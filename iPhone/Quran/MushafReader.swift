@@ -21,8 +21,25 @@ struct MushafPage: Identifiable {
 
     let page: Int
     let segments: [Segment]
+    /// Which pagination built this page (`MushafPagination.paginationKey`: the riwayah and the Quran it
+    /// was walked from). The render cache composes pages of the DISPLAYED riwayah's pagination only.
+    let paginationKey: String
 
     var id: Int { page }
+
+    /// The ayahs this page carries, "surah:first-surah:last": the page's CONTENT identity, which its
+    /// NUMBER is not. Every riwayah paginates on the Madinah page boundaries, but a Madani-count riwayah
+    /// numbers its ayahs one off from Hafs through most of al-Baqarah, so ITS page 13 carries ids 83-87
+    /// where Hafs's carries 84-88. Every store keyed by page number (the render cache, the persisted fit
+    /// numbers, the last-render fallback) keys on this too, so a page composed from one pagination can
+    /// never be served for, or sized by, another's. (2026-09-15, "different sizes and widths": after a
+    /// riwayah switch back to Hafs, a ring composed Warsh's page boundaries with Hafs text under the Hafs
+    /// keys, and the persisted numbers for Hafs's 84-88 sized a page holding 83-87.)
+    var contentSpan: String {
+        guard let first = segments.first, let a = first.ayahs.first,
+              let last = segments.last, let z = last.ayahs.last else { return "" }
+        return "\(first.surah.id):\(a.id)-\(last.surah.id):\(z.id)"
+    }
 
     var firstSurah: Surah? { segments.first?.surah }
     var firstAyah: Ayah? { segments.first?.ayahs.first }
@@ -59,8 +76,13 @@ enum MushafPagination {
     private static var pageCache: [(key: String, pages: [MushafPage])] = []
     private static let pageCacheLimit = 4
 
+    /// The pagination cache key, also stamped on every page it builds (`MushafPage.paginationKey`).
+    nonisolated static func paginationKey(qiraah: String?, quranCount: Int) -> String {
+        "\(qiraah ?? "Hafs")|\(quranCount)"
+    }
+
     static func pages(quran: [Surah], qiraah: String?) -> [MushafPage] {
-        let key = "\(qiraah ?? "Hafs")|\(quran.count)"
+        let key = paginationKey(qiraah: qiraah, quranCount: quran.count)
         if let index = pageCache.firstIndex(where: { $0.key == key }) {
             // Refresh on use, so eviction sheds the least-recently-READ entry - plain FIFO would evict the
             // default Hafs pagination (always inserted first) the moment a fifth qiraah was compared.
@@ -77,14 +99,14 @@ enum MushafPagination {
 
     /// Whether `pages` would be a cache hit - i.e. whether page mode can open with no pagination pause.
     static func isBuilt(quran: [Surah], qiraah: String?) -> Bool {
-        pageCache.contains { $0.key == "\(qiraah ?? "Hafs")|\(quran.count)" }
+        pageCache.contains { $0.key == paginationKey(qiraah: qiraah, quranCount: quran.count) }
     }
 
     /// Paginate off the main actor and seed the cache - so the page-mode TOGGLE can show its brief loading
     /// state instead of freezing the tap while all ~6,236 ayahs are walked. The build reads only value-type
     /// surah data, so it is safe anywhere; only the cache write returns to the main actor.
     static func buildInBackground(quran: [Surah], qiraah: String?) async {
-        let key = "\(qiraah ?? "Hafs")|\(quran.count)"
+        let key = paginationKey(qiraah: qiraah, quranCount: quran.count)
         guard !pageCache.contains(where: { $0.key == key }) else { return }
         // The ayah alignment is MainActor state, so resolve it into a plain table up front;
         // the detached pass then only reads value types.
@@ -133,6 +155,7 @@ enum MushafPagination {
     /// array each time (O(n²) per page, ~135k array allocations across the book).
     nonisolated private static func build(quran: [Surah], qiraah: String?,
                                           pageTable: [Int: [Int: Int]]? = nil) -> [MushafPage] {
+        let paginationKey = paginationKey(qiraah: qiraah, quranCount: quran.count)
         var pages: [MushafPage] = []
         var currentPage: Int?
         var currentSegments: [MushafPage.Segment] = []
@@ -151,7 +174,7 @@ enum MushafPagination {
         func flushPage() {
             flushSegment()
             if let page = currentPage, !currentSegments.isEmpty {
-                pages.append(MushafPage(page: page, segments: currentSegments))
+                pages.append(MushafPage(page: page, segments: currentSegments, paginationKey: paginationKey))
             }
             currentSegments = []
         }
@@ -327,6 +350,8 @@ struct SurahPageReader<Controls: View>: View {
     /// the page being turned TO, so the mounted set does not change inside the animated transaction
     /// (an insertion there renders as a crossfade, not a slide). Cleared once the slide has finished.
     @State private var windowAnchors: Set<Int> = []
+    /// The page the last turn LEFT, so the ring can be ordered ahead of the direction of travel.
+    @State private var previousPageIndex = -1
     /// The surah named by the pinned header at the top of the reader, and the ONLY thing that decides when
     /// the header (and the parent's toolbar title) re-renders. It is written by `reportSurah` and only when
     /// the top surah's id actually changes, so paging within one surah leaves it - and the header - alone.
@@ -656,6 +681,39 @@ struct SurahPageReader<Controls: View>: View {
                     }
                 }
             }
+            // "-pageTurnScript <step>[,<step>...]": scripted reader driving for headless repros of the
+            // page-turn fallbacks (2026-09-15, "different sizes and widths" after turns). Each step is
+            // "<action>@<seconds>": "+n" / "-n" turn n pages like a swipe (the animated selection write),
+            // "=i" turns to page INDEX i through `turnPage` (the picker's path), "picker" opens the page
+            // wheel exactly as the jump button does (seeding `pickerBaseGeometry`), "pick=i" moves the
+            // wheel to index i, "confirm" is the wheel's checkmark, "collapse" toggles the bottom chrome.
+            if let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "-pageTurnScript"),
+               ProcessInfo.processInfo.arguments.indices.contains(flag + 1) {
+                for step in ProcessInfo.processInfo.arguments[flag + 1].split(separator: ",") {
+                    let parts = step.split(separator: "@", maxSplits: 1).map(String.init)
+                    guard parts.count == 2, let delay = Double(parts[1]) else { continue }
+                    let action = parts[0]
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        if action == "picker" {
+                            pagePickerSelection = pageIndex
+                            pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                            withAnimation(.easeInOut) { activePicker = .page }
+                        } else if action.hasPrefix("pick="), let i = Int(action.dropFirst(5)) {
+                            pagePickerSelection = i
+                        } else if action == "confirm" {
+                            turnPage(to: min(max(pagePickerSelection, 0), max(pages.count - 1, 0)), in: pages,
+                                     suppressClear: false)
+                            withAnimation(.easeInOut) { activePicker = nil }
+                        } else if action == "collapse" {
+                            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed.toggle() }
+                        } else if action.hasPrefix("="), let i = Int(action.dropFirst()) {
+                            turnPage(to: i, in: pages, suppressClear: false)
+                        } else if let n = Int(action) {
+                            withAnimation(.easeInOut(duration: 0.35)) { pageIndex += n }
+                        }
+                    }
+                }
+            }
             // Headless verification: `-mushafFindBar <query>` opens the in-page find pre-filled, the
             // only way to drive it from `simctl launch` (no tap injection in that harness).
             if let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "-mushafFindBar"),
@@ -691,6 +749,10 @@ struct SurahPageReader<Controls: View>: View {
             reseedToStartingPage(in: pages)
         }
         .onChange(of: pageIndex) { index in
+            // Which way the reader is moving, for the ring's order: a run of swipes keeps the pages
+            // AHEAD of it warm first. A seed or a far jump (no previous page yet) stays symmetric.
+            let direction = previousPageIndex >= 0 ? (index - previousPageIndex).signum() : 0
+            previousPageIndex = index
             recentreWindow(on: index)
             // Leaving a page resets its pinch zoom to the fitted view (user rule: same as the PDF) -
             // otherwise the adjacent page stays mounted zoomed-in and greets you magnified on return.
@@ -702,7 +764,7 @@ struct SurahPageReader<Controls: View>: View {
             // first on the serial fit queue and the landing page's own fit ran LAST behind all of them -
             // a 5-10 second wait to see the picked page. Center-first makes the landing page the first
             // fit; an ordinary swipe is unaffected (its center is already cached and skips instantly).
-            MushafPageRenderCache.prewarm(pages: pages, around: index, includeCenter: true)
+            MushafPageRenderCache.prewarm(pages: pages, around: index, includeCenter: true, direction: direction)
             // Turning the page clears every selection: the tap-mark, the multi-select set, and any
             // search-arrival snippet - a new page is a fresh start. Programmatic seeds (initial open,
             // in-place surah swap) are NOT turns - they consume the latch instead of clearing.
@@ -779,13 +841,13 @@ struct SurahPageReader<Controls: View>: View {
         // the OLD qiraah's pages, which a later geometry change would then compose and cache under the
         // NEW qiraah's signature (wrong page content served from cache).
         .onChange(of: settings.displayQiraahForArabic) { _ in
-            reseedAfterRepagination(pages)
+            reseedAfterRepagination()
         }
         // Kept as a safety net for any other source of a count change (an index past the new end leaves
         // the TabView with no selected tag - a blank pager).
         .onChange(of: pages.count) { count in
             guard count > 0 else { return }
-            reseedAfterRepagination(pages)
+            reseedAfterRepagination()
         }
         .onChange(of: searchActive) { active in
             if active {
@@ -846,28 +908,38 @@ struct SurahPageReader<Controls: View>: View {
         // Compose the destination BEFORE the turn starts, so what slides in is the page rather than its
         // loading spinner. (`.onChange(of: pageIndex)` prewarms too, but that runs as the turn begins.)
         MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
-        // A follow/seed is not a user page turn - it must not wipe the mark or the selections. A
-        // DELIBERATE jump (the page/juz pickers) passes false: there a new page is a fresh start,
-        // exactly as if it had been swiped to.
-        if suppressClear { suppressNextPageTurnClear = true }
-        // Mount the target's ring NOW (this transaction, not animated) and keep the departure page
-        // mounted through the slide: the animated selection change below must find both pages
-        // already there, with the mounted set unchanged, or the pager crossfades instead of sliding
-        // (verified on the simulator: a ring inserted inside the animated transaction faded in).
-        // Released after the turn has settled, again outside any animation.
-        let departure = pageIndex
-        let anchors: Set<Int> = [departure, target]
-        windowAnchors = anchors
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            if windowAnchors == anchors { windowAnchors = [] }
-        }
-        // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
-        // INSIDE the player publish's own update pass, and a selection write made there reached the
-        // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
-        // (verified frame-by-frame: one giant scene step, zero intermediates). Hopping to the next
-        // tick puts the write in a fresh transaction whose animation the pager honors.
-        DispatchQueue.main.async {
-            withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+        // The turn WAITS for the landing page's render, bounded: prewarming it as the turn began still
+        // slid its spinner in whenever the fit outlasted the slide, which on a far jump - a page the
+        // ring never reached - was every time. A cached landing page turns at once; a cold one turns
+        // the moment its fit lands, or after 0.4 s regardless, so a slow fit degrades to the old
+        // behaviour (the spinner, briefly) rather than to a jump that never comes.
+        MushafPageRenderCache.whenRendered(page: pages[target], within: 0.4) {
+            // The reader may have moved on while the fit ran (a swipe, a newer jump).
+            guard pages.indices.contains(target), target != pageIndex else { return }
+            // A follow/seed is not a user page turn - it must not wipe the mark or the selections. A
+            // DELIBERATE jump (the page/juz pickers) passes false: there a new page is a fresh start,
+            // exactly as if it had been swiped to. Latched HERE, not before the wait: a turn that the
+            // guard above abandons must not leave the latch armed to swallow the next real turn's clear.
+            if suppressClear { suppressNextPageTurnClear = true }
+            // Mount the target's ring NOW (this transaction, not animated) and keep the departure page
+            // mounted through the slide: the animated selection change below must find both pages
+            // already there, with the mounted set unchanged, or the pager crossfades instead of sliding
+            // (verified on the simulator: a ring inserted inside the animated transaction faded in).
+            // Released after the turn has settled, again outside any animation.
+            let departure = pageIndex
+            let anchors: Set<Int> = [departure, target]
+            windowAnchors = anchors
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                if windowAnchors == anchors { windowAnchors = [] }
+            }
+            // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
+            // INSIDE the player publish's own update pass, and a selection write made there reached the
+            // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
+            // (verified frame-by-frame: one giant scene step, zero intermediates). Hopping to the next
+            // tick puts the write in a fresh transaction whose animation the pager honors.
+            DispatchQueue.main.async {
+                withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+            }
         }
     }
 
@@ -891,7 +963,14 @@ struct SurahPageReader<Controls: View>: View {
     /// After a repagination (qiraah switch): keep the READING POSITION - re-resolve the page holding the
     /// current anchor ayah in the NEW pages - clamp if it can't be resolved, and re-prewarm so the ring
     /// (and its stored context) is composed from the new pages under the new settings signature.
-    private func reseedAfterRepagination(_ pages: [MushafPage]) {
+    private func reseedAfterRepagination() {
+        // Re-derived HERE, never taken from the handler's capture: an `onChange` action runs with the
+        // `pages` of the body pass that installed it, which after a riwayah switch is still the OLD
+        // riwayah's pagination (fit trace, 2026-09-15). Re-prewarming from that array composed the old
+        // page boundaries with the new riwayah's text under the new signature - Hafs page 13 holding
+        // Warsh's 83-87, sized by the persisted fit numbers of 84-88 - and resolved the anchor in the
+        // wrong book. The lookup is free: the body pass that fired this handler just built it.
+        let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
         guard !pages.isEmpty else { return }
         if let anchor = currentAnchor,
            let target = MushafPagination.pageIndex(surahID: anchor.surahID, ayahID: anchor.ayahID, in: pages),
@@ -1978,7 +2057,10 @@ private struct MushafPageContent: View {
                 // and settings, so the text re-wraps identically; only the fitted size can be a hair off
                 // for the beat the refit takes.
                 renderedPageBody(rendered: stale, width: width, visibleHeight: visibleHeight)
-                    .task(id: "\(width)|\(textHeight)") {
+                    // The page's content span is part of the id: a repagination hands this view a page
+                    // with the same number and different ayahs, and the running task still holds the old
+                    // one - it must restart with the page actually on screen.
+                    .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
                         // Debounced: during a chrome transition (a picker collapsing after a jump, the
                         // mini player mounting) the height SWEEPS through intermediate values frame by
                         // frame, and composing for each transient fitted the page to heights it never
@@ -1988,13 +2070,25 @@ private struct MushafPageContent: View {
                         // this on every geometry change, so the sleep lets only a geometry that has
                         // held still for a beat reach the fit queue; the last good render of this page
                         // stays up meanwhile.
-                        try? await Task.sleep(nanoseconds: 150_000_000)
-                        guard !Task.isCancelled else { return }
+                        // A geometry some page has already finished a fit at is proven to be one the
+                        // reader rests at, so the debounce would only add 150 ms of blank page to every
+                        // cold swipe during an ordinary read - it applies to UNPROVEN geometries only.
+                        let settled = MushafPageRenderCache.hasSettledRender(width: width, height: textHeight)
+                        if !settled {
+                            try? await Task.sleep(nanoseconds: 150_000_000)
+                            guard !Task.isCancelled else { return }
+                        }
+                        MushafPageRenderCache.fitTrace("TASK \(MushafPageRenderCache.traceLabel(page)) \(Int(width.rounded()))x\(Int(textHeight.rounded())) settled=\(settled)")
                         MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
                             renderTick &+= 1
                         }
                     }
             } else {
+                // Truly cold: nothing composed for this page at any nearby height. The spinner shows the
+                // moment a page is cold (user rule: a load that is really happening is never hidden);
+                // the work of making this branch RARE is elsewhere - the ring's direction-first order
+                // and its deeper reach ahead of travel, the jumps that wait for their landing page's
+                // render (`turnPage`), and the settled-geometry fast path in the task below.
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     // `.task(id:)`, NOT `.onAppear`: if the geometry changes while the fit is in flight
@@ -2003,7 +2097,10 @@ private struct MushafPageContent: View {
                     // never request the new-geometry render, leaving the spinner up forever. The id re-runs
                     // this whenever the geometry the page needs actually changes; renderAsync dedupes by
                     // key, so repeats are free.
-                    .task(id: "\(width)|\(textHeight)") {
+                    // The page's content span is part of the id: a repagination hands this view a page
+                    // with the same number and different ayahs, and the running task still holds the old
+                    // one - it must restart with the page actually on screen.
+                    .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
                         // The same debounce as the stale branch above, for the same reason: a cold
                         // picker-jump lands mid-transition, and fitting every transient height not only
                         // queued the settled fit behind throwaway work - the first transient to finish
@@ -2011,8 +2108,15 @@ private struct MushafPageContent: View {
                         // geometry that holds still reaches the fit queue. (The reader's own prewarm
                         // already requested the landing page at the settled geometry in parallel, so
                         // this request is usually just the backstop.)
-                        try? await Task.sleep(nanoseconds: 150_000_000)
-                        guard !Task.isCancelled else { return }
+                        // A geometry some page has already finished a fit at is proven to be one the
+                        // reader rests at, so the debounce would only add 150 ms of blank page to every
+                        // cold swipe during an ordinary read - it applies to UNPROVEN geometries only.
+                        let settled = MushafPageRenderCache.hasSettledRender(width: width, height: textHeight)
+                        if !settled {
+                            try? await Task.sleep(nanoseconds: 150_000_000)
+                            guard !Task.isCancelled else { return }
+                        }
+                        MushafPageRenderCache.fitTrace("TASK \(MushafPageRenderCache.traceLabel(page)) \(Int(width.rounded()))x\(Int(textHeight.rounded())) settled=\(settled)")
                         MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
                             renderTick &+= 1
                         }
@@ -4277,6 +4381,32 @@ enum MushafPageRenderCache {
         return c
     }()
 
+    #if DEBUG
+    /// "p13[2:84-88]": the page number with the surah:ayah span it carries, so a trace line shows
+    /// WHICH pagination a page came from, not just its number.
+    nonisolated static func traceLabel(_ page: MushafPage) -> String {
+        "p\(page.page)[\(page.contentSpan)]"
+    }
+    /// "-pageFitLog" (the flag `MushafPageContent.logFit` reads too): one line per fit-pipeline event
+    /// in the system log - geometry changes, ring sweeps, render requests, lane starts and landings,
+    /// and every stale fallback served - so a "wrong size after a turn" report can be read off the
+    /// sequence (`log show --predicate 'eventMessage CONTAINS "FITTRACE"'`) instead of guessed at.
+    nonisolated private static let fitTraceEnabled = ProcessInfo.processInfo.arguments.contains("-pageFitLog")
+    /// Main-actor callers; the message is built only when the flag is on.
+    static func fitTrace(_ message: @autoclosure () -> String) {
+        guard fitTraceEnabled else { return }
+        NSLog("FITTRACE %@", message())
+    }
+    /// Fit-lane callers (off main): the message must not touch main-actor state.
+    nonisolated static func fitTraceLane(_ message: @autoclosure () -> String) {
+        guard fitTraceEnabled else { return }
+        NSLog("FITTRACE %@", message())
+    }
+    #else
+    @inline(__always) static func fitTrace(_ message: @autoclosure () -> String) {}
+    @inline(__always) nonisolated static func fitTraceLane(_ message: @autoclosure () -> String) {}
+    #endif
+
     /// Everything that changes the rendering but isn't the page or the geometry. Memoized on the
     /// main thread until the next Settings publish (`mushafSignatureCache`, Phase 5 step 5): every
     /// mounted page rebuilt this from ~20 defaults reads on every publish.
@@ -4329,6 +4459,7 @@ enum MushafPageRenderCache {
     private static var lastGeometry: (width: CGFloat, height: CGFloat)? {
         didSet {
             guard let g = lastGeometry, g != (oldValue ?? (0, 0)) else { return }
+            fitTrace("GEO \(Int(g.width.rounded()))x\(Int(g.height.rounded())) was \(oldValue.map { "\(Int($0.width.rounded()))x\(Int($0.height.rounded()))" } ?? "nil")")
             UserDefaults.standard.set([Double(g.width), Double(g.height)], forKey: geometryDefaultsKey)
             // Rotation / iPad split-resize / the bottom bars folding: every page in the prewarm ring
             // was fitted for the OLD geometry, so the first swipe in each direction landed on a cold
@@ -4426,7 +4557,10 @@ enum MushafPageRenderCache {
     // 10: print-matched lines withdrawn (`MushafComposeConfig.printLines` is always nil). Every
     // page composes and fits the ordinary way again, so every fit persisted by a print-matched
     // build measured a page that no longer exists - those pages stood at half height.
-    nonisolated private static let fitterVersion = 10
+    // 11: the key carries the page's content span (`MushafPage.contentSpan`). Keyed by page number
+    // alone, a store could hold - and after a riwayah switch did hold - numbers measured against
+    // another pagination's ayahs for that page number, sizing the real page short or tall for good.
+    nonisolated private static let fitterVersion = 11
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
@@ -4516,7 +4650,7 @@ enum MushafPageRenderCache {
         page: MushafPage, width: CGFloat, height: CGFloat, config: MushafComposeConfig
     ) -> String {
         [
-            "\(page.page)", "\(Int(width.rounded()))", "\(Int(height.rounded()))",
+            "\(page.page)", page.contentSpan, "\(Int(width.rounded()))", "\(Int(height.rounded()))",
             String(describing: config.pageLanguage),
             config.removeArabicDots ? "d" : "-",
             config.quranUsesSystemArabicFont ? "s" : "-",
@@ -4585,10 +4719,20 @@ enum MushafPageRenderCache {
     nonisolated(unsafe) private static var queueGeneration = 0
 
     static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false,
-                        at geometryOverride: (width: CGFloat, height: CGFloat)? = nil) {
+                        at geometryOverride: (width: CGFloat, height: CGFloat)? = nil, direction: Int = 0) {
         // `(1...radius)` below traps on a non-positive radius - guard it rather than trusting every caller.
         guard let geometry = geometryOverride ?? lastGeometry, !pages.isEmpty, radius >= 1,
               !isDegenerate(width: geometry.width, height: geometry.height) else { return }
+        // Only the DISPLAYED riwayah's pagination is composed. Every caller hands over a `pages` array
+        // some closure captured, and after a riwayah switch the repagination handler's capture was
+        // still the OLD riwayah's array (fit trace, 2026-09-15): this ring then composed those page
+        // boundaries with the NEW riwayah's text, keyed and sized as the new riwayah's pages - Hafs
+        // page 13 came up holding Warsh's 83-87. A stale array is refused whole (and never becomes
+        // the settle sweep's context); the reader re-derives its pages and warms again.
+        guard pages[0].paginationKey == displayedPaginationKey else {
+            fitTrace("RING refused: pages \(pages[0].paginationKey), displayed \(displayedPaginationKey)")
+            return
+        }
         lastPrewarmContext = (pages, index)
         // The background fit is nearly free for the main thread, but each warmed page still costs a colored
         // compose on main - in Low Power Mode keep that to the immediate neighbours.
@@ -4600,9 +4744,30 @@ enum MushafPageRenderCache {
         let config = MushafComposeConfig.current()
         let signature = settingsSignature
 
-        // Nearest neighbours first (the pages a swipe reaches next), then the outer ring.
-        let ordered = ((includeCenter ? [index] : []) + (1...radius).flatMap { [index + $0, index - $0] })
+        // Nearest neighbours first (the pages a swipe reaches next), then the outer ring. With a
+        // direction of travel the pages AHEAD lead, two to one, and the ring reaches further ahead
+        // than behind (8 and 3 at the default radius: the same eleven fits as the symmetric ring,
+        // placed where the next swipes go). In a flip run the pages behind were just read (cached),
+        // and a symmetric ring spent half its serial lane on them while the run outran its five
+        // pages ahead - which is when a swipe lands on the spinner. Low Power Mode (radius 1) keeps
+        // its immediate-neighbours-only contract.
+        var ring: [Int] = []
+        if direction == 0 {
+            ring = (1...radius).flatMap { [index + $0, index - $0] }
+        } else {
+            let ahead = direction > 0 ? 1 : -1
+            let reachAhead = radius >= 3 ? radius + 3 : radius
+            let reachBehind = radius >= 3 ? max(radius - 2, 1) : radius
+            var aheadSteps = Array(1...reachAhead)
+            var behindSteps = Array(1...reachBehind)
+            while !aheadSteps.isEmpty || !behindSteps.isEmpty {
+                for _ in 0..<2 where !aheadSteps.isEmpty { ring.append(index + ahead * aheadSteps.removeFirst()) }
+                if !behindSteps.isEmpty { ring.append(index - ahead * behindSteps.removeFirst()) }
+            }
+        }
+        let ordered = ((includeCenter ? [index] : []) + ring)
             .filter { pages.indices.contains($0) && (includeCenter || $0 != index) }
+        fitTrace("RING gen=\(generation) at \(Int(geometry.width.rounded()))x\(Int(geometry.height.rounded())) around=\(traceLabel(pages[min(max(index, 0), pages.count - 1)])) dir=\(direction) r=\(radius) sig=\(signature.hashValue % 10000) pages=\(ordered.map { pages[$0].page })")
 
         for i in ordered {
             let page = pages[i]
@@ -4610,6 +4775,7 @@ enum MushafPageRenderCache {
             // One fit per key, EVER in flight: overlapping rings used to re-enqueue duplicate fits for the
             // same pages because this check couldn't see queued work - the `pendingRenders` claim can.
             guard cache.object(forKey: key) == nil, pendingRenders[key] == nil else { continue }
+            fitTrace("RING queue \(traceLabel(page)) gen=\(generation)")
             pendingRenders[key] = []
             enqueueFit(page: page, width: geometry.width, height: geometry.height,
                        key: key, config: config, generation: generation)
@@ -4642,12 +4808,14 @@ enum MushafPageRenderCache {
         // for ring fits, so `queueGeneration`'s prewarm-queue confinement is preserved.
         let lane = generation == nil ? visibleFitQueue : prewarmQueue
         lane.async {
+            let started = Date()
             // A ring fit from an abandoned sweep skips the expensive fit - unless the user has since landed
             // on this very page (a waiter attached), which upgrades it to must-run.
             if let generation, queueGeneration != generation {
                 DispatchQueue.main.async {
                     let key = keyString as NSString
                     guard let waiters = pendingRenders[key] else { return }
+                    fitTrace("SKIP \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) gen=\(generation) waiters=\(waiters.count)")
                     if waiters.isEmpty {
                         pendingRenders.removeValue(forKey: key)
                         upgradedClaims.remove(key)
@@ -4657,6 +4825,7 @@ enum MushafPageRenderCache {
                 }
                 return
             }
+            fitTraceLane("START \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) lane=\(generation == nil ? "visible" : "prewarm")")
 
             let composer = MushafPageComposer(page: page, config: config)
             let metrics = fitMetricsUsingStore(composer: composer, width: width, height: height)
@@ -4673,8 +4842,11 @@ enum MushafPageRenderCache {
                     cache.setObject(rendered, forKey: key)
                     noteLatest(page: page, width: width, budget: height, rendered: rendered)
                 }
+                settledGeometries.insert(geometryToken(width: width, height: height))
                 upgradedClaims.remove(key)
-                (pendingRenders.removeValue(forKey: key) ?? []).forEach { $0() }
+                let waiters = pendingRenders.removeValue(forKey: key) ?? []
+                fitTrace("LAND \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) lane=\(generation == nil ? "visible" : "prewarm") ms=\(Int(Date().timeIntervalSince(started) * 1000)) waiters=\(waiters.count)")
+                waiters.forEach { $0() }
             }
         }
     }
@@ -4742,7 +4914,9 @@ enum MushafPageRenderCache {
         // The per-ayah pins join in PER PAGE rather than through `settingsSignature`: they change the
         // composed text or its colors, but pinning one ayah must only evict the page that ayah is on.
         let pins = AyahDisplayOverrides.signature(AyahDisplayOverrides.shared.overrides, limitedTo: page.ayahRefs)
-        return "\(page.page)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)|\(pins)" as NSString
+        // The content span too (`MushafPage.contentSpan`): the same page NUMBER holds different ayahs
+        // under another riwayah's pagination, and a render of one must never be served for the other.
+        return "\(page.page)|\(page.contentSpan)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)|\(pins)" as NSString
     }
 
     /// The pure, heavy part: fit the size, spread the leftover height, measure. Runs on the prewarm queue
@@ -4840,7 +5014,7 @@ enum MushafPageRenderCache {
     /// count-limit churn during an ordinary flip run evicted a mounted page's older-height render while
     /// it was still the only fallback for the next jitter - the spinner came back. Twelve attributed
     /// pages is small; the old bound of 64 was what undercut memory-pressure eviction.)
-    private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, rendered: MushafRenderedPage)] = [:]
+    private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, span: String, rendered: MushafRenderedPage)] = [:]
     /// Insertion order for eviction, oldest first.
     private static var latestOrder: [Int] = []
     private static let latestLimit = 12
@@ -4856,7 +5030,7 @@ enum MushafPageRenderCache {
         if latestByPage[page.page] != nil {
             latestOrder.removeAll { $0 == page.page }
         }
-        latestByPage[page.page] = (width, budget, signature, rendered)
+        latestByPage[page.page] = (width, budget, signature, page.contentSpan, rendered)
         latestOrder.append(page.page)
         while latestOrder.count > latestLimit {
             let evicted = latestOrder.removeFirst()
@@ -4880,8 +5054,26 @@ enum MushafPageRenderCache {
         guard let entry = latestByPage[page.page],
               Int(entry.width.rounded()) == Int(width.rounded()),
               entry.signature == settingsSignature,
+              // Same ayahs: page 13 of another riwayah's pagination is not this page (`contentSpan`).
+              entry.span == page.contentSpan,
               abs(entry.budget - height) <= max(entry.budget, height) * 0.45 else { return nil }
+        fitTrace("STALE \(traceLabel(page)) want=\(Int(width.rounded()))x\(Int(height.rounded())) have=\(Int(entry.width.rounded()))x\(Int(entry.budget.rounded())) rendered=\(Int(entry.rendered.height.rounded()))")
         return entry.rendered
+    }
+
+    /// Geometries (width x height, rounded like the cache key) at which at least one fit has COMPLETED.
+    /// A completed fit proves the frame is one the reader actually rests at, not a transient of a chrome
+    /// fold or a launch layout pass - so a page asking for a proven geometry can skip the settle debounce
+    /// (`MushafPageContent`) and go straight to the fit lane. Main-confined, like the cache bookkeeping.
+    private static var settledGeometries: Set<String> = []
+
+    /// Whether a page has ever finished a fit at exactly this geometry (see `settledGeometries`).
+    static func hasSettledRender(width: CGFloat, height: CGFloat) -> Bool {
+        settledGeometries.contains(geometryToken(width: width, height: height))
+    }
+
+    private static func geometryToken(width: CGFloat, height: CGFloat) -> String {
+        "\(Int(width.rounded()))x\(Int(height.rounded()))"
     }
 
     /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -
@@ -4901,13 +5093,49 @@ enum MushafPageRenderCache {
         width < 80 || height < 160
     }
 
+    /// Run `completion` once `page` has a render at the current geometry: at once if it is cached (or no
+    /// geometry is known yet), otherwise when its fit lands or after `timeout` seconds, whichever is
+    /// first. Exactly once, on main. The reader's programmatic turns wait on this so the page that
+    /// slides in is the page, not its spinner (`SurahPageReader.turnPage`).
+    static func whenRendered(page: MushafPage, within timeout: TimeInterval, completion: @escaping () -> Void) {
+        guard let geometry = lastGeometry, !isDegenerate(width: geometry.width, height: geometry.height) else {
+            completion()
+            return
+        }
+        var fired = false
+        let fireOnce = {
+            guard !fired else { return }
+            fired = true
+            completion()
+        }
+        // A cache hit calls back synchronously; a miss claims (or joins) the fit on the visible lane.
+        renderAsync(page: page, width: geometry.width, height: geometry.height, onReady: fireOnce)
+        if !fired {
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: fireOnce)
+        }
+    }
+
+    /// The pagination the reader is showing (`MushafPagination.paginationKey`): the displayed riwayah
+    /// over the loaded Quran. A page from any other pagination is refused by `prewarm`/`renderAsync`.
+    private static var displayedPaginationKey: String {
+        MushafPagination.paginationKey(qiraah: Settings.shared.displayQiraahForArabic,
+                                       quranCount: QuranData.shared.quran.count)
+    }
+
     static func renderAsync(page: MushafPage, width: CGFloat, height: CGFloat, onReady: @escaping () -> Void) {
         guard !isDegenerate(width: width, height: height) else { return }
+        // A page of another pagination (see `prewarm`): a closure's stale capture. Not composed - the
+        // page view's task is keyed on the page's content, so the page actually on screen asks again.
+        guard page.paginationKey == displayedPaginationKey else {
+            fitTrace("REQ refused \(traceLabel(page)): pagination \(page.paginationKey)")
+            return
+        }
         let key = cacheKey(page: page, width: width, height: height, signature: settingsSignature)
         if cache.object(forKey: key) != nil { onReady(); return }
 
         if pendingRenders[key] != nil {
             pendingRenders[key]?.append(onReady)
+            fitTrace("REQ \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) joined waiters=\(pendingRenders[key]?.count ?? 0) upgraded=\(upgradedClaims.contains(key))")
             // The claim may belong to a ring fit queued deep in the serial prewarm lane (or behind a
             // wedged one). The user is LOOKING at this page: enqueue ONE must-run duplicate on the
             // visible lane rather than waiting our turn. Safe: the completion path stores only if the
@@ -4920,6 +5148,7 @@ enum MushafPageRenderCache {
             return
         }
         pendingRenders[key] = [onReady]
+        fitTrace("REQ \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) claimed sig=\(settingsSignature.hashValue % 10000)")
 
         // generation nil = must-run: the user is looking at this page.
         enqueueFit(page: page, width: width, height: height,

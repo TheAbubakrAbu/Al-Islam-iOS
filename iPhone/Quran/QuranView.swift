@@ -592,6 +592,16 @@ struct QuranView: View {
         }
     }
 
+    /// `UIApplication.didEnterBackgroundNotification` on iOS. The watch build compiles this file too
+    /// and has neither that symbol nor page mode, so there it is a name nothing ever posts.
+    private static let didEnterBackgroundNotification: Notification.Name = {
+        #if os(iOS)
+        return UIApplication.didEnterBackgroundNotification
+        #else
+        return Notification.Name("AlIslamQuranNoopDidEnterBackground")
+        #endif
+    }()
+
     @State private var path: [QuranRoute] = []
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
@@ -770,6 +780,20 @@ struct QuranView: View {
             path = []
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { path = [route] }
         }
+        #endif
+    }
+
+    /// `openMushafWhereLeftOff` with the animation off, and only when the tab is sitting on the surah
+    /// list with no reader open - going back to the list and STAYING there is deliberate, and it
+    /// survives until the tab (or the app) is left. `openMushafWhereLeftOff` cannot make that call
+    /// itself: on iPad it deliberately re-points the detail column whatever is in it, which would
+    /// throw an iPad user off whatever they had open.
+    private func openMushafUnanimated() {
+        #if os(iOS)
+        guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { openMushafWhereLeftOff() }
         #endif
     }
 
@@ -1095,7 +1119,13 @@ struct QuranView: View {
             if shouldAutoOpen, !didAutoOpenMushaf {
                 didAutoOpenMushaf = true
                 await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
-                openMushafWhereLeftOff()
+                // Unanimated, like every other page-mode open below. Animated, this push IS the
+                // "it goes to the Quran view and THEN opens the page" two-step: the surah list is
+                // already on screen by the time the pagination await returns, so the reader slid in
+                // over it. With the animation off the tab is simply found standing on the mushaf.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { openMushafWhereLeftOff() }
             }
             #endif
             #if os(iOS)
@@ -1130,8 +1160,10 @@ struct QuranView: View {
         .onChange(of: isActiveTab) { active in
             #if os(iOS)
             guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
-            // The way in (the backstop) opens at once - there is a user waiting on it.
-            guard !active else { openMushafWhereLeftOff(); return }
+            // The way in (the backstop) opens at once - there is a user waiting on it - and
+            // unanimated, because an animated push here is the user WATCHING the surah list be
+            // replaced, which is the exact two-step page mode is supposed to skip.
+            guard !active else { openMushafUnanimated(); return }
             // The way out waits a beat first: the pager's build is half a second of main thread, and
             // the tab being switched TO has its own first frame to paint (Adhan's countdown and sky
             // animate). Let that land, then build behind it. Re-checked on arrival - the user may have
@@ -1140,11 +1172,24 @@ struct QuranView: View {
                 guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
                 // Unanimated: off screen there is nothing to animate, and a half-finished push
                 // transition is exactly what the returning tab must not walk into.
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) { openMushafWhereLeftOff() }
+                openMushafUnanimated()
             }
             #endif
+        }
+        // LEAVING THE APP is the same event as leaving the tab, and page mode has to treat it that
+        // way: "if you have page mode on, when you disappear it should just be mushaf" (Abu,
+        // 2026-09-14). Without this, backgrounding the app while the tab sat on the surah list
+        // (a Back tap out of the reader, or a launch that has not opened it yet) meant the next
+        // foreground came back to the LIST - `isActiveTab` never changed, so nothing re-opened it,
+        // and the mushaf only appeared after a trip through another tab.
+        //
+        // `didEnterBackground`, not `willResignActive`: the latter also fires for a pulled-down
+        // notification banner or Control Center, and re-arranging the navigation stack underneath
+        // someone who never actually left is its own bug. Setting `path` here is cheap (it is the
+        // realization that costs, and that happens on the way back in, where it would have anyway);
+        // what it buys is that the return renders the reader directly instead of the list plus a push.
+        .onReceive(NotificationCenter.default.publisher(for: Self.didEnterBackgroundNotification)) { _ in
+            openMushafUnanimated()
         }
         .onChange(of: searchHandoff.pendingQuery) { query in
             guard let query else { return }

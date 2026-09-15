@@ -176,6 +176,44 @@ let nonArabicArabicScriptLetters: [LetterData] = [
     LetterData(id: LetterID.next(), letter: "ژ", forms: ["ـژ", "ـژ ـ", "ژ ـ"], name: "ژے", transliteration: "zhe", showTashkeel: false, sound: "")
 ]
 
+/// Where a non-Arabic letter comes from: the languages that added it to the Arabic script, and the sound
+/// they added it for. Keyed by the letter's transliteration (the key the letter page's `nonArabicBaseSound`
+/// already switches on). Shown on the letter's page and under the alphabet's NON-ARABIC LETTERS section:
+/// "used in non-Arabic languages" named no language (user rule, 2026-09-15).
+struct NonArabicLetterOrigin {
+    /// The languages that write the letter, the most familiar first.
+    let languages: String
+    /// The sound it stands for, described by an English word that has it.
+    let sound: String
+}
+
+let nonArabicLetterOrigins: [String: NonArabicLetterOrigin] = [
+    "pe": NonArabicLetterOrigin(
+        languages: "Persian, Urdu, Kurdish and Pashto",
+        sound: "the \"p\" sound, which Arabic does not have: Arabic spells borrowed words with a baa instead, as in بَاكِسْتَان (Pakistan)"
+    ),
+    "che": NonArabicLetterOrigin(
+        languages: "Persian, Urdu, Kurdish and Pashto",
+        sound: "the \"ch\" sound, as in \"church\""
+    ),
+    "ve": NonArabicLetterOrigin(
+        languages: "Kurdish, and Arabic dialect writing in Iraq and the Maghreb",
+        sound: "the \"v\" sound, as in \"van\" (Malay and Indonesian Jawi write the same shape for \"p\")"
+    ),
+    "gaaf (gaa)": NonArabicLetterOrigin(
+        languages: "Persian, Urdu, Kurdish and Pashto",
+        sound: "the hard \"g\" sound, as in \"go\""
+    ),
+    "ngaf": NonArabicLetterOrigin(
+        languages: "Uyghur, Kazakh and Kyrgyz, and Ottoman Turkish before it moved to the Latin alphabet",
+        sound: "the \"ng\" sound, as in \"sing\" (Moroccan Arabic writes the same letter for a hard \"g\", as in أڭادير, Agadir)"
+    ),
+    "zhe": NonArabicLetterOrigin(
+        languages: "Persian, Urdu, Kurdish and Pashto",
+        sound: "the \"zh\" sound, the \"s\" of \"measure\""
+    ),
+]
+
 let numbers = [
     (number: "٠", name: "صِفر", transliteration: "sifr", englishNumber: "0"),
     (number: "١", name: "وَاحِد", transliteration: "waahid", englishNumber: "1"),
@@ -218,24 +256,6 @@ let tashkeels: [Tashkeel] = [
         length: "1 count"
     ),
     Tashkeel(
-        english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an",
-        root: "ف ت ح", rootMeaning: "two fathas",
-        howTo: "Two fathas stacked. Say the fatha, then close it with an \"n\" sound: \"an\". The \"n\" is pronounced but never written as a letter.",
-        length: "1 count, then the noon"
-    ),
-    Tashkeel(
-        english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in",
-        root: "ك س ر", rootMeaning: "two kasras",
-        howTo: "Two kasras stacked. Say the kasra, then close it with an \"n\": \"in\".",
-        length: "1 count, then the noon"
-    ),
-    Tashkeel(
-        english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un",
-        root: "ض م م", rootMeaning: "two dammas",
-        howTo: "Two dammas stacked. Say the damma, then close it with an \"n\": \"un\".",
-        length: "1 count, then the noon"
-    ),
-    Tashkeel(
         english: "Alif", arabic: "أَلِف", tashkeelMark: "َا", transliteration: "aa",
         root: "ف ت ح", rootMeaning: "the stretched fatha",
         howTo: "A fatha followed by alif. Same open mouth, simply held: the stronger, extended version of the fatha.",
@@ -252,6 +272,27 @@ let tashkeels: [Tashkeel] = [
         root: "ض م م", rootMeaning: "the stretched damma",
         howTo: "A damma followed by waaw. The extended version of the damma: \"oo\" as in \"moon\".",
         length: "2 counts"
+    ),
+    // Row order of the per-letter table (three marks to a row): the short vowels, then the long vowels
+    // that stretch them, then the tanween that close them with a noon (user rule, 2026-09-15: the
+    // tanween used to sit between the two, splitting the a/aa, i/ii, u/uu pairs across a row).
+    Tashkeel(
+        english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an",
+        root: "ف ت ح", rootMeaning: "two fathas",
+        howTo: "Two fathas stacked. Say the fatha, then close it with an \"n\" sound: \"an\". The \"n\" is pronounced but never written as a letter.",
+        length: "1 count, then the noon"
+    ),
+    Tashkeel(
+        english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in",
+        root: "ك س ر", rootMeaning: "two kasras",
+        howTo: "Two kasras stacked. Say the kasra, then close it with an \"n\": \"in\".",
+        length: "1 count, then the noon"
+    ),
+    Tashkeel(
+        english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un",
+        root: "ض م م", rootMeaning: "two dammas",
+        howTo: "Two dammas stacked. Say the damma, then close it with an \"n\": \"un\".",
+        length: "1 count, then the noon"
     ),
     Tashkeel(
         english: "Dagger Alif", arabic: "ألف خنجرية", tashkeelMark: "\u{064E}\u{0670}\u{0640}", transliteration: "aa",

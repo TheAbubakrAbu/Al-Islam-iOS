@@ -35,10 +35,28 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
 
     var isPlaying: Bool { playingPrayerName != nil }
 
+    /// How long after a prayer's time the app will still play that adhan in full when it is OPENED.
+    ///
+    /// The scheduled notification is capped at 30 seconds of sound and obeys the ringer switch; the
+    /// in-app player is neither, which is what "Play adhan in Silent Mode" actually buys - and it used
+    /// to be unreachable unless the app happened to already be open at the exact minute. Three minutes
+    /// is long enough to cover seeing the notification and tapping it, and short enough that the adhan
+    /// never comes detached from the prayer it announces. (`fire`'s own 150 s drift guard is a
+    /// different thing: that one rejects a TIMER that woke up late.)
+    private static let catchUpWindow: TimeInterval = 180
+
+    /// The identifier of the last adhan this player sounded, persisted so a catch-up survives the app
+    /// being killed rather than backgrounded. Without it, launching twice inside the window would play
+    /// the same adhan twice - and being killed is the ordinary case here, since the app was closed.
+    private static let lastPlayedIDKey = "foregroundAdhanLastPlayedID"
+
     private var timer: DispatchSourceTimer?
     private var player: AVAudioPlayer?
     private var pausedQuranForAdhan = false
-    private var lastPlayedID: String?
+    private var lastPlayedID: String? {
+        get { UserDefaults.standard.string(forKey: Self.lastPlayedIDKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.lastPlayedIDKey) }
+    }
     private var cancellables = Set<AnyCancellable>()
 
     private override init() {
@@ -76,6 +94,31 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     /// Stops the pending timer (e.g. when the app backgrounds). A currently-playing adhan is left to finish.
     func stop() {
         cancelTimer()
+    }
+
+    /// Plays the adhan for a prayer whose time passed within the last few minutes, if this player has not
+    /// already sounded it. Call on app-active ONLY: it is the counterpart to the armed timer, covering the
+    /// case the timer cannot - the app was closed when the moment arrived, so the user got the 30-second
+    /// notification sound (or nothing at all, on Silent) instead of the adhan.
+    ///
+    /// Everything the timer path checks is checked here too, through the same helpers: the prayer must be
+    /// an eligible at-time adhan, the chosen sound must be a real recording rather than "Default", and the
+    /// adhan must not already have been played for that identifier.
+    func playMissedAdhan() {
+        guard !isPlaying else { return }
+
+        let settings = Settings.shared
+        guard let missed = settings.recentForegroundAdhan(within: Self.catchUpWindow) else { return }
+        guard missed.notificationID != lastPlayedID else { return }
+        guard let resource = settings.adhanFullSoundResource(for: settings.adhanNotificationSound),
+              let path = Bundle.main.path(forResource: resource, ofType: "caf") else { return }
+
+        lastPlayedID = missed.notificationID
+        // The at-time notification for this moment is spent. Drop it if the system has somehow still not
+        // delivered it, so it cannot sound on top of the recording now starting.
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [missed.notificationID])
+
+        playAdhan(path: path, prayerName: missed.name)
     }
 
     private func cancelTimer() {

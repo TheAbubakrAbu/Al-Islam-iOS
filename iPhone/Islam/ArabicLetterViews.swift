@@ -7,7 +7,7 @@ struct TashkeelLettersView: View {
 
     private static let shaddahMark = arabicShaddahMark
 
-    /// Every mark the per-letter detail shows - the short vowels, the tanween, the long vowels and their madd
+    /// Every mark the per-letter detail shows - the short vowels, the long vowels, the tanween, the madd
     /// forms, the dagger alif and the miniatures, both sukoons, and the shaddah. This screen is the same table
     /// read the other way round, so it must not be a subset of it.
     ///
@@ -209,7 +209,7 @@ struct TashkeelLettersView: View {
                 Text(carrierGlyph(previewMark))
                     .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 24, relativeTo: .title2) : .title2)
                     .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
-                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                    .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                     .foregroundColor(isSelected ? settings.accentColor.color : .primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -342,7 +342,7 @@ struct TashkeelLettersView: View {
             }
             .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 20, relativeTo: .title3) : .title3)
             .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
-            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+            .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
             .lineLimit(1)
             .minimumScaleFactor(0.4)
             .multilineTextAlignment(.trailing)
@@ -362,7 +362,7 @@ struct TashkeelLettersView: View {
     /// Sized to the glyph, not to the Quranic face's (very tall) line box - but it grows with the size slider,
     /// or the letters would be pinned at whatever fits 34pt no matter where the slider sat.
     private var glyphBoxHeight: CGFloat {
-        let steps = Settings.arabicLetterDynamicTypeSizes.count - 1
+        let steps = Settings.arabicLetterSizeSteps
         let index = min(max(settings.arabicLetterSizeIndex, 0), steps)
         return 34 + CGFloat(index) * 7
     }
@@ -372,7 +372,7 @@ struct TashkeelLettersView: View {
             Text(glyph(letter))
                 .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 28, relativeTo: .title) : .title)
                 .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
-                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(height: glyphBoxHeight)
@@ -453,7 +453,7 @@ struct TashkeelLettersView: View {
                             }
                             .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 30, relativeTo: .title) : .title)
                             .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
-                            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                            .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                             .multilineTextAlignment(.trailing)
@@ -620,7 +620,7 @@ struct ArabicLetterView: View {
                                     : .title
                             )
                             .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                            .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
 
                         Spacer()
 
@@ -631,7 +631,7 @@ struct ArabicLetterView: View {
                                     : .title2
                             )
                             .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                            .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                     }
                 }
                 .padding(.vertical, useQuranicFontForLetter ? 0 : 2)
@@ -681,7 +681,7 @@ struct ArabicLetterView: View {
                                       ? settings.scalableIslamArabicFont(base: 34, relativeTo: .largeTitle)
                                       : .largeTitle)
                                 .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                                .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                                 .foregroundColor(TajweedLegendCategory.qalqalah.color)
                         }
 
@@ -709,7 +709,7 @@ struct ArabicLetterView: View {
                                         : .title2
                                 )
                                 .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                                .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
 
                             Spacer()
                         }
@@ -832,7 +832,7 @@ struct ArabicLetterView: View {
 
             if (!letterData.showTashkeel && letterData.transliteration != "alif")
                 || letterData.transliteration == "yaa" {
-                Section(header: Text("PURPOSE")) {
+                Section(header: Text(letterData.isNonArabicScriptLetter ? "WHERE IT IS USED" : "PURPOSE")) {
                     purposeSection(for: letterData)
                 }
             }
@@ -1061,8 +1061,14 @@ struct ArabicLetterView: View {
     private func purposeSection(for data: LetterData) -> some View {
         if data.isNonArabicScriptLetter {
             Group {
-                Text("This letter is used in non-Arabic languages that use Arabic script.")
-                Text("It is not one of the 28 standard Arabic alphabet letters.")
+                // Which languages, by name - "non-Arabic languages" told the reader nothing (user rule).
+                if let origin = nonArabicLetterOrigins[data.transliteration] {
+                    Text("Used in \(origin.languages), for \(origin.sound).")
+                    Text("It is not one of the 28 Arabic letters: those languages added it to the Arabic script for a sound Arabic lacks, so it never appears in the Quran.")
+                } else {
+                    Text("This letter is used in non-Arabic languages that use Arabic script.")
+                    Text("It is not one of the 28 standard Arabic alphabet letters.")
+                }
             }
             .font(.body)
         } else {
@@ -1299,7 +1305,7 @@ struct TashkeelRow: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
     /// it every Settings field its body reads and rebuilds it when one changes.
-    var letterTypeSize: DynamicTypeSize = Settings.shared.arabicLetterDynamicTypeSize
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
     var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
     @ObservedObject private var selection = ArabicPracticeSelection.shared
 
@@ -1359,7 +1365,7 @@ struct TashkeelRow: View {
                                 : .title
                         )
                         .arabicFontDesign(custom: useQuranicFontForLetter && appearance.islamUsesCustomArabicFace)
-                        .dynamicTypeSize(letterTypeSize...)
+                        .arabicLetterTypeFloor(steps: letterSizeSteps)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
 
@@ -1534,7 +1540,7 @@ struct HamzaPracticeRow: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
     /// it every Settings field its body reads and rebuilds it when one changes.
-    var letterTypeSize: DynamicTypeSize = Settings.shared.arabicLetterDynamicTypeSize
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
     var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
     @ObservedObject private var selection = ArabicPracticeSelection.shared
 
@@ -1670,7 +1676,7 @@ struct HamzaPracticeRow: View {
                                 : .title
                         )
                         .arabicFontDesign(custom: useQuranicFontForLetter && appearance.islamUsesCustomArabicFace)
-                        .dynamicTypeSize(letterTypeSize...)
+                        .arabicLetterTypeFloor(steps: letterSizeSteps)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         .frame(maxWidth: .infinity)
@@ -1687,7 +1693,7 @@ struct HamzaPracticeRow: View {
                                     : .title
                             )
                             .arabicFontDesign(custom: useQuranicFontForLetter && appearance.islamUsesCustomArabicFace)
-                            .dynamicTypeSize(letterTypeSize...)
+                            .arabicLetterTypeFloor(steps: letterSizeSteps)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)
                             .frame(maxWidth: .infinity)
@@ -1803,7 +1809,7 @@ struct NonArabicVowelPracticeRow: View {
                                 : .title
                         )
                         .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                        .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                        .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
 
@@ -1835,7 +1841,7 @@ struct ArabicExampleRow: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
     /// it every Settings field its body reads and rebuilds it when one changes.
-    var letterTypeSize: DynamicTypeSize = Settings.shared.arabicLetterDynamicTypeSize
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
     var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
     var useFontArabic: Bool = Settings.shared.useFontArabic
     @ObservedObject private var selection = ArabicPracticeSelection.shared
@@ -1872,7 +1878,7 @@ struct ArabicExampleRow: View {
             Text(arabic)
                 .font(useQuranicFont ? appearance.islamArabicFont(base: 24, relativeTo: .title2) : .title2)
                 .arabicFontDesign(custom: useQuranicFont && appearance.islamUsesCustomArabicFace)
-                .dynamicTypeSize(letterTypeSize...)
+                .arabicLetterTypeFloor(steps: letterSizeSteps)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
                 .minimumScaleFactor(0.5)
@@ -1922,7 +1928,7 @@ struct ArabicLetterRow: View, Equatable {
         self.useFontArabic = useFontArabic
         self.fontArabic = fontArabic
         self.searchQuery = searchQuery
-        // Snapshotted so `==` sees the size slider: the body applies `Settings.shared.arabicLetterDynamicTypeSize`,
+        // Snapshotted so `==` sees the size slider: the body applies it as `arabicLetterTypeFloor(steps:)`,
         // and an Equatable view must not ignore state that changes its rendering.
         self.sizeIndex = Settings.shared.arabicLetterSizeIndex
     }
@@ -1961,7 +1967,7 @@ struct ArabicLetterRow: View, Equatable {
                     guaranteeMatch: matchedLetter
                 )
                 .arabicFontDesign(custom: usesCustomArabicFace)
-                .dynamicTypeSize(Settings.shared.arabicLetterDynamicTypeSize...)
+                .arabicLetterTypeFloor(steps: sizeIndex)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .frame(width: 42, height: 38)
@@ -1993,7 +1999,7 @@ struct ArabicLetterRow: View, Equatable {
                                 : .subheadline
                         )
                         .arabicFontDesign(custom: usesCustomArabicFace)
-                        .dynamicTypeSize(Settings.shared.arabicLetterDynamicTypeSize...)
+                        .arabicLetterTypeFloor(steps: sizeIndex)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
 
@@ -2019,7 +2025,7 @@ struct ArabicLetterRow: View, Equatable {
                             : .caption
                     )
                     .arabicFontDesign(custom: usesCustomArabicFace)
-                    .dynamicTypeSize(Settings.shared.arabicLetterDynamicTypeSize...)
+                    .arabicLetterTypeFloor(steps: sizeIndex)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -2093,7 +2099,7 @@ struct ArabicNumberRow: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
     /// it every Settings field its body reads and rebuilds it when one changes.
-    var letterTypeSize: DynamicTypeSize = Settings.shared.arabicLetterDynamicTypeSize
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
     var useFontArabic: Bool = Settings.shared.useFontArabic
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
@@ -2119,7 +2125,7 @@ struct ArabicNumberRow: View {
                             : .subheadline
                     )
                     .arabicFontDesign(custom: useFontArabic && appearance.islamUsesCustomArabicFace)
-                    .dynamicTypeSize(letterTypeSize...)
+                    .arabicLetterTypeFloor(steps: letterSizeSteps)
                     .foregroundColor(.primary)
 
                 Text(numberData.transliteration)
@@ -2136,7 +2142,7 @@ struct ArabicNumberRow: View {
                         : .title2
                 )
                 .arabicFontDesign(custom: useFontArabic && appearance.islamUsesCustomArabicFace)
-                .dynamicTypeSize(letterTypeSize...)
+                .arabicLetterTypeFloor(steps: letterSizeSteps)
                 .foregroundColor(appearance.accent)
         }
         .lineLimit(1)
@@ -2165,7 +2171,7 @@ struct ArabicNumberGridTile: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
     /// it every Settings field its body reads and rebuilds it when one changes.
-    var letterTypeSize: DynamicTypeSize = Settings.shared.arabicLetterDynamicTypeSize
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
     var useFontArabic: Bool = Settings.shared.useFontArabic
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
@@ -2184,7 +2190,7 @@ struct ArabicNumberGridTile: View {
                             : .title
                     )
                     .arabicFontDesign(custom: useFontArabic && appearance.islamUsesCustomArabicFace)
-                    .dynamicTypeSize(letterTypeSize...)
+                    .arabicLetterTypeFloor(steps: letterSizeSteps)
                     .foregroundColor(appearance.accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -2489,7 +2495,7 @@ struct ArabicLetterGridTile: View, Equatable {
     /// Sized to the glyph rather than to the Quranic face's (very tall) line box - but it grows with the size
     /// slider, or the letter would be pinned at whatever fits 34pt no matter where the slider sat.
     private var glyphBoxHeight: CGFloat {
-        let steps = Settings.arabicLetterDynamicTypeSizes.count - 1
+        let steps = Settings.arabicLetterSizeSteps
         let index = min(max(sizeIndex, 0), steps)
         return 34 + CGFloat(index) * 7
     }
@@ -2500,7 +2506,7 @@ struct ArabicLetterGridTile: View, Equatable {
                 Text(letterData.letter)
                     .font(glyphFont)
                     .arabicFontDesign(custom: usesCustomArabicFace)
-                    .dynamicTypeSize(Settings.shared.arabicLetterDynamicTypeSize...)
+                    .arabicLetterTypeFloor(steps: sizeIndex)
                     .foregroundColor(accentColor.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -2523,7 +2529,7 @@ struct ArabicLetterGridTile: View, Equatable {
                           ? Font.arabic(fontArabic, size: 12, relativeTo: .caption2)
                           : .caption2)
                     .arabicFontDesign(custom: usesCustomArabicFace)
-                    .dynamicTypeSize(Settings.shared.arabicLetterDynamicTypeSize...)
+                    .arabicLetterTypeFloor(steps: sizeIndex)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -2551,3 +2557,24 @@ struct ArabicLetterGridTile: View, Equatable {
     }
 }
 #endif
+
+/// The Arabic Alphabet size slider, applied to one Arabic `Text`: a Dynamic-Type floor `steps` sizes above
+/// the size the text would otherwise read at. It reads the environment rather than assuming a base, so one
+/// slider position grows the Arabic by the same number of steps on an iPhone at the default text size, on
+/// an iPad or Mac after `regularIdiomTypeBoost`, and on a device with Larger Text on. The old fixed table
+/// of floors was a no-op on every position at or below the size already in force - the whole slider, on an
+/// iPad with Larger Text at the table's top (see `Settings.arabicLetterTypeSize(steps:above:)`).
+private struct ArabicLetterTypeFloor: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let steps: Int
+
+    func body(content: Content) -> some View {
+        content.dynamicTypeSize(Settings.arabicLetterTypeSize(steps: steps, above: dynamicTypeSize)...)
+    }
+}
+
+extension View {
+    func arabicLetterTypeFloor(steps: Int) -> some View {
+        modifier(ArabicLetterTypeFloor(steps: steps))
+    }
+}

@@ -204,6 +204,109 @@ narrator's printed line and asks one question, does the print show what our text
 `work/spot_check.py` into `spot.json` and `sprites/spot-check.jpg`; `make_html.py` now merges both files.
 The spot verdicts use the values `ok`, `differs`, `other`.
 
+### 6.2 Verdicts read back (2026-09-13), and two false-alarm classes
+
+63 verdict documents were in the store when read: 60 disagreement rows over 13 sites and 3 spot rows.
+Tally: 55 "print = our text (matrix wrong)", 0 "print = matrix (our text wrong)", 5 "other / unclear"
+(the five non-Qalun rows of 19:19), 3 spot rows "ok" (2:10 ad-Duri, 2:249 Idris, 2:280 Qalun). Sites:
+12:109 juncture 1 and 18:86 (12 rows each, disagreements in both directions: the matrix has the two
+reader groups swapped, and the prints side with our texts each way), 19:97 (6), 21:35 (4), 8:66 (4),
+3:49 (4), 19:19 (6: Qalun "text", the other five "other"), and the two-row sites 2:191, 2:281, 3:169,
+4:162, 6:83, 7:25.
+
+Two classes of false alarm surfaced while answering Abu's questions on 3:49 and 19:19:
+
+1. **Wrong occurrence.** When the juncture word repeats inside the ayah, the aligner takes the first
+   occurrence. 3:49 has أَنِّي twice; the variant (Nafi, Abu Jafar: إِنِّي) is the second one, before
+   أَخْلُقُ. Our Qalun, Warsh, Ibn Wardan and Ibn Jammaz texts carry إِنِّيَ there (word 15 of their ayah
+   48), the prints show it in pink, the matrix is right, and the four packet rows compared the first
+   أَنِّي, which everyone reads alike. Same at 10:35 (يَهْدِي five times; the variant لَا يَهِدِّي is the
+   fourth, the packet looked at the first). 26 of the 1,634 junctures have a repeated span; only these
+   two are in the packet, and none of the 30 spot rows. Tool fix: prefer the occurrence at which the
+   twenty texts differ from one another.
+
+2. **The Madinah dot on an alif seat.** At 19:19 the Warsh, ad-Duri, as-Susi, Ruways and Rawh prints
+   show لِاَ۬هَبَ: lam-alif in pink (the page legend reads "الحرف المخالف لحفص"), a fatha, and a filled
+   dot on the alif, no hamza. The same dot marks the lightened hamza at 2:6 ءَٰا۬نذَرۡتَهُمۡ in the ad-Duri
+   print. The literature writes this reading as a ya (لِيَهَبَ), which is the matrix's spelling; the
+   mushaf keeps the rasm alif and marks the change with the dot. Our ad-Duri and as-Susi texts carry the
+   print's spelling with the dot (U+06EC); our Warsh, Ruways and Rawh texts carry it without the dot,
+   exactly as KFGQPC's own digital Warsh text (Tilawa's copy) does. No text error: the judge scored the
+   dotted alif as a hamza (d = 0.3). Qalun's print has a black لِأَهَبَ with the hamza, as do our text
+   and KFGQPC's digital Qalun; the matrix's reader-level Nafi cell does not split Qalun, whose
+   transmission is recorded with a khilaf here and whose Madinah print takes the hamza. Candidate
+   erratum, not applied: 19:19 R0 gains transmitter 3 (Qalun). Other packet rows on the same notation,
+   still to be eye-checked: 36:49 Qalun, ad-Duri, as-Susi يَخ۬صِّمُونَ; 7:98 Warsh أَوَاَمِنَ.
+
+Nothing applied; the packet page was left as it is so the spot check in progress is not disturbed. Next,
+after the 30 spot rows: repair the locator, teach the judge the dot, rerun the pipeline, republish.
+
+### 6.3 The packet repaired (2026-09-14)
+
+Abu asked for the packet to be repaired before he went on. Three false-alarm classes had been found by
+then (6.2); the rebuild found and fixed several more. Nothing in Al-Islam changed: all of this is in
+`qiraat-review/work/` (qlib.py, judge.py, build_packet.py, make_html.py; the old outputs are kept in
+`work/prev_v1/`). The page at the same link now carries the rebuilt packet.
+
+**Locator.** A repeated word (أَنِّي twice in 3:49, يَهْدِي five times in 10:35) now resolves to the
+occurrence at which the twenty texts differ from one another; a segment that carries a context word
+(لَّا يَهِدِّىٓ) is narrowed to the reading's own words. Two-word readings (أَنَّهُ…فَأَنَّهُ) are located
+part by part on distinct words, the later part may sit in the next ayah (the second half of 8:65 and
+8:66 is one khilaf that the source lists under both ayahs, now one row set), and a Hafs ayah that a
+print splits in two (18:86, where the six Ibn Kathir, Abu Amr and Abu Jafar texts had been "unlocated")
+is searched across the neighbouring own ayah. A window more than three edits from every form is
+unlocated rather than shown as nonsense (11:41 had matched ٱثۡنَيۡنِ).
+
+**Judge.** The small waw and small ya of the silah (كُمُۥ, هُۥ, بِهِۦ) are letters in Unicode, not marks,
+so every span containing one had cost a point against the source's plain spelling; that alone made most
+of the old "neither" section. The KFGQPC alif notation was decoded from a survey of the texts themselves
+(every wasl alif in the Qalun, Warsh, ad-Duri, Ruways and Abu Jafar texts carries a dot or a rounded zero
+with its start vowel): an initial alif with vowel and dot is wasl and its start vowel is ignored; with a
+vowel and no mark it is a hamzat qat' written without its sign (Warsh's naql: قَرۡيَةً اَمَرۡنَا,
+قُرَيۡشٍ اِيلَٰفِهِمۡ); with a dot and no vowel, or plain before a vowelled letter, it is a lightened
+hamza (Ruways ا۬مۡوَٰلَكُمُ after ٱلسُّفَهَآءَ); a small waw on an alif is a waw (Abu Amr's اۥُقِّتَتۡ). Inside
+a word, a vowelled bare alif is a lightened hamza seat spelt ya or hamza by the books (19:19), a dotted
+alif without a vowel, or a second alif after a dagger, is a hamza present but lightened (Abu Jafar's
+ءَٰا۬ذۡهَبۡتُمۡ at 46:20, Qalun's هَٰا۬نتُمۡ at 3:66), and a dot on a consonant is a shortened vowel
+(يَه۬دِّي, يَخ۬صِّمُونَ). The alif wasla and the silent-letter marks (U+0652, which all twenty texts use only
+on silent letters, and the zeros) are honoured, so Ibn Amir's لِإِيْلَٰفِ reads لِإِلَٰفِ. On the source
+side: لاَ is normalised, a missing shadda is forgiven only where no shadda khilaf is among the forms
+(أَئِن for أَئِنَّ, but not لَوَّوۡا against لَوَوۡا), a dropped final vowel is cheap, اللّٰه with a dagger
+matches the prints' fatha, U+0622 is a hamza plus madd except before a hamza, before a doubled letter or
+at the end of a word, and cheap variants cover the ibdal of Warsh, as-Susi and Abu Jafar (مُومِنٗا,
+يَٰلِتۡكُم), Warsh's naql (أَوَاَمِنَ at 7:98) and a wasl spelt as a hamza (إِصۡطَفَى). A two-word juncture
+where the text follows one reading on one word and another on the other is a new status, "mixed"
+(3:169: Hisham and Ibn Dhakwan carry تَحۡسَبَنَّ with قُتِّلُواْ).
+
+**Numbers.** Over the 32,000 transmitter-junctures: agreements 31,363 to 31,934, ties 694 to 259,
+unlocated 160 to 81, "neither" 97 to 6 (plus 16 mixed). Packet: 391 rows over 108 sites to 334 rows
+over 93 sites (40 split sites with 101 rows, 43 whole-imam sites with 212 rows, 10 "no exact match"
+sites with 21 rows), every row with a crop. 76 old rows left the list (3:49, the five at 19:19, 8:65
+and 8:66, 3:66, 4:94, 7:40, 7:113, 10:35, 18:85, 21:96, 36:49, 37:153, 39:64, 43:68, 106:2 and a few
+more); 19 rows are new, all real questions: the six at 18:86 (the swap already known), seven at 6:63
+where the texts keep the shadda of the second يُنَجِّيكُم (6:64) that the source lightens for Nafi, Ibn
+Kathir, Abu Amr and Ibn Dhakwan, Abu Jafar's mixed 106:1-2, Ibn Dhakwan's ءَان at 68:14, and Rawh's
+لَوَوۡاْ at 63:5 (the source has Ruways and Rawh the other way round). 6:54 now reads cleanly and
+shows the same shape as 12:109: our Nafi and Abu Jafar texts carry أَنَّهُ…فَإِنَّهُ and our Ibn Kathir,
+Abu Amr, Hamzah, al-Kisai and Khalaf texts إِنَّهُ…فَإِنَّهُ, which is al-Tabari's account of the Madinan
+and Basran readings, so the source's R1 and R2 attributions look swapped. 1,369 agreements sit at a
+phonemic distance of one or more (the source's spelling granularity, e.g. Shubah's يِهِدِّيٓ against the
+source's يَهِدِّي); they are not in the packet.
+
+**Verdicts.** Of the 63 stored verdicts, 50 attach to rows that still exist (47 "print = our text", 3
+spot rows "ok"); the 13 orphans are exactly the false alarms (3:49 four, 19:19 five, 8:66 four). Five
+rows whose located span changed were re-keyed so no old verdict answers a new question (10:78, 11:68,
+59:2 j1, 73:9, 81:12). The 30 spot rows are untouched.
+
+**Page.** Sections run spot check, single-narrator splits, whole-imam disagreements, no exact match;
+"hide reviewed" is on by default and remembered; each site has a button that marks every row "print =
+our text" after one look at one print (and one that clears the site); compound rows show both words
+and both print lines; the source's readings are set in Scheherazade New (the KFGQPC faces stack the
+hamza of لِأَهَبَ oddly and draw a dotless final ya for modern spelling), the Warsh face is used for
+Warsh's own text only.
+
+Nothing applied to Al-Islam; Scripts/ untouched; nothing committed.
+
 ## Appendix: the errata block, ready to paste
 
 Additions for `VARIANT_READER_ERRATA` in `Scripts/build_qiraat_variants.py` (keyed by ayah, then by the

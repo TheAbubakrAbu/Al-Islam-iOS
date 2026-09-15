@@ -254,6 +254,9 @@ private struct MainTabView: View {
             // root is copied into a companion app, delete the domains it doesn't ship.
             // Shared: the tab walk behind the launch cover.
             .task { await warmUnderCover() }
+            // Al-Adhan: an adhan whose moment passed in the last few minutes while the app was
+            // closed. The scene-phase hook cannot cover this one - see the function's comment.
+            .task { await AppLifecycle.playMissedAdhanAtLaunch() }
             // The Reminder of the Day is a card at the top of the Islam tab, never a sheet (Abu,
             // 2026-09-12: the sheet clipped the card and covered the landing tab).
             #if DEBUG

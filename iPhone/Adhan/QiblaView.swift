@@ -62,9 +62,11 @@ struct QiblaView: View {
 
     private var qiblaTurnText: String? {
         guard compass.hasHeading else {
-            return CLLocationManager.headingAvailable()
-                ? "Waiting for the compass\u{2026}"
-                : "No compass on this device"
+            guard CLLocationManager.headingAvailable() else { return "No compass on this device" }
+            // Heading samples are DROPPED while there is no usable fix (there is no bearing to
+            // subtract them from), so "Waiting for the compass" named the wrong thing whenever the
+            // real hold-up was location - which is the common case indoors and on a fresh install.
+            return hasUsableLocation ? "Waiting for the compass\u{2026}" : "Waiting for your location\u{2026}"
         }
         guard !isAligned else { return "You are facing the Kaaba" }
 
@@ -72,6 +74,13 @@ struct QiblaView: View {
         let direction = delta < 0 ? "left" : "right"
         let degrees = Int(abs(delta).rounded())
         return "Turn \(direction) \(degrees)°"
+    }
+
+    /// A fix the Qibla maths can actually use: present, and not the app's (1000, 1000) "none yet"
+    /// sentinel. `LocalQiblaCompass.qiblaDirection()` applies the same test.
+    private var hasUsableLocation: Bool {
+        guard let currentLocation = live.currentLocation else { return false }
+        return abs(currentLocation.latitude) <= 90 && abs(currentLocation.longitude) <= 180
     }
 
     private var distanceToKaabaMiles: Double? {
@@ -423,6 +432,11 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
 
+    #if os(iOS)
+    /// Live only while the compass is running - see `beginObservingOrientation`.
+    private var orientationObserver: NSObjectProtocol?
+    #endif
+
     /// Publish only when the needle would visibly move, set from the needle's radius by `start`.
     /// This was a flat 0.5° at every size, which is a different thing at each of them: half a degree
     /// moves a 50 pt needle's tip by a fifth of a point and a 220 pt one's by a full point, so the
@@ -434,8 +448,46 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         self.locationProvider = locationProvider
         super.init()
         locationManager.delegate = self
+        #if os(iOS)
+        applyHeadingOrientation()
+        #else
         locationManager.headingOrientation = .portrait
+        #endif
     }
+
+    #if os(iOS)
+    /// CoreLocation reports a heading relative to the TOP OF THE DEVICE, so `headingOrientation` has
+    /// to say which edge that is. It was pinned to `.portrait`, and this app ships landscape on
+    /// iPhone and every orientation on iPad: rotate the window and the needle was a flat 90 degrees
+    /// wrong, pointing confidently at the wrong wall. Nothing else in the view could catch that -
+    /// `direction` is still a plausible number, the ring still turns green when you reach it.
+    ///
+    /// Mapped from the INTERFACE orientation (what the user is actually looking at) rather than the
+    /// device one, and the two are inverted for the landscapes: `UIInterfaceOrientation.landscapeLeft`
+    /// IS `UIDeviceOrientation.landscapeRight`, and `CLDeviceOrientation` follows the device.
+    private static func headingOrientation(for interface: UIInterfaceOrientation) -> CLDeviceOrientation {
+        switch interface {
+        case .portraitUpsideDown: return .portraitUpsideDown
+        case .landscapeLeft: return .landscapeRight
+        case .landscapeRight: return .landscapeLeft
+        default: return .portrait
+        }
+    }
+
+    private func applyHeadingOrientation() {
+        let interface = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }?
+            .interfaceOrientation ?? .portrait
+        let wanted = Self.headingOrientation(for: interface)
+        guard locationManager.headingOrientation != wanted else { return }
+        locationManager.headingOrientation = wanted
+        // The low-pass accumulator holds a delta measured in the OLD frame. Kept, it would WALK the
+        // needle across the 90 degrees instead of the frame simply changing under it; dropped, the
+        // next sample re-seeds it (see the `smoothedDelta == nil` branch below).
+        smoothedDelta = nil
+    }
+    #endif
 
     /// Start (or keep) heading updates for a needle of `needleRadius` points. The heading filter
     /// stays `kCLHeadingFilterNone` on purpose: the low-pass below only converges while samples keep
@@ -451,8 +503,39 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         locationManager.headingFilter = kCLHeadingFilterNone
         guard !started else { return }
         started = true
+        #if os(iOS)
+        // Re-read it here, not only in `init`: at init time the window scene is often not yet
+        // foregroundActive, so the initializer's read falls back to portrait.
+        applyHeadingOrientation()
+        beginObservingOrientation()
+        #endif
         locationManager.startUpdatingHeading()
     }
+
+    #if os(iOS)
+    /// Device-orientation notifications only fire while someone is generating them, and the generator
+    /// is reference counted - so this begins one for as long as the compass is up and ends it with
+    /// the compass, leaving anyone else's untouched. The notification is only the TRIGGER; the value
+    /// read is the window's interface orientation, which never reports faceUp/faceDown.
+    private func beginObservingOrientation() {
+        guard orientationObserver == nil else { return }
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+        orientationObserver = NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyHeadingOrientation()
+        }
+    }
+
+    private func endObservingOrientation() {
+        guard let orientationObserver else { return }
+        NotificationCenter.default.removeObserver(orientationObserver)
+        self.orientationObserver = nil
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
+    }
+    #endif
 
     /// The rotation, in degrees, that moves the needle's tip half a point: below that a publish
     /// costs a body evaluation and buys nothing. Clamped so the smallest compass still can't publish
@@ -465,6 +548,9 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     func stop() {
         guard started else { return }
         started = false
+        #if os(iOS)
+        endObservingOrientation()
+        #endif
         locationManager.stopUpdatingHeading()
         smoothedDelta = nil
         if hasHeading { hasHeading = false }
@@ -479,7 +565,13 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     }
 
     private func qiblaDirection() -> Double? {
-        guard let currentLocation = locationProvider() else { return nil }
+        // The app-wide "no fix yet" sentinel is (1000, 1000) and every other consumer screens for it.
+        // This one did not: `Qibla(coordinates:)` happily returns a bearing for it, so a phone with no
+        // location drew a needle that MOVED and looked alive while pointing at nothing - the same
+        // failure-looks-like-success trap `hasHeading` exists to close.
+        guard let currentLocation = locationProvider(),
+              abs(currentLocation.latitude) <= 90,
+              abs(currentLocation.longitude) <= 180 else { return nil }
         let locationKey = "\(currentLocation.latitude),\(currentLocation.longitude)"
         if cachedLocationKey == locationKey, let cachedQiblaDirection {
             return cachedQiblaDirection
@@ -534,6 +626,12 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     deinit {
         // Not `stop()`: that publishes `hasHeading`, and an object being deallocated must not send
         // `objectWillChange`.
+        #if os(iOS)
+        if let orientationObserver {
+            NotificationCenter.default.removeObserver(orientationObserver)
+            UIDevice.current.endGeneratingDeviceOrientationNotifications()
+        }
+        #endif
         guard started else { return }
         locationManager.stopUpdatingHeading()
     }

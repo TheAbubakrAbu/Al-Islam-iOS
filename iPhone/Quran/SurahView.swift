@@ -562,6 +562,10 @@ struct SurahView: View {
     @State private var arrivalTerm: String? = nil
     @State private var arrivalAyahID: Int? = nil
     @State private var showingSettingsSheet = false
+    #if DEBUG
+    /// `-launchReaderSettings` presents the sheet once per process (see onAppear).
+    private static var didAutoPresentReaderSettings = false
+    #endif
     @State private var showAlert = false
     @State private var showCustomRangeSheet = false
     /// In page mode the reader crosses surah boundaries, so the toolbar must follow the page rather than the
@@ -2042,6 +2046,18 @@ struct SurahView: View {
             // in LIST mode (the page reader has "-openPageSheet"), since neither a long press nor the
             // ellipsis menu can be driven headlessly.
             let launchArgs = ProcessInfo.processInfo.arguments
+            // "-launchReaderSettings" presents the READER's own copy of the Quran settings sheet (the
+            // gear), as opposed to "-launchQuranSettings", which presents the surah list's. On iPad the
+            // two live in different columns, so what the sheet does when a setting inside it changes the
+            // reader (2026-09-15: "Show Arabic Quran Text" collapsed it) has to be watched from here.
+            NSLog("SHEETTRACE reader onAppear surah=%d ayah=%d", surah.id, ayah ?? 0)
+            if launchArgs.contains("-launchReaderSettings"), !Self.didAutoPresentReaderSettings {
+                // Once per process: a reader that is torn down and re-created (the iPad detail column
+                // re-identifying itself) must not quietly re-present the sheet, or the collapse being
+                // looked for is hidden by its own repro harness.
+                Self.didAutoPresentReaderSettings = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showingSettingsSheet = true }
+            }
             if let i = launchArgs.firstIndex(of: "-openRowSheet"), i + 1 < launchArgs.count,
                let target = ayah, let targetAyah = surah.ayahs.first(where: { $0.id == target }) {
                 // "word" opens the word card for the "-wordIndex <n>" token (0-based) of the ayah.
@@ -4002,6 +4018,10 @@ struct SurahView: View {
         // columns with an empty gray detail pane.
         NavigationView { SettingsQuranView(presentedAsSheet: true) }
             .navigationViewStyle(.stack)
+            #if DEBUG
+            .onAppear { NSLog("SHEETTRACE reader settings sheet appeared") }
+            .onDisappear { NSLog("SHEETTRACE reader settings sheet disappeared") }
+            #endif
     }
     #endif
 

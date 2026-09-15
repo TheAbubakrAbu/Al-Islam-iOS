@@ -317,6 +317,18 @@ struct ArabicView: View {
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #else
         .background(gridNavigationLink)
+        #if DEBUG
+        // "-islamOpenLetter <letter>": push that letter's detail screen once the list is up. The grid's
+        // hidden link is the only way into `ArabicLetterView` and a tile tap cannot be scripted, so
+        // without this the letter page has no headless route at all - and it is where the size slider
+        // and the two practice toggles live. Pair it with "-settingsProbe arabicLetterSizeIndex=6@8".
+        .onAppear {
+            guard let letter = Self.debugOpenLetter,
+                  let match = (standardArabicLetters + otherArabicLetters + nonArabicArabicScriptLetters)
+                    .first(where: { $0.letter == letter }) else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { gridSelection = match }
+        }
+        #endif
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
@@ -324,7 +336,7 @@ struct ArabicView: View {
                 // No size slider here. It lives on the per-letter detail screen (`ArabicLetterView`), which is
                 // where you are actually looking at a letter big enough to want it resized. The size it sets is
                 // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
-                // `arabicLetterDynamicTypeSize`, so the alphabet list still resizes - it just doesn't carry the
+                // `arabicLetterTypeFloor(steps:)`, so the alphabet list still resizes - it just doesn't carry the
                 // control, which was crowding the bottom bar alongside the font picker and the search field.
                 // The one Islam-tab Arabic face picker, back above the search bar - the same control, on the
                 // same setting, that Duas, Dhikr, the 99 Names and the letter detail screens carry. It does
@@ -448,21 +460,34 @@ struct ArabicView: View {
     /// A letter section with the shared counted header. `shuffle` adds the random button (iOS only -
     /// it pushes through the grid's hidden navigation link, which the watch list doesn't have).
     @ViewBuilder
-    private func countedLetterSection(_ title: String, _ letters: [LetterData], shuffle: Bool = false) -> some View {
+    private func countedLetterSection(_ title: String, _ letters: [LetterData], shuffle: Bool = false, footer: String? = nil) -> some View {
         #if os(iOS)
-        Section(header: SectionPillHeader(
-            title: title,
-            count: letters.count,
-            onShuffle: shuffle ? { if let letter = letters.randomElement() { gridSelection = letter } } : nil
-        )) {
+        Section {
             letterCollection(letters)
+        } header: {
+            SectionPillHeader(
+                title: title,
+                count: letters.count,
+                onShuffle: shuffle ? { if let letter = letters.randomElement() { gridSelection = letter } } : nil
+            )
+        } footer: {
+            if let footer { Text(footer) }
         }
         #else
-        Section(header: SectionPillHeader(title: title, count: letters.count)) {
+        Section {
             letterCollection(letters)
+        } header: {
+            SectionPillHeader(title: title, count: letters.count)
+        } footer: {
+            if let footer { Text(footer) }
         }
         #endif
     }
+
+    /// Which languages the six letters belong to, right under them: "non-Arabic" alone named nobody (user
+    /// rule, 2026-09-15). Each letter's page says the same in full (`nonArabicLetterOrigins`).
+    private static let nonArabicLettersFooter =
+        "Not Arabic letters: other languages added them to the Arabic script for sounds Arabic does not have. پ, چ, گ and ژ come from Persian, Urdu, Kurdish and Pashto (p, ch, g, zh); ڤ from Kurdish and Arabic dialect writing (v); ڭ from Uyghur, Kazakh and Ottoman Turkish (ng). Open a letter for where it is used."
 
     @ViewBuilder
     private var favoriteLettersSection: some View {
@@ -527,6 +552,15 @@ struct ArabicView: View {
     /// The letter a grid tile asked to open. Every grid section shares the one link below, so exactly one
     /// letter is ever pushed.
     @State private var gridSelection: LetterData?
+
+    #if DEBUG
+    /// "-islamOpenLetter <letter>" - see the `.onAppear` that consumes it.
+    private static var debugOpenLetter: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let idx = arguments.firstIndex(of: "-islamOpenLetter"), arguments.indices.contains(idx + 1) else { return nil }
+        return arguments[idx + 1]
+    }
+    #endif
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showFavoriteLetters") private var showFavoriteLetters = true
@@ -677,7 +711,7 @@ struct ArabicView: View {
 
             tajweedSection
 
-            countedLetterSection("NON-ARABIC LETTERS", nonArabicArabicScriptLetters)
+            countedLetterSection("NON-ARABIC LETTERS", nonArabicArabicScriptLetters, footer: Self.nonArabicLettersFooter)
         }
     }
 
@@ -757,12 +791,13 @@ struct ArabicView: View {
 }
 
 /// Bottom size control shared by the Arabic Alphabet list and the per-letter detail. Drives
-/// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor. Position 0 is
-/// `.xSmall`, i.e. no floor at all - the alphabet then renders at whatever size the device is set to.
+/// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor that many steps ABOVE
+/// the size they already read at (`arabicLetterTypeFloor(steps:)`). Position 0 is no floor at all - the
+/// alphabet then renders at whatever size the device is set to.
 struct ArabicSizeSlider: View {
     @ObservedObject var settings = Settings.shared
 
-    private var maxIndex: Int { Settings.arabicLetterDynamicTypeSizes.count - 1 }
+    private var maxIndex: Int { Settings.arabicLetterSizeSteps }
 
     private var indexBinding: Binding<Double> {
         Binding(

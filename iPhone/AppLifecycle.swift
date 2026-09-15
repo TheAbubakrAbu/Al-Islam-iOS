@@ -48,6 +48,10 @@ enum AppLifecycle {
         let settings = Settings.shared
 
         if phase == .active {
+            // An adhan whose moment passed in the last few minutes while the app was CLOSED: play it
+            // now, in full and through Silent Mode if that is on. Before `reschedule()`, which only
+            // ever looks forward - this is the one path that looks back (Abu, 2026-09-14).
+            ForegroundAdhanPlayer.shared.playMissedAdhan()
             // Play the adhan in-app on time while open (the scheduled notification covers the closed
             // case and can be delivered late by the system, especially on Mac/Catalyst).
             ForegroundAdhanPlayer.shared.reschedule()
@@ -68,6 +72,27 @@ enum AppLifecycle {
             settings.endLocationRefinement()
             settings.endForegroundLocationCadence()
         }
+    }
+
+    /// The cold-launch half of the in-app adhan catch-up.
+    ///
+    /// `scenePhaseChanged` never runs for the FIRST active phase - `.onChange` has no previous value
+    /// to change from - and a cold launch is exactly the case this feature exists for: the adhan
+    /// notification sounded while the app was closed, and opening the app is what the user did next.
+    ///
+    /// Waits for today's prayer table to actually be in first. At launch `prayers` is whatever was
+    /// last persisted, which after midnight is YESTERDAY's day and holds no time inside the window,
+    /// so running this the instant the root appears would silently find nothing. Bounded, so a device
+    /// with no location never leaves the task hanging.
+    @MainActor
+    static func playMissedAdhanAtLaunch() async {
+        let settings = Settings.shared
+        let deadline = Date().addingTimeInterval(20)
+        while !Calendar.current.isDateInToday(settings.prayers?.day ?? .distantPast), Date() < deadline {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if Task.isCancelled { return }
+        }
+        ForegroundAdhanPlayer.shared.playMissedAdhan()
     }
 
     // MARK: - Al-Quran (playback persistence, Quran widgets, reading progress)

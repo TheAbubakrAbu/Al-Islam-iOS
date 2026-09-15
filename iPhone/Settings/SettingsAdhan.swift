@@ -2726,10 +2726,46 @@ extension Settings {
             .min(by: { $0.date < $1.date })
         else { return nil }
 
-        // Mirrors the at-time identifier built in makePrayerNotificationRequest (minutes == nil → "0").
-        let comps = Calendar.current.dateComponents([.year, .month, .day], from: next.date)
-        let id = "\(next.name)-0-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
-        return (next.date, next.name, id)
+        return (next.date, next.name, Self.foregroundAdhanNotificationID(name: next.name, date: next.date))
+    }
+
+    /// The most recent at-time adhan that has ALREADY passed, if it passed less than `window` ago.
+    ///
+    /// The mirror of `nextForegroundAdhan`, and the whole of the catch-up the in-app player needs: the
+    /// foreground player can only sound an adhan for a moment the app was OPEN for, so an adhan that
+    /// arrived as a notification while the app was closed was simply never heard in full - which is
+    /// exactly the case Silent Mode override exists for (Abu, 2026-09-14: "if the adhan notification
+    /// goes in and I open the app I would like it to play the adhan").
+    ///
+    /// Yesterday is included alongside today: the window is small, but a prayer three minutes before
+    /// midnight is still three minutes ago at 00:01, by which time `prayers` has rolled to the new day.
+    func recentForegroundAdhan(within window: TimeInterval, now: Date = Date()) -> (date: Date, name: String, notificationID: String)? {
+        guard window > 0, let prayerObj = prayers else { return nil }
+
+        var candidates: [(date: Date, name: String)] = []
+        for prayer in prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day) {
+            candidates.append((prayer.time, prayer.nameTransliteration))
+        }
+        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: prayerObj.day),
+           let list = getPrayerTimes(for: yesterday) {
+            for prayer in prayersIncludingOptional(list, for: yesterday) {
+                candidates.append((prayer.time, prayer.nameTransliteration))
+            }
+        }
+
+        guard let recent = candidates
+            .filter({ $0.date <= now && now.timeIntervalSince($0.date) < window && isForegroundAdhanEligible($0.name) })
+            .max(by: { $0.date < $1.date })
+        else { return nil }
+
+        return (recent.date, recent.name, Self.foregroundAdhanNotificationID(name: recent.name, date: recent.date))
+    }
+
+    /// The at-time identifier `makePrayerNotificationRequest` builds (minutes == nil → "0"), so a played
+    /// adhan can prune the notification that would otherwise sound for the same moment.
+    private static func foregroundAdhanNotificationID(name: String, date: Date) -> String {
+        let comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(name)-0-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
     }
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {

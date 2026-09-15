@@ -361,7 +361,44 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     case "hadithArabicFontSize": shared.hadithArabicFontSize = Double(kv[1]) ?? shared.hadithArabicFontSize
                     case "hadithEnglishFontSize": shared.hadithEnglishFontSize = Double(kv[1]) ?? shared.hadithEnglishFontSize
                     case "islamArabicFace": shared.islamArabicFace = IslamArabicFace(rawValue: kv[1]) ?? shared.islamArabicFace
+                    // The Arabic Alphabet screens' own controls: the bottom-bar size slider and the two
+                    // toggles on a letter's page. Same purpose as the font sizes above - the sliders and
+                    // toggles are not tappable from simctl, so this is the only way to ask "does the
+                    // screen actually redraw when this changes" without a person holding the device.
+                    case "arabicLetterSizeIndex": shared.arabicLetterSizeIndex = Int(kv[1]) ?? shared.arabicLetterSizeIndex
+                    case "hideEnglishInArabicLetters": shared.hideEnglishInArabicLetters = kv[1] == "1"
+                    case "quranicSukoonInLetterPractice": shared.quranicSukoonInLetterPractice = kv[1] == "1"
                     case "showDuha": shared.showDuha = kv[1] == "1"
+                    // The reader's riwayah chip, headlessly. Canonical tags ("Warsh an Nafi"); pass
+                    // "Hafs" to return to the default - a step with an empty value never reaches here
+                    // (the split above drops empty pieces).
+                    case "displayQiraah": shared.displayQiraah = kv[1]
+                    // The Arabic Text settings page's switches, flipped the way their Toggles flip them
+                    // (the bindings there carry `.animation(.easeInOut)`, so the write runs inside the
+                    // same transaction a tap would). For watching what the settings SHEET does when a
+                    // switch inside it moves: 2026-09-15, "Show Arabic Quran Text" off collapsed the sheet
+                    // on iPad/Mac.
+                    case "showArabicText", "beginnerMode", "showTajweedColors", "highlightAllahNames",
+                         "cleanArabicText", "removeArabicDots", "wordByWordMeanings", "wordByWordInline",
+                         "showQiraahDetails", "showTransliteration", "showEnglishSaheeh", "showEnglishMustafa":
+                        let on = kv[1] == "1"
+                        withAnimation(.easeInOut) {
+                            switch kv[0] {
+                            case "showArabicText": shared.showArabicText = on
+                            case "beginnerMode": shared.beginnerMode = on
+                            case "showTajweedColors": shared.showTajweedColors = on
+                            case "highlightAllahNames": shared.highlightAllahNames = on
+                            case "cleanArabicText": shared.cleanArabicText = on
+                            case "removeArabicDots": shared.removeArabicDots = on
+                            case "wordByWordMeanings": shared.wordByWordMeanings = on
+                            case "wordByWordInline": shared.wordByWordInline = on
+                            case "showQiraahDetails": shared.showQiraahDetails = on
+                            case "showTransliteration": shared.showTransliteration = on
+                            case "showEnglishSaheeh": shared.showEnglishSaheeh = on
+                            case "showEnglishMustafa": shared.showEnglishMustafa = on
+                            default: break
+                            }
+                        }
                     case "rawLastRead":
                         // Does a raw UserDefaults write show through the @AppStorage property? (Decides
                         // whether the last-read flush can coalesce its three writes into one publish.)
@@ -2291,10 +2328,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// real installed font, so any stray `.custom(_)` with it falls back to the system font anyway.
     static let systemArabicFontName = "AlIslamSystemArabicFont"
 
-    /// The Arabic Alphabet screens (ArabicView / ArabicLetterView) expose a size slider. This is its position
-    /// as an index into `arabicLetterDynamicTypeSizes`. The views apply the result as a Dynamic-Type *floor*
-    /// so text only ever grows from the device size, and the custom Arabic glyphs (built with `relativeTo:`)
-    /// grow along with every other label.
+    /// The Arabic Alphabet screens (ArabicView / ArabicLetterView) expose a size slider. This is its position:
+    /// the number of Dynamic-Type steps the Arabic reads ABOVE the size the screen already reads at (see
+    /// `arabicLetterTypeSize(steps:above:)`), applied as a floor so text only ever grows from the device
+    /// size, and the custom Arabic glyphs (built with `relativeTo:`) grow along with every other label.
     @AppStorage("arabicLetterSizeIndex") var arabicLetterSizeIndex: Int = 0
 
     /// Hides the English readings ("ba", "bi", "bu") under the tashkeel glyphs on the Arabic Alphabet screens, so
@@ -2307,15 +2344,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// the script on every letter would get old fast.
     @AppStorage("quranicSukoonInLetterPractice") var quranicSukoonInLetterPractice: Bool = false
 
-    /// Starts at `.xSmall`, not `.large`: a floor is a *minimum*, so anchoring it at `.large` silently forced
-    /// the alphabet up to the default text size for anyone whose system Dynamic Type is set smaller. The
-    /// lowest slider position must mean "whatever the device is set to", which only `.xSmall` guarantees.
-    static let arabicLetterDynamicTypeSizes: [DynamicTypeSize] =
-        [.xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2, .accessibility3]
+    /// How many steps the slider has (its range is `0...arabicLetterSizeSteps`).
+    ///
+    /// The slider used to index an ABSOLUTE table of sizes (`.xSmall` ... `.accessibility3`) applied as a
+    /// floor. A floor can only raise text that sits below it, so every position at or under the size the
+    /// screen already read at was a no-op: the first four on an iPhone at the default text size, the
+    /// first five on iPad and Mac (`regularIdiomTypeBoost` starts them at `.xLarge`), and the WHOLE
+    /// slider on an iPad whose Larger Text sat at the table's top (user report: "the slider doesn't
+    /// change it, at least on Mac/iPad"). The position is now RELATIVE: steps above whatever the view
+    /// reads at, so every position grows the Arabic on every device until the largest size is reached.
+    static let arabicLetterSizeSteps = 9
 
-    var arabicLetterDynamicTypeSize: DynamicTypeSize {
-        let sizes = Self.arabicLetterDynamicTypeSizes
-        return sizes[min(max(arabicLetterSizeIndex, 0), sizes.count - 1)]
+    /// The Dynamic-Type floor for one slider position: `steps` sizes above `base` (the size the view reads
+    /// at without the floor, from `@Environment(\.dynamicTypeSize)`), clamped to the largest size there is.
+    /// Position 0 is `base` itself, i.e. no floor at all - the alphabet then renders at whatever size the
+    /// device is set to, never smaller.
+    static func arabicLetterTypeSize(steps: Int, above base: DynamicTypeSize) -> DynamicTypeSize {
+        let all = DynamicTypeSize.allCases
+        let baseIndex = all.firstIndex(of: base) ?? all.firstIndex(of: .large) ?? 0
+        let clampedSteps = min(max(steps, 0), arabicLetterSizeSteps)
+        return all[min(baseIndex + clampedSteps, all.count - 1)]
     }
 
     /// The Islam tab's Arabic face (`nonQuranArabicFontName`), scaling with Dynamic Type so the Arabic

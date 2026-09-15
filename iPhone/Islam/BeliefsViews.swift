@@ -1895,6 +1895,13 @@ struct QiraatView: View {
 
                     Text(verbatim: "As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text, sent to all the major cities. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي), the consonantal skeleton of the mushaf (مُصحَف): dots and tashkeel did not yet exist in Arabic writing (nor did the Arabs need them), so the bare skeleton naturally supported the seven Ahruf, readable in every revealed way that matched the rasm.")
                         .font(.body)
+
+                    // Every reading carries a city, and the article named them only in passing on the
+                    // rows below (Abu, 2026-09-14: "qiraat view should also mention the city they were
+                    // developed in"). Cities here are the ones the app's own profiles ship in
+                    // `QiraatProfiles.masters`, so the prose and the rows can never disagree.
+                    Text(verbatim: "This is also why every Qiraah carries a city with it. Uthman (may Allah be pleased with him) sent a mushaf to each major centre and a teacher to recite by it, and the recitation of that centre settled around them, passing from teacher to student until one imam became its recognised authority. A Qiraah is named after that imam, but what he transmitted is the established reading of his city: Madinah (Nafi and, before him, his own teacher Abu Ja'far), Makkah (Ibn Kathir), Basrah (Abu Amr and, after him, Ya'qub), Damascus and greater Sham (Ibn Amir), and Kufah (Asim, Hamzah and al-Kisai, with Khalaf later carrying the Kufan tradition on from Baghdad).")
+                        .font(.body)
                 }
 
                 Section(header: ArticleHeader("AN ANALOGY: SEVEN NUMBERS, MANY PASSWORDS")) {
@@ -1967,6 +1974,9 @@ struct QiraatView: View {
                         .font(.body)
 
                     Text(verbatim: "The original seven were famously codified by Imam Abu Bakr Ibn Mujahid. Their Imams are: Nafi (Madinah), Ibn Kathir (Makkah), Abu Amr (Basra), Ibn Amir (Damascus), Asim (Kufa), Hamzah (Kufa), and al-Kisai (Kufa).")
+                        .font(.body)
+
+                    Text(verbatim: "The three that complete the ten, established by Imam Ibn al-Jazari, are: Abu Ja'far (Madinah), Ya'qub al-Hadrami (Basra), and Khalaf al-Bazzar (Baghdad, transmitting the Kufan tradition he received through Hamzah).")
                         .font(.body)
 
                     Text(verbatim: "Hafs is a riwayah from Asim, and Warsh is a riwayah from Nafi. So when people say Hafs or Warsh, they are naming a narration path within the canonical recitation tradition.")
@@ -2099,15 +2109,15 @@ struct QiraatView: View {
 
                         Text(articleMarkdown: "**Asim ibn Abi an-Najud (Qari of Kufah)**: narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
 
-                        Text(articleMarkdown: "**Hamzah az-Zayyat**: narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text(articleMarkdown: "**Hamzah az-Zayyat (Qari of Kufah)**: narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text(articleMarkdown: "**Ali ibn Hamzah al-Kisai**: narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text(articleMarkdown: "**Ali ibn Hamzah al-Kisai (Qari of Kufah)**: narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text(articleMarkdown: "**Ya‘qub al-Hadrami**: narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text(articleMarkdown: "**Ya‘qub al-Hadrami (Qari of Basrah)**: narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text(articleMarkdown: "**Khalaf al-Bazzar**: narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text(articleMarkdown: "**Khalaf al-Bazzar (Qari of Baghdad, in the Kufan tradition)**: narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text(articleMarkdown: "**Abu Ja‘far al-Madani**: narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text(articleMarkdown: "**Abu Ja‘far al-Madani (Qari of Madinah)**: narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
                     }
                     .font(.body)
                 }

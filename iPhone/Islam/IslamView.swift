@@ -707,6 +707,20 @@ struct IslamView: View {
         // recitation puts one identical bar in EACH column (the Quran tab's rule).
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .navigationTitle("Al-Islam")
+        // The same control, on the same setting, as the iPhone list's - the iPad simply never had it,
+        // so the toggle was unreachable on the one layout where it is shown as a sidebar.
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { settings.islamGridMode.toggle() }
+                } label: {
+                    Image(systemName: settings.islamGridMode ? "list.bullet" : "square.grid.2x2")
+                }
+                .accessibilityLabel(settings.islamGridMode ? "Show list" : "Show grid")
+                .tint(settings.accentColor.accent1)
+            }
+        }
     }
 
     @available(iOS 16.0, *)
@@ -848,32 +862,69 @@ struct IslamView: View {
     @available(iOS 16.0, *)
     @ViewBuilder
     private var resourcesSectionSplit: some View {
-        // The sidebar stays a list whatever the grid toggle says - a two-column grid crammed into a sidebar
-        // column reads worse than rows - but it shares the favorites and the context menu with the iPhone.
+        // The sidebar answers to the SAME grid toggle the iPhone list does (Abu, 2026-09-14: "Islam
+        // view doesn't have grid mode top right on iPad"). It was list-only on the reasoning that a
+        // grid crammed into a sidebar column reads worse than rows - true at three columns, which is
+        // why this one is two.
         let favorites = favoriteResources
         if !favorites.isEmpty {
             Section(header: Text("FAVORITES")) {
-                ForEach(favorites, id: \.self) { splitResourceLink($0) }
+                splitResourceItems(favorites)
             }
         }
 
         Section(header: Text("ISLAMIC RESOURCES")) {
-            ForEach(IslamDestination.available, id: \.self) { splitResourceLink($0) }
+            splitResourceItems(IslamDestination.available)
+        }
+    }
+
+    /// The sidebar's rows or tiles for one section. Rows keep `List(selection:)`'s own highlight;
+    /// tiles are inside a single list row, so the selection has to be drawn on the tile itself.
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private func splitResourceItems(_ items: [IslamDestination]) -> some View {
+        if settings.islamGridMode {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                ForEach(items, id: \.self) { item in
+                    Button {
+                        selectSplitResource(item)
+                    } label: {
+                        resourceGridTile(item)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .strokeBorder(settings.accentColor.color,
+                                                  lineWidth: selectedResource == item ? 2 : 0)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            // Same reasoning as the iPhone grid's inset: the section row carries ~16pt of its own.
+            .padding(.vertical, 1)
+        } else {
+            ForEach(items, id: \.self) { splitResourceLink($0) }
+        }
+    }
+
+    /// Selecting a sidebar resource, shared by the rows and the tiles: re-tapping the row that is
+    /// already selected pops its section back to the root instead of doing nothing.
+    @available(iOS 16.0, *)
+    private func selectSplitResource(_ value: IslamDestination) {
+        settings.hapticFeedback()
+        withAnimation(.easeInOut) {
+            if selectedResource == value {
+                islamDetailRefreshToken &+= 1
+            } else {
+                selectedResource = value
+            }
         }
     }
 
     @available(iOS 16.0, *)
     private func splitResourceLink(_ value: IslamDestination) -> some View {
         Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut) {
-                if selectedResource == value {
-                    // Re-tapping the selected row must still LAND: pop its section back to the root.
-                    islamDetailRefreshToken &+= 1
-                } else {
-                    selectedResource = value
-                }
-            }
+            // Re-tapping the selected row must still LAND - see `selectSplitResource`.
+            selectSplitResource(value)
         } label: {
             toolLabel(value.title, systemImage: value.systemImage)
         }
