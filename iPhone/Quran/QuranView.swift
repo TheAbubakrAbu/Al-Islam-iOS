@@ -2306,9 +2306,9 @@ struct QuranView: View {
         // accessibility text sizes, where the tiles simply take their own.
         let rowHeight = dynamicTypeSize.isAccessibilitySize ? nil : summaryTileHeights.values.max()
         // What the grid holds right now, resolved once so the Word of the Day can count it: with 1 or 3
-        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it sits as a row
-        // under the theme door instead (Abu, 2026-09-07) - never a fifth tile alone on its own row,
-        // never a hole beside three.
+        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it becomes a chip
+        // beside the Browse by Theme and History doors instead (a row above them from 2026-09-07 to
+        // 2026-09-16) - never a fifth tile alone on its own row, never a hole beside three.
         let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
         let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
         let lastListenedAyah = settings.saveLastListenedAyah ? lastListenedAyahPair : nil
@@ -2401,19 +2401,6 @@ struct QuranView: View {
                     .transition(.opacity)
             }
 
-            // The Word of the Day's row form, ABOVE the doors (Abu, 2026-09-07), when the grid above
-            // is already even. A Button, not a link, so it carries no chevron; same push as the tile.
-            if !wordFillsGrid, let word, let wordSurah {
-                Button {
-                    settings.hapticFeedback()
-                    openWordOfDay = true
-                } label: {
-                    WordOfDayRow(word: word, surahName: wordSurah.nameTransliteration)
-                        .equatable()
-                        .contentShape(Rectangle())
-                }
-            }
-
             // The doors, side by side on one row (2026-09-16: two full rows were most of the summary's
             // height). Each chip is its own chevron-less link inside the row (a plain NavigationLink
             // per chip drew a disclosure chevron after each); the screens introduce themselves in
@@ -2423,6 +2410,19 @@ struct QuranView: View {
             // mushaf auto-open.) A real push, not a sheet: on iPhone it takes the whole screen, and in
             // the iPad/Mac split it pushes in the LEFT column, leaving the reader on the right.
             HStack(spacing: 10) {
+                // The Word of the Day joins the doors as a third chip when the grid above is already
+                // even (Abu, 2026-09-16; it was a full row above them). A Button, not a link, so it
+                // carries no chevron; the same push as the tile.
+                if !wordFillsGrid, word != nil {
+                    Button {
+                        settings.hapticFeedback()
+                        openWordOfDay = true
+                    } label: {
+                        summaryDoorChip(title: SummaryWordTile.title, systemImage: "character.book.closed.fill")
+                    }
+                    .buttonStyle(.plain)
+                }
+
                 if ThematicTopicsStore.isBundled {
                     summaryDoorChip(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
                         .chevronlessLink { themesBrowseDestination }
@@ -2435,8 +2435,9 @@ struct QuranView: View {
         }
     }
 
-    /// A door under the summary tiles: a glass chip with the accent symbol and the name, half a row
-    /// wide, so the two doors share one line. The screen it opens introduces itself in its own first
+    /// A door under the summary tiles: a glass chip with the accent symbol and the name, a half or a
+    /// third of the row wide, so the doors (and the Word of the Day's chip, when it isn't a tile) share
+    /// one line. The screen it opens introduces itself in its own first
     /// section.
     private func summaryDoorChip(title: String, systemImage: String) -> some View {
         HStack(spacing: 6) {
@@ -2444,15 +2445,18 @@ struct QuranView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
 
+            // Two lines, so three chips on an iPhone row keep their whole names ("Word of the
+            // Day", "Browse by Theme" ran to an ellipsis on one line); two chips still take one.
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .multilineTextAlignment(.leading)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
         }
         .padding(.vertical, 9)
         .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .conditionalGlassEffect(clear: true, rectangle: true)
         .contentShape(Rectangle())
     }
