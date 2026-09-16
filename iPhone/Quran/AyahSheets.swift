@@ -216,10 +216,16 @@ struct AyahPreviewCard: View {
     let surah: Surah
     let ayahs: [Ayah]
 
-    /// Show the ayah as PLAIN standard text - full tashkeel and dots, no tajweed coloring, no beginner
-    /// spacing - while the reader has any of those shaping it (user rule). Card-local; the reader keeps
-    /// its own.
+    /// Show the ayah as PLAIN standard text - full tashkeel and dots, no tajweed coloring, no Allah
+    /// highlight, no beginner spacing - while the reader has any of those shaping it (user rule).
+    /// Card-local; the reader keeps its own. The Allah highlight joined the list on 2026-09-16 (Abu:
+    /// "choosing plain text ... doesn't get rid of highlight Allah").
+    #if DEBUG
+    /// "-previewPlainText" opens the card already in plain text (the toggle is not tappable headlessly).
+    @State private var showPlainText = ProcessInfo.processInfo.arguments.contains("-previewPlainText")
+    #else
     @State private var showPlainText = false
+    #endif
 
     /// The tapped word's card (the Hafs gloss + tajweed-rules card, or the riwayah word card), presented
     /// OVER the sheet this card sits in, so closing it returns here. `item:` so tapping a different word
@@ -319,7 +325,7 @@ struct AyahPreviewCard: View {
         let tajweedCanPaint = settings.showArabicText
             && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
         let modified = choices.hideTashkeel || choices.hideDots || choices.beginner
-            || (choices.tajweed && tajweedCanPaint)
+            || (choices.tajweed && tajweedCanPaint) || choices.highlightAllah
 
         return Piece(
             ayah: ayah,
@@ -329,7 +335,7 @@ struct AyahPreviewCard: View {
                 ayahNumberArabic: ayah.idArabic,
                 glosses: glosses,
                 alwaysTappable: (settings.isHafsDisplay && glosses.isEmpty && !beginner) || wordTag != nil,
-                highlightAllahNames: choices.highlightAllah
+                highlightAllahNames: choices.highlightAllah && !plain
             ),
             glosses: glosses,
             riwayahWordTag: wordTag,
@@ -397,9 +403,9 @@ struct AyahPreviewCard: View {
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
-            // Plain standard text on demand (user rule): with tajweed colors, hidden tashkeel, hidden
-            // dots or beginner spacing shaping the run, one tap shows the ayah exactly as written -
-            // full marks, no coloring - without touching the reader's settings.
+            // Plain standard text on demand (user rule): with tajweed colors, the Allah highlight, hidden
+            // tashkeel, hidden dots or beginner spacing shaping the run, one tap shows the ayah exactly
+            // as written - full marks, no coloring - without touching the reader's settings.
             if anyModified {
                 Button {
                     settings.hapticFeedback()

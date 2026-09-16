@@ -77,15 +77,38 @@ struct SolarWindow {
     }
 }
 
+/// Where the skyline's ground runs (see `SolarArcShape.ground`): the horizon's y, and how far under
+/// it the night's path dips.
+struct SkyGround {
+    let y: CGFloat
+    let depth: CGFloat
+}
+
 /// The dashed sun path. Drawn as a polyline of the normalized curve, mapped into the band between
 /// `topInset` and `bottomInset` so the peak and trough land where the card wants them (see
-/// `SkyCard.arcTopInset` for how that band is chosen).
+/// `SkyCard.arcTopInset` for how that band is chosen). With a `ground` the mapping is pinned instead:
+/// the horizon crossing sits on the ground's y whatever the season, the day's arc rises from there to
+/// the peak at `topInset`, and the night's path dips `depth` under the ground (as far as the day rises,
+/// so the line is a full wave: "a real solar graph going all the way down and up"). The seasons then
+/// show in how wide the day's arc is (where sunrise and sunset fall), not in how the line rides the band.
 private struct SolarArcShape: Shape {
     let curve: SolarCurve
     let topInset: CGFloat
     let bottomInset: CGFloat
+    var ground: SkyGround? = nil
 
     func yPosition(of height: Double, in rect: CGRect) -> CGFloat {
+        if let ground {
+            let horizon = curve.horizon
+            if height >= horizon {
+                // 0 at the horizon, 1 at the peak.
+                let up = (height - horizon) / max(1 - horizon, 0.0001)
+                return ground.y - CGFloat(up) * (ground.y - (rect.minY + topInset))
+            }
+            // 0 at the horizon, 1 at the trough.
+            let down = (horizon - height) / max(horizon + 1, 0.0001)
+            return ground.y + CGFloat(down) * ground.depth
+        }
         let usable = rect.height - topInset - bottomInset
         return rect.maxY - bottomInset - CGFloat((height + 1) / 2) * usable
     }
@@ -172,7 +195,7 @@ struct SkyView: View {
         let _ = ChangePrinter.hit(Self.self)
         let interval: TimeInterval = appearance.isReducedTier ? 300 : 60
         TimelineView(.periodic(from: clockAnchor, by: interval)) { context in
-            SkyCard(now: Self.quantizedToMinute(context.date), isOnScreen: isOnScreen)
+            SkyCard(now: Self.effectiveNow(context.date), isOnScreen: isOnScreen)
         }
         // The two list themes give a row different built-in margins, so the card has to make up the
         // difference itself. Grouped rows already carry the list's 20pt margin - adding any more is what
@@ -193,10 +216,31 @@ struct SkyView: View {
     private static func quantizedToMinute(_ date: Date) -> Date {
         Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
     }
+
+    private static func effectiveNow(_ date: Date) -> Date {
+        #if DEBUG
+        if let debugNow { return debugNow }
+        #endif
+        return quantizedToMinute(date)
+    }
+
+    #if DEBUG
+    /// "-skyNow HH:mm": the card drawn as if it were that time today (a day scene at night, the moon
+    /// at noon), for screenshot runs. The prayer columns and the countdown keep the live clock; the
+    /// widget gallery's entry takes the same moment.
+    static let debugNow: Date? = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-skyNow"), arguments.indices.contains(index + 1) else { return nil }
+        let parts = arguments[index + 1].split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return nil }
+        return Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: Date())
+    }()
+    #endif
 }
 
 /// The sky card's drawing, for one moment `now`. See `SkyView`.
 struct SkyCard: View {
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var settings = Settings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
@@ -219,6 +263,9 @@ struct SkyCard: View {
     /// for why the card's height is the lever that closes that gap.
     private let height: CGFloat = 200
 
+    /// The coordinate space `PrayerCountdown` measures its digits in (see `SkyDigitsTopKey`).
+    static let groundSpace = "SkyCard.ground"
+
     /// The arc's vertical band, as insets from the card's top and bottom edges. The card is three bands: the
     /// prayer columns end about 69 pt down, the countdown block is bottom-anchored (a flexible `Spacer`
     /// above it), and the arc lives in between: peak at 68, trough at `height - arcBottomInset`.
@@ -235,8 +282,28 @@ struct SkyCard: View {
     /// `arcBottomInset` also sets the floor - the gap at f = 0 is `arcBottomInset - 91` - so it must not
     /// drop much below 88 or the line grazes the caption at Arctic midsummer. Re-derive all three numbers
     /// whenever the columns or the countdown block change height.
+    ///
+    /// All of that is the PLAIN card's geometry (skyline off). With the skyline on the horizon is the
+    /// ground the pyramids and the mosque stand on, and it is pinned to the gap between the
+    /// countdown's "TIME LEFT" caption and its digits (`digitsTop`, measured through
+    /// `SkyDigitsTopKey`): the caption sits in the sky between the pyramids and the mosque, the sun
+    /// rises out of the pyramids and sets behind the mosque, the day's arc always peaks at
+    /// `arcTopInset`, and the night's path dips as far under the ground as the day rises above it,
+    /// behind the digits and the bar (Abu, 2026-09-16: first "at the countdown", then, when that
+    /// pinned the night to a shallow dip, "a real solar graph going all the way down and up", then
+    /// "in between Time Left and the countdown").
     private let arcTopInset: CGFloat = 68
     private let arcBottomInset: CGFloat = 88
+
+    /// The top of the countdown's digits in the card's coordinate space, as `PrayerCountdown` reports
+    /// it; nil until the first layout. The estimate stands in for that first frame so the ground does
+    /// not jump: 200 less the bottom padding, the footer line, its top padding, the bar and the digits.
+    @State private var digitsTop: CGFloat?
+    private static let estimatedDigitsTop: CGFloat = 122
+    /// The ground line sits this far above the digits, in the 2 pt gap under the caption.
+    private static let groundAir: CGFloat = 1
+    /// The night's trough never dips closer than this to the card's bottom edge.
+    private static let troughInset: CGFloat = 8
 
     // MARK: Derived state
 
@@ -307,21 +374,24 @@ struct SkyCard: View {
 
         let skyPeriod = settings.skyPeriodName(at: displayedDate)
         let starOpacity = SkyStars.opacity(forPeriod: skyPeriod)
+        let skyColors = settings.skyGradientColors(forPrayer: skyPeriod)
 
         ZStack {
             LinearGradient(
-                colors: settings.skyGradientColors(forPrayer: skyPeriod),
+                colors: skyColors,
                 startPoint: .top,
                 endPoint: .bottom
             )
-            // Re-tint both when the period changes and when the user edits that prayer's colors.
-            .animation(.easeInOut(duration: 0.4), value: skyPeriod)
+            // Re-tint both when the period changes and when the user edits that prayer's colors. The
+            // period's change takes a leisurely second so the first paint, and the turn at each prayer,
+            // ease between the two gradients instead of snapping (Abu, 2026-09-16: "smoother").
+            .animation(.easeInOut(duration: 1.0), value: skyPeriod)
             .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
 
             StarFieldView(opacity: starOpacity, paused: !isOnScreen)
                 .animation(.easeInOut(duration: 0.6), value: starOpacity)
 
-            arc(curve: curve, window: window)
+            arc(curve: curve, window: window, skyColors: skyColors)
 
             // Legibility scrim, weighted to the two text bands. A soft gradient rather than a hard seam: it
             // reads as dusk gathering at the horizon, and it keeps white text readable over whichever two
@@ -339,6 +409,10 @@ struct SkyCard: View {
             .allowsHitTesting(false)
 
             content
+        }
+        .coordinateSpace(name: Self.groundSpace)
+        .onPreferenceChange(SkyDigitsTopKey.self) { top in
+            if top != digitsTop { digitsTop = top }
         }
         .overlay(alignment: .top) { scrubReadout }
         .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
@@ -389,6 +463,9 @@ struct SkyCard: View {
             // button takes the whole line while it sounds.
             footer
                 .padding(.top, 8)
+                // The stop button slides up and fades in as the adhan starts and out as it stops; the
+                // `if` swap alone cut straight between the two (Abu, 2026-09-16).
+                .animation(.easeInOut(duration: 0.35), value: adhanPlayer.playingPrayerName)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -474,9 +551,7 @@ struct SkyCard: View {
             // Quantized to the hour: the moon's look doesn't change measurably within one, and a stable
             // date lets SwiftUI diff MoonPhaseView out (instead of re-running the ephemeris trig twice
             // per second while the card ticks).
-            let moonReference = scrubber.scrubbedDate ?? selectedDay.date ?? now
-            let moonDate = Date(timeIntervalSinceReferenceDate:
-                (moonReference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
+            let moonDate = self.moonDate
             let moonPhase = MoonPhase.on(moonDate)
             HStack(spacing: 6) {
                 MoonPhaseView(date: moonDate, diameter: 18)
@@ -488,6 +563,13 @@ struct SkyCard: View {
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.75))
             }
+    }
+
+    /// The moment the moon is drawn for (the footer's glyph and, at night, the one on the arc): the
+    /// dragged moment, else the browsed day, else now, quantized to the hour (see `moonRow`).
+    private var moonDate: Date {
+        let reference = scrubber.scrubbedDate ?? selectedDay.date ?? now
+        return Date(timeIntervalSinceReferenceDate: (reference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
     }
 
     /// The moment (and prayer) being previewed while the sun is dragged. It rides at the TOP of the card, over
@@ -519,11 +601,19 @@ struct SkyCard: View {
 
 
 
-    private func arc(curve: SolarCurve, window: SolarWindow) -> some View {
+    private func arc(curve: SolarCurve, window: SolarWindow, skyColors: [Color]) -> some View {
         GeometryReader { geo in
             let rect = CGRect(origin: .zero, size: geo.size)
             let displayedFraction = window.fraction(of: displayedDate)
-            let shape = SolarArcShape(curve: curve, topInset: arcTopInset, bottomInset: arcBottomInset)
+            let showsScene = settings.showSkyScene
+            // The skyline pins the ground between "TIME LEFT" and the digits (see `arcTopInset`),
+            // and the night dips as deep as the day climbs, short of the card's bottom edge.
+            let groundY = (digitsTop ?? Self.estimatedDigitsTop) - Self.groundAir
+            let ground = showsScene
+                ? SkyGround(y: groundY,
+                            depth: min(groundY - (rect.minY + arcTopInset), rect.maxY - Self.troughInset - groundY))
+                : nil
+            let shape = SolarArcShape(curve: curve, topInset: arcTopInset, bottomInset: arcBottomInset, ground: ground)
             let horizonY = shape.yPosition(of: curve.horizon, in: rect)
             let sunHeight = curve.height(at: displayedFraction)
             let sunPoint = CGPoint(
@@ -546,6 +636,41 @@ struct SkyCard: View {
                     path.addLine(to: CGPoint(x: rect.maxX, y: horizonY))
                 }
                 .stroke(Color.white.opacity(0.45), lineWidth: 1)
+
+                // The sun, on its path day and night. With the skyline on it sets behind the ground
+                // and rises out of it (only the sky above the horizon shows it), and it is drawn UNDER
+                // the skyline so it sinks behind the mosque rather than in front of it; the plain card
+                // keeps the dimmed underground sun it always had.
+                let sunFill = sunColor(height: sunHeight, horizon: curve.horizon)
+                let sun = Circle()
+                    .fill(sunFill)
+                    .frame(width: 20, height: 20)
+                    .softShadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
+                    .position(sunPoint)
+                if showsScene {
+                    sun.mask(alignment: .top) {
+                        Rectangle().frame(height: max(horizonY - rect.minY, 0))
+                    }
+                } else {
+                    sun.opacity(isUp ? 1 : 0.45)
+                }
+
+                // The skyline along the ground (SkyScene.swift): the pyramids under CURRENT and the
+                // mosque under UPCOMING, in silhouette on the ground the line draws, dark over a day
+                // sky and pale over the night's. Over the sun and the stars, under the dots. The dark
+                // and the pale skylines are both drawn and crossfaded, because a Canvas cannot animate
+                // its colour: the flip used to cut straight from black to white at Isha (Abu,
+                // 2026-09-16), now it takes the same second the sky behind it takes to re-tint (a
+                // first cut of two seconds was "too slow").
+                if showsScene {
+                    let day = SkyScene.dayFactor(overSky: skyColors, at: horizonY / max(rect.height, 1))
+                    SkySceneView(horizonY: horizonY, color: SkyScene.silhouette(day: 1))
+                        .opacity(day)
+                        .animation(.easeInOut(duration: 1.0), value: day)
+                    SkySceneView(horizonY: horizonY, color: SkyScene.silhouette(day: 0))
+                        .opacity(1 - day)
+                        .animation(.easeInOut(duration: 1.0), value: day)
+                }
 
                 // A dot on the arc for each mandatory prayer (Jumuah and the traveling combined pairs
                 // included), so the day's structure is readable off the curve itself - and scrubbing to a
@@ -570,13 +695,14 @@ struct SkyCard: View {
                     .stroke(Color.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
                 }
 
-                let sunFill = sunColor(height: sunHeight, horizon: curve.horizon)
-                Circle()
-                    .fill(sunFill)
-                    .frame(width: 20, height: 20)
-                    .softShadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
-                    .position(sunPoint)
-                    .opacity(isUp ? 1 : 0.45)
+                // Through the night the moon, at its true phase, is the marker on the path: it rides
+                // the night's dip of the wave exactly as the sun rides the day's, and follows a drag
+                // the same way (Abu, 2026-09-16: on the graph, not parked at the top of the sky). It
+                // is drawn OVER the skyline's ground band so it never fades into the ground.
+                if showsScene, !isUp {
+                    MoonPhaseView(date: moonDate, diameter: 20)
+                        .position(sunPoint)
+                }
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(in: rect, window: window))

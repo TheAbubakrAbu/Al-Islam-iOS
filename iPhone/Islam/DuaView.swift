@@ -606,7 +606,8 @@ struct DuaView: View {
     }
 }
 
-private struct DuaCollectionView: View {
+/// Internal, not private: the Today screen (DailyHub.swift) opens the Dua of the Day's category here.
+struct DuaCollectionView: View {
     @ObservedObject var settings = Settings.shared
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -1150,6 +1151,13 @@ final class HisnDuasStore: @unchecked Sendable {
 
     static let isBundled: Bool = packURL != nil
 
+    /// The library if it is in memory, else nil: for the main thread, which must never parse (the
+    /// Reminder of the Day resolver kicks the parse off-main itself and asks again when it lands).
+    var libraryIfLoaded: Library? {
+        lock.lock(); defer { lock.unlock() }
+        return library
+    }
+
     func loaded() -> Library? {
         lock.lock()
         if let library { lock.unlock(); return library }
@@ -1179,6 +1187,26 @@ final class HisnDuasStore: @unchecked Sendable {
         }
     }
 
+    /// The source's "transliteration" is, for some twenty of the 268 entries, not a transliteration
+    /// at all but a second English rendering with the Arabic phrases transliterated inline ("The most
+    /// excellent invocation is: Alhamdulillah and the most excellent words of remembrance are: La
+    /// ilaha illallah"), so the Dua screen and the Reminder of the Day showed the same text twice
+    /// (Abu, 2026-09-16: "why are there 2 of the same texts?"). One is dropped when, bracketed notes
+    /// aside, it carries English function words and most of its words also appear in the translation.
+    static func genuineTransliteration(_ transliteration: String, translation: String) -> String {
+        let bare = transliteration.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
+        let words = bare.lowercased().components(separatedBy: CharacterSet.letters.inverted).filter { $0.count >= 3 }
+        guard !words.isEmpty else { return transliteration }
+        let english: Set<String> = ["the", "and", "for", "you", "who", "when", "whoever", "said", "say",
+                                    "then", "should", "his", "him", "will", "that", "this", "one", "any",
+                                    "with", "from", "are", "was", "used", "not", "your"]
+        let functionWords = words.filter { english.contains($0) }.count
+        guard functionWords >= 3 else { return transliteration }
+        let translated = Set(translation.lowercased().components(separatedBy: CharacterSet.letters.inverted))
+        let shared = words.filter { translated.contains($0) }.count
+        return Double(shared) / Double(words.count) > 0.5 ? "" : transliteration
+    }
+
     private static func parse(_ json: Data) -> Library? {
         guard let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] else { return nil }
         let categories = (root["categories"] as? [[String: Any]] ?? []).compactMap { row -> Category? in
@@ -1197,7 +1225,8 @@ final class HisnDuasStore: @unchecked Sendable {
             guard let id = row["id"] as? String, let arabic = row["arabic"] as? String, !arabic.isEmpty else { return nil }
             return Entry(id: id, number: row["number"] as? String ?? "", categoryID: row["category"] as? String ?? "",
                          title: row["title"] as? String ?? "", arabic: arabic,
-                         transliteration: row["transliteration"] as? String ?? "",
+                         transliteration: Self.genuineTransliteration(row["transliteration"] as? String ?? "",
+                                                                     translation: row["translation"] as? String ?? ""),
                          translation: row["translation"] as? String ?? "", notes: row["notes"] as? String ?? "",
                          benefits: row["benefits"] as? String ?? "", repeatCount: row["repeat"] as? Int ?? 1,
                          reference: row["reference"] as? String ?? "",
@@ -1503,7 +1532,12 @@ struct HisnDuaOfTheDayCard: View {
                 if let category {
                     Text(category.label)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
+                // Everything of the day on one screen (2026-09-16): the door every daily card carries,
+                // chevron-less so the row keeps its edge clean.
+                DailyHubDoorLabel()
+                    .chevronlessLink { DailyHubView() }
             }
             .font(.caption2.weight(.bold))
             .foregroundColor(settings.accentColor.color)

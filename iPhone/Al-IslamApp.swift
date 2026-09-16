@@ -667,6 +667,12 @@ private struct MainTabView: View {
     // The broad Quran warm moved to `QuranLaunchWarmup.prewarmAll()` in the Quran module (MushafReader.swift);
     // the `.task` above calls it directly.
 
+    @available(iOS 18.0, *)
+    private var settingsTabRole: TabRole {
+        if #available(iOS 27.0, *) { return .prominent }
+        return .search
+    }
+
     @ViewBuilder
     private var tabs: some View {
         if #available(iOS 18.0, *) {
@@ -687,7 +693,10 @@ private struct MainTabView: View {
                     IslamView()
                 }
 
-                Tab("Settings", systemImage: "gearshape", value: AppTab.settings, role: .search) {
+                // Settings stands alone at the trailing end of the bar. iOS 26 gave that place to the
+                // search role; iOS 27 keeps the search role in the row and moved the standalone slot
+                // to `.prominent` (Abu, 2026-09-16: the tab had slid back into the row).
+                Tab("Settings", systemImage: "gearshape", value: AppTab.settings, role: settingsTabRole) {
                     SettingsView()
                 }
             }

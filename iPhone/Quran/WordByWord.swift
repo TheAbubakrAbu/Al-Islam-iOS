@@ -1975,6 +1975,11 @@ private struct WordAcrossRiwayatSection: View {
 
     @State private var readings: [WordRiwayahReading] = []
     @State private var cells: [WordQiraahCell] = []
+    /// The comparison runs OFF the main thread (2026-09-16: a cold Al-Baqarah cost 550 ms on it, paid
+    /// inside the sheet's own appearance, so "double tapping a word takes a while to open the sheet").
+    /// The card opens at once; this block fills in when the comparison lands.
+    @State private var comparing = false
+    @State private var compareTask: Task<Void, Never>?
 
     private var riwayahCount: Int { readings.reduce(0) { $0 + $1.options.count } }
 
@@ -2025,29 +2030,71 @@ private struct WordAcrossRiwayatSection: View {
                     )
                 }
 
+                // Keyed on the cells so the uniform height starts over for every word (a height
+                // measured for one word must not carry to the next).
                 WordByQiraahGrid(cells: cells)
+                    .id(cells.map(\.id).joined(separator: "|"))
+            } else if comparing {
+                Divider()
+                    .padding(.bottom, 4)
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Comparing the riwayat…")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(.top, 4)
-        .onAppear {
-            guard readings.isEmpty else { return }
-            guard let context = WordAcrossRiwayat.context(
-                surah: surah.id, ayahNumber: ayah.id, tag: tag,
-                tokenIndex: tokenIndex, sourceTokens: sourceTokens
-            ) else { return }
-            readings = WordAcrossRiwayat.readings(context, word: word)
-            cells = WordAcrossRiwayat.byQiraah(context, word: word)
-            #if DEBUG
-            // Headless verification: the block sits below the fold of the Hafs card, so its data
-            // goes to the console too.
-            print("WORD CARD \(surah.id):\(ayah.id) [\(tag.isEmpty ? "Hafs" : tag)] \(word): \(summary)")
-            for reading in readings { print("  \(reading.word) <- \(reading.names)") }
-            for cell in cells {
-                let says = cell.readings.map { "\($0.rawiNames): \($0.word)" }.joined(separator: " | ")
-                print("  [\(cell.teacher)\(cell.isBeta ? " beta" : "")] \(says)")
+        .onAppear(perform: compare)
+        .onDisappear {
+            compareTask?.cancel()
+            compareTask = nil
+        }
+    }
+
+    /// The comparison, detached: the alignment of this surah for every riwayah (the cold cost, cached
+    /// for the session behind `QiraahComparison`'s lock), then the word's counterpart in each.
+    private func compare() {
+        guard readings.isEmpty, compareTask == nil else { return }
+        comparing = true
+        let surahID = surah.id
+        let ayahNumber = ayah.id
+        let tag = tag
+        let tokenIndex = tokenIndex
+        let sourceTokens = sourceTokens
+        let word = word
+        compareTask = Task.detached(priority: .userInitiated) {
+            let context = WordCardTrace.measure("riwayat.context") {
+                WordAcrossRiwayat.context(surah: surahID, ayahNumber: ayahNumber, tag: tag,
+                                          tokenIndex: tokenIndex, sourceTokens: sourceTokens)
             }
-            fflush(stdout)
-            #endif
+            let found: (readings: [WordRiwayahReading], cells: [WordQiraahCell])? = context.map { context in
+                (WordCardTrace.measure("riwayat.readings") { WordAcrossRiwayat.readings(context, word: word) },
+                 WordCardTrace.measure("riwayat.byQiraah") { WordAcrossRiwayat.byQiraah(context, word: word) })
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    comparing = false
+                    if let found {
+                        readings = found.readings
+                        cells = found.cells
+                    }
+                }
+                #if DEBUG
+                // Headless verification: the block sits below the fold of the Hafs card, so its data
+                // goes to the console too.
+                print("WORD CARD \(surahID):\(ayahNumber) [\(tag.isEmpty ? "Hafs" : tag)] \(word): \(summary)")
+                for reading in readings { print("  \(reading.word) <- \(reading.names)") }
+                for cell in cells {
+                    let says = cell.readings.map { "\($0.rawiNames): \($0.word)" }.joined(separator: " | ")
+                    print("  [\(cell.teacher)\(cell.isBeta ? " beta" : "")] \(says)")
+                }
+                fflush(stdout)
+                #endif
+            }
         }
     }
 }
@@ -2062,11 +2109,12 @@ private struct WordByQiraahGrid: View {
     let cells: [WordQiraahCell]
 
     /// Every cell the height of the tallest (Abu, 2026-09-07: "make sure each grid is the same
-    /// height"): a qiraah whose two rawis disagree stacks two words where the others show one, and
-    /// the grid came out ragged. Each cell reports its natural height through a preference, the
-    /// maximum goes back to all of them as a minimum height, and the words center in whatever room
-    /// that leaves. Stable by construction: a cell only ever reports the larger of its own content
-    /// and the height it was already given, so the maximum settles after one pass.
+    /// height"): each cell reports its natural height through a preference, the maximum goes back
+    /// to all of them as a minimum height, and the words center in whatever room that leaves. Stable
+    /// by construction: a cell only ever reports the larger of its own content and the height it was
+    /// already given, so the maximum settles after one pass. A qiraah whose two rawis disagree used
+    /// to stack its two words, which made EVERY cell two words tall (Abu, 2026-09-16: "sometimes each
+    /// grid is too big"); the two now sit side by side, so a cell is always one word tall.
     @State private var uniformHeight: CGFloat = 0
 
     private let columns = [GridItem(.adaptive(minimum: 140), spacing: 8, alignment: .top)]
@@ -2133,26 +2181,29 @@ private struct WordByQiraahGrid: View {
                     .minimumScaleFactor(0.75)
             }
             Spacer(minLength: 0)
-            ForEach(cell.readings) { reading in
-                VStack(alignment: .center, spacing: 0) {
-                    // Accent = not Hafs's spelling, in every cell alike; the reader's own qiraah is
-                    // told by the cell's tinted background and name, never by the word's color.
-                    Text(reading.word)
-                        .font(Font.arabic(
-                            settings.quranArabicFontName(for: reading.options.first?.tag),
-                            size: cellFontSize
-                        ))
-                        .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                        .foregroundColor(reading.differsFromHafs ? settings.accentColor.color : .primary)
-                        .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
-                    Text(reading.rawiNames)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(cell.readings) { reading in
+                    VStack(alignment: .center, spacing: 0) {
+                        // Accent = not Hafs's spelling, in every cell alike; the reader's own qiraah is
+                        // told by the cell's tinted background and name, never by the word's color.
+                        Text(reading.word)
+                            .font(Font.arabic(
+                                settings.quranArabicFontName(for: reading.options.first?.tag),
+                                size: cellFontSize
+                            ))
+                            .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                            .foregroundColor(reading.differsFromHafs ? settings.accentColor.color : .primary)
+                            .multilineTextAlignment(.center)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
+                        Text(reading.rawiNames)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             Spacer(minLength: 0)
@@ -2202,6 +2253,34 @@ private extension View {
     }
 }
 
+/// "-wordCardTrace": stamps and per-piece timings for a word card on the console - the request, the
+/// first body's pieces, the appear, the across-the-riwayat block - so a "double tap takes a while to
+/// open the sheet" report (Abu, 2026-09-16) is measured, not guessed. Off (a bool check) in release.
+enum WordCardTrace {
+    static let enabled: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-wordCardTrace")
+        #else
+        return false
+        #endif
+    }()
+
+    static func stamp(_ what: String) {
+        guard enabled else { return }
+        print(String(format: "WORDCARD %@ t=%.3f", what, CFAbsoluteTimeGetCurrent()))
+        fflush(stdout)
+    }
+
+    static func measure<T>(_ what: String, _ work: () -> T) -> T {
+        guard enabled else { return work() }
+        let start = CFAbsoluteTimeGetCurrent()
+        let result = work()
+        print(String(format: "WORDCARD %@ %.1f ms", what, (CFAbsoluteTimeGetCurrent() - start) * 1000))
+        fflush(stdout)
+        return result
+    }
+}
+
 /// What one word means. Deliberately small: the word, its meaning, where it sits, and the two things
 /// worth doing with it.
 struct WordMeaningSheet: View {
@@ -2224,7 +2303,9 @@ struct WordMeaningSheet: View {
     /// `position` counts DISPLAY tokens, and clean mode deletes ornament-only tokens (the ۞ mark)
     /// outright - so the display index is walked over the raw tokens, skipping any token that
     /// vanishes under cleaning, exactly the rule `WordByWordStore` aligns glosses with.
-    private var rawWord: (text: String, tokenIndex: Int, range: NSRange)? {
+    private typealias LocatedWord = (text: String, tokenIndex: Int, range: NSRange)
+
+    private var rawWord: LocatedWord? {
         let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
         let ranges = WordTokens.ranges(in: rawText)
         let tokens = WordTokens.tokens(in: rawText)
@@ -2246,9 +2327,9 @@ struct WordMeaningSheet: View {
     }
 
     /// The word painted with its tajweed colors, when tajweed is on and paints anything here.
-    private var tajweedStyledWord: AttributedString? {
+    private func tajweedStyledWord(_ located: LocatedWord?) -> AttributedString? {
         guard settings.showTajweedColors, settings.isHafsDisplay,
-              let located = rawWord,
+              let located,
               let styled = TajweedStore.shared.attributedText(
                   surah: surah.id, ayah: ayah.id, text: located.text
               ) else { return nil }
@@ -2266,28 +2347,36 @@ struct WordMeaningSheet: View {
     /// Resolved here rather than threaded through the tap payload: `rawWord` already maps the display
     /// position onto the RAW token index, and the raw tokens are exactly what the pack is built on, so
     /// the two layers index identically.
-    private var transliteration: String {
-        guard let located = rawWord,
+    private func transliteration(_ located: LocatedWord?) -> String {
+        guard let located,
               let latin = WordByWordStore.shared.transliterations(surah: surah.id, ayah: ayah.id),
               latin.indices.contains(located.tokenIndex) else { return "" }
         return latin[located.tokenIndex]
     }
 
     /// The visible tajweed rules inside this word, in legend order.
-    private var wordRules: [TajweedLegendCategory] {
-        guard settings.showTajweedColors, settings.isHafsDisplay, let located = rawWord else { return [] }
+    private func wordRules(_ located: LocatedWord?) -> [TajweedLegendCategory] {
+        guard settings.showTajweedColors, settings.isHafsDisplay, let located else { return [] }
         return TajweedStore.shared.ruleCategories(
             surah: surah.id, ayah: ayah.id, text: located.text, wordRange: located.range
         )
     }
 
     var body: some View {
-        NavigationView {
+        // Each piece resolved ONCE per body: `rawWord` used to be re-walked by every property that
+        // needed it (the styled word, the transliteration, the rules, the morphology, the riwayat).
+        let located = WordCardTrace.measure("body.rawWord") { rawWord }
+        let styledWord = WordCardTrace.measure("body.tajweedStyledWord") { tajweedStyledWord(located) }
+        let latin = WordCardTrace.measure("body.transliteration") { transliteration(located) }
+        let rules = WordCardTrace.measure("body.wordRules") { wordRules(located) }
+        let speechAvailable = WordCardTrace.measure("body.speechAvailable") { ArabicSpeech.shared.isAvailable }
+
+        return NavigationView {
             ScrollView {
                 ScrollViewReader { proxy in
                 VStack(spacing: 20) {
                     SelectableWordText(
-                        styled: tajweedStyledWord,
+                        styled: styledWord,
                         plain: word,
                         font: UIFont(name: hafsFontName, size: CGFloat(settings.fontArabicSize) + 16)
                             ?? .roundedSystemFont(ofSize: CGFloat(settings.fontArabicSize) + 16),
@@ -2298,8 +2387,8 @@ struct WordMeaningSheet: View {
                     // How the word is SAID, between the Arabic and what it means - the order a reader
                     // works in. Silent when the pack has no transliteration for this token (the ۞ mark,
                     // the tail of a merged word), never a placeholder.
-                    if !transliteration.isEmpty {
-                        Text(transliteration)
+                    if !latin.isEmpty {
+                        Text(latin)
                             .font(.headline.italic())
                             .foregroundColor(settings.accentColor.color)
                             .multilineTextAlignment(.center)
@@ -2320,7 +2409,7 @@ struct WordMeaningSheet: View {
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 12) {
-                        if ArabicSpeech.shared.isAvailable {
+                        if speechAvailable {
                             actionButton(
                                 isSpeakingThis ? "Stop" : "Listen",
                                 system: isSpeakingThis ? "stop.fill" : "speaker.wave.2.fill"
@@ -2346,7 +2435,7 @@ struct WordMeaningSheet: View {
                     // The tajweed rules this word carries, matching the colors painted on it above -
                     // the card doubles as a per-word legend. Only rules the reader has visible are
                     // listed, so the list never names a color that isn't on screen.
-                    if !wordRules.isEmpty {
+                    if !rules.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             Divider()
                                 .padding(.bottom, 4)
@@ -2354,7 +2443,7 @@ struct WordMeaningSheet: View {
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.secondary)
-                            ForEach(wordRules) { rule in
+                            ForEach(rules) { rule in
                                 HStack(spacing: 10) {
                                     Circle()
                                         .fill(rule.color)
@@ -2378,7 +2467,7 @@ struct WordMeaningSheet: View {
                     }
 
                     // The word's root and dictionary form, and the way to every other word of the root.
-                    if let located = rawWord {
+                    if let located {
                         WordMorphologySection(surah: surah, ayah: ayah, tokenIndex: located.tokenIndex)
                     }
 
@@ -2414,7 +2503,7 @@ struct WordMeaningSheet: View {
                     .padding(.top, 4)
 
                     BeginnerLettersSection(
-                        styled: tajweedStyledWord,
+                        styled: styledWord,
                         word: word,
                         fontName: hafsFontName,
                         fontSize: CGFloat(settings.fontArabicSize) + 8
@@ -2422,7 +2511,7 @@ struct WordMeaningSheet: View {
 
                     // The same word in the other readings - only for a reader who has qiraat on,
                     // since for everyone else Hafs is the whole Quran there is.
-                    if settings.showQiraahDetails, let located = rawWord {
+                    if settings.showQiraahDetails, let located {
                         WordAcrossRiwayatSection(
                             surah: surah,
                             ayah: ayah,
@@ -2444,6 +2533,7 @@ struct WordMeaningSheet: View {
         }
         .navigationViewStyle(.stack)
         .smallMediumSheetPresentation()
+        .onAppear { WordCardTrace.stamp("appear") }
         .onDisappear { ArabicSpeech.shared.stop() }
     }
 

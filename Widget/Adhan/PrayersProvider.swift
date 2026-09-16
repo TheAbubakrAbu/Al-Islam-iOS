@@ -193,6 +193,7 @@ struct PrayersProvider: TimelineProvider {
         var offsets: [Int]
         var customAngles: [Double?]
         var skyGradients: String?
+        var showSkyScene: Bool
     }
     private static var memo: (inputs: Inputs, builtAt: Date, entries: [PrayersEntry])?
     private static let memoMaxAge: TimeInterval = 5 * 60
@@ -210,7 +211,8 @@ struct PrayersProvider: TimelineProvider {
             switchHijriDateAtMaghrib: store?.bool(forKey: "switchHijriDateAtMaghrib") ?? false,
             offsets: Settings.prayerOffsetKeys.map { store?.integer(forKey: $0) ?? 0 },
             customAngles: ["customFajrAngle", "customIshaAngle"].map { store?.object(forKey: $0) as? Double },
-            skyGradients: store?.string(forKey: "skyGradients")
+            skyGradients: store?.string(forKey: "skyGradients"),
+            showSkyScene: store?.object(forKey: "showSkyScene") as? Bool ?? true
         )
     }
 

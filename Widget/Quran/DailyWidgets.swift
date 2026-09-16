@@ -72,9 +72,18 @@ struct DailyReminderProvider: TimelineProvider {
     }
 
     private func entry(snapshot: DailyWidgetSnapshot? = DailyWidgetStore.load()) -> DailyReminderEntry {
-        guard let cards = snapshot?.reminders, !cards.isEmpty else { return sample() }
         let index = DailyWidgetShared.dayIndex(for: snapshot)
-        let card = cards[((index % cards.count) + cards.count) % cards.count]
+        // The app's own pick when it wrote one for today (the Ayah / Hadith / Dua / Name of the Day
+        // the in-app card shows, 2026-09-16); the corpus walk otherwise, and on every other day.
+        let card: DailyWidgetSnapshot.ReminderCard?
+        if let resolved = snapshot?.resolved, snapshot?.resolvedDayIndex == index {
+            card = resolved
+        } else if let cards = snapshot?.reminders, !cards.isEmpty {
+            card = cards[((index % cards.count) + cards.count) % cards.count]
+        } else {
+            card = nil
+        }
+        guard let card else { return sample() }
         return DailyReminderEntry(date: Date(), kindLabel: card.kindLabel, arabic: card.arabic,
                                   english: card.english, short: card.short, source: card.source,
                                   fontName: card.fontName, accentColor: DailyWidgetShared.accent)

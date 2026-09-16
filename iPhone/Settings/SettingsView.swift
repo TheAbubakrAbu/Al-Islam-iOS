@@ -32,6 +32,11 @@ struct SettingsSearchEntry: Identifiable {
         case credits
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
         case credit(String)
+        /// A page's own sub-screen, pushed directly (the page enums live in SettingsSearch.swift).
+        case notificationsPage(SettingsNotificationsPage)
+        case prayerPage(SettingsAdhanPage)
+        case quranPage(SettingsQuranPage)
+        case hadithPage(SettingsHadithPage)
 
         /// The chip icon a search result renders with - derived here so entries never repeat it.
         var icon: String {
@@ -48,6 +53,10 @@ struct SettingsSearchEntry: Identifiable {
             case .appearance: return "paintpalette.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
+            case .notificationsPage(let page): return page.systemImage
+            case .prayerPage(let page): return page.systemImage
+            case .quranPage(let page): return page.systemImage
+            case .hadithPage(let page): return page.systemImage
             }
         }
     }
@@ -93,8 +102,8 @@ struct SettingsView: View {
 
     private func prepareSettingsSemanticCorpus() {
         guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(Self.settingsSemanticCorpusID) else { return }
-        let texts = Self.settingsSearchIndex.map { "\($0.title) \($0.path) \($0.keywords)" }
-        let keys = Self.settingsSearchIndex.map(\.id)
+        let texts = SettingsSearchEntry.all.map { "\($0.title) \($0.path) \($0.keywords)" }
+        let keys = SettingsSearchEntry.all.map(\.id)
         semanticEngine.prepare(corpusID: Self.settingsSemanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
     }
 
@@ -115,11 +124,11 @@ struct SettingsView: View {
             let keys = await MainActor.run { semanticEngine.corpus(Self.settingsSemanticCorpusID)?.itemKeys }
             await MainActor.run {
                 guard trimmed == settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                let byID = Dictionary(uniqueKeysWithValues: Self.settingsSearchIndex.map { ($0.id, $0) })
+                let byID = Dictionary(uniqueKeysWithValues: SettingsSearchEntry.all.map { ($0.id, $0) })
                 settingsAIHits = results.compactMap { result -> SettingsSearchEntry? in
                     if let keys, keys.indices.contains(result.index) { return byID[keys[result.index]] }
-                    guard Self.settingsSearchIndex.indices.contains(result.index) else { return nil }
-                    return Self.settingsSearchIndex[result.index]
+                    guard SettingsSearchEntry.all.indices.contains(result.index) else { return nil }
+                    return SettingsSearchEntry.all[result.index]
                 }
             }
         }
@@ -247,6 +256,11 @@ struct SettingsView: View {
             .debugPushDestination(isPresented: $debugOpenCredit) {
                 if let id = Self.debugCreditID { CreditsView(presentedAsSheet: false, scrollTo: id) }
             }
+            // `-settingsOpen prayer|notifications|quran|hadith|appearance`: that settings page pushed on
+            // launch, so a page's own search bar ("-settingsPageSearch <q>") and rows can be screenshotted.
+            .debugPushDestination(isPresented: $debugOpenSettingsPage) {
+                if let destination = Self.debugSettingsPage { searchDestinationView(destination) }
+            }
             .onAppear {
                 // `-settingsSearch <query>` seeds the search a moment after the tab appears; `-showCredits`
                 // presents the Credits sheet. Typing and tapping are not scriptable in the simulator.
@@ -262,6 +276,9 @@ struct SettingsView: View {
                 if ProcessInfo.processInfo.arguments.contains("-openProfile") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenProfile = true }
                 }
+                if Self.debugSettingsPage != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenSettingsPage = true }
+                }
             }
             #endif
     }
@@ -269,8 +286,20 @@ struct SettingsView: View {
     #if DEBUG
     @State private var debugOpenCredit = false
     @State private var debugOpenProfile = false
+    @State private var debugOpenSettingsPage = false
 
     private static var debugCreditID: String? { launchValue("-openCredit") }
+
+    private static var debugSettingsPage: SettingsSearchEntry.Destination? {
+        switch launchValue("-settingsOpen") {
+        case "prayer": return .prayerSettings
+        case "notifications": return .notifications
+        case "quran": return .quranSettings
+        case "hadith": return .hadithSettings
+        case "appearance": return .appearance
+        default: return nil
+        }
+    }
 
     private static func launchValue(_ argument: String) -> String? {
         let arguments = ProcessInfo.processInfo.arguments
@@ -376,66 +405,17 @@ struct SettingsView: View {
     // (see `SettingsSearchEntry`) - this file only concatenates them. To add/remove a setting's entry,
     // edit the `SettingsSearchEntry` extension at the bottom of the file that owns the control.
 
-    private static let settingsSearchIndex: [SettingsSearchEntry] =
-        SettingsSearchEntry.notificationEntries
-        + SettingsSearchEntry.adhanEntries
-        + SettingsSearchEntry.prayerCalculationEntries
-        + SettingsSearchEntry.quranEntries
-        + SettingsSearchEntry.hadithEntries
-        + SettingsSearchEntry.appearanceEntries
-        + SettingsSearchEntry.creditEntries
+    // The whole index is `SettingsSearchEntry.all`, the ranking `SettingsSearchEntry.rank`, and the
+    // destination mapping `SettingsSearchDestinationView` (SettingsSearch.swift): the per-page search
+    // bars share all three with this root search.
 
     @ViewBuilder
     private func searchDestinationView(_ destination: SettingsSearchEntry.Destination) -> some View {
-        switch destination {
-        case .notifications: NotificationView()
-        case .notificationReminders: MoreNotificationView()
-        case .prayerSettings: SettingsAdhanView(showNotifications: false)
-        case .travelingMode: SettingsAdhanView(showNotifications: false, openTravelingMode: true)
-        case .prayerCalculation: PrayerCalculationListView()
-        case .skyColors: SkyColorsView()
-        case .quranSettings: SettingsQuranView()
-        case .reciters: ReciterListView()
-        case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
-        case .appearance: AppearanceSettingsScreen()
-        case .credits: CreditsView(presentedAsSheet: false)
-        case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
-        }
+        SettingsSearchDestinationView.view(for: destination)
     }
 
-    /// Ranked keyword results: every query term must match somewhere (title, path, or keywords,
-    /// diacritic-insensitive), and results order by WHERE they matched - title prefix first, then
-    /// title, then path, then keywords-only - so "not" puts Notifications above rows that merely
-    /// mention it. Ties keep the index's hand-authored order.
     private var settingsSearchResults: [SettingsSearchEntry] {
-        let query = settingsSearchText
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        guard !query.isEmpty else { return [] }
-        let terms = query.split(separator: " ").map(String.init)
-
-        func fold(_ text: String) -> String {
-            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        }
-
-        let scored: [(entry: SettingsSearchEntry, score: Int, order: Int)] = Self.settingsSearchIndex.enumerated().compactMap { order, entry in
-            let title = fold(entry.title)
-            let path = fold(entry.path)
-            let keywords = fold(entry.keywords)
-            var score = 0
-            for term in terms {
-                if title.hasPrefix(term) { score += 40 }
-                else if title.split(separator: " ").contains(where: { $0.hasPrefix(Substring(term)) }) { score += 24 }
-                else if title.contains(term) { score += 16 }
-                else if path.contains(term) { score += 8 }
-                else if keywords.contains(term) { score += 4 }
-                else { return nil }   // every term must land somewhere
-            }
-            return (entry, score, order)
-        }
-        return scored
-            .sorted { ($0.score, -$0.order) > ($1.score, -$1.order) }
-            .map(\.entry)
+        SettingsSearchEntry.rank(SettingsSearchEntry.all, query: settingsSearchText)
     }
 
     @ViewBuilder
@@ -469,27 +449,7 @@ struct SettingsView: View {
 
     private func settingsSearchResultRow(_ entry: SettingsSearchEntry) -> some View {
         NavigationLink(destination: LazyDestination { searchDestinationView(entry.destination) }) {
-            HStack(spacing: 12) {
-                AccentIconChip(systemImage: entry.destination.icon)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HighlightedSnippet(
-                        source: entry.title,
-                        term: settingsSearchText,
-                        font: .subheadline,
-                        accent: settings.accentColor.color,
-                        fg: .primary
-                    )
-
-                    // The breadcrumb, in the system's "›" grammar rather than the index's "→".
-                    Text("Settings › \(entry.path.replacingOccurrences(of: " → ", with: " › "))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-            }
-            .padding(.vertical, 2)
+            SettingsSearchResultRow(entry: entry, query: settingsSearchText)
         }
     }
 
@@ -500,13 +460,14 @@ struct SettingsView: View {
         title: String,
         systemImage: String,
         subtitle: String? = nil,
+        tint: Color? = nil,
         @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
         // LazyDestination, same as IslamView: building the destination eagerly meant every body pass of this
         // tab constructed the full Adhan/Quran/Notification settings trees - on the watch, where TabView
         // re-evaluates neighbouring tabs on every swipe, that WAS the tab-switch lag into Settings.
         NavigationLink(destination: LazyDestination(build: destination)) {
-            toolLabel(title, systemImage: systemImage, subtitle: subtitle)
+            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint)
         }
         .tint(settings.accentColor.color)
     }
@@ -542,6 +503,7 @@ struct SettingsView: View {
         title: String,
         systemImage: String,
         subtitle: String? = nil,
+        tint: Color? = nil,
         value: SettingsDestination
     ) -> some View {
         // A Button (not `NavigationLink(value:)`) so a re-tap of the ALREADY-selected row still
@@ -557,7 +519,7 @@ struct SettingsView: View {
                 }
             }
         } label: {
-            toolLabel(title, systemImage: systemImage, subtitle: subtitle)
+            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -567,24 +529,26 @@ struct SettingsView: View {
 
     /// The four settings destinations as ONE card - the old one-row-per-section layout spent most
     /// of the screen on headers. Notifications shown on watchOS too (it supports local notifications).
+    /// Each area wears its own fixed colour (`SettingsTint`: prayer yellow, Quran green, hadith blue),
+    /// the iOS Settings app's grammar. Every page behind these rows carries its own search bar.
     @ViewBuilder
     private var settingsHubSection: some View {
         Section(header: Text("SETTINGS")) {
             resourceLink(title: "Notifications", systemImage: "bell.badge.fill",
-                         subtitle: "Prayer alerts, adhan sounds, reminders") {
+                         subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications) {
                 NotificationView()
             }
             resourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                         subtitle: "Calculation, offsets, traveling mode") {
+                         subtitle: "Calculation, offsets, traveling mode, sky", tint: SettingsTint.prayer) {
                 SettingsAdhanView(showNotifications: false)
             }
             resourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                         subtitle: "Fonts, translations, tajweed, reciters") {
+                         subtitle: "Fonts, translations, tajweed, reciters, themes", tint: SettingsTint.quran) {
                 SettingsQuranView()
             }
             #if os(iOS)
             resourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                         subtitle: "Arabic and English text, Hadith of the Day") {
+                         subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith) {
                 SettingsHadithView(presentedAsSheet: false)
             }
             #endif
@@ -596,13 +560,13 @@ struct SettingsView: View {
     private var settingsHubSectionSplit: some View {
         Section(header: Text("SETTINGS")) {
             splitResourceLink(title: "Notifications", systemImage: "bell.badge.fill",
-                              subtitle: "Prayer alerts, adhan sounds, reminders", value: .notification)
+                              subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications, value: .notification)
             splitResourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                              subtitle: "Calculation, offsets, traveling mode", value: .prayerSettings)
+                              subtitle: "Calculation, offsets, traveling mode, sky", tint: SettingsTint.prayer, value: .prayerSettings)
             splitResourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                              subtitle: "Fonts, translations, tajweed, reciters", value: .quranSettings)
+                              subtitle: "Fonts, translations, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
             splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                              subtitle: "Arabic and English text, Hadith of the Day", value: .hadithSettings)
+                              subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
         }
     }
 
@@ -669,8 +633,9 @@ struct SettingsView: View {
         Section(header: Text("CREDITS")) {
             creditsIntro
             viewCreditsButton
-            leaveReviewButton
+            // App Settings first, the review below it (Abu, 2026-09-16).
             openAppSettingsButton
+            leaveReviewButton
             websiteRow
             contactRow
             VersionNumber(width: glyphWidth)
@@ -691,7 +656,7 @@ struct SettingsView: View {
             settings.hapticFeedback()
             showingCredits = true
         } label: {
-            toolLabel("View Credits", systemImage: "scroll.fill")
+            toolLabel("View Credits", systemImage: "scroll.fill", chipTint: SettingsTint.credits)
         }
         .sheet(isPresented: $showingCredits) {
             CreditsView()
@@ -706,7 +671,7 @@ struct SettingsView: View {
         Button {
             leaveReview()
         } label: {
-            toolLabel("Leave a Review", systemImage: "star.bubble.fill")
+            toolLabel("Leave a Review", systemImage: "star.bubble.fill", chipTint: Color(red: 0.98, green: 0.72, blue: 0.20))
         }
         .contextMenu {
             Text("Review")
@@ -732,7 +697,7 @@ struct SettingsView: View {
             settings.hapticFeedback()
             openAppSettings()
         } label: {
-            toolLabel("Open App Settings", systemImage: "gearshape.fill")
+            toolLabel("Open App Settings", systemImage: "gearshape.fill", chipTint: SettingsTint.credits)
         }
         #endif
     }
@@ -859,13 +824,11 @@ struct SettingsView: View {
 /// section otherwise lives inline on the Settings tab with nothing to navigate to.
 struct AppearanceSettingsScreen: View {
     var body: some View {
-        List {
+        SettingsScopedSearch(scope: .appearance) {
             Section {
                 SettingsAppearanceView()
             }
-            .themedListRowBackground()
         }
-        .applyConditionalListStyle()
         .navigationTitle("Appearance")
     }
 }

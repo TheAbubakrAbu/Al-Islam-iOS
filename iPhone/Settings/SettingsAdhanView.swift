@@ -26,26 +26,21 @@ struct SettingsAdhanView: View {
 
     @State var showNotifications: Bool
     private let presentedAsSheet: Bool
-    /// Lands straight on the Traveling Mode screen - for the prayer list's Qasr footer, whose whole point is
-    /// "take me to where I can turn this off".
     /// The programmatic entrances: Traveling Mode (its dialog, the prayer list's row, the Distance
-    /// From Home glance tile) and Prayer Calculation (its glance tile). The request is remembered
-    /// and the push is raised a beat after appear: iOS 16+ pushes through
-    /// `navigationDestination(isPresented:)` (a `NavigationStack`), iOS 15 through the hidden
-    /// `isActive` links in the sections below, and either one set true before the container has
-    /// mounted never pushes (2026-09-05, seen on iOS 26).
-    private let requestedTravelingMode: Bool
-    private let requestedPrayerCalculation: Bool
-    @State private var openTravelingMode = false
-    @State private var openPrayerCalculation = false
+    /// From Home glance tile), Prayer Calculation (its glance tile), and any sub-screen a settings
+    /// search result names. The request is remembered and the push is raised a beat after appear
+    /// (`SettingsDeepLink`): iOS 16+ pushes through `navigationDestination(isPresented:)`, iOS 15
+    /// through a hidden `isActive` link, and either one set true before the container has mounted
+    /// never pushes (2026-09-05, seen on iOS 26).
+    private let requestedPage: SettingsAdhanPage?
+    @State private var openRequestedPage = false
     @State private var deepLinkFired = false
 
     init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false,
-         openPrayerCalculation: Bool = false) {
+         openPrayerCalculation: Bool = false, openPage: SettingsAdhanPage? = nil) {
         self._showNotifications = State(initialValue: showNotifications)
         self.presentedAsSheet = presentedAsSheet
-        self.requestedTravelingMode = openTravelingMode
-        self.requestedPrayerCalculation = openPrayerCalculation
+        self.requestedPage = openTravelingMode ? .travelingMode : (openPrayerCalculation ? .prayerCalculation : openPage)
     }
 
     private var dialogTitle: String {
@@ -62,93 +57,17 @@ struct SettingsAdhanView: View {
     }
 
     var body: some View {
-        List {
-            Group {
-                notificationsSection
-                Section {
-                    adhanSettingsLink(title: "Prayer Calculation", systemImage: "function") {
-                        prayerCalculationDestination
-                    }
-                    #if os(iOS)
-                    // The iOS 15 programmatic entrance (see `requestedPrayerCalculation`).
-                    .modifier(LegacyProgrammaticLink(isActive: $openPrayerCalculation) {
-                        prayerCalculationDestination
-                    })
-                    #endif
-                }
-                Section {
-                    adhanSettingsLink(title: "Traveling Mode", systemImage: "airplane") {
-                        travelingModeDestination
-                    }
-                    // The iOS 15 programmatic entrance (see `requestedTravelingMode`). iOS-only: the
-                    // watch never opens this programmatically, and `isActive:` is deprecated on
-                    // watchOS 9+.
-                    #if os(iOS)
-                    .modifier(LegacyProgrammaticLink(isActive: $openTravelingMode) {
-                        travelingModeDestination
-                    })
-                    #endif
-                }
-                Section {
-                    adhanSettingsLink(title: "Optional Prayers", systemImage: "moon.stars") {
-                        optionalTimesDestination
-                    }
-                }
-                Section {
-                    adhanSettingsLink(title: "Manual Offsets", systemImage: "slider.horizontal.3") {
-                        prayerOffsetsDestination
-                    }
-                }
-                Section {
-                    adhanSettingsLink(title: "Custom Prayer Names", systemImage: "character.cursor.ibeam") {
-                        customPrayerNamesDestination
-                    }
-                }
-                
-                #if os(iOS)
-                Section {
-                    VStack(alignment: .leading) {
-                        Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
-                            .font(.subheadline)
-                            .tint(settings.accentColor.color)
-                            .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
-
-                        Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
-
-                    // Nothing to color when the sky isn't drawn.
-                    if settings.showSkyView {
-                        adhanSettingsLink(title: "Sky Colors", systemImage: "paintpalette") {
-                            SkyColorsView()
-                        }
-                    }
-                }
-                #endif
-            }
-            .themedListRowBackground()
-        }
-        .applyConditionalListStyle()
+        rootList
         #if os(iOS)
-        .modifier(ProgrammaticDestinations(
-            openTravelingMode: $openTravelingMode,
-            openPrayerCalculation: $openPrayerCalculation,
-            travelingMode: { AnyView(travelingModeDestination) },
-            prayerCalculation: { AnyView(prayerCalculationDestination) }
-        ))
+        .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: requestedPage != nil) {
+            if let page = requestedPage { adhanPageDestination(page) }
+        })
         .onAppear {
-            guard !deepLinkFired, requestedTravelingMode || requestedPrayerCalculation else { return }
+            guard !deepLinkFired, requestedPage != nil else { return }
             deepLinkFired = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                if requestedTravelingMode { openTravelingMode = true }
-                if requestedPrayerCalculation { openPrayerCalculation = true }
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
         }
         #endif
-        .compactListSectionSpacing()
         .navigationTitle("Al-Adhan Settings")
         #if os(iOS)
         .toolbar {
@@ -293,20 +212,6 @@ struct SettingsAdhanView: View {
         }
     }
 
-    private func adhanSettingsLink<Destination: View>(
-        title: String,
-        systemImage: String,
-        @ViewBuilder destination: () -> Destination
-    ) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
-            Label(title, systemImage: systemImage)
-                .padding(.vertical, 4)
-        }
-        .tint(settings.accentColor.color)
-    }
-
     /// Shared scaffold for each Adhan settings sub-screen: themed list + standard style + title.
     @ViewBuilder
     private func adhanSettingsSubList<Content: View>(
@@ -364,13 +269,125 @@ struct SettingsAdhanView: View {
         }
     }
 
+    /// The root's sections, on the page-search scaffold (iOS) or a plain list (the watch).
+    @ViewBuilder
+    private var rootList: some View {
+        #if os(iOS)
+        SettingsScopedSearch(scope: .prayer, resolve: resolveSearchDestination) { rootSections }
+        #else
+        List {
+            Group { rootSections }
+                .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        #endif
+    }
+
+    /// One card per area (2026-09-16): the door to Notifications, the five prayer-time screens, and
+    /// the sky. Every row carries its caption, so the screen reads as a table of contents.
+    @ViewBuilder
+    private var rootSections: some View {
+        notificationsSection
+
+        Section(header: Text("PRAYER TIMES")) {
+            adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
+            adhanPageLink(.travelingMode) { travelingModeDestination }
+            adhanPageLink(.optionalPrayers) { optionalTimesDestination }
+            adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
+            adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
+        }
+
+        #if os(iOS)
+        Section(header: Text("SKY")) {
+            VStack(alignment: .leading) {
+                Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
+
+                Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+
+            // Nothing to color, and no ground for a skyline, when the sky isn't drawn.
+            if settings.showSkyView {
+                VStack(alignment: .leading) {
+                    Toggle("Skyline", isOn: $settings.showSkyScene.animation(.easeInOut))
+                        .font(.subheadline)
+                        .tint(settings.accentColor.color)
+                        .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
+
+                    Text("A mosque, pyramids and palm trees along the horizon, with the sun crossing by day and the moon by night. Also on the Solar Arc and Day & Night widgets.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
+                .settingsDependent()
+
+                adhanPageLink(.skyColors, tint: SettingsTint.sky) { SkyColorsView() }
+            }
+        }
+        #endif
+    }
+
+    private func adhanPageLink<Destination: View>(
+        _ page: SettingsAdhanPage,
+        tint: Color? = SettingsTint.prayer,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink(destination: LazyDestination(build: destination)) {
+            SettingsRowLabel(title: page.title, systemImage: page.systemImage, subtitle: page.caption, tint: tint)
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    /// The sub-screen behind each root row, for the deep links and the page search.
+    @ViewBuilder
+    private func adhanPageDestination(_ page: SettingsAdhanPage) -> some View {
+        switch page {
+        case .prayerCalculation: prayerCalculationDestination
+        case .travelingMode: travelingModeDestination
+        case .optionalPrayers: optionalTimesDestination
+        case .manualOffsets: prayerOffsetsDestination
+        case .customPrayerNames: customPrayerNamesDestination
+        case .skyColors:
+            #if os(iOS)
+            SkyColorsView()
+            #else
+            EmptyView()
+            #endif
+        }
+    }
+
+    #if os(iOS)
+    /// The page search's results land on THIS page's sub-screens; the app-wide mapping would push a
+    /// second Prayer Settings root first.
+    private func resolveSearchDestination(_ destination: SettingsSearchEntry.Destination) -> AnyView? {
+        switch destination {
+        case .prayerPage(let page): return AnyView(adhanPageDestination(page))
+        case .travelingMode: return AnyView(travelingModeDestination)
+        case .prayerCalculation: return AnyView(prayerCalculationDestination)
+        case .skyColors: return AnyView(SkyColorsView())
+        case .notifications: return AnyView(NotificationView())
+        default: return nil
+        }
+    }
+    #endif
+
     @ViewBuilder
     private var notificationsSection: some View {
         #if os(iOS)
         Section {
             NavigationLink(destination: LazyDestination { NotificationView() }) {
-                Label("Notification Settings", systemImage: "bell.badge")
+                SettingsRowLabel(title: "Notification Settings", systemImage: "bell.badge.fill",
+                                 subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications)
             }
+            .tint(settings.accentColor.color)
         }
         #endif
     }
@@ -717,9 +734,80 @@ struct NotificationView: View {
         notifSettings?.soundSetting == .disabled
     }
 
+    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
+    var openPage: SettingsNotificationsPage? = nil
+    @State private var openRequestedPage = false
+    @State private var deepLinkFired = false
+
     var body: some View {
+        notificationList
+        #if os(iOS)
+        .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
+            if let page = openPage { notificationPageDestination(page) }
+        })
+        #endif
+        .task { await refresh() }
+        .onAppear {
+            settings.normalizeAdhanSoundSelection()
+            requestAuthorizationAndFetchPrayerTimes()
+            #if os(iOS)
+            if openPage != nil, !deepLinkFired {
+                deepLinkFired = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
+            }
+            #endif
+        }
+        .onDisappear {
+            #if os(iOS)
+            stopAdhanPreview()
+            #endif
+        }
+        .onChange(of: scenePhase) { _ in requestAuthorizationAndFetchPrayerTimes() }
+        .confirmationDialog("Notifications Off", isPresented: $showAlert, titleVisibility: .visible) {
+            Button("Open Settings") {
+                settings.hapticFeedback()
+                openSystemSettings()
+            }
+            Button("Ignore") { }
+        } message: {
+            Text("Please go to Settings and enable notifications to be notified of prayer times.")
+        }
+        .confirmationDialog("Notifications", isPresented: Binding(
+            get: { requestAccessAlertMessage != nil },
+            set: { if !$0 { requestAccessAlertMessage = nil } }
+        ), titleVisibility: .visible) {
+            Button("OK") { requestAccessAlertMessage = nil }
+            Button("Open Settings") {
+                settings.hapticFeedback()
+                requestAccessAlertMessage = nil
+                openSystemSettings()
+            }
+        } message: {
+            if let msg = requestAccessAlertMessage {
+                Text(msg)
+            }
+        }
+        #if !os(iOS)
+        .applyConditionalListStyle()
+        #endif
+        .navigationTitle("Notification Settings")
+    }
+
+    /// The sections on the page-search scaffold (iOS) or a plain list (the watch).
+    @ViewBuilder
+    private var notificationList: some View {
+        #if os(iOS)
+        SettingsScopedSearch(scope: .notifications, resolve: resolveSearchDestination) { notificationSections }
+        #else
         List {
-            Group {
+            Group { notificationSections }
+                .themedListRowBackground()
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var notificationSections: some View {
                 #if os(iOS)
                 Section {
                     permissionCard
@@ -761,15 +849,8 @@ struct NotificationView: View {
                 #if os(iOS)
                 Section(header: Text("QURAN AND SUNNAH")) {
                     NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Label("Sunnah Reminders", systemImage: "bell.and.waves.left.and.right")
-                                .font(.subheadline)
-                            Text("Al-Kahf on Friday, al-Mulk before sleep, the Mu'awwidhat, and more, each with its hadith.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.vertical, 2)
+                        SettingsRowLabel(title: "Sunnah Reminders", systemImage: "bell.and.waves.left.and.right.fill",
+                                         subtitle: "Al-Kahf on Friday, al-Mulk before sleep, and more", tint: SettingsTint.notifications)
                     }
                     .tint(settings.accentColor.color)
                 }
@@ -881,51 +962,30 @@ struct NotificationView: View {
 
                 Section(header: Text("PRAYER REMINDERS")) {
                     NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
-                        Label("Prayer Notifications", systemImage: "bell.fill")
-                            .font(.subheadline)
+                        SettingsRowLabel(title: "Prayer Notifications", systemImage: "bell.fill",
+                                         subtitle: "Per-prayer alerts, early warnings, nagging", tint: SettingsTint.notifications)
                     }
+                    .tint(settings.accentColor.color)
                 }
-            }
-            .themedListRowBackground()
-        }
-        .task { await refresh() }
-        .onAppear {
-            settings.normalizeAdhanSoundSelection()
-            requestAuthorizationAndFetchPrayerTimes()
-        }
-        .onDisappear {
-            #if os(iOS)
-            stopAdhanPreview()
-            #endif
-        }
-        .onChange(of: scenePhase) { _ in requestAuthorizationAndFetchPrayerTimes() }
-        .confirmationDialog("Notifications Off", isPresented: $showAlert, titleVisibility: .visible) {
-            Button("Open Settings") {
-                settings.hapticFeedback()
-                openSystemSettings()
-            }
-            Button("Ignore") { }
-        } message: {
-            Text("Please go to Settings and enable notifications to be notified of prayer times.")
-        }
-        .confirmationDialog("Notifications", isPresented: Binding(
-            get: { requestAccessAlertMessage != nil },
-            set: { if !$0 { requestAccessAlertMessage = nil } }
-        ), titleVisibility: .visible) {
-            Button("OK") { requestAccessAlertMessage = nil }
-            Button("Open Settings") {
-                settings.hapticFeedback()
-                requestAccessAlertMessage = nil
-                openSystemSettings()
-            }
-        } message: {
-            if let msg = requestAccessAlertMessage {
-                Text(msg)
-            }
-        }
-        .applyConditionalListStyle()
-        .navigationTitle("Notification Settings")
     }
+
+    #if os(iOS)
+    @ViewBuilder
+    private func notificationPageDestination(_ page: SettingsNotificationsPage) -> some View {
+        switch page {
+        case .prayerReminders: MoreNotificationView()
+        case .sunnahReminders: SunnahRemindersView()
+        }
+    }
+
+    private func resolveSearchDestination(_ destination: SettingsSearchEntry.Destination) -> AnyView? {
+        switch destination {
+        case .notificationsPage(let page): return AnyView(notificationPageDestination(page))
+        case .notificationReminders: return AnyView(MoreNotificationView())
+        default: return nil
+        }
+    }
+    #endif
 
     #if os(iOS)
     private var permissionCard: some View {
@@ -1551,21 +1611,27 @@ struct NotificationSettingsSection: View {
 extension SettingsSearchEntry {
     static let notificationEntries: [SettingsSearchEntry] = [
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
+        .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah silent mode ringer", destination: .notifications),
+        .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
         .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
-        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationReminders),
-        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationReminders),
+        .init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders)),
+        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationsPage(.prayerReminders)),
     ]
 
     static let adhanEntries: [SettingsSearchEntry] = [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
-        .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .travelingMode),
-        .init(title: "Optional Prayer Times", path: "Prayer Settings", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerSettings),
-        .init(title: "Manual Prayer Offsets", path: "Prayer Settings", keywords: "adjust minutes plus minus tune offset", destination: .prayerSettings),
-        .init(title: "Custom Prayer Names", path: "Prayer Settings", keywords: "rename spelling fadjr salah names", destination: .prayerSettings),
-        .init(title: "Hijri Date Offset", path: "Prayer Settings", keywords: "hijri adjust day moon date calendar", destination: .prayerSettings),
-        .init(title: "Sky View & Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky", destination: .skyColors),
+        .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),
+        .init(title: "Optional Prayer Times", path: "Prayer Settings → Optional Prayers", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerPage(.optionalPrayers)),
+        .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),
+        .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
+        .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
+        .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames)),
+        .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerSettings),
+        .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerSettings),
+        .init(title: "Sky Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky colors", destination: .prayerPage(.skyColors)),
     ]
 }
 #endif
@@ -1864,49 +1930,11 @@ struct PrayerCalculationListView: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screen they describe)
 extension SettingsSearchEntry {
     static let prayerCalculationEntries: [SettingsSearchEntry] = [
-        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerCalculation),
-        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerCalculation),
-        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerCalculation),
-        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerCalculation),
+        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerPage(.prayerCalculation)),
+        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerPage(.prayerCalculation)),
+        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerPage(.prayerCalculation)),
+        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerPage(.prayerCalculation)),
     ]
 }
 #endif
 
-#if os(iOS)
-/// The iOS 16+ half of the Adhan settings' programmatic entrances: `navigationDestination(isPresented:)`,
-/// which a `NavigationStack` honours. On iOS 15 this is a no-op and `LegacyProgrammaticLink` pushes.
-private struct ProgrammaticDestinations: ViewModifier {
-    @Binding var openTravelingMode: Bool
-    @Binding var openPrayerCalculation: Bool
-    let travelingMode: () -> AnyView
-    let prayerCalculation: () -> AnyView
-
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) {
-            content
-                .navigationDestination(isPresented: $openTravelingMode) { travelingMode() }
-                .navigationDestination(isPresented: $openPrayerCalculation) { prayerCalculation() }
-        } else {
-            content
-        }
-    }
-}
-
-/// The iOS 15 half: a hidden `NavigationLink(isActive:)` behind the row. Applied on iOS 15 ONLY, so
-/// a `NavigationStack` never sees two links for one flag.
-private struct LegacyProgrammaticLink<Destination: View>: ViewModifier {
-    @Binding var isActive: Bool
-    @ViewBuilder let destination: () -> Destination
-
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) {
-            content
-        } else {
-            content.background(
-                NavigationLink(isActive: $isActive) { destination() } label: { EmptyView() }
-                    .hidden()
-            )
-        }
-    }
-}
-#endif

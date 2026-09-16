@@ -5142,11 +5142,20 @@ enum QiraahComparison {
 
     private static var alignmentCache: [String: Alignment] = [:]
     private static var diffCache: [String: [(Int, Int)]] = [:]
+    /// Guards the three tables (this pair and `hafsSideCache`): the word cards compare a word across
+    /// the riwayat OFF the main thread now (2026-09-16: a cold Al-Baqarah cost 550 ms on it, paid
+    /// while the sheet was still animating in), and the explorer's prewarm already did, while the
+    /// comparison rows read the same tables on it. Held for the lookups and the stores only, never
+    /// across a computation, so a cold surah on one thread never stalls the other; two threads
+    /// computing the same alignment once each is the accepted price.
+    private static let cacheLock = NSLock()
 
     /// Memory-warning purge (AppLifecycle): both tables rebuild on demand from the immutable texts.
     static func purgeCaches() {
+        cacheLock.lock(); defer { cacheLock.unlock() }
         alignmentCache.removeAll()
         diffCache.removeAll()
+        hafsSideCache.removeAll()
     }
 
     /// The alignment for one surah of one riwayah, cached for the app's lifetime (texts are
@@ -5155,7 +5164,10 @@ enum QiraahComparison {
         let canonical = Settings.Riwayah.canonicalTag(tag)
         guard !canonical.isEmpty else { return nil }
         let key = "\(surahID)|\(canonical)"
-        if let cached = alignmentCache[key] { return cached }
+        cacheLock.lock()
+        let cachedAlignment = alignmentCache[key]
+        cacheLock.unlock()
+        if let cachedAlignment { return cachedAlignment }
         #if DEBUG
         var phase = Date()
         func lap(_ slot: Int) { phaseMillis[slot] += Date().timeIntervalSince(phase) * 1000; phase = Date() }
@@ -5199,11 +5211,12 @@ enum QiraahComparison {
                 finalScore = repairedScore.mean
             }
         }
+        cacheLock.lock()
         #if DEBUG
         diagnostics[key] = Diagnostics(countScore: countScore.mean, finalScore: finalScore, walkScore: walkScore)
         #endif
-
         alignmentCache[key] = result
+        cacheLock.unlock()
         return result
     }
 
@@ -5332,10 +5345,15 @@ enum QiraahComparison {
     private static var hafsSideCache: [Int: Side] = [:]
 
     private static func hafsSide(surahID: Int, quranData: QuranData) -> Side? {
-        if let cached = hafsSideCache[surahID] { return cached }
+        cacheLock.lock()
+        let cachedSide = hafsSideCache[surahID]
+        cacheLock.unlock()
+        if let cachedSide { return cachedSide }
         guard let texts = texts(surahID: surahID, tag: nil, quranData: quranData) else { return nil }
         let side = Side(texts: texts)
+        cacheLock.lock()
         hafsSideCache[surahID] = side
+        cacheLock.unlock()
         return side
     }
 
@@ -5638,7 +5656,10 @@ enum QiraahComparison {
     static func differingRanges(in text: String, vs reference: String) -> [Range<String.Index>] {
         guard text != reference else { return [] }
         let key = "\(text)\u{0}\(reference)"
-        if let spans = diffCache[key] {
+        cacheLock.lock()
+        let cachedSpans = diffCache[key]
+        cacheLock.unlock()
+        if let spans = cachedSpans {
             return spans.compactMap { span in
                 guard let lo = utf16Index(span.0, in: text), let hi = utf16Index(span.1, in: text), lo < hi else { return nil }
                 return lo..<hi
@@ -5681,11 +5702,14 @@ enum QiraahComparison {
         for (index, token) in a.enumerated() where !common.contains(index) && !token.folded.isEmpty {
             ranges.append(token.range)
         }
-        diffCache[key] = ranges.map { range in
+        let spans = ranges.map { range in
             (text.utf16.distance(from: text.startIndex, to: range.lowerBound),
              text.utf16.distance(from: text.startIndex, to: range.upperBound))
         }
+        cacheLock.lock()
+        diffCache[key] = spans
         if diffCache.count > 4_000 { diffCache.removeAll(keepingCapacity: true) }
+        cacheLock.unlock()
         return ranges
     }
 

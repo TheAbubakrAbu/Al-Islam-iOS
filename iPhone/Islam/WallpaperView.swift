@@ -11,7 +11,13 @@ private struct Wallpaper: Identifiable {
 
 private let wallpapers: [Wallpaper] = [
     Wallpaper(imageName: "Palestine Wallpaper", description: "FREE PALESTINE PHONE WALLPAPER"),
+    // A drawn poster beside the photo: the flag's bands, the Dome of the Rock, olive branches and
+    // the ayah of hope (2:214). Vector, so it stays crisp at any size (Abu, 2026-09-16).
+    Wallpaper(imageName: "Palestine Poster", description: "FREE PALESTINE POSTER"),
     Wallpaper(imageName: "Phone Wallpaper", description: "AL-ISLAM PHONE WALLPAPER"),
+    // OC Ummah's launch scene (its emerald desert night: crescent, pyramids, masjid) rendered as a
+    // wallpaper, without the palms and with the pyramids grown (Abu, 2026-09-16).
+    Wallpaper(imageName: "OC Ummah Wallpaper", description: "OC UMMAH PHONE WALLPAPER"),
     Wallpaper(imageName: "Laptop Wallpaper", description: "LAPTOP (16:9) WALLPAPER"),
     Wallpaper(imageName: "Desktop Wallpaper", description: "DESKTOP (21:9) WALLPAPER")
 ]

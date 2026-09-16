@@ -2240,6 +2240,7 @@ private struct MushafPageContent: View {
         guard tokens.indices.contains(wordIndex) else { return }
 
         if settings.isHafsDisplay {
+            WordCardTrace.stamp("request")
             let glosses = WordByWordStore.shared.glosses(
                 surah: surah.id, ayah: ayah.id,
                 rawText: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil),
@@ -4405,6 +4406,10 @@ enum MushafPageRenderCache {
     #else
     @inline(__always) static func fitTrace(_ message: @autoclosure () -> String) {}
     @inline(__always) nonisolated static func fitTraceLane(_ message: @autoclosure () -> String) {}
+    /// The trace messages are autoclosures, so their `traceLabel(page)` calls are still type-checked in
+    /// Release even though the stubs above never evaluate them: without this stub a Release build (an
+    /// Xcode Cloud archive) failed on every fit-trace line (2026-09-16).
+    @inline(__always) nonisolated static func traceLabel(_ page: MushafPage) -> String { "" }
     #endif
 
     /// Everything that changes the rendering but isn't the page or the geometry. Memoized on the
@@ -5111,7 +5116,12 @@ enum MushafPageRenderCache {
         // A cache hit calls back synchronously; a miss claims (or joins) the fit on the visible lane.
         renderAsync(page: page, width: geometry.width, height: geometry.height, onReady: fireOnce)
         if !fired {
-            DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: fireOnce)
+            // A main-actor Task rather than `asyncAfter(execute:)`: `fireOnce` captures `fired`, and
+            // handing that non-Sendable closure to GCD is a data-race warning under Swift 6.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: UInt64(max(timeout, 0) * 1_000_000_000))
+                fireOnce()
+            }
         }
     }
 

@@ -720,6 +720,9 @@ final class HadithStore: ObservableObject {
     @Published private(set) var daily: DailyPick?
 
     private var dailyPreparedForDay: String?
+    /// Whether today's pick has been resolved: a nil `daily` after this means no collection is
+    /// available, not "still resolving" (the Reminder of the Day resolver waits on the difference).
+    var isDailyResolved: Bool { dailyPreparedForDay == Settings.shared.dailyDayKey() }
     private static let dailyOverrideKey = "hadithOfTheDayOverride"
     private static let dailyResolvedKey = "hadithOfTheDayResolved"
 

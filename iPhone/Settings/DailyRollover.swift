@@ -74,8 +74,22 @@ extension Settings {
 
     /// The day `date` belongs to under the daily boundary (start of that day).
     func dailyAnchor(for date: Date = Date()) -> Date {
-        DailyRollover.anchoredDay(for: date, fajr: dailyFajr(for: date))
+        #if DEBUG
+        // "-dailyDayShift <n>": every daily feature reads the day n days from now, so the six-kind
+        // rotation of the Reminder of the Day (and what each kind resolves to) can be walked without
+        // waiting for the calendar.
+        let date = Self.debugDailyDayShift.map { Calendar.current.date(byAdding: .day, value: $0, to: date) ?? date } ?? date
+        #endif
+        return DailyRollover.anchoredDay(for: date, fajr: dailyFajr(for: date))
     }
+
+    #if DEBUG
+    private static let debugDailyDayShift: Int? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-dailyDayShift"), i + 1 < args.count else { return nil }
+        return Int(args[i + 1])
+    }()
+    #endif
 
     /// The daily features' day counter: every "of the day" pick is `corpus[dailyDayIndex % count]`.
     func dailyDayIndex(for date: Date = Date()) -> Int {

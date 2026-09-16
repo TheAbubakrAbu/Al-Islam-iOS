@@ -1665,7 +1665,6 @@ final class QuranPlayer: ObservableObject {
         _ = retiringPlayer; _ = retiringQueue
 
         statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
-            guard let self = self else { return }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.isLoading = false
@@ -1851,7 +1850,6 @@ final class QuranPlayer: ObservableObject {
             _ = retiringPlayer; _ = retiringQueue
 
             statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
-                guard let self = self else { return }
                 DispatchQueue.main.async { [weak self] in
                     guard let self else { return }
                     self.idleTimerSet(true)
@@ -1946,7 +1944,6 @@ final class QuranPlayer: ObservableObject {
         _ = retiringPlayer; _ = retiringQueue
 
         statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
-            guard let self = self else { return }
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
                 self.idleTimerSet(true)

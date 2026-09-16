@@ -219,6 +219,9 @@ struct QuranView: View {
     /// summary (the reader's auto-open is suppressed for it, exactly as for the other two).
     private static let debugWantsHistory = ProcessInfo.processInfo.arguments.contains("-openQuranHistory")
     @State private var debugOpenHistory = false
+    /// "-openDailyHub" pushes the Today screen (the summary header's pill) the same way.
+    private static let debugWantsDailyHub = ProcessInfo.processInfo.arguments.contains("-openDailyHub")
+    @State private var debugOpenDailyHub = false
     #endif
     /// Pushes today's Word of the Day screen: the summary tile's and row's tap (and DEBUG's
     /// "-openWordOfDay"). A state push through the List's own destination, not a NavigationLink: a
@@ -1105,7 +1108,7 @@ struct QuranView: View {
             shouldAutoOpen = shouldAutoOpen || ProcessInfo.processInfo.arguments.contains("-quranListMode")
             // "-openThemes" pushes its own screen the moment the tab appears; a second push from the
             // mushaf auto-open in the same instant was a reproducible crash (see `DebugPushDestination`).
-            if Self.debugWantsThemes || Self.debugWantsWordOfDay || Self.debugWantsHistory { shouldAutoOpen = false }
+            if Self.debugWantsThemes || Self.debugWantsWordOfDay || Self.debugWantsHistory || Self.debugWantsDailyHub { shouldAutoOpen = false }
             // "-noAutoOpenMushaf": page mode ON but the reader NOT auto-opened, so the tab sits on the
             // surah list with an empty path. That is the state a user reaches by tapping Back out of the
             // mushaf, and the only way to reach it headlessly - it is what the tab-exit re-open below is
@@ -1307,6 +1310,7 @@ struct QuranView: View {
                 // auto-open and crashed inside SwiftUI (3 of 6 launches on iOS 26.5).
                 .debugPushDestination(isPresented: $debugOpenThemes) { themesBrowseDestination }
                 .debugPushDestination(isPresented: $debugOpenHistory) { quranHistoryDestination }
+                .debugPushDestination(isPresented: $debugOpenDailyHub) { dailyHubDestination }
                 #endif
         }
     }
@@ -1657,6 +1661,9 @@ struct QuranView: View {
             }
             if Self.debugWantsHistory {
                 debugOpenHistory = true
+            }
+            if Self.debugWantsDailyHub {
+                debugOpenDailyHub = true
             }
             if ProcessInfo.processInfo.arguments.contains("-openWordOfDay") {
                 openWordOfDay = true
@@ -2319,6 +2326,14 @@ struct QuranView: View {
                     .foregroundStyle(settings.accentColor.color)
                 Text("YOUR SUMMARY")
                     .foregroundStyle(settings.accentColor.color)
+
+                Spacer()
+
+                // Everything of the day on one screen (2026-09-16): the door every daily card carries.
+                NavigationLink(destination: dailyHubDestination) {
+                    DailyHubDoorLabel()
+                }
+                .buttonStyle(.plain)
             }
         ) {
             LazyVGrid(
@@ -2399,39 +2414,57 @@ struct QuranView: View {
                 }
             }
 
-            if ThematicTopicsStore.isBundled {
-                // (The "-openThemes" launch hook pushes this same screen from `pathNavigation`, never
-                // from a hidden link row here: a zero-height row is still a List row that draws its
-                // band, and an isActive link inside the path stack crashed against the mushaf auto-open.)
-                //
-                // A real push (LazyDestination so the topic corpus isn't touched until it's opened),
-                // not a sheet: on iPhone it takes the whole screen, and in the iPad/Mac split it pushes
-                // in the LEFT column, leaving the reader on the right - the hadith chapter grammar.
-                // No caption under the title: the screen says what it is when it opens (Abu, 2026-09-07).
-                NavigationLink(destination: themesBrowseDestination) {
-                    summaryDoorLabel(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
+            // The doors, side by side on one row (2026-09-16: two full rows were most of the summary's
+            // height). Each chip is its own chevron-less link inside the row (a plain NavigationLink
+            // per chip drew a disclosure chevron after each); the screens introduce themselves in
+            // their own first section, so no caption. (The "-openThemes" launch hook pushes the theme screen from
+            // `pathNavigation`, never from a hidden link row here: a zero-height row is still a List
+            // row that draws its band, and an isActive link inside the path stack crashed against the
+            // mushaf auto-open.) A real push, not a sheet: on iPhone it takes the whole screen, and in
+            // the iPad/Mac split it pushes in the LEFT column, leaving the reader on the right.
+            HStack(spacing: 10) {
+                if ThematicTopicsStore.isBundled {
+                    summaryDoorChip(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
+                        .chevronlessLink { themesBrowseDestination }
                 }
-                .tint(settings.accentColor.color)
-            }
 
-            NavigationLink(destination: quranHistoryDestination) {
-                summaryDoorLabel(title: "History", systemImage: "clock.arrow.circlepath")
+                summaryDoorChip(title: "History", systemImage: "clock.arrow.circlepath")
+                    .chevronlessLink { quranHistoryDestination }
             }
-            .tint(settings.accentColor.color)
+            .padding(.vertical, 2)
         }
     }
 
-    /// A door row under the summary tiles: the accent chip and the name, nothing else. The screen it
-    /// opens introduces itself in its own first section.
-    private func summaryDoorLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, size: 30)
+    /// A door under the summary tiles: a glass chip with the accent symbol and the name, half a row
+    /// wide, so the two doors share one line. The screen it opens introduces itself in its own first
+    /// section.
+    private func summaryDoorChip(title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
 
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .conditionalGlassEffect(clear: true, rectangle: true)
+        .contentShape(Rectangle())
+    }
+
+    /// The Today screen, built lazily like the other doors: the header pill's destination and the
+    /// "-openDailyHub" hook's.
+    private var dailyHubDestination: some View {
+        LazyDestination {
+            DailyHubView { surahID, ayahID in
+                push(surahID: surahID, ayahID: ayahID)
+            }
+        }
     }
     #endif
 

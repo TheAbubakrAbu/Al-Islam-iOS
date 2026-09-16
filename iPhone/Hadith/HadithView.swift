@@ -968,6 +968,12 @@ struct HadithView: View {
 
                 Spacer()
 
+                // Everything of the day on one screen (2026-09-16): the door every daily card carries.
+                NavigationLink(destination: LazyDestination { DailyHubView() }) {
+                    DailyHubDoorLabel()
+                }
+                .buttonStyle(.plain)
+
                 if !dailyHistory.isEmpty {
                     Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
                         .padding(4)
@@ -1040,11 +1046,11 @@ struct HadithView: View {
             settings.hapticFeedback()
             onTap()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
+            // Tight on purpose (Abu, 2026-09-16), the Quran tab's tiles' exact grammar: 4 pt between
+            // lines, 10 pt of padding, one line of each script, a small chip for the icon.
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.caption)
-                        .foregroundColor(settings.accentColor.color)
+                    AccentIconChip(systemImage: icon, size: 18)
                     Text(title)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
@@ -1067,20 +1073,20 @@ struct HadithView: View {
                 // English lines are shorter. The toggles gate the slots, not the content, because a
                 // toggle applies to both tiles at once and so cannot make them ragged.
                 if settings.showHadithArabic {
-                    HadithArabicPreview(text: arabic, lineLimit: 2)
+                    HadithArabicPreview(text: arabic, lineLimit: 1)
                 }
 
                 if settings.showHadithEnglish {
                     Text(english)
-                        .font(.footnote)
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                        .reservedLineLimit(2)
+                        .reservedLineLimit(1)
                 }
             }
             // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
             // all the slack as dead space under the English line.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
+            .padding(10)
             .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
@@ -1098,34 +1104,44 @@ struct HadithView: View {
     /// section instead.
     @ViewBuilder
     private var encyclopediaDoors: some View {
-        if HadithTopicsStore.isBundled {
-            NavigationLink(destination: LazyDestination { HadithTopicsView() }) {
-                doorLabel(title: "Browse by Topic", systemImage: "square.grid.2x2.fill")
+        // Three chips on one row (2026-09-16: three full rows were most of the summary's height), each
+        // its own chevron-less link inside the row; the twin of the Quran tab's row.
+        HStack(spacing: 10) {
+            if HadithTopicsStore.isBundled {
+                doorChip(title: "Topics", systemImage: "square.grid.2x2.fill")
+                    .chevronlessLink { HadithTopicsView() }
             }
-        }
 
-        if HadeethEncStore.isBundled {
-            NavigationLink(destination: LazyDestination { HadeethEncView() }) {
-                doorLabel(title: "Hadith Encyclopedia", systemImage: "books.vertical.fill")
+            if HadeethEncStore.isBundled {
+                doorChip(title: "Encyclopedia", systemImage: "books.vertical.fill")
+                    .chevronlessLink { HadeethEncView() }
             }
-        }
 
-        NavigationLink(destination: LazyDestination { HadithHistoryView() }) {
-            doorLabel(title: "History", systemImage: "clock.arrow.circlepath")
+            doorChip(title: "History", systemImage: "clock.arrow.circlepath")
+                .chevronlessLink { HadithHistoryView() }
         }
+        .padding(.vertical, 2)
     }
 
-    /// One door row: the accent chip and the name. Deliberately the twin of the Quran tab's
-    /// `summaryDoorLabel`, so the two summaries read the same.
-    private func doorLabel(title: String, systemImage: String) -> some View {
-        HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, size: 30)
+    /// One door chip: the accent symbol and the name on glass. Deliberately the twin of the Quran
+    /// tab's `summaryDoorChip`, so the two summaries read the same.
+    private func doorChip(title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
 
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(.caption.weight(.semibold))
                 .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .conditionalGlassEffect(clear: true, rectangle: true)
+        .contentShape(Rectangle())
     }
 
     // MARK: About hadith

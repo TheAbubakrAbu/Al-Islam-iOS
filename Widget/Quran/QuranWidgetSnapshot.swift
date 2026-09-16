@@ -142,6 +142,11 @@ struct DailyWidgetSnapshot: Codable {
     var fajrByDay: [String: TimeInterval]?
     /// The daily-rollover day key the blob was written on.
     var writtenDay: String?
+    /// The app's own pick for `resolvedDayIndex` (the Ayah / Hadith / Dua / Name of the Day the
+    /// in-app card shows that day, see `DailyReminderResolver`): the widget shows it on that day
+    /// only and walks the corpus on every other. Optional so older blobs decode.
+    var resolved: ReminderCard?
+    var resolvedDayIndex: Int?
 
     init(reminders: [ReminderCard] = [], names: [NameCard] = [], fajrByDay: [String: TimeInterval]? = nil, writtenDay: String? = nil) {
         self.reminders = reminders

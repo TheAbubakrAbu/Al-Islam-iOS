@@ -62,9 +62,16 @@ final class NamesDetailsStore: @unchecked Sendable {
     func prewarm() {
         guard Self.isBundled else { return }
         lock.lock()
+        let already = loaded != nil
         let needed = loaded == nil && !loadFailed && !loading
         if needed { loading = true }
         lock.unlock()
+        if already, !readiness.isLoaded {
+            // Parsed by another path (the widget writer's detached build reads the depth directly):
+            // the flag still has to flip for the observers that wait on it.
+            DispatchQueue.main.async { self.readiness.isLoaded = true }
+            return
+        }
         guard needed else { return }
         DispatchQueue.global(qos: .utility).async {
             _ = self.library()

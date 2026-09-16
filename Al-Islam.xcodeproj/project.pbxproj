@@ -489,6 +489,13 @@
 		FACE00052F7CB0E10066FBA9 /* Muqattaat.swift in Sources */ = {isa = PBXBuildFile; fileRef = FACE00012F7CB0E10066FBA9 /* Muqattaat.swift */; };
 		FACE11012D42DDF100871A6A /* WatchConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE962D42DDF100871A6A /* WatchConnectivity.swift */; };
 		FACE11022D42DDF100871A6A /* WatchConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE962D42DDF100871A6A /* WatchConnectivity.swift */; };
+		AA24AF6CC6224EB30AC80CB7 /* ThemeColorGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7001B33A898C862FB4E85AA4 /* ThemeColorGuide.swift */; };
+		AD6174459F37C6A8DE78B0D9 /* ThemeHighlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B141BD14955EFB97632A08 /* ThemeHighlightsView.swift */; };
+		45F7CCD0A44922FFF65075F0 /* SettingsSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9FF3E06AAA14EB1AEE61321 /* SettingsSearch.swift */; };
+		58B7EB2DED78DFFCA94BAB98 /* SettingsSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9FF3E06AAA14EB1AEE61321 /* SettingsSearch.swift */; };
+		95E5E9B3585C0B9ED629D49E /* SkyScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE176521E9FC2BED65552FF /* SkyScene.swift */; };
+		A0639E14E75BCFCDCF258EA8 /* SkyScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE176521E9FC2BED65552FF /* SkyScene.swift */; };
+		AF3C3733D9243C3B39B84F4E /* DailyHub.swift in Sources */ = {isa = PBXBuildFile; fileRef = B109F421AF5F03426015FB72 /* DailyHub.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -850,6 +857,11 @@
 		6B1ADF47224844378FD6E352 /* NamesDetails.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = NamesDetails.json.xz; sourceTree = "<group>"; };
 		4FB4589028C64113869A0CCF /* DailyReminders.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = DailyReminders.json.xz; sourceTree = "<group>"; };
 		FACE00012F7CB0E10066FBA9 /* Muqattaat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Muqattaat.swift; sourceTree = "<group>"; };
+		7001B33A898C862FB4E85AA4 /* ThemeColorGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColorGuide.swift; sourceTree = "<group>"; };
+		36B141BD14955EFB97632A08 /* ThemeHighlightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeHighlightsView.swift; sourceTree = "<group>"; };
+		E9FF3E06AAA14EB1AEE61321 /* SettingsSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearch.swift; sourceTree = "<group>"; };
+		FFE176521E9FC2BED65552FF /* SkyScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyScene.swift; sourceTree = "<group>"; };
+		B109F421AF5F03426015FB72 /* DailyHub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyHub.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1030,6 +1042,7 @@
 			isa = PBXGroup;
 			children = (
 				7260F9152A8715D600E8FF87 /* SettingsView.swift */,
+				E9FF3E06AAA14EB1AEE61321 /* SettingsSearch.swift */,
 				72827EA52E3C425300EBA534 /* SettingsAdhanView.swift */,
 				72827EAB2E3C425B00EBA534 /* SettingsQuranView.swift */,
 				72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */,
@@ -1067,6 +1080,7 @@
 				72574CC52E49EDDE00BFF138 /* AdhanShortcuts.swift */,
 				72F000012F7A000000AAF800 /* DayScrubber.swift */,
 				72F000032F7A000000AAF800 /* SkyView.swift */,
+				FFE176521E9FC2BED65552FF /* SkyScene.swift */,
 				72CA00012F7D000000AAFB00 /* PrayerCalendarView.swift */,
 				72CA00022F7D000000AAFB00 /* PrayerCalendarExport.swift */,
 				72AC00032F7E000000AAFC00 /* FastingActivityController.swift */,
@@ -1115,6 +1129,8 @@
 				EF2040FC77C948C58B211CE9 /* QiraatIsnad.swift */,
 				5C3F924E746F407ABF466CE4 /* QuranRankedSearch.swift */,
 				0ADC7477F58F426E98493CD8 /* ThemeHighlights.swift */,
+				36B141BD14955EFB97632A08 /* ThemeHighlightsView.swift */,
+				7001B33A898C862FB4E85AA4 /* ThemeColorGuide.swift */,
 				6FB947DE3A1743BF85A01EE6 /* SunnahReminders.swift */,
 				3D1F3BE4F44B4F36B0D4BA76 /* ReminderKinds.swift */,
 				D1588E22EECD42598CE073C4 /* WordOfDay.swift */,
@@ -1214,6 +1230,7 @@
 				72E832A02F6F52BA0013428B /* NamesView.swift */,
 				DC8542345D7B4EE5822130B2 /* NamesDepth.swift */,
 				F9C3B6F6C0E04927991AF898 /* DailyReminders.swift */,
+				B109F421AF5F03426015FB72 /* DailyHub.swift */,
 				72FA0001AB5F4C7D00000001 /* ZakahView.swift */,
 				72FA0011AB5F4C7D00000011 /* InheritanceView.swift */,
 				72E8329B2F6F52BA0013428B /* DateView.swift */,
@@ -1722,6 +1739,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A0639E14E75BCFCDCF258EA8 /* SkyScene.swift in Sources */,
 				7E5A00000000000000000006 /* AdhanClipStore.swift in Sources */,
 				72BE7A042F90000000AAFF04 /* BetaQiraat.swift in Sources */,
 				72BE7A012F90000000AAFF12 /* QiraahTajweed.swift in Sources */,
@@ -1775,6 +1793,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF3C3733D9243C3B39B84F4E /* DailyHub.swift in Sources */,
+				95E5E9B3585C0B9ED629D49E /* SkyScene.swift in Sources */,
+				45F7CCD0A44922FFF65075F0 /* SettingsSearch.swift in Sources */,
+				AD6174459F37C6A8DE78B0D9 /* ThemeHighlightsView.swift in Sources */,
+				AA24AF6CC6224EB30AC80CB7 /* ThemeColorGuide.swift in Sources */,
 				7E5A00000000000000000015 /* AnswersViews.swift in Sources */,
 				72D47A0000000000000000C1 /* WidgetChrome.swift in Sources */,
 				72D47A0000000000000000C2 /* DateLockWidgets.swift in Sources */,
@@ -1953,6 +1976,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				58B7EB2DED78DFFCA94BAB98 /* SettingsSearch.swift in Sources */,
 				7E5A00000000000000000016 /* AnswersViews.swift in Sources */,
 				6BC3BA7721864963949CE2B7 /* IslamArticles.swift in Sources */,
 				7E5A000000000000000000A2 /* IslamSearch.swift in Sources */,

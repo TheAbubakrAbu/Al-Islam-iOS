@@ -410,6 +410,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     // whether a look change keeps the Settings list where it was (2026-09-04: it
                     // used to jump to the top, because the bottom bar's modifier changed shape).
                     case "classicLook": shared.classicLook = kv[1] == "1"
+                    // The sky card's two switches, for looking at the card without its skyline (or sky).
+                    case "showSkyView": shared.showSkyView = kv[1] == "1"
+                    case "showSkyScene": shared.showSkyScene = kv[1] == "1"
                     case "tab":
                         NotificationCenter.default.post(name: Notification.Name("AlIslamDebugSwitchTab"), object: kv[1])
                     default: break
@@ -1173,6 +1176,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// The sun arc, moon phase and starfield on the Adhan tab. Off falls back to the standalone
     /// Current/Upcoming countdown card, exactly as it looked before the two were merged.
     @AppStorage("showSkyView") var showSkyView: Bool = true
+
+    /// The skyline along the sky card's horizon (pyramids, a mosque, palms) with the sun by day and
+    /// the moon by night, on the card and on the Solar Arc widgets. Mirrored to the app group because
+    /// the widgets read it there (`Settings.showsSkyline`, SkyScene.swift); the six sky layouts
+    /// reload so a flip shows on the home screen at once.
+    @AppStorage("showSkyScene") var showSkyScene: Bool = true {
+        didSet {
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(showSkyScene, forKey: "showSkyScene")
+            Self.reloadWidgetKinds(["SolarArcWidget", "SolarArcSkyWidget", "MoonWidget", "MoonSkyWidget",
+                                    "SolarMoonWidget", "SolarMoonSkyWidget"])
+        }
+    }
 
     /// JSON map of prayer → `[topHex, bottomHex]` for the Adhan tab's sky card. Empty means "all defaults".
     /// Read and written through the helpers in `SkyPalette.swift`. Mirrored to the app group because the

@@ -247,6 +247,11 @@ struct WordMorphologySection: View {
     }
 
     var body: some View {
+        let rootInfo = WordCardTrace.measure("morphology.root") { self.rootInfo }
+        let lemmaInfo = WordCardTrace.measure("morphology.lemma") { self.lemmaInfo }
+        let rootCount = WordCardTrace.measure("morphology.rootOccurrences") {
+            rootInfo.map { MorphologyStore.shared.occurrences(ofRoot: $0.id).count } ?? 0
+        }
         if MorphologyStore.isBundled, rootInfo != nil || lemmaInfo != nil {
             VStack(alignment: .leading, spacing: 10) {
                 Divider()
@@ -259,7 +264,7 @@ struct WordMorphologySection: View {
 
                 HStack(alignment: .top, spacing: 12) {
                     if let rootInfo {
-                        morphologyTile(title: "Root", value: rootInfo.root.letters, count: MorphologyStore.shared.occurrences(ofRoot: rootInfo.id).count)
+                        morphologyTile(title: "Root", value: rootInfo.root.letters, count: rootCount)
                     }
                     if let lemmaInfo {
                         morphologyTile(title: "Dictionary form", value: lemmaInfo.lemma.text, count: MorphologyStore.shared.occurrences(ofLemma: lemmaInfo.id).count)

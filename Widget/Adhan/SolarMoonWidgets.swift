@@ -88,6 +88,10 @@ struct SolarArcGraph: View {
     private var dotDiameter: CGFloat { compact ? 4 : 5 }
     private var verticalInset: CGFloat { compact ? 7 : 10 }
 
+    /// The skyline and the night moon (SkyScene.swift), the app card's, on the full-height graphs;
+    /// the compact strip has no room for a mosque. Off with the app's Skyline switch.
+    private var showsScene: Bool { !compact && Settings.shared.showsSkyline }
+
     var body: some View {
         let day = WidgetSolarDay(entry: entry)
         let sunFraction = day.fraction(of: entry.date)
@@ -123,6 +127,16 @@ struct SolarArcGraph: View {
             }
             .stroke(horizonColor, lineWidth: 1)
 
+            // The skyline: the app card's scene, dark over a day sky and pale over the night's,
+            // mid-grey on the standard background.
+            if showsScene {
+                let horizonY = yPosition(of: day.horizon, in: rect)
+                SkySceneView(horizonY: horizonY,
+                             color: skyStyle
+                                ? SkyScene.silhouette(overSky: entry.skyColors, at: horizonY / max(rect.height, 1))
+                                : Color.secondary.opacity(0.45))
+            }
+
             ForEach(dots) { prayer in
                 let fraction = day.fraction(of: prayer.time)
                 Circle()
@@ -131,12 +145,39 @@ struct SolarArcGraph: View {
                     .position(point(at: fraction, day: day, in: rect))
             }
 
-            Circle()
+            // The sun, on its path day and night. With the skyline it sets behind the ground and rises
+            // out of it (the app card's rule: only the sky above the horizon shows it); the plain
+            // graph keeps the dimmed underground sun it always had.
+            let sun = Circle()
                 .fill(sunFill)
                 .frame(width: sunDiameter, height: sunDiameter)
                 .shadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 8 : 0)
                 .position(point(at: sunFraction, day: day, in: rect))
-                .opacity(isUp ? 1 : 0.45)
+            if showsScene {
+                sun.mask(alignment: .top) {
+                    Rectangle().frame(height: max(yPosition(of: day.horizon, in: rect) - rect.minY, 0))
+                }
+            } else {
+                sun.opacity(isUp ? 1 : 0.45)
+            }
+
+            if showsScene, !isUp {
+                // Night: the moon at its true phase is the marker on the path, riding the night's dip
+                // where the sun would be (the app card's rule): the real lit limb over the sky and the
+                // monochrome glyph on the standard background, where a white moon would vanish in
+                // light mode.
+                let moonPoint = point(at: sunFraction, day: day, in: rect)
+                if skyStyle {
+                    MoonPhaseView(date: entry.date, diameter: sunDiameter)
+                        .position(moonPoint)
+                } else {
+                    let phase = MoonPhase.on(entry.date)
+                    MoonPhaseGlyph(illumination: phase.illumination, isWaxing: phase.isWaxing)
+                        .frame(width: sunDiameter, height: sunDiameter)
+                        .foregroundColor(.primary)
+                        .position(moonPoint)
+                }
+            }
         }
     }
 
@@ -146,10 +187,9 @@ struct SolarArcGraph: View {
     }
 
     private func yPosition(of height: Double, in rect: CGRect) -> CGFloat {
-        // Vertical inset keeps the sun's glow and the midnight troughs inside the frame.
-        let inset = verticalInset
-        let usable = rect.height - 2 * inset
-        return rect.maxY - inset - CGFloat((height + 1) / 2) * usable
+        // Vertical insets keep the sun's glow and the midnight troughs inside the frame.
+        let usable = rect.height - 2 * verticalInset
+        return rect.maxY - verticalInset - CGFloat((height + 1) / 2) * usable
     }
 }
 

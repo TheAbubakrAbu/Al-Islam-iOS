@@ -239,11 +239,9 @@ struct SummaryWordTile: View, Equatable {
             Settings.shared.hapticFeedback()
             onTap()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: "character.book.closed")
-                        .font(.caption)
-                        .foregroundColor(accent)
+                    AccentIconChip(systemImage: "character.book.closed.fill", tint: accent, size: 18)
                     Text(Self.title)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(accent)
@@ -261,7 +259,7 @@ struct SummaryWordTile: View, Equatable {
 
                 if let arabic {
                     Text(arabic)
-                        .font(Font.arabic(fontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.35))
+                        .font(Font.arabic(fontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.2))
                         .arabicFontDesign(custom: customFace)
                         .foregroundColor(.primary)
                         .lineLimit(1)
@@ -275,7 +273,7 @@ struct SummaryWordTile: View, Equatable {
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(12)
+            .padding(10)
             // The content keeps its IDEAL height whatever the tile is stretched to, so the measurement
             // below can never depend on the frame it feeds (see `SummaryAyahTile`).
             .fixedSize(horizontal: false, vertical: true)
@@ -320,7 +318,7 @@ struct WordOfDayRow: View, Equatable {
 
     var body: some View {
         HStack(spacing: 12) {
-            AccentIconChip(systemImage: "character.book.closed.fill", size: 30)
+            AccentIconChip(systemImage: "character.book.closed.fill", size: 26)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("Word of the Day")
@@ -345,7 +343,7 @@ struct WordOfDayRow: View, Equatable {
                     .minimumScaleFactor(0.7)
             }
         }
-        .padding(.vertical, 3)
+        .padding(.vertical, 1)
     }
 }
 

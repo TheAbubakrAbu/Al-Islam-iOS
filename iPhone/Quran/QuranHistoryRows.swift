@@ -483,12 +483,13 @@ struct SummaryAyahTile: View {
             settings.hapticFeedback()
             onTap()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
+            // Tight on purpose (Abu, 2026-09-16: the summary took too much of the tab): 4 pt between
+            // lines, 10 pt of padding, one line of each script, and a small chip for the icon so the
+            // tile still has a spot of colour.
+            VStack(alignment: .leading, spacing: 4) {
                 if !title.isEmpty {
                     HStack(spacing: 6) {
-                        Image(systemName: icon)
-                            .font(.caption)
-                            .foregroundColor(settings.accentColor.color)
+                        AccentIconChip(systemImage: icon, size: 18)
                         Text(title)
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(titleColor)
@@ -524,7 +525,7 @@ struct SummaryAyahTile: View {
 
                 ayahPreview
             }
-            .padding(12)
+            .padding(10)
             // The content keeps its IDEAL height whatever the tile is stretched to, so the measurement
             // below can never depend on the frame it feeds. (The loop that once froze this grid lived
             // in `SummarySurahTile.oneLineReciterHeight`; this keeps the ayah tiles out of any other.)
@@ -546,12 +547,12 @@ struct SummaryAyahTile: View {
 
     @ViewBuilder
     private var ayahPreview: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 3) {
             if settings.showArabicText {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: "",
-                    font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.1),
+                    font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),
@@ -565,7 +566,7 @@ struct SummaryAyahTile: View {
 
             if settings.showTransliteration, settings.isHafsDisplay {
                 Text(ayah.textTransliteration)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -573,13 +574,13 @@ struct SummaryAyahTile: View {
 
             if settings.showEnglishSaheeh, settings.isHafsDisplay {
                 Text(ayah.textEnglishSaheeh)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else if settings.showEnglishMustafa, settings.isHafsDisplay {
                 Text(ayah.textEnglishMustafa)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -668,11 +669,9 @@ struct SummarySurahTile: View {
             settings.hapticFeedback()
             onTap()
         } label: {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
-                    Image(systemName: icon)
-                        .font(.caption)
-                        .foregroundColor(settings.accentColor.color)
+                    AccentIconChip(systemImage: icon, size: 18)
                     Text(title)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(titleColor)
@@ -773,7 +772,7 @@ struct SummarySurahTile: View {
                 )
                 .padding(.top, 1)
             }
-            .padding(12)
+            .padding(10)
             // See `SummaryAyahTile`: the measured content never depends on the proposed height.
             .fixedSize(horizontal: false, vertical: true)
             .background(GeometryReader { proxy in

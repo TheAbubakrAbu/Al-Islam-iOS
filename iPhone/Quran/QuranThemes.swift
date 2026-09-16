@@ -141,6 +141,30 @@ final class ThematicTopicsStore: @unchecked Sendable {
 
 // MARK: - Sections store
 
+/// One passage of a surah's outline (Quranpedia, via Tilawa): where it runs and what it is about.
+struct SurahSection: Identifiable, Hashable {
+    /// "<surah>:<order>": two passages can share a range (surah 18's two "Two Gardens" rows), so the
+    /// position in the outline is the identity.
+    let id: String
+    let surahID: Int
+    let order: Int
+    let ayahStart: Int
+    let ayahEnd: Int
+    let title: String
+    let titleArabic: String
+
+    var ayahCount: Int { ayahEnd - ayahStart + 1 }
+
+    /// "Ayahs 7-18", or "Ayah 3".
+    var rangeLabel: String {
+        ayahStart == ayahEnd ? "Ayah \(ayahStart)" : "Ayahs \(ayahStart)-\(ayahEnd)"
+    }
+
+    func contains(ayah: Int) -> Bool {
+        (ayahStart...ayahEnd).contains(ayah)
+    }
+}
+
 final class SurahSectionsStore: @unchecked Sendable {
     static let shared = SurahSectionsStore()
     private init() {}
@@ -148,8 +172,70 @@ final class SurahSectionsStore: @unchecked Sendable {
     private let lock = NSLock()
     private var table: [String: Any]?
     private var loadFailed = false
+    /// The structured passages per surah, and their legend colours, built once each.
+    private var sectionsBySurah: [Int: [SurahSection]] = [:]
+    private var colorsBySurah: [Int: [String: ThemeWashColor]] = [:]
+    private var allSectionsCache: [SurahSection]?
 
     static let isBundled: Bool = ThemesPack.url("SurahSections") != nil
+
+    /// The surah's passages in outline order, or [] when it has none.
+    func sections(surah: Int) -> [SurahSection] {
+        lock.lock()
+        if let cached = sectionsBySurah[surah] { lock.unlock(); return cached }
+        lock.unlock()
+        let rows = (loadedTable()?["\(surah)"] as? [String: Any])?["sections"] as? [[Any]] ?? []
+        var sections: [SurahSection] = []
+        for row in rows {
+            guard row.count >= 4, let start = row[0] as? Int, let end = row[1] as? Int, end >= start else { continue }
+            sections.append(SurahSection(
+                id: "\(surah):\(sections.count)",
+                surahID: surah,
+                order: sections.count,
+                ayahStart: start,
+                ayahEnd: end,
+                title: (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                titleArabic: (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            ))
+        }
+        lock.lock(); defer { lock.unlock() }
+        if sectionsBySurah[surah] == nil { sectionsBySurah[surah] = sections }
+        return sectionsBySurah[surah] ?? sections
+    }
+
+    /// Every passage of every surah (741 of them), mushaf order.
+    func allSections() -> [SurahSection] {
+        lock.lock()
+        if let cached = allSectionsCache { lock.unlock(); return cached }
+        lock.unlock()
+        let all = (1...114).flatMap { sections(surah: $0) }
+        lock.lock(); defer { lock.unlock() }
+        if allSectionsCache == nil, !all.isEmpty { allSectionsCache = all }
+        return all
+    }
+
+    func section(id: String) -> SurahSection? {
+        let parts = id.split(separator: ":")
+        guard parts.count == 2, let surah = Int(parts[0]), let order = Int(parts[1]) else { return nil }
+        let list = sections(surah: surah)
+        return list.indices.contains(order) ? list[order] : nil
+    }
+
+    /// The passages naming this ayah, narrowest first (an outline can nest a passage in a passage).
+    func sections(surah: Int, ayah: Int) -> [SurahSection] {
+        sections(surah: surah).filter { $0.contains(ayah: ayah) }.sorted { $0.ayahCount < $1.ayahCount }
+    }
+
+    /// The passage's legend colour (`ThemeColorGuide`), classified once per surah.
+    func color(for section: SurahSection) -> ThemeWashColor {
+        lock.lock()
+        if let cached = colorsBySurah[section.surahID]?[section.id] { lock.unlock(); return cached }
+        lock.unlock()
+        let colors = ThemeColorGuide.colors(forSections: sections(surah: section.surahID))
+        lock.lock(); defer { lock.unlock() }
+        if colorsBySurah[section.surahID] == nil { colorsBySurah[section.surahID] = colors }
+        return colorsBySurah[section.surahID]?[section.id] ?? .signs
+    }
 
     /// The outline for one surah as ready-to-render markdown, or nil when the surah has none.
     /// Markdown because the consumer is the About this Surah sheet's existing markdown view -
@@ -345,6 +431,26 @@ struct ThemesBrowseView: View {
                     Text(verbatim: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    // The passages and the legend: every theme here is lit in its meaning's colour, and
+                    // that screen says what the colours mean and washes whole surahs by passage.
+                    NavigationLink(destination: LazyDestination { ThemeHighlightsView(onOpenAyah: onOpenAyah) }) {
+                        HStack(spacing: 12) {
+                            ThemeLegendChip(size: 30)
+
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Highlight Themes")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                Text(themeHighlights.summary == "Off" ? "Color-coded passages and what each color means" : themeHighlights.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.vertical, 3)
+                    }
+                    .tint(settings.accentColor.color)
                 }
             }
 
@@ -519,6 +625,11 @@ struct ThemesBrowseView: View {
     private func topicLabel(_ topic: ThemeTopic) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
+                // The meaning's colour, the colour the theme lights up in (Tilawa's category dot).
+                Circle()
+                    .fill(ThemeColorGuide.color(for: topic).color)
+                    .frame(width: 10, height: 10)
+
                 // Highlighted like every other search surface, so a match shows WHY it matched.
                 HighlightedSnippet(
                     source: topic.name,
@@ -620,7 +731,8 @@ struct ThemeTopicDetailView: View {
             // Light the theme in the reader: every ayah it names takes a faint wash of one color, in
             // both readers, until it is put out here or in Browse by Theme.
             if !topic.ayahs.isEmpty {
-                let litColor = themeHighlights.color(for: topic.id)
+                let color = themeHighlights.color(for: topic.id) ?? ThemeColorGuide.color(for: topic)
+                let isLit = themeHighlights.isLit(topic.id)
                 Section {
                     Toggle(isOn: Binding(
                         get: { themeHighlights.isLit(topic.id) },
@@ -631,13 +743,14 @@ struct ThemeTopicDetailView: View {
                     )) {
                         HStack(spacing: 10) {
                             Circle()
-                                .fill((litColor ?? themeHighlights.nextColor).color)
+                                .fill(color.color)
                                 .frame(width: 14, height: 14)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Highlight in the Reader")
                                     .font(.subheadline.weight(.semibold))
-                                Text(litColor.map { "Lit in \($0.name.lowercased()) across \(topic.ayahs.count) ayahs" }
-                                     ?? "A faint \(themeHighlights.nextColor.name.lowercased()) wash on its \(topic.ayahs.count) ayahs")
+                                Text(isLit
+                                     ? "Lit in \(color.name) (\(color.meaning.lowercased())) across \(topic.ayahs.count) ayahs"
+                                     : "A faint \(color.name) wash, the color of \(color.meaning.lowercased()), on its \(topic.ayahs.count) ayahs")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -645,7 +758,7 @@ struct ThemeTopicDetailView: View {
                     }
                     .tint(settings.accentColor.color)
                 } footer: {
-                    Text("Up to \(ThemeHighlights.limit) themes can be lit at once, each in its own color, in the list and page readers. Put them out here or at the top of Browse by Theme.")
+                    Text("Up to \(ThemeHighlights.limit) themes can be lit at once, each in the color of what it speaks about, in the list and page readers. Put them out here, at the top of Browse by Theme, or under Highlight Themes, which also says what every color means.")
                         .font(.caption)
                 }
             }

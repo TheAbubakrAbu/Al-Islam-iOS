@@ -12,6 +12,10 @@ struct SettingsHadithView: View {
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = true
+    /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
+    var openPage: SettingsHadithPage? = nil
+    @State private var openRequestedPage = false
+    @State private var deepLinkFired = false
 
     #if DEBUG
     /// Headless visual verification (no tap access on the dev machine): `-launchHadithSettingsReading`
@@ -38,6 +42,14 @@ struct SettingsHadithView: View {
             .navigationViewStyle(.stack)
         } else {
             settingsList
+                .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
+                    if let page = openPage { hadithPageDestination(page) }
+                })
+                .onAppear {
+                    guard !deepLinkFired, openPage != nil else { return }
+                    deepLinkFired = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
+                }
                 .navigationTitle("Hadith Settings")
         }
     }
@@ -75,32 +87,43 @@ struct SettingsHadithView: View {
         )
     }
 
-    /// The root: one link per area, the Al-Quran Settings pattern exactly - the controls live one push
-    /// away so this screen reads as a table of contents rather than a wall of toggles.
+    /// The root: one card of links, the Al-Quran Settings pattern exactly - the controls live one push
+    /// away so this screen reads as a table of contents rather than a wall of toggles - on the
+    /// page-search scaffold, so "font" here finds the size sliders.
     private var settingsList: some View {
-        List {
-            Group {
-                Section {
-                    hadithSettingsLink(title: "Reading View", systemImage: "book") {
-                        readingViewDestination
-                    }
-                }
-                Section {
-                    hadithSettingsLink(title: "Arabic Text", systemImage: "textformat.ar") {
-                        arabicTextDestination
-                    }
-                }
-                Section {
-                    hadithSettingsLink(title: "English Text", systemImage: "textformat") {
-                        englishTextDestination
-                    }
-                }
-                readingModeSection
+        SettingsScopedSearch(scope: .hadith, resolve: resolveSearchDestination) {
+            Section(header: Text("READING")) {
+                hadithPageLink(.readingView) { readingViewDestination }
+                hadithPageLink(.arabicText) { arabicTextDestination }
+                hadithPageLink(.englishText) { englishTextDestination }
             }
-            .themedListRowBackground()
+            readingModeSection
         }
-        .applyConditionalListStyle()
-        .compactListSectionSpacing()
+    }
+
+    private func hadithPageLink<Destination: View>(
+        _ page: SettingsHadithPage,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        NavigationLink(destination: LazyDestination(build: destination)) {
+            SettingsRowLabel(title: page.title, systemImage: page.systemImage, subtitle: page.caption, tint: SettingsTint.hadith)
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    /// The sub-screen behind each root row, for the deep links and the page search.
+    @ViewBuilder
+    private func hadithPageDestination(_ page: SettingsHadithPage) -> some View {
+        switch page {
+        case .readingView: readingViewDestination
+        case .arabicText: arabicTextDestination
+        case .englishText: englishTextDestination
+        }
+    }
+
+    private func resolveSearchDestination(_ destination: SettingsSearchEntry.Destination) -> AnyView? {
+        if case .hadithPage(let page) = destination { return AnyView(hadithPageDestination(page)) }
+        return nil
     }
 
     /// The same list-vs-pages choice the book screen's toolbar book button makes, surfaced here so it can be
@@ -120,20 +143,6 @@ struct SettingsHadithView: View {
             .pickerStyle(.segmented)
             .onChange(of: hadithPageMode) { _ in settings.hapticFeedback() }
         }
-    }
-
-    private func hadithSettingsLink<Destination: View>(
-        title: String,
-        systemImage: String,
-        @ViewBuilder destination: () -> Destination
-    ) -> some View {
-        NavigationLink {
-            destination()
-        } label: {
-            Label(title, systemImage: systemImage)
-                .padding(.vertical, 4)
-        }
-        .tint(settings.accentColor.color)
     }
 
     private var readingViewDestination: some View {
@@ -260,9 +269,12 @@ struct SettingsHadithView: View {
 extension SettingsSearchEntry {
     static let hadithEntries: [SettingsSearchEntry] = [
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
-        .init(title: "Show Hadith Arabic / English", path: "Hadith Settings → Arabic / English Text", keywords: "hadith text toggles narrator display", destination: .hadithSettings),
-        .init(title: "Hadith Font Sizes", path: "Hadith Settings → Arabic / English Text", keywords: "hadith arabic english font size", destination: .hadithSettings),
-        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithSettings),
+        .init(title: "Hadith Reading View (List / Pages)", path: "Hadith Settings", keywords: "page mode list mode paged reader hadith", destination: .hadithSettings),
+        .init(title: "Show Hadith Arabic", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic text toggle display", destination: .hadithPage(.arabicText)),
+        .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system", destination: .hadithPage(.arabicText)),
+        .init(title: "Show Hadith English", path: "Hadith Settings → English Text", keywords: "hadith english translation narrator toggle display", destination: .hadithPage(.englishText)),
+        .init(title: "Hadith English Font Size", path: "Hadith Settings → English Text", keywords: "hadith english font size slider system", destination: .hadithPage(.englishText)),
+        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithPage(.readingView)),
     ]
 }
 

@@ -264,6 +264,9 @@ struct PrayerCountdown: View {
             .foregroundStyle(.secondary)
 
             CountdownDigits(target: next.time)
+                // The skyline's ground runs through the gap above these digits, under the caption
+                // (see `SkyCard.arcTopInset`).
+                .reportingSkyDigitsTop()
         }
         .frame(maxWidth: .infinity)
     }
@@ -731,5 +734,32 @@ struct AccentGradientBar: View {
             }
         }
         .frame(height: 4)
+    }
+}
+
+#if os(iOS)
+/// The top of the sky card's countdown digits, in `SkyCard.groundSpace`: the skyline's ground runs
+/// just above them, between "TIME LEFT" and the digits (see `SkyCard.arcTopInset`). Nil until the
+/// first layout.
+struct SkyDigitsTopKey: PreferenceKey {
+    static let defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue() ?? value
+    }
+}
+#endif
+
+private extension View {
+    /// Reports the view's top edge to the sky card (iOS only: the Watch has no sky card).
+    @ViewBuilder
+    func reportingSkyDigitsTop() -> some View {
+        #if os(iOS)
+        background(GeometryReader { geo in
+            Color.clear.preference(key: SkyDigitsTopKey.self,
+                                   value: geo.frame(in: .named(SkyCard.groundSpace)).minY)
+        })
+        #else
+        self
+        #endif
     }
 }

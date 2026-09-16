@@ -1254,6 +1254,7 @@ struct AyahRow: View, Equatable {
                     // The card opens from a word only with "Tap a Word for Its Meaning" on; the
                     // study layout below still draws its glosses without it.
                     let selectWord: ((Int) -> Void)? = settings.wordByWordMeanings && wordTapsAllowed ? { index in
+                        WordCardTrace.stamp("request")
                         requestSheet(.word(TappedWord(
                             index: index,
                             word: WordTokens.tokens(in: arabicSource)[index],
