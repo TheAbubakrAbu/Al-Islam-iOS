@@ -162,13 +162,13 @@ struct SolarArcGraph: View {
             }
 
             if showsScene, !isUp {
-                // Night: the moon at its true phase is the marker on the path, riding the night's dip
-                // where the sun would be (the app card's rule): the real lit limb over the sky and the
-                // monochrome glyph on the standard background, where a white moon would vanish in
-                // light mode.
+                // Night: the moon is the marker on the path, riding the night's dip where the sun
+                // would be (the app card's rule): a full disc over the sky, so it reads as a position
+                // rather than as a sliver, and the monochrome glyph on the standard background, where
+                // a white moon would vanish in light mode. The Moon widget below shows the true phase.
                 let moonPoint = point(at: sunFraction, day: day, in: rect)
                 if skyStyle {
-                    MoonPhaseView(date: entry.date, diameter: sunDiameter)
+                    MoonPhaseView(date: entry.date, diameter: sunDiameter, alwaysFull: true)
                         .position(moonPoint)
                 } else {
                     let phase = MoonPhase.on(entry.date)

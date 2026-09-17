@@ -148,18 +148,24 @@ struct MoonLitShape: Shape {
 struct MoonPhaseView: View {
     let date: Date
     var diameter: CGFloat = 44
+    /// Draw a full disc whatever the real phase is. The moon that rides the solar arc uses this: there
+    /// it is the night's MARKER, the counterpart of the sun on the day's half of the wave, and a
+    /// crescent reads at a glance as a sliver of a thing rather than as the marker's position (Abu,
+    /// 2026-09-16). The footer's glyph, which exists to show the phase and names it, leaves this off.
+    var alwaysFull: Bool = false
 
     private var phase: MoonPhase { .on(date) }
 
     var body: some View {
         let phase = self.phase
+        let illumination = alwaysFull ? 1 : phase.illumination
         ZStack {
             // The unlit disc: earthshine, not a hole in the sky.
             Circle()
                 .fill(Color.white.opacity(0.10))
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
 
-            MoonLitShape(illumination: phase.illumination, isWaxing: phase.isWaxing)
+            MoonLitShape(illumination: illumination, isWaxing: phase.isWaxing)
                 .fill(
                     LinearGradient(
                         colors: [Color(white: 0.98), Color(white: 0.82)],
@@ -170,12 +176,12 @@ struct MoonPhaseView: View {
                 // A plain `.shadow`, not `.softShadow`: this file is shared with the widget target,
                 // which has no appearance environment. One 20 pt glow on the sky card is not worth a
                 // second copy of the modifier.
-                .shadow(color: .white.opacity(0.35 * phase.illumination), radius: 6)
+                .shadow(color: .white.opacity(0.35 * illumination), radius: 6)
         }
         .frame(width: diameter, height: diameter)
-        .animation(.easeInOut(duration: 0.35), value: phase.illumination)
+        .animation(.easeInOut(duration: 0.35), value: illumination)
         .accessibilityElement()
-        .accessibilityLabel("\(phase.name), \(phase.illuminationPercent) percent illuminated")
+        .accessibilityLabel(alwaysFull ? "Moon" : "\(phase.name), \(phase.illuminationPercent) percent illuminated")
     }
 }
 

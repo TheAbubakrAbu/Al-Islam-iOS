@@ -7,17 +7,36 @@ import SwiftUI
 // stands in the sky band between the prayer columns and the digits, the pyramids under CURRENT, the
 // caption between them and the mosque under UPCOMING (see `SkyCard.arc`); the Solar Arc widgets draw the same paths on their own horizon,
 // scaled to whatever room they have above it, so the two skylines match in shape. The sun rides the
-// arc by day and sinks behind the ground at sunset; through the night the moon, at its true phase,
-// takes its place on the path (the card and `SolarArcGraph` place it). The pyramids and the mosque are
-// the same height, the mosque back at the size it first had (Abu, 2026-09-16: "the mosque before
-// looked better, make it take as much height as it needs"), and the palms that once stood east of it
-// are gone. Over a dark sky the silhouette turns pale (`silhouette(overSky:at:)`), or the skyline
-// vanished at Isha.
+// arc by day and sinks behind the ground at sunset; through the night a full moon takes its place on
+// the path (the card and `SolarArcGraph` place it). The two structures are MIRROR IMAGES about the
+// middle of the card: each spans `clusterSpan`, the mosque centred on `mosqueCentre` and the
+// pyramids on its reflection, and each is a tall centre between two smaller outer
+// masses - the great pyramid answering the dome, the two small ones answering the minarets, all at
+// matching heights. Both keep clear of the middle, where the arc peaks and the countdown digits sit.
+// The palms that once stood east of the mosque are gone. The silhouette is always a DARKER shade of
+// the sky behind it (`silhouette(overSky:)`), at every hour, so it never has to cross the sky's own
+// luminance to get from one period's colour to the next.
 
 enum SkyScene {
-    /// The tallest point of the scene above the horizon at scale 1 (the mosque's crescent), in points.
-    /// `draw` shrinks the scene when the room above the horizon is shorter than this.
+    /// The tallest point of the scene above the horizon at scale 1 (the mosque's crescent, the great
+    /// pyramid's apex), in points. `draw` shrinks the scene when the room above the horizon is
+    /// shorter than this.
     static let naturalHeight: CGFloat = 43
+
+    /// How much of the card's width each of the two structures covers. They are mirror images about
+    /// the middle: the pyramids centred on `1 - mosqueCentre`, the mosque on `mosqueCentre`, each
+    /// spanning this. Both `drawPyramids` and `drawMosque` derive their positions from these two, so
+    /// the sides cannot drift apart the way they did when each carried its own hand-written numbers.
+    private static let clusterSpan: CGFloat = 0.255
+    private static let mosqueCentre: CGFloat = 0.828
+
+    /// Every height, multiplied by this before it is drawn (Abu, 2026-09-16: "just make them both a
+    /// little smaller"). Width shrinks with it through `clusterSpan`, by the same 0.85, so the two
+    /// structures keep their proportions and stay each other's mirror; `mosqueCentre` moves out a
+    /// little as the span narrows, to hold the mosque's outer edge at the 0.965 that keeps its minaret
+    /// clear of the card's rounded corner.
+    private static let heightFactor: CGFloat = 0.85
+
 
     /// Draws the scene into `context`. `rect` is the graph's rect, `horizonY` the ground line, `color`
     /// the silhouette (see `silhouette(overSky:at:)` for one that suits the sky). Every length scales
@@ -27,7 +46,7 @@ enum SkyScene {
         let width = rect.width
         let room = horizonY - rect.minY
         guard width > 40, room > 12 else { return }
-        let scale = min(max(0.55, min(1.0, width / 340)), (room - 2) / naturalHeight)
+        let scale = min(max(0.55, min(1.0, width / 340)), (room - 2) / naturalHeight) * heightFactor
         let lit = Color.white.opacity(0.10)
 
         func point(_ x: CGFloat, _ up: CGFloat) -> CGPoint {
@@ -50,11 +69,29 @@ enum SkyScene {
     }
 
     /// The silhouette colour for a sky painted with `colors` (top to bottom), read at `location`
-    /// (0 top, 1 bottom) where the ground runs: a dark shade over a daytime sky, a pale one over the
-    /// night's, blended in between, so the pyramids and the mosque show against every period's
-    /// gradient and whatever pair the user picked (Abu, 2026-09-16: at night they were hard to see).
+    /// (0 top, 1 bottom) where the ground runs: a darker shade of that sky, so the pyramids and the
+    /// mosque show against every period's gradient and whatever pair the user picked.
     static func silhouette(overSky colors: [Color], at location: CGFloat) -> Color {
-        silhouette(day: dayFactor(overSky: colors, at: location))
+        silhouette(overSky: skyColor(of: colors, at: location))
+    }
+
+    /// The sky's own colour where the ground runs: the gradient's endpoints mixed by `location`.
+    /// The silhouette is a darker shade of exactly this, which is what keeps the two in step.
+    static func skyColor(of colors: [Color], at location: CGFloat) -> Color {
+        let c = skyComponents(of: colors, at: location)
+        return Color(red: c.red, green: c.green, blue: c.blue)
+    }
+
+    /// The same reading as `skyColor`, as three numbers, so `SkylineSilhouette` can interpolate them.
+    /// A `Color` cannot travel through `animatableData`; its components can.
+    static func skyComponents(of colors: [Color], at location: CGFloat) -> (red: Double, green: Double, blue: Double) {
+        guard let top = colors.first, let bottom = colors.last else { return (0, 0, 0) }
+        let t = max(0, min(1, location))
+        var tr: CGFloat = 0, tg: CGFloat = 0, tb: CGFloat = 0, ta: CGFloat = 0
+        var br: CGFloat = 0, bg: CGFloat = 0, bb: CGFloat = 0, ba: CGFloat = 0
+        UIColor(top).getRed(&tr, green: &tg, blue: &tb, alpha: &ta)
+        UIColor(bottom).getRed(&br, green: &bg, blue: &bb, alpha: &ba)
+        return (Double(tr + (br - tr) * t), Double(tg + (bg - tg) * t), Double(tb + (bb - tb) * t))
     }
 
     /// How much of a DAY sky this is at `location`: 0 over a night sky (luminance up to 0.12), 1 over
@@ -66,11 +103,58 @@ enum SkyScene {
         return smoothstep((luminance - 0.12) / 0.28)
     }
 
-    /// The silhouette for a given day factor: 0.55 black by day, a pale 0.30 white by night.
-    static func silhouette(day: CGFloat) -> Color {
-        let day = max(0, min(1, day))
-        return Color(white: 0.92 * (1 - day), opacity: 0.30 + 0.25 * day)
+    /// A darker shade of the sky behind it, OPAQUE.
+    ///
+    /// Opaque is the whole point (Abu, 2026-09-16: "WE ARE STILL CROSSING THE SOLAR GRAPH"). The
+    /// skyline has always been drawn after the arc, so it was already on top, but at 0.30...0.55 alpha
+    /// the dashes read straight through the pyramids and the mosque and the arc looked like it was
+    /// cutting them in half. Filling the shapes solid hides it behind them, which is what a silhouette
+    /// on a horizon does, and it is the only fix that leaves the graph itself alone.
+    ///
+    /// Shrinking the buildings does NOT work, which cost three attempts to establish: the arc's window
+    /// runs Fajr to Fajr, so the day half rises out of the ground at sunrise around x 0.01...0.07,
+    /// right where the pyramid cluster starts, and therefore sweeps through EVERY height there. A
+    /// shorter pyramid is crossed lower down, not spared. Measured across real prayer windows, the
+    /// pyramids were crossed in 30 of 30 at full height and in 30 of 30 at 50%.
+    ///
+    /// Takes the sky it stands against so it can keep the LOOK the translucent version had. The old
+    /// silhouette was 0.92 white at 0.30 alpha over a night sky, which composited to a blue-tinted
+    /// RGB(82, 88, 113): its colour came from the sky showing through it, which is the very thing
+    /// being removed. So the sky is mixed into the fill instead of behind it, and the result is the
+    /// same colour, opaque. Sampling a built card before and after is the check that matters here;
+    /// a first attempt at a flat opaque grey came out RGB(164, 164, 164), twice as light and with the
+    /// blue gone, and looked nothing like the card it replaced.
+    static func silhouette(overSky sky: Color) -> Color {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(sky).getRed(&r, green: &g, blue: &b, alpha: &a)
+        // The sky's own colour, darkened. One multiply, nothing else: see `shade`.
+        return Color(red: Double(r) * shade, green: Double(g) * shade, blue: Double(b) * shade)
     }
+
+    /// How much of the sky's brightness the silhouette keeps. ALWAYS DARKER THAN ITS SKY, at every
+    /// hour, which is the whole design and is worth stating plainly because two cleverer versions of
+    /// this failed in ways that only showed up mid-animation.
+    ///
+    /// A silhouette is a shadow. It reads as one when it is darker than what is behind it, and the
+    /// day/night crossfade this used to do (pale buildings at night, dark by day) had to pass THROUGH
+    /// the sky's own luminance to get from one to the other. Standing still that was only a bad
+    /// colour at Maghrib, where the blend happened to land on the crossing. Moving, it was worse: at
+    /// the turn from Maghrib to Isha the silhouette went from darker-than-sky to lighter-than-sky, so
+    /// the fade between them ran through 1.00x contrast and the pyramids and the mosque genuinely
+    /// disappeared for a few frames (Abu, 2026-09-16: "so abrupt and almost like there is nothing").
+    ///
+    /// Two attempted repairs are recorded here because both look reasonable and neither works:
+    ///  - recomputing a contrast floor per frame keeps every FRAME legible but lets the push
+    ///    direction flip when one direction runs out of headroom, which is a 113-point jump, and
+    ///  - crossfading the darker and lighter candidates is smooth, 3 points a frame, but the average
+    ///    of a dark and a light colour is the sky itself, so it passes through 1.01x and vanishes.
+    /// One direction, always, is what removes the failure instead of relocating it.
+    ///
+    /// 0.38 keeps every period between 1.9x and 2.4x contrast against its own sky, the darkest being
+    /// Isha's 1.93x (a night sky has the least room to go darker). Because it is a plain multiple of
+    /// the sky, the silhouette moves exactly as the sky moves: across a Maghrib-to-Isha turn the
+    /// biggest step is 1 RGB point and contrast never drops below 2.08x.
+    private static let shade: Double = 0.38
 
     private static func luminance(of color: Color) -> CGFloat {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
@@ -86,13 +170,36 @@ enum SkyScene {
     // MARK: Pyramids
 
     private static func drawPyramids(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint, color: Color, lit: Color) {
-        // (left, apex x, right, height): the great one in the middle of the cluster, a low one half off
-        // the edge, a small one toward the middle. The great one stands 30 high, the mosque's dome
-        // about the same (its crescent a little higher): "the pyramids the same size as the mosque".
+        // (left, apex x, right, height). The cluster MIRRORS the mosque's skeleton rather than merely
+        // matching its bounding box (Abu, 2026-09-16, looking at the card: "look at that tiny pyramid
+        // its nothing like the minaret"). The mosque is a tall centre between two smaller outer
+        // masses, so this is too: a great pyramid on the cluster's centre, `naturalHeight` like the
+        // crescent, with one smaller pyramid at each end where the minarets stand.
+        //
+        // What was wrong before: three pyramids staggered 0.02/0.11/0.26 at heights 24/43/15. The
+        // bounding box measured 0.30 wide and 43 tall and so passed every check, but the third was a
+        // 15-high stub with nothing opposite it, and the cluster's mass sat left of its own centre
+        // while the mosque's sat on its. Equal boxes, visibly unequal skylines.
+        //
+        // The cluster spans `clusterSpan` centred on `clusterCentre`, which is the mosque's centre
+        // reflected about the card (1 - 0.815 = 0.185), so the two sit at mirrored offsets from the
+        // middle. Widths are NOT mirrored from the minarets: a minaret is a 5 pt shaft, and a pyramid
+        // that narrow at 38 high would be a needle. Each keeps the proportions its own shape needs
+        // (a slope near 1.5, which reads as a pyramid) while the skeleton, the span and the heights
+        // are what mirror.
+        let clusterCentre = 1 - mosqueCentre
+        // Half-bases chosen for a slope (height over half-base) of about 1.4, near Giza's 1.27, so
+        // these read as pyramids and not as spikes. The bases overlap, which is what a cluster does.
+        // Written against the original 0.30 span, so they narrow with it and the slopes hold.
+        let greatHalf = 0.0775 * (clusterSpan / 0.30)
+        let smallHalf = 0.060 * (clusterSpan / 0.30)
+        let smallHeight: CGFloat = 30
+        let clusterLeft = clusterCentre - clusterSpan / 2
+        let clusterRight = clusterCentre + clusterSpan / 2
         let pyramids: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-            (-0.02, 0.06, 0.14, 17),
-            (0.08, 0.19, 0.30, 30),
-            (0.27, 0.32, 0.37, 11),
+            (clusterLeft, clusterLeft + smallHalf, clusterLeft + smallHalf * 2, smallHeight),
+            (clusterCentre - greatHalf, clusterCentre, clusterCentre + greatHalf, naturalHeight),
+            (clusterRight - smallHalf * 2, clusterRight - smallHalf, clusterRight, smallHeight),
         ]
         for (left, apex, right, height) in pyramids {
             var body = Path()
@@ -116,20 +223,39 @@ enum SkyScene {
 
     private static func drawMosque(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
                                    width: CGFloat, scale: CGFloat, color: Color, lit: Color) {
-        // Centred at 0.82 of the width, the body spanning 0.69...0.95 and the minarets at its edges.
-        // The dome's apex lands at about 30 (the great pyramid's height), its crescent at 43
-        // (`naturalHeight`), the minarets' finials at about 38. The dome is sized in points, not in
-        // the width, and the whole stands clear of the UPCOMING column's last line (about 69 pt down
-        // the card; the ground is about 121).
-        let centre: CGFloat = 0.82
+        // The mosque spans exactly `span` of the card, 0.665...0.965, matching the pyramid cluster's
+        // 0.02...0.32, and its crescent reaches `naturalHeight` as the great pyramid's apex does. The
+        // two stand either side of the middle, which the arc's peak and the countdown digits need
+        // clear. The right edge stops short of the card's own so nothing is clipped by the rounded
+        // corner (0.98 clipped the minaret; only a screenshot caught it, the build was clean).
+        //
+        // MEASURE THE OUTERMOST INK, not the body. Getting this wrong is what made the mosque read
+        // as wider and shorter than the pyramids even though the numbers here said 0.30 and 43:
+        //  - the widest thing is not the body rect but each minaret's BALCONY RING, which is
+        //    `shaft * 2` wide, so it overhangs its own centre by a full `shaft` on each side. The
+        //    minaret centres are therefore inset from the span's ends by that overhang, in width
+        //    fractions, which holds the drawn span at 0.30 at widget size and card size alike.
+        //  - the tallest thing is the crescent, which sits 7 above the finial's tip plus its own
+        //    radius, and the tip is `domeRadius * 1.28` above the dome's centre. `domeLift` is
+        //    solved backwards from all of that so the topmost ink lands on `naturalHeight`.
+        // Both are derived here rather than written as literals, so a change of scale, shaft or dome
+        // radius carries through instead of quietly unmatching the two again. Check a change against
+        // a screenshot, not the build: the last mismatch compiled perfectly for weeks.
+        let centre = mosqueCentre
+        let span = clusterSpan
         let baseHeight: CGFloat = 9
         let domeRadius = 15 * scale
         let sideRadius = 6.5 * scale
         let minaretHeight: CGFloat = 30
+        let shaftWidth = min(width * 0.014, 5 * scale)
+        // Half the distance between the minaret centres: the span less each ring's overhang.
+        let minaretOffset = span / 2 - shaftWidth / width
+        // Lifts the dome so the crescent's topmost point is exactly `naturalHeight`.
+        let domeLift = naturalHeight - baseHeight - domeRadius * 1.28 / scale - 10.05
 
         // Minarets first: they stand behind the body.
-        for x in [centre - 0.115, centre + 0.115] {
-            let shaft = min(width * 0.014, 5 * scale)
+        for x in [centre - minaretOffset, centre + minaretOffset] {
+            let shaft = shaftWidth
             let top = point(x, minaretHeight)
             let shaftRect = CGRect(x: top.x - shaft / 2, y: top.y, width: shaft, height: point(x, 0).y - top.y)
             context.fill(Path(shaftRect), with: .color(color))
@@ -145,12 +271,12 @@ enum SkyScene {
         }
 
         // The two side domes, then the great dome, all standing on the body's roof line.
-        for x in [centre - 0.075, centre + 0.075] {
+        for x in [centre - 0.095, centre + 0.095] {
             let domeCentre = point(x, baseHeight)
             let rect = CGRect(x: domeCentre.x - sideRadius, y: domeCentre.y - sideRadius, width: sideRadius * 2, height: sideRadius * 2)
             context.fill(Path(ellipseIn: rect), with: .color(color))
         }
-        let domeCentre = point(centre, baseHeight + 2)
+        let domeCentre = point(centre, baseHeight + domeLift)
         var dome = Path()
         // An onion dome: the round of a circle, drawn up to a point.
         dome.move(to: CGPoint(x: domeCentre.x - domeRadius, y: domeCentre.y))
@@ -178,8 +304,10 @@ enum SkyScene {
                         startAngle: .degrees(-40), endAngle: .degrees(220), clockwise: false)
         context.stroke(crescent, with: .color(color), lineWidth: 1.3)
 
-        // The body, over the domes' undersides.
-        let bodyRect = CGRect(x: point(centre - 0.13, 0).x, y: point(centre, baseHeight).y, width: width * 0.26, height: baseHeight * scale)
+        // The body, over the domes' undersides. It sits INSIDE the minarets rather than spanning the
+        // whole mosque: they stand at its corners, so it reaches their centres and no further.
+        let bodyRect = CGRect(x: point(centre - minaretOffset, 0).x, y: point(centre, baseHeight).y,
+                              width: minaretOffset * 2 * width, height: baseHeight * scale)
         context.fill(Path(bodyRect), with: .color(color))
 
         // The doorway's arch and two windows, lighter, so the body is a building and not a block.
@@ -211,6 +339,63 @@ struct SkySceneView: View {
             SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, color: color)
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// The skyline as something that can ANIMATE its colour, which `SkySceneView` cannot: a `Canvas` just
+/// redraws with whatever `Color` it is handed, so `.animation(value:)` around one has nothing to
+/// interpolate and the silhouette snaps from its night shade to its day shade in a single frame.
+///
+/// The card used to hide that by stacking a dark skyline and a pale one and crossfading their
+/// opacities, which worked but required both to be translucent, and a translucent silhouette is what
+/// let the solar arc show straight through the buildings (Abu, 2026-09-16). So the fade moved here
+/// instead: `day` is a plain `Double`, `animatableData` lets SwiftUI walk it frame by frame, and each
+/// frame resolves the one opaque colour for that instant. Nothing is ever see-through, and the tint
+/// still travels rather than jumping (Abu, same day: "the animation for when the color changes is bad").
+/// Draws the skyline with a colour that TRAVELS when the sky turns over at a prayer.
+///
+/// It is a `ViewModifier`, and that is the load-bearing detail. SwiftUI only drives `animatableData`
+/// frame by frame on a `Shape`, a `ViewModifier` and a couple of other protocols; on a plain `View`
+/// conforming to `Animatable` it is quietly ignored and the body renders once with the final value.
+/// A first attempt made this a `View`, which compiled, looked correct and still snapped: the sky's
+/// gradient eased over its second while the silhouette jumped 56 RGB points in a single frame, so at
+/// the turn from Maghrib to Isha the buildings changed colour all at once (Abu, 2026-09-16:
+/// "switching from maghrib to isha the color of the mosque/pyramids is so abrupt").
+///
+/// FOUR numbers travel, not one. At night only 30% of the silhouette's colour comes from the
+/// day/night tint and the other 70% from the sky mixed into it, so `day` alone is not enough: the
+/// sky's three components have to come with it, or most of the colour still jumps.
+/// Draws the skyline with a colour that TRAVELS when the sky turns over at a prayer.
+///
+/// It is a `ViewModifier`, and that is the load-bearing detail. SwiftUI drives `animatableData` frame
+/// by frame on a `Shape`, a `ViewModifier` and a couple of other protocols; on a plain `View`
+/// conforming to `Animatable` it is quietly ignored and the body renders once with the final value.
+/// A first attempt made this a `View`, which compiled, looked right and still snapped.
+struct SkylineSilhouette: ViewModifier, Animatable {
+    var sky: (red: Double, green: Double, blue: Double)
+    var horizonY: CGFloat
+
+    /// The sky's three components travel, and the silhouette is recomputed from them every frame.
+    /// It is NOT the silhouette's own colour that is interpolated: that is what made the turn from
+    /// Maghrib to Isha pass through 1.00x contrast, because the two ends sat on opposite sides of the
+    /// sky's luminance and the straight line between them ran through the sky itself. Interpolating
+    /// the sky and re-deriving a shade of it keeps the relationship at every step.
+    var animatableData: AnimatablePair<Double, AnimatablePair<Double, Double>> {
+        get { .init(sky.red, .init(sky.green, sky.blue)) }
+        set { sky = (newValue.first, newValue.second.first, newValue.second.second) }
+    }
+
+    func body(content: Content) -> some View {
+        SkySceneView(horizonY: horizonY,
+                     color: SkyScene.silhouette(overSky: Color(red: sky.red, green: sky.green, blue: sky.blue)))
+    }
+}
+
+extension View {
+    /// Replaces this view with the skyline, drawn at the colour for `day` over `sky`, animating both.
+    func skylineSilhouette(sky: (red: Double, green: Double, blue: Double),
+                           horizonY: CGFloat) -> some View {
+        modifier(SkylineSilhouette(sky: sky, horizonY: horizonY))
     }
 }
 

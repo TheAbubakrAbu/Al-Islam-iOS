@@ -657,19 +657,33 @@ struct SkyCard: View {
 
                 // The skyline along the ground (SkyScene.swift): the pyramids under CURRENT and the
                 // mosque under UPCOMING, in silhouette on the ground the line draws, dark over a day
-                // sky and pale over the night's. Over the sun and the stars, under the dots. The dark
-                // and the pale skylines are both drawn and crossfaded, because a Canvas cannot animate
-                // its colour: the flip used to cut straight from black to white at Isha (Abu,
-                // 2026-09-16), now it takes the same second the sky behind it takes to re-tint (a
-                // first cut of two seconds was "too slow").
+                // sky and pale over the night's. Over the sun and the stars, under the dots.
+                //
+                // ONE layer, and an opaque one. It used to be two, a dark skyline and a pale one
+                // crossfaded by opacity, because a Canvas cannot animate its colour and the flip
+                // otherwise cut straight from black to white at Isha (Abu, 2026-09-16). That trick
+                // needed both layers translucent, and a translucent silhouette is exactly what let the
+                // solar arc show straight through the pyramids and the mosque (Abu, same day: "WE ARE
+                // STILL CROSSING THE SOLAR GRAPH"), so `silhouette(day:overSky:)` now mixes the sky
+                // INTO the fill and the shape is solid.
+                //
+                // The fade lives in the `SkylineSilhouette` MODIFIER, not in an `.animation` around a
+                // Canvas: a Canvas redraws with whatever colour it is handed, so animating it directly
+                // has nothing to interpolate and the tint snaps in one frame. The modifier's
+                // `animatableData` carries `day` and the sky's three components, so every frame of the
+                // turn resolves its own opaque colour, over the same second the gradient above takes.
+                // It must be a ViewModifier: as a plain `View` conforming to `Animatable` the same
+                // code compiles and is ignored (see `SkylineSilhouette`).
                 if showsScene {
-                    let day = SkyScene.dayFactor(overSky: skyColors, at: horizonY / max(rect.height, 1))
-                    SkySceneView(horizonY: horizonY, color: SkyScene.silhouette(day: 1))
-                        .opacity(day)
-                        .animation(.easeInOut(duration: 1.0), value: day)
-                    SkySceneView(horizonY: horizonY, color: SkyScene.silhouette(day: 0))
-                        .opacity(1 - day)
-                        .animation(.easeInOut(duration: 1.0), value: day)
+                    let location = horizonY / max(rect.height, 1)
+                    let sky = SkyScene.skyComponents(of: skyColors, at: location)
+                    // Keyed on the sky itself, which is the only thing the silhouette is derived
+                    // from now. One modifier: stacking three `.animation`s would let them fight over
+                    // the same transaction.
+                    Color.clear
+                        .skylineSilhouette(sky: sky, horizonY: horizonY)
+                        .animation(.easeInOut(duration: 1.0),
+                                   value: [sky.red, sky.green, sky.blue])
                 }
 
                 // A dot on the arc for each mandatory prayer (Jumuah and the traveling combined pairs
@@ -700,7 +714,11 @@ struct SkyCard: View {
                 // the same way (Abu, 2026-09-16: on the graph, not parked at the top of the sky). It
                 // is drawn OVER the skyline's ground band so it never fades into the ground.
                 if showsScene, !isUp {
-                    MoonPhaseView(date: moonDate, diameter: 20)
+                    // A full disc, not the night's true phase: here the moon is the MARKER, the
+                    // counterpart of the sun on the day's half of the wave, and a 34% crescent reads
+                    // as a sliver of a thing rather than as a position on the path. The footer's
+                    // glyph is the one that shows the real phase, and it names it (Abu, 2026-09-16).
+                    MoonPhaseView(date: moonDate, diameter: 20, alwaysFull: true)
                         .position(sunPoint)
                 }
             }
