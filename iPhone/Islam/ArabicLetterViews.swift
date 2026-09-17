@@ -1129,6 +1129,20 @@ struct ArabicLetterView: View {
                         Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
                         Text("The sound does not change: read it simply as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there.")
                         Text("You meet it constantly in the Quran, most familiarly as the word of negation لَا (\"no\" / \"not\") and in لَآ إِلَٰهَ إِلَّا ٱللَّهُ.")
+
+                        // The two shapes kept from the retired LETTERS JOINED TOGETHER section. They
+                        // live here rather than in the alphabet because neither is a letter: they are
+                        // the definite article written onto a hamza, and the pair differs ONLY by the
+                        // madd sign, which is the whole point of showing them together.
+                        Text("ٱلۡأَ - al + hamza with fatHah")
+                            .font(.body.weight(.semibold))
+                        Text("The definite article on a word that begins with a hamza carrying a short fatHah: one beat, \"a\". Written ٱ + ل + أ. You read it in ٱلۡأَرۡضِ (al-ard, \"the earth\", Quran 2:11).")
+
+                        Text("ٱلۡأٓ - al + alif madd")
+                            .font(.body.weight(.semibold))
+                        Text("The same article on a word beginning with a LONG \"aa\": the madd sign (ٓ) over the hamza holds it about twice as long. Written ٱ + ل + أ + madd. This is the alif madd (آ) you already know, written the way the mushaf writes it here, as a hamza carrying the madd rather than as the single letter آ. You read it in ٱلۡأٓخِرَةِ (al-aakhirah, \"the Hereafter\", Quran 2:102).")
+
+                        Text("The two differ only in the mark above the hamza, and that mark is the whole difference in length: one beat against about two.")
                     }
                     .font(.body)
                 }

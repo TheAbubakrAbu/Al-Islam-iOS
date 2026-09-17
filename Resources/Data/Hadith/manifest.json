@@ -24,13 +24,13 @@
     },
     {
       "blocks" : 22,
-      "bytes" : 1909334,
+      "bytes" : 1909330,
       "chapters" : 38,
       "dailyCandidates" : 1399,
       "hadiths" : 4345,
-      "sha256" : "c22512de6ac01b733a5134f073ca0a965ae991c7b82ee7080bcdbb6e532723e6",
+      "sha256" : "8173d3bc34422df4c5e3e7ff01dadb521d9f4dceb95de4877482c8c7e0175b08",
       "slug" : "ibnmajah",
-      "sourceBytes" : 6881950
+      "sourceBytes" : 8193870
     },
     {
       "blocks" : 30,
@@ -54,13 +54,13 @@
     },
     {
       "blocks" : 30,
-      "bytes" : 2378679,
+      "bytes" : 2378683,
       "chapters" : 52,
       "dailyCandidates" : 1707,
       "hadiths" : 5768,
-      "sha256" : "81560a34569256cf2df40c0b2f1e668ddba716a3fbb60b538723841f0f005c35",
+      "sha256" : "d28c43dab2d8338fd8776f425564b43871172d49dd87cd7ee94974843f860e81",
       "slug" : "nasai",
-      "sourceBytes" : 9172806
+      "sourceBytes" : 10717374
     },
     {
       "blocks" : 12,
@@ -74,13 +74,13 @@
     },
     {
       "blocks" : 9,
-      "bytes" : 815614,
+      "bytes" : 814959,
       "chapters" : 8,
       "dailyCandidates" : 321,
       "hadiths" : 1374,
-      "sha256" : "598991a7adbfdb279407cd4ccda2a8714c3cc5d9a6b4709144b2d0c40a7394ae",
+      "sha256" : "43069a0cde100fff339d5dbbf7dd63186359d607ddd009e5b9ac6378b1d201f4",
       "slug" : "ahmed",
-      "sourceBytes" : 2568811
+      "sourceBytes" : 2742359
     },
     {
       "blocks" : 11,
@@ -154,13 +154,13 @@
     },
     {
       "blocks" : 19,
-      "bytes" : 1982725,
+      "bytes" : 1982717,
       "chapters" : 25,
       "dailyCandidates" : 1231,
       "hadiths" : 4428,
-      "sha256" : "9a1f3a7478cfcf2cf1dc681d8ef1d53e1e8414488a1870674902983b7801e96b",
+      "sha256" : "4943dcc7e7a436e38e2fb5f56c018a6effbbe4822e2c2130884f120db6764e93",
       "slug" : "mishkat_almasabih",
-      "sourceBytes" : 5389681
+      "sourceBytes" : 5729168
     },
     {
       "blocks" : 8,
@@ -179,5 +179,5 @@
   "textCodec" : "lzma",
   "totalChapters" : 607,
   "totalHadiths" : 50884,
-  "totalPackBytes" : 25498779
+  "totalPackBytes" : 25498116
 }

@@ -309,6 +309,12 @@ struct SurahPageReader<Controls: View>: View {
     var onToggleSelection: ((Int, Int) -> Void)? = nil
     /// Fires on a real page turn (not the initial seed) - the parent clears its selections and snippet.
     var onPageTurned: (() -> Void)? = nil
+    /// Ask the HOST (`SurahView`) to present a sheet for an ayah on the page. The page must not present
+    /// its own: a mushaf page is mounted only while it is inside the pager's window, and unmounting the
+    /// view that owns a live `.sheet` dismisses that sheet - which is why the first word card opened on
+    /// a page could vanish on its own. The host outlives every page, exactly as it does for list rows
+    /// (`AyahRow.onRequestSheet`, Phase 5 step 6).
+    var onRequestSheet: ((AyahRowSheetKind, Surah, Ayah) -> Void)? = nil
     /// Opens the reciter picker (the parent owns the sheet). Page mode had no way to change reciter
     /// without leaving to list mode; the footer play menu offers it through this hook.
     var onChooseReciter: (() -> Void)? = nil
@@ -579,6 +585,7 @@ struct SurahPageReader<Controls: View>: View {
                             } else {
                                 MushafPageContent(
                                     page: pages[index],
+                                    onRequestSheet: onRequestSheet,
                                     highlightedAyah: $highlightedAyah,
                                     arrivalHighlight: arrivalHighlight,
                                     onClearArrival: onClearArrival,
@@ -1875,6 +1882,10 @@ private struct MushafPageContent: View {
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
 
     let page: MushafPage
+    /// Route a sheet request to the reader's HOST instead of presenting it here: a page is mounted only
+    /// while it is inside the pager's window, and unmounting a view that owns a live `.sheet` dismisses
+    /// that sheet. See `SurahPageReader.onRequestSheet`.
+    var onRequestSheet: ((AyahRowSheetKind, Surah, Ayah) -> Void)? = nil
 
     /// The ayah the app is drawing attention to, shared with the list reader so a highlight survives a
     /// switch between reading modes. Tapping an ayah toggles it; opening to an ayah (last-read / search) or
@@ -1931,33 +1942,6 @@ private struct MushafPageContent: View {
     /// A tapped surah heading in the page TEXT (the name/basmala where a surah begins mid-page) - drives
     /// the surah info sheet. The reader's pinned header has its own, at reader level.
     @State private var infoSurah: Surah?
-
-    /// A double-tapped word's meaning card (Hafs: gloss + tajweed; non-Hafs: the riwayah word card) -
-    /// the page-mode twin of the list rows' word tap, reached without opening the actions sheet first.
-    /// Own wrappers rather than `TappedWord`/`RiwayahTappedWord`: those carry no surah/ayah (their
-    /// sheets get them from the presenting context), and a page can show up to two surahs.
-    private struct PageTappedWord: Identifiable {
-        let surah: Surah
-        let ayah: Ayah
-        let index: Int
-        let word: String
-        let meaning: String
-        let total: Int
-        var id: String { "\(surah.id).\(ayah.id).\(index)" }
-    }
-
-    private struct PageTappedRiwayahWord: Identifiable {
-        let surah: Surah
-        let ayah: Ayah
-        let index: Int
-        let word: String
-        let total: Int
-        let tag: String
-        var id: String { "\(surah.id).\(ayah.id).\(index)" }
-    }
-
-    @State private var pageTappedWord: PageTappedWord?
-    @State private var pageTappedRiwayahWord: PageTappedRiwayahWord?
 
     private struct SecondarySheetRequest: Identifiable {
         let kind: AyahSecondarySheet
@@ -2146,30 +2130,6 @@ private struct MushafPageContent: View {
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
-        // The double-tapped word's card. `item:` so double-tapping a different word re-presents
-        // with the new word - same pattern as the actions sheet's own word tap.
-        .sheet(item: $pageTappedWord) { tapped in
-            WordMeaningSheet(
-                surah: tapped.surah,
-                ayah: tapped.ayah,
-                word: tapped.word,
-                meaning: tapped.meaning,
-                position: tapped.index + 1,
-                total: tapped.total
-            )
-            .environmentObject(settings)
-        }
-        .sheet(item: $pageTappedRiwayahWord) { tapped in
-            RiwayahWordSheet(
-                surah: tapped.surah,
-                ayah: tapped.ayah,
-                tag: tapped.tag,
-                word: tapped.word,
-                index: tapped.index,
-                total: tapped.total
-            )
-            .environmentObject(settings)
-        }
         // Report this page's sheet state to the shared tracker so the pager's follow-the-recitation
         // page turn holds still while a sheet presented from this page is up - turning the page tears
         // this page view down, which dismissed its open sheet (see `AyahSheetPresence`).
@@ -2214,7 +2174,6 @@ private struct MushafPageContent: View {
     /// Whether any sheet presented from THIS page (actions, secondary, surah info, word card) is up.
     private var anyPageSheetOpen: Bool {
         sheetAyah != nil || secondarySheet != nil || infoSurah != nil
-            || pageTappedWord != nil || pageTappedRiwayahWord != nil
     }
 
     /// Double tap on a word: open its meaning card - the gloss + tajweed card on Hafs, the riwayah
@@ -2247,26 +2206,23 @@ private struct MushafPageContent: View {
                 displayText: displayText
             ) ?? []
             settings.hapticFeedback()
-            pageTappedWord = PageTappedWord(
-                surah: surah,
-                ayah: ayah,
+            // Presented by the HOST, never by this page: see `SurahPageReader.onRequestSheet`.
+            onRequestSheet?(.word(TappedWord(
                 index: wordIndex,
                 word: tokens[wordIndex],
                 meaning: glosses.indices.contains(wordIndex) ? glosses[wordIndex] : "",
                 total: glosses.isEmpty ? tokens.count : glosses.count
-            )
+            )), surah, ayah)
         } else {
             let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
             guard !tag.isEmpty, QiraahTajweedStore.shared.isAvailable(tag: tag) else { return }
             settings.hapticFeedback()
-            pageTappedRiwayahWord = PageTappedRiwayahWord(
-                surah: surah,
-                ayah: ayah,
+            onRequestSheet?(.riwayahWord(RiwayahTappedWord(
                 index: wordIndex,
                 word: tokens[wordIndex],
                 total: tokens.count,
                 tag: tag
-            )
+            )), surah, ayah)
         }
     }
 

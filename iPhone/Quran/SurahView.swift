@@ -1902,6 +1902,12 @@ struct SurahView: View {
                     if arrivalTerm != nil { arrivalTerm = nil }
                     if arrivalAyahID != nil { arrivalAyahID = nil }
                 },
+                // The page reader's word cards are presented by THIS view, the same host the list rows
+                // use: a mushaf page is unmounted whenever it leaves the pager's window, and a view that
+                // owns a live `.sheet` takes that sheet down with it when it goes.
+                onRequestSheet: { kind, surah, ayah in
+                    presentRowSheet(kind, surah: surah, ayah: ayah)
+                },
                 onChooseReciter: {
                     showReciterPickerSheet = true
                 },
