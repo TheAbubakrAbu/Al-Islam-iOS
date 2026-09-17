@@ -1240,10 +1240,12 @@ extension Settings {
     /// one early check is harmless (the next fetch re-runs it), flipping a paired watch's mode is not.
     var ownsTravelingModeAutoCheck: Bool {
         #if os(watchOS)
-        // Query WCSession directly (rather than via WatchConnectivityManager) so this also compiles in
-        // targets that don't include the manager source, e.g. the watch Complication extension.
-        let session = WCSession.default
-        return session.activationState == .activated && !session.isCompanionAppInstalled
+        // The watch NEVER decides traveling mode for itself, paired or standalone (Abu, 2026-09-16:
+        // "no automatic travel mode and no home city on apple watch"). Qasr is a ruling the wearer
+        // makes deliberately; a wrist device flipping it from a drifting GPS fix, with no home city
+        // set there to measure from, decides it for them. A paired watch follows the phone, and a
+        // standalone one is toggled by hand in its own settings.
+        return false
         #else
         return true
         #endif
@@ -3212,6 +3214,21 @@ extension Settings {
             return Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
         }
         return now
+    }
+
+    /// Whether a tracker slot can be marked yet, honouring `trackerRequiresPrayerTime`.
+    ///
+    /// Only TODAY is ever gated. Past days must stay editable - filling in what you forgot to mark at
+    /// the time is what the history views are for - and future days are already blocked a whole day at
+    /// a time by `isFuture`. With the setting off this is always true, which is the behaviour the
+    /// tracker has always had.
+    ///
+    /// Takes the slot's own `time` rather than looking the prayer up by name, so combined traveling
+    /// rows ("Dhuhr/Asr") and Jumuah gate off the time actually shown for them.
+    func canMarkPrayer(startingAt start: Date, on date: Date, at now: Date = Date()) -> Bool {
+        guard trackerRequiresPrayerTime else { return true }
+        guard Calendar.current.isDate(date, inSameDayAs: now) else { return true }
+        return start <= now
     }
 
     /// The full "Yes, I prayed it" handling shared by the notification actions and the in-app dialog.

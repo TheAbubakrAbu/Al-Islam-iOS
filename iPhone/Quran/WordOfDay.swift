@@ -19,8 +19,6 @@ struct WordOfDayEntry: Identifiable, Equatable {
     }
 
     let id: String
-    /// This app's own token at the anchor, so it renders in every bundled face.
-    let arabic: String
     let transliteration: String
     let meaning: String
     /// The anchor occurrence: where the form first appears in the mushaf.
@@ -31,6 +29,14 @@ struct WordOfDayEntry: Identifiable, Equatable {
     let count: Int
     /// Every ayah carrying the form, in mushaf order.
     let occurrences: [Occurrence]
+
+    /// The written form: this app's own token at the anchor, read from the Quran text (the pack
+    /// stores no copy of a Quranic word, so the form can never differ from the reader's).
+    var arabic: String {
+        guard let ayahRow = QuranData.shared.ayah(surah: surah, ayah: ayah) else { return "" }
+        let tokens = WordTokens.tokens(in: ayahRow.displayArabicText(surahId: surah, clean: false, qiraahOverride: ""))
+        return tokens.indices.contains(token) ? tokens[token] : ""
+    }
 }
 
 /// The bundled corpus (`Resources/Data/Quran/WordOfDay.json.xz`), parsed once off-main (kicked at
@@ -165,12 +171,13 @@ final class WordOfDayStore: @unchecked Sendable {
 
     private static func parse(_ json: Data) -> [WordOfDayEntry]? {
         guard let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
+              // Version 2: the form is read from the Quran text at the anchor, not carried.
+              root["version"] as? Int == 2,
               let rows = root["words"] as? [[String: Any]] else { return nil }
         var out: [WordOfDayEntry] = []
         out.reserveCapacity(rows.count)
         for row in rows {
             guard let id = row["id"] as? String,
-                  let arabic = row["ar"] as? String,
                   let surah = row["s"] as? Int, let ayah = row["a"] as? Int, let token = row["p"] as? Int,
                   let count = row["n"] as? Int,
                   let occ = row["occ"] as? [[Any]] else { continue }
@@ -180,7 +187,7 @@ final class WordOfDayStore: @unchecked Sendable {
                 return .init(surah: s, ayah: a, tokens: tokens)
             }
             out.append(WordOfDayEntry(
-                id: id, arabic: arabic,
+                id: id,
                 transliteration: row["tr"] as? String ?? "",
                 meaning: row["en"] as? String ?? "",
                 surah: surah, ayah: ayah, token: token, count: count,

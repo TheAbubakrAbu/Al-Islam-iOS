@@ -3152,7 +3152,10 @@ struct MushafPageComposer {
     }
 
     /// Fallback only - used if `QuranCommon` isn't installed and the ornament can't be drawn.
-    private static let basmalaText = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+    private static var basmalaText: String {
+        // al-Fatihah's first ayah, from the Quran the app ships, never a copy here.
+        QuranData.shared.ayah(surah: 1, ayah: 1)?.displayArabicText(surahId: 1, clean: false) ?? ""
+    }
 
     /// The isti'adhah, shown in place of the basmala for al-Fatihah and at-Tawbah (the same text the list
     /// reader's header row shows).
@@ -5592,7 +5595,15 @@ struct MushafPageTextView: UIViewRepresentable {
             .map { "\($0.surahID):\($0.ayahID):\($0.highlight?.rawValue ?? "")" }
             .sorted()
             .joined(separator: ",")
-        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)"
+        // The theme washes belong in the key for the same reason the bookmark colors do: lighting a
+        // theme (or Thematic Highlighting as a whole) changes this page's wash while the text, the
+        // bookmarks and the selection all stay put. Leaving it out is what made a toggled highlight
+        // appear only after leaving the reader and coming back, which rebuilt the view from scratch.
+        let themeKey = themeWashes
+            .map { "\($0.surahID):\($0.ayahID):\($0.color.rawValue)" }
+            .sorted()
+            .joined(separator: ",")
+        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)|\(themeKey)"
         let sameText = context.coordinator.lastAssignedText === attributed
             && context.coordinator.lastWidth == width
         if sameText, context.coordinator.lastHighlightKey == highlightKey {
@@ -5630,6 +5641,11 @@ struct MushafPageTextView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     final class Coordinator: NSObject, NSLayoutManagerDelegate, UIScrollViewDelegate {
+        /// How long a single tap's ayah mark waits for a possible second tap. UIKit's own double-tap
+        /// window is ~0.3 s; this is deliberately a little under it, short enough that a single tap
+        /// still feels immediate and long enough that a real double tap always cancels the mark.
+        static let doubleTapGrace: TimeInterval = 0.25
+
         weak var textView: UITextView?
         weak var scrollView: UIScrollView?
         var ranges: [MushafAyahRange] = []
@@ -5662,6 +5678,9 @@ struct MushafPageTextView: UIViewRepresentable {
         var onDoubleTapWord: ((Int, Int, Int) -> Void)?
         var forcedBaselineOffset: CGFloat = 0
         var baselineBand: ClosedRange<CGFloat> = 0...0
+
+        /// The first tap's ayah mark, held for `doubleTapGrace` so a second tap can cancel it.
+        var pendingMark: DispatchWorkItem?
 
         /// Uniform baselines: the paragraph style pins every running-text line BOX to the body font's height,
         /// and this pins where the baseline sits inside that box. TextKit otherwise derives it per line from
@@ -5777,9 +5796,27 @@ struct MushafPageTextView: UIViewRepresentable {
             // `<= 0` also covers the name-only subrange sentinel, should a hit ever resolve to it.
             if ayahID <= 0 {
                 onTapHeading?(surahID)
-            } else {
-                onTapAyah?(surahID, ayahID)
+                return
             }
+            guard onDoubleTapWord != nil else {
+                onTapAyah?(surahID, ayahID)
+                return
+            }
+            // A double tap must not disturb the ayah mark (Abu, 2026-09-16: "when i double tap a word
+            // dont affect select"). The single-tap recognizer cannot use `require(toFail:)` here
+            // without making EVERY tap wait for the double-tap timeout, so the mark is deferred by
+            // that much instead and cancelled when the second tap lands: one tap still marks with no
+            // perceptible delay, two taps open the word card and leave the mark exactly as it was.
+            // (The earlier code let both taps through, on the theory that two toggles cancel out; they
+            // are two separate writes, so the ayah visibly flickered and any interleaving left it wrong.)
+            pendingMark?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.pendingMark = nil
+                self.onTapAyah?(surahID, ayahID)
+            }
+            pendingMark = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.doubleTapGrace, execute: work)
         }
 
         /// Double tap on a word: resolves which whitespace-split token of the ayah's composed text
@@ -5787,6 +5824,10 @@ struct MushafPageTextView: UIViewRepresentable {
         /// splitting `WordTokens.tokens` uses, so the presenter's tokens/glosses line up; the ayah's
         /// trailing number ornament is one extra final token, which the presenter's bounds check drops.
         @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            // The first tap's deferred mark: drop it, whatever this double tap resolves to. A double
+            // tap that lands between words opens nothing, and it must still not toggle the ayah.
+            pendingMark?.cancel()
+            pendingMark = nil
             guard gesture.state == .ended, let tv = textView, tv.textStorage.length > 0 else { return }
             let point = gesture.location(in: tv)
             let location = CGPoint(x: point.x - tv.textContainerInset.left, y: point.y - tv.textContainerInset.top)

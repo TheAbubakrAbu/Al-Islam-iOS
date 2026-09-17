@@ -2,7 +2,14 @@ import SwiftUI
 
 struct ArabicView: View {
     @ObservedObject private var settings = Settings.shared
+    #if DEBUG
+    /// `-arabicSearch <text>`: start with the search field filled, the only headless way to reach a
+    /// section below the fold (the simulator cannot be scrolled from a script).
+    @State private var searchText = ProcessInfo.processInfo.arguments.firstIndex(of: "-arabicSearch")
+        .flatMap { ProcessInfo.processInfo.arguments.indices.contains($0 + 1) ? ProcessInfo.processInfo.arguments[$0 + 1] : nil } ?? ""
+    #else
     @State private var searchText = ""
+    #endif
     /// The letter a result asked to scroll to ("Scroll To Letter"), consumed once the search clears.
     @State private var scrollTarget: String?
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -308,6 +315,7 @@ struct ArabicView: View {
                 mainLetterSections
                 if keywordVisible {
                     searchResultsSection
+                    joinedShapesResultsSection
                 }
             }
             .themedListRowBackground()
@@ -483,6 +491,128 @@ struct ArabicView: View {
         }
         #endif
     }
+
+    /// Shapes two letters make together (`joinedArabicShapes`): the mandatory laam-alif, the two hamza
+    /// forms of the definite article that differ only by the madd sign, and the stacked naskh pairs.
+    ///
+    /// A section of its own rather than entries in SPECIAL ARABIC LETTERS, because none of these is a
+    /// letter: the alphabet's sections are lists of characters, and filing لا or ٱلۡأٓ among them would
+    /// teach that they are letters with sounds of their own, which they are not. What they teach is
+    /// recognition, so they sit after the alphabet and before the basics.
+    @ViewBuilder
+    private var joinedShapesSection: some View {
+        // Only when NOT searching: a search replaces the whole screen with its own results, and the
+        // matching shapes are listed there instead (`joinedShapesResultsSection`).
+        if searchText.isEmpty {
+            Section {
+                ForEach(joinedArabicShapes) { shape in
+                    joinedShapeRow(shape)
+                }
+            } header: {
+                SectionPillHeader(title: "LETTERS JOINED TOGETHER", count: joinedArabicShapes.count)
+            } footer: {
+                Text(Self.joinedShapesFooter)
+            }
+        }
+    }
+
+    /// The joined shapes a search matches, under the letter results: searching "yaa jeem", "laam
+    /// alif" or a shape itself has to find these too, or the section is invisible to anyone who
+    /// looks for it by name.
+    @ViewBuilder
+    private var joinedShapesResultsSection: some View {
+        let shapes = joinedArabicShapes.filter { matchesSearch($0) }
+        if !searchText.isEmpty, !shapes.isEmpty {
+            Section {
+                ForEach(shapes) { shape in
+                    joinedShapeRow(shape)
+                }
+            } header: {
+                SectionPillHeader(title: "JOINED SHAPES", count: shapes.count)
+            }
+        }
+    }
+
+    private func matchesSearch(_ shape: JoinedShape) -> Bool {
+        guard !searchText.isEmpty else { return true }
+        let needle = searchText.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        return [shape.shape, shape.parts, shape.name, shape.transliteration, shape.example]
+            .contains { $0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(needle) }
+    }
+
+    private func joinedShapeRow(_ shape: JoinedShape) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                // The alphabet's own Arabic face and size rules (the letter tiles' pattern): a joined
+                // shape is taller and wider than a single letter, so it gets a fixed slot, one line and
+                // room to scale down rather than overflowing the row.
+                Text(shape.shape)
+                    .font(settings.scalableIslamArabicFont(base: 30, relativeTo: .title2))
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(minWidth: 74, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(shape.transliteration)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+                    HStack(spacing: 6) {
+                        Text(shape.parts)
+                            .font(settings.scalableIslamArabicFont(base: 15, relativeTo: .footnote))
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        if shape.isMandatory {
+                            Text("required")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(settings.accentColor.color.opacity(0.18), in: Capsule())
+                                .foregroundColor(settings.accentColor.color)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Text(shape.name)
+                    .font(settings.scalableIslamArabicFont(base: 16, relativeTo: .subheadline))
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Text(shape.note)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(shape.example)
+                    .font(settings.scalableIslamArabicFont(base: 20, relativeTo: .body))
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(shape.exampleReference)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 4)
+        #if !os(watchOS)
+        .textSelection(.enabled)
+        #endif
+    }
+
+    private static let joinedShapesFooter =
+        "None of these is a new letter: they are shapes letters make when written together. Only laam-alif is required by the script itself. The rest are how the naskh hand of the mushaf stacks a pair, and knowing them by name is what turns a wall of joined letters into words you can pick apart."
 
     /// Which languages the six letters belong to, right under them: "non-Arabic" alone named nobody (user
     /// rule, 2026-09-15). Each letter's page says the same in full (`nonArabicLetterOrigins`).
@@ -683,6 +813,8 @@ struct ArabicView: View {
             }
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
+
+            joinedShapesSection
 
             Section("ARABIC BASICS") {
                 NavigationLink {

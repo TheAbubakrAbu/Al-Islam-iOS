@@ -184,16 +184,10 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         }
 
         do {
-            let session = AVAudioSession.sharedInstance()
-            // .playback ignores the ringer switch; .ambient respects it. The override is an explicit
-            // opt-in ("play the adhan in the app even in Silent Mode"), off by default.
-            try session.setCategory(Settings.shared.adhanOverridesSilentMode ? .playback : .ambient, mode: .default)
-            try session.setActive(true)
-
+            // Decoding the file and preparing the player touch no audio hardware, so they stay here.
             let p = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
             p.delegate = self
             p.prepareToPlay()
-            p.play()
             // Retire a still-playing previous adhan through a local (the stopAdhan idiom): stop it
             // explicitly, and never let its release run inside the `player = p` write - the shape of
             // the achievement-banner exclusivity crash.
@@ -201,6 +195,30 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             old?.stop()
             player = p
             playingPrayerName = prayerName ?? "Adhan"
+
+            // Activating the session configures the audio route and can block the caller for hundreds
+            // of milliseconds; on this @MainActor class that is a visible hang, which is what Xcode's
+            // "AVAudioSession Hang Risk" warning points at. So the session work runs off the main
+            // thread and the adhan starts in its completion, still in the right order (category, then
+            // activation, then play) and still on the main actor.
+            let overridesSilentMode = Settings.shared.adhanOverridesSilentMode
+            Task.detached(priority: .userInitiated) {
+                let session = AVAudioSession.sharedInstance()
+                do {
+                    // .playback ignores the ringer switch; .ambient respects it. The override is an
+                    // explicit opt-in ("play the adhan in the app even in Silent Mode"), off by default.
+                    try session.setCategory(overridesSilentMode ? .playback : .ambient, mode: .default)
+                    try session.setActive(true)
+                } catch {
+                    // Report it, then still try to play: a failed activation usually means another app
+                    // holds the session, and playing silently is better than swallowing the adhan.
+                    logger.error("Adhan audio session failed: \(error.localizedDescription)")
+                }
+                await MainActor.run { [weak self] in
+                    guard let self, self.player === p else { return }   // stopped while we activated
+                    p.play()
+                }
+            }
         } catch {
             logger.error("Foreground adhan playback failed: \(error.localizedDescription)")
             player = nil
@@ -214,7 +232,11 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             pausedQuranForAdhan = false
             Self.resumeRecitation?()
         } else {
-            try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+            // Deactivation blocks the same way activation does (the hang warning names both), and
+            // nothing waits on it: the adhan has already finished. Hand it to a background thread.
+            Task.detached(priority: .utility) {
+                try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+            }
         }
     }
 }

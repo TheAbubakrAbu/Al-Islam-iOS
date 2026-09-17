@@ -140,13 +140,63 @@ extension View {
 /// English, in the accent colour, as one reusable view with a context menu that copies both, source
 /// included (the citation is part of the English itself, e.g. "(Quran 2:43)" or "(Sahih al-Bukhari 631)").
 ///
-/// The Arabic is the app's own text, not retyped: ayat are the Uthmani text of the bundled mushaf and
-/// hadith are the matn as printed in the bundled collection, so what the reader sees here is what they
-/// find when they open the same reference in the Quran or Hadith tabs.
+/// The Arabic is the app's own text, not retyped: ayat are read from the bundled mushaf and hadith
+/// from the bundled collection as the quote renders (`QuranQuote.swift`, `HadithQuote.swift`), so what
+/// the reader sees here is what they find when they open the same reference in the Quran or Hadith tabs.
 struct ScriptureQuote: View {
     let text: String
     var arabic: String? = nil
     var dimmed: Bool = false
+    /// The reference form: a Quran quote whose words come from the Quran the app ships, never from
+    /// a copy in the article (see `QuranQuote.swift`). `words` narrows it to the quoted words.
+    var reference: QuranQuoteReference? = nil
+    var words: ClosedRange<Int>? = nil
+    /// The shelf form: a narration whose words come from the bundled collection (see
+    /// `HadithQuote.swift`), the Arabic and the English each a token range of the row, or the
+    /// literal `arabic` / `text` above when the article's wording is not the shelf's.
+    var hadith: HadithQuoteReference? = nil
+    var cite: String = ""
+    var hadithArabic: ClosedRange<Int>? = nil
+    var hadithEnglish: [ClosedRange<Int>] = []
+
+    /// The literal form: the words of the Companions and scholars, and anything else the app's
+    /// packs do not carry. Quran quotes use `init(quran:words:)`; hadith use `init(hadith:cite:)`.
+    init(text: String, arabic: String? = nil, dimmed: Bool = false) {
+        self.text = text
+        self.arabic = arabic
+        self.dimmed = dimmed
+    }
+
+    /// The reference is one surah's ayahs: 2:255, 52:35-36 or 2:43, 110. A reference that does not
+    /// parse renders as its citation alone, which the corpus gate (Scripts/verify_islam_corpus.py)
+    /// refuses to ship in the first place.
+    init(quran reference: String, words: ClosedRange<Int>? = nil) {
+        self.text = "(Quran \(reference))"
+        self.reference = QuranQuoteReference(reference)
+        self.words = words
+    }
+
+    /// A narration on the shelf, "bukhari:6306", cited as written ("Sahih al-Bukhari 6306, Sahih
+    /// Muslim 2705"). `arabic` is the matn's token range in the row's Arabic and `english` the quoted
+    /// sentence's in its translation; a side the shelf does not have in the article's words is
+    /// carried literally instead (`arabicText`, or `text` with its quote marks and no citation).
+    init(hadith link: String, cite: String, arabic: ClosedRange<Int>? = nil, english: ClosedRange<Int>? = nil,
+         text: String? = nil, arabicText: String? = nil) {
+        self.init(hadith: link, cite: cite, arabic: arabic, english: english.map { [$0] } ?? [],
+                  text: text, arabicText: arabicText)
+    }
+
+    /// The same with an English quote that skips part of the narration: one range per piece.
+    init(hadith link: String, cite: String, arabic: ClosedRange<Int>? = nil, english: [ClosedRange<Int>],
+         text: String? = nil, arabicText: String? = nil) {
+        self.text = text ?? ""
+        self.arabic = arabicText
+        self.dimmed = true
+        self.hadith = HadithQuoteReference(link)
+        self.cite = cite
+        self.hadithArabic = arabic
+        self.hadithEnglish = english
+    }
 
     // Two layers: this thin wrapper takes the call site's plain inputs and hands them to an Equatable
     // body behind `.equatable()`, so the 1,400+ quotes across the article pages do not re-evaluate when
@@ -154,7 +204,70 @@ struct ScriptureQuote: View {
     // accent and the Arabic faces come from `AppearanceEnvironment`, not from observing `Settings`, so
     // a location tick or a countdown never reaches a quote at all.
     var body: some View {
-        ScriptureQuoteBody(text: text, arabic: arabic, dimmed: dimmed).equatable()
+        if let reference {
+            QuranQuoteView(reference: reference, words: words)
+        } else if let hadith {
+            HadithQuoteView(reference: hadith, cite: cite, arabic: hadithArabic, english: hadithEnglish,
+                            literalText: text, literalArabic: arabic)
+        } else {
+            ScriptureQuoteBody(text: text, arabic: arabic, dimmed: dimmed).equatable()
+        }
+    }
+}
+
+/// A referenced hadith quote: the row's texts come from `HadithQuoteSource`, synchronously when the
+/// row is warm (a quote scrolled back into view) and after one off-main read the first time, during
+/// which the citation shows alone. A link the shelf cannot resolve keeps showing the citation (and
+/// whichever side is literal), which the corpus gate refuses to ship in the first place.
+private struct HadithQuoteView: View {
+    let reference: HadithQuoteReference
+    let cite: String
+    let arabic: ClosedRange<Int>?
+    let english: [ClosedRange<Int>]
+    let literalText: String
+    let literalArabic: String?
+
+    @State private var late: HadithQuoteText?
+
+    var body: some View {
+        let row = late ?? HadithQuoteSource.cached(reference)
+        let englishText: String = english.isEmpty
+            ? literalText
+            : row.map { "\u{201C}\(WordRange.words($0.text, english))\u{201D}" } ?? ""
+        let arabicText: String? = arabic.map { range in row.map { WordRange.words($0.arabic, range) } } ?? literalArabic
+        ScriptureQuoteBody(text: englishText.isEmpty ? "(\(cite))" : "\(englishText) (\(cite))",
+                           arabic: arabicText, dimmed: true)
+            .equatable()
+            .task(id: reference) {
+                if row == nil { late = await HadithQuoteSource.resolve(reference) }
+            }
+    }
+}
+
+/// A referenced Quran quote: resolved from the app's own text as it renders (a dictionary lookup,
+/// not an observation of `QuranData`, so a load step never re-evaluates every quote on a page). In
+/// the one case the text is not there yet, an article opened in the first moments of a cold launch,
+/// the citation shows alone and the words follow once the Quran has loaded.
+private struct QuranQuoteView: View {
+    let reference: QuranQuoteReference
+    let words: ClosedRange<Int>?
+
+    @State private var late: QuranQuoteText?
+
+    var body: some View {
+        let resolved = late ?? QuranQuoteSource.resolve(reference)
+        if let resolved {
+            ScriptureQuoteBody(text: "\u{201C}\(resolved.english)\u{201D} (\(reference.citation))",
+                               arabic: resolved.arabic, dimmed: false, emphasis: words)
+                .equatable()
+        } else {
+            ScriptureQuoteBody(text: "(\(reference.citation))", arabic: nil, dimmed: false)
+                .equatable()
+                .task {
+                    await QuranQuoteSource.waitUntilReady()
+                    late = QuranQuoteSource.resolve(reference)
+                }
+        }
     }
 }
 
@@ -169,9 +282,25 @@ private struct ScriptureQuoteBody: View, Equatable {
     /// Hadith and the words of the Companions render slightly softened (0.85 opacity) so ayat keep
     /// the fullest accent, and their Arabic is set in the Islam tab's face rather than the mushaf face.
     let dimmed: Bool
+    /// The words the article is about, as a token range of `arabic`: those keep the full accent and
+    /// the rest of the ayah steps back. Nil quotes the whole text evenly.
+    var emphasis: ClosedRange<Int>? = nil
 
     static func == (lhs: ScriptureQuoteBody, rhs: ScriptureQuoteBody) -> Bool {
-        lhs.text == rhs.text && lhs.arabic == rhs.arabic && lhs.dimmed == rhs.dimmed
+        lhs.text == rhs.text && lhs.arabic == rhs.arabic && lhs.dimmed == rhs.dimmed && lhs.emphasis == rhs.emphasis
+    }
+
+    /// The Arabic as one `Text`: plain, or with the tokens outside `emphasis` lightened.
+    private func arabicText(_ arabic: String) -> Text {
+        guard let emphasis else { return Text(arabic.decomposingAlefMadda) }
+        let tokens = arabic.split(separator: " ", omittingEmptySubsequences: true)
+        var out = Text("")
+        for (index, token) in tokens.enumerated() {
+            var piece = Text(String(token).decomposingAlefMadda)
+            if !emphasis.contains(index) { piece = piece.foregroundColor(accent.opacity(0.5)) }
+            out = index == 0 ? piece : out + Text(" ") + piece
+        }
+        return out
     }
 
     private var accent: Color { appearance.accent.opacity(dimmed ? 0.85 : 1) }
@@ -197,7 +326,7 @@ private struct ScriptureQuoteBody: View, Equatable {
         let _ = RenderCounter.hit("ScriptureQuote")
         let quote = VStack(alignment: .leading, spacing: 10) {
             if let arabic, !arabic.isEmpty {
-                Text(arabic.decomposingAlefMadda)
+                arabicText(arabic)
                     .font(arabicFont)
                     .arabicFontDesign(custom: arabicUsesCustomFace)
                     .lineSpacing(6)

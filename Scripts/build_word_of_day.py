@@ -14,9 +14,11 @@ the hamza carriers on their base letter, the dagger alif KEPT so genuinely diffe
 merge), Tilawa's own fold, and the counts are checked against Tilawa's so any drift between the two
 texts is reported rather than shipped silently.
 
-Pack layout (version 1): {"version": 1, "words": [{"id", "ar", "tr", "en", "s", "a", "p", "n",
+Pack layout (version 2): {"version": 2, "words": [{"id", "tr", "en", "s", "a", "p", "n",
 "occ": [[surah, ayah, [token, ...]], ...]}]} - `p` is the anchor's 0-based token index, `n` the
-count of the form across the Quran, `occ` every ayah in mushaf order.
+count of the form across the Quran, `occ` every ayah in mushaf order. The written form itself is
+NOT stored: it is the app's own token at the anchor (`s`:`a`, token `p`), read from the Quran
+text at runtime, so the pack carries no copy of a Quranic word (version 1 did, as `ar`).
 """
 import json, lzma, pathlib, re, subprocess, sys
 
@@ -95,7 +97,7 @@ def main() -> None:
             drift.append(f"{entry['id']} {entry['arabic']}: app {count} vs Tilawa {entry['occurrences']}")
         words.append({
             "id": entry["id"],
-            "ar": anchor[p],  # this app's own token, so it renders in every bundled face
+            # No "ar": the form is the app's own token at (s, a, p), read at runtime.
             "tr": entry["transliteration"],
             "en": entry["meaningEn"],
             "s": s, "a": a, "p": p,
@@ -103,7 +105,7 @@ def main() -> None:
             "occ": occ,
         })
 
-    pack = {"version": 1, "source": "Tilawa wordOfDay.ts (curation, transliteration, gloss); occurrences from this app's Hafs text", "words": words}
+    pack = {"version": 2, "source": "Tilawa wordOfDay.ts (curation, transliteration, gloss); the form and its occurrences from this app's Hafs text", "words": words}
     body = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_bytes(xz(body))

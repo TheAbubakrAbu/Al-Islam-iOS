@@ -62,7 +62,9 @@ struct DailyReminderEntry: Identifiable, Equatable {
 
     let id: String
     let kind: Kind
-    /// Empty for a verse: the Arabic is read from the Quran at render time.
+    /// Empty for a verse: the Arabic is read from the Quran at render time. For a card whose words
+    /// live on the app's shelf or in the Fortress of the Muslim, filled from there when the pack
+    /// loads (`DailyReminderStore.resolveReferences`); the pack itself carries no copy.
     let arabic: String
     let transliteration: String?
     /// The memorable core (the widget's line).
@@ -75,9 +77,24 @@ struct DailyReminderEntry: Identifiable, Equatable {
     let ayah: Int?
     let repeatCount: Int?
     let hadith: HadithLink?
+    /// The card's Arabic as a 0-based inclusive range of whitespace tokens of its narration's text
+    /// (`hadith`) or its Fortress entry (`dua`): the reference the pack stores instead of the words.
+    var arabicWords: ClosedRange<Int>? = nil
+    /// Likewise the English, into the narration's translation.
+    var englishWords: ClosedRange<Int>? = nil
+    /// The Fortress of the Muslim entry this dua card is (`HisnDuasStore` id), when it is one.
+    var dua: String? = nil
 
     /// Whether the Arabic is Quran (rendered in the reader's face) rather than a narration or a dua.
-    var isQuranArabic: Bool { kind == .ayah }
+    var isQuranArabic: Bool { kind == .ayah || (surah != nil && ayah != nil) }
+
+    /// The same card with its referenced words filled in.
+    func resolved(arabic: String, english: String) -> DailyReminderEntry {
+        DailyReminderEntry(id: id, kind: kind, arabic: arabic, transliteration: transliteration, short: short,
+                           english: english, source: source, target: target, surah: surah, ayah: ayah,
+                           repeatCount: repeatCount, hadith: hadith, arabicWords: arabicWords,
+                           englishWords: englishWords, dua: dua)
+    }
 }
 
 /// The screen a card opens.
@@ -250,9 +267,11 @@ final class DailyReminderStore: ObservableObject {
     /// The Arabic and English a card shows: a verse from the Quran itself (an O(1) lookup, in the
     /// Hafs text every face carries), everything else as written.
     func texts(for entry: DailyReminderEntry) -> (arabic: String, english: String) {
-        if entry.kind == .ayah, let s = entry.surah, let a = entry.ayah,
+        // A verse card, or a dua that is an ayah: the Quran itself.
+        if let s = entry.surah, let a = entry.ayah, entry.kind == .ayah || entry.kind == .dua,
            let ayah = QuranData.shared.ayah(surah: s, ayah: a) {
-            return (ayah.displayArabicText(surahId: s, clean: false, qiraahOverride: ""), ayah.textEnglishSaheeh)
+            return (ayah.displayArabicText(surahId: s, clean: false, qiraahOverride: ""),
+                    entry.kind == .ayah ? ayah.textEnglishSaheeh : entry.english)
         }
         return (entry.arabic, entry.english)
     }
@@ -386,13 +405,19 @@ final class DailyReminderStore: ObservableObject {
         PackTrace.measure("DailyReminders") { () -> (result: [DailyReminderEntry]?, bytes: Int) in
             guard let url = packURL, let blob = try? Data(contentsOf: url),
                   let json = SolidPack.xzDecompress(blob) else { return (nil, 0) }
-            return (parse(json), json.count)
+            return (parse(json).map(resolveReferences), json.count)
         }
     }
 
     private static func parse(_ json: Data) -> [DailyReminderEntry]? {
         guard let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              // Version 2: a card's words are references into the shelf, the Fortress or the Quran.
+              root["version"] as? Int == 2,
               let rows = root["entries"] as? [[String: Any]] else { return nil }
+        func range(_ value: Any?) -> ClosedRange<Int>? {
+            guard let pair = value as? [Int], pair.count == 2, pair[0] >= 0, pair[1] >= pair[0] else { return nil }
+            return pair[0]...pair[1]
+        }
         let entries = rows.compactMap { row -> DailyReminderEntry? in
             guard let id = row["id"] as? String, let rawKind = row["type"] as? String,
                   let kind = DailyReminderEntry.Kind(rawValue: rawKind) else { return nil }
@@ -411,9 +436,57 @@ final class DailyReminderStore: ObservableObject {
                 target: row["target"] as? String,
                 surah: row["s"] as? Int, ayah: row["a"] as? Int,
                 repeatCount: row["repeat"] as? Int,
-                hadith: link)
+                hadith: link,
+                arabicWords: range(row["arWords"]), englishWords: range(row["enWords"]),
+                dua: row["dua"] as? String)
         }
         return entries.isEmpty ? nil : entries
+    }
+
+    /// Fills in the words of every card the pack stores as a reference: the narration's own Arabic
+    /// and translation from the bundled .hpk (the pack is mapped, one text block decompressed per
+    /// card), the Fortress entry's Arabic for a dua the Fortress carries. Runs where the parse runs,
+    /// off the main thread, once; after it a card's `arabic` and `english` are plain strings, so
+    /// nothing downstream (the card, the widget blob, a saved reflection) knows the difference.
+    /// A reference that cannot be read leaves the card's text empty rather than stale.
+    private static func resolveReferences(_ entries: [DailyReminderEntry]) -> [DailyReminderEntry] {
+        var books: [String: HadithBookData] = [:]
+        func book(_ slug: String) -> HadithBookData? {
+            if let open = books[slug] { return open }
+            guard let url = HadithPack.bundledURL(slug), let pack = HadithPack(slug: slug, url: url) else { return nil }
+            let data = HadithBookData(pack: pack)
+            books[slug] = data
+            return data
+        }
+        var fortress: HisnDuasStore.Library?
+        var fortressAsked = false
+        func words(_ text: String, _ span: ClosedRange<Int>) -> String {
+            let tokens = text.split(whereSeparator: \.isWhitespace)
+            guard span.lowerBound < tokens.count else { return "" }
+            return tokens[span.lowerBound...min(span.upperBound, tokens.count - 1)].joined(separator: " ")
+        }
+        return entries.map { entry in
+            var arabic = entry.arabic
+            var english = entry.english
+            if let link = entry.hadith, entry.arabicWords != nil || entry.englishWords != nil {
+                let parts = link.parts
+                if let data = book(link.slug), let hadith = data.hadith(referenced: parts.number, suffix: parts.suffix) {
+                    let text = hadith.allText
+                    if let span = entry.arabicWords { arabic = words(text.arabic, span) }
+                    if let span = entry.englishWords { english = words(text.text, span) }
+                }
+            }
+            if let duaID = entry.dua {
+                if !fortressAsked {
+                    fortressAsked = true
+                    fortress = HisnDuasStore.shared.loaded()
+                }
+                if let dua = fortress?.entryByID[duaID] {
+                    arabic = entry.arabicWords.map { words(dua.arabic, $0) } ?? dua.arabic
+                }
+            }
+            return arabic == entry.arabic && english == entry.english ? entry : entry.resolved(arabic: arabic, english: english)
+        }
     }
 }
 

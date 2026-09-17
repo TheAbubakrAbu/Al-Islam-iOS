@@ -761,15 +761,15 @@ struct PrayerList: View {
     }
 
     private var travelingModeDescription: some View {
+        #if os(watchOS)
+        // The watch has no home city and never decides traveling mode for itself, so it names
+        // neither: mentioning a city it does not measure from, and cannot change, only misleads.
+        // Traveling mode is set on the phone (or by hand here on a standalone watch).
+        let homeSentence = "Traveling mode is set in the iPhone app."
+        #else
         // Names the HOME CITY the 48-mile rule measures from, and points at the exact control that
         // changes it - "customize in settings" alone left the reader hunting (user rule).
         let homeCity = settings.homeLocation?.city.trimmingCharacters(in: .whitespacesAndNewlines)
-        #if os(watchOS)
-        // No Travel Settings button on the watch - the pointer would dangle.
-        let homeSentence = (homeCity?.isEmpty == false)
-            ? "Your home city is \(homeCity!). You can change it in the iPhone app's Travel Settings."
-            : "You can set your home city in the iPhone app's Travel Settings."
-        #else
         let homeSentence = (homeCity?.isEmpty == false)
             ? "Your home city is \(homeCity!). You can change it by tapping Travel Settings below."
             : "You can set your home city by tapping Travel Settings below."

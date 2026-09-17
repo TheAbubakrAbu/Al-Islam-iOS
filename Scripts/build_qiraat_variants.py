@@ -14,6 +14,12 @@ not a word index): the juncture's words are matched by rasm skeleton against the
 tokens, exactly the way the audit that vetted the source did, and stored as 0-based inclusive
 token ranges (-1 when a segment could not be placed, which the UI tolerates).
 
+The reading and juncture texts are stored with their sukoon marks normalized to the app's own
+convention (`sukoon.py`): the source writes a real sukoon as U+0652 in some rows and U+06E1 in
+others, and types a sukoon onto long vowels, so set beside the app's ayah text in one sheet the
+rows looked wrong. Silent letters keep their U+0652. The errata below stay keyed by the source's
+text as it came, so the lookup runs before the normalization.
+
 The source is a scrape of Quran.com's own page data, not a published API: the factual layer
 (which imam reads what) is classical scholarship, but the English renderings and explanations
 are Quran.com's editorial text - clear their use with the Quran Foundation before a release.
@@ -28,6 +34,10 @@ import json
 import lzma
 import pathlib
 import re
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from sukoon import normalize_sukoon  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / "Resources" / "JSONs-Deprecated" / "Qiraat" / "quran-com-qiraat.json.xz"
@@ -153,11 +163,12 @@ def main() -> None:
             for reading in juncture["readings"]:
                 cells = reading.get("matrix") or {}
                 text = reading.get("textUthmani") or reading.get("text") or ""
+                # Keyed by the source's text as it came; only what is stored is normalized.
                 fixed = VARIANT_READER_ERRATA.get(key, {}).get(text)
                 if fixed is not None:
                     applied_errata.add((key, text))
                 row = {
-                    "t": text,
+                    "t": normalize_sukoon(text),
                     "tr": reading.get("transliteration") or "",
                     "en": reading.get("translation") or "",
                     "ex": ((reading.get("explanation") or {}).get("text") or "").strip(),
@@ -171,7 +182,7 @@ def main() -> None:
                 rows.append(row)
                 readings += 1
             packed.append({
-                "t": juncture.get("text") or "",
+                "t": normalize_sukoon(juncture.get("text") or ""),
                 "c": juncture.get("category") or "",
                 "seg": segments,
                 "readings": rows,

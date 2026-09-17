@@ -232,7 +232,7 @@ private extension PrayerMark {
 }
 
 /// The chooser inside every press-and-hold menu: a checkmarked picker of the three marks plus
-/// "Not marked" to clear. A Picker rather than plain buttons, so the current answer shows its
+/// "Not Marked" to clear. A Picker rather than plain buttons, so the current answer shows its
 /// checkmark in the menu.
 private struct TrackerMarkPicker: View {
     @ObservedObject private var settings = Settings.shared
@@ -253,7 +253,7 @@ private struct TrackerMarkPicker: View {
             ForEach(PrayerMark.allCases, id: \.self) { mark in
                 Label(mark.title, systemImage: mark.symbol).tag(Optional(mark))
             }
-            Label("Not marked", systemImage: "circle").tag(PrayerMark?.none)
+            Label("Not Marked", systemImage: "circle").tag(PrayerMark?.none)
         }
     }
 }
@@ -309,6 +309,10 @@ private struct TrackerProgressRing: View {
 /// late, missed, or not marked.
 private struct TrackerPrayerToggle: View {
     @ObservedObject private var settings = Settings.shared
+    /// Observed for the time gate only: `LiveState` republishes when a prayer window rolls over, which
+    /// is exactly the moment a slot becomes markable under `trackerRequiresPrayerTime`. Without it the
+    /// circle would stay inert until something else happened to redraw it.
+    @ObservedObject private var live = LiveState.shared
 
     let prayer: Prayer
     let date: Date
@@ -316,6 +320,7 @@ private struct TrackerPrayerToggle: View {
     var body: some View {
         let mark = settings.prayerMark(for: prayer.nameTransliteration, on: date)
         let tint = mark?.tint(accent: settings.accentColor.accent2) ?? .secondary
+        let canMark = settings.canMarkPrayer(startingAt: prayer.time, on: date)
 
         Menu {
             TrackerMarkPicker(prayerName: prayer.nameTransliteration, date: date)
@@ -367,8 +372,14 @@ private struct TrackerPrayerToggle: View {
         }
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
-        .accessibilityLabel("\(prayer.displayName): \(mark?.spokenTitle ?? "not marked")")
-        .accessibilityHint("Tap to mark prayed on time. Press and hold for late or missed.")
+        // Dimmed rather than hidden: the five slots keep their places, so the row still reads as the
+        // whole day with the rest of it still to come.
+        .disabled(!canMark)
+        .opacity(canMark ? 1 : 0.4)
+        .accessibilityLabel("\(prayer.displayName): \(canMark ? (mark?.spokenTitle ?? "not marked") : "not yet")")
+        .accessibilityHint(canMark
+            ? "Tap to mark prayed on time. Press and hold for late or missed."
+            : "Can be marked once \(prayer.displayName) begins.")
     }
 }
 
@@ -871,6 +882,7 @@ struct PrayerTrackerView: View {
         let name = prayer.nameTransliteration
         let mark = settings.prayerMark(for: name, on: day)
         let accent = settings.accentColor.accent2
+        let canMark = settings.canMarkPrayer(startingAt: prayer.time, on: day)
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
@@ -890,21 +902,30 @@ struct PrayerTrackerView: View {
                     .foregroundColor(.secondary)
             }
 
-            HStack(spacing: 6) {
-                ForEach(PrayerMark.allCases, id: \.self) { option in
-                    markChip(option, selected: mark == option, accent: accent) {
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
+            if canMark {
+                HStack(spacing: 6) {
+                    ForEach(PrayerMark.allCases, id: \.self) { option in
+                        markChip(option, selected: mark == option, accent: accent) {
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
+                            }
                         }
                     }
                 }
+                .padding(.leading, 36)
+            } else {
+                // The chips are replaced rather than dimmed here: the Day view has the room to say why,
+                // and a row of three greyed answers invites tapping at them.
+                Text("Can be marked once \(prayer.displayName) begins.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.leading, 36)
             }
-            .padding(.leading, 36)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(prayer.displayName): \(mark?.spokenTitle ?? "not marked")")
+        .accessibilityLabel("\(prayer.displayName): \(canMark ? (mark?.spokenTitle ?? "not marked") : "not yet")")
     }
 
     private func markChip(_ mark: PrayerMark, selected: Bool, accent: Color, action: @escaping () -> Void) -> some View {
@@ -1114,6 +1135,7 @@ struct PrayerTrackerView: View {
         let mark = record.marks[prayerName]
         let tint = mark?.tint(accent: settings.accentColor.accent2) ?? .clear
         let dateLabel = Self.shortDateFormatter.string(from: record.date)
+        let hasBegun = hasPrayerBegun(prayerName, on: record.date)
 
         let face = Group {
             if record.exempt {
@@ -1139,7 +1161,7 @@ struct PrayerTrackerView: View {
         .frame(width: 22, height: 22)
         .contentShape(Rectangle())
 
-        if record.counts {
+        if record.counts && hasBegun {
             Menu {
                 TrackerMarkPicker(prayerName: prayerName, date: record.date)
             } label: {
@@ -1156,8 +1178,23 @@ struct PrayerTrackerView: View {
             .accessibilityHint("Tap to mark prayed on time. Press and hold for late or missed.")
         } else {
             face
+                .opacity(record.counts && !hasBegun ? 0.4 : 1)
                 .accessibilityLabel("\(prayerName), \(dateLabel): \(record.exempt ? "exempt" : "not yet")")
         }
+    }
+
+    /// Whether `prayerName`'s time has come on `date`, for the week grid - which, unlike every other
+    /// marking surface, holds only a name and a `DayRecord` and so has to look the time up.
+    ///
+    /// Cheap in the common cases: the setting off, or any day but today, answers without a lookup. Only
+    /// today's row consults the slots, and those come from the already-decoded `prayers`.
+    private func hasPrayerBegun(_ prayerName: String, on date: Date) -> Bool {
+        guard settings.trackerRequiresPrayerTime else { return true }
+        guard calendar.isDateInToday(date) else { return true }
+        guard let slot = settings.trackableSlots(for: date)
+            .first(where: { $0.nameTransliteration == prayerName })
+        else { return true }
+        return settings.canMarkPrayer(startingAt: slot.time, on: date)
     }
 
     // MARK: Month view
@@ -1508,8 +1545,44 @@ struct PrayerTrackerView: View {
                             text: "A streak is a day where all five prayers were prayed, on time or late. A perfect day is all five on time. Exempt days never break a streak; it continues right through them.")
             }
             .padding(.vertical, 8)
+
+            // The tracker records what happened; notifications are what change it. Someone looking
+            // at a row of missed prayers is exactly the person nagging mode was built for, so the
+            // setting is named and reachable from here rather than only from Settings.
+            NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "bell.badge")
+                        .font(.footnote)
+                        .foregroundColor(settings.accentColor.accent2)
+                        .frame(width: 20)
+                        .padding(.top, 1)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Struggling to pray on time?")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Text(naggingBlurb)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .tint(settings.accentColor.color)
         }
         .themedListRowBackground()
+    }
+
+    /// Says what the reminders would do, or what they are already doing: a reader who has nagging
+    /// mode on should not be told to turn it on.
+    private var naggingBlurb: String {
+        if settings.naggingMode {
+            return "Nagging mode is on: you are reminded before each prayer, then every 15 minutes, "
+                 + "with final nudges at 10 and 5 minutes left. Adjust which prayers nag, and when they start, here."
+        }
+        return "Turn on prayer notifications, or nagging mode, to be reminded before each prayer "
+             + "and again every 15 minutes until you have prayed."
     }
 
     private func guidanceRow(symbol: String, text: String) -> some View {

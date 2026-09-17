@@ -38,6 +38,10 @@ class Item:
     narrator: str
     text: str
     grades: list
+    # The row's own number in the book (what `HadithBookData.hadith(numbered:)` takes) and its
+    # index: the only unambiguous handle where two rows share a citation string.
+    id_in_book: int = 0
+    row_index: int = -1
 
 
 class _Cursor:
@@ -132,7 +136,14 @@ class Hadith:
                 continue
             parts = rec.split('\x1f', 1)
             gl.append((parts[0], parts[1]) if len(parts) == 2 else ('', parts[0]))
-        return Item(r.citation, arabic, narrator, text, gl)
+        return Item(r.citation, arabic, narrator, text, gl, r.idInBook, row_index)
+
+    def find_id(self, id_in_book):
+        """The row numbered `id_in_book` in the book, or None."""
+        for i, r in enumerate(self.rows):
+            if r.idInBook == id_in_book:
+                return self.item(i)
+        return None
 
     def find(self, citation):
         """Rows whose sunnah.com citation is N or N<letter>."""

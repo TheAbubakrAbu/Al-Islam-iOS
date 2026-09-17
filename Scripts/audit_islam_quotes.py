@@ -56,7 +56,32 @@ for f in FILES:
         cit=cm.group(1) if cm else ''
         en=t[:cm.start()].strip() if cm else t
         quotes.append(dict(file=f,line=line,text=t,en=en,ar=ar,cit=cit,dimmed=m.group(3)))
-print(len(quotes),'quotes')
+print(len(quotes),'literal quotes (hadith, scholars, and anything the packs do not carry)')
+
+# Quran quotes are references since 2026-09-16 (`ScriptureQuote(quran:)` / `.ayah(`): the Arabic and
+# the English come from the app's own Quran at render time, so there is nothing to compare, only
+# that every reference is an ayah of this app and its `words` range sits inside it.
+import importlib.util
+_spec=importlib.util.spec_from_file_location('build_islam_corpus',os.path.join(os.path.dirname(os.path.abspath(__file__)),'build_islam_corpus.py'))
+_corpus=importlib.util.module_from_spec(_spec)
+_argv=sys.argv; sys.argv=['build_islam_corpus','--print']
+import contextlib
+with contextlib.redirect_stdout(io.StringIO()):
+    _spec.loader.exec_module(_corpus)
+sys.argv=_argv
+refs=_corpus.quran_references()
+bad=[]
+for f,line,ref,words in refs:
+    try: _corpus.quran_quote(ref,words)
+    except SystemExit as e: bad.append((f,line,ref,words,str(e)))
+print(len(refs),'Quran references,',len(refs)-len(bad),'render from the app\'s text')
+for row in bad: print('  QURAN_REF_BAD',row)
+hrefs=builder.hadith_references(); bad_h=[]
+for f,line,args in hrefs:
+    try: builder.hadith_quote(args)
+    except SystemExit as e: bad_h.append((f,line,str(e)))
+print(len(hrefs),'hadith references,',len(hrefs)-len(bad_h),'render from the shelf')
+for row in bad_h: print('  HADITH_REF_BAD',row)
 
 packs={}
 def pack(slug):

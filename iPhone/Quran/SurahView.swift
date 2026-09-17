@@ -2590,7 +2590,11 @@ struct SurahView: View {
                             )
                         } else {
                             HeaderRow(
-                                arabicText: "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِِ",
+                                // The basmalah is al-Fatihah's first ayah: read it from the Quran the
+                                // app ships, in the riwayah the reader is on, rather than from a copy
+                                // here (the copy this replaced had drifted to a doubled kasra).
+                                arabicText: QuranData.shared.ayah(surah: 1, ayah: 1)
+                                    .map { $0.displayArabicText(surahId: 1, clean: false) } ?? "",
                                 englishTransliteration: "Bismi Allahi alrrahmani alrraheemi",
                                 englishTranslation: "In the name of Allah, the Compassionate, the Merciful."
                             )
@@ -3196,6 +3200,27 @@ struct SurahView: View {
         return ayahs.map { HighlightedAyahRef(surahID: target.id, ayahID: $0.id) }
     }
 
+    /// How many ayahs "Select All" would cover, counted without building the list of them: the bar
+    /// renders on every selection change and only needs the number (see `selectionActionBar`).
+    private var selectAllTargetCount: Int {
+        let target = displayedSurah
+        if target.id == surah.id, !cachedAyahsForQiraah.isEmpty { return cachedAyahsForQiraah.count }
+        let qiraah = settings.displayQiraahForArabic
+        return target.ayahs.reduce(into: 0) { total, ayah in
+            if ayah.existsInQiraah(qiraah, surahID: target.id) { total += 1 }
+        }
+    }
+
+    /// How many of the selection sit in the surah on screen: the counterpart of `selectAllTargetCount`,
+    /// so "is everything here selected" is two integers rather than a scan of a freshly built array.
+    /// A selection that crossed a page boundary into another surah is deliberately not counted.
+    private var selectedInDisplayedSurah: Int {
+        let targetID = displayedSurah.id
+        return selectedAyahs.reduce(into: 0) { total, ref in
+            if ref.surahID == targetID { total += 1 }
+        }
+    }
+
     private var allSelectedBookmarked: Bool {
         !selectedAyahs.isEmpty && selectedAyahs.allSatisfy { settings.isBookmarked(surah: $0.surahID, ayah: $0.ayahID) }
     }
@@ -3211,11 +3236,20 @@ struct SurahView: View {
 
                 // "Select All" covers the surah on screen; anything picked in ANOTHER surah (a page-mode
                 // selection that crossed a boundary) is kept, so the toggle never silently discards it.
-                let allTargets = selectAllTargets
-                let allSelected = !allTargets.isEmpty && allTargets.allSatisfy { selectedAyahs.contains($0) }
+                //
+                // Only the COUNT is computed while rendering: building the target list here allocated an
+                // array of every ayah in the surah (286 in al-Baqarah, each filtered through
+                // `existsInQiraah`) and then walked it again with `allSatisfy` - on every single tap,
+                // because this bar re-renders whenever the selection changes. That was the "selecting and
+                // unselecting is slow" report (Abu, 2026-09-16), and it scaled with the surah's length,
+                // which is why it showed on the big screens where the whole bar sits beside the reader.
+                // The list itself is built only when the button is actually pressed.
+                let selectableCount = selectAllTargetCount
+                let allSelected = selectableCount > 0 && selectedInDisplayedSurah >= selectableCount
 
                 Button {
                     settings.hapticFeedback()
+                    let allTargets = selectAllTargets
                     withAnimation(.easeInOut) {
                         if allSelected {
                             selectedAyahs.subtract(allTargets)

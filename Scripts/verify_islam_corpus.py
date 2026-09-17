@@ -14,7 +14,16 @@ Checks, in order of what has actually gone wrong while building it:
      its search bar;
   6. every catalog article's view carries exactly one `ArticleSourcesSection`
      naming ITSELF (a 2026-09 injection had shifted them one article along, so
-     Shahadah listed Salah's sources).
+     Shahadah listed Salah's sources);
+  7. every Quran quote is a reference (`ScriptureQuote(quran:)` / `.ayah(`) the
+     app can render, and none is carried as a literal copy of the ayah;
+  8. every hadith reference (`ScriptureQuote(hadith:)` / `.hadith(`) names a row
+     of the bundled shelf and its token ranges lie inside that row;
+  9. no literal quote (`ScriptureQuote(text:)` / `.quote(`) carries, word for
+     word, a narration the shelf holds under its citation (Abu's rule: one copy
+     of a hadith, on the shelf; the articles reference it);
+ 10. the Watch's copy of the referenced rows (HadithQuotes.json.deflate, the
+     only target without the .hpk shelf) is byte-identical to a fresh build.
 """
 import json
 import re
@@ -93,6 +102,64 @@ for path in builder.SOURCES:
         sources = re.findall(r'ArticleSourcesSection\(article: "(\w+)"\)', body)
         check(sources == [name], f"{name}: sources section names {sources}, must be exactly its own")
 check(seen == catalog_ids, f"catalog ids without a view struct in the article files: {sorted(catalog_ids - seen)}")
+
+# 7: every Quran quote is a reference the app can render. The articles carry no copy of an ayah
+# (`ScriptureQuote(quran:)` / `.ayah(` since 2026-09-16); a reference outside this app's Quran, or
+# a `words` range outside the cited ayahs, would render as a bare citation, so it does not ship.
+references = builder.quran_references()
+check(len(references) >= 700, f"only {len(references)} Quran references found - the article regex probably stopped matching")
+for file_name, line, reference, words in references:
+    try:
+        builder.quran_quote(reference, words)
+    except SystemExit as error:
+        check(False, f"{file_name}:{line}: {error}")
+literal_quran = []
+for path in builder.SOURCES:
+    src = path.read_text()
+    for m in builder.QUOTE_RE.finditer(src):
+        if re.search(r"\(Quran\s+\d+:\d+", m.group(1)):
+            literal_quran.append(f"{path.name}:{src.count(chr(10), 0, m.start()) + 1}")
+check(not literal_quran, f"Quran quotes carried as literals instead of references: {literal_quran[:10]}")
+
+# 8: every hadith reference is a shelf row and its ranges are inside it.
+from hadith_spans import shelf_link, match  # noqa: E402
+
+hadith_refs = builder.hadith_references()
+check(len(hadith_refs) >= 550, f"only {len(hadith_refs)} hadith references found - the article regex probably stopped matching")
+for file_name, line, args in hadith_refs:
+    try:
+        builder.hadith_quote(args)
+    except SystemExit as error:
+        check(False, f"{file_name}:{line}: {error}")
+
+# 9: a literal quote must not be a copy of a row the shelf holds under its citation.
+LITERAL_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + builder.STR + r")(?:\s*,\s*arabic:\s*(" + builder.STR + r"))?", re.S)
+CITE_RE = re.compile(r"\(([^()]*(?:\([^()]*\)[^()]*)*)\)\.?\s*$")
+copies = []
+for path in builder.SOURCES:
+    src = path.read_text()
+    for m in LITERAL_RE.finditer(src):
+        text = builder.unquote(m.group(1))
+        arabic = builder.unquote(m.group(2)) if m.group(2) else ""
+        cm = CITE_RE.search(text)
+        if not cm:
+            continue
+        link = shelf_link(cm.group(1).split(";")[0])
+        if not link:
+            continue
+        found = match(link[0], link[1], arabic, text[:cm.start()].strip())
+        if found and (found[1] is not None or found[2] is not None):
+            copies.append(f"{path.name}:{src.count(chr(10), 0, m.start()) + 1}")
+check(not copies, f"literal hadith quotes that are on the shelf word for word (make them references): {copies[:10]}")
+
+# 10: the Watch's derived copy of the referenced rows is what a rebuild produces.
+wspec = importlib.util.spec_from_file_location("build_hadith_quotes_pack", ROOT / "Scripts/build_hadith_quotes_pack.py")
+watch_pack = importlib.util.module_from_spec(wspec)
+with contextlib.redirect_stdout(io.StringIO()):
+    wspec.loader.exec_module(watch_pack)
+fresh = watch_pack.build()
+check(watch_pack.OUT.exists() and watch_pack.OUT.read_bytes() == fresh,
+      f"{watch_pack.OUT.relative_to(ROOT)} is stale - run ./Scripts/build_hadith_quotes_pack.py")
 
 if failures:
     for f in failures:

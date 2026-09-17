@@ -280,8 +280,6 @@ final class JournalStore: ObservableObject {
         khutbah.speaker = "Sh. Yasir"
         khutbah.place = "Masjid an-Nur"
         khutbah.attachments = [JournalAttachment(kind: .ayah, refID: "14:7", title: "Ibrahim 14:7",
-                                                 arabic: "وَإِذ تَأَذَّنَ رَبُّكُم لَئِن شَكَرتُم لَأَزِيدَنَّكُم",
-                                                 body: "And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor]'",
                                                  source: "Saheeh International")]
         khutbah.pinned = true
         khutbah.createdAt = Date().addingTimeInterval(-86_400 * 2)
@@ -963,6 +961,17 @@ struct JournalAttachmentCard: View {
     @Environment(\.appearance) private var appearance
     let attachment: JournalAttachment
 
+    /// A verse attachment reads its words from the Quran the app ships, by the reference it stored
+    /// (`refID`, "14:7"), so a saved entry shows the mushaf's text rather than a copy taken when it
+    /// was saved. Entries written before that carry the words themselves: those are the fallback.
+    private var verse: QuranQuoteText? {
+        guard attachment.kind == .ayah, let reference = QuranQuoteReference(attachment.refID) else { return nil }
+        return QuranQuoteSource.resolve(reference)
+    }
+
+    private var arabic: String { verse?.arabic ?? attachment.arabic }
+    private var english: String { verse?.english ?? attachment.body }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -979,8 +988,8 @@ struct JournalAttachmentCard: View {
             }
             .foregroundColor(appearance.accent)
 
-            if !attachment.arabic.isEmpty {
-                Text(attachment.arabic)
+            if !arabic.isEmpty {
+                Text(arabic)
                     .font(.custom(attachment.kind == .ayah ? appearance.quranDisplayFace : appearance.islamArabicFontName, size: 22))
                     .arabicFontDesign(custom: true)
                     .multilineTextAlignment(.trailing)
@@ -988,8 +997,8 @@ struct JournalAttachmentCard: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if !attachment.body.isEmpty {
-                Text(attachment.body)
+            if !english.isEmpty {
+                Text(english)
                     .font(.footnote)
                     .fixedSize(horizontal: false, vertical: true)
             }

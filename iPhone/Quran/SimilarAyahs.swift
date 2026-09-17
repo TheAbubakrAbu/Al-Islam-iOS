@@ -11,22 +11,25 @@ import Compression
 //   * generated - phrase-overlap matches from the Tilawa app's generator, with reason labels;
 //   * QUL - the Quranic Universal Library's similar-ayah table, which adds the SPANS of the shared
 //     words in the matched ayah (tinted in the rows) and the pairs the other two lack.
+// The pack stores NO Quran text: the shared wording every source records is located in the
+// matched ayah at build time and kept as token spans into this app's own text, so the rows tint
+// the words the reader has, never a copy that can drift from them (version 2, 2026-09-16).
 // The sheet's second tab is the repeated PHRASES of the ayah (`MutashabihatStore`).
 //
 // Ported from Tilawa (by Jamil Hammoudeh), with permission - see CreditsView.
 
 // MARK: - Store
 
-/// One match row, in display order. `phrase` is the shared wording (may be empty), `labels`
-/// the generated matcher's reasons (empty for verified rows).
+/// One match row, in display order. `spans` is the shared wording, as token ranges into the
+/// matched ayah; `labels` the generated matcher's reasons (empty for verified rows).
 struct SimilarAyahMatch: Identifiable {
     let surah: Int
     let ayah: Int
-    let phrase: String
     let verified: Bool
     let labels: [String]
-    /// 0-based inclusive token ranges of the shared words in the TARGET ayah's raw Hafs text
-    /// (QUL rows); empty when only the phrase is known.
+    /// 0-based inclusive token ranges of the shared words in the TARGET ayah's raw Hafs text:
+    /// QUL's own placement where it lists the pair, else the corpus's recorded phrase located in
+    /// the ayah at build time. Empty when no source records shared wording for the pair.
     var spans: [ClosedRange<Int>] = []
     /// QUL's 0-100 similarity score, when it listed the pair.
     var score: Int? = nil
@@ -88,7 +91,11 @@ final class SimilarAyahsStore: @unchecked Sendable {
         guard let url = packURL(),
               let blob = try? Data(contentsOf: url),
               let json = inflate(blob),
-              let raw = try? JSONSerialization.jsonObject(with: json) as? [String: [[Any]]] else { return nil }
+              let pack = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
+              // Version 2 only: a version-1 pack carried the shared wording as text, which the
+              // sheet no longer reads, so an old pack is treated as no pack rather than half a one.
+              pack["v"] as? Int == 2,
+              let raw = pack["ayahs"] as? [String: [[Any]]] else { return nil }
 
         var out: [String: [SimilarAyahMatch]] = [:]
         out.reserveCapacity(raw.count)
@@ -96,20 +103,19 @@ final class SimilarAyahsStore: @unchecked Sendable {
             var matches: [SimilarAyahMatch] = []
             matches.reserveCapacity(rows.count)
             for row in rows {
-                // row = [surah, ayah, phrase, verifiedFlag, labels?, spans?, score?] - see the build script.
-                guard row.count >= 4,
+                // row = [surah, ayah, verifiedFlag, spans, labels, score] - see the build script.
+                guard row.count == 6,
                       let surah = row[0] as? Int,
                       let ayah = row[1] as? Int,
-                      let phrase = row[2] as? String,
-                      let flag = row[3] as? Int else { continue }
-                let labels = row.count > 4 ? (row[4] as? [String] ?? []) : []
-                let spans = (row.count > 5 ? row[5] as? [[Int]] : nil)?.compactMap { span -> ClosedRange<Int>? in
+                      let flag = row[2] as? Int else { continue }
+                let spans = (row[3] as? [[Int]] ?? []).compactMap { span -> ClosedRange<Int>? in
                     guard span.count == 2, span[1] >= span[0] else { return nil }
                     return span[0]...span[1]
-                } ?? []
-                let score = row.count > 6 ? row[6] as? Int : nil
+                }
+                let labels = row[4] as? [String] ?? []
+                let score = row[5] as? Int
                 matches.append(SimilarAyahMatch(
-                    surah: surah, ayah: ayah, phrase: phrase, verified: flag == 1, labels: labels,
+                    surah: surah, ayah: ayah, verified: flag == 1, labels: labels,
                     spans: spans, score: score
                 ))
             }
@@ -149,7 +155,7 @@ enum SimilarAyahFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: return true
         case .verified: return match.verified
-        case .phrase: return !match.phrase.isEmpty || !match.spans.isEmpty || match.labels.contains("Shared phrase")
+        case .phrase: return !match.spans.isEmpty || match.labels.contains("Shared phrase")
         case .root: return match.labels.contains { $0.hasPrefix("Root ") }
         case .theme: return match.labels.contains { $0 != "Shared phrase" && !$0.hasPrefix("Root ") }
         }
@@ -418,13 +424,13 @@ struct SimilarAyahsSheet: View {
                     reasonChips(match.labels)
                 }
 
-                // The shared words tinted: QUL's spans where it lists the pair, else the phrase the
-                // corpus recorded, found by the snippet's own Arabic match ladder.
+                // The shared words tinted, from the pack's spans into this ayah's own tokens (QUL's
+                // placement where it lists the pair, else the corpus's phrase located at build time).
                 let display = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: "")
                 let spans = displayRanges(for: match, surah: surah, ayah: ayah, display: display)
                 HighlightedSnippet(
                     source: display,
-                    term: spans.isEmpty ? match.phrase : "",
+                    term: "",
                     font: .custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4),
                     accent: settings.accentColor.color,
                     fg: .primary,

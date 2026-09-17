@@ -17,32 +17,91 @@ import SwiftUI
 
 // MARK: - Model
 
+/// Quran words a lesson row shows: an ayah and a 0-based inclusive token range of this app's own
+/// Hafs text. The pack stores no copy of the words (nothing the app ships carries an ayah), so the
+/// row reads them out of the ayah at render time and they can never drift from the mushaf text.
+struct TajweedAyahWords {
+    let surahId: Int
+    let ayahNumber: Int
+    let span: ClosedRange<Int>
+
+    /// A key for row ids: the same whether or not the Quran is loaded.
+    var key: String { "\(surahId):\(ayahNumber):\(span.lowerBound)-\(span.upperBound)" }
+
+    /// The pack's `[surah, ayahNumber, first, last]`.
+    init?(pack raw: Any?) {
+        guard let row = raw as? [Int], row.count == 4, row[2] >= 0, row[2] <= row[3] else { return nil }
+        surahId = row[0]
+        ayahNumber = row[1]
+        span = row[2]...row[3]
+    }
+
+    /// The words at `span`, read out of the ayah's own text.
+    func words(in ayahText: String) -> String { Self.cut(span, from: ayahText) }
+
+    /// The words, read from the loaded Quran (the ayah's Hafs display text, the text the example
+    /// rows show); empty until the Quran has loaded.
+    func words(in quran: QuranData) -> String {
+        guard let surah = quran.surah(surahId),
+              let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return "" }
+        return words(in: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: ""))
+    }
+
+    /// The tokens of `ayahText` at `span`, joined; empty when the span falls outside the text.
+    static func cut(_ span: ClosedRange<Int>, from ayahText: String) -> String {
+        let tokens = WordTokens.tokens(in: ayahText)
+        guard span.lowerBound >= 0, span.upperBound < tokens.count else { return "" }
+        return tokens[span].joined(separator: " ")
+    }
+}
+
 struct TajweedLessonExample: Identifiable {
     let surahId: Int
     let ayahNumber: Int
-    /// The exact span inside the ayah the lesson points at (KFGQPC spelling).
-    let word: String
+    /// The words inside the ayah the lesson points at, as a 0-based inclusive token range of
+    /// this app's own Hafs text (the pack stores no copy of the words); nil when the lesson
+    /// names the whole ayah.
+    let wordSpan: ClosedRange<Int>?
     /// What to listen for in this ayah.
     let focus: String
 
-    var id: String { "\(surahId):\(ayahNumber):\(word)" }
+    var id: String {
+        "\(surahId):\(ayahNumber):" + (wordSpan.map { "\($0.lowerBound)-\($0.upperBound)" } ?? "")
+    }
+
+    /// The words at `wordSpan`, read out of the ayah's own text.
+    func words(in ayahText: String) -> String {
+        guard let wordSpan else { return "" }
+        return TajweedAyahWords.cut(wordSpan, from: ayahText)
+    }
 }
 
 struct TajweedLessonDrill: Identifiable {
-    /// A short isolated snippet (letter row, word, phrase) - practice text, not an ayah.
+    /// A short isolated snippet (letter row, syllable, word) when the drill is Tilawa's own practice
+    /// text; empty when the drill is Quran, which `ayah` locates instead.
     let text: String
+    /// The ayah words when the drill is Quran text, read from the app's text at render time.
+    let ayah: TajweedAyahWords?
     let caption: String
     /// Latin reading, for a learner who cannot yet read the script.
     let translit: String
 
-    var id: String { text + caption }
+    var id: String { (ayah?.key ?? text) + caption }
+
+    /// The Arabic to show: the practice text, or the ayah's words from the loaded Quran.
+    func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? text }
 }
 
 struct TajweedLessonFragment: Identifiable {
+    /// The fragment as written when it is teaching Arabic; empty when `ayah` locates it.
     let text: String
+    let ayah: TajweedAyahWords?
     let caption: String
 
-    var id: String { text + caption }
+    var id: String { (ayah?.key ?? text) + caption }
+
+    /// The Arabic to show: the fragment as written, or the ayah's words from the loaded Quran.
+    func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? text }
 }
 
 struct TajweedLessonDefinition {
@@ -88,12 +147,18 @@ struct TajweedLessonTable {
 
 struct TajweedQuizQuestion: Identifiable {
     let prompt: String
+    /// The Arabic the question is about, as written when it is teaching Arabic; empty when `ayah`
+    /// locates it (a question about a real ayah shows the app's own text).
     let arabic: String
+    let ayah: TajweedAyahWords?
     let choices: [String]
     let answer: Int
     let explain: String
 
     var id: String { prompt }
+
+    /// The Arabic to show: as written, or the ayah's words from the loaded Quran.
+    func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? arabic }
 }
 
 struct TajweedLesson: Identifiable {
@@ -212,7 +277,9 @@ final class TajweedLessonsStore: @unchecked Sendable {
     }
 
     private static func parse(_ json: Data) -> Course? {
+        // Version 4: drill, fragment and quiz ayahs are references into the app's text, not copies.
         guard let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
+              root["version"] as? Int == 4,
               let rows = root["chapters"] as? [[String: Any]] else { return nil }
 
         let stages = (root["stages"] as? [[String: Any]] ?? []).compactMap { row -> TajweedCourseStage? in
@@ -236,13 +303,18 @@ final class TajweedLessonsStore: @unchecked Sendable {
                 let examples = (lesson["examples"] as? [[String: Any]] ?? []).compactMap { example -> TajweedLessonExample? in
                     guard let surah = example["surahId"] as? Int,
                           let ayah = example["ayahNumber"] as? Int else { return nil }
-                    return TajweedLessonExample(surahId: surah, ayahNumber: ayah,
-                                                word: example["word"] as? String ?? "",
+                    let span = (example["wordSpan"] as? [Int]).flatMap { pair -> ClosedRange<Int>? in
+                        guard pair.count == 2, pair[0] <= pair[1] else { return nil }
+                        return pair[0]...pair[1]
+                    }
+                    return TajweedLessonExample(surahId: surah, ayahNumber: ayah, wordSpan: span,
                                                 focus: example["focus"] as? String ?? "")
                 }
                 let drills = (lesson["drills"] as? [[String: Any]] ?? []).compactMap { drill -> TajweedLessonDrill? in
-                    guard let text = drill["text"] as? String else { return nil }
-                    return TajweedLessonDrill(text: text, caption: drill["caption"] as? String ?? "",
+                    let ayah = TajweedAyahWords(pack: drill["ayah"])
+                    guard ayah != nil || drill["text"] is String else { return nil }
+                    return TajweedLessonDrill(text: drill["text"] as? String ?? "", ayah: ayah,
+                                              caption: drill["caption"] as? String ?? "",
                                               translit: drill["translit"] as? String ?? "")
                 }
                 var definition: TajweedLessonDefinition?
@@ -253,8 +325,10 @@ final class TajweedLessonsStore: @unchecked Sendable {
                 var ruleCard: TajweedLessonRuleCard?
                 if let raw = lesson["ruleCard"] as? [String: Any] {
                     let fragments = (raw["fragments"] as? [[String: Any]] ?? []).compactMap { fragment -> TajweedLessonFragment? in
-                        guard let text = fragment["text"] as? String else { return nil }
-                        return TajweedLessonFragment(text: text, caption: fragment["caption"] as? String ?? "")
+                        let ayah = TajweedAyahWords(pack: fragment["ayah"])
+                        guard ayah != nil || fragment["text"] is String else { return nil }
+                        return TajweedLessonFragment(text: fragment["text"] as? String ?? "", ayah: ayah,
+                                                     caption: fragment["caption"] as? String ?? "")
                     }
                     let mnemonic = raw["mnemonic"] as? [String: Any]
                     ruleCard = TajweedLessonRuleCard(
@@ -284,6 +358,7 @@ final class TajweedLessonsStore: @unchecked Sendable {
                     guard let prompt = row["prompt"] as? String, let choices = row["choices"] as? [String],
                           let answer = row["answer"] as? Int, choices.indices.contains(answer) else { return nil }
                     return TajweedQuizQuestion(prompt: prompt, arabic: row["arabic"] as? String ?? "",
+                                               ayah: TajweedAyahWords(pack: row["ayah"]),
                                                choices: choices, answer: answer, explain: row["explain"] as? String ?? "")
                 }
                 return TajweedLesson(id: lid, titleEn: titleEn,
@@ -662,10 +737,15 @@ struct TajweedLessonDetailView: View {
                     Section(header: Text("PRACTICE DRILLS")) {
                         ForEach(lesson.drills) { drill in
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text(drill.text)
-                                    .font(arabicFont)
-                                    .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
-                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                                // A Quran drill shows the ayah's words from the app's own text (empty
+                                // until the Quran loads, like the example rows).
+                                let arabic = drill.arabic(in: quranData)
+                                if !arabic.isEmpty {
+                                    Text(arabic)
+                                        .font(arabicFont)
+                                        .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
+                                }
                                 if !drill.translit.isEmpty {
                                     Text(drill.translit)
                                         .font(.caption.italic())
@@ -761,10 +841,14 @@ struct TajweedLessonDetailView: View {
 
             ForEach(card.fragments) { fragment in
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(fragment.text)
-                        .font(arabicFont)
-                        .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    // A Quran fragment shows the ayah's words from the app's own text.
+                    let arabic = fragment.arabic(in: quranData)
+                    if !arabic.isEmpty {
+                        Text(arabic)
+                            .font(arabicFont)
+                            .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
                     if !fragment.caption.isEmpty {
                         Text(fragment.caption)
                             .font(.caption)
@@ -879,12 +963,14 @@ struct TajweedLessonDetailView: View {
                 TajweedExampleText(surah: example.surahId, ayah: example.ayahNumber, text: text,
                                    fontName: appearance.quranDisplayFace, size: CGFloat(appearance.fontArabicSize))
 
-                if !example.word.isEmpty {
+                // The words to listen at, cut from the ayah's own text by the pack's span.
+                let word = example.words(in: text)
+                if !word.isEmpty {
                     HStack(spacing: 6) {
                         Text("Listen at")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(example.word)
+                        Text(word)
                             .font(Font.arabic(appearance.quranDisplayFace, size: 18))
                             .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                             .foregroundColor(accent)
@@ -941,6 +1027,8 @@ private struct TajweedExampleText: View {
 
 struct TajweedQuizView: View {
     @Environment(\.appearance) private var appearance
+    /// A question about a real ayah shows its words from the app's own text.
+    @ObservedObject private var quranData = QuranData.shared
 
     let questions: [TajweedQuizQuestion]
 
@@ -986,8 +1074,9 @@ struct TajweedQuizView: View {
                 Text(question.prompt)
                     .font(.subheadline.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
-                if !question.arabic.isEmpty {
-                    Text(question.arabic)
+                let arabic = question.arabic(in: quranData)
+                if !arabic.isEmpty {
+                    Text(arabic)
                         .font(Font.arabic(appearance.quranDisplayFace, size: CGFloat(appearance.fontArabicSize)))
                         .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
                         .frame(maxWidth: .infinity, alignment: .trailing)

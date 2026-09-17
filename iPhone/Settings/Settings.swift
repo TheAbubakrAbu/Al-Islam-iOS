@@ -195,11 +195,24 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Every publish (a `@Published` write or an `@AppStorage` write - both route through
         // `objectWillChange`) invalidates the render-signature memo. Off-main publishes are a bug
         // elsewhere, but must not race the main-only cache, so they hop.
+        // `objectWillChange` fires BEFORE the new value is stored (that is what "will" means), so
+        // clearing the memo here only is not enough: anything that recomputes the signature during
+        // the same turn of the run loop - a SwiftUI body pass this very publish scheduled - reads the
+        // OLD value and caches it again, and every equatable row then compares equal and keeps its
+        // stale text until some later, unrelated publish clears it again. That is the "I change a
+        // setting and it doesn't apply until I do something else first" family of glitches
+        // (Abu, 2026-09-16). Clear it now AND once more after the write has landed, so the first
+        // body pass that can see the new value is also the first one to memoize it.
         selfObservation = objectWillChange.sink { [weak self] _ in
             guard let self else { return }
             if Thread.isMainThread {
                 self.renderSignatureCache = nil
                 self.mushafSignatureCache = nil
+                // After the store commits, before SwiftUI renders.
+                DispatchQueue.main.async {
+                    self.renderSignatureCache = nil
+                    self.mushafSignatureCache = nil
+                }
             } else {
                 DispatchQueue.main.async {
                     self.renderSignatureCache = nil
@@ -985,6 +998,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("mensesPauseStartStamp") var mensesPauseStartStamp: Double = 0 {
         didSet { bumpTrackerGeneration() }
     }
+
+    /// Gates the tracker to prayers whose time has actually begun. Off by default: the tracker has
+    /// always let you mark the whole day at once, and people who tick the five off in one sitting in
+    /// the evening are using it exactly as designed. On, a slot stays inert until its adhan, so the
+    /// row reads as "what is left to pray" rather than "what is left to tick".
+    ///
+    /// Today only. Past days stay fully editable - the whole point of the history views is filling in
+    /// what you forgot to mark at the time - and future days are already blocked a day at a time.
+    @AppStorage("trackerRequiresPrayerTime") var trackerRequiresPrayerTime: Bool = false
 
     /// Set when a nagging notification is tapped: the prayer tab asks "Did you pray X?" and a yes
     /// marks the tracker and silences the rest of that cascade.

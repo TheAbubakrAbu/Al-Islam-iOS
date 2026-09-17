@@ -1,7 +1,7 @@
 import SwiftUI
 import AVFoundation
 
-struct DuaItem: Identifiable {
+struct DuaItem: Identifiable, Sendable {
     let arabicText: String
     let transliteration: String
     let translation: String
@@ -24,10 +24,73 @@ struct DuaItem: Identifiable {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
-    var id: String { identity ?? ("\(reference ?? transliteration)-\(arabicText)") }
+    /// Where a referenced dua's words come from, when it is one: resolved as the screen builds its
+    /// rows (`DuaCollection.resolved()`), never stored here, so a dua written as a reference cannot
+    /// be baked in empty by a list built before the Quran finished loading.
+    enum Source: Equatable {
+        /// The Quran this app ships (`QuranQuote.swift`): the cited ayahs, narrowed to the dua's own
+        /// words by a 0-based inclusive token range (nil = the whole ayah).
+        case quran(reference: String, words: ClosedRange<Int>?)
+        /// A narration on the app's own shelf (`HadithQuote.swift`): a token range of the row's matn,
+        /// and of its translation where the dua says what the shelf's translation says.
+        case shelf(link: String, arabic: ClosedRange<Int>, english: ClosedRange<Int>?)
+    }
+
+    /// Set when the dua's words are a reference; nil when they are its own text.
+    var source: Source? = nil
+
+    /// A dua that is Quran: the words come from the Quran this app ships, never from a copy here.
+    /// `translation` is Tilawa's own rendering where it has one, and nil where the reader's own
+    /// translation is what the dua says.
+    init(quran reference: String, words: ClosedRange<Int>? = nil, transliteration: String,
+         translation: String? = nil) {
+        self.init(arabicText: "", transliteration: transliteration, translation: translation ?? "",
+                  reference: reference)
+        source = .quran(reference: reference, words: words)
+    }
+
+    /// A dua that is a narration on the app's own shelf. `cite` is the citation the row displays.
+    init(hadith link: String, cite: String, arabic: ClosedRange<Int>, english: ClosedRange<Int>? = nil,
+         transliteration: String, translation: String? = nil) {
+        self.init(arabicText: "", transliteration: transliteration, translation: translation ?? "",
+                  reference: cite)
+        source = .shelf(link: link, arabic: arabic, english: english)
+    }
+
+    /// The same dua with its referenced words filled in from the app's own Quran and shelf. Called
+    /// off the main actor: reading a narration decompresses a block of its pack.
+    func resolved() -> DuaItem {
+        guard let source else { return self }
+        var arabic = arabicText
+        var english = translation
+        switch source {
+        case let .quran(reference, words):
+            guard let parsed = QuranQuoteReference(reference), let text = QuranQuoteSource.resolve(parsed) else { return self }
+            arabic = words.map { WordRange.words(text.arabic, $0) } ?? text.arabic
+            if english.isEmpty { english = text.english }
+        case let .shelf(link, arabicRange, englishRange):
+            guard let parsed = HadithQuoteReference(link), let row = HadithQuoteSource.read(parsed) else { return self }
+            arabic = WordRange.words(row.arabic, arabicRange)
+            if english.isEmpty, let englishRange { english = WordRange.words(row.text, englishRange) }
+        }
+        var filled = DuaItem(arabicText: arabic, transliteration: transliteration, translation: english,
+                             reference: reference)
+        filled.audioURL = audioURL
+        filled.identity = id       // the id the unresolved item had, so rows and search keys hold
+        filled.source = source
+        return filled
+    }
+
+    /// Stable whether or not the words have been filled in: a reference names itself by its
+    /// reference and transliteration, never by text that arrives later.
+    var id: String {
+        if let identity { return identity }
+        if source != nil { return "\(reference ?? "")-\(transliteration)" }
+        return "\(reference ?? transliteration)-\(arabicText)"
+    }
 }
 
-struct DuaCollection: Identifiable {
+struct DuaCollection: Identifiable, Sendable {
     let title: String
     let subtitle: String
     let systemImage: String
@@ -36,6 +99,76 @@ struct DuaCollection: Identifiable {
     let items: [DuaItem]
 
     var id: String { title }
+
+    /// The collection with every referenced dua's words filled in from the app's own Quran and shelf.
+    func resolved() -> DuaCollection {
+        DuaCollection(title: title, subtitle: subtitle, systemImage: systemImage,
+                      introductionTitle: introductionTitle, introduction: introduction,
+                      items: items.map { $0.resolved() })
+    }
+}
+
+/// Fills the Dua screen's referenced duas with their words, once, off the main thread.
+///
+/// The collections below are written as references (`DuaItem(quran:)`, `DuaItem(hadith:)`): the dua
+/// screen carries no copy of an ayah or of a narration the app already ships. Resolving them reads
+/// `QuranData` and decompresses a block of a hadith pack, so it happens in one detached pass and the
+/// filled collections are published; until it finishes (a moment on a cold launch, nothing at all
+/// once the Quran is warm) the screen shows the same rows with their words still empty.
+@MainActor
+final class DuaLibrary: ObservableObject {
+    static let shared = DuaLibrary()
+
+    /// The collections as the screen shows them: the authored ones until the referenced words land.
+    @Published private(set) var collections: [DuaCollection]
+    /// One flat list across the collections, in the collections' own order.
+    @Published private(set) var allItems: [DuaItem]
+
+    private var resolving = false
+
+    private init(_ source: [DuaCollection] = DuaLibrary.authored) {
+        collections = source
+        allItems = source.flatMap(\.items)
+    }
+
+    /// The collections exactly as written: the source of truth for ids and ordering.
+    ///
+    /// `nonisolated` because it is read from off the main actor (the detached pass that resolves the
+    /// referenced duas) and from a nonisolated static (`DuaView.collection(of:)`). That is safe here
+    /// and not merely silenced: this is a `let` of immutable value types, written once at first use
+    /// and never mutated, so there is nothing to race. Without it this is a warning today and an
+    /// error under the Swift 6 language mode. Both types are `Sendable` (plain values), so this is
+    /// a plain `nonisolated`, checked by the compiler rather than asserted.
+    nonisolated static let authored: [DuaCollection] = [
+        DuaCollections.common,
+        DuaCollections.morningEvening,
+        DuaCollections.sleepWaking,
+        DuaCollections.distress,
+        DuaCollections.travel,
+        DuaCollections.homeMosque,
+        DuaCollections.foodDrink,
+        DuaCollections.forgiveness,
+        DuaCollections.prophets,
+        DuaCollections.rabbana,
+    ]
+
+    /// Resolve once. Safe to call from every appearance: a second call while one is in flight, or
+    /// after one finished, does nothing.
+    func load() {
+        guard !resolving else { return }
+        resolving = true
+        Task { [weak self] in
+            // The Quran text is what most of these duas are; wait for it rather than resolve to
+            // nothing. (Already loaded on any launch that has shown the Quran tab: returns at once.)
+            await QuranQuoteSource.waitUntilReady()
+            let filled = await Task.detached(priority: .userInitiated) {
+                DuaLibrary.authored.map { $0.resolved() }
+            }.value
+            guard let self else { return }
+            self.collections = filled
+            self.allItems = filled.flatMap(\.items)
+        }
+    }
 }
 
 struct DuaView: View {
@@ -55,18 +188,12 @@ struct DuaView: View {
     /// The collection row a result asked to scroll to ("Scroll To Collection"), consumed once the search clears.
     @State private var scrollTarget: String?
 
-    private static let collections: [DuaCollection] = [
-        DuaCollections.common,
-        DuaCollections.morningEvening,
-        DuaCollections.sleepWaking,
-        DuaCollections.distress,
-        DuaCollections.travel,
-        DuaCollections.homeMosque,
-        DuaCollections.foodDrink,
-        DuaCollections.forgiveness,
-        DuaCollections.prophets,
-        DuaCollections.rabbana
-    ]
+    /// The collections with their referenced duas' words filled in (`DuaLibrary`). The screen reads
+    /// them through the library, never from the authored literals, so a dua written as a reference
+    /// shows the app's own text.
+    @ObservedObject private var library = DuaLibrary.shared
+
+    private var collections: [DuaCollection] { library.collections }
 
     private var normalizedQuery: String {
         searchText
@@ -76,8 +203,8 @@ struct DuaView: View {
 
     /// Collection rows filter IN PLACE while searching, the reading lists' rule.
     private func filteredCollections(for normalizedQuery: String) -> [DuaCollection] {
-        guard !normalizedQuery.isEmpty else { return Self.collections }
-        return Self.collections.filter {
+        guard !normalizedQuery.isEmpty else { return collections }
+        return collections.filter {
             $0.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
                 || $0.subtitle.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
         }
@@ -87,7 +214,7 @@ struct DuaView: View {
     /// itself, not just the folder it lives in.
     private func matchingDuas(for normalizedQuery: String) -> [DuaItem] {
         guard !normalizedQuery.isEmpty else { return [] }
-        return Self.collections.flatMap { collection in
+        return collections.flatMap { collection in
             collection.items.filter { $0.searchBlob.contains(normalizedQuery) }
         }
     }
@@ -103,7 +230,8 @@ struct DuaView: View {
 
     fileprivate static let semanticCorpusID = "duas-en"
     /// One flat list across the collections - the corpus rows, in a stable order.
-    static let allDuaItems: [DuaItem] = collections.flatMap(\.items)
+    /// One flat list across the collections, in a stable order (the library's, resolved).
+    static var allDuaItems: [DuaItem] { DuaLibrary.shared.allItems }
 
     /// True when the live query is one the semantic engine can answer (English text, long enough).
     private var aiQueryEligible: Bool {
@@ -554,6 +682,8 @@ struct DuaView: View {
         .navigationTitle("Dua & Supplications")
         #if os(iOS)
         .task {
+            // The referenced duas' words, from the app's own Quran and hadith shelf.
+            library.load()
             guard hisnLibrary == nil, HisnDuasStore.isBundled else { return }
             hisnLibrary = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
         }
@@ -597,7 +727,9 @@ struct DuaView: View {
     /// The collection a dua belongs to - a matching dua's home on this screen, since the duas
     /// themselves are listed only inside their collections.
     private static func collection(of item: DuaItem) -> DuaCollection? {
-        collections.first { $0.items.contains { $0.id == item.id } }
+        // Membership is by id, and a referenced dua's id does not change when its words arrive, so
+        // the authored collections answer this without waiting for the library to resolve.
+        DuaLibrary.authored.first { $0.items.contains { $0.id == item.id } }
     }
 
     private func scrollToCollection(_ collection: DuaCollection) {
@@ -808,17 +940,17 @@ private enum DuaCollections {
         introductionTitle: "Supplications to Allah",
         introduction: "Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)",
         items: [
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِن زَوَالِ نِعمَتِكَ وَتَحَوُّلِ عَافِيَتِكَ وَفُجَاءَةِ نِقمَتِكَ وَجَمِيعِ سَخَطِكَ", transliteration: "Allahumma inni a'udhu bika min zawali ni'matika wa tahawwuli 'afiyatika wa fuja'ati niqmatika wa jamee'i sakhatika", translation: "O Allah, I seek refuge in You from the removal of Your blessings, changing of Your protection, sudden wrath, and all of Your displeasure", reference: "Sahih Muslim 2739"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَسأَلُكَ العَفوَ وَالعَافِيَةَ فِي الدُّنيَا وَالآخِرَةِ", transliteration: "Allahumma inni as'aluka al-'afwa wal-'afiyah fi ad-dunya wal-akhirah", translation: "O Allah, I ask You for forgiveness and well-being in this life and the hereafter", reference: "Sunan Ibn Majah 3871"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَسأَلُكَ الهُدَى وَالتُّقَى وَالعَفَافَ وَالغِنَى", transliteration: "Allahumma inni as'aluka al-huda wa at-tuqaa wal-'afaafa wal-ghina", translation: "O Allah, I ask You for guidance, righteousness, chastity, and sufficiency", reference: "Sahih Muslim 2721"),
+            DuaItem(hadith: "muslim:2739", cite: "Sahih Muslim 2739", arabic: 42...54, transliteration: "Allahumma inni a'udhu bika min zawali ni'matika wa tahawwuli 'afiyatika wa fuja'ati niqmatika wa jamee'i sakhatika", translation: "O Allah, I seek refuge in You from the removal of Your blessings, changing of Your protection, sudden wrath, and all of Your displeasure"),
+            DuaItem(hadith: "ibnmajah:3871", cite: "Sunan Ibn Majah 3871", arabic: 44...51, transliteration: "Allahumma inni as'aluka al-'afwa wal-'afiyah fi ad-dunya wal-akhirah", translation: "O Allah, I ask You for forgiveness and well-being in this life and the hereafter"),
+            DuaItem(hadith: "muslim:2721a", cite: "Sahih Muslim 2721", arabic: 34...40, transliteration: "Allahumma inni as'aluka al-huda wa at-tuqaa wal-'afaafa wal-ghina", translation: "O Allah, I ask You for guidance, righteousness, chastity, and sufficiency"),
             DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الكُفرِ وَالفَقرِ وَأَعُوذُ بِكَ مِن عَذَابِ القَبرِ", transliteration: "Allahumma inni a'udhu bika min al-kufr wal-faqr wa a'udhu bika min 'adhab al-qabr", translation: "O Allah, I seek refuge in You from disbelief, poverty, and the punishment of the grave", reference: "Sunan Abi Dawud 5090"),
             DuaItem(arabicText: "اللَّهُمَّ مَا أَصبَحَ بِي مِن نِعمَةٍ أَو بِأَحَدٍ مِن خَلقِكَ فَمِنكَ وَحدَكَ لَا شَرِيكَ لَكَ فَلَكَ الحَمدُ وَلَكَ الشُّكرُ", transliteration: "Allahumma ma asbaha bi min ni'matin, aw bi ahadin min khalqika, faminka wahdaka la sharika laka, falaka alhamdu wa laka ash-shukr", translation: "O Allah, whatever blessings I or any of Your creatures rose up with, is from You alone, without partner, so for You is all praise and unto You all thanks.", reference: "Sunan Abi Dawud 5073"),
-            DuaItem(arabicText: "رَبِّ اشرَح لِي صَدرِي وَيَسِّر لِي أَمرِي", transliteration: "Rabbi ishrah li sadri wa yassir li amri", translation: "O my Lord, expand for me my chest, and ease for me my task.", reference: "20:25-26"),
-            DuaItem(arabicText: "اللَّهُمَّ أَعِنِّي عَلَى ذِكرِكَ وَشُكرِكَ وَحُسنِ عِبَادَتِكَ", transliteration: "Allahumma a'innee ala dhikrika wa shukrika wa husni ibadatika", translation: "O Allah, assist me in remembering You, in thanking You, and in worshipping You in the best manner.", reference: "Sunan Abi Dawud 1522"),
-            DuaItem(arabicText: "رَبَّنَا آتِنَا فِي الدُّنيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ", transliteration: "Rabbanaa atinaa fid-dunya hasanatan wa fil aakhirati hasanatan wa qinaa 'adhaaban-naar", translation: "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.", reference: "2:201"),
+            DuaItem(quran: "20:25-26", words: 1...7, transliteration: "Rabbi ishrah li sadri wa yassir li amri", translation: "O my Lord, expand for me my chest, and ease for me my task."),
+            DuaItem(hadith: "abudawud:1522", cite: "Sunan Abi Dawud 1522", arabic: 67...73, transliteration: "Allahumma a'innee ala dhikrika wa shukrika wa husni ibadatika", translation: "O Allah, assist me in remembering You, in thanking You, and in worshipping You in the best manner."),
+            DuaItem(quran: "2:201", words: 3...13, transliteration: "Rabbanaa atinaa fid-dunya hasanatan wa fil aakhirati hasanatan wa qinaa 'adhaaban-naar", translation: "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire."),
             DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِن عَجزِ وَالكَسَلِ وَالجُبنِ وَالهَرَمِ وَالبُخلِ وَأَعُوذُ بِكَ مِن عَذَابِ القَبرِ وَمِن فِتنَةِ المَحيَا وَالمَمَاتِ", transliteration: "Allahumma inni a'udhu bika min al-'ajzi wal-kasali wal-jubni wal-harami wal-bukhli, wa a'udhu bika min 'adhab al-qabr, wa min fitnat al-mahya wal-mamat", translation: "O Allah, I seek refuge in You from incapacity and laziness, from cowardice and senility, and from miserliness. And I seek refuge in You from the punishment of the grave, and from the trials of life and death.", reference: "Sahih Muslim 2706"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَسأَلُكَ عِلمًا نَافِعًا وَرِزقًا طَيِّبًا وَعَمَلًا مُتَقَبَّلًا", transliteration: "Allahumma inni as'aluka 'ilman nafi'an, wa rizqan tayyiban, wa 'amalan mutaqabbalan", translation: "O Allah, I ask You for knowledge that is of benefit, a good provision, and deeds that will be accepted.", reference: "Sunan Ibn Majah 925"),
-            DuaItem(arabicText: "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الحَيُّ القَيُّومُ ۚ لَا تَأخُذُهُ سِنَةٌ وَلَا نَومٌ ۚ لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الأَرضِ ۗ مَن ذَا الَّذِي يَشفَعُ عِندَهُ إِلَّا بِإِذنِهِ ۚ يَعلَمُ مَا بَينَ أَيدِيهِم وَمَا خَلفَهُم ۖ وَلَا يُحِيطُونَ بِشَيءٍ مِّن عِلمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرسِيُّهُ السَّمَاوَاتِ وَالأَرضَ ۖ وَلَا يَئُودُهُ حِفظُهُمَا ۚ وَهُوَ العَلِيُّ العَظِيمُ", transliteration: "Allahu la ilaha illa Huwa, Al-Hayyul-Qayyum. La ta'khudhuhu sinatun wa la nawm. Lahu ma fi as-samawati wa ma fi al-ard. Man dha allathee yashfa'u 'indahu illa bi-idhnihi? Ya'lamu ma bayna aydihim wa ma khalfahum, wa la yuhituna bishay'in min 'ilmihi illa bima sha'. Wasi'a kursiyyuhu as-samawati wal-ard, wa la ya'uduhu hifzuhuma, wa Huwal 'Aliyyul-'Azim.", translation: "Allah: there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.", reference: "2:255")
+            DuaItem(hadith: "ibnmajah:925", cite: "Sunan Ibn Majah 925", arabic: 39...47, transliteration: "Allahumma inni as'aluka 'ilman nafi'an, wa rizqan tayyiban, wa 'amalan mutaqabbalan", translation: "O Allah, I ask You for knowledge that is of benefit, a good provision, and deeds that will be accepted."),
+            DuaItem(quran: "2:255", transliteration: "Allahu la ilaha illa Huwa, Al-Hayyul-Qayyum. La ta'khudhuhu sinatun wa la nawm. Lahu ma fi as-samawati wa ma fi al-ard. Man dha allathee yashfa'u 'indahu illa bi-idhnihi? Ya'lamu ma bayna aydihim wa ma khalfahum, wa la yuhituna bishay'in min 'ilmihi illa bima sha'. Wasi'a kursiyyuhu as-samawati wal-ard, wa la ya'uduhu hifzuhuma, wa Huwal 'Aliyyul-'Azim.", translation: "Allah: there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.")
         ]
     )
 
@@ -833,15 +965,15 @@ private enum DuaCollections {
         introductionTitle: "Morning & Evening Adhkar",
         introduction: "Remembrances the Prophet ﷺ said at the start and end of every day, seeking Allah's protection, provision, and pleasure before the day makes its own claims. \"And exalt [Allah] with praise of your Lord before the rising of the sun and before its setting.\" (Quran 20:130)",
         items: [
-            DuaItem(arabicText: "اللَّهُمَّ أَنتَ رَبِّي لَا إِلَهَ إِلَّا أَنتَ خَلَقتَنِي وَأَنَا عَبدُكَ وَأَنَا عَلَى عَهدِكَ وَوَعدِكَ مَا استَطَعتُ أَعُوذُ بِكَ مِن شَرِّ مَا صَنَعتُ أَبُوءُ لَكَ بِنِعمَتِكَ عَلَيَّ وَأَبُوءُ لَكَ بِذَنبِي فَاغفِر لِي فَإِنَّهُ لَا يَغفِرُ الذُّنُوبَ إِلَّا أَنتَ", transliteration: "Allahumma anta Rabbi la ilaha illa anta, khalaqtani wa ana 'abduka, wa ana 'ala 'ahdika wa wa'dika ma istata'tu, a'udhu bika min sharri ma sana'tu, abu'u laka bini'matika 'alayya, wa abu'u laka bidhanbi faghfir li, fa innahu la yaghfiru adh-dhunuba illa anta", translation: "O Allah, You are my Lord; there is no god but You. You created me and I am Your servant, and I keep Your covenant and promise as much as I am able. I seek refuge in You from the evil of what I have done. I acknowledge before You Your blessing upon me, and I acknowledge my sin, so forgive me, for none forgives sins but You. (The master of seeking forgiveness; said morning and evening)", reference: "Sahih al-Bukhari 6306"),
+            DuaItem(hadith: "bukhari:6306", cite: "Sahih al-Bukhari 6306", arabic: 39...75, transliteration: "Allahumma anta Rabbi la ilaha illa anta, khalaqtani wa ana 'abduka, wa ana 'ala 'ahdika wa wa'dika ma istata'tu, a'udhu bika min sharri ma sana'tu, abu'u laka bini'matika 'alayya, wa abu'u laka bidhanbi faghfir li, fa innahu la yaghfiru adh-dhunuba illa anta", translation: "O Allah, You are my Lord; there is no god but You. You created me and I am Your servant, and I keep Your covenant and promise as much as I am able. I seek refuge in You from the evil of what I have done. I acknowledge before You Your blessing upon me, and I acknowledge my sin, so forgive me, for none forgives sins but You. (The master of seeking forgiveness; said morning and evening)"),
             DuaItem(arabicText: "أَمسَينَا وَأَمسَى المُلكُ لِلَّهِ وَالحَمدُ لِلَّهِ لَا إِلَهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ المُلكُ وَلَهُ الحَمدُ وَهُوَ عَلَى كُلِّ شَيءٍ قَدِيرٌ رَبِّ أَسأَلُكَ خَيرَ مَا فِي هَذِهِ اللَّيلَةِ وَخَيرَ مَا بَعدَهَا وَأَعُوذُ بِكَ مِن شَرِّ مَا فِي هَذِهِ اللَّيلَةِ وَشَرِّ مَا بَعدَهَا", transliteration: "Amsayna wa amsal-mulku lillah, walhamdu lillah, la ilaha illallahu wahdahu la sharika lah, lahul-mulku wa lahul-hamdu wa huwa 'ala kulli shay'in qadir. Rabbi as'aluka khayra ma fi hadhihil-laylati wa khayra ma ba'daha, wa a'udhu bika min sharri ma fi hadhihil-laylati wa sharri ma ba'daha", translation: "We have reached evening, and the dominion has reached evening belonging to Allah. Praise be to Allah; there is no god but Allah alone, without partner. His is the dominion and His is the praise, and He is able to do all things. My Lord, I ask You for the good of this night and the good of what follows it, and I seek refuge in You from the evil of this night and the evil of what follows it. (In the morning: 'Asbahna wa asbahal-mulku lillah... I ask You for the good of this day...')", reference: "Sahih Muslim 2723"),
             DuaItem(arabicText: "اللَّهُمَّ بِكَ أَصبَحنَا وَبِكَ أَمسَينَا وَبِكَ نَحيَا وَبِكَ نَمُوتُ وَإِلَيكَ النُّشُورُ", transliteration: "Allahumma bika asbahna wa bika amsayna wa bika nahya wa bika namutu wa ilaykan-nushur", translation: "O Allah, by You we reach the morning and by You we reach the evening; by You we live and by You we die, and to You is the resurrection. (In the evening it ends: '...and to You is the final return')", reference: "Jami' at-Tirmidhi 3391"),
-            DuaItem(arabicText: "بِسمِ اللَّهِ الَّذِي لَا يَضُرُّ مَعَ اسمِهِ شَيءٌ فِي الأَرضِ وَلَا فِي السَّمَاءِ وَهُوَ السَّمِيعُ العَلِيمُ", transliteration: "Bismillahil-ladhi la yadurru ma'a ismihi shay'un fil-ardi wa la fis-sama'i wa huwas-Sami'ul-'Alim", translation: "In the name of Allah, with Whose name nothing on earth or in heaven can cause harm, and He is the All-Hearing, the All-Knowing. (Three times, morning and evening)", reference: "Sunan Abi Dawud 5088"),
+            DuaItem(hadith: "abudawud:5088", cite: "Sunan Abi Dawud 5088", arabic: 34...49, transliteration: "Bismillahil-ladhi la yadurru ma'a ismihi shay'un fil-ardi wa la fis-sama'i wa huwas-Sami'ul-'Alim", translation: "In the name of Allah, with Whose name nothing on earth or in heaven can cause harm, and He is the All-Hearing, the All-Knowing. (Three times, morning and evening)"),
             DuaItem(arabicText: "رَضِيتُ بِاللَّهِ رَبًّا وَبِالإِسلَامِ دِينًا وَبِمُحَمَّدٍ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ نَبِيًّا", transliteration: "Raditu billahi Rabban, wa bil-Islami dinan, wa bi-Muhammadin sallallahu 'alayhi wa sallama nabiyya", translation: "I am pleased with Allah as my Lord, with Islam as my religion, and with Muhammad ﷺ as my Prophet. (Three times, morning and evening)", reference: "Sunan Abi Dawud 5072"),
             DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَسأَلُكَ العَافِيَةَ فِي الدُّنيَا وَالآخِرَةِ اللَّهُمَّ إِنِّي أَسأَلُكَ العَفوَ وَالعَافِيَةَ فِي دِينِي وَدُنيَايَ وَأَهلِي وَمَالِي اللَّهُمَّ استُر عَورَاتِي وَآمِن رَوعَاتِي اللَّهُمَّ احفَظنِي مِن بَينِ يَدَيَّ وَمِن خَلفِي وَعَن يَمِينِي وَعَن شِمَالِي وَمِن فَوقِي وَأَعُوذُ بِعَظَمَتِكَ أَن أُغتَالَ مِن تَحتِي", transliteration: "Allahumma inni as'alukal-'afiyata fid-dunya wal-akhirah. Allahumma inni as'alukal-'afwa wal-'afiyata fi dini wa dunyaya wa ahli wa mali. Allahumma-stur 'awrati wa amin raw'ati. Allahumma-hfazni min bayni yadayya wa min khalfi wa 'an yamini wa 'an shimali wa min fawqi, wa a'udhu bi'azamatika an ughtala min tahti", translation: "O Allah, I ask You for well-being in this world and the Hereafter. O Allah, I ask You for pardon and well-being in my religion, my worldly life, my family, and my wealth. O Allah, conceal my faults and calm my fears. O Allah, guard me from in front of me and behind me, from my right and my left, and from above me; and I seek refuge in Your greatness from being seized from beneath me.", reference: "Sunan Abi Dawud 5074"),
-            DuaItem(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ", transliteration: "Subhanallahi wa bihamdih", translation: "Glory be to Allah and praise be to Him. (One hundred times: whoever says it morning and evening, no one brings anything better on the Day of Resurrection except one who said the same or more)", reference: "Sahih Muslim 2692"),
-            DuaItem(arabicText: "سُبحَانَ اللَّهِ وَبِحَمدِهِ عَدَدَ خَلقِهِ وَرِضَا نَفسِهِ وَزِنَةَ عَرشِهِ وَمِدَادَ كَلِمَاتِهِ", transliteration: "Subhanallahi wa bihamdihi 'adada khalqihi wa rida nafsihi wa zinata 'arshihi wa midada kalimatih", translation: "Glory be to Allah and praise be to Him, as many as His creation, as much as pleases Him, as heavy as His Throne, and as much as the ink of His words. (Three times in the morning)", reference: "Sahih Muslim 2726"),
-            DuaItem(arabicText: "حَسبِيَ اللَّهُ لَا إِلَهَ إِلَّا هُوَ عَلَيهِ تَوَكَّلتُ وَهُوَ رَبُّ العَرشِ العَظِيمِ", transliteration: "Hasbiyallahu la ilaha illa huwa, 'alayhi tawakkaltu, wa huwa Rabbul-'arshil-'azim", translation: "Allah is sufficient for me; there is no god but Him. In Him I put my trust, and He is the Lord of the Mighty Throne. (Seven times, morning and evening)", reference: "Sunan Abi Dawud 5081"),
+            DuaItem(hadith: "muslim:2692", cite: "Sahih Muslim 2692", arabic: 37...39, transliteration: "Subhanallahi wa bihamdih", translation: "Glory be to Allah and praise be to Him. (One hundred times: whoever says it morning and evening, no one brings anything better on the Day of Resurrection except one who said the same or more)"),
+            DuaItem(hadith: "muslim:2726a", cite: "Sahih Muslim 2726", arabic: 91...101, transliteration: "Subhanallahi wa bihamdihi 'adada khalqihi wa rida nafsihi wa zinata 'arshihi wa midada kalimatih", translation: "Glory be to Allah and praise be to Him, as many as His creation, as much as pleases Him, as heavy as His Throne, and as much as the ink of His words. (Three times in the morning)"),
+            DuaItem(hadith: "abudawud:5081", cite: "Sunan Abi Dawud 5081", arabic: 52...63, transliteration: "Hasbiyallahu la ilaha illa huwa, 'alayhi tawakkaltu, wa huwa Rabbul-'arshil-'azim", translation: "Allah is sufficient for me; there is no god but Him. In Him I put my trust, and He is the Lord of the Mighty Throne. (Seven times, morning and evening)"),
             DuaItem(arabicText: "اللَّهُمَّ فَاطِرَ السَّمَاوَاتِ وَالأَرضِ عَالِمَ الغَيبِ وَالشَّهَادَةِ رَبَّ كُلِّ شَيءٍ وَمَلِيكَهُ أَشهَدُ أَن لَا إِلَهَ إِلَّا أَنتَ أَعُوذُ بِكَ مِن شَرِّ نَفسِي وَمِن شَرِّ الشَّيطَانِ وَشِركِهِ", transliteration: "Allahumma fatiras-samawati wal-ard, 'alimal-ghaybi wash-shahadah, Rabba kulli shay'in wa malikah, ashhadu an la ilaha illa anta, a'udhu bika min sharri nafsi wa min sharrish-shaytani wa shirkih", translation: "O Allah, Creator of the heavens and the earth, Knower of the unseen and the seen, Lord and Sovereign of all things: I bear witness that there is no god but You. I seek refuge in You from the evil of my own self and from the evil of Shaytan and his call to associate partners with Allah.", reference: "Jami' at-Tirmidhi 3529")
         ]
     )
@@ -853,14 +985,14 @@ private enum DuaCollections {
         introductionTitle: "Sleep & Waking Duas",
         introduction: "The Prophet ﷺ closed each day surrendering his soul to Allah and opened each morning with gratitude for its return. \"And it is He who makes the night a covering for you and sleep a rest.\" (Quran 25:47)",
         items: [
-            DuaItem(arabicText: "بِاسمِكَ اللَّهُمَّ أَمُوتُ وَأَحيَا", transliteration: "Bismika Allahumma amutu wa ahya", translation: "In Your name, O Allah, I die and I live. (Said when going to bed)", reference: "Sahih al-Bukhari 6324"),
-            DuaItem(arabicText: "الحَمدُ لِلَّهِ الَّذِي أَحيَانَا بَعدَ مَا أَمَاتَنَا وَإِلَيهِ النُّشُورُ", transliteration: "Alhamdu lillahil-ladhi ahyana ba'da ma amatana wa ilayhin-nushur", translation: "Praise be to Allah, Who gave us life after He caused us to die, and to Him is the resurrection. (Said upon waking)", reference: "Sahih al-Bukhari 6324"),
+            DuaItem(hadith: "bukhari:6324", cite: "Sahih al-Bukhari 6324", arabic: 29...32, transliteration: "Bismika Allahumma amutu wa ahya", translation: "In Your name, O Allah, I die and I live. (Said when going to bed)"),
+            DuaItem(hadith: "bukhari:6324", cite: "Sahih al-Bukhari 6324", arabic: 40...48, transliteration: "Alhamdu lillahil-ladhi ahyana ba'da ma amatana wa ilayhin-nushur", translation: "Praise be to Allah, Who gave us life after He caused us to die, and to Him is the resurrection. (Said upon waking)"),
             DuaItem(arabicText: "بِاسمِكَ رَبِّي وَضَعتُ جَنبِي وَبِكَ أَرفَعُهُ إِن أَمسَكتَ نَفسِي فَارحَمهَا وَإِن أَرسَلتَهَا فَاحفَظهَا بِمَا تَحفَظُ بِهِ عِبَادَكَ الصَّالِحِينَ", transliteration: "Bismika Rabbi wada'tu janbi wa bika arfa'uh, in amsakta nafsi farhamha, wa in arsaltaha fahfazha bima tahfazu bihi 'ibadakas-salihin", translation: "In Your name, my Lord, I lay down my side, and by You I raise it. If You take my soul, have mercy on it; and if You release it, protect it with that with which You protect Your righteous servants.", reference: "Sahih al-Bukhari 6320"),
             DuaItem(arabicText: "اللَّهُمَّ أَسلَمتُ نَفسِي إِلَيكَ وَفَوَّضتُ أَمرِي إِلَيكَ وَوَجَّهتُ وَجهِي إِلَيكَ وَأَلجَأتُ ظَهرِي إِلَيكَ رَغبَةً وَرَهبَةً إِلَيكَ لَا مَلجَأَ وَلَا مَنجَا مِنكَ إِلَّا إِلَيكَ آمَنتُ بِكِتَابِكَ الَّذِي أَنزَلتَ وَبِنَبِيِّكَ الَّذِي أَرسَلتَ", transliteration: "Allahumma aslamtu nafsi ilayk, wa fawwadtu amri ilayk, wa wajjahtu wajhi ilayk, wa alja'tu zahri ilayk, raghbatan wa rahbatan ilayk, la malja'a wa la manja minka illa ilayk, amantu bikitabikal-ladhi anzalt, wa binabiyyikal-ladhi arsalt", translation: "O Allah, I surrender my soul to You, I entrust my affairs to You, I turn my face to You, and I rely completely on You, in hope and fear of You. There is no refuge and no escape from You except to You. I believe in Your Book which You revealed and Your Prophet whom You sent. (Whoever says it and dies that night, dies upon the natural faith)", reference: "Sahih al-Bukhari 6311"),
             DuaItem(arabicText: "سُبحَانَ اللَّهِ (ثَلَاثًا وَثَلَاثِينَ) وَالحَمدُ لِلَّهِ (ثَلَاثًا وَثَلَاثِينَ) وَاللَّهُ أَكبَرُ (أَربَعًا وَثَلَاثِينَ)", transliteration: "Subhanallah (33 times), Alhamdulillah (33 times), Allahu Akbar (34 times)", translation: "Glory be to Allah (33 times), praise be to Allah (33 times), Allah is the Greatest (34 times). The Prophet ﷺ taught it to Fatimah and Ali when they asked for a servant, saying it is better for them than a servant.", reference: "Sahih al-Bukhari 5362"),
-            DuaItem(arabicText: "اللَّهُمَّ قِنِي عَذَابَكَ يَومَ تَبعَثُ عِبَادَكَ", transliteration: "Allahumma qini 'adhabaka yawma tab'athu 'ibadak", translation: "O Allah, protect me from Your punishment on the Day You resurrect Your servants. (Three times, lying on the right side)", reference: "Sunan Abi Dawud 5045"),
+            DuaItem(hadith: "abudawud:5045", cite: "Sunan Abi Dawud 5045", arabic: 43...48, transliteration: "Allahumma qini 'adhabaka yawma tab'athu 'ibadak", translation: "O Allah, protect me from Your punishment on the Day You resurrect Your servants. (Three times, lying on the right side)"),
             DuaItem(arabicText: "الحَمدُ لِلَّهِ الَّذِي أَطعَمَنَا وَسَقَانَا وَكَفَانَا وَآوَانَا فَكَم مِمَّن لَا كَافِيَ لَهُ وَلَا مُؤوِيَ", transliteration: "Alhamdu lillahil-ladhi at'amana wa saqana wa kafana wa awana, fakam mimman la kafiya lahu wa la mu'wi", translation: "Praise be to Allah, Who has fed us, given us drink, sufficed us, and sheltered us, for how many have none to suffice them or shelter them.", reference: "Sahih Muslim 2715"),
-            DuaItem(arabicText: "اللَّهُمَّ خَلَقتَ نَفسِي وَأَنتَ تَوَفَّاهَا لَكَ مَمَاتُهَا وَمَحيَاهَا إِن أَحيَيتَهَا فَاحفَظهَا وَإِن أَمَتَّهَا فَاغفِر لَهَا اللَّهُمَّ إِنِّي أَسأَلُكَ العَافِيَةَ", transliteration: "Allahumma khalaqta nafsi wa anta tawaffaha, laka mamatuha wa mahyaha, in ahyaytaha fahfazha, wa in amattaha faghfir laha. Allahumma inni as'alukal-'afiyah", translation: "O Allah, You created my soul and You take it back; to You belong its death and its life. If You keep it alive, protect it, and if You cause it to die, forgive it. O Allah, I ask You for well-being.", reference: "Sahih Muslim 2712")
+            DuaItem(hadith: "muslim:2712", cite: "Sahih Muslim 2712", arabic: 37...55, transliteration: "Allahumma khalaqta nafsi wa anta tawaffaha, laka mamatuha wa mahyaha, in ahyaytaha fahfazha, wa in amattaha faghfir laha. Allahumma inni as'alukal-'afiyah", translation: "O Allah, You created my soul and You take it back; to You belong its death and its life. If You keep it alive, protect it, and if You cause it to die, forgive it. O Allah, I ask You for well-being.")
         ]
     )
 
@@ -872,12 +1004,12 @@ private enum DuaCollections {
         introduction: "Supplications the Prophet ﷺ said (and taught) for the moments when the heart is tight and the way out is hidden. \"Is He not who responds to the desperate one when he calls upon Him, and removes evil?\" (Quran 27:62)",
         items: [
             DuaItem(arabicText: "لَا إِلَهَ إِلَّا اللَّهُ العَظِيمُ الحَلِيمُ لَا إِلَهَ إِلَّا اللَّهُ رَبُّ العَرشِ العَظِيمِ لَا إِلَهَ إِلَّا اللَّهُ رَبُّ السَّمَاوَاتِ وَرَبُّ الأَرضِ وَرَبُّ العَرشِ الكَرِيمِ", transliteration: "La ilaha illallahul-'Azimul-Halim, la ilaha illallahu Rabbul-'arshil-'azim, la ilaha illallahu Rabbus-samawati wa Rabbul-ardi wa Rabbul-'arshil-karim", translation: "There is no god but Allah, the Magnificent, the Forbearing. There is no god but Allah, Lord of the Mighty Throne. There is no god but Allah, Lord of the heavens, Lord of the earth, and Lord of the Noble Throne. (The Prophet's dua at times of distress)", reference: "Sahih al-Bukhari 6346"),
-            DuaItem(arabicText: "يَا حَيُّ يَا قَيُّومُ بِرَحمَتِكَ أَستَغِيثُ", transliteration: "Ya Hayyu ya Qayyum, bi-rahmatika astaghith", translation: "O Ever-Living, O Sustainer of all, in Your mercy I seek relief. (Said by the Prophet ﷺ when a matter distressed him)", reference: "Jami' at-Tirmidhi 3524"),
-            DuaItem(arabicText: "لَا إِلَهَ إِلَّا أَنتَ سُبحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ", transliteration: "La ilaha illa anta subhanaka inni kuntu minaz-zalimin", translation: "There is no god but You; glory be to You. Indeed, I have been of the wrongdoers. (The dua of Yunus in the belly of the whale; no Muslim supplicates with it for anything except that Allah answers him)", reference: "Jami' at-Tirmidhi 3505"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الهَمِّ وَالحَزَنِ وَالعَجزِ وَالكَسَلِ وَالجُبنِ وَالبُخلِ وَضَلَعِ الدَّينِ وَغَلَبَةِ الرِّجَالِ", transliteration: "Allahumma inni a'udhu bika minal-hammi wal-hazan, wal-'ajzi wal-kasal, wal-jubni wal-bukhl, wa dala'id-dayni wa ghalabatir-rijal", translation: "O Allah, I seek refuge in You from worry and grief, from incapacity and laziness, from cowardice and miserliness, from the burden of debt and from being overpowered by men.", reference: "Sahih al-Bukhari 6369"),
+            DuaItem(hadith: "tirmidhi:3524", cite: "Jami' at-Tirmidhi 3524", arabic: 37...42, transliteration: "Ya Hayyu ya Qayyum, bi-rahmatika astaghith", translation: "O Ever-Living, O Sustainer of all, in Your mercy I seek relief. (Said by the Prophet ﷺ when a matter distressed him)"),
+            DuaItem(hadith: "tirmidhi:3505", cite: "Jami' at-Tirmidhi 3505", arabic: 42...50, transliteration: "La ilaha illa anta subhanaka inni kuntu minaz-zalimin", translation: "There is no god but You; glory be to You. Indeed, I have been of the wrongdoers. (The dua of Yunus in the belly of the whale; no Muslim supplicates with it for anything except that Allah answers him)"),
+            DuaItem(hadith: "bukhari:6369", cite: "Sahih al-Bukhari 6369", arabic: 25...39, transliteration: "Allahumma inni a'udhu bika minal-hammi wal-hazan, wal-'ajzi wal-kasal, wal-jubni wal-bukhl, wa dala'id-dayni wa ghalabatir-rijal", translation: "O Allah, I seek refuge in You from worry and grief, from incapacity and laziness, from cowardice and miserliness, from the burden of debt and from being overpowered by men."),
             DuaItem(arabicText: "اللَّهُمَّ إِنِّي عَبدُكَ ابنُ عَبدِكَ ابنُ أَمَتِكَ نَاصِيَتِي بِيَدِكَ مَاضٍ فِيَّ حُكمُكَ عَدلٌ فِيَّ قَضَاؤُكَ أَسأَلُكَ بِكُلِّ اسمٍ هُوَ لَكَ سَمَّيتَ بِهِ نَفسَكَ أَو أَنزَلتَهُ فِي كِتَابِكَ أَو عَلَّمتَهُ أَحَدًا مِن خَلقِكَ أَوِ استَأثَرتَ بِهِ فِي عِلمِ الغَيبِ عِندَكَ أَن تَجعَلَ القُرآنَ رَبِيعَ قَلبِي وَنُورَ صَدرِي وَجِلَاءَ حُزنِي وَذَهَابَ هَمِّي", transliteration: "Allahumma inni 'abduka, ibnu 'abdika, ibnu amatika, nasiyati biyadika, madin fiyya hukmuka, 'adlun fiyya qada'uka, as'aluka bikulli ismin huwa laka, sammayta bihi nafsaka, aw anzaltahu fi kitabika, aw 'allamtahu ahadan min khalqika, aw ista'tharta bihi fi 'ilmil-ghaybi 'indaka, an taj'alal-Qur'ana rabi'a qalbi, wa nura sadri, wa jila'a huzni, wa dhahaba hammi", translation: "O Allah, I am Your servant, son of Your servant, son of Your maidservant. My forelock is in Your hand, Your command over me is ever executed, and Your decree over me is just. I ask You by every name that is Yours (with which You named Yourself, or revealed in Your Book, or taught to any of Your creation, or kept with Yourself in the knowledge of the unseen) that You make the Quran the spring of my heart, the light of my chest, the departure of my sorrow, and the passing of my worry. (Whoever says it, Allah removes his sorrow and grief and replaces them with joy)", reference: "Musnad Ahmad 3712"),
-            DuaItem(arabicText: "حَسبُنَا اللَّهُ وَنِعمَ الوَكِيلُ", transliteration: "Hasbunallahu wa ni'mal-wakil", translation: "Sufficient for us is Allah, and He is the best Disposer of affairs. (Said by Ibrahim when cast into the fire, and by the believers when threatened)", reference: "3:173"),
-            DuaItem(arabicText: "لَا حَولَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "La hawla wa la quwwata illa billah", translation: "There is no power and no strength except through Allah. (A treasure from the treasures of Paradise)", reference: "Sahih al-Bukhari 6384")
+            DuaItem(quran: "3:173", words: 13...16, transliteration: "Hasbunallahu wa ni'mal-wakil", translation: "Sufficient for us is Allah, and He is the best Disposer of affairs. (Said by Ibrahim when cast into the fire, and by the believers when threatened)"),
+            DuaItem(hadith: "bukhari:6384", cite: "Sahih al-Bukhari 6384", arabic: 65...70, transliteration: "La hawla wa la quwwata illa billah", translation: "There is no power and no strength except through Allah. (A treasure from the treasures of Paradise)")
         ]
     )
 
@@ -888,12 +1020,12 @@ private enum DuaCollections {
         introductionTitle: "Travel Duas",
         introduction: "From mounting the ride to returning home, the Prophet ﷺ wrapped the whole journey in remembrance. \"...that you may settle yourselves upon their backs and then remember the favor of your Lord.\" (Quran 43:13)",
         items: [
-            DuaItem(arabicText: "سُبحَانَ الَّذِي سَخَّرَ لَنَا هَذَا وَمَا كُنَّا لَهُ مُقرِنِينَ وَإِنَّا إِلَى رَبِّنَا لَمُنقَلِبُونَ", transliteration: "Subhanal-ladhi sakhkhara lana hadha wa ma kunna lahu muqrinin, wa inna ila Rabbina lamunqalibun", translation: "Glory be to the One who subjected this to us, for we could never have accomplished it ourselves; and indeed, to our Lord we shall return. (Said after Allahu Akbar three times, when mounted for travel)", reference: "Sahih Muslim 1342"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنَّا نَسأَلُكَ فِي سَفَرِنَا هَذَا البِرَّ وَالتَّقوَى وَمِنَ العَمَلِ مَا تَرضَى اللَّهُمَّ هَوِّن عَلَينَا سَفَرَنَا هَذَا وَاطوِ عَنَّا بُعدَهُ اللَّهُمَّ أَنتَ الصَّاحِبُ فِي السَّفَرِ وَالخَلِيفَةُ فِي الأَهلِ", transliteration: "Allahumma inna nas'aluka fi safarina hadhal-birra wat-taqwa, wa minal-'amali ma tarda. Allahumma hawwin 'alayna safarana hadha watwi 'anna bu'dah. Allahumma antas-sahibu fis-safari wal-khalifatu fil-ahl", translation: "O Allah, we ask You on this journey of ours for righteousness and taqwa, and for deeds that please You. O Allah, make this journey easy for us and fold up its distance for us. O Allah, You are the Companion on the journey and the Guardian over the family left behind.", reference: "Sahih Muslim 1342"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِن وَعثَاءِ السَّفَرِ وَكَآبَةِ المَنظَرِ وَسُوءِ المُنقَلَبِ فِي المَالِ وَالأَهلِ", transliteration: "Allahumma inni a'udhu bika min wa'tha'is-safari, wa ka'abatil-manzari, wa su'il-munqalabi fil-mali wal-ahl", translation: "O Allah, I seek refuge in You from the hardships of travel, from a grievous sight, and from an ill turn of fortune in wealth and family.", reference: "Sahih Muslim 1342"),
-            DuaItem(arabicText: "آيِبُونَ تَائِبُونَ عَابِدُونَ لِرَبِّنَا حَامِدُونَ", transliteration: "Ayibuna, ta'ibuna, 'abiduna, li-Rabbina hamidun", translation: "We return, repentant, worshipping, and praising our Lord. (Added when returning from the journey)", reference: "Sahih Muslim 1342"),
-            DuaItem(arabicText: "أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ مِن شَرِّ مَا خَلَقَ", transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created. (Whoever says it when stopping at a place, nothing will harm him until he departs from it)", reference: "Sahih Muslim 2708"),
-            DuaItem(arabicText: "أَستَودِعُ اللَّهَ دِينَكَ وَأَمَانَتَكَ وَخَوَاتِيمَ عَمَلِكَ", transliteration: "Astawdi'ullaha dinaka wa amanataka wa khawatima 'amalik", translation: "I entrust to Allah your religion, your trusts, and the final outcome of your deeds. (The Prophet's farewell to a departing traveler)", reference: "Sunan Abi Dawud 2600")
+            DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 44...56, transliteration: "Subhanal-ladhi sakhkhara lana hadha wa ma kunna lahu muqrinin, wa inna ila Rabbina lamunqalibun", translation: "Glory be to the One who subjected this to us, for we could never have accomplished it ourselves; and indeed, to our Lord we shall return. (Said after Allahu Akbar three times, when mounted for travel)"),
+            DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 57...84, transliteration: "Allahumma inna nas'aluka fi safarina hadhal-birra wat-taqwa, wa minal-'amali ma tarda. Allahumma hawwin 'alayna safarana hadha watwi 'anna bu'dah. Allahumma antas-sahibu fis-safari wal-khalifatu fil-ahl", translation: "O Allah, we ask You on this journey of ours for righteousness and taqwa, and for deeds that please You. O Allah, make this journey easy for us and fold up its distance for us. O Allah, You are the Companion on the journey and the Guardian over the family left behind."),
+            DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 85...98, transliteration: "Allahumma inni a'udhu bika min wa'tha'is-safari, wa ka'abatil-manzari, wa su'il-munqalabi fil-mali wal-ahl", translation: "O Allah, I seek refuge in You from the hardships of travel, from a grievous sight, and from an ill turn of fortune in wealth and family."),
+            DuaItem(hadith: "muslim:1342", cite: "Sahih Muslim 1342", arabic: 108...112, transliteration: "Ayibuna, ta'ibuna, 'abiduna, li-Rabbina hamidun", translation: "We return, repentant, worshipping, and praising our Lord. (Added when returning from the journey)"),
+            DuaItem(hadith: "muslim:2708a", cite: "Sahih Muslim 2708", arabic: 63...70, transliteration: "A'udhu bikalimatillahit-tammati min sharri ma khalaq", translation: "I seek refuge in the perfect words of Allah from the evil of what He has created. (Whoever says it when stopping at a place, nothing will harm him until he departs from it)"),
+            DuaItem(hadith: "abudawud:2600", cite: "Sunan Abi Dawud 2600", arabic: 35...40, transliteration: "Astawdi'ullaha dinaka wa amanataka wa khawatima 'amalik", translation: "I entrust to Allah your religion, your trusts, and the final outcome of your deeds. (The Prophet's farewell to a departing traveler)")
         ]
     )
 
@@ -905,10 +1037,10 @@ private enum DuaCollections {
         introduction: "The Prophet ﷺ marked every threshold with remembrance: leaving in Allah's care, returning with His name, and entering His house asking for His mercy.",
         items: [
             DuaItem(arabicText: "بِسمِ اللَّهِ تَوَكَّلتُ عَلَى اللَّهِ وَلَا حَولَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", transliteration: "Bismillahi tawakkaltu 'alallah, wa la hawla wa la quwwata illa billah", translation: "In the name of Allah, I place my trust in Allah, and there is no power and no strength except through Allah. (On leaving the home, it is said to him: you are guided, sufficed, and protected)", reference: "Sunan Abi Dawud 5095"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ أَن أَضِلَّ أَو أُضَلَّ أَو أَزِلَّ أَو أُزَلَّ أَو أَظلِمَ أَو أُظلَمَ أَو أَجهَلَ أَو يُجهَلَ عَلَيَّ", transliteration: "Allahumma inni a'udhu bika an adilla aw udall, aw azilla aw uzall, aw azlima aw uzlam, aw ajhala aw yujhala 'alayy", translation: "O Allah, I seek refuge in You from going astray or being led astray, from slipping or being made to slip, from wronging or being wronged, and from acting ignorantly or being treated with ignorance. (On leaving the home)", reference: "Sunan Abi Dawud 5094"),
-            DuaItem(arabicText: "اللَّهُمَّ افتَح لِي أَبوَابَ رَحمَتِكَ", transliteration: "Allahumma-ftah li abwaba rahmatik", translation: "O Allah, open for me the doors of Your mercy. (On entering the masjid)", reference: "Sahih Muslim 713"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي أَسأَلُكَ مِن فَضلِكَ", transliteration: "Allahumma inni as'aluka min fadlik", translation: "O Allah, I ask You of Your bounty. (On leaving the masjid)", reference: "Sahih Muslim 713"),
-            DuaItem(arabicText: "أَعُوذُ بِاللَّهِ العَظِيمِ وَبِوَجهِهِ الكَرِيمِ وَسُلطَانِهِ القَدِيمِ مِنَ الشَّيطَانِ الرَّجِيمِ", transliteration: "A'udhu billahil-'Azim, wa biwajhihil-karim, wa sultanihil-qadim, minash-shaytanir-rajim", translation: "I seek refuge in Allah the Magnificent, in His Noble Face and His eternal authority, from the accursed Shaytan. (On entering the masjid, Shaytan says: he is protected from me for the rest of the day)", reference: "Sunan Abi Dawud 466")
+            DuaItem(hadith: "abudawud:5094", cite: "Sunan Abi Dawud 5094", arabic: 32...52, transliteration: "Allahumma inni a'udhu bika an adilla aw udall, aw azilla aw uzall, aw azlima aw uzlam, aw ajhala aw yujhala 'alayy", translation: "O Allah, I seek refuge in You from going astray or being led astray, from slipping or being made to slip, from wronging or being wronged, and from acting ignorantly or being treated with ignorance. (On leaving the home)"),
+            DuaItem(hadith: "muslim:713a", cite: "Sahih Muslim 713", arabic: 43...47, transliteration: "Allahumma-ftah li abwaba rahmatik", translation: "O Allah, open for me the doors of Your mercy. (On entering the masjid)"),
+            DuaItem(hadith: "muslim:713a", cite: "Sahih Muslim 713", arabic: 52...56, transliteration: "Allahumma inni as'aluka min fadlik", translation: "O Allah, I ask You of Your bounty. (On leaving the masjid)"),
+            DuaItem(hadith: "abudawud:466", cite: "Sunan Abi Dawud 466", arabic: 51...60, transliteration: "A'udhu billahil-'Azim, wa biwajhihil-karim, wa sultanihil-qadim, minash-shaytanir-rajim", translation: "I seek refuge in Allah the Magnificent, in His Noble Face and His eternal authority, from the accursed Shaytan. (On entering the masjid, Shaytan says: he is protected from me for the rest of the day)")
         ]
     )
 
@@ -920,10 +1052,10 @@ private enum DuaCollections {
         introduction: "\"O messengers, eat from the good foods and work righteousness.\" (Quran 23:51) The sunnah surrounds every meal with Allah's name and gratitude for His provision.",
         items: [
             DuaItem(arabicText: "بِسمِ اللَّهِ", transliteration: "Bismillah", translation: "In the name of Allah. (Before eating: 'Mention Allah's name, eat with your right hand, and eat from what is nearest to you')", reference: "Sahih al-Bukhari 5376"),
-            DuaItem(arabicText: "بِسمِ اللَّهِ أَوَّلَهُ وَآخِرَهُ", transliteration: "Bismillahi awwalahu wa akhirah", translation: "In the name of Allah, at its beginning and its end. (If one forgot to say Bismillah before starting)", reference: "Sunan Abi Dawud 3767"),
+            DuaItem(hadith: "abudawud:3767", cite: "Sunan Abi Dawud 3767", arabic: 64...67, transliteration: "Bismillahi awwalahu wa akhirah", translation: "In the name of Allah, at its beginning and its end. (If one forgot to say Bismillah before starting)"),
             DuaItem(arabicText: "الحَمدُ لِلَّهِ الَّذِي أَطعَمَنِي هَذَا وَرَزَقَنِيهِ مِن غَيرِ حَولٍ مِنِّي وَلَا قُوَّةٍ", transliteration: "Alhamdu lillahil-ladhi at'amani hadha wa razaqanihi min ghayri hawlin minni wa la quwwah", translation: "Praise be to Allah, Who fed me this and provided it for me without any strength or power on my part. (After eating, his past sins are forgiven)", reference: "Sunan Abi Dawud 4023"),
-            DuaItem(arabicText: "اللَّهُمَّ بَارِك لَنَا فِيهِ وَزِدنَا مِنهُ", transliteration: "Allahumma barik lana fihi wa zidna minhu", translation: "O Allah, bless us in it and give us more of it. (On drinking milk, for nothing suffices in place of food and drink except milk)", reference: "Jami' at-Tirmidhi 3455"),
-            DuaItem(arabicText: "ذَهَبَ الظَّمَأُ وَابتَلَّتِ العُرُوقُ وَثَبَتَ الأَجرُ إِن شَاءَ اللَّهُ", transliteration: "Dhahabaz-zama'u wabtallatil-'uruqu wa thabatal-ajru in sha' Allah", translation: "The thirst is gone, the veins are moistened, and the reward is confirmed, if Allah wills. (When breaking the fast)", reference: "Sunan Abi Dawud 2357")
+            DuaItem(hadith: "tirmidhi:3455", cite: "Jami' at-Tirmidhi 3455", arabic: 100...105, transliteration: "Allahumma barik lana fihi wa zidna minhu", translation: "O Allah, bless us in it and give us more of it. (On drinking milk, for nothing suffices in place of food and drink except milk)"),
+            DuaItem(hadith: "abudawud:2357", cite: "Sunan Abi Dawud 2357", arabic: 51...59, transliteration: "Dhahabaz-zama'u wabtallatil-'uruqu wa thabatal-ajru in sha' Allah", translation: "The thirst is gone, the veins are moistened, and the reward is confirmed, if Allah wills. (When breaking the fast)")
         ]
     )
 
@@ -934,11 +1066,11 @@ private enum DuaCollections {
         introductionTitle: "Forgiveness & Repentance Duas",
         introduction: "The Prophet ﷺ, though forgiven, sought Allah's forgiveness dozens of times a day, and taught his companions to do the same. \"And whoever does a wrong or wrongs himself but then seeks forgiveness of Allah will find Allah Forgiving and Merciful.\" (Quran 4:110)",
         items: [
-            DuaItem(arabicText: "رَبِّ اغفِر لِي وَتُب عَلَيَّ إِنَّكَ أَنتَ التَّوَّابُ الرَّحِيمُ", transliteration: "Rabbi-ghfir li wa tub 'alayya, innaka antat-Tawwabur-Rahim", translation: "My Lord, forgive me and accept my repentance; indeed, You are the Accepting of Repentance, the Merciful. (The Prophet ﷺ was counted saying it a hundred times in a single gathering)", reference: "Sunan Abi Dawud 1516"),
-            DuaItem(arabicText: "اللَّهُمَّ إِنِّي ظَلَمتُ نَفسِي ظُلمًا كَثِيرًا وَلَا يَغفِرُ الذُّنُوبَ إِلَّا أَنتَ فَاغفِر لِي مَغفِرَةً مِن عِندِكَ وَارحَمنِي إِنَّكَ أَنتَ الغَفُورُ الرَّحِيمُ", transliteration: "Allahumma inni zalamtu nafsi zulman kathiran, wa la yaghfirudh-dhunuba illa anta, faghfir li maghfiratan min 'indika, warhamni, innaka antal-Ghafurur-Rahim", translation: "O Allah, I have greatly wronged myself, and none forgives sins but You; so grant me forgiveness from You and have mercy on me. Indeed, You are the Forgiving, the Merciful. (Taught by the Prophet ﷺ to Abu Bakr to say in prayer)", reference: "Sahih al-Bukhari 834"),
-            DuaItem(arabicText: "أَستَغفِرُ اللَّهَ الَّذِي لَا إِلَهَ إِلَّا هُوَ الحَيُّ القَيُّومُ وَأَتُوبُ إِلَيهِ", transliteration: "Astaghfirullahal-ladhi la ilaha illa huwal-Hayyul-Qayyumu wa atubu ilayh", translation: "I seek the forgiveness of Allah, besides Whom there is no god, the Ever-Living, the Sustainer of all, and I turn to Him in repentance. (Whoever says it is forgiven, even if he had fled from battle)", reference: "Sunan Abi Dawud 1517"),
-            DuaItem(arabicText: "اللَّهُمَّ اغفِر لِي ذَنبِي كُلَّهُ دِقَّهُ وَجِلَّهُ وَأَوَّلَهُ وَآخِرَهُ وَعَلَانِيَتَهُ وَسِرَّهُ", transliteration: "Allahumma-ghfir li dhanbi kullah, diqqahu wa jillah, wa awwalahu wa akhirah, wa 'alaniyatahu wa sirrah", translation: "O Allah, forgive me all my sins: the small and the great, the first and the last, the open and the hidden. (Said by the Prophet ﷺ in prostration)", reference: "Sahih Muslim 483"),
-            DuaItem(arabicText: "سُبحَانَكَ اللَّهُمَّ وَبِحَمدِكَ أَشهَدُ أَن لَا إِلَهَ إِلَّا أَنتَ أَستَغفِرُكَ وَأَتُوبُ إِلَيكَ", transliteration: "Subhanakallahumma wa bihamdika, ashhadu an la ilaha illa anta, astaghfiruka wa atubu ilayk", translation: "Glory be to You, O Allah, and praise be to You. I bear witness that there is no god but You; I seek Your forgiveness and turn to You in repentance. (Said on rising from a gathering, an expiation for whatever happened in it)", reference: "Sunan Abi Dawud 4859")
+            DuaItem(hadith: "abudawud:1516", cite: "Sunan Abi Dawud 1516", arabic: 37...45, transliteration: "Rabbi-ghfir li wa tub 'alayya, innaka antat-Tawwabur-Rahim", translation: "My Lord, forgive me and accept my repentance; indeed, You are the Accepting of Repentance, the Merciful. (The Prophet ﷺ was counted saying it a hundred times in a single gathering)"),
+            DuaItem(hadith: "bukhari:834", cite: "Sahih al-Bukhari 834", arabic: 47...67, transliteration: "Allahumma inni zalamtu nafsi zulman kathiran, wa la yaghfirudh-dhunuba illa anta, faghfir li maghfiratan min 'indika, warhamni, innaka antal-Ghafurur-Rahim", translation: "O Allah, I have greatly wronged myself, and none forgives sins but You; so grant me forgiveness from You and have mercy on me. Indeed, You are the Forgiving, the Merciful. (Taught by the Prophet ﷺ to Abu Bakr to say in prayer)"),
+            DuaItem(hadith: "abudawud:1517", cite: "Sunan Abi Dawud 1517", arabic: 46...56, transliteration: "Astaghfirullahal-ladhi la ilaha illa huwal-Hayyul-Qayyumu wa atubu ilayh", translation: "I seek the forgiveness of Allah, besides Whom there is no god, the Ever-Living, the Sustainer of all, and I turn to Him in repentance. (Whoever says it is forgiven, even if he had fled from battle)"),
+            DuaItem(hadith: "muslim:483", cite: "Sahih Muslim 483", arabic: 43...53, transliteration: "Allahumma-ghfir li dhanbi kullah, diqqahu wa jillah, wa awwalahu wa akhirah, wa 'alaniyatahu wa sirrah", translation: "O Allah, forgive me all my sins: the small and the great, the first and the last, the open and the hidden. (Said by the Prophet ﷺ in prostration)"),
+            DuaItem(hadith: "abudawud:4859", cite: "Sunan Abi Dawud 4859", arabic: 48...59, transliteration: "Subhanakallahumma wa bihamdika, ashhadu an la ilaha illa anta, astaghfiruka wa atubu ilayk", translation: "Glory be to You, O Allah, and praise be to You. I bear witness that there is no god but You; I seek Your forgiveness and turn to You in repentance. (Said on rising from a gathering, an expiation for whatever happened in it)")
         ]
     )
 
@@ -949,12 +1081,12 @@ private enum DuaCollections {
         introductionTitle: "Duas of the Prophets",
         introduction: "The Quran preserves the very words the prophets called upon their Lord with (in illness, loneliness, need, and gratitude), and every one was answered. \"So We responded to him...\" (Quran 21:84)",
         items: [
-            DuaItem(arabicText: "أَنِّي مَسَّنِيَ ٱلضُّرُّ وَأَنتَ أَرحَمُ ٱلرَّٰحِمِينَ", transliteration: "Anni massaniyad-durru wa anta arhamur-rahimin", translation: "Indeed, adversity has touched me, and You are the Most Merciful of the merciful. (Ayyub, in his long illness; and Allah removed his affliction)", reference: "21:83"),
-            DuaItem(arabicText: "رَبِّ لَا تَذَرنِي فَردٗا وَأَنتَ خَيرُ ٱلوَٰرِثِينَ", transliteration: "Rabbi la tadharni fardan wa anta khayrul-warithin", translation: "My Lord, do not leave me alone, and You are the best of inheritors. (Zakariyya, asking for a child; and he was given Yahya)", reference: "21:89"),
-            DuaItem(arabicText: "رَبِّ أَوزِعنِيٓ أَن أَشكُرَ نِعمَتَكَ ٱلَّتِيٓ أَنعَمتَ عَلَيَّ وَعَلَىٰ وَٰلِدَيَّ وَأَن أَعمَلَ صَٰلِحٗا تَرضَىٰهُ وَأَدخِلنِي بِرَحمَتِكَ فِي عِبَادِكَ ٱلصَّٰلِحِينَ", transliteration: "Rabbi awzi'ni an ashkura ni'matakal-lati an'amta 'alayya wa 'ala walidayya wa an a'mala salihan tardahu wa adkhilni birahmatika fi 'ibadikas-salihin", translation: "My Lord, enable me to be grateful for Your favor which You have bestowed upon me and my parents, and to do righteousness that pleases You, and admit me by Your mercy among Your righteous servants. (Sulayman, on hearing the ant)", reference: "27:19"),
-            DuaItem(arabicText: "رَبِّ إِنِّي لِمَآ أَنزَلتَ إِلَيَّ مِن خَيرٖ فَقِيرٞ", transliteration: "Rabbi inni lima anzalta ilayya min khayrin faqir", translation: "My Lord, indeed I am in need of whatever good You send down to me. (Musa, alone and destitute in Madyan; and he was soon given shelter, work, and family)", reference: "28:24"),
-            DuaItem(arabicText: "رَّبِّ ٱغفِر لِي وَلِوَٰلِدَيَّ وَلِمَن دَخَلَ بَيتِيَ مُؤمِنٗا وَلِلمُؤمِنِينَ وَٱلمُؤمِنَٰتِ", transliteration: "Rabbi-ghfir li wa liwalidayya wa liman dakhala baytiya mu'minan wa lil-mu'minina wal-mu'minat", translation: "My Lord, forgive me and my parents and whoever enters my house a believer, and the believing men and believing women. (Nuh)", reference: "71:28"),
-            DuaItem(arabicText: "رَبِّ هَب لِي حُكمٗا وَأَلحِقنِي بِٱلصَّٰلِحِينَ", transliteration: "Rabbi hab li hukman wa alhiqni bis-salihin", translation: "My Lord, grant me wisdom and join me with the righteous. (Ibrahim)", reference: "26:83")
+            DuaItem(quran: "21:83", words: 5...10, transliteration: "Anni massaniyad-durru wa anta arhamur-rahimin", translation: "Indeed, adversity has touched me, and You are the Most Merciful of the merciful. (Ayyub, in his long illness; and Allah removed his affliction)"),
+            DuaItem(quran: "21:89", words: 4...10, transliteration: "Rabbi la tadharni fardan wa anta khayrul-warithin", translation: "My Lord, do not leave me alone, and You are the best of inheritors. (Zakariyya, asking for a child; and he was given Yahya)"),
+            DuaItem(quran: "27:19", words: 5...23, transliteration: "Rabbi awzi'ni an ashkura ni'matakal-lati an'amta 'alayya wa 'ala walidayya wa an a'mala salihan tardahu wa adkhilni birahmatika fi 'ibadikas-salihin", translation: "My Lord, enable me to be grateful for Your favor which You have bestowed upon me and my parents, and to do righteousness that pleases You, and admit me by Your mercy among Your righteous servants. (Sulayman, on hearing the ant)"),
+            DuaItem(quran: "28:24", words: 7...14, transliteration: "Rabbi inni lima anzalta ilayya min khayrin faqir", translation: "My Lord, indeed I am in need of whatever good You send down to me. (Musa, alone and destitute in Madyan; and he was soon given shelter, work, and family)"),
+            DuaItem(quran: "71:28", words: 0...9, transliteration: "Rabbi-ghfir li wa liwalidayya wa liman dakhala baytiya mu'minan wa lil-mu'minina wal-mu'minat", translation: "My Lord, forgive me and my parents and whoever enters my house a believer, and the believing men and believing women. (Nuh)"),
+            DuaItem(quran: "26:83", transliteration: "Rabbi hab li hukman wa alhiqni bis-salihin", translation: "My Lord, grant me wisdom and join me with the righteous. (Ibrahim)")
         ]
     )
 
@@ -969,46 +1101,46 @@ private enum DuaCollections {
         // 59:10) hold more than one dua. Storing the full ayah on every entry made the same Arabic render two or
         // three times in a row, and made the block long enough to be cut off.
         items: [
-            DuaItem(arabicText: "رَبَّنَا تَقَبَّل مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلعَلِيمُ", transliteration: "Rabbana taqabbal minnaa innaka Antas Samee'ul Aleem", translation: "Our Lord, accept this from us. Indeed, You are the Hearing, the Knowing.", reference: "2:127"),
-            DuaItem(arabicText: "رَبَّنَا وَٱجعَلنَا مُسلِمَينِ لَكَ وَمِن ذُرِّيَّتِنَآ أُمَّةٗ مُّسلِمَةٗ لَّكَ وَأَرِنَا مَنَاسِكَنَا وَتُب عَلَينَآۖ إِنَّكَ أَنتَ ٱلتَّوَّابُ ٱلرَّحِيمُ", transliteration: "Rabbana waj'alnaa muslimaini laka wa min zurriyyatinaaa ummatam muslimatal laka wa arinaa manaasikanaa wa tub 'alainaa innaka antat Tawwaabur Raheem", translation: "Our Lord, make us Muslims in submission to You and from our descendants a Muslim nation in submission to You. Show us our rites and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful.", reference: "2:128"),
-            DuaItem(arabicText: "رَبَّنَآ ءَاتِنَا فِي ٱلدُّنيَا حَسَنَةٗ وَفِي ٱلأٓخِرَةِ حَسَنَةٗ وَقِنَا عَذَابَ ٱلنَّارِ", transliteration: "Rabbana atina fid dunyaa hasanatanw wa fil aakhirati hasanatanw wa qinaa azaaban Naar", translation: "Our Lord, give us in this world good and in the Hereafter good and protect us from the punishment of the Fire.", reference: "2:201"),
-            DuaItem(arabicText: "رَبَّنَآ أَفرِغ عَلَينَا صَبرٗا وَثَبِّت أَقدَامَنَا وَٱنصُرنَا عَلَى ٱلقَومِ ٱلكَٰفِرِينَ", transliteration: "Rabbana afrigh 'alainaa sabranw wa sabbit aqdaamanaa wansurnaa 'alal qawmil kaafireen", translation: "Our Lord, pour upon us patience, plant firmly our feet, and give us victory over the disbelieving people.", reference: "2:250"),
-            DuaItem(arabicText: "رَبَّنَا لَا تُؤَاخِذنَآ إِن نَّسِينَآ أَو أَخطَأنَاۚ", transliteration: "Rabbana laa tu'aakhiznaaa in naseenaaa aw akhtaanaa", translation: "Our Lord, do not impose blame upon us if we have forgotten or erred.", reference: "2:286"),
-            DuaItem(arabicText: "رَبَّنَا وَلَا تَحمِل عَلَينَآ إِصرٗا كَمَا حَمَلتَهُۥ عَلَى ٱلَّذِينَ مِن قَبلِنَاۚ", transliteration: "Rabbana wa laa tahmil-'alainaaa isran kamaa hamaltahoo 'alal-lazeena min qablinaa", translation: "Our Lord, lay not upon us a burden like that which You laid upon those before us.", reference: "2:286"),
-            DuaItem(arabicText: "رَبَّنَا وَلَا تُحَمِّلنَا مَا لَا طَاقَةَ لَنَا بِهِۦۖ وَٱعفُ عَنَّا وَٱغفِر لَنَا وَٱرحَمنَآۚ أَنتَ مَولَىٰنَا فَٱنصُرنَا عَلَى ٱلقَومِ ٱلكَٰفِرِينَ", transliteration: "Rabbana wa laa tuhammilnaa maa laa taaqata lanaa bih; wa'fu 'annaa waghfir lanaa warhamnaa; Anta mawlaanaa fansurnaa 'alal qawmil kaafireen", translation: "Our Lord, burden us not with what we have no ability to bear. Pardon us, forgive us, and have mercy upon us. You are our protector, so give us victory over the disbelieving people.", reference: "2:286"),
-            DuaItem(arabicText: "رَبَّنَا لَا تُزِغ قُلُوبَنَا بَعدَ إِذ هَدَيتَنَا وَهَب لَنَا مِن لَّدُنكَ رَحمَةًۚ إِنَّكَ أَنتَ ٱلوَهَّابُ", transliteration: "Rabbana laa tuzigh quloobanaa ba'da iz hadaitanaa wa hab lanaa mil ladunka rahmah; innaka antal Wahhaab", translation: "Our Lord, let not our hearts deviate after You have guided us and grant us mercy from Yourself. Indeed, You are the Bestower.", reference: "3:8"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّكَ جَامِعُ ٱلنَّاسِ لِيَومٖ لَّا رَيبَ فِيهِۚ إِنَّ ٱللَّهَ لَا يُخلِفُ ٱلمِيعَادَ", transliteration: "Rabbanaaa innaka jaami 'un-naasil Yawmil laa raibafeeh; innal laaha laa yukhliful mee'aad", translation: "Our Lord, surely You will gather the people for a Day about which there is no doubt. Indeed, Allah does not fail in His promise.", reference: "3:9"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّنَآ ءَامَنَّا فَٱغفِر لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ ٱلنَّارِ", transliteration: "Rabbanaaa innanaaa aamannaa faghfir lanaa zunoobanaa wa qinaa 'azaaban Naar", translation: "Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire.", reference: "3:16"),
-            DuaItem(arabicText: "رَبَّنَآ ءَامَنَّا بِمَآ أَنزَلتَ وَٱتَّبَعنَا ٱلرَّسُولَ فَٱكتُبنَا مَعَ ٱلشَّٰهِدِينَ", transliteration: "Rabbanaaa aamannaa bimaaa anzalta wattaba'nar Rasoola faktubnaa ma'ash shaahideen", translation: "Our Lord, we have believed in what You revealed and have followed the messenger, so register us among the witnesses to truth.", reference: "3:53"),
-            DuaItem(arabicText: "رَبَّنَا ٱغفِر لَنَا ذُنُوبَنَا وَإِسرَافَنَا فِيٓ أَمرِنَا وَثَبِّت أَقدَامَنَا وَٱنصُرنَا عَلَى ٱلقَومِ ٱلكَٰفِرِينَ", transliteration: "Rabbanagh fir lanaa zunoobanaa wa israafanaa feee amrinaa wa sabbit aqdaamanaa wansurnaa 'alal qawmil kaafireen", translation: "Our Lord, forgive us our sins and the excess committed in our affairs, plant firmly our feet, and give us victory over the disbelieving people.", reference: "3:147"),
-            DuaItem(arabicText: "رَبَّنَا مَا خَلَقتَ هَٰذَا بَٰطِلٗا سُبحَٰنَكَ فَقِنَا عَذَابَ ٱلنَّارِ", transliteration: "Rabbanaa maa khalaqta haaza baatilan Subhaanaka faqinaa 'azaaban Naar", translation: "Our Lord, You did not create this aimlessly; exalted are You, so protect us from the punishment of the Fire.", reference: "3:191"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّكَ مَن تُدخِلِ ٱلنَّارَ فَقَد أَخزَيتَهُۥۖ وَمَا لِلظَّٰلِمِينَ مِن أَنصَارٖ", transliteration: "Rabbanaaa innaka man tudkhilin Naara faqad akhzai tahoo wa maa lizzaalimeena min ansaar", translation: "Our Lord, indeed whoever You admit to the Fire, You have disgraced him, and for the wrongdoers there are no helpers.", reference: "3:192"),
-            DuaItem(arabicText: "رَّبَّنَآ إِنَّنَا سَمِعنَا مُنَادِيٗا يُنَادِي لِلإِيمَٰنِ أَن ءَامِنُوا بِرَبِّكُم فَـَٔامَنَّاۚ", transliteration: "Rabbanaaa innanaa sami'naa munaadiyai yunaadee lil eemaani an aaminoo bi Rabbikum fa aamannaa", translation: "Our Lord, indeed we heard a caller calling to faith, saying, Believe in your Lord, and we have believed.", reference: "3:193"),
-            DuaItem(arabicText: "رَبَّنَا فَٱغفِر لَنَا ذُنُوبَنَا وَكَفِّر عَنَّا سَيِّـَٔاتِنَا وَتَوَفَّنَا مَعَ ٱلأَبرَارِ", transliteration: "Rabbanaa faghfir lanaa zunoobanaa wa kaffir 'annaa saiyi aatina wa tawaffanaa ma'al abraar", translation: "Our Lord, forgive us our sins, remove from us our misdeeds, and cause us to die among the righteous.", reference: "3:193"),
-            DuaItem(arabicText: "رَبَّنَا وَءَاتِنَا مَا وَعَدتَّنَا عَلَىٰ رُسُلِكَ وَلَا تُخزِنَا يَومَ ٱلقِيَٰمَةِۖ إِنَّكَ لَا تُخلِفُ ٱلمِيعَادَ", transliteration: "Rabbanaa wa aatinaa maa wa'attanaa 'alaa Rusulika wa laa tukhzinaa Yawmal Qiyaamah; innaka laa tukhliful mee'aad", translation: "Our Lord, grant us what You promised through Your messengers and do not disgrace us on the Day of Resurrection. Indeed, You do not fail in promise.", reference: "3:194"),
-            DuaItem(arabicText: "رَبَّنَآ ءَامَنَّا فَٱكتُبنَا مَعَ ٱلشَّٰهِدِينَ", transliteration: "Rabbanaaa aamannaa faktubnaa ma'ash shaahideen", translation: "Our Lord, we have believed, so register us among the witnesses.", reference: "5:83"),
-            DuaItem(arabicText: "ٱللَّهُمَّ رَبَّنَآ أَنزِل عَلَينَا مَآئِدَةٗ مِّنَ ٱلسَّمَآءِ تَكُونُ لَنَا عِيدٗا لِّأَوَّلِنَا وَءَاخِرِنَا وَءَايَةٗ مِّنكَۖ وَٱرزُقنَا وَأَنتَ خَيرُ ٱلرَّٰزِقِينَ", transliteration: "Rabbanaaa anzil 'alainaa maaa'idatam minas samaaa'i takoonu lanaa 'eedal li awwalinaa wa aakhirinaa wa Aayatam minka warzuqnaa wa Anta khairur raaziqeen", translation: "O Allah, our Lord, send down to us a table from heaven to be a festival and a sign from You. Provide for us, and You are the best of providers.", reference: "5:114"),
-            DuaItem(arabicText: "رَبَّنَا ظَلَمنَآ أَنفُسَنَا وَإِن لَّم تَغفِر لَنَا وَتَرحَمنَا لَنَكُونَنَّ مِنَ ٱلخَٰسِرِينَ", transliteration: "Rabbanaa zalamnaaa anfusanaa wa illam taghfir lanaa wa tarhamnaa lanakoonanna minal khaasireen", translation: "Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.", reference: "7:23"),
-            DuaItem(arabicText: "رَبَّنَا لَا تَجعَلنَا مَعَ ٱلقَومِ ٱلظَّٰلِمِينَ", transliteration: "Rabbanaa laa taj'alnaa ma'al qawmiz zaalimeen", translation: "Our Lord, do not place us with the wrongdoing people.", reference: "7:47"),
-            DuaItem(arabicText: "رَبَّنَا ٱفتَح بَينَنَا وَبَينَ قَومِنَا بِٱلحَقِّ وَأَنتَ خَيرُ ٱلفَٰتِحِينَ", transliteration: "Rabbanaf-tah bainana wa baina qawmina bil haqqi wa anta Khairul Fatiheen", translation: "Our Lord, decide between us and our people in truth, and You are the best of those who give decision.", reference: "7:89"),
-            DuaItem(arabicText: "رَبَّنَآ أَفرِغ عَلَينَا صَبرٗا وَتَوَفَّنَا مُسلِمِينَ", transliteration: "Rabbanaaa afrigh 'alainaa sabranw wa tawaffanaa muslimeen", translation: "Our Lord, pour upon us patience and let us die as Muslims in submission to You.", reference: "7:126"),
-            DuaItem(arabicText: "رَبَّنَا لَا تَجعَلنَا فِتنَةٗ لِّلقَومِ ٱلظَّٰلِمِينَ وَنَجِّنَا بِرَحمَتِكَ مِنَ ٱلقَومِ ٱلكَٰفِرِينَ", transliteration: "Rabbana la taj'alna fitnatal lil-qawmidh-Dhalimeen; wa najjina bi-Rahmatika minal qawmil kafireen", translation: "Our Lord, make us not objects of trial for the wrongdoing people, and save us by Your mercy from the disbelieving people.", reference: "10:85-86"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّكَ تَعلَمُ مَا نُخفِي وَمَا نُعلِنُۗ وَمَا يَخفَىٰ عَلَى ٱللَّهِ مِن شَيءٖ فِي ٱلأَرضِ وَلَا فِي ٱلسَّمَآءِ", transliteration: "Rabbanaaa innaka ta'lamu maa nukhfee wa maa nu'lin; wa maa yakhfaa 'alal laahi min shai'in fil ardi wa laa fis samaaa", translation: "Our Lord, indeed You know what we conceal and what we declare, and nothing is hidden from Allah on the earth or in the heaven.", reference: "14:38"),
-            DuaItem(arabicText: "رَبِّ ٱجعَلنِي مُقِيمَ ٱلصَّلَوٰةِ وَمِن ذُرِّيَّتِيۚ رَبَّنَا وَتَقَبَّل دُعَآءِ", transliteration: "Rabbij 'alnee muqeemas Salaati wa min zurriyyatee Rabbanaa wa taqabbal du'aaa", translation: "My Lord, make me an establisher of prayer, and many from my descendants. Our Lord, accept my supplication.", reference: "14:40"),
-            DuaItem(arabicText: "رَبَّنَا ٱغفِر لِي وَلِوَٰلِدَيَّ وَلِلمُؤمِنِينَ يَومَ يَقُومُ ٱلحِسَابُ", transliteration: "Rabbanagh fir lee wa liwaalidaiya wa lilmu'mineena Yawma yaqoomul hisaab", translation: "Our Lord, forgive me and my parents and the believers the Day the account is established.", reference: "14:41"),
-            DuaItem(arabicText: "رَبَّنَآ ءَاتِنَا مِن لَّدُنكَ رَحمَةٗ وَهَيِّئ لَنَا مِن أَمرِنَا رَشَدٗا", transliteration: "Rabbanaaa aatinaa mil ladunka rahmatanw wa haiyi' lanaa min amrinaa rashadaa", translation: "Our Lord, grant us mercy from Yourself and prepare for us right guidance in our affair.", reference: "18:10"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّنَا نَخَافُ أَن يَفرُطَ عَلَينَآ أَو أَن يَطغَىٰ", transliteration: "Rabbanaaa innanaa nakhaafu ai yafruta 'alainaaa aw ai yatghaa", translation: "Our Lord, indeed we are afraid that he will hasten punishment against us or that he will transgress.", reference: "20:45"),
-            DuaItem(arabicText: "رَبَّنَآ ءَامَنَّا فَٱغفِر لَنَا وَٱرحَمنَا وَأَنتَ خَيرُ ٱلرَّٰحِمِينَ", transliteration: "Rabbanaaa aamannaa faghfir lanaa warhamnaa wa Anta khairur raahimeen", translation: "Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful.", reference: "23:109"),
-            DuaItem(arabicText: "رَبَّنَا ٱصرِف عَنَّا عَذَابَ جَهَنَّمَۖ إِنَّ عَذَابَهَا كَانَ غَرَامًا إِنَّهَا سَآءَت مُستَقَرّٗا وَمُقَامٗا", transliteration: "Rabbanas rif 'annnaa 'azaaba Jahannama inn 'azaabahaa kaana gharaamaa; innahaa saaa'at mustaqarranw wa muqaamaa", translation: "Our Lord, avert from us the punishment of Hell. Indeed, its punishment is ever adhering; indeed, it is evil as a settlement and residence.", reference: "25:65-66"),
-            DuaItem(arabicText: "رَبَّنَا هَب لَنَا مِن أَزوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعيُنٖ وَٱجعَلنَا لِلمُتَّقِينَ إِمَامًا", transliteration: "Rabbanaa hab lanaa min azwaajinaa wa zurriyaatinaa qurrata a'yuninw waj'alnaa lilmuttaqeena Imaamaa", translation: "Our Lord, grant us from among our spouses and offspring comfort to our eyes and make us an example for the righteous.", reference: "25:74"),
-            DuaItem(arabicText: "ٱلحَمدُ لِلَّهِ ٱلَّذِيٓ أَذهَبَ عَنَّا ٱلحَزَنَۖ إِنَّ رَبَّنَا لَغَفُورٞ شَكُورٌ", transliteration: "Inna Rabbanaa la-Ghafoorun Shakoor", translation: "Indeed, our Lord is Forgiving and Appreciative.", reference: "35:34"),
-            DuaItem(arabicText: "رَبَّنَا وَسِعتَ كُلَّ شَيءٖ رَّحمَةٗ وَعِلمٗا فَٱغفِر لِلَّذِينَ تَابُوا وَٱتَّبَعُوا سَبِيلَكَ وَقِهِم عَذَابَ ٱلجَحِيمِ", transliteration: "Rabbanaa wasi'ta kulla shai'ir rahmatanw wa 'ilman faghfir lillazeena taaboo wattaba'oo sabeelaka wa qihim 'azaabal Jaheem", translation: "Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who repent and follow Your way, and protect them from the punishment of Hellfire.", reference: "40:7"),
-            DuaItem(arabicText: "رَبَّنَا وَأَدخِلهُم جَنَّٰتِ عَدنٍ ٱلَّتِي وَعَدتَّهُم وَمَن صَلَحَ مِن ءَابَآئِهِم وَأَزوَٰجِهِم وَذُرِّيَّٰتِهِمۚ إِنَّكَ أَنتَ ٱلعَزِيزُ ٱلحَكِيمُ وَقِهِمُ ٱلسَّيِّـَٔاتِۚ", transliteration: "Rabbana wa adhkhilhum Jannati 'adninil-lati wa'attahum wa man salaha min aba'ihim wa azwajihim wa dhuriyyatihim innaka antal 'Azizul-Hakim, waqihimus saiyi'at", translation: "Our Lord, admit them to gardens of perpetual residence which You promised them, and whoever was righteous among their forefathers, spouses, and offspring. Indeed, You are the Exalted in Might, the Wise. Protect them from evil consequences.", reference: "40:8-9"),
-            DuaItem(arabicText: "رَبَّنَا ٱغفِر لَنَا وَلِإِخوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلإِيمَٰنِ وَلَا تَجعَل فِي قُلُوبِنَا غِلّٗا لِّلَّذِينَ ءَامَنُوا", transliteration: "Rabbanagh fir lanaa wa li ikhwaani nal lazeena sabqoonaa bil eemaani wa laa taj'al fee quloobinaa ghillalil lazeena aamanoo", translation: "Our Lord, forgive us and our brothers who preceded us in faith, and put not in our hearts resentment toward those who have believed.", reference: "59:10"),
-            DuaItem(arabicText: "رَبَّنَآ إِنَّكَ رَءُوفٞ رَّحِيمٌ", transliteration: "Rabbannaaa innaka Ra'oofur Raheem", translation: "Our Lord, indeed You are Kind and Merciful.", reference: "59:10"),
-            DuaItem(arabicText: "رَّبَّنَا عَلَيكَ تَوَكَّلنَا وَإِلَيكَ أَنَبنَا وَإِلَيكَ ٱلمَصِيرُ", transliteration: "Rabbanaa 'alaika tawakkalnaa wa ilaika anabnaa wa ilaikal maseer", translation: "Our Lord, upon You we have relied, to You we have returned, and to You is the destination.", reference: "60:4"),
-            DuaItem(arabicText: "رَبَّنَا لَا تَجعَلنَا فِتنَةٗ لِّلَّذِينَ كَفَرُوا وَٱغفِر لَنَا رَبَّنَآۖ إِنَّكَ أَنتَ ٱلعَزِيزُ ٱلحَكِيمُ", transliteration: "Rabbana laa taj'alnaa fitnatal lillazeena kafaroo waghfir lanaa rabbanaaa innaka antal azeezul hakeem", translation: "Our Lord, make us not objects of trial for those who disbelieve and forgive us, our Lord. Indeed, You are the Exalted in Might, the Wise.", reference: "60:5"),
-            DuaItem(arabicText: "رَبَّنَآ أَتمِم لَنَا نُورَنَا وَٱغفِر لَنَآۖ إِنَّكَ عَلَىٰ كُلِّ شَيءٖ قَدِيرٞ", transliteration: "Rabbanaaa atmim lanaa nooranaa waghfir lana innaka 'alaa kulli shai'in qadeer", translation: "Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.", reference: "66:8")
+            DuaItem(quran: "2:127", words: 7...13, transliteration: "Rabbana taqabbal minnaa innaka Antas Samee'ul Aleem", translation: "Our Lord, accept this from us. Indeed, You are the Hearing, the Knowing."),
+            DuaItem(quran: "2:128", transliteration: "Rabbana waj'alnaa muslimaini laka wa min zurriyyatinaaa ummatam muslimatal laka wa arinaa manaasikanaa wa tub 'alainaa innaka antat Tawwaabur Raheem", translation: "Our Lord, make us Muslims in submission to You and from our descendants a Muslim nation in submission to You. Show us our rites and accept our repentance. Indeed, You are the Accepting of Repentance, the Merciful."),
+            DuaItem(quran: "2:201", words: 3...13, transliteration: "Rabbana atina fid dunyaa hasanatanw wa fil aakhirati hasanatanw wa qinaa azaaban Naar", translation: "Our Lord, give us in this world good and in the Hereafter good and protect us from the punishment of the Fire."),
+            DuaItem(quran: "2:250", words: 5...14, transliteration: "Rabbana afrigh 'alainaa sabranw wa sabbit aqdaamanaa wansurnaa 'alal qawmil kaafireen", translation: "Our Lord, pour upon us patience, plant firmly our feet, and give us victory over the disbelieving people."),
+            DuaItem(quran: "2:286", words: 12...18, transliteration: "Rabbana laa tu'aakhiznaaa in naseenaaa aw akhtaanaa", translation: "Our Lord, do not impose blame upon us if we have forgotten or erred."),
+            DuaItem(quran: "2:286", words: 19...29, transliteration: "Rabbana wa laa tahmil-'alainaaa isran kamaa hamaltahoo 'alal-lazeena min qablinaa", translation: "Our Lord, lay not upon us a burden like that which You laid upon those before us."),
+            DuaItem(quran: "2:286", words: 30...48, transliteration: "Rabbana wa laa tuhammilnaa maa laa taaqata lanaa bih; wa'fu 'annaa waghfir lanaa warhamnaa; Anta mawlaanaa fansurnaa 'alal qawmil kaafireen", translation: "Our Lord, burden us not with what we have no ability to bear. Pardon us, forgive us, and have mercy upon us. You are our protector, so give us victory over the disbelieving people."),
+            DuaItem(quran: "3:8", transliteration: "Rabbana laa tuzigh quloobanaa ba'da iz hadaitanaa wa hab lanaa mil ladunka rahmah; innaka antal Wahhaab", translation: "Our Lord, let not our hearts deviate after You have guided us and grant us mercy from Yourself. Indeed, You are the Bestower."),
+            DuaItem(quran: "3:9", transliteration: "Rabbanaaa innaka jaami 'un-naasil Yawmil laa raibafeeh; innal laaha laa yukhliful mee'aad"),
+            DuaItem(quran: "3:16", words: 2...10, transliteration: "Rabbanaaa innanaaa aamannaa faghfir lanaa zunoobanaa wa qinaa 'azaaban Naar", translation: "Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire."),
+            DuaItem(quran: "3:53", transliteration: "Rabbanaaa aamannaa bimaaa anzalta wattaba'nar Rasoola faktubnaa ma'ash shaahideen", translation: "Our Lord, we have believed in what You revealed and have followed the messenger, so register us among the witnesses to truth."),
+            DuaItem(quran: "3:147", words: 6...18, transliteration: "Rabbanagh fir lanaa zunoobanaa wa israafanaa feee amrinaa wa sabbit aqdaamanaa wansurnaa 'alal qawmil kaafireen", translation: "Our Lord, forgive us our sins and the excess committed in our affairs, plant firmly our feet, and give us victory over the disbelieving people."),
+            DuaItem(quran: "3:191", words: 12...20, transliteration: "Rabbanaa maa khalaqta haaza baatilan Subhaanaka faqinaa 'azaaban Naar", translation: "Our Lord, You did not create this aimlessly; exalted are You, so protect us from the punishment of the Fire."),
+            DuaItem(quran: "3:192", transliteration: "Rabbanaaa innaka man tudkhilin Naara faqad akhzai tahoo wa maa lizzaalimeena min ansaar"),
+            DuaItem(quran: "3:193", words: 0...9, transliteration: "Rabbanaaa innanaa sami'naa munaadiyai yunaadee lil eemaani an aaminoo bi Rabbikum fa aamannaa", translation: "Our Lord, indeed we heard a caller calling to faith, saying, Believe in your Lord, and we have believed."),
+            DuaItem(quran: "3:193", words: 10...19, transliteration: "Rabbanaa faghfir lanaa zunoobanaa wa kaffir 'annaa saiyi aatina wa tawaffanaa ma'al abraar", translation: "Our Lord, forgive us our sins, remove from us our misdeeds, and cause us to die among the righteous."),
+            DuaItem(quran: "3:194", transliteration: "Rabbanaa wa aatinaa maa wa'attanaa 'alaa Rusulika wa laa tukhzinaa Yawmal Qiyaamah; innaka laa tukhliful mee'aad", translation: "Our Lord, grant us what You promised through Your messengers and do not disgrace us on the Day of Resurrection. Indeed, You do not fail in promise."),
+            DuaItem(quran: "5:83", words: 16...20, transliteration: "Rabbanaaa aamannaa faktubnaa ma'ash shaahideen", translation: "Our Lord, we have believed, so register us among the witnesses."),
+            DuaItem(quran: "5:114", words: 4...21, transliteration: "Rabbanaaa anzil 'alainaa maaa'idatam minas samaaa'i takoonu lanaa 'eedal li awwalinaa wa aakhirinaa wa Aayatam minka warzuqnaa wa Anta khairur raaziqeen", translation: "O Allah, our Lord, send down to us a table from heaven to be a festival and a sign from You. Provide for us, and You are the best of providers."),
+            DuaItem(quran: "7:23", words: 1...11, transliteration: "Rabbanaa zalamnaaa anfusanaa wa illam taghfir lanaa wa tarhamnaa lanakoonanna minal khaasireen", translation: "Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers."),
+            DuaItem(quran: "7:47", words: 8...13, transliteration: "Rabbanaa laa taj'alnaa ma'al qawmiz zaalimeen", translation: "Our Lord, do not place us with the wrongdoing people."),
+            DuaItem(quran: "7:89", words: 33...41, transliteration: "Rabbanaf-tah bainana wa baina qawmina bil haqqi wa anta Khairul Fatiheen", translation: "Our Lord, decide between us and our people in truth, and You are the best of those who give decision."),
+            DuaItem(quran: "7:126", words: 10...15, transliteration: "Rabbanaaa afrigh 'alainaa sabranw wa tawaffanaa muslimeen", translation: "Our Lord, pour upon us patience and let us die as Muslims in submission to You."),
+            DuaItem(quran: "10:85-86", words: 4...14, transliteration: "Rabbana la taj'alna fitnatal lil-qawmidh-Dhalimeen; wa najjina bi-Rahmatika minal qawmil kafireen", translation: "Our Lord, make us not objects of trial for the wrongdoing people, and save us by Your mercy from the disbelieving people."),
+            DuaItem(quran: "14:38", transliteration: "Rabbanaaa innaka ta'lamu maa nukhfee wa maa nu'lin; wa maa yakhfaa 'alal laahi min shai'in fil ardi wa laa fis samaaa"),
+            DuaItem(quran: "14:40", transliteration: "Rabbij 'alnee muqeemas Salaati wa min zurriyyatee Rabbanaa wa taqabbal du'aaa", translation: "My Lord, make me an establisher of prayer, and many from my descendants. Our Lord, accept my supplication."),
+            DuaItem(quran: "14:41", transliteration: "Rabbanagh fir lee wa liwaalidaiya wa lilmu'mineena Yawma yaqoomul hisaab"),
+            DuaItem(quran: "18:10", words: 6...15, transliteration: "Rabbanaaa aatinaa mil ladunka rahmatanw wa haiyi' lanaa min amrinaa rashadaa", translation: "Our Lord, grant us mercy from Yourself and prepare for us right guidance in our affair."),
+            DuaItem(quran: "20:45", words: 1...9, transliteration: "Rabbanaaa innanaa nakhaafu ai yafruta 'alainaaa aw ai yatghaa", translation: "Our Lord, indeed we are afraid that he will hasten punishment against us or that he will transgress."),
+            DuaItem(quran: "23:109", words: 6...13, transliteration: "Rabbanaaa aamannaa faghfir lanaa warhamnaa wa Anta khairur raahimeen", translation: "Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful."),
+            DuaItem(quran: "25:65-66", words: 2...14, transliteration: "Rabbanas rif 'annnaa 'azaaba Jahannama inn 'azaabahaa kaana gharaamaa; innahaa saaa'at mustaqarranw wa muqaamaa", translation: "Our Lord, avert from us the punishment of Hell. Indeed, its punishment is ever adhering; indeed, it is evil as a settlement and residence."),
+            DuaItem(quran: "25:74", words: 2...12, transliteration: "Rabbanaa hab lanaa min azwaajinaa wa zurriyaatinaa qurrata a'yuninw waj'alnaa lilmuttaqeena Imaamaa", translation: "Our Lord, grant us from among our spouses and offspring comfort to our eyes and make us an example for the righteous."),
+            DuaItem(quran: "35:34", words: 1...10, transliteration: "Inna Rabbanaa la-Ghafoorun Shakoor", translation: "Indeed, our Lord is Forgiving and Appreciative."),
+            DuaItem(quran: "40:7", words: 13...26, transliteration: "Rabbanaa wasi'ta kulla shai'ir rahmatanw wa 'ilman faghfir lillazeena taaboo wattaba'oo sabeelaka wa qihim 'azaabal Jaheem", translation: "Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who repent and follow Your way, and protect them from the punishment of Hellfire."),
+            DuaItem(quran: "40:8-9", words: 0...17, transliteration: "Rabbana wa adhkhilhum Jannati 'adninil-lati wa'attahum wa man salaha min aba'ihim wa azwajihim wa dhuriyyatihim innaka antal 'Azizul-Hakim, waqihimus saiyi'at", translation: "Our Lord, admit them to gardens of perpetual residence which You promised them, and whoever was righteous among their forefathers, spouses, and offspring. Indeed, You are the Exalted in Might, the Wise. Protect them from evil consequences."),
+            DuaItem(quran: "59:10", words: 5...18, transliteration: "Rabbanagh fir lanaa wa li ikhwaani nal lazeena sabqoonaa bil eemaani wa laa taj'al fee quloobinaa ghillalil lazeena aamanoo", translation: "Our Lord, forgive us and our brothers who preceded us in faith, and put not in our hearts resentment toward those who have believed."),
+            DuaItem(quran: "59:10", words: 19...22, transliteration: "Rabbannaaa innaka Ra'oofur Raheem", translation: "Our Lord, indeed You are Kind and Merciful."),
+            DuaItem(quran: "60:4", words: 45...51, transliteration: "Rabbanaa 'alaika tawakkalnaa wa ilaika anabnaa wa ilaikal maseer", translation: "Our Lord, upon You we have relied, to You we have returned, and to You is the destination."),
+            DuaItem(quran: "60:5", transliteration: "Rabbana laa taj'alnaa fitnatal lillazeena kafaroo waghfir lanaa rabbanaaa innaka antal azeezul hakeem", translation: "Our Lord, make us not objects of trial for those who disbelieve and forgive us, our Lord. Indeed, You are the Exalted in Might, the Wise."),
+            DuaItem(quran: "66:8", words: 34...44, transliteration: "Rabbanaaa atmim lanaa nooranaa waghfir lana innaka 'alaa kulli shai'in qadeer", translation: "Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.")
         ]
     )
 }

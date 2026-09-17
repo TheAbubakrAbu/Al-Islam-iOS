@@ -35,19 +35,19 @@ struct SahabahScholarsView: View {
                 Section(header: ArticleHeader("WHY SCHOLARS MATTER")) {
                     Text(verbatim: "Allah (Glorified and Exalted be He) raised the people of knowledge above others and made asking them an obligation on the one who does not know:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah will raise those who have believed among you and those who were given knowledge, by degrees” (Quran 58:11).", arabic: "يَرفَعِ ٱللَّهُ ٱلَّذِينَ ءَامَنُوا مِنكُم وَٱلَّذِينَ أُوتُوا ٱلعِلمَ دَرَجَٰتٖۚ")
+                    ScriptureQuote(quran: "58:11", words: 17...25)
 
-                    ScriptureQuote(text: "“Say, ‘Are those who know equal to those who do not know?’ Only they will remember [who are] people of understanding” (Quran 39:9).", arabic: "قُل هَل يَستَوِي ٱلَّذِينَ يَعلَمُونَ وَٱلَّذِينَ لَا يَعلَمُونَۗ إِنَّمَا يَتَذَكَّرُ أُولُوا ٱلأَلبَٰبِ")
+                    ScriptureQuote(quran: "39:9", words: 12...23)
 
-                    ScriptureQuote(text: "“Only those fear Allah, from among His servants, who have knowledge” (Quran 35:28).", arabic: "إِنَّمَا يَخشَى ٱللَّهَ مِن عِبَادِهِ ٱلعُلَمَٰٓؤُاۗ")
+                    ScriptureQuote(quran: "35:28", words: 7...12)
 
-                    ScriptureQuote(text: "“So ask the people of the message if you do not know” (Quran 16:43).", arabic: "فَسـَٔلُوٓا أَهلَ ٱلذِّكرِ إِن كُنتُم لَا تَعلَمُونَ")
+                    ScriptureQuote(quran: "16:43", words: 8...14)
 
                     Text(verbatim: "The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“If Allah wants to do good to a person, He makes him comprehend the religion” (Sahih al-Bukhari 71, Sahih Muslim 1037).", arabic: "مَن يُرِدِ اللَّهُ بِهِ خَيرًا يُفَقِّههُ فِي الدِّينِ", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:71", cite: "Sahih al-Bukhari 71, Sahih Muslim 1037", arabic: 32...39, english: 6...20)
 
-                    ScriptureQuote(text: "“Allah does not take away the knowledge, by taking it away from (the hearts of) the people, but takes it away by the death of the religious learned men till when none of the (religious learned men) remains, people will take as their leaders ignorant persons who when consulted will give their verdict without knowledge. So they will go astray and will lead the people astray” (Sahih al-Bukhari 100).", arabic: "إِنَّ اللَّهَ لاَ يَقبِضُ العِلمَ انتِزَاعًا، يَنتَزِعُهُ مِنَ العِبَادِ، وَلَكِن يَقبِضُ العِلمَ بِقَبضِ العُلَمَاءِ، حَتَّى إِذَا لَم يُبقِ عَالِمًا، اتَّخَذَ النَّاسُ رُءُوسًا جُهَّالاً فَسُئِلُوا، فَأَفتَوا بِغَيرِ عِلمٍ، فَضَلُّوا وَأَضَلُّوا", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:100", cite: "Sahih al-Bukhari 100", arabic: 32...60, english: 6...71)
 
                     Text(verbatim: "Knowledge in Islam is not opinion; it is transmission. A scholar is one who carries the Quran and the Sunnah with understanding, from a teacher who carried it from his, back to the Companions and the Prophet (peace be upon him). This is why the scholars of Ahl as-Sunnah are known by their chains and their teachers.")
                         .font(.body)
@@ -56,9 +56,9 @@ struct SahabahScholarsView: View {
                 Section(header: ArticleHeader("THE FIRST SCHOLARS")) {
                     Text(verbatim: "The Companions (may Allah be pleased with them) learned the Quran as it came down and the Sunnah from the one who lived it. Among them some were singled out for knowledge. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The most merciful of my nation to my nation is Abu Bakr, and the most severe of them concerning the order of Allah is 'Umar, and the most truly modest of them is 'Uthman bin 'Affan. The most knowledgeable of them concerning the lawful and unlawful is Mu'adh Bin Jabal, the most knowledgeable of them concerning (the laws of) inheritance is Zaid bin Thabit, the best reciter (of the Qur'an) among them is Ubayy bin Ka'b, and every nation has a trustworthy one, and the trustworthy one of this nation is Abu 'Ubaidah Bin Al-Jarrah” (Sunan al-Tirmidhi 3790; graded sahih by al-Albani).", arabic: "أَرحَمُ أُمَّتِي بِأُمَّتِي أَبُو بَكرٍ وَأَشَدُّهُم فِي أَمرِ اللَّهِ عُمَرُ وَأَصدَقُهُم حَيَاءً عُثمَانُ وَأَعلَمُهُم بِالحَلاَلِ وَالحَرَامِ مُعَاذُ بنُ جَبَلٍ وَأَفرَضُهُم زَيدُ بنُ ثَابِتٍ وَأَقرَؤُهُم أُبَىُّ بنُ كَعبٍ وَلِكُلِّ أُمَّةٍ أَمِينٌ وَأَمِينُ هَذِهِ الأُمَّةِ أَبُو عُبَيدَةَ بنُ الجَرَّاحِ", dimmed: true)
+                    ScriptureQuote(hadith: "tirmidhi:3790", cite: "Sunan al-Tirmidhi 3790; graded sahih by al-Albani", arabic: 31...67, english: 7...101)
 
-                    ScriptureQuote(text: "“Take (learn) the Qur'an from four: `Abdullah bin Masud, Salim, Mu`adh and Ubai bin Ka`b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا القُرآنَ مِن أَربَعَةٍ مِن عَبدِ اللَّهِ بنِ مَسعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بنِ كَعبٍ", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:4999", cite: "Sahih al-Bukhari 4999", arabic: 34...47, english: 22...36)
                 }
 
                 Section(header: ArticleHeader("THE RIGHTLY GUIDED CALIPHS")) {
@@ -104,23 +104,23 @@ struct SahabahScholarsView: View {
                     ScriptureQuote(text: "“The Sahabi is one who met the Prophet (peace be upon him) believing in him, and died upon Islam” (Ibn Hajar, al-Isabah fi Tamyiz as-Sahabah).", arabic: "الصَّحَابِيُّ: مَن لَقِيَ النَّبِيَّ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ مُؤمِنًا بِهِ، وَمَاتَ عَلَى الإِسلَامِ", dimmed: true)
                     Text(verbatim: "So a Companion is not only one who kept his company for years; whoever met him as a believer, even once, and died a Muslim is a Sahabi. Allah declared Himself pleased with them, and so Ahl as-Sunnah hold that every Companion is trustworthy in what he narrates; a chain is examined below the Companion, never at him:")
                         .font(.body)
-                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلأَوَّلُونَ مِنَ ٱلمُهَٰجِرِينَ وَٱلأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحسَٰنٖ رَّضِيَ ٱللَّهُ عَنهُم وَرَضُوا عَنهُ")
+                    ScriptureQuote(quran: "9:100", words: 0...12)
                     Text(verbatim: "The Prophet (peace be upon him) forbade abusing them:")
                         .font(.body)
-                    ScriptureQuote(text: "“Do not abuse my companions for if any one of you spent gold equal to Uhud (in Allah's Cause) it would not be equal to a Mud or even a half Mud spent by one of them” (Sahih al-Bukhari 3673, Sahih Muslim 2541).", arabic: "لاَ تَسُبُّوا أَصحَابِي، فَلَو أَنَّ أَحَدَكُم أَنفَقَ مِثلَ أُحُدٍ ذَهَبًا مَا بَلَغَ مُدَّ أَحَدِهِم وَلاَ نَصِيفَهُ", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:3673", cite: "Sahih al-Bukhari 3673, Sahih Muslim 2541", arabic: 31...46, english: 4...40)
 
                     Text(articleMarkdown: "**Ahlul Bayt (أَهل البَيت)**: “the People of the House,“ from bayt (بَيت), “house“: the household of the Prophet (peace be upon him). They are his wives, whom the verse of purification addresses in its context, and his relatives for whom zakah is forbidden, the families of Ali, Aqil, Ja‘far, and al-Abbas, as Zayd ibn Arqam explained (Sahih Muslim 2408). Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah intends only to remove from you the impurity [of sin], O people of the [Prophet's] household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذهِبَ عَنكُمُ ٱلرِّجسَ أَهلَ ٱلبَيتِ وَيُطَهِّرَكُم تَطهِيرٗا")
+                    ScriptureQuote(quran: "33:33", words: 15...24)
                     Text(verbatim: "The Prophet (peace be upon him) wrapped Ali, Fatimah, al-Hasan, and al-Husayn in his cloak and recited this verse over them (Sahih Muslim 2424), and at the pool of Khumm, between Makkah and Madinah, he said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The second are the members of my household I remind you (of your duties) to the members of my family” (Sahih Muslim 2408).", arabic: "وَأَهلُ بَيتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهلِ بَيتِي", dimmed: true)
+                    ScriptureQuote(hadith: "muslim:2408a", cite: "Sahih Muslim 2408", arabic: 179...185, english: 226...245)
                     Text(verbatim: "Ahl as-Sunnah love them, honour them, and keep this will, without raising them above the rank Allah gave them; see the page “The People of the House.“")
                         .font(.body)
 
                     Text(articleMarkdown: "**The Ten Promised Paradise (العَشَرَة المُبَشَّرُون بِالجَنَّة)**: “the ten given glad tidings of Paradise,“ from bushra (بُشرَى), “glad tidings“: ten Companions named together as people of Paradise in one hadith. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Abu Bakr is in Paradise, 'Umar is in Paradise, 'Uthman is in Paradise, 'Ali is in Paradise, Talhah is in Paradise, Az-Zubair is in Paradise, 'Abdur-Rahman bin 'Awf is in Paradise, Sa'd bin Abi Waqqas is in Paradise, Sa'eed bin Zaid is in Paradise, and Abu 'Ubaidah bin Al-Jarrah is in Paradise” (Sunan al-Tirmidhi 3747; graded sahih by al-Albani).", arabic: "أَبُو بَكرٍ فِي الجَنَّةِ وَعُمَرُ فِي الجَنَّةِ وَعُثمَانُ فِي الجَنَّةِ وَعَلِيٌّ فِي الجَنَّةِ وَطَلحَةُ فِي الجَنَّةِ وَالزُّبَيرُ فِي الجَنَّةِ وَعَبدُ الرَّحمَنِ بنُ عَوفٍ فِي الجَنَّةِ وَسَعدٌ فِي الجَنَّةِ وَسَعِيدٌ فِي الجَنَّةِ وَأَبُو عُبَيدَةَ بنُ الجَرَّاحِ فِي الجَنَّةِ", dimmed: true)
+                    ScriptureQuote(hadith: "tirmidhi:3747", cite: "Sunan al-Tirmidhi 3747; graded sahih by al-Albani", arabic: 30...66, english: 7...58)
                     Text(verbatim: "Sa‘d is Sa‘d ibn Abi Waqqas and Sa‘id is Sa‘id ibn Zayd, as Sa‘id ibn Zayd himself narrated (Sunan Abi Dawud 4649; graded sahih by al-Albani). Others were given the glad tidings individually, among them Fatimah (Sahih al-Bukhari 3623), al-Hasan and al-Husayn (Sunan al-Tirmidhi 3768; graded sahih by al-Albani), and Abdullah ibn Salam (Sahih al-Bukhari 3812); the ten are singled out because they were named in one breath.")
                         .font(.body)
 
@@ -132,7 +132,7 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**The Mothers of the Believers (أُمَّهَات المُؤمِنِين)**: from umm (أُمّ), “mother“: the wives of the Prophet (peace be upon him), given this title by Allah Himself. They are forbidden in marriage to the nation forever (Quran 33:53), honoured as mothers are honoured, and were teachers of the religion, above all Aisha and Umm Salamah:")
                         .font(.body)
-                    ScriptureQuote(text: "“The Prophet is more worthy of the believers than themselves, and his wives are [in the position of] their mothers” (Quran 33:6).", arabic: "ٱلنَّبِيُّ أَولَىٰ بِٱلمُؤمِنِينَ مِن أَنفُسِهِمۖ وَأَزوَٰجُهُۥٓ أُمَّهَٰتُهُمۗ")
+                    ScriptureQuote(quran: "33:6", words: 0...6)
 
                     Text(articleMarkdown: "**Tabi‘i (تَابِعِيّ)** and **Tabi‘ at-Tabi‘in (تَابِع التَّابِعِين)**: from the root ت-ب-ع, “to follow.“ A Tabi‘i (Successor) is one who met a Companion as a Muslim and died as a Muslim; a Tabi‘ at-Tabi‘in is one who likewise met a Tabi‘i. They are the second and third of the three generations the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652), and they are “those who followed them with good conduct“ of the verse above. Sa‘id ibn al-Musayyib, al-Hasan al-Basri, and Mujahid are of the first; Malik, Sufyan ath-Thawri, and al-Awza‘i are of the second. See the page “The Salaf and the Imams.“")
                         .font(.body)
@@ -142,7 +142,7 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**Salaf (سَلَف)**: “those who came before,“ from the root س-ل-ف, “to precede.“ In the usage of the scholars it means the Companions, the Tabi‘un, and the Tabi‘ at-Tabi‘in, the three best generations, and then those who followed their way. The Prophet (peace be upon him) used the word of himself when he told Fatimah of his approaching death:")
                         .font(.body)
-                    ScriptureQuote(text: "“So, be afraid of Allah, and be patient, for I am the best predecessor for you (in the Hereafter)” (Sahih al-Bukhari 6285).", arabic: "فَاتَّقِي اللَّهَ وَاصبِرِي، فَإِنِّي نِعمَ السَّلَفُ أَنَا لَكَ", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:6285", cite: "Sahih al-Bukhari 6285", arabic: 168...175, english: 241...259)
                     Text(verbatim: "“Salafi“ therefore means nothing more than one who follows the Salaf in creed and practice, as explained on the page “Salafiyyah.“")
                         .font(.body)
 
@@ -151,7 +151,7 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**Rabbani (رَبَّانِيّ)**: from Rabb (رَبّ), “Lord“: one devoted to his Lord who nurtures the people upon His religion. Allah says that the prophets commanded their followers:")
                         .font(.body)
-                    ScriptureQuote(text: "“Be pious scholars of the Lord because of what you have taught of the Scripture and because of what you have studied” (Quran 3:79).", arabic: "كُونُوا رَبَّٰنِيِّـۧنَ بِمَا كُنتُم تُعَلِّمُونَ ٱلكِتَٰبَ وَبِمَا كُنتُم تَدرُسُونَ")
+                    ScriptureQuote(quran: "3:79", words: 19...27)
                     Text(verbatim: "Ibn Abbas explained the Rabbaniyyun as the forbearing and the jurists, and al-Bukhari adds in the chapter headings of his Sahih, “it is said that the Rabbani is the one who nurtures the people with the small matters of knowledge before the great ones“ (Sahih al-Bukhari, Kitab al-‘Ilm, chapter “Knowledge before speech and action“).")
                         .font(.body)
 
@@ -160,13 +160,13 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**Imam (إِمَام)**: “one who is followed,“ from the root أ-م-م, the same word as the leader of the prayer. In scholarship it is the title of a scholar whose knowledge made him a reference for others, as in “Imam Malik“ and “Imam Ahmad.“ Allah says of the leaders of the Children of Israel:")
                         .font(.body)
-                    ScriptureQuote(text: "“And We made from among them leaders guiding by Our command when they were patient and [when] they were certain of Our signs” (Quran 32:24).", arabic: "وَجَعَلنَا مِنهُم أَئِمَّةٗ يَهدُونَ بِأَمرِنَا لَمَّا صَبَرُواۖ وَكَانُوا بِـَٔايَٰتِنَا يُوقِنُونَ")
+                    ScriptureQuote(quran: "32:24")
                     Text(verbatim: "Ibn al-Qayyim writes in Madarij as-Salikin that by patience and certainty leadership in the religion is attained. In Ahl as-Sunnah the title carries no infallibility; an imam is followed for his evidence.")
                         .font(.body)
 
                     Text(articleMarkdown: "**Hafiz (حَافِظ)**: “preserver,“ from the root ح-ف-ظ. Among the hadith scholars it is the rank of one who has memorised a great body of hadith with their chains and knows their narrators, above the ordinary muhaddith; Ibn Hajar and adh-Dhahabi are called al-Hafiz. In common speech it is also used for one who has memorised the whole Quran. The Prophet (peace be upon him) prayed for those who preserve his words:")
                         .font(.body)
-                    ScriptureQuote(text: "“'May Allah gladden a man who hears something from us, so he conveys it as he heard it. Perhaps the one it is conveyed to is more understanding than the one who heard it” (Sunan al-Tirmidhi 2657; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امرَأً سَمِعَ مِنَّا شَيئًا فَبَلَّغَهُ كَمَا سَمِعَ فَرُبَّ مُبَلَّغٍ أَوعَى مِن سَامِعٍ", dimmed: true)
+                    ScriptureQuote(hadith: "tirmidhi:2657", cite: "Sunan al-Tirmidhi 2657; graded sahih by al-Albani", arabic: 36...49, english: 21...54)
 
                     Text(articleMarkdown: "**Muhaddith (مُحَدِّث)**: from hadith (حَدِيث), “speech, report“: a scholar who transmits and examines the narrations of the Prophet (peace be upon him): their chains, their narrators, their wordings, and their hidden defects. Al-Bukhari, Muslim, Abu Dawud, and in our time al-Albani are muhaddithun. Not every muhaddith is a jurist; as the Prophet (peace be upon him) said in the hadith narrated by Zayd ibn Thabit, “many a bearer of knowledge conveys it to one who is more versed than he is, and many a bearer of knowledge is not versed in it“ (Sunan Abi Dawud 3660; graded sahih by al-Albani).")
                         .font(.body)
@@ -191,7 +191,7 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**Mujaddid (مُجَدِّد)**: “renewer,“ from the root ج-د-د: one who renews the religion after it has been neglected, by teaching the Sunnah and removing innovation. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah will raise for this community at the end of every hundred years the one who will renovate its religion for it” (Sunan Abi Dawud 4291; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ يَبعَثُ لِهَذِهِ الأُمَّةِ عَلَى رَأسِ كُلِّ مِائَةِ سَنَةٍ مَن يُجَدِّدُ لَهَا دِينَهَا", dimmed: true)
+                    ScriptureQuote(hadith: "abudawud:4291", cite: "Sunan Abi Dawud 4291; graded sahih by al-Albani", arabic: 36...49, english: 4...25)
                     Text(verbatim: "The scholars counted Umar ibn Abd al-Aziz as the renewer of the first century and ash-Shafi‘i of the second, and later scholars counted Ibn Taymiyyah and Muhammad ibn Abd al-Wahhab among the renewers of their centuries. The hadith does not say the renewer must be one man; Ibn Kathir wrote in al-Bidayah wan-Nihayah that it includes the carriers of knowledge of every field.")
                         .font(.body)
 
@@ -201,7 +201,7 @@ struct SahabahScholarsView: View {
 
                     Text(articleMarkdown: "**Jarh wa Ta‘dil (الجَرح وَالتَّعدِيل)**: “criticism and declaring trustworthy“; jarh (جَرح) is literally “wounding“ and ta‘dil is from ‘adl (عَدل), “uprightness“: the science of judging narrators, so that a hadith is accepted only from the truthful and the accurate. It is founded on the Quranic command to verify reports:")
                         .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, if there comes to you a disobedient one with information, investigate” (Quran 49:6).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓا إِن جَآءَكُم فَاسِقُۢ بِنَبَإٖ فَتَبَيَّنُوٓا")
+                    ScriptureQuote(quran: "49:6", words: 0...7)
                     Text(verbatim: "Its imams were Shu‘bah, Yahya ibn Sa‘id al-Qattan, Ibn Ma‘in, Ali ibn al-Madini, Ahmad, al-Bukhari, Abu Hatim, and an-Nasa’i, and its rulings fill the books of narrators such as Tahdhib al-Kamal of al-Mizzi and Tahdhib at-Tahdhib of Ibn Hajar.")
                         .font(.body)
 
@@ -286,7 +286,7 @@ struct SalafScholarsView: View {
                 Section(header: ArticleHeader("WHAT MADE THEM THE SALAF")) {
                     Text(verbatim: "The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“those persons who assemble in the house among the houses of Allah (mosques) and recite the Book of Allah and they learn and teach the Qur'an (among themselves) there would descend upon them tranquility and mercy would cover them and the angels would surround them and Allah mentions them in the presence of those near Him” (Sahih Muslim 2699).", arabic: "وَمَا اجتَمَعَ قَومٌ فِي بَيتٍ مِن بُيُوتِ اللَّهِ يَتلُونَ كِتَابَ اللَّهِ وَيَتَدَارَسُونَهُ بَينَهُم إِلاَّ نَزَلَت عَلَيهِمُ السَّكِينَةُ وَغَشِيَتهُمُ الرَّحمَةُ وَحَفَّتهُمُ المَلاَئِكَةُ وَذَكَرَهُمُ اللَّهُ فِيمَن عِندَهُ", dimmed: true)
+                    ScriptureQuote(hadith: "muslim:2699a", cite: "Sahih Muslim 2699", arabic: 101...125, english: 111...166)
 
                     Text(verbatim: "The Salaf were such gatherings: men who sat before the Companions and passed on what they heard, word for word, with the names of those they heard it from. They did not philosophise the creed, and they did not invent worship. Their agreement is a proof, because the Prophet (peace be upon him) guaranteed their goodness.")
                         .font(.body)
@@ -600,7 +600,7 @@ struct LaterScholarsView: View {
                 Section(header: ArticleHeader("HOW TO TAKE FROM THE SCHOLARS")) {
                     Text(verbatim: "A scholar is followed for his evidence, not for himself. Imam Malik said that everyone’s words may be accepted or rejected except those of the one in the Prophet’s grave, and every imam after him said the same. So the Muslim learns from the scholars of the Sunnah with respect, asks them what he does not know, and keeps the Quran and Sunnah as the final word for all of them:")
                         .font(.body)
-                    ScriptureQuote(text: "“And it is not for the believers to go forth [to battle] all at once. For there should separate from every division of them a group [remaining] to obtain understanding in the religion and warn their people when they return to them that they might be cautious” (Quran 9:122).", arabic: "وَمَا كَانَ ٱلمُؤمِنُونَ لِيَنفِرُوا كَآفَّةٗۚ فَلَولَا نَفَرَ مِن كُلِّ فِرقَةٖ مِّنهُم طَآئِفَةٞ لِّيَتَفَقَّهُوا فِي ٱلدِّينِ وَلِيُنذِرُوا قَومَهُم إِذَا رَجَعُوٓا إِلَيهِم لَعَلَّهُم يَحذَرُونَ")
+                    ScriptureQuote(quran: "9:122")
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
@@ -608,7 +608,7 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "No. Only the Prophet (peace be upon him) is protected from error in what he conveys from Allah; every scholar after him is right at times and wrong at times, and is followed only as far as he follows the evidence. Allah made the Quran and the Sunnah, not any man, the court of appeal:")
                         .font(.body)
-                    ScriptureQuote(text: "“And if you disagree over anything, refer it to Allah and the Messenger, if you should believe in Allah and the Last Day” (Quran 4:59).", arabic: "فَإِن تَنَٰزَعتُم فِي شَيءٖ فَرُدُّوهُ إِلَى ٱللَّهِ وَٱلرَّسُولِ إِن كُنتُم تُؤمِنُونَ بِٱللَّهِ وَٱليَومِ ٱلأٓخِرِۚ")
+                    ScriptureQuote(quran: "4:59", words: 10...23)
                     Text(verbatim: "The Companions said this first. When Urwah answered a hadith with the practice of Abu Bakr and Umar, Ibn Abbas (may Allah be pleased with him) said:")
                         .font(.body)
                     ScriptureQuote(text: "“I think they will perish! I say, ‘the Prophet (peace be upon him) said,’ and he says, ‘Abu Bakr and Umar forbade it’” (Musnad Ahmad 3121; at-Tabarani, al-Mu‘jam al-Awsat 1718, graded hasan by al-Haythami).", arabic: "أُرَاهُم سَيَهلِكُونَ! أَقُولُ: قَالَ النَّبِيُّ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ، وَيَقُولُ: نَهَى أَبُو بَكرٍ وَعُمَرُ", dimmed: true)
@@ -625,10 +625,10 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "The evidence, and the scholar who shows it to you. Allah commanded that matters be returned to those able to draw conclusions from the texts:")
                         .font(.body)
-                    ScriptureQuote(text: "“But if they had referred it back to the Messenger or to those of authority among them, then the ones who [can] draw correct conclusions from it would have known about it” (Quran 4:83).", arabic: "وَلَو رَدُّوهُ إِلَى ٱلرَّسُولِ وَإِلَىٰٓ أُولِي ٱلأَمرِ مِنهُم لَعَلِمَهُ ٱلَّذِينَ يَستَنۢبِطُونَهُۥ مِنهُمۗ")
+                    ScriptureQuote(quran: "4:83", words: 9...20)
                     Text(verbatim: "A layman is not asked to weigh the proofs himself; he asks the most knowledgeable and God-fearing scholar he can reach, and when he can understand the evidence he follows what it supports, even against his own teacher. Difference among scholars is not a licence to pick the easiest opinion: Sulayman at-Taymi (may Allah have mercy on him) said that if you take the concession of every scholar, all evil gathers in you (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih). And the scholar who errs after striving is not sinning. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“If a judge gives a verdict according to the best of his knowledge and his verdict is correct (i.e. agrees with Allah and His Apostle's verdict) he will receive a double reward, and if he gives a verdict according to the best of his knowledge and his verdict is wrong, (i.e. against that of Allah and His Apostle) even then he will get a reward” (Sahih al-Bukhari 7352).", arabic: "إِذَا حَكَمَ الحَاكِمُ فَاجتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجرَانِ، وَإِذَا حَكَمَ فَاجتَهَدَ ثُمَّ أَخطَأَ فَلَهُ أَجرٌ", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:7352", cite: "Sahih al-Bukhari 7352", arabic: 46...60, english: 7...71)
                     Text(verbatim: "So difference among the scholars is not a reason to abandon all of them, nor to follow desire under the name of choice. Ask the best you can reach, follow the proof when it is clear, and do not make the differences of the scholars a religion of your own.")
                         .font(.body)
 
@@ -639,7 +639,7 @@ struct LaterScholarsView: View {
                     ScriptureQuote(text: "“Part of faith in Allah is faith in what He has described Himself with in His Book and in what His Messenger Muhammad (peace be upon him) has described Him with, without distortion (tahrif) or denial (ta‘til), and without asking how (takyif) or likening (tamthil)” (Ibn Taymiyyah, al-Aqidah al-Wasitiyyah).", arabic: "وَمِنَ الإِيمَانِ بِاللَّهِ: الإِيمَانُ بِمَا وَصَفَ بِهِ نَفسَهُ فِي كِتَابِهِ، وَبِمَا وَصَفَهُ بِهِ رَسُولُهُ مُحَمَّدٌ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ، مِن غَيرِ تَحرِيفٍ وَلَا تَعطِيلٍ، وَمِن غَيرِ تَكيِيفٍ وَلَا تَمثِيلٍ", dimmed: true)
                     Text(verbatim: "He then cites the verse that is the foundation of the whole creed:")
                         .font(.body)
-                    ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).", arabic: "لَيسَ كَمِثلِهِۦ شَيءٞۖ وَهُوَ ٱلسَّمِيعُ ٱلبَصِيرُ")
+                    ScriptureQuote(quran: "42:11", words: 13...18)
                     Text(verbatim: "A mujassim (مُجَسِّم), from jism (جِسم), “body,“ is one who likens Allah to the bodies of His creation. A man who affirms the attributes exactly as Allah affirmed them and denies any likeness exactly as Allah denied it is not a mujassim; he is on the way of the Salaf. In 705 AH al-Wasitiyyah was examined in three public sessions in Damascus before the judges and scholars of the city, and nothing against the Sunnah was found in it; Ibn Abd al-Hadi records the sessions in al-‘Uqud ad-Durriyyah and Ibn Kathir in al-Bidayah wan-Nihayah. When a later writer claimed that whoever called him Shaykh al-Islam was a disbeliever, Ibn Nasir ad-Din ad-Dimashqi replied with ar-Radd al-Wafir, gathering the words of more than eighty scholars of every school who had given him that title, and Ibn Hajar wrote an endorsement of the book. Adh-Dhahabi, who knew him for years, wrote that he had not seen his like (see the page “Ibn Taymiyyah“).")
                         .font(.body)
 
@@ -647,13 +647,13 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "No. Minhaj as-Sunnah is a reply to a Rafidi book, and it refutes the exaggeration about Ali, not Ali. In it Ibn Taymiyyah affirms Ali’s virtues, his caliphate as the fourth of the rightly guided, and that he was nearer to the truth than those who fought him, citing the Prophet’s words about Ammar, who was killed in Ali’s army at Siffin:")
                         .font(.body)
-                    ScriptureQuote(text: "“A band of rebels would kill `Ammar” (Sahih Muslim 2916).", arabic: "تَقتُلُ عَمَّارًا الفِئَةُ البَاغِيَةُ", dimmed: true)
+                    ScriptureQuote(hadith: "muslim:2916c", cite: "Sahih Muslim 2916", arabic: 30...33, english: 0...6)
                     Text(verbatim: "In al-Wasitiyyah he writes that Ahl as-Sunnah:")
                         .font(.body)
                     ScriptureQuote(text: "“love the People of the House of the Messenger of Allah (peace be upon him), take them as allies, and keep the will of the Messenger of Allah (peace be upon him) concerning them” (Ibn Taymiyyah, al-Aqidah al-Wasitiyyah).", arabic: "وَيُحِبُّونَ أَهلَ بَيتِ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ وَيَتَوَلَّونَهُم، وَيَحفَظُونَ فِيهِم وَصِيَّةَ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ", dimmed: true)
                     Text(verbatim: "This is the creed of every Sunni, for Ali (may Allah be pleased with him) reported the Prophet’s promise:")
                         .font(.body)
-                    ScriptureQuote(text: "“the Apostle (may peace and blessings be upon him) gave me a promise that no one but a believer would love me, and none but a hypocrite would nurse grudge against me” (Sahih Muslim 78).", arabic: "إِنَّهُ لَعَهدُ النَّبِيِّ الأُمِّيِّ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ إِلَىَّ أَن لاَ يُحِبَّنِي إِلاَّ مُؤمِنٌ وَلاَ يُبغِضَنِي إِلاَّ مُنَافِقٌ", dimmed: true)
+                    ScriptureQuote(hadith: "muslim:#146", cite: "Sahih Muslim 78", arabic: 40...57, english: 13...44)
                     Text(verbatim: "Imam Ahmad said that whoever does not affirm the caliphate of Ali is more astray than his family’s donkey (al-Khallal, as-Sunnah; Ibn Abi Ya‘la, Tabaqat al-Hanabilah), and Ibn Taymiyyah, a Hanbali, followed him in this. He was called an enemy of Ali by those whose claims against the other Companions he refused to accept; refusing to curse the Companions is a mark of the Sunnah, not of hatred.")
                         .font(.body)
 
@@ -661,7 +661,7 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "Because justice is a command, and a man is judged by the whole of his work. An-Nawawi and Ibn Hajar (may Allah have mercy on them) gave the nation Sharh Sahih Muslim, Riyad as-Salihin, the Forty Hadith, Fath al-Bari, and Bulugh al-Maram; their service to the Sunnah is beyond calculation. In some matters of the divine attributes they followed the interpretation (ta’wil) of the Ash‘ari school that dominated their time, and in this they erred; the Salafi does not follow them in it, and says so openly. But he does not throw away the imam because of a mistake. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And do not let the hatred of a people prevent you from being just. Be just; that is nearer to righteousness” (Quran 5:8).", arabic: "وَلَا يَجرِمَنَّكُم شَنَـَٔانُ قَومٍ عَلَىٰٓ أَلَّا تَعدِلُواۚ ٱعدِلُوا هُوَ أَقرَبُ لِلتَّقوَىٰۖ")
+                    ScriptureQuote(quran: "5:8", words: 8...18)
                     Text(verbatim: "Adh-Dhahabi wrote in Siyar A‘lam an-Nubala’, in the biography of the imam Muhammad ibn Nasr al-Marwazi:")
                         .font(.body)
                     ScriptureQuote(text: "“If every time an imam erred in his ijtihad in a single matter, with an error that is forgiven him, we rose against him, called him an innovator, and abandoned him, then neither Ibn Nasr nor Ibn Mandah nor those greater than them would be safe with us” (adh-Dhahabi, Siyar A‘lam an-Nubala’ 14/40).", arabic: "وَلَو أَنَّا كُلَّمَا أَخطَأَ إِمَامٌ فِي اجتِهَادِهِ فِي آحَادِ المَسَائِلِ خَطَأً مَغفُورًا لَهُ، قُمنَا عَلَيهِ وَبَدَّعنَاهُ وَهَجَرنَاهُ، لَمَا سَلِمَ مَعَنَا لَا ابنُ نَصرٍ وَلَا ابنُ مَندَه وَلَا مَن هُوَ أَكبَرُ مِنهُمَا", dimmed: true)
@@ -680,10 +680,10 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "No, when it is done as Allah commanded. Taqlid (تَقلِيد) is to accept a ruling without knowing its evidence, and the one who does not know is ordered to do exactly that: ask the one who knows:")
                         .font(.body)
-                    ScriptureQuote(text: "“So ask the people of the message if you do not know” (Quran 16:43).", arabic: "فَسـَٔلُوٓا أَهلَ ٱلذِّكرِ إِن كُنتُم لَا تَعلَمُونَ")
+                    ScriptureQuote(quran: "16:43", words: 8...14)
                     Text(verbatim: "The command is repeated in Surat al-Anbiya (Quran 21:7). Ibn Abd al-Barr writes in Jami‘ Bayan al-‘Ilm that the scholars do not differ that the common people must follow their scholars in what befalls them, since they cannot see where the proof lies, and Ibn al-Qayyim discusses in I‘lam al-Muwaqqi‘in the saying that the layman’s madhhab is the madhhab of his mufti. Blameworthy taqlid is something else: clinging to a man’s opinion after the proof against it is known, or taking a scholar as the measure of truth instead of the texts. Allah condemned the People of the Book for exactly this:")
                         .font(.body)
-                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah” (Quran 9:31).", arabic: "ٱتَّخَذُوٓا أَحبَارَهُم وَرُهبَٰنَهُم أَربَابٗا مِّن دُونِ ٱللَّهِ")
+                    ScriptureQuote(quran: "9:31", words: 0...6)
                     Text(verbatim: "Ibn Kathir explains in his tafsir that they did not worship them, but obeyed them when they made the unlawful lawful and the lawful unlawful. So the Salafi asks the scholars, accepts their answer, and asks for the evidence when he can understand it, and the scholars of the Sunnah are the first to give it.")
                         .font(.body)
 
@@ -702,16 +702,16 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "Begin with creed, then the Sunnah, then rulings, and take each with a teacher or a reliable explanation. In creed: al-Usul ath-Thalathah (the three fundamentals: who is your Lord, what is your religion, who is your Prophet) and Kitab at-Tawhid of Muhammad ibn Abd al-Wahhab, then al-Aqidah al-Wasitiyyah of Ibn Taymiyyah, with the explanations of Ibn al-Uthaymin. In hadith: the Forty of an-Nawawi, then Riyad as-Salihin, then Umdat al-Ahkam and Bulugh al-Maram for the hadith of rulings. In tafsir: Tafsir Ibn Kathir, or the short tafsir of as-Sa‘di. Read a little every day, memorise what you can, act on what you learn, and make the Prophet’s supplication your own:")
                         .font(.body)
-                    ScriptureQuote(text: "“And say, ‘My Lord, increase me in knowledge’” (Quran 20:114).", arabic: "وَقُل رَّبِّ زِدنِي عِلمٗا")
+                    ScriptureQuote(quran: "20:114", words: 13...16)
 
                     Text(articleMarkdown: "**Why were Ahmad and Ibn Taymiyyah imprisoned if they were upon the truth?**")
                         .font(.body)
                     Text(verbatim: "Because trial is the lot of those who hold to the truth, not a sign against it. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“Do the people think that they will be left to say, ‘We believe’ and they will not be tried? But We have certainly tried those before them, and Allah will surely make evident those who are truthful, and He will surely make evident the liars” (Quran 29:2-3).", arabic: "أَحَسِبَ ٱلنَّاسُ أَن يُترَكُوٓا أَن يَقُولُوٓا ءَامَنَّا وَهُم لَا يُفتَنُونَ ۝ وَلَقَد فَتَنَّا ٱلَّذِينَ مِن قَبلِهِمۖ فَلَيَعلَمَنَّ ٱللَّهُ ٱلَّذِينَ صَدَقُوا وَلَيَعلَمَنَّ ٱلكَٰذِبِينَ")
+                    ScriptureQuote(quran: "29:2-3")
                     Text(verbatim: "The Prophet (peace be upon him) was asked which people are tried most severely and said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The Prophets, then those nearest to them, then those nearest to them. A man is tried according to his religion; if he is firm in his religion, then his trials are more severe” (Sunan al-Tirmidhi 2398; graded hasan sahih by al-Albani).", arabic: "الأَنبِيَاءُ ثُمَّ الأَمثَلُ فَالأَمثَلُ فَيُبتَلَى الرَّجُلُ عَلَى حَسَبِ دِينِهِ فَإِن كَانَ دِينُهُ صُلبًا اشتَدَّ بَلاَؤُهُ", dimmed: true)
+                    ScriptureQuote(hadith: "tirmidhi:2398", cite: "Sunan al-Tirmidhi 2398; graded hasan sahih by al-Albani", arabic: 28...42, english: 14...46)
                     Text(verbatim: "Ahmad was imprisoned and flogged in the Mihnah, the inquisition of 218 to 234 AH in which the caliphs al-Ma’mun, al-Mu‘tasim, and al-Wathiq forced the Mu‘tazili doctrine that the Quran is created upon the scholars; he refused, and when al-Mutawakkil ended the trial the nation called him the Imam of Ahl as-Sunnah. Ibn Taymiyyah’s al-Wasitiyyah was cleared by the councils of Damascus in 705 AH, yet his opponents had him summoned to Cairo, where he was imprisoned over his creed from 705 to 707 AH; he was imprisoned in Damascus in 720 AH over his ruling that a triple divorce pronounced at once counts as one, and finally in 726 AH over his ruling that setting out on a journey only to visit graves is not legislated; he died in the citadel in 728 AH. Before them Abu Hanifah was imprisoned for refusing the judgeship and Malik was flogged, and the Prophet (peace be upon him) himself was driven from Makkah. Allah says that the believers before us were shaken until the Messenger and those with him said, “When is the help of Allah?“ (Quran 2:214). Prison did not harm the truth they carried; it is the books of their opponents that are forgotten.")
                         .font(.body)
 
@@ -719,10 +719,10 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text(verbatim: "No. Every Muslim must learn what his worship requires: the meaning of the testimony of faith, how to purify and pray, what to fast and give, and the rulings of whatever trade or situation he is in; this is obligatory on each individual, as Ibn Abd al-Barr explains in Jami‘ Bayan al-‘Ilm. Beyond that, becoming a scholar is a communal obligation which some must fulfil for all, as the verse of Surat at-Tawbah above lays down. And every Muslim carries what he has learned to others. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Convey (my teachings) to the people even if it were a single sentence” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَو آيَةً", dimmed: true)
+                    ScriptureQuote(hadith: "bukhari:3461", cite: "Sahih al-Bukhari 3461", arabic: 29...32, english: 4...16)
                     Text(verbatim: "Every step on the road is rewarded:")
                         .font(.body)
-                    ScriptureQuote(text: "“he who treads the path in search of knowledge, Allah would make that path easy, leading to Paradise for him” (Sahih Muslim 2699).", arabic: "وَمَن سَلَكَ طَرِيقًا يَلتَمِسُ فِيهِ عِلمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الجَنَّةِ", dimmed: true)
+                    ScriptureQuote(hadith: "muslim:2699a", cite: "Sahih Muslim 2699", arabic: 88...100, english: 90...109)
                     Text(verbatim: "The Companions were farmers, traders, and soldiers, and they were the most knowledgeable of the nation, because they learned a little and acted on it before they learned more. Knowledge is for everyone who seeks it; the rank of scholar is for those who give their lives to it.")
                         .font(.body)
 

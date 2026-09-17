@@ -462,14 +462,24 @@ private struct ArticleHeaderProbe: UIViewRepresentable {
 /// gets a keyed `ForEach` tree whose rows are built as they scroll in, instead of a 200-leaf static
 /// tuple that SwiftUI materialises in full when the page opens. The spellings are fixed: the corpus
 /// builder (Scripts/build_islam_corpus.py) and the quote audit (Scripts/audit_islam_quotes.py) read
-/// `.text(`, `.markdown(`, `.quote(text:` and `ArticleSection("HEADING"` straight out of the source.
+/// `.text(`, `.markdown(`, `.quote(text:`, `.ayah(`, `.hadith(` and `ArticleSection("HEADING"` straight
+/// out of the source.
 enum ArticleBlock {
     /// Plain prose, drawn with `Text(verbatim:)`.
     case text(String)
     /// Prose with inline **bold** terms, drawn through `Text(articleMarkdown:)`.
     case markdown(String)
-    /// A `ScriptureQuote`, same arguments.
+    /// A `ScriptureQuote`, same arguments: the words of scholars and anything the packs do not
+    /// carry, as written.
     case quote(text: String, arabic: String? = nil, dimmed: Bool = false)
+    /// A Quran quote by reference (`ScriptureQuote(quran:words:)`): the words come from the Quran
+    /// the app ships, never from a copy in the article.
+    case ayah(String, words: ClosedRange<Int>? = nil)
+    /// A hadith by reference (`ScriptureQuote(hadith:cite:arabic:english:)`): the words come from
+    /// the bundled collection's row, each side a token range, or literal where the article's
+    /// wording is not the shelf's.
+    case hadith(String, cite: String, arabic: ClosedRange<Int>? = nil, english: [ClosedRange<Int>] = [],
+                text: String? = nil, arabicText: String? = nil)
 }
 
 struct ArticleSection {
@@ -512,6 +522,10 @@ struct ArticleBlockView: View {
                 .font(.body)
         case .quote(let text, let arabic, let dimmed):
             ScriptureQuote(text: text, arabic: arabic, dimmed: dimmed)
+        case .ayah(let reference, let words):
+            ScriptureQuote(quran: reference, words: words)
+        case .hadith(let link, let cite, let arabic, let english, let text, let arabicText):
+            ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english, text: text, arabicText: arabicText)
         }
     }
 }

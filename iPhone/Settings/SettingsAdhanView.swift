@@ -332,6 +332,21 @@ struct SettingsAdhanView: View {
                 adhanPageLink(.skyColors, tint: SettingsTint.sky) { SkyColorsView() }
             }
         }
+
+        Section(header: Text("PRAYER TRACKER")) {
+            VStack(alignment: .leading) {
+                Toggle("Mark Only After the Time Begins", isOn: $settings.trackerRequiresPrayerTime.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.trackerRequiresPrayerTime) { _ in settings.hapticFeedback() }
+
+                Text("A prayer can only be marked once its time has come in, so the row shows what is still left to pray. Off, the whole day can be marked at any time. Past days can always be filled in either way.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+        }
         #endif
     }
 
@@ -1629,6 +1644,7 @@ extension SettingsSearchEntry {
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
         .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
         .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames)),
+        .init(title: "Mark Only After the Time Begins", path: "Prayer Settings", keywords: "prayer tracker mark time begins lock gate future prayers order only after adhan", destination: .prayerSettings),
         .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerSettings),
         .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerSettings),
         .init(title: "Sky Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky colors", destination: .prayerPage(.skyColors)),

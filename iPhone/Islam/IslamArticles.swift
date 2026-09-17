@@ -243,8 +243,9 @@ enum IslamArticles {
     /// Raw deflate (no zlib header), what build_islam_corpus.py writes. Streamed through
     /// `compression_stream` into a buffer that grows by the output actually produced (the pack is
     /// ~1 MB inflated), instead of a scratch allocation sized at 24x the input (Performance Guide,
-    /// Phase 6 step 9).
-    private static func inflate(_ data: Data) -> Data? {
+    /// Phase 6 step 9). Shared with the Watch's hadith quotes pack (`HadithQuoteSource`), which is
+    /// written the same way.
+    static func inflate(_ data: Data) -> Data? {
         var stream = compression_stream(dst_ptr: UnsafeMutablePointer<UInt8>(bitPattern: 1)!, dst_size: 0,
                                         src_ptr: UnsafePointer<UInt8>(bitPattern: 1)!, src_size: 0, state: nil)
         guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else { return nil }

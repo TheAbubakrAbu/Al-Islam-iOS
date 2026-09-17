@@ -4,7 +4,9 @@
 Checks the packs ON DISK, the way verify_tajweed_lessons.py checks its own:
 
   * DailyReminders.json.xz   every hadith card resolves on the app's shelf (the 9-books engine JSON,
-                             slug + citation) and every verse card's surah:ayah exists
+                             slug + citation) and every verse card's surah:ayah exists; version 2:
+                             a card's words are word ranges into its bundled narration (.hpk) or
+                             its Fortress entry, inside those texts, never a copy beside a reference
   * HadithTopics.json.xz     every citation resolves; gradings are reported where the engine carries one
   * NamesDetails.json.xz     every verse exists and its tinted tokens sit inside the ayah; the
                              unmatched-verse count is printed
@@ -45,6 +47,9 @@ import pathlib
 import re
 import sys
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from islam_packs import Hadith  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "Resources" / "Data"
@@ -104,6 +109,13 @@ def load(name: str) -> dict:
     except (lzma.LZMAError, ValueError) as error:
         fail(f"{name}: pack does not decode: {error}")
         return {}
+
+
+def saheeh() -> dict[tuple[int, int], str]:
+    """(surah, ayah) -> the Saheeh International translation, the English a verse card shows."""
+    rows = json.loads(QURAN_JSON.read_text(encoding="utf-8"))
+    return {(int(s["id"]), int(a["id"])): a.get("textEnglishSaheeh", "")
+            for s in rows for a in s["ayahs"]}
 
 
 def quran() -> dict[int, dict[int, int]]:
@@ -199,6 +211,107 @@ def main() -> None:
                  f"{unlinked} open the Hadith tab")
     dash_census("DailyReminders authored lines", authored)
 
+    # Version 3: a card's words are references (word ranges into its shelf narration or its Fortress
+    # entry, or an ayah), never a copy beside a reference, and its headline is a range into the very
+    # English the card shows (`shortWords`) wherever it is that English's own words. Checked against
+    # the packs ON DISK: the bundled .hpk the app reads (islam_packs.py), HisnDuas.json.xz, and the
+    # app's own Quran (a verse card's headline is cut from the Saheeh translation the app renders).
+    if daily.get("version") != 3:
+        fail(f"DailyReminders: pack version {daily.get('version')!r}, expected 3 (words and headlines as references)")
+    fortress = {row["id"]: row for row in load("HisnDuas").get("entries", [])}
+    translations = saheeh()
+    shelf_packs: dict[str, object] = {}
+
+    def shelf_texts(link: str) -> tuple[str, str] | None:
+        slug, _, citation = link.partition(":")
+        if slug not in shelf_packs:
+            shelf_packs[slug] = Hadith(slug)
+        if citation.startswith("#"):
+            row = shelf_packs[slug].find_id(int(citation[1:]))
+        else:
+            rows = shelf_packs[slug].find(citation)
+            row = next((r for r in rows if r.citation == citation), rows[0] if rows else None)
+        return None if row is None else (row.arabic, row.text)
+
+    def shelf_tokens(link: str) -> tuple[int, int] | None:
+        texts = shelf_texts(link)
+        return None if texts is None else (len(texts[0].split()), len(texts[1].split()))
+
+    def headline_source(entry: dict) -> tuple[str, str] | None:
+        """The very text the app cuts a card's headline from, and what it is: the Saheeh translation
+        of the verse for a verse card, the narration's or the Fortress entry's translation for a card
+        whose English is a range into it, the card's own `en` otherwise. None when there is none."""
+        s, a = entry.get("s"), entry.get("a")
+        if s is not None and a is not None and entry.get("type") == "ayah":
+            verse = translations.get((s, a))
+            return (verse, f"the Saheeh translation of {s}:{a}") if verse else None
+        if entry.get("enWords") is not None:
+            if entry.get("dua") is not None:
+                dua = fortress.get(entry["dua"])
+                return (dua["translation"], f"Fortress entry {entry['dua']}") if dua else None
+            if entry.get("hadith"):
+                texts = shelf_texts(entry["hadith"])
+                return (texts[1], f"the translation of {entry['hadith']}") if texts else None
+            return None
+        return (entry["en"], "the card's own English") if entry.get("en") else None
+
+    referenced = copies = headlines = 0
+    for entry in daily.get("entries", []):
+        eid = entry.get("id")
+        ar_words, en_words = entry.get("arWords"), entry.get("enWords")
+        if ar_words is not None and entry.get("ar"):
+            fail(f"DailyReminders {eid}: carries Arabic beside a word range")
+        if en_words is not None and entry.get("en"):
+            fail(f"DailyReminders {eid}: carries English beside a word range")
+        if entry.get("dua") is not None:
+            dua = fortress.get(entry["dua"])
+            if dua is None:
+                fail(f"DailyReminders {eid}: Fortress entry {entry['dua']} does not exist")
+            elif entry.get("ar"):
+                fail(f"DailyReminders {eid}: carries Arabic beside its Fortress entry")
+            elif ar_words is not None and not 0 <= ar_words[0] <= ar_words[1] < len(dua["arabic"].split()):
+                fail(f"DailyReminders {eid}: arWords {ar_words} outside Fortress entry {entry['dua']}")
+            referenced += 1
+        elif ar_words is not None or en_words is not None:
+            if not entry.get("hadith"):
+                fail(f"DailyReminders {eid}: word ranges without a shelf link")
+            else:
+                sizes = shelf_tokens(entry["hadith"])
+                if sizes is None:
+                    fail(f"DailyReminders {eid}: {entry['hadith']} is not in the bundled packs")
+                else:
+                    if ar_words is not None and not 0 <= ar_words[0] <= ar_words[1] < sizes[0]:
+                        fail(f"DailyReminders {eid}: arWords {ar_words} outside {entry['hadith']} ({sizes[0]} words)")
+                    if en_words is not None and not 0 <= en_words[0] <= en_words[1] < sizes[1]:
+                        fail(f"DailyReminders {eid}: enWords {en_words} outside {entry['hadith']} ({sizes[1]} words)")
+            referenced += 1
+        elif entry.get("type") in ("hadith", "sunnah", "dua") and entry.get("ar"):
+            copies += 1
+
+        # The headline: a range into the English the card shows, or Tilawa's own line, never both.
+        short_words = entry.get("shortWords")
+        if short_words is not None and entry.get("short"):
+            fail(f"DailyReminders {eid}: carries a headline beside a headline range")
+        if short_words is None and not entry.get("short"):
+            fail(f"DailyReminders {eid}: no headline (the widget's line) at all")
+        if short_words is not None:
+            source = headline_source(entry)
+            if source is None:
+                fail(f"DailyReminders {eid}: shortWords but no English to cut it from")
+            elif not 0 <= short_words[0] <= short_words[1] < len(source[0].split()):
+                fail(f"DailyReminders {eid}: shortWords {short_words} outside {source[1]} "
+                     f"({len(source[0].split())} words)")
+            else:
+                headlines += 1
+
+        # A verse card renders its translation from the Quran, so a copy of it would be a second one.
+        if entry.get("type") == "ayah" and entry.get("en"):
+            fail(f"DailyReminders {eid}: a verse card carries a translation the app never shows")
+    notes.append(f"DailyReminders: {referenced} cards read their words from the shelf, the Fortress or the Quran; "
+                 f"{copies} keep Tilawa's own wording")
+    notes.append(f"DailyReminders headlines: {headlines} cut from the English the card shows, "
+                 f"{len(daily.get('entries', [])) - headlines} written by Tilawa")
+
     # The Sunnah reminder presets are Swift (SunnahReminders.swift), so their citations are pinned here
     # and checked the same way; a preset edit there needs an edit here.
     for slug, citation in SUNNAH_PRESET_CITATIONS:
@@ -252,7 +365,11 @@ def main() -> None:
 
     # Word of the day.
     words = load("WordOfDay")
+    if words.get("version") != 2:
+        fail(f"WordOfDay: pack version {words.get('version')!r}, expected 2 (the form is the app's token, not carried)")
     for word in words.get("words", []):
+        if "ar" in word:
+            fail(f"WordOfDay {word.get('id')}: carries a copy of the word; the form is the token at the anchor")
         total = 0
         for occurrence in word.get("occ", []):
             if len(occurrence) != 3:

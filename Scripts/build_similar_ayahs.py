@@ -25,19 +25,28 @@ verified matches ranked by their API score, then generated matches that aren't
 already present, capped at MAX_MATCHES. The pack stores the final display
 order; the Swift store never ranks, merges, or scores.
 
-OUTPUT FORMAT
--------------
+OUTPUT FORMAT (version 2)
+-------------------------
 xz (like the other Data/Quran payloads) over:
 
-    { "2:255": [ [42, 4, "<shared phrase>", 1],          <- verified row
-                 [20, 110, "<shared phrase>", 0, ["Shared phrase","Root HwT"]],
-                 [59, 22, "<shared phrase>", 0, ["Shared words"], [[3, 5]], 70],
-                 ... ], ... }
+    { "v": 2,
+      "ayahs": { "2:255": [ [42, 4, 1, [[0, 5]], [], null],                     <- verified row
+                            [20, 110, 0, [[3, 4]], ["Shared phrase","Root HwT"], null],
+                            [59, 22, 0, [[3, 5]], ["Shared words"], 70],
+                            ... ], ... } }
 
-    row = [targetSurah, targetAyah, sharedPhrase, verifiedFlag, labels?, spans?, score?]
-    sharedPhrase may be "" (a verified row whose API entry carried no span).
-    spans (0-based inclusive token ranges in the TARGET ayah, this app's own
-    tokens) and score come from QUL and ride on any row QUL also lists.
+    row = [targetSurah, targetAyah, verifiedFlag, spans, labels, score]
+    spans: 0-based inclusive token ranges of the shared words in the TARGET ayah,
+    this app's own tokens; [] when the sources record no shared wording (or the
+    wording they record is not in the target, 14 rows). labels: the generated
+    matcher's reasons, [] for verified rows. score: QUL's 0-100 similarity where
+    it lists the pair, else null.
+
+    The pack stores NO text. Version 1 carried the shared phrase as a string
+    (44,000 copies of the sources' own spelling of the Quran, which drifted from
+    the app's text in their sukoon marks); the phrase is now located in the
+    target ayah at build time (`quran_spans.py`) and only the span is kept, so
+    the sheet tints the app's own words. QUL's spans win where it lists a pair.
 
 RUN
 ---
@@ -54,6 +63,9 @@ import json
 import pathlib
 import sys
 import lzma
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from quran_spans import locate  # noqa: E402
 
 
 def xz_compress(body: bytes) -> bytes:
@@ -125,6 +137,18 @@ def main() -> None:
     positions = _qul.PositionMap(order, texts, _qul.upstream_words(tilawa))
     tokens_by_key = {key: texts[key].split() for key in order}
     qul_rows = 0
+    phrases = located = 0
+
+    def phrase_spans(phrase: str, target: tuple[int, int]) -> list[list[int]]:
+        """The shared wording a source records, as token spans in the target ayah."""
+        nonlocal phrases, located
+        words = (phrase or "").split()
+        if not words:
+            return []
+        phrases += 1
+        spans = locate(words, tokens_by_key[f"{target[0]}:{target[1]}"])
+        located += 1 if spans else 0
+        return [list(span) for span in spans]
 
     all_keys = set(verified.get("ayahs", {})) | set(generated.get("ayahs", {})) | set(qul_matching)
     for key in all_keys:
@@ -147,7 +171,7 @@ def main() -> None:
             seen.add(target)
             spans = entry[4] if len(entry) > 4 and entry[4] else []
             phrase = spans[0][2] if spans and len(spans[0]) > 2 else ""
-            rows.append([target[0], target[1], phrase, 1])
+            rows.append([target[0], target[1], 1, phrase_spans(phrase, target), [], None])
 
         # Generated fill: the `v` verse list, skipping targets the verified rows cover.
         for entry in generated.get("ayahs", {}).get(key, {}).get("v", []):
@@ -160,12 +184,8 @@ def main() -> None:
             if target in seen:
                 continue
             seen.add(target)
-            phrase = entry[1] or ""
             labels = [l for l in (entry[3] if len(entry) > 3 and entry[3] else []) if l]
-            row: list = [target[0], target[1], phrase, 0]
-            if labels:
-                row.append(labels[:4])
-            rows.append(row)
+            rows.append([target[0], target[1], 0, phrase_spans(entry[1] or "", target), labels[:4], None])
 
         # QUL: spans + score onto rows already listed, new rows for the pairs only it has.
         strong: list[list] = []
@@ -186,28 +206,28 @@ def main() -> None:
             score = int(entry.get("score") or 0)
             existing = next((r for r in rows if (r[0], r[1]) == target), None)
             if existing is not None:
-                if len(existing) == 4:
-                    existing.append([])
-                existing[4:] = [existing[4], spans, score]
+                # QUL's spans are the table's own placement of the shared words: they win over a
+                # phrase located here.
+                if spans:
+                    existing[3] = [list(span) for span in spans]
+                existing[5] = score
                 continue
             if target in seen or not spans:
                 continue
             seen.add(target)
-            target_tokens = tokens_by_key[target_key]
-            phrase = " ".join(target_tokens[spans[0][0]:spans[0][1] + 1])
-            row = [target[0], target[1], phrase, 0, ["Shared words"], spans, score]
+            row = [target[0], target[1], 0, [list(span) for span in spans], ["Shared words"], score]
             (strong if score >= QUL_STRONG_SCORE else weak).append(row)
-        strong.sort(key=lambda r: -r[6])
-        weak.sort(key=lambda r: -r[6])
-        first_generated = next((i for i, r in enumerate(rows) if r[3] == 0), len(rows))
+        strong.sort(key=lambda r: -r[5])
+        weak.sort(key=lambda r: -r[5])
+        first_generated = next((i for i, r in enumerate(rows) if r[2] == 0), len(rows))
         rows[first_generated:first_generated] = strong
         rows.extend(weak)
         qul_rows += len(strong) + len(weak)
 
         if rows:
             packed[key] = rows[:MAX_MATCHES]
-            verified_rows += sum(1 for r in rows[:MAX_MATCHES] if r[3] == 1)
-            generated_rows += sum(1 for r in rows[:MAX_MATCHES] if r[3] == 0)
+            verified_rows += sum(1 for r in rows[:MAX_MATCHES] if r[2] == 1)
+            generated_rows += sum(1 for r in rows[:MAX_MATCHES] if r[2] == 0)
 
     if problems:
         print(f"FAILED: {len(problems)} problem(s)", file=sys.stderr)
@@ -215,11 +235,12 @@ def main() -> None:
             print(f"  {line}", file=sys.stderr)
         raise SystemExit(1)
 
-    body = json.dumps(packed, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    body = json.dumps({"v": 2, "ayahs": packed}, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     blob = xz_compress(body)
     OUT.write_bytes(blob)
 
     print(f"{len(packed)} ayahs with matches ({verified_rows} verified rows, {generated_rows} generated rows, {qul_rows} added by QUL before the cap)")
+    print(f"{located} of {phrases} recorded phrases located in their target ayah as token spans; no text stored")
     print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} xz")
 
 
