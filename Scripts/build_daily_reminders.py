@@ -330,7 +330,7 @@ def engine_citations(slug: str) -> set[str]:
 def source_line(text: str) -> str:
     # "Tirmidhi 1956 - Sahih (al-Albani)" is a citation and its grading, not two clauses: the app
     # joins those with a middle dot everywhere else.
-    return re.sub(r"\s+[-–—]\s+", " · ", text).strip()
+    return re.sub(r"\s+[-–, ]\s+", " · ", text).strip()
 
 
 def main() -> None:
@@ -422,7 +422,7 @@ def main() -> None:
         # The headline last: it indexes the English the card shows, which the references decide.
         reference_headline(entry, references, saheeh)
         for key in ("short", "en", "source", "tr"):
-            if key in entry and ("—" in entry[key] or " - " in entry[key]) and kind not in SCRIPTURE:
+            if key in entry and (", " in entry[key] or " - " in entry[key]) and kind not in SCRIPTURE:
                 problems.append(f"{row['id']}: dash left in {key}: {entry[key][:60]}")
         if ("short" in entry) == ("shortWords" in entry):
             problems.append(f"{row['id']}: a card carries either a headline or a headline range")

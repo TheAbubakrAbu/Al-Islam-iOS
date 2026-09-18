@@ -244,7 +244,7 @@ def dashes_left(node, path="") -> list[str]:
         for i, value in enumerate(node):
             found += dashes_left(value, f"{path}[{i}]")
     elif isinstance(node, str) and not re.search(r"[؀-ۿ]", node):
-        if "—" in node or re.search(r"[A-Za-z)] - [A-Za-z(]", node):
+        if ", " in node or re.search(r"[A-Za-z)] - [A-Za-z(]", node):
             found.append(f"{path}: {node[:70]}")
     return found
 

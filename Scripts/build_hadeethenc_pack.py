@@ -78,7 +78,7 @@ _SENTENCE_OPENERS = ("And ", "But ", "So ", "Then ", "Thus ", "Hence ", "Or ", "
 
 
 def _join_single(before: str, after: str) -> str:
-    """One dash: `before—after`."""
+    """One dash: `before, after`."""
     stripped = after.lstrip()
     lowered = stripped.lower()
     if before.rstrip().endswith((":", ",", ";", "(", "{", "[")):
@@ -104,7 +104,7 @@ def soften_dashes(text: str) -> str:
     every blank line in any text that happened to contain a dash."""
     if "\u2014" not in text:
         return text
-    # Normalize the spaced variants (" — ", "— ", " —") to a bare dash between the two
+    # Normalize the spaced variants (", ", ", ", ", ") to a bare dash between the two
     # halves. Horizontal whitespace only: a line break beside a dash is structure, not spacing.
     text = re.sub(r"[^\S\n]*\u2014[^\S\n]*", "\u2014", text)
     out = []

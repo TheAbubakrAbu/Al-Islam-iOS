@@ -136,7 +136,7 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .readingView: return "List or pages, the name of Allah in red"
+        case .readingView: return "The name of Allah in red"
         case .arabicText: return "Show Arabic, its face and size"
         case .englishText: return "Show English, its size"
         }

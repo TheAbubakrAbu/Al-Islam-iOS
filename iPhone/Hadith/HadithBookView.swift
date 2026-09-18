@@ -1,7 +1,7 @@
 import SwiftUI
 
-// One collection: the chapter list (with in-place page mode), one chapter, and the right-to-left
-// paged reader that fits as many hadiths per page as the font sizes allow.
+// One collection: the chapter list and one chapter, read as a scrolling list. (A right-to-left
+// paged reader used to be offered here as well; it was removed - hadith are read as a list.)
 
 #if os(iOS)
 
@@ -14,7 +14,7 @@ fileprivate extension HadithBookData.Hadith {
     }
 }
 
-// MARK: - One collection: chapters + book search + page mode
+// MARK: - One collection: chapters + book search
 
 struct HadithBookView: View {
     @ObservedObject private var settings = Settings.shared
@@ -28,13 +28,6 @@ struct HadithBookView: View {
     @State private var searchText = ""
     /// The chapter list shares the tab's grid/list choice, with its own copy of the toggle up top.
     @AppStorage("hadithGridMode") private var hadithGridMode = false
-    /// How chapters open. Hadiths are prose of wildly varying length, not the mushaf's fixed page, so the
-    /// scrolling LIST is the default here (unlike the Quran, where pages are the canonical layout); the
-    /// paged reader is opt-in. The toggle sits top left exactly as it does in the chapter itself, but
-    /// flips the setting rather than this screen.
-    @AppStorage("hadithPageMode") private var hadithPageMode = false
-    /// Drives the "Switch to Page/List View?" confirmation before the reading mode actually flips.
-    @State private var showReadingModeConfirm = false
     /// The hidden push target the chapter grid tiles use (a NavigationLink cell would draw a chevron).
     @State private var pushedChapter: HadithBookData.Chapter?
     /// "Scroll to chapter": clears the search, then lands the list on this chapter.
@@ -426,35 +419,6 @@ struct HadithBookView: View {
         // right - fullscreen and sharing live in the rows' context menus, not up here.
         // Pages/list top left (the Quran reader's toolbar shape), grid + gear top right - the tab
         // root's exact trailing pair. Fullscreen/sharing live in the rows' context menus.
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                if data != nil {
-                    Button {
-                        settings.hapticFeedback()
-                        showReadingModeConfirm = true
-                    } label: {
-                        Image(systemName: hadithPageMode ? "list.bullet.rectangle" : "book")
-                    }
-                    .accessibilityLabel(hadithPageMode ? "Open chapters as lists" : "Open chapters as pages")
-                    .tint(settings.accentColor.accent1)
-                    .confirmationDialog(
-                        hadithPageMode ? "Switch to List View?" : "Switch to Page View?",
-                        isPresented: $showReadingModeConfirm,
-                        titleVisibility: .visible
-                    ) {
-                        Button(hadithPageMode ? "Read as List" : "Read as Pages") {
-                            settings.hapticFeedback()
-                            withAnimation(.easeInOut) { hadithPageMode.toggle() }
-                        }
-                        Button("Cancel", role: .cancel) {}
-                    } message: {
-                        Text(hadithPageMode
-                             ? "Chapters will open as a scrolling list of hadiths."
-                             : "Chapters will open as pages right away: a right-to-left paged reader fitting as many hadiths per page as your font sizes allow.")
-                    }
-                }
-            }
-        }
         .modifier(HadithTrailingToolbar(
             hadithGridMode: $hadithGridMode,
             showHadithSettings: $showHadithSettings
@@ -1668,7 +1632,7 @@ struct HadithChapterView: View {
         if recordLastRead, let first = hadiths.first {
             // Through the shared debounce slot, like every other last-read record: an immediate store
             // publish mid-transition re-renders the observing book screen - the pop hazard - and in
-            // page mode the pager's own record follows anyway (single slot: last record wins).
+            // the chapter list owns the record (single slot: last record wins).
             let book = book
             HadithLastReadDebounce.schedule {
                 HadithStore.shared.recordLastRead(book: book, hadith: first)
@@ -1787,7 +1751,6 @@ struct HadithChapterView: View {
     @State private var visibility = ChapterVisibilityModel()
     /// The chapter's reading mode: the scrolling list unless the reader asks for pages (via the title
     /// menu or Hadith Settings). Same key, same default, as the chapters screen declares.
-    @AppStorage("hadithPageMode") private var hadithPageMode = false
     /// The title menu's chapter picker sheet.
     @State private var showChapterPicker = false
     // Multi-select (list mode): pick several hadiths, then copy/share/bookmark them all at once - the
@@ -1870,58 +1833,23 @@ struct HadithChapterView: View {
 
     /// What the page shows, as one choice - backs the title menu's "Page Text" picker, the mushaf's
     /// page-language picker for hadiths. 0 = Arabic & English, 1 = Arabic only, 2 = English only.
-    private var pageTextSelection: Binding<Int> {
-        Binding(
-            get: {
-                if settings.showHadithArabic && settings.showHadithEnglish { return 0 }
-                return settings.showHadithArabic ? 1 : 2
-            },
-            set: { value in
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.showHadithArabic = value != 2
-                    settings.showHadithEnglish = value != 1
-                }
-            }
-        )
-    }
-
     var body: some View {
         RenderCounter.hit("HadithChapterView")
-        return Group {
-            // Page mode is the user's reading mode, deep link or not: a target hadith opens the PAGER
-            // seeded to its page (the mushaf's way). It used to force the list - "open last read" while
-            // in page mode dumped you into list mode, the reported bug.
-            if hadithPageMode {
-                Group {
-                    if textReady {
-                        HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
-                    } else {
-                        textLoadingPlaceholder
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                // The chapter list gets the top accent glow through `applyConditionalListStyle`;
-                // the pager is not a list, so it draws the same wash itself - themed base included.
-                .background(AccentGlowOverlay())
-                .themedReaderBackground()
-            } else {
-                chapterList
-            }
-        }
+        // A chapter is ALWAYS a scrolling list. The right-to-left paged reader this screen used to
+        // offer (and its `hadithPageMode` toggle, in the toolbar and in Hadith Settings) was removed:
+        // hadith are read as a list, unlike the mushaf, where a page is the unit the text is printed in.
+        return chapterList
         // ONE pinned chapter-identity header for BOTH reading modes (the title above carries only the
         // book + chapter number, so nothing repeats). The list's progress bar rides on top of it.
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                if !hadithPageMode {
-                    ChapterProgressBar(
-                        visibility: visibility,
-                        firstID: allChapterHadiths.first?.idInBook,
-                        lastID: allChapterHadiths.last?.idInBook,
-                        isActive: !isSearchActive,
-                        color: settings.accentColor.color
-                    )
-                }
+                ChapterProgressBar(
+                    visibility: visibility,
+                    firstID: allChapterHadiths.first?.idInBook,
+                    lastID: allChapterHadiths.last?.idInBook,
+                    isActive: !isSearchActive,
+                    color: settings.accentColor.color
+                )
 
                 floatingChapterHeader
             }
@@ -1992,10 +1920,7 @@ struct HadithChapterView: View {
             // through the ONE shared debounce slot, deferred past the push transition (`recordLastRead`
             // publishes through the store the PARENT book screen observes and renders, and re-diffing
             // the List hosting the auto-open NavigationLink mid-push is what spuriously popped a
-            // deep-linked chapter back to the chapter list). In PAGE mode the pager owns the record -
-            // a chapter-level record here raced the pager's and could reset a mid-chapter last-read
-            // back to the chapter's first hadith, depending on onAppear ordering.
-            guard !hadithPageMode else { return }
+            // deep-linked chapter back to the chapter list).
             let target = scrollToHadithId.flatMap { id in allChapterHadiths.first { $0.idInBook == id } }
                 ?? allChapterHadiths.first
             if let target {
@@ -2009,16 +1934,6 @@ struct HadithChapterView: View {
         // view) - keep the derived chapter state in lock-step so the title and list follow.
         .onChange(of: chapterIndex) { index in
             syncChapterFromIndex(index)
-        }
-        // Entering page mode opens where you actually left off - the surah reader's rule: this book's
-        // last-read chapter when it has one, chapter 1 otherwise. (Leaving page mode stays put.)
-        .onChange(of: hadithPageMode) { isOn in
-            guard isOn, scrollToHadithId == nil else { return }
-            let target = store.lastRead(for: book.slug)
-                .flatMap { last in bookData.chapters.first(where: { $0.id == last.chapterId }) }
-                ?? bookData.chapters.first
-            guard let target, target.id != chapter.id else { return }
-            navigateToChapter(target, recordLastRead: false)
         }
     }
 
@@ -2086,7 +2001,6 @@ struct HadithChapterView: View {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    if hadithPageMode { hadithPageMode = false }
                     isSelectingHadiths = true
                     selectedHadithIDs = []
                 }
@@ -2094,31 +2008,6 @@ struct HadithChapterView: View {
                 Label("Select Hadiths", systemImage: "checkmark.circle")
             }
 
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    isSelectingHadiths = false
-                    selectedHadithIDs = []
-                    hadithPageMode.toggle()
-                }
-            } label: {
-                Label(hadithPageMode ? "Read as List" : "Read as Pages",
-                      systemImage: hadithPageMode ? "list.bullet.rectangle" : "book")
-            }
-
-            // Page mode: what the page's text is - just Arabic, just English, or both. (The same Show
-            // Arabic/English switches as settings, reachable where the reading actually happens.)
-            if hadithPageMode {
-                Menu {
-                    Picker("Page Text", selection: pageTextSelection) {
-                        Text("Arabic & English").tag(0)
-                        Text("Arabic Only").tag(1)
-                        Text("English Only").tag(2)
-                    }
-                } label: {
-                    Label("Page Text", systemImage: "character.book.closed")
-                }
-            }
         } label: {
             chapterTitleLabel
                 .frame(maxWidth: .infinity)
@@ -2315,7 +2204,7 @@ struct HadithChapterView: View {
         .onChange(of: textReady) { ready in
             if ready { scheduleArrivalScroll(scrollProxy) }
         }
-        // (The pinned chapter header + progress bar live at the BODY level now, shared with page mode.)
+        // (The pinned chapter header + progress bar live at the BODY level now.)
         .onChange(of: chapterIndex) { _ in
             // A Previous/Next chapter swap lands at the LITERAL top of the new chapter - the nav
             // buttons above the first hadith included - not at hadith 1 with them scrolled away.
@@ -2659,496 +2548,6 @@ struct HadithChapterPickerSheet: View {
         }
         .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
-    }
-}
-
-// MARK: - Page mode: as many hadiths per page as fit, right-to-left, chapter by chapter
-
-/// The paged reader, in the mushaf's manner: pages turn RIGHT-TO-LEFT, and each page carries as many
-/// whole hadiths as the current Arabic/English font sizes allow. Chapter-scoped - paging all ~7,500
-/// hadiths of Bukhari through one TabView is the page-realization stampede the Quran mushaf had to
-/// engineer around; a chapter is at most a few hundred light pages.
-///
-/// Layout rules: a chapter heading is never left as the last thing on a page (it moves to the top of
-/// the next page so its hadiths follow it), and a hadith is atomic - its reference line and its text
-/// always travel together.
-struct HadithPagedView: View {
-    @ObservedObject private var settings = Settings.shared
-
-    let book: HadithCatalogBook
-    let bookData: HadithBookData
-
-    /// Bound to the parent chapter view, so Choose Chapter, Previous/Next, and the title all stay in
-    /// sync - the pager no longer keeps a private copy that could drift.
-    @Binding var chapterIndex: Int
-    /// A deep-link target (last read, bookmark, search result): the pager opens on ITS page instead of
-    /// the book's last-read seed. Nil for a plain chapter open.
-    var seedHadithID: Int? = nil
-    @State private var pageIndex = 0
-
-    /// Seed-once guard: the reader opens on the page holding this book's last-read hadith (when it is
-    /// in this chapter), then never yanks the user again.
-    @State private var didSeedPage = false
-    /// The deep-link target is honored on the FIRST seed only; re-arms (chapter swaps) follow the live
-    /// last read instead.
-    @State private var didConsumeDeepLinkSeed = false
-
-    /// Which inline wheel is open above the footer - the mushaf reader's page/juz picker, reshaped
-    /// for hadiths and chapters.
-    private enum PickerTarget { case hadith, chapter }
-    @State private var activePicker: PickerTarget?
-    @State private var hadithPickerSelection = 0
-    @State private var chapterPickerSelection = 0
-
-    private var chapter: HadithBookData.Chapter? {
-        bookData.chapters.indices.contains(chapterIndex) ? bookData.chapters[chapterIndex] : nil
-    }
-
-    /// ONE hadith per page, so the page list IS the chapter's row slice: page i shows hadith i, the
-    /// ordinal is i + 1, and nothing here reads a hadith's text. The old `builtPages` walked every
-    /// hadith's text and grades in `body` (two block inflates on the main thread per chapter open)
-    /// to decide which blocks a page carried; the page view decides that for itself at render time
-    /// (Performance Guide, Phase 7 step 11).
-    private var chapterHadiths: ArraySlice<HadithBookData.Hadith> {
-        guard let chapter else { return [] }
-        return bookData.hadiths(in: chapter)
-    }
-
-    var body: some View {
-        RenderCounter.hit("HadithPagedView")
-        let hadiths = chapterHadiths
-        let pageCount = hadiths.count
-
-        return Group {
-            if pageCount == 0 {
-                Text("This chapter has no hadiths.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                // Right-to-left, exactly like the mushaf: the DATA is reversed rather than the layout
-                // direction, so page 0 sits at the far right and reading advances leftward. Each page
-                // is its own View STRUCT, so the `.page` TabView evaluates only the pages it realizes
-                // (the mushaf's `MushafPageContent` rule) instead of building every page's blocks
-                // inline on every turn.
-                TabView(selection: $pageIndex) {
-                    ForEach((0..<pageCount).reversed(), id: \.self) { index in
-                        HadithPageContent(
-                            book: book,
-                            hadith: hadiths[hadiths.startIndex + index],
-                            ordinal: index + 1
-                        )
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
-            pagerFooter(hadiths: hadiths)
-        }
-        .onAppear {
-            // Open on the page holding the deep-link target (or this book's last-read hadith) - the
-            // mushaf's "open where you stopped" - then record that page as the new last read via the
-            // ONE debounced recorder below.
-            let seeded = seedPageIfNeeded(hadiths)
-            scheduleRecordLastRead(hadiths: hadiths, at: seeded ?? pageIndex)
-        }
-        .onChange(of: pageIndex) { index in
-            scheduleRecordLastRead(hadiths: hadiths, at: index)
-        }
-        .onChange(of: chapterIndex) { _ in
-            // A chapter swap re-arms the last-read seed: when the book's last read lives in the
-            // NEW chapter (the page-mode entry jump), land on its exact page - otherwise hadith 1.
-            didSeedPage = false
-            activePicker = nil
-            let swapped = chapterHadiths
-            if let seeded = seedPageIfNeeded(swapped) {
-                scheduleRecordLastRead(hadiths: swapped, at: seeded)
-            } else {
-                // Record page 1 EXPLICITLY: when `pageIndex` was already 0 (jumping chapters from the
-                // wheel while on a chapter's first page), the assignment below fires no `.onChange`,
-                // and the newly-opened chapter never became the last read.
-                pageIndex = 0
-                scheduleRecordLastRead(hadiths: swapped, at: 0)
-            }
-        }
-        // No title of its own: the parent chapter view's principal title-menu button owns the bar.
-    }
-
-    /// The ONE path a page becomes the last read, trailing-debounced 1.0s through the shared slot. This
-    /// closes two holes the separate immediate/deferred records had: the onAppear SEED sets `pageIndex`,
-    /// whose `.onChange` used to record immediately - a store publish mid-push that re-rendered the
-    /// ancestor book screen (which observes the store) and could pop this very view; and a page turn
-    /// inside the first second recorded instantly, only to be overwritten by the stale deferred landing
-    /// record. A single debounce slot means the LAST record standing wins, always past the transition.
-    private func scheduleRecordLastRead(hadiths: ArraySlice<HadithBookData.Hadith>, at index: Int) {
-        guard index >= 0, index < hadiths.count else { return }
-        let hadith = hadiths[hadiths.startIndex + index]
-        let book = book
-        HadithLastReadDebounce.schedule {
-            HadithStore.shared.recordLastRead(book: book, hadith: hadith)
-        }
-    }
-
-    /// Land on the target hadith's page, once per open: the explicit deep-link target when there is
-    /// one, this book's last-read hadith otherwise. Returns the seeded index when it resolved.
-    private func seedPageIfNeeded(_ hadiths: ArraySlice<HadithBookData.Hadith>) -> Int? {
-        guard !didSeedPage else { return nil }
-        didSeedPage = true
-
-        // The deep-link target seeds exactly ONCE. It used to win every re-arm (chapter swap and
-        // back), yanking the pager - and the follow-up record - BACK to the original target after the
-        // user had read past it, regressing their last read to a position they'd already left.
-        let deepLinkTarget: Int?
-        if let seedHadithID, !didConsumeDeepLinkSeed {
-            didConsumeDeepLinkSeed = true
-            deepLinkTarget = seedHadithID
-        } else {
-            deepLinkTarget = nil
-        }
-        let targetID: Int? = deepLinkTarget ?? {
-            guard let chapter,
-                  let lastRead = HadithStore.shared.lastRead(for: book.slug),
-                  lastRead.chapterId == chapter.id
-                    || hadiths.contains(where: { $0.idInBook == lastRead.idInBook })
-            else { return nil }
-            return lastRead.idInBook
-        }()
-
-        guard let targetID, let position = hadiths.firstIndex(where: { $0.idInBook == targetID }) else { return nil }
-        let index = position - hadiths.startIndex
-        // Report the landing page even when it's the one already showing - callers treat nil as
-        // "nothing to seed" and reset to page 1.
-        if index != pageIndex { pageIndex = index }
-        return index
-    }
-
-    private func pagerFooter(hadiths: ArraySlice<HadithBookData.Hadith>) -> some View {
-        let pageCount = hadiths.count
-        return VStack(spacing: 6) {
-            TrackedBar(
-                fraction: pageCount > 1 ? CGFloat(pageIndex) / CGFloat(pageCount - 1) : 1,
-                height: 3,
-                color: settings.accentColor.color
-            )
-            .padding(.horizontal, 2)
-
-            if activePicker != nil {
-                inlinePicker(hadiths: hadiths)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
-            // The mushaf footer's grammar: the readouts ARE the buttons that open their pickers -
-            // "Hadith X / Y" and "Chapter A / B" each unfold an inline wheel, no chevron-stepping.
-            HStack(spacing: 10) {
-                jumpButton(
-                    title: pageCount > 0 ? "Hadith \(pageIndex + 1) / \(pageCount)" : "Hadith - / -",
-                    target: .hadith
-                ) {
-                    hadithPickerSelection = pageIndex
-                }
-
-                jumpButton(
-                    title: "Chapter \(chapterIndex + 1) / \(bookData.chapters.count)",
-                    target: .chapter
-                ) {
-                    chapterPickerSelection = chapterIndex
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .conditionalGlassEffect(rectangle: true)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
-    }
-
-    /// The readouts double as the buttons that open their picker. `seed` sets the wheel to where you
-    /// currently are, so opening it and confirming without touching it is a no-op.
-    private func jumpButton(title: String, target: PickerTarget, seed: @escaping () -> Void) -> some View {
-        let isOpen = activePicker == target
-
-        return Button {
-            settings.hapticFeedback()
-            if !isOpen { seed() }
-            withAnimation(.easeInOut) {
-                activePicker = isOpen ? nil : target
-            }
-        } label: {
-            HStack(spacing: 3) {
-                Text(title)
-                Image(systemName: isOpen ? "chevron.down" : "chevron.up.chevron.down")
-                    .font(.system(size: 7))
-            }
-            .font(.caption.weight(.semibold))
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .foregroundStyle(settings.accentColor.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(settings.accentColor.color.opacity(isOpen ? 0.22 : 0.12))
-            )
-            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        }
-        .accessibilityLabel("\(title). Jump to")
-    }
-
-    /// The hadith and chapter pickers, in place rather than as a sheet - the mushaf's page/juz picker
-    /// chrome (xmark / title / checkmark over a wheel), reshaped for this reader.
-    private func inlinePicker(hadiths: ArraySlice<HadithBookData.Hadith>) -> some View {
-        let pageCount = hadiths.count
-        return VStack(spacing: 0) {
-            HStack {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { activePicker = nil }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Text(activePicker == .hadith ? "Go to Hadith" : "Go to Chapter")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Button {
-                    settings.hapticFeedback()
-                    switch activePicker {
-                    case .hadith:
-                        // Clamped: the selection was seeded against the page list it was opened with.
-                        pageIndex = min(max(hadithPickerSelection, 0), max(pageCount - 1, 0))
-                    case .chapter:
-                        let target = min(max(chapterPickerSelection, 0), max(bookData.chapters.count - 1, 0))
-                        if target != chapterIndex {
-                            withAnimation(.easeInOut) { chapterIndex = target }
-                        }
-                    case nil:
-                        break
-                    }
-                    withAnimation(.easeInOut) { activePicker = nil }
-                } label: {
-                    Image(systemName: "checkmark")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(settings.accentColor.accent2)
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 8)
-
-            Group {
-                if activePicker == .hadith {
-                    Picker("Hadith", selection: $hadithPickerSelection) {
-                        ForEach(0..<max(pageCount, 1), id: \.self) { i in
-                            // Within-chapter position plus the book-wide citation number. The slice
-                            // is read in place - it used to be COPIED twice per wheel row.
-                            if i < pageCount {
-                                Text("Hadith \(i + 1)  (#\(hadiths[hadiths.startIndex + i].displayNumber))").tag(i)
-                            } else {
-                                Text("Hadith \(i + 1)").tag(i)
-                            }
-                        }
-                    }
-                } else {
-                    Picker("Chapter", selection: $chapterPickerSelection) {
-                        ForEach(0..<max(bookData.chapters.count, 1), id: \.self) { i in
-                            if bookData.chapters.indices.contains(i) {
-                                Text("\(i + 1). \(bookData.chapters[i].english)").tag(i)
-                            } else {
-                                Text("Chapter \(i + 1)").tag(i)
-                            }
-                        }
-                    }
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.wheel)
-            .frame(height: 110)
-        }
-    }
-}
-
-/// One page of the paged reader: the hadith's header capsule and its text blocks, rendered with the
-/// reading rows' exact styles (fonts, comma fallback, Allah highlighting) - the page IS the row, just
-/// flowing across pages. A separate View so the `.page` TabView evaluates only the pages it realizes.
-private struct HadithPageContent: View {
-    @ObservedObject private var settings = Settings.shared
-    /// The header's bookmark tint reads user marks - this observation refreshes it on a toggle.
-    @ObservedObject private var userData = HadithUserData.shared
-
-    let book: HadithCatalogBook
-    let hadith: HadithBookData.Hadith
-    /// The hadith's position within its chapter, for the header capsule ("3 - 102 Book").
-    let ordinal: Int
-
-    var body: some View {
-        RenderCounter.hit("HadithPageContent")
-        // One block lookup for the whole page; the blocks below decide their own presence from it.
-        let text = hadith.allText
-        let grades = hadith.grades
-        let isBookmarked = userData.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
-
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                header(isBookmarked: isBookmarked)
-
-                if settings.showHadithArabic, !text.arabic.isEmpty {
-                    // Always the chosen face: the longest narrations render as sentence-bounded chunks
-                    // the KFGQPC faces can shape (see `HadithArabicChunks`), never as the system face.
-                    let usesCustomFace = settings.hadithArabicWantsCustomFace
-                    HadithArabicText(
-                        text: text.arabic,
-                        term: "",
-                        font: usesCustomFace
-                            ? Font.arabic(settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
-                            : .system(size: settings.hadithArabicFontSize),
-                        lineSpacing: 6
-                    )
-                    .textSelection(.enabled)
-                }
-
-                if settings.showHadithEnglish {
-                    if !text.narrator.isEmpty {
-                        // HighlightedSnippet (not a plain Text) so the narrator line gets the Allah
-                        // highlight in page mode too - it's English text like the body.
-                        HighlightedSnippet(
-                            source: text.narrator,
-                            term: "",
-                            font: .system(size: settings.hadithEnglishFontSize).italic(),
-                            accent: settings.accentColor.color,
-                            fg: .secondary,
-                            highlightAllahNames: settings.highlightAllahNamesHadith
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                    }
-
-                    if !text.text.isEmpty {
-                        HighlightedSnippet(
-                            source: text.text,
-                            term: "",
-                            font: .system(size: settings.hadithEnglishFontSize),
-                            accent: settings.accentColor.color,
-                            fg: .primary,
-                            highlightAllahNames: settings.highlightAllahNamesHadith
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                    }
-                }
-
-                // The grade line trails the text - after the English, or after the Arabic when
-                // English is off or absent (the reading rows' placement). Always shown: the grading
-                // is part of the hadith, not a preference.
-                if !grades.isEmpty {
-                    HadithGradeLine(grades: grades)
-                        .textSelection(.enabled)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-        }
-    }
-
-    /// The reading row's exact header grammar: tap the pill to toggle the bookmark (tinted + corner
-    /// badge when set), and the same actions behind an always-ellipsis button - page mode used to
-    /// offer only a long-press context menu, which read as "can't bookmark here".
-    private func header(isBookmarked: Bool) -> some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 5) {
-                Text("\(ordinal)")
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-
-                Text("-")
-                    .font(.caption.weight(.semibold))
-                    .opacity(0.55)
-
-                Text(hadith.displayNumber)
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-
-                Text(book.englishTitle)
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundColor(settings.accentColor.color)
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
-            .padding(.horizontal, 8)
-            .frame(height: 26)
-            .conditionalGlassEffect(
-                useColor: isBookmarked ? 0.3 : nil,
-                customTint: isBookmarked ? settings.accentColor.color : nil,
-                interactive: false
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) { HadithStore.shared.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
-            }
-            .overlay(alignment: .topTrailing) {
-                if isBookmarked {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption2)
-                        .foregroundStyle(settings.accentColor.color)
-                        .padding(4)
-                        .offset(x: 8, y: -6)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Menu {
-                headerActions(isBookmarked: isBookmarked)
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 23, height: 23)
-                    .foregroundColor(settings.accentColor.color)
-                    .conditionalGlassEffect()
-                    .frame(width: 26, height: 26)
-                    .contentShape(Rectangle())
-            }
-        }
-        .contextMenu {
-            headerActions(isBookmarked: isBookmarked)
-        }
-    }
-
-    /// The page header's actions, shared verbatim by the ellipsis Menu and the long-press context menu.
-    @ViewBuilder
-    private func headerActions(isBookmarked: Bool) -> some View {
-        Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
-        } label: {
-            Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
-                  systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-        } label: {
-            Label("Copy Hadith", systemImage: "doc.on.doc")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            presentSystemShareSheet(items: [HadithShareSheet.composedText(book: book, hadith: hadith)])
-        } label: {
-            Label("Share Hadith", systemImage: "square.and.arrow.up")
-        }
     }
 }
 

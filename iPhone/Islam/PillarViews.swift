@@ -1577,41 +1577,92 @@ struct ProphetsView: View {
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(verbatim: """
-                    Allah sent prophets to every nation, and a Muslim believes in every one of them. Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name:
-                    - Adam: آدَم
-                    - Idris (often identified with Enoch): إِدرِيس
-                    - Nuh (Noah): نُوح
-                    - Hud: هُود
-                    - Saleh: صَالِح
-                    - Lut (Lot): لُوط
-                    - Ibrahim (Abraham): إِبرَاهِيم
-                    - Ismail (Ishmael): إِسمَاعِيل
-                    - Ishaq (Isaac): إِسحَاق
-                    - Yaqub (Jacob): يَعقُوب
-                    - Yusuf (Joseph): يُوسُف
-                    - Shu’aib (sometimes identified with Jethro): شُعَيب
-                    - Ayyub (Job): أَيُّوب
-                    - Dhul-Kifl: ذُو الكِفل
-                    - Musa (Moses): مُوسَى
-                    - Harun (Aaron): هَارُون
-                    - Dawud (David): دَاوُود
-                    - Sulayman (Solomon): سُلَيمَان
-                    - Ilyas (Elias): إِليَاس
-                    - Alyasa (Elisha): اليَسَع
-                    - Yunus (Jonah): يُونُس
-                    - Zakariya (Zachariah): زَكَرِيَّا
-                    - Yahya (John the Baptist): يَحيَى
-                    - Isa (Jesus): عِيسَى
-                    - Muhammad: مُحَمَّد
-                    """)
-                    .font(.body)
+                    Text(verbatim: "Allah sent prophets to every nation, and a Muslim believes in every one of them. Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name.")
+                        .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
                     ScriptureQuote(quran: "6:84-85")
 
                     Text(verbatim: "Each prophet conveyed Allah’s guidance and served as role models for their people. While all prophets were sent to specific nations and times, Prophet Muhammad was sent as the final messenger for all of humanity. Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
                     ScriptureQuote(quran: "33:40", words: 0...11)
+                }
+
+                Section(header: ArticleHeader("THE 25 PROPHETS NAMED IN THE QURAN")) {
+                    NavigationLink(destination: LazyDestination { ProphetAdamView() }) {
+                        ProphetLinkRow(name: "Adam", arabic: "آدَم", sentTo: "The first man, and the first prophet")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIdrisView() }) {
+                        ProphetLinkRow(name: "Idris", arabic: "إِدرِيس", sentTo: "Raised by Allah to a high station")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetNuhView() }) {
+                        ProphetLinkRow(name: "Nuh", arabic: "نُوح", sentTo: "Sent to his people for 950 years")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetHudView() }) {
+                        ProphetLinkRow(name: "Hud", arabic: "هُود", sentTo: "Sent to ‘Aad, of the sand dunes")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetSalihView() }) {
+                        ProphetLinkRow(name: "Salih", arabic: "صَالِح", sentTo: "Sent to Thamud, of al-Hijr")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIbrahimView() }) {
+                        ProphetLinkRow(name: "Ibrahim", arabic: "إِبرَاهِيم", sentTo: "The friend of Allah, father of the prophets")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetLutView() }) {
+                        ProphetLinkRow(name: "Lut", arabic: "لُوط", sentTo: "Sent to the cities of the plain")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIsmailView() }) {
+                        ProphetLinkRow(name: "Ismail", arabic: "إِسمَاعِيل", sentTo: "True to his promise; built the Ka’bah")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIshaqView() }) {
+                        ProphetLinkRow(name: "Ishaq", arabic: "إِسحَاق", sentTo: "The glad tidings given to Ibrahim")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetYaqubView() }) {
+                        ProphetLinkRow(name: "Yaqub", arabic: "يَعقُوب", sentTo: "Israil, father of the twelve tribes")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetYusufView() }) {
+                        ProphetLinkRow(name: "Yusuf", arabic: "يُوسُف", sentTo: "The best of stories, told in full")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetAyyubView() }) {
+                        ProphetLinkRow(name: "Ayyub", arabic: "أَيُّوب", sentTo: "An excellent servant, patient in loss")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetShuaybView() }) {
+                        ProphetLinkRow(name: "Shu’ayb", arabic: "شُعَيب", sentTo: "Sent to Madyan, on honest trade")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetMusaView() }) {
+                        ProphetLinkRow(name: "Musa", arabic: "مُوسَى", sentTo: "Spoken to by Allah; given the Torah")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetHarunView() }) {
+                        ProphetLinkRow(name: "Harun", arabic: "هَارُون", sentTo: "Given to Musa as an answered prayer")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetDhulKiflView() }) {
+                        ProphetLinkRow(name: "Dhul-Kifl", arabic: "ذُو الكِفل", sentTo: "Named among the patient and excellent")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetDawudView() }) {
+                        ProphetLinkRow(name: "Dawud", arabic: "دَاوُود", sentTo: "Prophet and king; given the Zabur")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetSulaymanView() }) {
+                        ProphetLinkRow(name: "Sulayman", arabic: "سُلَيمَان", sentTo: "Given a kingdom like no one after him")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIlyasView() }) {
+                        ProphetLinkRow(name: "Ilyas", arabic: "إِليَاس", sentTo: "Sent to a people who worshipped Ba‘l")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetAlyasaView() }) {
+                        ProphetLinkRow(name: "Alyasa", arabic: "اليَسَع", sentTo: "Chosen by Allah above the worlds")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetYunusView() }) {
+                        ProphetLinkRow(name: "Yunus", arabic: "يُونُس", sentTo: "Dhun-Nun, of the whale")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetZakariyaView() }) {
+                        ProphetLinkRow(name: "Zakariya", arabic: "زَكَرِيَّا", sentTo: "Answered in old age with Yahya")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetYahyaView() }) {
+                        ProphetLinkRow(name: "Yahya", arabic: "يَحيَى", sentTo: "Given wisdom while still a child")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetIsaView() }) {
+                        ProphetLinkRow(name: "Isa", arabic: "عِيسَى", sentTo: "Son of Maryam; given the Injil")
+                    }
+                    NavigationLink(destination: LazyDestination { ProphetMuhammadView() }) {
+                        ProphetLinkRow(name: "Muhammad", arabic: "مُحَمَّد", sentTo: "The seal of the prophets ﷺ")
+                    }
                 }
 
                 Section(header: ArticleHeader("PROPHETS AND MESSENGERS")) {
@@ -1664,8 +1715,47 @@ struct ProphetsView: View {
                         .font(.body)
                 }
 
-                Section(header: ArticleHeader("RESOURCE")) {
-                    Text(verbatim: "For a detailed family tree of the prophets: https://madinahmedia.com/family-tree-of-prophets-in-islam/")
+                Section(header: ArticleHeader("VISUAL GUIDE")) {
+                    Text(verbatim: "The order of the 25 prophets named in the Quran, from Adam to Muhammad (peace be upon them all). Tap to open it full screen.")
+                        .font(.body)
+
+                    Image("ProphetsChart1")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .focusableImage("ProphetsChart1", title: "The Prophets in Islam",
+                                        subtitle: "The 25 prophets named in the Quran, in order")
+                        .padding(.vertical, 4)
+
+                    Text(verbatim: "A fuller family tree, showing how the prophets are related and which people each was sent to. It is dense: open it full screen and zoom in.")
+                        .font(.body)
+
+                    Image("ProphetsChart2")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .focusableImage("ProphetsChart2", title: "Islamic Prophets Family Tree",
+                                        subtitle: "Lineage, the people each was sent to, and Quranic mentions")
+                        .padding(.vertical, 4)
+                }
+
+                Section(header: ArticleHeader("ABOUT THE CHARTS")) {
+                    Text(verbatim: "The lineage in the second chart is a reconstruction. The Quran and the authentic Sunnah name the prophets and state some of the relationships between them (Ismail and Ishaq as sons of Ibrahim, Yaqub as the son of Ishaq, Yusuf as the son of Yaqub, Harun as the brother of Musa, Yahya as the son of Zakariya), but most of the intermediate generations, and the identifications of Idris with Enoch and Dhul-Kifl with Ezekiel, come from the reports of the People of the Scripture. Those are neither affirmed nor denied: take the chart as a guide to the names, not as established creed.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("IMAGE CREDITS")) {
+                    Text(verbatim: "The first chart is shared with credit to its creator, @path_to_jannah.")
+                        .font(.caption)
+
+                    Link(destination: URL(string: "https://www.usefulcharts.com/products/islamic-prophets-family-tree")!) {
+                        Label("Islamic Prophets Family Tree by UsefulCharts (CC BY-SA 3.0)", systemImage: "link")
+                    }
+                    .font(.caption)
+
+                    Text(verbatim: "The second chart is \u{00A9} 2021 UsefulCharts Publishing, designed by Matt Baker, used under the Creative Commons Attribution-ShareAlike 3.0 licence. Prophet calligraphy by Syawish Reyman.")
                         .font(.caption)
                 }
 

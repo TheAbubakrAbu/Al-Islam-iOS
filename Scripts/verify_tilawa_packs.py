@@ -88,7 +88,7 @@ SUNNAH_PRESET_CITATIONS = [("tirmidhi", "2891"), ("bukhari", "5009"), ("muslim",
                            ("tirmidhi", "3575"), ("bukhari", "891"), ("muslim", "879a"), ("bukhari", "4569"),
                            ("muslim", "256")]
 
-EM_DASH = "—"
+EM_DASH = ", "
 SPACED_HYPHEN = re.compile(r"[^\W\d_] - [^\W\d_]")
 
 errors: list[str] = []
@@ -477,7 +477,7 @@ def main() -> None:
         # The dash filter re-punctuates; it must not move a word or lose a paragraph. It did both
         # once (2026-09-08): the sentence split was rejoined with a single space, so every blank
         # line in a dash-bearing explanation went with it. This probe is that bug, kept.
-        probe = ("He raised his hands to his knees—the Sunnah—and then paused.\n\n"
+        probe = ("He raised his hands to his knees, the Sunnah, and then paused.\n\n"
                  "The Prophet (peace be upon him) said: pray as you have seen me pray.")
         softened = henc.soften(probe)
         if softened.count("\n\n") != probe.count("\n\n"):

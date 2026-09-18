@@ -40,6 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [
     ROOT / "iPhone/Islam/PillarsView.swift",
     ROOT / "iPhone/Islam/PillarViews.swift",
+    ROOT / "iPhone/Islam/ProphetViews.swift",
     ROOT / "iPhone/Islam/BeliefsViews.swift",
     ROOT / "iPhone/Islam/HowToGuides.swift",
     ROOT / "iPhone/Islam/AqeedahViews.swift",
