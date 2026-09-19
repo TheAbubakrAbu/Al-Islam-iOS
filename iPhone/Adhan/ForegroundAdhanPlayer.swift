@@ -35,6 +35,15 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
 
     var isPlaying: Bool { playingPrayerName != nil }
 
+    #if DEBUG
+    /// `-fakeAdhanPlaying <name>`: shows the sky card's stop button with no audio, so the footer's
+    /// swap (stop button <-> moon line) can be screenshotted and its cross-fade verified. Tapping
+    /// the button clears it through the normal path, since `stopAdhan` returns early with no player.
+    func debugSetPlaying(_ name: String?) {
+        playingPrayerName = name
+    }
+    #endif
+
     /// How long after a prayer's time the app will still play that adhan in full when it is OPENED.
     ///
     /// The scheduled notification is capped at 30 seconds of sound and obeys the ringer switch; the
@@ -164,6 +173,13 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
 
     /// Fades out a playing adhan and restores whatever it interrupted. Safe to call when nothing is playing.
     func stopAdhan() {
+        #if DEBUG
+        // `-fakeAdhanPlaying` has no player behind it: clear the flag so the footer animates back.
+        if player == nil, playingPrayerName != nil {
+            playingPrayerName = nil
+            return
+        }
+        #endif
         guard let player else { return }
         player.setVolume(0, fadeDuration: 0.4)
         // Hold the reference so `audioPlayerDidFinishPlaying` (which never fires for a manual stop) can't

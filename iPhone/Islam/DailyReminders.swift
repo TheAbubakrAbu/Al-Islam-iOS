@@ -84,6 +84,12 @@ struct DailyReminderEntry: Identifiable, Equatable {
     var englishWords: ClosedRange<Int>? = nil
     /// The Fortress of the Muslim entry this dua card is (`HisnDuasStore` id), when it is one.
     var dua: String? = nil
+    /// The headline as a 0-based inclusive range of whitespace tokens of the English the card shows,
+    /// for the (common) case where it is a verbatim slice of it: the pack stores the range instead of
+    /// a second copy of the words. `short` and `shortWords` are never both present (pack v3). A verse
+    /// card's English is read from the Quran at render time, so its headline is cut there
+    /// (`DailyReminderStore.headline(for:english:)`); every other kind is cut when the pack loads.
+    var shortWords: ClosedRange<Int>? = nil
 
     /// Whether the Arabic is Quran (rendered in the reader's face) rather than a narration or a dua.
     var isQuranArabic: Bool { kind == .ayah || (surah != nil && ayah != nil) }
@@ -93,7 +99,15 @@ struct DailyReminderEntry: Identifiable, Equatable {
         DailyReminderEntry(id: id, kind: kind, arabic: arabic, transliteration: transliteration, short: short,
                            english: english, source: source, target: target, surah: surah, ayah: ayah,
                            repeatCount: repeatCount, hadith: hadith, arabicWords: arabicWords,
-                           englishWords: englishWords, dua: dua)
+                           englishWords: englishWords, dua: dua, shortWords: shortWords)
+    }
+
+    /// The same card with its headline filled in from `shortWords`.
+    func resolved(short: String) -> DailyReminderEntry {
+        DailyReminderEntry(id: id, kind: kind, arabic: arabic, transliteration: transliteration, short: short,
+                           english: english, source: source, target: target, surah: surah, ayah: ayah,
+                           repeatCount: repeatCount, hadith: hadith, arabicWords: arabicWords,
+                           englishWords: englishWords, dua: dua, shortWords: shortWords)
     }
 }
 
@@ -264,6 +278,16 @@ final class DailyReminderStore: ObservableObject {
         return all[((index % all.count) + all.count) % all.count]
     }
 
+    /// The card's headline. Every kind but a verse has it already (cut when the pack loaded, see
+    /// `resolveReferences`); a verse's English comes from the Quran at render time, so its headline
+    /// is cut from `english` here (pack v3's `shortWords`).
+    static func headline(for entry: DailyReminderEntry, english: String) -> String {
+        guard entry.short.isEmpty, let span = entry.shortWords, !english.isEmpty else { return entry.short }
+        let tokens = english.split(whereSeparator: \.isWhitespace)
+        guard span.lowerBound < tokens.count else { return "" }
+        return tokens[span.lowerBound...min(span.upperBound, tokens.count - 1)].joined(separator: " ")
+    }
+
     /// The Arabic and English a card shows: a verse from the Quran itself (an O(1) lookup, in the
     /// Hafs text every face carries), everything else as written.
     func texts(for entry: DailyReminderEntry) -> (arabic: String, english: String) {
@@ -290,7 +314,8 @@ final class DailyReminderStore: ObservableObject {
         let texts = texts(for: entry)
         return DailyWidgetSnapshot.ReminderCard(
             id: entry.id, kind: entry.kind.rawValue, kindLabel: entry.kind.label,
-            arabic: texts.arabic, english: texts.english, short: entry.short,
+            arabic: texts.arabic, english: texts.english,
+            short: Self.headline(for: entry, english: texts.english),
             source: entry.source, fontName: entry.kind == .ayah ? quranFace : nil)
     }
 
@@ -374,7 +399,8 @@ final class DailyReminderStore: ObservableObject {
                     let texts = verseTexts[entry.id] ?? (arabic: entry.arabic, english: entry.english)
                     return DailyWidgetSnapshot.ReminderCard(
                         id: entry.id, kind: entry.kind.rawValue, kindLabel: entry.kind.label,
-                        arabic: texts.arabic, english: texts.english, short: entry.short,
+                        arabic: texts.arabic, english: texts.english,
+                        short: DailyReminderStore.headline(for: entry, english: texts.english),
                         source: entry.source, fontName: entry.kind == .ayah ? quranFace : nil)
                 }
                 // The names' depth (a 16 KB pack) parses here, off-main, if nothing has parsed it yet.
@@ -411,8 +437,15 @@ final class DailyReminderStore: ObservableObject {
 
     private static func parse(_ json: Data) -> [DailyReminderEntry]? {
         guard let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any],
-              // Version 2: a card's words are references into the shelf, the Fortress or the Quran.
-              root["version"] as? Int == 2,
+              // A card's words are references into the shelf, the Fortress or the Quran (v2), and
+              // its headline a range into the English it shows (v3, `shortWords`). Both shapes read
+              // the same here: a v2 pack simply carries no `shortWords`.
+              //
+              // This gate is why the card vanished app-wide: the pack was rebuilt to v3 on
+              // 2026-09-16 while the gate still said `== 2`, so the whole file was rejected, the
+              // corpus parsed to nothing, and every surface that shows the Reminder of the Day drew
+              // an empty section (Abu, 2026-09-18: "gone from Islam tab").
+              let version = root["version"] as? Int, version == 2 || version == 3,
               let rows = root["entries"] as? [[String: Any]] else { return nil }
         func range(_ value: Any?) -> ClosedRange<Int>? {
             guard let pair = value as? [Int], pair.count == 2, pair[0] >= 0, pair[1] >= pair[0] else { return nil }
@@ -438,7 +471,7 @@ final class DailyReminderStore: ObservableObject {
                 repeatCount: row["repeat"] as? Int,
                 hadith: link,
                 arabicWords: range(row["arWords"]), englishWords: range(row["enWords"]),
-                dua: row["dua"] as? String)
+                dua: row["dua"] as? String, shortWords: range(row["shortWords"]))
         }
         return entries.isEmpty ? nil : entries
     }
@@ -483,9 +516,18 @@ final class DailyReminderStore: ObservableObject {
                 }
                 if let dua = fortress?.entryByID[duaID] {
                     arabic = entry.arabicWords.map { words(dua.arabic, $0) } ?? dua.arabic
+                    if let span = entry.englishWords { english = words(dua.translation, span) }
                 }
             }
-            return arabic == entry.arabic && english == entry.english ? entry : entry.resolved(arabic: arabic, english: english)
+            var resolved = arabic == entry.arabic && english == entry.english
+                ? entry
+                : entry.resolved(arabic: arabic, english: english)
+            // The headline, cut from the English the card ends up showing (pack v3). A verse card's
+            // English is not known until render time, so its headline is cut there instead.
+            if entry.kind != .ayah, let span = entry.shortWords, !english.isEmpty {
+                resolved = resolved.resolved(short: words(english, span))
+            }
+            return resolved
         }
     }
 }

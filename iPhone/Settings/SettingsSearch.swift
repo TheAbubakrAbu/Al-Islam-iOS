@@ -264,7 +264,7 @@ extension SettingsSearchEntry.Destination {
     var scope: SettingsSearchScope {
         switch self {
         case .notifications, .notificationReminders, .notificationsPage: return .notifications
-        case .prayerSettings, .travelingMode, .prayerCalculation, .skyColors, .prayerPage: return .prayer
+        case .prayerSettings, .prayerTracker, .travelingMode, .prayerCalculation, .skyColors, .prayerPage: return .prayer
         case .quranSettings, .reciters, .quranPage: return .quran
         case .hadithSettings, .hadithPage: return .hadith
         case .appearance: return .appearance
@@ -336,6 +336,7 @@ enum SettingsSearchDestinationView {
         case .notificationReminders: MoreNotificationView()
         case .notificationsPage(let page): NotificationView(openPage: page)
         case .prayerSettings: SettingsAdhanView(showNotifications: false)
+        case .prayerTracker: PrayerTrackerView()
         case .travelingMode: SettingsAdhanView(showNotifications: false, openPage: .travelingMode)
         case .prayerCalculation: SettingsAdhanView(showNotifications: false, openPage: .prayerCalculation)
         case .skyColors: SettingsAdhanView(showNotifications: false, openPage: .skyColors)

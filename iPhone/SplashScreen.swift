@@ -98,6 +98,11 @@ struct SplashScreen: View {
                 .transition(.opacity)
             }
             .navigationBarTitleDisplayMode(.inline)
+            // As a sheet ("Learn More") this had NO dismiss control at all: the only way out was the
+            // full-width hero button at the bottom of a scroll view (Abu, 2026-09-18). The hero button
+            // stays - it is the screen's own call to action, and on first launch it reads "Get
+            // Started" - but the sheet now also closes from the house X, like every other sheet.
+            .sheetDismissToolbarIf(presentedAsSheet)
             .onAppear(perform: runHeroPopAnimation)
         }
         .navigationViewStyle(.stack)

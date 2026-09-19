@@ -264,11 +264,12 @@ struct PrayerCountdown: View {
             .foregroundStyle(.secondary)
 
             CountdownDigits(target: next.time)
-                // The skyline's ground runs through the gap above these digits, under the caption
-                // (see `SkyCard.arcTopInset`).
-                .reportingSkyDigitsTop()
         }
         .frame(maxWidth: .infinity)
+        // The skyline's ground runs just ABOVE this whole block - the caption and the digits both
+        // sit under the horizon, in clear air (Abu, 2026-09-18: the line used to cut through
+        // "TIME LEFT"). See `SkyCard.arcTopInset`.
+        .reportingSkyDigitsTop()
     }
 
     /// "until Fajr": the footer's right side, shared with the sky card.
@@ -738,9 +739,9 @@ struct AccentGradientBar: View {
 }
 
 #if os(iOS)
-/// The top of the sky card's countdown digits, in `SkyCard.groundSpace`: the skyline's ground runs
-/// just above them, between "TIME LEFT" and the digits (see `SkyCard.arcTopInset`). Nil until the
-/// first layout.
+/// The top of the sky card's whole countdown block ("TIME LEFT" and the digits beneath it), in
+/// `SkyCard.groundSpace`: the skyline's ground runs just above it, so the caption and the digits
+/// are both below the horizon (see `SkyCard.arcTopInset`). Nil until the first layout.
 struct SkyDigitsTopKey: PreferenceKey {
     static let defaultValue: CGFloat? = nil
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {

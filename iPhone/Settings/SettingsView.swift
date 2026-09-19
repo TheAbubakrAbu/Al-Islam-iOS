@@ -22,6 +22,9 @@ struct SettingsSearchEntry: Identifiable {
         case notifications
         case notificationReminders
         case prayerSettings
+        /// The Prayer Tracker screen itself (Al-Adhan tab), which owns its own settings since
+        /// 2026-09-18 - not a Settings page at all, but the search must still reach the toggle.
+        case prayerTracker
         case travelingMode
         case prayerCalculation
         case skyColors
@@ -44,6 +47,7 @@ struct SettingsSearchEntry: Identifiable {
             case .notifications: return "bell.badge.fill"
             case .notificationReminders: return "bell.and.waves.left.and.right.fill"
             case .prayerSettings: return "safari.fill"
+            case .prayerTracker: return "checklist"
             case .travelingMode: return "airplane"
             case .prayerCalculation: return "globe.europe.africa.fill"
             case .skyColors: return "sunset.fill"

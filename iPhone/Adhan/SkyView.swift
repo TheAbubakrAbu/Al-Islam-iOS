@@ -205,6 +205,14 @@ struct SkyView: View {
         .onAppear {
             isOnScreen = true
             clockAnchor = Date()
+            #if DEBUG
+            // `-fakeAdhanPlaying <name>`: the footer opens on the stop button, so its cross-fade back
+            // to the moon line can be verified headlessly (see `ForegroundAdhanPlayer.debugSetPlaying`).
+            let args = ProcessInfo.processInfo.arguments
+            if let index = args.firstIndex(of: "-fakeAdhanPlaying"), args.indices.contains(index + 1) {
+                ForegroundAdhanPlayer.shared.debugSetPlaying(args[index + 1])
+            }
+            #endif
         }
         .onDisappear { isOnScreen = false }
         .onChange(of: scenePhase) { phase in
@@ -284,24 +292,25 @@ struct SkyCard: View {
     /// whenever the columns or the countdown block change height.
     ///
     /// All of that is the PLAIN card's geometry (skyline off). With the skyline on the horizon is the
-    /// ground the pyramids and the mosque stand on, and it is pinned to the gap between the
-    /// countdown's "TIME LEFT" caption and its digits (`digitsTop`, measured through
-    /// `SkyDigitsTopKey`): the caption sits in the sky between the pyramids and the mosque, the sun
-    /// rises out of the pyramids and sets behind the mosque, the day's arc always peaks at
+    /// ground the pyramids and the mosque stand on, and it is pinned just ABOVE the whole countdown
+    /// block - "TIME LEFT" and the digits together (`digitsTop`, measured through `SkyDigitsTopKey`):
+    /// the sun rises out of the pyramids and sets behind the mosque, the day's arc always peaks at
     /// `arcTopInset`, and the night's path dips as far under the ground as the day rises above it,
-    /// behind the digits and the bar (Abu, 2026-09-16: first "at the countdown", then, when that
-    /// pinned the night to a shallow dip, "a real solar graph going all the way down and up", then
-    /// "in between Time Left and the countdown").
+    /// behind the caption, the digits and the bar (Abu, 2026-09-16: first "at the countdown", then,
+    /// when that pinned the night to a shallow dip, "a real solar graph going all the way down and
+    /// up", then "in between Time Left and the countdown"; 2026-09-18: the line went above the text
+    /// and the countdown entirely, so nothing is struck through by the horizon).
     private let arcTopInset: CGFloat = 68
     private let arcBottomInset: CGFloat = 88
 
-    /// The top of the countdown's digits in the card's coordinate space, as `PrayerCountdown` reports
-    /// it; nil until the first layout. The estimate stands in for that first frame so the ground does
-    /// not jump: 200 less the bottom padding, the footer line, its top padding, the bar and the digits.
+    /// The top of the countdown BLOCK ("TIME LEFT" and the digits under it) in the card's coordinate
+    /// space, as `PrayerCountdown` reports it; nil until the first layout. The estimate stands in for
+    /// that first frame so the ground does not jump: 200 less the bottom padding, the footer line, its
+    /// top padding, the bar, the digits, and the caption above them.
     @State private var digitsTop: CGFloat?
-    private static let estimatedDigitsTop: CGFloat = 122
-    /// The ground line sits this far above the digits, in the 2 pt gap under the caption.
-    private static let groundAir: CGFloat = 1
+    private static let estimatedDigitsTop: CGFloat = 108
+    /// The ground line sits this far above the countdown block, in the air over "TIME LEFT".
+    private static let groundAir: CGFloat = 4
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -516,6 +525,13 @@ struct SkyCard: View {
 
     /// The card's last line: the moon's phase, and which prayer the countdown runs to. While the adhan
     /// sounds in-app the stop button replaces both.
+    ///
+    /// BOTH branches carry a transition, and they are deliberately opposite `move` edges so the two
+    /// lines cross-fade as one line changing rather than as two things swapping. Only the stop button
+    /// had one before (2026-09-16), which is why stopping the adhan looked like the button simply
+    /// vanishing (Abu, 2026-09-18): an `if`/`else` swaps both branches in the SAME transaction, so
+    /// the un-transitioned moon row snapped in at full opacity on top of the button's fade and hid
+    /// it completely. A transition on one side of a swap is never enough.
     @ViewBuilder
     private var footer: some View {
         if let playingPrayerName = adhanPlayer.playingPrayerName {
@@ -535,6 +551,7 @@ struct SkyCard: View {
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
@@ -606,8 +623,9 @@ struct SkyCard: View {
             let rect = CGRect(origin: .zero, size: geo.size)
             let displayedFraction = window.fraction(of: displayedDate)
             let showsScene = settings.showSkyScene
-            // The skyline pins the ground between "TIME LEFT" and the digits (see `arcTopInset`),
-            // and the night dips as deep as the day climbs, short of the card's bottom edge.
+            // The skyline pins the ground just above the countdown block - over "TIME LEFT" and the
+            // digits both (see `arcTopInset`) - and the night dips as deep as the day climbs, short
+            // of the card's bottom edge.
             let groundY = (digitsTop ?? Self.estimatedDigitsTop) - Self.groundAir
             let ground = showsScene
                 ? SkyGround(y: groundY,

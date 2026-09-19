@@ -76,7 +76,8 @@ struct HadithView: View {
     @AppStorage("showHadithBookmarks") private var showHadithBookmarks = true
     /// The Hadith tab's OWN grid/list choice - deliberately decoupled from the app-wide `gridMode`
     /// switch, so flipping the hadith catalog doesn't flip the Quran, 99 Names, and Islam grids too.
-    @AppStorage("hadithGridMode") private var hadithGridMode = false
+    /// Grid by default, like every other catalog (Abu, 2026-09-18).
+    @AppStorage("hadithGridMode") private var hadithGridMode = true
     /// "Scroll to book" from a search result: clears the search and lands the catalog on this book.
     @State private var pendingScrollToBookSlug: String? = nil
     /// Apple Music-style bar minimization: true while scrolling down.

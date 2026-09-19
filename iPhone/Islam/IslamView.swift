@@ -363,13 +363,6 @@ struct IslamView: View {
     @ViewBuilder
     private func islamListEntries(split: Bool) -> some View {
         Group {
-            // The Reminder of the Day lives HERE, as the first card of the tab (Abu, 2026-09-12:
-            // "keep it in Islam, don't have it be a sheet"). It renders only once the corpus has
-            // parsed, so the resource grid never waits on it.
-            #if os(iOS)
-            ReminderOfTheDaySection()
-            #endif
-
             Group {
                 #if os(iOS)
                 if split, #available(iOS 16.0, *) {
@@ -383,6 +376,15 @@ struct IslamView: View {
                 resourcesSection
                 #endif
             }
+
+            // The Reminder of the Day lives in the Islam tab (Abu, 2026-09-12: "keep it in Islam,
+            // don't have it be a sheet"), directly UNDER the resources rather than above them
+            // (2026-09-18) - the tab opens on what it is for, and the card is the first thing past
+            // it. It renders only once the corpus has parsed, so the resource grid never waits on it.
+            #if os(iOS)
+            ReminderOfTheDaySection()
+                .id("reminder")
+            #endif
 
             ProphetQuote()
             AlIslamAppsSection()
@@ -451,6 +453,11 @@ struct IslamView: View {
             // `-islamScrollToApps`: bring the app tiles at the foot of the list into a screenshot.
             if ProcessInfo.processInfo.arguments.contains("-islamScrollToApps") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = "apps" }
+            }
+            // `-islamScrollToReminder`: bring the Reminder of the Day card under the resources
+            // into a screenshot (there is no scroll tooling for the simulator).
+            if ProcessInfo.processInfo.arguments.contains("-islamScrollToReminder") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = "reminder" }
             }
             if let seeded = IslamSearchDebug.launchQuery("-islamSearch"), searchText.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
@@ -1247,6 +1254,15 @@ struct AlIslamAppsSection: View {
             .onAppear(perform: runAppCardsPopAnimation)
             #if DEBUG
             .onAppear { MemoryFootprint.logLater("app tiles") }
+            #endif
+            #if os(iOS) && DEBUG
+            // `-openLearnMore` (pair it with `-islamScrollToApps`, which brings this card on
+            // screen): opens the Learn More sheet for screenshot runs - taps aren't scriptable.
+            .onAppear {
+                if ProcessInfo.processInfo.arguments.contains("-openLearnMore") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showLearnMoreSheet = true }
+                }
+            }
             #endif
             .onDisappear {
                 withAnimation {

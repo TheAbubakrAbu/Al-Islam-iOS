@@ -209,16 +209,20 @@ struct DuaSessionView: View {
             }
             .navigationTitle(collection.title)
             .navigationBarTitleDisplayMode(.inline)
+            // The house X on the LEFT, like every other sheet (Abu, 2026-09-18) - this one used a
+            // filled `xmark.circle.fill` on the trailing side. Hand-rolled rather than
+            // `.sheetDismissToolbar()` only because closing must also stop the speech.
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button {
                         settings.hapticFeedback()
                         speech.stop()
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
                     }
+                    .tint(settings.accentColor.color)
                     .accessibilityLabel("Close the session")
                 }
             }

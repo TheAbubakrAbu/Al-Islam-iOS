@@ -2191,8 +2191,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
     /// historical name so existing users' Quran preference carries over. The retired per-screen
     /// `arabicDisplayMode` / `namesDisplayMode` strings are no longer migrated - those screens default to
-    /// list until re-toggled.)
-    @AppStorage("quranGridMode") var gridMode = false
+    /// grid until re-toggled.)
+    ///
+    /// Grid is the DEFAULT everywhere (Abu, 2026-09-18). Only a fresh install sees it: `@AppStorage`
+    /// returns the stored value for anyone who has ever flipped a grid icon, so an existing reader who
+    /// chose lists keeps them.
+    @AppStorage("quranGridMode") var gridMode = true
     
     /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab; the Hadith tab and the Quran tab
     /// own theirs). -1 = "not chosen yet": falls back to the app-wide `gridMode`, so existing users keep

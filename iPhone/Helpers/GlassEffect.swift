@@ -289,5 +289,13 @@ extension View {
     func sheetDismissToolbar(onConfirm: (() -> Bool)? = nil) -> some View {
         modifier(SheetDismissToolbar(onConfirm: onConfirm))
     }
+
+    /// `sheetDismissToolbar()` only when this copy of the screen IS a sheet. For the views that are
+    /// reached both ways (pushed onto a stack and presented as a sheet): a pushed copy already has
+    /// the stack's back button, and a second dismiss control beside it is wrong.
+    @ViewBuilder
+    func sheetDismissToolbarIf(_ isSheet: Bool, onConfirm: (() -> Bool)? = nil) -> some View {
+        if isSheet { modifier(SheetDismissToolbar(onConfirm: onConfirm)) } else { self }
+    }
     #endif
 }

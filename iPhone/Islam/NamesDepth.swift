@@ -197,6 +197,9 @@ struct NameDetailView: View {
     @ObservedObject private var quranData = QuranData.shared
 
     let name: NameOfAllah
+    /// True when presented as a sheet (the Names list's "More about this name"), which is the only
+    /// case that needs its own Done button - a pushed copy gets the stack's back button.
+    var isSheet: Bool = false
 
     private var accent: Color { appearance.accent }
     private var depth: NameDepth? { NamesDetailsStore.shared.detail(name.number) }
@@ -263,6 +266,8 @@ struct NameDetailView: View {
         .applyConditionalListStyle()
         .navigationTitle(name.transliteration)
         .navigationBarTitleDisplayMode(.inline)
+        // The house X, not a text "Done" (Abu, 2026-09-18): every sheet dismisses the same way.
+        .sheetDismissToolbarIf(isSheet)
     }
 
     private var heroSection: some View {
@@ -349,22 +354,31 @@ struct NameDetailView: View {
     }
 }
 
-/// The door from a name's row into its page.
+/// The door from a name's row into its page: "More about this name", which opens the name's depth
+/// as a SHEET rather than pushing it (Abu, 2026-09-18).
+///
+/// A push was the bug as much as the style: the expanded row already carries a hidden
+/// `NavigationLink` for "View First Found", and SwiftUI fires EVERY link in a List row on a tap, so
+/// one tap here opened both screens (the depth, with the ayah stacked behind it). A sheet takes the
+/// second link out of the row entirely, which is what actually fixes it - and the chevron goes with
+/// the push, since a sheet does not lead anywhere deeper.
 struct NameDetailLink: View {
     @Environment(\.appearance) private var appearance
     let name: NameOfAllah
 
+    @State private var showsDetail = false
+
     var body: some View {
-        NavigationLink(destination: LazyDestination { NameDetailView(name: name) }) {
+        Button {
+            Settings.shared.hapticFeedback()
+            showsDetail = true
+        } label: {
             HStack(spacing: 6) {
                 Image(systemName: "text.book.closed")
                     .font(.caption.weight(.semibold))
                 Text("More about this name")
                     .font(.caption.weight(.semibold))
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
             }
             .foregroundColor(appearance.accent)
             .padding(.vertical, 8)
@@ -374,6 +388,11 @@ struct NameDetailLink: View {
         }
         .buttonStyle(.plain)
         .padding(.top, 6)
+        .sheet(isPresented: $showsDetail) {
+            SheetNavigationContainer {
+                NameDetailView(name: name, isSheet: true)
+            }
+        }
     }
 }
 #endif

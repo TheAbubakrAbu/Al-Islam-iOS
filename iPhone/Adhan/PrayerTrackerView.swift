@@ -553,6 +553,7 @@ struct PrayerTrackerView: View {
             statsSection
             historySection
             mensesSection
+            settingsSection
             guidanceSection
         }
         .environment(\.defaultMinListRowHeight, 1)
@@ -1525,6 +1526,28 @@ struct PrayerTrackerView: View {
     }
 
     // MARK: Guidance
+
+    /// The tracker's own settings, on the tracker (Abu, 2026-09-18: "move it to inside the actual
+    /// prayer tracker, not in settings"). It used to be a PRAYER TRACKER section under Prayer
+    /// Settings, two screens away from the rows it governs; the Settings search still finds it and
+    /// now lands here. `MoreNotificationView` is reached from `guidanceSection` below on the same
+    /// reasoning.
+    private var settingsSection: some View {
+        Section(header: Text("SETTINGS")) {
+            VStack(alignment: .leading) {
+                Toggle("Mark Only After the Time Begins", isOn: $settings.trackerRequiresPrayerTime.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.trackerRequiresPrayerTime) { _ in settings.hapticFeedback() }
+
+                Text("A prayer can only be marked once its time has come in, so the row shows what is still left to pray. Off, the whole day can be marked at any time. Past days can always be filled in either way.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+        }
+    }
 
     private var guidanceSection: some View {
         Section(header: Text("GOOD TO KNOW")) {

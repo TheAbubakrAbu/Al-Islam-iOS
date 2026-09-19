@@ -23,7 +23,6 @@ struct WidgetGalleryView: View {
     let page: String
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dismiss) private var dismiss
 
     private let entry: PrayersEntry
     private let sizes: WidgetSizes
@@ -56,11 +55,8 @@ struct WidgetGalleryView: View {
             .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Widgets: \(page)")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            // The house X, not a text "Done" (Abu, 2026-09-18).
+            .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
     }
