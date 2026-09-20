@@ -67,6 +67,34 @@ struct IslamArticleGroup: Identifiable {
     let entries: [IslamArticleEntry]
 
     var id: String { "\(home.rawValue)/\(title)" }
+
+    /// The group's icon, drawn on every row in it as an `AccentIconChip` (Abu, 2026-09-19: the index
+    /// rows were bare text while every other list in the app leads with a chip, so Pillars and the
+    /// How-to Guides read as a different, plainer app). Keyed off the group title, which is the one
+    /// thing every row in a section already shares.
+    var systemImage: String {
+        switch title {
+        case "THE BASICS":                      return "questionmark.circle"
+        case "THE 5 PILLARS OF ISLAM":          return "building.columns"
+        case "THE 6 PILLARS OF IMAN (FAITH)":   return "heart"
+        case "THE 25 PROPHETS NAMED IN THE QURAN": return "person.wave.2"
+        case "THE THREE HOLY MOSQUES":          return "building.2"
+        case "QURAN & TAFSIR":                  return "book.closed"
+        case "THE ISLAMIC CALENDAR":            return "calendar"
+        case "HISTORICAL & BIOGRAPHICAL":       return "clock.arrow.circlepath"
+        case "SCHOLARS OF AHL AS-SUNNAH":       return "text.book.closed"
+        case "SALAFIYYAH: THE WAY OF THE SALAF": return "arrow.triangle.branch"
+        case "ANSWERING OTHER PATHS":           return "bubble.left.and.bubble.right"
+        case "HOW TO WORSHIP":                  return "hands.sparkles"
+        case "PURIFICATION & PRAYER":           return "drop"
+        case "MORE PRAYERS":                    return "moon.stars"
+        case "PRAYER IN SPECIAL CASES":         return "airplane"
+        case "FASTING & CHARITY":               return "sunrise"
+        case "EID":                             return "sparkles"
+        case "FAITH & THE HEART":               return "heart.text.square"
+        default:                                return "doc.text"
+        }
+    }
 }
 
 /// An article to open on top of its index: what a result on the Islam tab's root asks Pillars & Beliefs
@@ -100,6 +128,8 @@ enum IslamArticleCatalog {
             ("IslamPillarView", "What is Islam?", "islam", ["religion", "submission"]),
             ("MuslimPillarView", "What is a Muslim?", "muslim", ["believer", "mumin"]),
             ("AllahPillarView", "Who is Allah \u{FDFB}\u{200E}?", "allah", ["god", "allah"]),
+            ("NamesOfAllahPillarView", "The 99 Names of Allah", "names-of-allah",
+             ["99 names", "ninety-nine", "asma", "husna", "asma ul husna", "beautiful names", "attributes", "ahsaha"]),
             ("QuranPillarView", "What is the Quran?", "quran", ["koran", "book", "revelation"]),
             ("ProphetPillarView", "Who is Prophet Muhammad \u{FDFA}?", "prophet", ["messenger", "rasul", "muhammad"]),
             ("SunnahPillarView", "What is the Sunnah?", "sunnah", ["tradition", "way of the prophet"]),
@@ -323,25 +353,32 @@ struct IslamArticleIndexSections: View {
         ForEach(groups) { group in
             Section(header: Text(group.title)) {
                 ForEach(group.entries) { entry in
-                    row(entry)
+                    row(entry, icon: group.systemImage)
                 }
             }
         }
     }
 
+    /// One index row: an accent chip, then the title. Every other list in the app leads with a chip
+    /// (the Islam root's `toolLabel`, the Hadith books, the resource rows), and these indexes used to
+    /// be bare text in two different sizes - a headline accent for THE BASICS and small grey
+    /// subheadline for everything else - which read as two different screens stitched together
+    /// (Abu, 2026-09-19: "list mode looks ugly in a lot of places"). Now every row is the same
+    /// shape; THE BASICS keeps its accent, as the entry point it is, but at the same size as its
+    /// neighbours.
     @ViewBuilder
-    private func row(_ entry: IslamArticleEntry) -> some View {
+    private func row(_ entry: IslamArticleEntry, icon: String) -> some View {
         let link = NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
-            if entry.emphasized {
+            HStack(spacing: 12) {
+                AccentIconChip(systemImage: icon, size: 29)
+
                 Text(entry.title)
-                    .foregroundColor(appearance.accent)
-                    .font(.headline)
-            } else {
-                Text(entry.title)
-                    .font(.subheadline)
+                    .font(.subheadline.weight(entry.emphasized ? .semibold : .regular))
+                    .foregroundColor(entry.emphasized ? appearance.accent : .primary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, 3)
         }
-        .padding(.vertical, 4)
         .id(entry.listID)
 
         #if os(iOS)
@@ -1339,6 +1376,14 @@ enum ArticleSources {
             ArticleSource(title: "Kitab at-Tawhid", subtitle: "Muhammad ibn Abd al-Wahhab, with Fath al-Majid by Abd ar-Rahman ibn Hasan"),
             ArticleSource(title: "Importance of knowing the Beautiful Names of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/4043"),
             ArticleSource(title: "Important questions about the beliefs of Ahl as-Sunnah concerning the names and attributes of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/155478"),
+        ],
+        "NamesOfAllahPillarView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari 2736 and Sahih Muslim 2677, with the graded Sunan"),
+            ArticleSource(title: "Al-Qawa'id al-Muthla", subtitle: "Ibn al-Uthaymin, the rules governing the names and attributes of Allah"),
+            ArticleSource(title: "Al-Aqidah al-Wasitiyyah", subtitle: "Ibn Taymiyyah, with the commentary of Ibn al-Uthaymin"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, on Sahih al-Bukhari 2736 and the enumeration"),
+            ArticleSource(title: "Importance of knowing the Beautiful Names of Allah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/4043"),
+            ArticleSource(title: "The 99 Names of Allah", subtitle: "Al-Asma al-Husna with transliteration and meanings", url: "https://99namesofallah.name/"),
         ],
         "QuranPillarView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

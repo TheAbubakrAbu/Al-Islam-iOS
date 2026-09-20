@@ -1073,6 +1073,9 @@ struct HijriCalendarView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Hijri Calendar")
+        #if os(iOS)
+        .openScreen(.hijriArticle)
+        #endif
         .selectableArticleList(article: "HijriCalendarView")
     }
 }
@@ -1549,16 +1552,19 @@ struct TajweedView: View {
                 }
 
                 Section(header: ArticleHeader("FOR MORE DETAILS")) {
-                    NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(verbatim: "Tajweed Foundations")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(appearance.accent)
-                            Text(verbatim: "Comprehensive guide with rules, topics, and detailed explanations")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                    // Foundations links straight back to this article, so the pair is a corridor.
+                    // This file compiles for the Watch, where `OpenScreenLink` does not exist.
+                    #if os(iOS)
+                    OpenScreenLink(screen: .tajweedFoundations) {
+                        TajweedFoundationsView()
+                    } label: {
+                        tajweedFoundationsRowLabel
                     }
+                    #else
+                    NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
+                        tajweedFoundationsRowLabel
+                    }
+                    #endif
                 }
 
                 Section(header: ArticleHeader("RESOURCES")) {
@@ -1576,6 +1582,9 @@ struct TajweedView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Tajweed")
+        #if os(iOS)
+        .openScreen(.tajweedArticle)
+        #endif
         .selectableArticleList(article: "TajweedView")
         #if os(iOS)
         .sheet(isPresented: $showTajweedLegend) {
@@ -1586,6 +1595,19 @@ struct TajweedView: View {
             .smallMediumSheetPresentation()
         }
         #endif
+    }
+
+    /// The Foundations row's face, shared by the iOS `OpenScreenLink` and the Watch's plain link, so
+    /// the two branches can never drift.
+    private var tajweedFoundationsRowLabel: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(verbatim: "Tajweed Foundations")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(appearance.accent)
+            Text(verbatim: "Comprehensive guide with rules, topics, and detailed explanations")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
     }
 }
 
@@ -1874,15 +1896,21 @@ struct QiraatView: View {
                 // the riwayat actually differ, ayah by ayah, with every reading side by side.
                 #if os(iOS)
                 Section(header: ArticleHeader("EXPLORE")) {
-                    NavigationLink(destination: LazyDestination { QiraatExplorerView() }) {
+                    OpenScreenLink(screen: .qiraatExplorer) {
+                        QiraatExplorerView()
+                    } label: {
                         QiraatDoorRow(systemImage: "arrow.left.and.right.text.vertical", title: "Qiraat Explorer",
                                       subtitle: "Every place the riwayat differ, ayah by ayah: what changes, what it means, and all twenty readings side by side")
                     }
-                    NavigationLink(destination: LazyDestination { QiraatExplorerView(mode: .duel) }) {
+                    OpenScreenLink(screen: .qiraatExplorer) {
+                        QiraatExplorerView(mode: .duel)
+                    } label: {
                         QiraatDoorRow(systemImage: "arrow.left.arrow.right", title: "Head-to-Head",
                                       subtitle: "Pick any two riwayat and step through the places where they part ways")
                     }
-                    NavigationLink(destination: LazyDestination { QiraatIsnadIndexView() }) {
+                    OpenScreenLink(screen: .qiraatIsnadIndex) {
+                        QiraatIsnadIndexView()
+                    } label: {
                         QiraatDoorRow(systemImage: "point.3.connected.trianglepath.dotted", title: "Chains to the Prophet ﷺ",
                                       subtitle: "Every reading's isnad as a diagram: narrator, imam, Successors, Companions, the Prophet ﷺ")
                     }
@@ -2091,7 +2119,9 @@ struct QiraatView: View {
                         .font(.body)
 
                     #if os(iOS)
-                    NavigationLink(destination: LazyDestination { QiraatIsnadIndexView() }) {
+                    OpenScreenLink(screen: .qiraatIsnadIndex) {
+                        QiraatIsnadIndexView()
+                    } label: {
                         Label("See every chain as a diagram, link by link", systemImage: "point.3.connected.trianglepath.dotted")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(appearance.accent)
@@ -2267,6 +2297,9 @@ struct QiraatView: View {
         }
         #endif
         .navigationTitle("10 Qiraat (Recitations)")
+        #if os(iOS)
+        .openScreen(.qiraatArticle)
+        #endif
         .selectableArticleList(article: "QiraatView")
     }
 

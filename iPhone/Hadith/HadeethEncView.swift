@@ -815,9 +815,12 @@ struct HadeethEncCategoryView: View {
                 if !hadiths.isEmpty {
                     Section(header: SectionPillHeader(title: children.isEmpty ? "HADITHS" : "HADITHS IN THIS TOPIC", count: hadiths.count)) {
                         ForEach(hadiths) { entry in
-                            NavigationLink(destination: LazyDestination {
+                            // A hadith lists its topics, including the one you arrived from, so the
+                            // pair loops. Keyed by ID: only the hadith you came FROM greys out, never
+                            // every hadith just because some hadith is open.
+                            OpenScreenLink(screen: .hadeethEncHadith, id: entry.id) {
                                 HadeethEncHadithView(entry: entry)
-                            }) {
+                            } label: {
                                 HadeethEncHadithRow(entry: entry, query: "").equatable()
                             }
                         }
@@ -838,6 +841,7 @@ struct HadeethEncCategoryView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle(category.english)
+        .openScreen(.hadeethEncCategory, id: category.id)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             guard !loaded else { return }
@@ -1071,9 +1075,11 @@ struct HadeethEncHadithView: View {
                 if !topics.isEmpty {
                     Section(header: Text("TOPICS")) {
                         ForEach(topics) { topic in
-                            NavigationLink(destination: LazyDestination {
+                            // The other half. Only the topic you came from greys; the hadith's OTHER
+                            // topics are exactly where a reader should be able to go next.
+                            OpenScreenLink(screen: .hadeethEncCategory, id: topic.id) {
                                 HadeethEncCategoryView(category: topic)
-                            }) {
+                            } label: {
                                 HadeethEncCategoryRow(category: topic)
                             }
                         }
@@ -1086,6 +1092,7 @@ struct HadeethEncHadithView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Hadith \(entry.id)")
+        .openScreen(.hadeethEncHadith, id: entry.id)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

@@ -1,5 +1,26 @@
 import SwiftUI
 
+/// The corner radius every rectangular glass surface uses, and that anything drawn ON one of them
+/// (a selection border, a focus ring) must match.
+///
+/// It used to live privately inside the glass modifier while call sites that decorated a glass tile
+/// hardcoded their own guess. The iPad/Mac sidebar's selection border guessed 12 against the tile's
+/// real 24, so the highlight cut visible corners inside the tile it was meant to outline
+/// (Abu, 2026-09-19, with a screenshot). One constant, so a border cannot drift from its shape again.
+enum GlassCorner {
+    /// The radius of `conditionalGlassEffect(rectangle: true)`. A 24pt curve reads right on
+    /// iPhone-sized cards; on the watch's small tiles it rounds them into near-stadiums that look
+    /// chopped, so the watch uses a gentler one.
+    static var rectangle: CGFloat {
+        #if os(watchOS)
+        14
+        #else
+        24
+        #endif
+    }
+}
+
+
 struct ConditionalGlassEffect: ViewModifier {
     // The appearance snapshot, not `Settings`: this modifier sits on ~205 sites (35 on the Adhan tab
     // alone), and as an `@ObservedObject` each one was a subscriber that re-ran on every Settings
@@ -29,13 +50,7 @@ struct ConditionalGlassEffect: ViewModifier {
 
     /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
     /// near-stadiums that look chopped, so the watch uses a gentler curve.
-    private var rectangleCornerRadius: CGFloat {
-        #if os(watchOS)
-        14
-        #else
-        24
-        #endif
-    }
+    private var rectangleCornerRadius: CGFloat { GlassCorner.rectangle }
 
     func body(content: Content) -> some View {
         // `appearance.liquidGlass` is false on every pre-26 system and under the Classic Look (manual,

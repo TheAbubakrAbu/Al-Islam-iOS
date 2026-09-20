@@ -273,6 +273,10 @@ struct TasbihStatsStrip: View {
 }
 
 struct TasbihView: View {
+    #if os(iOS)
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
+
     @ObservedObject var settings = Settings.shared
 
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -301,9 +305,20 @@ struct TasbihView: View {
                 #if os(watchOS)
                 activeTasbihSection
                 #endif
+
+                // A counter counts; this says what is being counted and why (Abu, 2026-09-19).
+                #if os(iOS)
+                AboutSignsSection(heading: "About Dhikr",
+                                  systemImage: "circles.hexagonpath",
+                                  doors: [.dhikrVirtue, .tawhid, .makeDua],
+                                  openDoor: $aboutDoor)
+                #endif
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         #if os(iOS)
         // A plain adaptive inset (safeAreaBar on iOS 26): just the card, no wrapping stack and no solid
         // backdrop, so it floats like every other bottom bar and never shrinks on scroll.

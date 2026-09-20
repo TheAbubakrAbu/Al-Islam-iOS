@@ -1281,7 +1281,188 @@ struct DismissKeyboardOnScrollModifier: ViewModifier {
     }
 }
 
+#if os(iOS)
+/// A calculator's explanation, moved off the screen and behind a tap.
+///
+/// The zakah and inheritance screens carry a lot of fiqh - which view they follow, who held what,
+/// the hadith behind a threshold - and it is the most valuable thing on them. It was also printed
+/// as section footers, so ~340 words sat between the reader and the number they came for (Abu,
+/// 2026-09-19: "so cluttered and ugly and confusing"). Nothing is deleted: each section keeps a
+/// one-line caption and puts the full text behind this button, which opens it as a sheet.
+struct ExplainerButton: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let title: String
+    let body_: String
+    /// A short line that stays visible under the section, when one is worth having.
+    var caption: String? = nil
+
+    @State private var showing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let caption {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button {
+                settings.hapticFeedback()
+                showing = true
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "info.circle")
+                        .font(.caption2.weight(.semibold))
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundColor(settings.accentColor.accent1)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showing) {
+            SheetNavigationContainer {
+                List {
+                    Section {
+                        Text(body_)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 2)
+                    }
+                    .themedListRowBackground()
+                }
+                .applyConditionalListStyle()
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .sheetDismissToolbar()
+            }
+        }
+    }
+}
+
+/// The big answer a calculator exists to produce, at the TOP of its screen.
+struct CalculatorResultCard<Detail: View>: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let title: String
+    let value: String
+    /// Shown under the number: the working, or why there is nothing to pay.
+    @ViewBuilder let detail: () -> Detail
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                .foregroundColor(settings.accentColor.accent2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+
+            detail()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+}
+
+/// The "Choose Reciter" row every play menu opens with, captioned with who is reciting right now
+/// (Abu, 2026-09-19: the menu said only "Choose Reciter", so the current reciter was invisible until
+/// you opened the picker).
+///
+/// A `Label` cannot carry a subtitle, but a menu Button whose label is a `VStack` of two `Text`s
+/// renders as a title with a smaller grey line under it - the shape Apple's own menus use. The
+/// `Image` has to come from a sibling `HStack` rather than `Label` to keep the glyph aligned to the
+/// title line.
+struct ChooseReciterMenuLabel: View {
+    var title: String = "Choose Reciter"
+
+    var body: some View {
+        // Read at BUILD time, not observed: a menu's content is rebuilt each time it opens, so the
+        // caption is always current without this label subscribing to Settings.
+        let reciter = Settings.shared.currentReciterDisplayName
+        return VStack(alignment: .leading, spacing: 1) {
+            Label(title, systemImage: "headphones")
+            Text(reciter)
+        }
+    }
+}
+
+/// The reciter picker as a sheet, with the house X. Was copy-pasted into the Quran list, the reader
+/// and the page reader; now also used by the per-ayah menu, whose Play/Repeat submenus grew their own
+/// "Choose Reciter" entry (Abu, 2026-09-19).
+struct ReciterPickerSheet: ViewModifier {
+    @ObservedObject private var settings = Settings.shared
+    @Binding var isPresented: Bool
+
+    func body(content: Content) -> some View {
+        content.sheet(isPresented: $isPresented) {
+            SheetNavigationContainer {
+                ReciterListView(dismissAfterSelectingReciter: true, autoScrollToInitialSelection: false)
+                    .environmentObject(settings)
+                    .sheetDismissToolbar()
+            }
+        }
+    }
+}
+
+/// A grid tile that taps to act and PRESSES-AND-HOLDS to open its row's menu.
+///
+/// Grid tiles carried no menu for most of this app's life, because a `.contextMenu` on a tile lifts the
+/// WHOLE `List` row as its preview - and a grid is one `LazyVGrid` inside a single row, so every tile in
+/// the section rose at once. The workaround was a corner star for favoriting and nothing else, which left
+/// the grid modes with a fraction of the actions the list rows offer.
+///
+/// `Menu { } label: { } primaryAction: { }` has neither problem: `primaryAction` runs on a plain tap, the
+/// menu opens on a long press, and SwiftUI renders it as a popover anchored to the LABEL rather than as a
+/// lifted context-menu preview of the row. `TrackerPrayerToggle` (PrayerTrackerView.swift) proved the
+/// pattern on the prayer tracker's five slots; Abu asked for it across every grid (2026-09-19).
+///
+/// Two rules for call sites:
+/// - Put `.contentShape(Rectangle())` INSIDE the label, so the whole tile is pressable.
+/// - Keep `gridFavoriteStar` OUTSIDE this call. Inside the label its 30 pt tap target competes with the
+///   menu's long press; outside, the star keeps its own tap and the rest of the tile keeps the menu.
+struct GridTileMenu<Label: View, Menu: View>: View {
+    let primaryAction: () -> Void
+    @ViewBuilder let menu: () -> Menu
+    @ViewBuilder let label: () -> Label
+
+    var body: some View {
+        SwiftUI.Menu {
+            menu()
+        } label: {
+            label()
+        } primaryAction: {
+            primaryAction()
+        }
+        // The tile IS the control - a menu chevron drawn into a 4-across grid cell is noise.
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+    }
+}
+#endif
+
 extension View {
+    #if os(iOS)
+    /// See `ReciterPickerSheet`.
+    func reciterPickerSheet(isPresented: Binding<Bool>) -> some View {
+        modifier(ReciterPickerSheet(isPresented: isPresented))
+    }
+
+    /// Wraps this view as a `GridTileMenu`'s label. See that type for the whole story.
+    func gridTileMenu<MenuContent: View>(
+        primaryAction: @escaping () -> Void,
+        @ViewBuilder menu: @escaping () -> MenuContent
+    ) -> some View {
+        GridTileMenu(primaryAction: primaryAction, menu: menu) { self }
+    }
+    #endif
+
     /// The corner favorite star every grid tile shares: a small overlay (never part of the tile's own
     /// stack, so it costs no layout) tucked into the top-trailing corner with a hair of breathing room.
     /// The visible glyph is small; the tap target is padded well past it.
@@ -1375,10 +1556,19 @@ struct AccentIconChip: View {
 
     let systemImage: String
     var tint: Color? = nil
+    /// A SECOND colour, so the chip can carry two: it then runs from `tint` at the top-leading corner
+    /// to this at the bottom-trailing, in place of the one-colour light-to-dark ramp. Islam Settings is
+    /// the reason it exists (Abu, 2026-09-19): that section covers the whole app rather than one tab, so
+    /// its row wears BOTH of Al-Islam's colours, yellow into green, where Prayer/Quran/Hadith each wear
+    /// their own single one.
+    var secondaryTint: Color? = nil
     var size: CGFloat = 29
 
     var body: some View {
         let tint = tint ?? appearance.accent
+        // One colour ramps light-to-dark as it always has; two run corner to corner at full strength,
+        // since dimming the second half would read as a smudge rather than as a second colour.
+        let colors: [Color] = secondaryTint.map { [tint, $0] } ?? [tint.opacity(0.95), tint.opacity(0.65)]
         Image(systemName: systemImage)
             // Scales with the chip (~footnote at the default 29pt), so mini chips stay balanced.
             .font(.system(size: size * 0.45, weight: .semibold))
@@ -1388,7 +1578,7 @@ struct AccentIconChip: View {
                 RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [tint.opacity(0.95), tint.opacity(0.65)],
+                            colors: colors,
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )

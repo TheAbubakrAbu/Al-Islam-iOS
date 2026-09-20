@@ -5,6 +5,13 @@ struct TajweedFoundationsView: View {
     @State private var debugOpenLessons = false
     #endif
     @ObservedObject var settings = Settings.shared
+    #if os(iOS)
+    /// The merged course's progress, so the lead section can say where the reader is up to.
+    @ObservedObject private var lessonProgress = TajweedLessonProgress.shared
+    /// The course itself, for the lesson/minute counts. Parsed off the main thread by the store; nil
+    /// until it lands, which only blanks the counts, never the section.
+    @State private var course: TajweedLessonsStore.Course? = TajweedLessonsStore.shared.courseIfLoaded
+    #endif
     @State private var showTajweedLegend = false
 
     private let topics: [String] = [
@@ -23,9 +30,69 @@ struct TajweedFoundationsView: View {
         "Waqf (Stopping)"
     ]
 
+    #if os(iOS)
+    /// The course's own entry card: what it is, how long it takes, and how far in you already are.
+    /// The counts come from the parsed course and are simply absent until it lands, which is why the
+    /// copy never depends on them being there.
+    @ViewBuilder
+    private var courseCard: some View {
+        let all = (course?.chapters ?? []).flatMap(\.lessons)
+        let doneCount = all.filter { lessonProgress.isDone($0.id) }.count
+        let minutes = all.reduce(0) { $0 + $1.minutes }
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                AccentIconChip(systemImage: "graduationcap.fill", size: 34)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Tajweed Lessons")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+
+                    if all.isEmpty {
+                        Text("A guided course in four steps, from reading the letters to reading the mushaf.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("\(all.count) lessons, about \(minutes) minutes in all, from reading the letters to reading the mushaf. Each one states the rule, shows it in real ayahs you can hear, and ends with a self-check.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            if doneCount > 0, !all.isEmpty {
+                ProgressView(value: Double(doneCount), total: Double(max(1, all.count)))
+                    .tint(settings.accentColor.color)
+
+                Text("\(doneCount) of \(all.count) lessons done")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+    #endif
+
     var body: some View {
         List {
             Group {
+            // The course used to be its own Islamic Resources tile, which split one subject across two
+            // doors: the reader had to know that "Foundations" was the reference and "Course" was the
+            // practice (Abu, 2026-09-19: "actually like full on merge them"). It is now this screen's
+            // LEAD section - what you do here - with the reference material underneath it.
+            #if os(iOS)
+            if TajweedLessonsStore.isBundled {
+                Section("THE COURSE") {
+                    NavigationLink(destination: LazyDestination { TajweedLessonsView() }) {
+                        courseCard
+                    }
+                }
+            }
+            #endif
+
             Section("TAJWEED LEGEND") {
                 #if os(iOS)
                 Button {
@@ -126,10 +193,21 @@ struct TajweedFoundationsView: View {
                         .foregroundColor(settings.accentColor.color)
                 }
 
+                // The article links back here, so the pair is a corridor. This file compiles for the
+                // Watch, where `OpenScreenLink` does not exist.
+                #if os(iOS)
+                OpenScreenLink(screen: .tajweedArticle) {
+                    TajweedView()
+                } label: {
+                    Text("What is Tajweed?")
+                        .foregroundColor(settings.accentColor.color)
+                }
+                #else
                 NavigationLink(destination: LazyDestination { TajweedView() }) {
                     Text("What is Tajweed?")
                         .foregroundColor(settings.accentColor.color)
                 }
+                #endif
 
                 NavigationLink(destination: LazyDestination { AhrufView() }) {
                     Text("What are the 7 Ahruf?")
@@ -141,24 +219,6 @@ struct TajweedFoundationsView: View {
                         .foregroundColor(settings.accentColor.color)
                 }
             }
-
-            #if os(iOS)
-            if TajweedLessonsStore.isBundled {
-                Section("STRUCTURED LESSONS") {
-                    NavigationLink(destination: LazyDestination { TajweedLessonsView() }) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Tajweed Lessons")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
-                            Text("A guided course from the alphabet to the rules, with Quranic examples you can hear.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-            }
-            #endif
 
             Section("TAJWEED TOPICS") {
                 ForEach(topics, id: \.self) { topic in
@@ -185,6 +245,15 @@ struct TajweedFoundationsView: View {
         #endif
         .navigationTitle("Tajweed Foundations")
         #if os(iOS)
+        .openScreen(.tajweedFoundations)
+        #endif
+        #if os(iOS)
+        // Same off-main parse the lessons index does: the pack is 467 KB and parsing it in the
+        // body stalled first open.
+        .task {
+            guard course == nil, TajweedLessonsStore.isBundled else { return }
+            course = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value
+        }
         .sheet(isPresented: $showTajweedLegend) {
             NavigationView {
                 TajweedLegendView()

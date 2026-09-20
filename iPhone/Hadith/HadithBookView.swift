@@ -1150,7 +1150,7 @@ struct HadithBookView: View {
     private func chapterGridTile(_ chapter: HadithBookData.Chapter, data: HadithBookData) -> some View {
         let favorite = store.isChapterFavorite(slug: book.slug, chapterId: chapter.id)
         let isCurrent = usesColumnNavigation && columnSelection.currentChapterID == chapter.id
-        return Button {
+        return GridTileMenu {
             settings.hapticFeedback()
             // Column mode swaps the detail; iOS 16 stack appends to the path; iOS 15 uses the hidden link.
             if usesColumnNavigation {
@@ -1160,6 +1160,8 @@ struct HadithBookView: View {
             } else {
                 pushedChapter = chapter
             }
+        } menu: {
+            chapterContextMenu(chapter, data: data)
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 if !chapter.arabic.isEmpty {
@@ -1236,7 +1238,6 @@ struct HadithBookView: View {
             .frame(height: 76)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         // Favorite keeps its full tint; the chapter currently filling the detail column gets a lighter
         // one, so the grid says which tile is open the same way the list rows do.
         .conditionalGlassEffect(

@@ -39,18 +39,100 @@ struct DateView: View {
     var body: some View {
         VStack {
             #if os(iOS)
-            List {
-                Group {
-                selectionSection
-                convertedDateSection
+            ScrollViewReader { proxy in
+                List {
+                    Group {
+                    selectionSection
+                    convertedDateSection
+                    aboutHijriSection
+                        #if DEBUG
+                        .id("aboutHijri")
+                        #endif
+                    }
+                    .themedListRowBackground()
                 }
-                .themedListRowBackground()
+                #if DEBUG
+                // The card sits past the graphical date picker, well below the fold, and a simulator
+                // screenshot cannot scroll. `-hijriChainProbe` brings it into view.
+                .onAppear {
+                    guard Self.chainProbe else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { proxy.scrollTo("aboutHijri", anchor: .center) }
+                    }
+                }
+                #endif
             }
             #endif
         }
         .navigationTitle("Hijri Converter")
         .applyConditionalListStyle()
+        #if os(iOS)
+        .openScreen(.hijriConverter)
+        #endif
+        #if DEBUG && os(iOS)
+        .modifier(HijriChainProbe(active: Self.chainProbe))
+        #endif
     }
+
+    #if DEBUG && os(iOS)
+    /// "-hijriChainProbe": pretend this Converter was reached FROM the Hijri Calendar, so the
+    /// "already here" rows can be screenshotted without a tap (the real route needs one).
+    private static let chainProbe = ProcessInfo.processInfo.arguments.contains("-hijriChainProbe")
+    #endif
+
+    #if os(iOS)
+    /// The orientation card this screen never had (Abu, 2026-09-19). Converting a date is a mechanical
+    /// act; a reader who does not already know what the Hijri calendar IS met two date pickers and no
+    /// explanation. The prose is the Hijri Calendar screen's own opening paragraph, kept word for word
+    /// so the two screens cannot drift, and the doors go to the places that say more: the full events
+    /// list and the article.
+    private var aboutHijriSection: some View {
+        Section(header: Text("WHAT IS HIJRI?")) {
+            Text("The Hijri calendar is the Islamic lunar calendar. It tracks months by moon cycles, so dates shift through the solar year and are primarily used for Islamic worship and sacred days.")
+                .font(.subheadline)
+                .foregroundColor(.primary)
+
+            Text("Conversions use the Umm al-Qura Hijri method, with the Hijri offset set in app settings.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            // Forced to `.events`: this row promises the dates, so it must not land on the month grid
+            // just because that is the half the reader last had open.
+            //
+            // All three are `OpenScreenLink`s: the Calendar offers the Converter and the Converter
+            // offers the Calendar, which is a corridor you could walk forever. Arriving here FROM the
+            // Calendar greys these out rather than hiding them, so the screen keeps its shape.
+            OpenScreenLink(screen: .hijriCalendar) {
+                CalendarView(mode: .events)
+            } label: {
+                hijriDoorLabel("See All Hijri Events", systemImage: "star.circle")
+            }
+
+            OpenScreenLink(screen: .hijriArticle) {
+                HijriCalendarView()
+            } label: {
+                hijriDoorLabel("Learn About the Hijri Calendar", systemImage: "book.pages")
+            }
+
+            OpenScreenLink(screen: .hijriCalendar) {
+                CalendarView(mode: .calendar)
+            } label: {
+                hijriDoorLabel("Open Hijri Calendar", systemImage: "calendar")
+            }
+        }
+    }
+
+    /// The shared look of this card's three doors, so a disabled one differs from a live one only in
+    /// colour and the missing chevron.
+    private func hijriDoorLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+            Text(title)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundColor(settings.accentColor.color)
+    }
+    #endif
 
     private var selectionSection: some View {
         Section("SELECT DATE") {
@@ -176,3 +258,19 @@ struct DateView: View {
         DateView()
     }
 }
+
+#if DEBUG && os(iOS)
+/// Declares the Hijri Calendar "open" above this screen, for the headless screenshot of the disabled
+/// rows. DEBUG only, and inert unless `-hijriChainProbe` was passed.
+private struct HijriChainProbe: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        if active {
+            content.openScreen(.hijriCalendar).openScreen(.hijriArticle)
+        } else {
+            content
+        }
+    }
+}
+#endif

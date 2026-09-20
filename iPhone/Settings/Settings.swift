@@ -48,6 +48,14 @@ final class LiveState: ObservableObject {
     /// The encoded `Prayers`; `Settings.prayers` decodes it through its main-thread cache.
     @Published var prayersData = Data()
     @Published var currentLocation: Location?
+    /// The last fix's altitude in METRES above sea level, and how much CoreLocation says that may be
+    /// off by. Nil until a fix reports a usable vertical reading (`verticalAccuracy > 0`): indoors,
+    /// on a Mac, or on a coarse fix there is simply no altitude, and showing 0 m would be a lie.
+    ///
+    /// Deliberately NOT a field on `Location`: that struct is `Codable` and persisted (the app group
+    /// blob, the home location, the traveling-mode anchor), so widening it would have to migrate
+    /// every stored copy. Altitude is live-only - nothing needs yesterday's height.
+    @Published var currentAltitude: (metres: Double, accuracy: Double)?
 
     /// The decoded prayers, for view bodies that already read the other fields from here.
     var prayers: Prayers? { Settings.shared.prayers }
@@ -471,6 +479,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            storedHadithValue == false {
             UserDefaults.standard.removeObject(forKey: "highlightAllahNamesHadith")
         }
+        // The "nagging before Dhuhr" cascade was retired on 2026-09-19: it asked "did you pray Fajr?"
+        // a second time, hours after Fajr's window had already closed at sunrise. Anyone who had it on
+        // is moved to the Shurooq cascade, which asks the same question at the moment it can still be
+        // acted on. Runs once - the old key is cleared, so a user who later turns Shurooq off stays off.
+        if UserDefaults.standard.object(forKey: "naggingDhuhr") as? Bool == true {
+            UserDefaults.standard.set(true, forKey: "naggingSunrise")
+            UserDefaults.standard.set(false, forKey: "naggingDhuhr")
+        }
+
         isReadyForUI = true
 
         // Defer CoreLocation + NWPathMonitor startup off the synchronous init/first-paint path. Settings.shared
@@ -1110,6 +1127,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Also remind one day BEFORE each Islamic date (e.g. the day before Ramadan begins), so the
     /// day itself never arrives unannounced. Only meaningful while `dateNotifications` is on.
     @AppStorage("dateNotificationsDayBefore") var dateNotificationsDayBefore = true {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+
+    /// Adds each prayer's meaning to its notification: "Time for Maghrib (sunset)". Off by default,
+    /// because the names are the point and a reader who knows them does not need the gloss twice a day.
+    ///
+    /// Abu had this before and turned it off, not because he disliked it but because some already
+    /// scheduled notifications kept their OLD wording (2026-09-19). That was a real bug, not a
+    /// misunderstanding: the scheduler replaces a pending request only when this pass re-adds its exact
+    /// identifier, and the identifier did not encode the body. A pending notification whose id matched
+    /// but whose text had changed therefore kept the stale text, and anything past the ~60-request cap
+    /// was never revisited at all. The identifier now carries a content signature
+    /// (`notificationContentSignature`), so flipping this changes every id and the whole schedule is
+    /// genuinely rebuilt.
+    @AppStorage("prayerNotificationEnglishNames") var prayerNotificationEnglishNames = false {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
 
@@ -2046,6 +2078,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// ON by default, like the tajweed colors (user rule): the divine name reads red out of the box.
     /// A user who explicitly turned it off has a stored false, which this default never overrides.
     @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = true
+
+    /// Keep the ayah's actions sheet open UNDER whatever it opens (tafsir, the range picker, Select
+    /// Text...), instead of closing it first (Abu, 2026-09-19: "maybe I still want the other sheet to
+    /// be there cause I plan on doing something else with it"). Off keeps the old swap, which is the
+    /// lighter feel on a small screen; on stacks them, so dismissing the second returns to the first.
+    @AppStorage("keepAyahSheetOpen") var keepAyahSheetOpen: Bool = false
+
+    /// The Arabic size of the ayah preview card inside a sheet, as a MULTIPLIER of the reader's own
+    /// size, remembered across launches (Abu, 2026-09-19: "+/- button next to plain text that is app
+    /// storage that remembers how big I want it"). 1.0 is the reader's size, which is what the card
+    /// used before the control existed.
+    @AppStorage("ayahPreviewCardScale") var ayahPreviewCardScale: Double = 1.0
+
+    /// The step the card's +/- buttons move by, and the range they clamp to. A quarter step is big
+    /// enough to feel on one tap and small enough that the ends take a few.
+    static let ayahPreviewScaleStep: Double = 0.15
+    static let ayahPreviewScaleRange: ClosedRange<Double> = 0.7...2.2
     /// Double-tap a word in the reader to see what it means. ON by default (Abu, 2026-09-04,
     /// reversing the performance plan's off-by-default: he wants the feature findable). The cost
     /// it carries is unchanged: every ayah row with it on is a UITextView with a tap coordinator,

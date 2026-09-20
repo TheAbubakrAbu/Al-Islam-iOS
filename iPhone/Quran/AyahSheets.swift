@@ -8,6 +8,29 @@ enum AyahSecondarySheet: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// The channel the "Keep Sheet Open" setting uses (Abu, 2026-09-19).
+///
+/// With the setting ON, a secondary sheet is presented BY the actions sheet rather than by the
+/// reader that hosts it: SwiftUI silently drops a `.sheet` raised from a view whose own sheet is
+/// already up, so the reader cannot stack one itself. The reader therefore posts the request here
+/// and `AyahActionsSheet` - which is on screen and free to present - picks it up.
+///
+/// A singleton rather than a binding because the request crosses from the reader's `presentRowSheet`
+/// into a sheet body it does not own; there is at most one ayah actions sheet up at a time, so one
+/// slot is enough.
+@MainActor
+final class AyahSheetStack: ObservableObject {
+    static let shared = AyahSheetStack()
+    private init() {}
+
+    /// The sheet the actions sheet should stack on top of itself, cleared when it closes.
+    @Published var pending: AyahSecondarySheet?
+
+    func present(_ sheet: AyahSecondarySheet) {
+        pending = sheet
+    }
+}
+
 /// One of the sheets an ayah row asks its host to present (Phase 5 step 6). A list row used to carry
 /// twelve presentation modifiers of its own, ~100-150 presentation hosts churned per screenful of
 /// scrolling; `SurahView` hosts ONE `.sheet(item:)` now and the rows route requests through
@@ -66,9 +89,10 @@ struct AyahRowSheetContent: View {
             switch request.kind {
             case .actions:
                 // The list reader can draw the inline study layout, so its actions sheet offers the
-                // per-ayah "Word by Word" pin; the page reader's cannot.
+                // per-ayah "Word by Word" pin; the page reader's cannot. One host serves both readers
+                // now (the page reader routes its sheets here too), so the mode decides.
                 AyahActionsSheet(surah: surah, ayah: ayah, onRequestSheet: onRequestSecondary,
-                                 offersWordByWord: true)
+                                 offersWordByWord: !settings.quranPageMode)
                     .smallMediumSheetPresentation(startLarge: AyahActionsSheet.opensLarge(for: ayah))
 
             case .word(let tapped):
@@ -107,6 +131,29 @@ struct AyahRowSheetContent: View {
 
     @ViewBuilder
     private func secondary(_ kind: AyahSecondarySheet, surah: Surah, ayah: Ayah) -> some View {
+        AyahSecondarySheetContent(kind: kind, surah: surah, ayah: ayah, onDismiss: onDismiss)
+    }
+}
+
+/// One secondary sheet's body, built from its kind. Extracted from `AyahRowSheetContent` so the
+/// actions sheet can present the SAME sheet on top of itself when "Keep Sheet Open" is on
+/// (Abu, 2026-09-19) - one builder, so the stacked copy can never drift from the swapped one.
+struct AyahSecondarySheetContent: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    private var quranPlayer: QuranPlayer { .shared }
+
+    let kind: AyahSecondarySheet
+    let surah: Surah
+    let ayah: Ayah
+    let onDismiss: () -> Void
+
+    var body: some View {
+        content
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch kind {
         case .tafsir:
             AyahTafsirSheet(surahName: surah.nameTransliteration, surahNumber: surah.id, ayahNumber: ayah.id)
@@ -375,6 +422,61 @@ struct AyahPreviewCard: View {
         return ayahSheetTitle(surahNumber: surah.id, ayahNumber: first.id, endAyah: last.id > first.id ? last.id : nil)
     }
 
+    /// The card's Arabic size: the reader's own, clamped to what fits a sheet, times the remembered
+    /// `ayahPreviewCardScale`. The clamp is applied BEFORE the scale so the multiplier always means
+    /// the same thing whatever the reader is set to.
+    private var cardFontSize: CGFloat {
+        let base = min(max(CGFloat(settings.fontArabicSize), 20), 36)
+        return (base * CGFloat(settings.ayahPreviewCardScale)).rounded()
+    }
+
+    private func stepScale(_ direction: Double) {
+        let range = Settings.ayahPreviewScaleRange
+        let next = (settings.ayahPreviewCardScale + direction * Settings.ayahPreviewScaleStep)
+        let clamped = min(max((next * 100).rounded() / 100, range.lowerBound), range.upperBound)
+        guard clamped != settings.ayahPreviewCardScale else { return }
+        settings.hapticFeedback()
+        withAnimation(.easeInOut(duration: 0.15)) { settings.ayahPreviewCardScale = clamped }
+    }
+
+    /// Minus | percentage | plus. The number is the affordance that says the setting is remembered -
+    /// without it, two identical circles give no hint that the size persists.
+    private var sizeStepper: some View {
+        let range = Settings.ayahPreviewScaleRange
+        return HStack(spacing: 8) {
+            stepperButton("minus", enabled: settings.ayahPreviewCardScale > range.lowerBound) { stepScale(-1) }
+
+            Text("\(Int((settings.ayahPreviewCardScale * 100).rounded()))%")
+                .font(.caption2.weight(.semibold).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 34)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    // Tap the number to go back to the reader's size.
+                    guard settings.ayahPreviewCardScale != 1.0 else { return }
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut(duration: 0.15)) { settings.ayahPreviewCardScale = 1.0 }
+                }
+                .accessibilityLabel("Ayah size \(Int((settings.ayahPreviewCardScale * 100).rounded())) percent, tap to reset")
+
+            stepperButton("plus", enabled: settings.ayahPreviewCardScale < range.upperBound) { stepScale(1) }
+        }
+    }
+
+    private func stepperButton(_ systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(enabled ? settings.accentColor.accent1 : .secondary)
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+                .conditionalGlassEffect(clear: true, circle: true)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(systemImage == "plus" ? "Larger" : "Smaller")
+    }
+
     var body: some View {
         let pieces = ayahs.map(piece(for:))
         let anyModified = pieces.contains { $0.modified }
@@ -395,7 +497,7 @@ struct AyahPreviewCard: View {
                 WordByWordText(
                     segments: pieces.map(\.segment),
                     fontName: settings.quranDisplayUsesCustomArabicFace ? settings.quranDisplayFontName : nil,
-                    fontSize: min(max(CGFloat(settings.fontArabicSize), 20), 36),
+                    fontSize: cardFontSize,
                     tapsRequired: 1,
                     selectedWord: selectedWord,
                     onSelectWord: { ref in select(ref, pieces: pieces) }
@@ -406,20 +508,30 @@ struct AyahPreviewCard: View {
             // Plain standard text on demand (user rule): with tajweed colors, the Allah highlight, hidden
             // tashkeel, hidden dots or beginner spacing shaping the run, one tap shows the ayah exactly
             // as written - full marks, no coloring - without touching the reader's settings.
-            if anyModified {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { showPlainText.toggle() }
-                } label: {
-                    Label(showPlainText ? "Show Reader's Text" : "Show Plain Text",
-                          systemImage: showPlainText ? "paintpalette" : "textformat")
-                        .font(.caption2.weight(.medium))
-                        .contentShape(Rectangle())
+            //
+            // The size stepper sits on the same line (Abu, 2026-09-19): the card's Arabic is the thing
+            // being read, and the reader's own size is not always the right one inside a sheet. Always
+            // shown, even when there is nothing to plain-text.
+            HStack(spacing: 10) {
+                sizeStepper
+
+                Spacer(minLength: 8)
+
+                if anyModified {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { showPlainText.toggle() }
+                    } label: {
+                        Label(showPlainText ? "Show Reader's Text" : "Show Plain Text",
+                              systemImage: showPlainText ? "paintpalette" : "textformat")
+                            .font(.caption2.weight(.medium))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(settings.accentColor.accent1)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(settings.accentColor.accent1)
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .frame(maxWidth: .infinity)
 
             // The reference caption, plus the ayah's ACTUAL text in the active translation (not just the
             // translation's name) - one flowing paragraph, numbered inline when the group spans several.
@@ -516,6 +628,8 @@ struct AyahActionsSheet: View {
     /// preview card and the page composer - so the "Apply Settings" tile's menu shows the ayah's real
     /// current state and a pin re-composes the page behind the sheet.
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
+    /// The "Keep Sheet Open" channel: non-nil while a secondary sheet is stacked over this one.
+    @ObservedObject private var sheetStack = AyahSheetStack.shared
     @Environment(\.dismiss) private var dismiss
 
     let surah: Surah
@@ -920,6 +1034,34 @@ struct AyahActionsSheet: View {
             .accentWashedBackground()
         }
         .navigationViewStyle(.stack)
+        // "Keep Sheet Open": the reader posts the request here rather than swapping this sheet out,
+        // and this sheet - which is on screen, so it CAN present - stacks it on top of itself. The
+        // second sheet's dismiss lands back here (Abu, 2026-09-19).
+        .sheet(item: $sheetStack.pending) { secondary in
+            AyahSecondarySheetContent(
+                kind: secondary,
+                surah: surah,
+                ayah: ayah,
+                onDismiss: { sheetStack.pending = nil }
+            )
+            .modifier(StackedSecondaryPresentation(kind: secondary, ayah: ayah))
+        }
+    }
+}
+
+/// The stacked sheet's detents: the range picker opens full height, everything else takes the
+/// small/medium pair the swapped copy uses.
+private struct StackedSecondaryPresentation: ViewModifier {
+    let kind: AyahSecondarySheet
+    let ayah: Ayah
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if kind == .customRange {
+            content
+        } else {
+            content.smallMediumSheetPresentation(startLarge: AyahActionsSheet.opensLarge(for: ayah))
+        }
     }
 }
 

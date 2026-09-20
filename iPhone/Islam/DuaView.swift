@@ -176,6 +176,11 @@ struct DuaView: View {
 
     @State private var searchText = ""
     #if os(iOS)
+    /// The "About" card's single open door (one @State + one destination on the List:
+    /// every chip lives in the SAME List row, and two links in one row both fire).
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
+    #if os(iOS)
     /// Hisn al-Muslim, loaded off the main thread for the front page's dua of the day.
     @State private var hisnLibrary: HisnDuasStore.Library?
     #if DEBUG
@@ -420,7 +425,14 @@ struct DuaView: View {
                         HisnDuaOfTheDayCard(entry: today, category: hisnLibrary.categories.first { $0.id == today.categoryID }, library: hisnLibrary)
                     }
                 }
-                Section(header: Text("HISN AL-MUSLIM")) {
+                // The two libraries DO overlap, and the footer says so rather than leaving a reader to
+                // wonder why a dua they just read turns up again (Abu asked, 2026-09-19; measured:
+                // about two thirds of the hadith-sourced duas in the collections above are also
+                // somewhere in Hisn's 268). They are different cuts of the same sunnah, so the overlap
+                // is not a defect: the collections are a short curated set arranged by SITUATION, and
+                // Hisn is al-Qahtani's complete book arranged by his own 132 chapters, with audio.
+                Section(header: Text("HISN AL-MUSLIM"),
+                        footer: Text("Many of the duas above also appear here. The collections are a short set for everyday situations; Hisn al-Muslim is the complete book, with its own chapters, references and recitations.")) {
                     NavigationLink(destination: LazyDestination { HisnDuaLibraryView() }) {
                         HStack(spacing: 12) {
                             AccentIconChip(systemImage: "shield.lefthalf.filled")
@@ -652,6 +664,12 @@ struct DuaView: View {
                     SpeechQualityHint()
                 }
             }
+                #if os(iOS)
+                AboutSignsSection(heading: "About Dua",
+                                  systemImage: "text.book.closed",
+                                  doors: [.makeDua, .allah, .tawhid],
+                                  openDoor: $aboutDoor)
+                #endif
             }
             .themedListRowBackground()
         }
@@ -659,13 +677,10 @@ struct DuaView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The Arabic face picker used to float here, above the search bar. One control on six
+            // screens writing one `settings.islamArabicFace` is a SETTING, not a reading control: it
+            // now lives once, in Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19).
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The same picker each collection screen carries - this tab root shows dua rows of its own
-                // (the featured duas, and the search results), so it must offer the face choice too.
-                IslamArabicFontPicker()
-                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                    .conditionalGlassEffect(interactive: false)
-
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -679,6 +694,9 @@ struct DuaView: View {
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("Dua & Supplications")
         #if os(iOS)
         .task {
@@ -833,13 +851,10 @@ struct DuaCollectionView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The Arabic face picker used to float here, above the search bar. One control on six
+            // screens writing one `settings.islamArabicFace` is a SETTING, not a reading control: it
+            // now lives once, in Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19).
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The floating font picker, back above the search bar. It no longer folds away on
-                // scroll (`collapsibleBarRow` stays off) - it just rides with the bar.
-                IslamArabicFontPicker()
-                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                    .conditionalGlassEffect(interactive: false)
-
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .minimizedBarStyle(barsCollapsed)
             }

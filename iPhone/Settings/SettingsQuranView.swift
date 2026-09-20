@@ -402,6 +402,23 @@ struct SettingsQuranView: View {
             pageAndJuzDividersGroup
 
             highlightAllahGroup
+
+            keepAyahSheetOpenGroup
+        }
+    }
+
+    /// Whether a sheet opened FROM the ayah's actions sheet stacks on top of it or replaces it.
+    private var keepAyahSheetOpenGroup: some View {
+        VStack(alignment: .leading) {
+            Toggle("Keep Sheet Open", isOn: $settings.keepAyahSheetOpen.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.keepAyahSheetOpen) { _ in settings.hapticFeedback() }
+
+            Text("When you open Tafsir, Play Custom Range, or anything else from an ayah's actions, keep the actions underneath it. Closing the second sheet returns to the first, so you can do something else with the same ayah. Off, the actions close as the new sheet opens.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
         }
     }
 
@@ -1359,6 +1376,8 @@ struct FavoritesView: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     static let quranEntries: [SettingsSearchEntry] = [
+        .init(title: "Keep Sheet Open", path: "Quran Settings", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranSettings),
+        .init(title: "Ayah Card Size", path: "Ayah actions sheet", keywords: "preview card arabic bigger smaller plus minus percent remember size", destination: .quranSettings),
         .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
         .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
         .init(title: "Recitation Type & Random Reciter", path: "Quran Settings → Recitation", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranPage(.recitation)),

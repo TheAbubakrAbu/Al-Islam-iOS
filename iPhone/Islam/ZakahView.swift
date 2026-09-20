@@ -65,6 +65,10 @@ struct ZakahCalculatorView: View {
 
     @FocusState private var focusedField: Bool
 
+    /// The four less common asset rows. Starts open when any of them already has a figure, so a
+    /// calculation saved earlier is never hidden behind a closed disclosure.
+    @State private var showMoreAssets = false
+
     private var nisabBasis: NisabBasis { NisabBasis(rawValue: nisabBasisRaw) ?? .silver }
     private var yearBasis: YearBasis { YearBasis(rawValue: yearBasisRaw) ?? .lunar }
 
@@ -133,20 +137,41 @@ struct ZakahCalculatorView: View {
     }()
     #endif
 
+    #if os(iOS)
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
+
     var body: some View {
         List {
             Group {
+                // The ANSWER first (Abu, 2026-09-19). The old order put seven empty amount rows and
+                // ~340 words of footer between the reader and the number they opened the screen for.
+                if shows("result") { resultSection }
                 if shows("assets") { assetsSection }
                 if shows("liabilities") { liabilitiesSection }
                 if shows("nisab") { nisabSection }
                 if shows("year") { yearSection }
-                if shows("result") { resultSection }
-                if shows("fitr") { fitrSection }
+                if shows("fitr") { fitrDoorSection }
                 if shows("other") { otherZakahSection }
                 if shows("notes") { notesSection }
+
+                // A calculator answers "how much". These answer "what is this, and why"
+                // (Abu, 2026-09-19: link the tools to what they are). The same card the libraries
+                // carry, pointed at the zakah articles that already exist.
+                #if os(iOS)
+                if shows("about") {
+                    AboutSignsSection(heading: "About Zakah",
+                                      systemImage: "percent",
+                                      doors: [.zakah, .howToZakah, .islam],
+                                      openDoor: $aboutDoor)
+                }
+                #endif
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("Zakah Calculator")
         .applyConditionalListStyle()
         #if DEBUG
@@ -183,30 +208,61 @@ struct ZakahCalculatorView: View {
     // MARK: What you own
 
     private var assetsSection: some View {
-        Section(header: Text("ZAKATABLE ASSETS"),
-                footer: Text("What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet. Gold and silver count whatever they are for, jewellery included: see the note at the bottom.")) {
+        Section(header: Text("WHAT YOU OWN")) {
+            // The three most people need are always here; the other four are behind a disclosure
+            // (Abu, 2026-09-19 - seven rows of "0" was most of the first screen). It opens by
+            // itself when any of them already holds a figure, so a saved calculation is never hidden.
             amountRow("Cash & bank balances", systemImage: "banknote", text: $cash)
             amountRow("Gold you own", systemImage: "circle.hexagongrid", text: $gold)
             amountRow("Silver you own", systemImage: "circle.grid.cross", text: $silver)
-            amountRow("Shares held to trade", systemImage: "chart.line.uptrend.xyaxis", text: $tradeShares)
-            amountRow("Long-term shares", systemImage: "building.columns", text: $longShares)
-            amountRow("Business stock", systemImage: "shippingbox", text: $business)
-            amountRow("Money owed to you", systemImage: "person.crop.circle.badge.checkmark", text: $owedToYou)
+
+            DisclosureGroup(isExpanded: $showMoreAssets) {
+                amountRow("Shares held to trade", systemImage: "chart.line.uptrend.xyaxis", text: $tradeShares)
+                amountRow("Long-term shares", systemImage: "building.columns", text: $longShares)
+                amountRow("Business stock", systemImage: "shippingbox", text: $business)
+                amountRow("Money owed to you", systemImage: "person.crop.circle.badge.checkmark", text: $owedToYou)
+            } label: {
+                HStack {
+                    Text("Shares, business, money owed")
+                        .font(.subheadline)
+                    Spacer(minLength: 8)
+                    if otherAssetsTotal > 0 && !showMoreAssets {
+                        Text(formatted(otherAssetsTotal))
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundColor(settings.accentColor.accent2)
+                    }
+                }
+            }
+            .tint(settings.accentColor.color)
+
+            ExplainerButton(
+                title: "What counts, and what does not",
+                body_: "What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet.\n\nGold and silver count whatever they are for, jewellery included - even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi\u{2018}i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \u{201C}Do you pay the zakah on this?\u{201D} (Abu Dawud 1563). This calculator follows that view; if you follow the other, leave the field empty.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone. Business stock is valued at what you would sell it for today, not what you paid.",
+                caption: "Held for a lunar year. Your home, car and tools are not counted."
+            )
         }
     }
 
+    private var otherAssetsTotal: Double {
+        [tradeShares, longShares, business, owedToYou].map(amount).reduce(0, +)
+    }
+
     private var liabilitiesSection: some View {
-        Section(header: Text("WHAT YOU OWE"),
-                footer: Text("Only what is actually due now: this month's bills, this year's instalments, a debt somebody can demand today. A mortgage stretching over twenty years is not subtracted whole, or almost nobody would ever pay zakah again.")) {
+        Section(header: Text("WHAT YOU OWE")) {
             amountRow("Debts due now", systemImage: "creditcard", text: $debts)
+
+            ExplainerButton(
+                title: "Which debts come off",
+                body_: "Only what is actually due now: this month's bills, this year's instalments, a debt somebody can demand today. A mortgage stretching over twenty years is not subtracted whole, or almost nobody would ever pay zakah again.",
+                caption: "Only what is due now, not a whole mortgage."
+            )
         }
     }
 
     // MARK: The threshold
 
     private var nisabSection: some View {
-        Section(header: Text("NISAB"),
-                footer: Text(nisabFooter)) {
+        Section(header: Text("THE THRESHOLD (NISAB)")) {
             Picker("Nisab basis", selection: $nisabBasisRaw) {
                 ForEach(NisabBasis.allCases, id: \.rawValue) { basis in
                     Text(basis.label).tag(basis.rawValue)
@@ -231,6 +287,18 @@ struct ZakahCalculatorView: View {
                         .foregroundColor(knowsNisab ? .primary : .secondary)
                 }
             }
+
+            ExplainerButton(title: "About the nisab", body_: nisabFooter,
+                            caption: nisabCaption)
+        }
+    }
+
+    /// The one line that stays on the screen; the rest is behind the explainer.
+    private var nisabCaption: String {
+        switch nisabBasis {
+        case .silver: return "595g of silver - nearly always the lower of the two, and the better one for the poor."
+        case .gold:   return "85g of gold, twenty mithqal."
+        case .custom: return "Enter the threshold directly, or leave it empty to skip the check."
         }
     }
 
@@ -246,8 +314,7 @@ struct ZakahCalculatorView: View {
     }
 
     private var yearSection: some View {
-        Section(header: Text("THE YEAR"),
-                footer: Text("Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). Dipping below in the middle of the year does not restart it, on the view most scholars take; only the two ends matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days.")) {
+        Section(header: Text("THE YEAR")) {
             Picker("Year", selection: $yearBasisRaw) {
                 ForEach(YearBasis.allCases, id: \.rawValue) { basis in
                     Text(basis.label).tag(basis.rawValue)
@@ -256,100 +323,94 @@ struct ZakahCalculatorView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .padding(.vertical, 2)
+
+            ExplainerButton(
+                title: "Why a lunar year",
+                body_: "Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). Dipping below in the middle of the year does not restart it, on the view most scholars take; only the two ends matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days.",
+                caption: yearBasis == .lunar ? "A fortieth, once the wealth has sat a lunar year." : "2.577%, to make up the eleven days a solar year adds."
+            )
         }
     }
 
     // MARK: The answer
 
     private var resultSection: some View {
-        Section(header: Text("RESULT")) {
-            resultRow("Total assets", value: totalAssets)
-            if debtsDue > 0 {
-                resultRow("Net after debts due", value: netWealth)
-            }
-            if knowsNisab {
-                resultRow("Nisab", value: nisabValue)
-            }
-
-            if isBelowNisab {
-                Text("Your wealth is below the nisab, so no zakah is due on it. Give what you like as sadaqah instead.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            } else {
-                HStack {
-                    Text("Zakah due (\(yearBasis.rateText))")
-                        .font(.headline)
-
-                    Spacer()
-
-                    Text(formatted(zakahDue))
-                        .font(.headline.monospacedDigit())
-                        .foregroundColor(settings.accentColor.accent2)
-                }
-                .padding(.vertical, 2)
-                .contextMenu {
-                    Button {
-                        settings.hapticFeedback()
-                        UIPasteboard.general.string = formatted(zakahDue)
-                    } label: {
-                        Label("Copy Amount", systemImage: "doc.on.doc")
-                    }
-                }
-
-                if debtsDue > 0 {
+        Section {
+            CalculatorResultCard(
+                title: isBelowNisab ? "Nothing due" : "Zakah due (\(yearBasis.rateText))",
+                value: isBelowNisab ? "\u{2014}" : formatted(zakahDue)
+            ) {
+                if isBelowNisab {
+                    Text("Your wealth is below the nisab, so no zakah is due on it. Give what you like as sadaqah instead.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if totalAssets == 0 {
+                    Text("Enter what you own below and this updates as you type.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text("Without deducting the debt")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text(formatted(zakahBeforeDebts))
-                                .font(.caption.monospacedDigit())
-                                .foregroundColor(.secondary)
-                        }
-                        Text("Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars, so both figures are shown. The safer of the two is the larger.")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        workingRow("Total assets", value: totalAssets)
+                        if debtsDue > 0 { workingRow("Less debts due", value: -debtsDue) }
+                        if knowsNisab { workingRow("Nisab", value: nisabValue) }
                     }
-                    .padding(.vertical, 2)
                 }
             }
+            .contextMenu {
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = formatted(zakahDue)
+                } label: {
+                    Label("Copy Amount", systemImage: "doc.on.doc")
+                }
+            }
+
+            if !isBelowNisab, debtsDue > 0 {
+                ExplainerButton(
+                    title: "Why two figures?",
+                    body_: "Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars, so both are worth knowing. Without deducting the debt you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger.",
+                    caption: "Without deducting the debt: \(formatted(zakahBeforeDebts))"
+                )
+            }
+        }
+    }
+
+    private func workingRow(_ title: String, value: Double) -> some View {
+        HStack {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(formatted(value))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
         }
     }
 
     // MARK: Zakat al-Fitr
 
-    private var fitrSection: some View {
-        Section(header: Text("ZAKAT AL-FITR"),
-                footer: Text("A separate obligation from the zakah above, and it is not worked out on wealth. One sa‘ of the staple food people eat, for every person you are responsible for, given before the Eid prayer. Ibn ‘Umar said the Messenger of Allah (peace be upon him) made it obligatory: a sa‘ of dates or a sa‘ of barley, on the slave and the free, the male and the female, the young and the old (al-Bukhari 1503). A sa‘ is about 3kg of rice or dates. Ibn Baz, Ibn ‘Uthaymin and the Permanent Committee all held it must be given as food and not as its price; Abu Hanifa allowed the money, so the cost here is only to tell you what the food will run to.")) {
-            Stepper(value: $fitrPeople, in: 1...30) {
-                HStack {
-                    Text("People in your household")
-                        .font(.subheadline)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                    Spacer(minLength: 8)
-                    Text("\(fitrPeople)")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundColor(settings.accentColor.accent2)
+    /// Its own screen, not a section here (Abu, 2026-09-19). Its own footer said it best: "a separate
+    /// obligation from the zakah above, and it is not worked out on wealth". A different calculation
+    /// on a different basis, sharing a screen with the wealth zakah, was a real part of the confusion.
+    private var fitrDoorSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination { ZakatAlFitrView() }) {
+                HStack(spacing: 12) {
+                    AccentIconChip(systemImage: "takeoutbag.and.cup.and.straw", size: 30)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Zakat al-Fitr")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+
+                        Text("The Eid obligation, given as food - worked out per person, not on wealth.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-            }
-            .padding(.vertical, 2)
-
-            HStack {
-                Text("Food to give")
-                    .font(.headline)
-                Spacer()
-                Text("\(fitrPeople) sa‘ (about \(Int((Double(fitrPeople) * 3).rounded()))kg)")
-                    .font(.headline.monospacedDigit())
-                    .foregroundColor(settings.accentColor.accent2)
-            }
-            .padding(.vertical, 2)
-
-            amountRow("Cost of one sa‘ locally", systemImage: "cart", text: $fitrCost)
-
-            if amount(fitrCost) > 0 {
-                resultRow("Roughly what that costs", value: amount(fitrCost) * Double(fitrPeople))
+                .padding(.vertical, 2)
             }
         }
     }

@@ -128,12 +128,11 @@ struct TashkeelLettersView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The size slider stays: watching the letters grow IS the control. The face picker moved to
+            // Settings -> Islam Settings -> Arabic Text, where the one setting lives once
+            // (Abu, 2026-09-19).
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
-
-                // The same three-way face choice the alphabet screen offers - a harakah sits very differently
-                // on a Quranic face than on the system one, which is half of what you'd come here to see.
-                IslamArabicFontPicker()
             }
             .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
@@ -593,6 +592,24 @@ struct ArabicLetterView: View {
     }
 
     var body: some View {
+        #if DEBUG && os(iOS)
+        ScrollViewReader { proxy in
+            letterList
+                // "-scrollToVowelPairs": the WITH YAA AND WAAW section sits well below the fold and a
+                // simulator screenshot cannot scroll, so this is how it gets verified headlessly.
+                .onAppear {
+                    guard ProcessInfo.processInfo.arguments.contains("-scrollToVowelPairs") else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        withAnimation { proxy.scrollTo("vowelPairs", anchor: .top) }
+                    }
+                }
+        }
+        #else
+        letterList
+        #endif
+    }
+
+    private var letterList: some View {
         List {
             Group {
             #if os(watchOS)
@@ -820,6 +837,49 @@ struct ArabicLetterView: View {
                 }
             }
 
+            // With Yaa and Waw: the six combinations a reader meets constantly and that the harakaat
+            // table above cannot show, because each needs TWO letters (Abu, 2026-09-19). Long vowels
+            // (dhii, dhuu) and diphthongs (dhay, dhaw) are where a letter's sound actually lands in a
+            // word, and the pairs are laid out so the contrast is visible: same letter, different
+            // mark, different result.
+            if letterData.showTashkeel, !letterData.isNonArabicScriptLetter {
+                Section {
+                    VStack(alignment: .leading, spacing: 10) {
+                        VowelCombinationRow(
+                            letterData: letterData,
+                            partner: .yaa,
+                            useQuranicFontForLetter: useQuranicFontForLetter
+                        )
+
+                        #if os(iOS)
+                        Divider().padding(.trailing, -100)
+                        #endif
+
+                        VowelCombinationRow(
+                            letterData: letterData,
+                            partner: .waaw,
+                            useQuranicFontForLetter: useQuranicFontForLetter
+                        )
+                    }
+                    .padding(.top, 6)
+
+                    if let englishSound = letterData.englishSound {
+                        Text(englishSound)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text("WITH YAA AND WAAW")
+                } footer: {
+                    Text("A long vowel stretches the sound (2 counts); a diphthong glides from one sound into another. Tap a syllable to select it, then press play to hear it.")
+                }
+                #if DEBUG
+                .id("vowelPairs")
+                #endif
+            }
+
             if letterData.isNonArabicScriptLetter {
                 Section(header: Text("SOUND WITH HARAKAAT")) {
                     NonArabicVowelPracticeRow(
@@ -853,15 +913,11 @@ struct ArabicLetterView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The size slider stays: on a screen built around one big glyph, resizing it IS the task. The
+            // face picker moved to Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19); the watch
+            // keeps its own in-list section, having no Settings page to move it to.
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
-
-                // The Quranic/Basic choice is meaningless for پ چ ژ and the rest: they aren't in the Quranic
-                // faces at all, so both options render them identically in the system font. Offering the pick
-                // implies a difference that isn't there.
-                if !letterData.isNonArabicScriptLetter {
-                    arabicFontPicker
-                }
             }
             .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
@@ -1427,6 +1483,132 @@ struct TashkeelRow: View {
             #if os(iOS)
             .smallMediumSheetPresentation()
             #endif
+        }
+    }
+}
+
+/// One letter combined with Yaa or with Waw, as the three readings each pairing produces.
+///
+/// The harakaat table above shows a letter with ONE mark. This shows what happens when the letter is
+/// followed by a vowel letter, which is where most of its real appearances in the Quran land, and
+/// which needs two letters to write (Abu, 2026-09-19, with ذِي / ذَي / ذُي and ذُو / ذَوْ / ذِوْ as
+/// the worked examples).
+///
+/// The three readings per partner are always the same shape, so the contrast is the lesson:
+///   - kasrah + Yaa  -> the LONG "ee"  (ذِي, dhī)
+///   - fathah + Yaa  -> the DIPHTHONG "ay" (ذَي, dhay)
+///   - dammah + Yaa  -> a short u gliding into y (ذُي, dhuy)
+/// and the matching three for Waw. The middle one of each set is the one readers get wrong, because
+/// a fathah before a vowel letter does NOT lengthen; it glides.
+struct VowelCombinationRow: View {
+    @Environment(\.appearance) private var appearance
+    /// Snapshotted at creation, the `TashkeelRow` rule: this row observes nothing, so the parent
+    /// hands it every Settings field its body reads and rebuilds it when one changes.
+    var letterSizeSteps: Int = Settings.shared.arabicLetterSizeIndex
+    var hideEnglish: Bool = Settings.shared.hideEnglishInArabicLetters
+    @ObservedObject private var selection = ArabicPracticeSelection.shared
+
+    /// Which vowel letter the row pairs with.
+    enum Partner {
+        case yaa
+        case waaw
+
+        var letter: String { self == .yaa ? "\u{064A}" : "\u{0648}" }
+        var title: String { self == .yaa ? "With Yaa (\u{064A})" : "With Waaw (\u{0648})" }
+
+        /// The three combinations, innermost first: the mark on the BASE letter, whether the partner
+        /// carries a sukoon, the reading, and what it is.
+        ///
+        /// The long vowel is written with a bare partner (كِتَابِي) and the diphthong with an explicit
+        /// sukoon (ذَوْ), which is how the mushaf writes them and how the app's own Quran text reads.
+        var combinations: [(mark: String, partnerSukoon: Bool, suffix: String, kind: String)] {
+            switch self {
+            case .yaa:
+                return [
+                    ("\u{0650}", false, "\u{012B}", "long \u{201C}ee\u{201D}"),
+                    ("\u{064E}", true,  "ay",       "glides, like \u{201C}day\u{201D}"),
+                    ("\u{064F}", true,  "uy",       "short u into y"),
+                ]
+            case .waaw:
+                return [
+                    ("\u{064F}", false, "\u{016B}", "long \u{201C}oo\u{201D}"),
+                    ("\u{064E}", true,  "aw",       "glides, like \u{201C}cow\u{201D}"),
+                    ("\u{0650}", true,  "iw",       "short i into w"),
+                ]
+            }
+        }
+    }
+
+    let letterData: LetterData
+    let partner: Partner
+    let useQuranicFontForLetter: Bool
+
+    /// The sukoon the reader has chosen to practise with: the plain one, or the Uthmani one the
+    /// mushaf prints. The same setting the Hamza rows and the shaddah expansions answer to.
+    private var sukoon: String {
+        Settings.shared.quranicSukoonInLetterPractice ? "\u{06E1}" : "\u{0652}"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(partner.title)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(appearance.accent)
+
+            // Same layout as `TashkeelRow`: reading above, glyph below, 20pt between columns, and no
+            // fixed glyph box, so the letters grow with the size slider.
+            HStack(spacing: 20) {
+                ForEach(partner.combinations, id: \.suffix) { combo in
+                    let glyph = letterData.letter + combo.mark
+                        + partner.letter + (combo.partnerSukoon ? sukoon : "")
+                    let reading = letterData.sound + combo.suffix
+                    let id = "vowelpair:\(letterData.letter):\(partner.letter):\(combo.suffix)"
+                    let isSelected = selection.isSelected(id)
+
+                    VStack(spacing: 4) {
+                        if !hideEnglish {
+                            Text(reading)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                        }
+
+                        Text(glyph)
+                            .font(
+                                useQuranicFontForLetter
+                                    ? appearance.islamArabicFont(base: 28, relativeTo: .title)
+                                    : .title
+                            )
+                            .arabicFontDesign(custom: useQuranicFontForLetter && appearance.islamUsesCustomArabicFace)
+                            .arabicLetterTypeFloor(steps: letterSizeSteps)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
+
+                        if !hideEnglish {
+                            Text(combo.kind)
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.6)
+                        }
+
+                        if isSelected {
+                            PracticeListenButton(text: glyph)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -4, vInset: -2)
+                    .onTapGesture {
+                        Settings.shared.hapticFeedback()
+                        withAnimation(.easeInOut) { selection.toggle(id) }
+                    }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("\(reading), \(combo.kind)\(isSelected ? ", selected" : "")")
+                }
+            }
+            .environment(\.layoutDirection, .rightToLeft)
         }
     }
 }
@@ -2061,9 +2243,8 @@ struct ArabicLetterRow: View, Equatable {
                 .tint(.secondary)
             }
         }
-        // LIST ROWS ONLY. `ArabicLetterGridTile` deliberately has no menu: the grid is a LazyVGrid inside a
-        // single List row, so a context menu on a tile lifts the WHOLE row - every tile at once - as its
-        // preview. The tile's corner star is the favorite action instead.
+        // The grid tile offers these same items through `gridTileMenu` (press and hold); the tile's
+        // corner star stays as the one-tap favorite.
         .contextMenu {
             arabicLetterContextItems(letterData, isFavorite: isFavorite)
 
@@ -2171,7 +2352,7 @@ struct ArabicNumberRow: View {
             Settings.shared.hapticFeedback()
             FocusOverlayPresenter.shared.present(.number(numberData))
         }
-        // LIST ROWS ONLY, same reason as the letter rows - `ArabicNumberGridTile` carries no menu.
+        // The grid tile offers these same items through `gridTileMenu` (press and hold).
         .contextMenu { arabicNumberContextItems(numberData) }
         #endif
     }
@@ -2179,8 +2360,8 @@ struct ArabicNumberRow: View {
 
 #if os(iOS)
 /// The number as a tile, mirroring `ArabicLetterGridTile` so the grid mode covers the whole screen and not
-/// just the letters. No `contextMenu`, for the same reason the letter tiles have none: the grid is one List
-/// row, so a menu on a tile lifts every tile at once.
+/// just the letters. Press-and-hold opens the same menu the row carries - see `gridTileMenu` for why this
+/// is a `Menu` with a `primaryAction` rather than a `contextMenu`.
 struct ArabicNumberGridTile: View {
     @Environment(\.appearance) private var appearance
     /// Snapshotted at creation (the NameRow rule): this row observes nothing, so the parent hands
@@ -2190,9 +2371,11 @@ struct ArabicNumberGridTile: View {
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
     var body: some View {
-        Button {
+        GridTileMenu {
             Settings.shared.hapticFeedback()
             FocusOverlayPresenter.shared.present(.number(numberData))
+        } menu: {
+            arabicNumberContextItems(numberData)
         } label: {
             VStack(spacing: 3) {
                 // Fixed box for the same reason as the letter tiles: the Arabic face's line box is much taller
@@ -2228,7 +2411,6 @@ struct ArabicNumberGridTile: View {
             .contentShape(Rectangle())
             .conditionalGlassEffect(clear: true, rectangle: true)
         }
-        .buttonStyle(.plain)
     }
 }
 #endif
@@ -2334,8 +2516,7 @@ struct QuranSignsSectionContent: View {
 /// The long-press menu for a single letter, used by `ArabicLetterRow`. A free function rather than a method so
 /// the number row beside it can follow the same shape without inheriting the row's state.
 ///
-/// Deliberately NOT used by `ArabicLetterGridTile`: a context menu inside a LazyVGrid-in-a-List-row lifts the
-/// whole row (every tile at once) as its preview, so the grid puts its favorite action on the tile's own star.
+/// Shared by `ArabicLetterRow` and, through `gridTileMenu`, by `ArabicLetterGridTile`: one menu, both modes.
 @ViewBuilder
 func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> some View {
     let settings = Settings.shared
@@ -2497,13 +2678,23 @@ struct ArabicLetterGridTile: View, Equatable {
     let onTap: () -> Void
 
     var body: some View {
-        Button {
+        GridTileMenu {
             Settings.shared.hapticFeedback()
             onTap()
+        } menu: {
+            arabicLetterContextItems(letterData, isFavorite: isFavorite)
         } label: {
             tile
         }
-        .buttonStyle(.plain)
+        // OUTSIDE the menu's label, deliberately: inside, the star's own 30 pt tap target competes
+        // with the long press that opens the menu (see `GridTileMenu`).
+        .gridFavoriteStar(
+            isFavorite: isFavorite,
+            accent: accentColor.color,
+            accessibilityName: letterData.transliteration
+        ) {
+            Settings.shared.toggleLetterFavorite(letterData: letterData)
+        }
     }
 
     /// Sized to the glyph rather than to the Quranic face's (very tall) line box - but it grows with the size
@@ -2560,13 +2751,6 @@ struct ArabicLetterGridTile: View, Equatable {
                 useColor: isFavorite ? 0.25 : nil,
                 customTint: isFavorite ? accentColor.color : nil
             )
-            .gridFavoriteStar(
-                isFavorite: isFavorite,
-                accent: accentColor.color,
-                accessibilityName: letterData.transliteration
-            ) {
-                Settings.shared.toggleLetterFavorite(letterData: letterData)
-            }
         }
     }
 }

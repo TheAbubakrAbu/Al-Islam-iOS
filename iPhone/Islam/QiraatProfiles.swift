@@ -742,11 +742,25 @@ struct QiraahMasterDetailView: View {
                 let riwayat = QiraatProfiles.narrators(ofMaster: profile.id)
                 Section {
                     ForEach(riwayat) { narrator in
+                        // The imam lists its riwayat and each riwayah links back to its imam, which is
+                        // a corridor you could walk forever. Arriving here FROM a riwayah greys that
+                        // riwayah's row rather than removing it, so the pair always reads as a pair.
+                        #if os(iOS)
+                        OpenScreenLink(screen: .riwayahNarrator,
+                                       alreadyHereCaption: "You are on \(narrator.name)'s page") {
+                            RiwayahNarratorDetailView(profile: narrator)
+                        } label: {
+                            QiraatProfileRow(title: narrator.name, arabic: narrator.arabic,
+                                             detail: "\(narrator.city) · d. \(narrator.diedAH) AH",
+                                             systemImage: "link")
+                        }
+                        #else
                         NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
                             QiraatProfileRow(title: narrator.name, arabic: narrator.arabic,
                                              detail: "\(narrator.city) · d. \(narrator.diedAH) AH",
                                              systemImage: "link")
                         }
+                        #endif
                     }
                 } header: {
                     Text("ITS TWO RIWAYAT")
@@ -763,6 +777,9 @@ struct QiraahMasterDetailView: View {
         }
         .navigationTitle(profile.id)
         .selectableArticleList()
+        #if os(iOS)
+        .openScreen(.qiraahMaster)
+        #endif
     }
 }
 
@@ -840,11 +857,24 @@ struct RiwayahNarratorDetailView: View {
 
                 if let master = QiraatProfiles.master(id: profile.masterID) {
                     Section(header: Text("THE READING IT NARRATES")) {
+                        // The other half of the pair: reached FROM this imam's page, the row greys out
+                        // instead of offering a second lap.
+                        #if os(iOS)
+                        OpenScreenLink(screen: .qiraahMaster,
+                                       alreadyHereCaption: "You are on \(master.id)'s page") {
+                            QiraahMasterDetailView(profile: master)
+                        } label: {
+                            QiraatProfileRow(title: master.id, arabic: master.arabic,
+                                             detail: "\(master.city) · d. \(master.diedAH) AH",
+                                             ordinal: QiraatProfiles.ordinal(ofMaster: master.id))
+                        }
+                        #else
                         NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
                             QiraatProfileRow(title: master.id, arabic: master.arabic,
                                              detail: "\(master.city) · d. \(master.diedAH) AH",
                                              ordinal: QiraatProfiles.ordinal(ofMaster: master.id))
                         }
+                        #endif
                     }
                 }
 
@@ -854,6 +884,9 @@ struct RiwayahNarratorDetailView: View {
         }
         .navigationTitle(profile.name)
         .selectableArticleList()
+        #if os(iOS)
+        .openScreen(.riwayahNarrator)
+        #endif
     }
 }
 

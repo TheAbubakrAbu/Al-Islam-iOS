@@ -404,6 +404,14 @@ extension Settings {
     }
 
     /// When not using Random Reciter: resolve by stored id first, then by legacy display name (disambiguated when multiple rows share a name).
+    /// The chosen reciter's name for a label: the resolved row's name plus its riwayah when it has
+    /// one, the raw stored string when nothing matches, and "Random" left as it reads. Every "who is
+    /// reciting right now" caption in the app goes through this (Abu, 2026-09-19).
+    var currentReciterDisplayName: String {
+        if reciter == Self.randomReciterName { return reciter }
+        return resolvedSelectedReciterIgnoringRandom()?.displayNameWithEnglishQiraah ?? reciter
+    }
+
     func resolvedSelectedReciterIgnoringRandom() -> Reciter? {
         guard reciter != Self.randomReciterName else { return nil }
         if !reciterId.isEmpty, let match = reciters.first(where: { $0.id == reciterId }) {

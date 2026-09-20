@@ -355,6 +355,13 @@ struct ProphetSalihView: View {
                         .font(.body)
                 }
 
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetSalihView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetSalihView")
             }
             .themedListRowBackground()
@@ -438,6 +445,13 @@ struct ProphetIbrahimView: View {
                     Text(verbatim: "The friend of Allah broke the idols, walked into the fire, and raised the knife: every test asked him for what he loved, and he gave it.")
                         .font(.body)
                 }
+
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetIbrahimView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetIbrahimView")
             }
@@ -945,6 +959,13 @@ struct ProphetMusaView: View {
                         .font(.body)
                 }
 
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetMusaView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetMusaView")
             }
             .themedListRowBackground()
@@ -1121,6 +1142,13 @@ struct ProphetDawudView: View {
                         .font(.body)
                 }
 
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetDawudView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetDawudView")
             }
             .themedListRowBackground()
@@ -1195,6 +1223,13 @@ struct ProphetSulaymanView: View {
                     Text(verbatim: "Given wind, jinn, and the speech of animals, Sulayman's recorded reaction to all of it was to ask Allah to let him be grateful.")
                         .font(.body)
                 }
+
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetSulaymanView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetSulaymanView")
             }
@@ -1359,6 +1394,13 @@ struct ProphetYunusView: View {
                     Text(verbatim: "Yunus walked away, was swallowed by the sea, and called on Allah in a way that has been answering his descendants ever since.")
                         .font(.body)
                 }
+
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetYunusView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetYunusView")
             }
@@ -1553,6 +1595,13 @@ struct ProphetIsaView: View {
                         .font(.body)
                 }
 
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetIsaView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetIsaView")
             }
             .themedListRowBackground()
@@ -1625,6 +1674,13 @@ struct ProphetMuhammadView: View {
                     Text(verbatim: "The last Messenger, sent as a mercy to all the worlds, whose example is the way and whose finality is part of the creed.")
                         .font(.body)
                 }
+
+                // The other half of the bridge: his signs, in Miracles of the Prophets
+                // (`ProphetSignsIndex` is the one table both directions read). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetMuhammadView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetMuhammadView")
             }

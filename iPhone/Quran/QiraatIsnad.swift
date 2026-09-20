@@ -601,6 +601,7 @@ struct QiraatIsnadIndexView: View {
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("Chains to the Prophet ﷺ")
+        .openScreen(.qiraatIsnadIndex)
         .navigationBarTitleDisplayMode(.inline)
     }
 }

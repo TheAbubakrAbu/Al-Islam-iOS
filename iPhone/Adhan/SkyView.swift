@@ -28,6 +28,26 @@ struct SolarCurve {
         fraction >= sunriseFraction && fraction <= sunsetFraction
     }
 
+    /// How much of the marker on the arc is the sun rather than the moon, 0...1: a smoothed version of
+    /// `isDaylight` used by whatever has to CHANGE across the horizon (the sun's glow, the moon's
+    /// opacity). `isDaylight` stays a hard boolean for anything that only needs to know which side of
+    /// the line it is on.
+    ///
+    /// Ramped on the sun's HEIGHT, not on the fraction of the day: height is what positions the marker,
+    /// so tying the fade to it makes the crossing exactly as smooth as the drag that causes it, at any
+    /// latitude or season (near the poles a band measured in fractions-of-a-day would be a band of
+    /// hours). The band is a fixed slice of the curve's amplitude, which is always 2 (-1...1), so
+    /// `bandHalfHeight` means the same thing everywhere.
+    func daylightPresence(at fraction: Double) -> Double {
+        let bandHalfHeight = 0.06
+        let above = height(at: fraction) - horizon
+        let t = (above + bandHalfHeight) / (2 * bandHalfHeight)
+        let clamped = min(max(t, 0), 1)
+        // Smoothstep, so the fade eases in and out of the band rather than starting and stopping
+        // abruptly at its edges (which would just move the visible kink instead of removing it).
+        return clamped * clamped * (3 - 2 * clamped)
+    }
+
     /// Falls back to a nominal quarter-to-three-quarters day when sunrise and sunset don't bracket a sane
     /// daylight span - no prayer times yet, or a polar day/night where the library returns nothing at all.
     init(sunriseFractionOfWindow s: Double?, sunsetFractionOfWindow e: Double?) {
@@ -394,7 +414,12 @@ struct SkyCard: View {
             // Re-tint both when the period changes and when the user edits that prayer's colors. The
             // period's change takes a leisurely second so the first paint, and the turn at each prayer,
             // ease between the two gradients instead of snapping (Abu, 2026-09-16: "smoother").
-            .animation(.easeInOut(duration: 1.0), value: skyPeriod)
+            //
+            // But a full second is wrong WHILE DRAGGING (Abu, 2026-09-19): a scrub crosses several
+            // prayer boundaries in a second, so each crossing started a 1s retint that the next one
+            // interrupted, and the gradient lagged visibly behind the thumb. During a scrub the retint
+            // is quick enough to keep up with the finger; released, it goes back to the leisurely turn.
+            .animation(.easeInOut(duration: scrubber.isScrubbing ? 0.2 : 1.0), value: skyPeriod)
             .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
 
             StarFieldView(opacity: starOpacity, paused: !isOnScreen)
@@ -638,7 +663,14 @@ struct SkyCard: View {
                 x: xPosition(forFraction: displayedFraction, in: rect),
                 y: shape.yPosition(of: sunHeight, in: rect)
             )
-            let isUp = curve.isDaylight(at: displayedFraction)
+            // How much of the marker is the SUN rather than the moon, 0...1, ramped across a thin band
+            // either side of the horizon instead of flipped by `isUp` (Abu, 2026-09-19: dragging the sun
+            // down into the night was not smooth). A boolean made the crossing a one-frame event - the
+            // sun's glow went radius 12 -> 0 and the moon materialised - and no `.animation` can rescue
+            // that, because a drag writes `scrubbedDate` ~60x/second and each write is its own
+            // transaction fighting the last. Ramping on the sun's HEIGHT instead means the swap is
+            // carried by the same number that moves the marker, so it is as smooth as the drag is.
+            let dayPresence = curve.daylightPresence(at: displayedFraction)
 
             ZStack {
                 shape
@@ -663,14 +695,16 @@ struct SkyCard: View {
                 let sun = Circle()
                     .fill(sunFill)
                     .frame(width: 20, height: 20)
-                    .softShadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
+                    // The glow fades with the ramp rather than being switched off at the horizon.
+                    .softShadow(color: sunFill.opacity(0.9 * dayPresence), radius: 12 * dayPresence)
                     .position(sunPoint)
                 if showsScene {
                     sun.mask(alignment: .top) {
                         Rectangle().frame(height: max(horizonY - rect.minY, 0))
                     }
                 } else {
-                    sun.opacity(isUp ? 1 : 0.45)
+                    // 1 by day, 0.45 by night, interpolated - not a two-value switch.
+                    sun.opacity(0.45 + 0.55 * dayPresence)
                 }
 
                 // The skyline along the ground (SkyScene.swift): the pyramids under CURRENT and the
@@ -700,7 +734,10 @@ struct SkyCard: View {
                     // the same transaction.
                     Color.clear
                         .skylineSilhouette(sky: sky, horizonY: horizonY)
-                        .animation(.easeInOut(duration: 1.0),
+                        // Matches the gradient's own duration, scrub included - the silhouette is mixed
+                        // FROM the sky, so if the two turn at different speeds the mosque drifts out of
+                        // step with the sky behind it.
+                        .animation(.easeInOut(duration: scrubber.isScrubbing ? 0.2 : 1.0),
                                    value: [sky.red, sky.green, sky.blue])
                 }
 
@@ -731,12 +768,16 @@ struct SkyCard: View {
                 // the night's dip of the wave exactly as the sun rides the day's, and follows a drag
                 // the same way (Abu, 2026-09-16: on the graph, not parked at the top of the sky). It
                 // is drawn OVER the skyline's ground band so it never fades into the ground.
-                if showsScene, !isUp {
+                // Drawn whenever any of the night is showing (`dayPresence < 1`) and faded by the
+                // ramp, so through the crossing the sun and the moon are briefly both on the path at
+                // partial strength rather than one replacing the other between two frames.
+                if showsScene, dayPresence < 1 {
                     // A full disc, not the night's true phase: here the moon is the MARKER, the
                     // counterpart of the sun on the day's half of the wave, and a 34% crescent reads
                     // as a sliver of a thing rather than as a position on the path. The footer's
                     // glyph is the one that shows the real phase, and it names it (Abu, 2026-09-16).
                     MoonPhaseView(date: moonDate, diameter: 20, alwaysFull: true)
+                        .opacity(1 - dayPresence)
                         .position(sunPoint)
                 }
             }

@@ -574,6 +574,10 @@ enum Faraid {
 /// the estate, applying the blocking rules, ‘awl and radd. The estate figures are optional - without
 /// them the answer is fractions and percentages, which is what the law actually specifies.
 struct InheritanceCalculatorView: View {
+    #if os(iOS)
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
+
     @ObservedObject private var settings = Settings.shared
 
     // Persisted so a half-entered family survives leaving the screen, matching the zakah calculator.
@@ -692,6 +696,9 @@ struct InheritanceCalculatorView: View {
     var body: some View {
         List {
             Group {
+                // The ANSWER first (Abu, 2026-09-19): who inherits and what each gets, before the
+                // estate arithmetic and the five heir groups it is worked out from.
+                if shows("shares") { resultSection }
                 if shows("estate") { estateSection }
                 if shows("heirs") {
                 heirSection("SPOUSE", heirs: [.husband, .wives])
@@ -703,13 +710,25 @@ struct InheritanceCalculatorView: View {
                             footer: "Maternal half-siblings are the children of the mother only. They inherit only when there is no child and no father.")
                 }
                 if shows("heirs") || shows("wider") { widerSection }
-                if shows("shares") { resultSection }
                 if shows("shares"), !result.blocked.isEmpty { blockedSection }
                 if shows("shares"), !result.notes.isEmpty { notesSection }
                 if shows("scope") { scopeSection }
+
+                // The shares themselves come from the Quran, and the estate is settled after the
+                // obligations Islam names. The calculator does the arithmetic; these say what it is
+                // arithmetic ABOUT (Abu, 2026-09-19).
+                #if os(iOS)
+                AboutSignsSection(heading: "About Inheritance in Islam",
+                                  systemImage: "divide.circle",
+                                  doors: [.quran, .islam, .muslim],
+                                  openDoor: $aboutDoor)
+                #endif
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("Inheritance Calculator")
         .applyConditionalListStyle()
         #if DEBUG
@@ -764,8 +783,7 @@ struct InheritanceCalculatorView: View {
     // MARK: Sections
 
     private var estateSection: some View {
-        Section(header: Text("THE ESTATE (OPTIONAL)"),
-                footer: Text("The order is fixed and it is not the heirs' to change: the burial first, then every debt, then a bequest of up to a third of what is left, and only then the shares below. A bequest to somebody who already inherits is not valid unless the other heirs agree to it. Leave these empty to see the shares as fractions only.")) {
+        Section(header: Text("THE ESTATE (OPTIONAL)")) {
             amountRow("Total estate", systemImage: "banknote", text: $estate)
             amountRow("Funeral costs", systemImage: "leaf", text: $funeral)
             amountRow("Debts owed", systemImage: "creditcard", text: $debts)
@@ -791,13 +809,29 @@ struct InheritanceCalculatorView: View {
                         .foregroundColor(.secondary)
                 }
             }
+
+            ExplainerButton(
+                title: "The order of payment",
+                body_: "The order is fixed and it is not the heirs' to change: the burial first, then every debt, then a bequest of up to a third of what is left, and only then the shares below. A bequest to somebody who already inherits is not valid unless the other heirs agree to it.\n\nLeave these fields empty to see the shares as fractions only.",
+                caption: "Burial, then debts, then a bequest up to a third, then the shares."
+            )
         }
     }
 
+    /// A group of heirs. Any rule about who blocks whom rides as a short caption rather than a
+    /// footer paragraph - the long form is in "Before you divide anything" at the foot of the screen.
     private func heirSection(_ title: String, heirs: [FaraidHeir], footer: String? = nil) -> some View {
-        Section(header: Text(title), footer: footer.map { Text($0) }) {
+        Section(header: Text(title)) {
             ForEach(heirs, id: \.self) { heir in
                 heirRow(heir)
+            }
+
+            if let footer {
+                Text(footer)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
             }
         }
     }
@@ -805,8 +839,7 @@ struct InheritanceCalculatorView: View {
     /// The wider male line is folded away by default: it decides an estate only when nobody nearer
     /// survives, and six more steppers above the answer would cost every ordinary case.
     private var widerSection: some View {
-        Section(header: Text("WIDER RELATIVES"),
-                footer: Text("Half here always means through the father: a maternal half-brother's sons are not heirs at all, and neither is a maternal uncle. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him. A sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.")) {
+        Section(header: Text("WIDER RELATIVES")) {
             Button {
                 settings.hapticFeedback()
                 withAnimation { showWider.toggle() }
@@ -837,6 +870,12 @@ struct InheritanceCalculatorView: View {
                 ForEach(Self.widerHeirs, id: \.self) { heir in
                     heirRow(heir)
                 }
+
+                ExplainerButton(
+                    title: "Who counts as a wider relative",
+                    body_: "Half here always means through the father: a maternal half-brother's sons are not heirs at all, and neither is a maternal uncle. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.",
+                    caption: "Half always means through the father."
+                )
             }
         }
     }
@@ -915,11 +954,17 @@ struct InheritanceCalculatorView: View {
     }
 
     private var resultSection: some View {
-        Section(header: Text("SHARES")) {
+        Section(header: Text("WHO INHERITS")) {
             if result.isEmpty {
-                Text("Add the surviving heirs above and their shares appear here.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Nothing to divide yet.")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Add the surviving heirs below and their shares appear here as you go.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
             } else {
                 ForEach(result.awards) { award in
                     awardRow(award)

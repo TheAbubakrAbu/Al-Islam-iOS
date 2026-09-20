@@ -9,6 +9,19 @@ struct LetterData: Identifiable, Codable, Equatable, Comparable {
     let showTashkeel: Bool
     let sound: String
 
+    /// What the letter sounds like in English, said as a comparison a reader can act on
+    /// (Abu, 2026-09-19: "say what each letter sounds like in english like the dha and th like in
+    /// three etc do that for each one").
+    ///
+    /// Deliberately names the ENGLISH WORD and, where English has two sounds spelled the same, says
+    /// which one it is NOT: ث is the "th" of "three", ذ the "th" of "this", and a reader who is only
+    /// told "th" has no way to tell them apart. Where English has no equivalent at all (ع, ق, ح, ض)
+    /// it says so rather than offering a near-miss that teaches the wrong sound.
+    ///
+    /// Declared BEFORE `weight` because the memberwise init takes arguments in declaration order and
+    /// every call site passes `weight:` last.
+    var englishSound: String? = nil
+
     var weight: LetterWeight?
     var weightRule: String?
 
@@ -68,20 +81,21 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "alif",
         showTashkeel: false,
         sound: "a",
+        englishSound: "Alif carries the sound of whatever mark sits on it: “a” as in “father” when long.",
         weight: .followsPrevious,
         weightRule: "Alif has no weight of its own; it follows the heaviness or lightness of the previous letter."
     ),
 
-    LetterData(id: LetterID.next(), letter: "ب", forms: ["ـب", "ـبـ", "بـ"], name: "بَاء", transliteration: "baa", showTashkeel: true, sound: "b", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ت", forms: ["ـت", "ـتـ", "تـ"], name: "تَاء", transliteration: "taa", showTashkeel: true, sound: "t", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ث", forms: ["ـث", "ـثـ", "ثـ"], name: "ثَاء", transliteration: "thaa", showTashkeel: true, sound: "th", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ج", forms: ["ـج", "ـجـ", "جـ"], name: "جِيم", transliteration: "jeem", showTashkeel: true, sound: "j", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ح", forms: ["ـح", "ـحـ", "حـ"], name: "حَاء", transliteration: "Haa", showTashkeel: true, sound: "H", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ب", forms: ["ـب", "ـبـ", "بـ"], name: "بَاء", transliteration: "baa", showTashkeel: true, sound: "b", englishSound: "Like the b in “book”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ت", forms: ["ـت", "ـتـ", "تـ"], name: "تَاء", transliteration: "taa", showTashkeel: true, sound: "t", englishSound: "Like the t in “table”, but with the tongue on the back of the upper front teeth rather than behind them.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ث", forms: ["ـث", "ـثـ", "ثـ"], name: "ثَاء", transliteration: "thaa", showTashkeel: true, sound: "th", englishSound: "Like the th in “three” or “think” (the breathy one), never the th in “this”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ج", forms: ["ـج", "ـجـ", "جـ"], name: "جِيم", transliteration: "jeem", showTashkeel: true, sound: "j", englishSound: "Like the j in “jam”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ح", forms: ["ـح", "ـحـ", "حـ"], name: "حَاء", transliteration: "Haa", showTashkeel: true, sound: "H", englishSound: "No English equivalent: a hard, breathy h made deep in the throat, much stronger than the h in “hat”.", weight: .light),
 
-    LetterData(id: LetterID.next(), letter: "خ", forms: ["ـخ", "ـخـ", "خـ"], name: "خَاء", transliteration: "khaa", showTashkeel: true, sound: "kh", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "خ", forms: ["ـخ", "ـخـ", "خـ"], name: "خَاء", transliteration: "khaa", showTashkeel: true, sound: "kh", englishSound: "No English equivalent: the ch in the Scottish “loch” or the German “Bach”, a scrape at the back of the mouth.", weight: .heavy),
 
-    LetterData(id: LetterID.next(), letter: "د", forms: ["ـد", "ـد ـ", "د ـ"], name: "دَال", transliteration: "daal", showTashkeel: true, sound: "d", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ذ", forms: ["ـذ", "ـذ ـ", "ذ ـ"], name: "ذَال", transliteration: "dhaal", showTashkeel: true, sound: "dh", weight: .light),
+    LetterData(id: LetterID.next(), letter: "د", forms: ["ـد", "ـد ـ", "د ـ"], name: "دَال", transliteration: "daal", showTashkeel: true, sound: "d", englishSound: "Like the d in “door”, with the tongue on the back of the upper front teeth.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ذ", forms: ["ـذ", "ـذ ـ", "ذ ـ"], name: "ذَال", transliteration: "dhaal", showTashkeel: true, sound: "dh", englishSound: "Like the th in “this” or “mother” (the voiced one), never the th in “three”.", weight: .light),
 
     LetterData(
         id: LetterID.next(),
@@ -91,24 +105,25 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "raa",
         showTashkeel: true,
         sound: "r",
+        englishSound: "A rolled r, like the Spanish “perro”; a single tap, not the English r in “red”.",
         weight: .conditional,
         weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra, unless an isti'la letter with fatha/damma follows in the same word (قِرطَاس), which makes it heavy."
     ),
 
-    LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز ـ", "ز ـ"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", weight: .light),
-    LetterData(id: LetterID.next(), letter: "س", forms: ["ـس", "ـسـ", "سـ"], name: "سِين", transliteration: "seen", showTashkeel: true, sound: "s", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ش", forms: ["ـش", "ـشـ", "شـ"], name: "شِين", transliteration: "sheen", showTashkeel: true, sound: "sh", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز ـ", "ز ـ"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", englishSound: "Like the z in “zebra”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "س", forms: ["ـس", "ـسـ", "سـ"], name: "سِين", transliteration: "seen", showTashkeel: true, sound: "s", englishSound: "Like the s in “sun”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ش", forms: ["ـش", "ـشـ", "شـ"], name: "شِين", transliteration: "sheen", showTashkeel: true, sound: "sh", englishSound: "Like the sh in “ship”.", weight: .light),
 
-    LetterData(id: LetterID.next(), letter: "ص", forms: ["ـص", "ـصـ", "صـ"], name: "صَاد", transliteration: "Saad", showTashkeel: true, sound: "S", weight: .heavy),
-    LetterData(id: LetterID.next(), letter: "ض", forms: ["ـض", "ـضـ", "ضـ"], name: "ضَاد", transliteration: "Daad", showTashkeel: true, sound: "D", weight: .heavy),
-    LetterData(id: LetterID.next(), letter: "ط", forms: ["ـط", "ـطـ", "طـ"], name: "طَاء", transliteration: "Taa", showTashkeel: true, sound: "T", weight: .heavy),
-    LetterData(id: LetterID.next(), letter: "ظ", forms: ["ـظ", "ـظـ", "ظـ"], name: "ظَاء", transliteration: "Dhaa", showTashkeel: true, sound: "Dh", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ص", forms: ["ـص", "ـصـ", "صـ"], name: "صَاد", transliteration: "Saad", showTashkeel: true, sound: "S", englishSound: "A heavy s: the s in “sun” said with the tongue low and the mouth full, closer to the s in “saw”.", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ض", forms: ["ـض", "ـضـ", "ضـ"], name: "ضَاد", transliteration: "Daad", showTashkeel: true, sound: "D", englishSound: "No English equivalent: a heavy d made along the side of the tongue. The Arabic language is named after it, “the language of the Daad”.", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ط", forms: ["ـط", "ـطـ", "طـ"], name: "طَاء", transliteration: "Taa", showTashkeel: true, sound: "T", englishSound: "A heavy t: the t in “table” said with the tongue low and the mouth full, closer to the t in “tall”.", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ظ", forms: ["ـظ", "ـظـ", "ظـ"], name: "ظَاء", transliteration: "Dhaa", showTashkeel: true, sound: "Dh", englishSound: "A heavy version of the th in “this”: the same voiced th, said with the tongue low and the mouth full.", weight: .heavy),
 
-    LetterData(id: LetterID.next(), letter: "ع", forms: ["ـع", "ـعـ", "عـ"], name: "عَين", transliteration: "'ayn", showTashkeel: true, sound: "'a", weight: .light),
-    LetterData(id: LetterID.next(), letter: "غ", forms: ["ـغ", "ـغـ", "غـ"], name: "غَين", transliteration: "ghayn", showTashkeel: true, sound: "gh", weight: .heavy),
-    LetterData(id: LetterID.next(), letter: "ف", forms: ["ـف", "ـفـ", "فـ"], name: "فَاء", transliteration: "faa", showTashkeel: true, sound: "f", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ق", forms: ["ـق", "ـقـ", "قـ"], name: "قَاف", transliteration: "qaaf", showTashkeel: true, sound: "q", weight: .heavy),
-    LetterData(id: LetterID.next(), letter: "ك", forms: ["ـك", "ـكـ", "كـ"], name: "كَاف", transliteration: "kaaf", showTashkeel: true, sound: "k", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ع", forms: ["ـع", "ـعـ", "عـ"], name: "عَين", transliteration: "'ayn", showTashkeel: true, sound: "'a", englishSound: "No English equivalent: a voiced squeeze from deep in the throat. It is a sound, not a silence, and not the same as a hamza.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "غ", forms: ["ـغ", "ـغـ", "غـ"], name: "غَين", transliteration: "ghayn", showTashkeel: true, sound: "gh", englishSound: "Close to the French r in “Paris”: a gargle at the back of the mouth, the voiced partner of khaa.", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ف", forms: ["ـف", "ـفـ", "فـ"], name: "فَاء", transliteration: "faa", showTashkeel: true, sound: "f", englishSound: "Like the f in “fan”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ق", forms: ["ـق", "ـقـ", "قـ"], name: "قَاف", transliteration: "qaaf", showTashkeel: true, sound: "q", englishSound: "No English equivalent: a k made far back, where the tongue meets the very back of the roof of the mouth. Deeper than the k in “king”.", weight: .heavy),
+    LetterData(id: LetterID.next(), letter: "ك", forms: ["ـك", "ـكـ", "كـ"], name: "كَاف", transliteration: "kaaf", showTashkeel: true, sound: "k", englishSound: "Like the k in “king”.", weight: .light),
 
     LetterData(
         id: LetterID.next(),
@@ -118,13 +133,14 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "laam",
         showTashkeel: true,
         sound: "l",
+        englishSound: "Like the l in “lamp”.",
         weight: .conditional,
         weightRule: "Heavy only in the Name of Allah when preceded by fatha or damma; otherwise light."
     ),
 
-    LetterData(id: LetterID.next(), letter: "م", forms: ["ـم", "ـمـ", "مـ"], name: "مِيم", transliteration: "meem", showTashkeel: true, sound: "m", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ن", forms: ["ـن", "ـنـ", "نـ"], name: "نُون", transliteration: "nuun", showTashkeel: true, sound: "n", weight: .light),
-    LetterData(id: LetterID.next(), letter: "ه", forms: ["ـه", "ـهـ", "هـ"], name: "هَاء", transliteration: "haa", showTashkeel: true, sound: "h", weight: .light),
+    LetterData(id: LetterID.next(), letter: "م", forms: ["ـم", "ـمـ", "مـ"], name: "مِيم", transliteration: "meem", showTashkeel: true, sound: "m", englishSound: "Like the m in “moon”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ن", forms: ["ـن", "ـنـ", "نـ"], name: "نُون", transliteration: "nuun", showTashkeel: true, sound: "n", englishSound: "Like the n in “noon”.", weight: .light),
+    LetterData(id: LetterID.next(), letter: "ه", forms: ["ـه", "ـهـ", "هـ"], name: "هَاء", transliteration: "haa", showTashkeel: true, sound: "h", englishSound: "Like the h in “hat”, a soft breath (haa, not the deep Haa).", weight: .light),
 
     LetterData(
         id: LetterID.next(),
@@ -134,6 +150,7 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "waaw",
         showTashkeel: true,
         sound: "w",
+        englishSound: "Like the w in “water” as a consonant; as a vowel it is the “oo” of “food”.",
         weight: .light
         // No `weightRule`: waaw is unconditionally light, and `ArabicView.alwaysWeightRule` now says so for
         // every unconditional letter in one shared sentence. Spelling it out only here made waaw and yaa look
@@ -148,6 +165,7 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "yaa",
         showTashkeel: true,
         sound: "y",
+        englishSound: "Like the y in “yes” as a consonant; as a vowel it is the “ee” of “see”.",
         weight: .light
     )
 ]

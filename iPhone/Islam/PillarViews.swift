@@ -424,6 +424,104 @@ struct AllahPillarView: View {
     }
 }
 
+/// The 99 Names as an ARTICLE (Abu, 2026-09-19). The Islam tab already has the names themselves as a
+/// browsable library; this is the other half, the one Pillars & Beliefs was missing: what the Most
+/// Beautiful Names are, what the hadith actually says, why the familiar numbered list is not part of
+/// the authentic narration, and how Ahl as-Sunnah affirm them. It sits in THE BASICS beside "Who is
+/// Allah?", whose Names paragraph it expands.
+///
+/// Every quote is our own pack's text, checked word by word before it was written: Bukhari 2736 and
+/// Muslim 2677a for the count, 7:180 / 17:110 / 20:8 / 59:22-24 for the Quranic basis. The enumerated
+/// list in Tirmidhi 3507 is graded Daif by Shakir, al-Albani and Zubair Ali Zai alike, and the article
+/// says so rather than quoting it as if it were the Prophet's own listing.
+struct NamesOfAllahPillarView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    Text(verbatim: "In short: Allah has the Most Beautiful Names, and the Prophet (peace and blessings be upon him) said whoever encompasses ninety-nine of them will enter Paradise. To encompass them is to learn them, understand what they mean, and call upon Allah by them.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("OVERVIEW")) {
+                    Text(articleMarkdown: "**Al-Asma al-Husna (الأَسمَاء الحُسنَى)**, the Most Beautiful Names, are the names Allah (Glorified and Exalted be He) has given Himself in the Quran and through His Messenger (peace and blessings be upon him). They are not titles people invented for Him: a name of Allah is only what He or His Messenger affirmed. Each one names a perfection that belongs to Him alone and completely.")
+                        .font(.body)
+
+                    Text(verbatim: "Allah commands us to use them when we call on Him:")
+                        .font(.body)
+                    ScriptureQuote(quran: "7:180")
+
+                    Text(verbatim: "And whichever of them you call Him by, you are calling the same One:")
+                        .font(.body)
+                    ScriptureQuote(quran: "17:110")
+                }
+
+                Section(header: ArticleHeader("THE NINETY-NINE")) {
+                    Text(verbatim: "The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(hadith: "bukhari:2736", cite: "Sahih al-Bukhari 2736", arabic: 28...39, english: 4...19)
+
+                    Text(verbatim: "And in the narration of Muslim:")
+                        .font(.body)
+                    ScriptureQuote(hadith: "muslim:2677a", cite: "Sahih Muslim 2677", arabic: 36...48, english: 0...33)
+
+                    Text(articleMarkdown: "The word in the hadith is **ahsaha (أَحصَاهَا)**, to encompass or take account of. The scholars explain it as more than memorizing the words: it is to learn them, to understand what each one means, to worship Allah by what they require, and to call upon Him with them. A name learned and not acted upon has not been encompassed.")
+                        .font(.body)
+
+                    // Deliberately NOT quoting the famous "or kept to Yourself in the hidden place of
+                    // the unseen" dua here: our only copy of it is Mishkat 2452, transmitted by Razin,
+                    // which does not meet the app's sahih/hasan-only rule for a quoted proof. The point
+                    // stands on the wording of the authentic hadith itself, which states a count that
+                    // carries a promise and never says the names stop there.
+                    Text(verbatim: "Note what the hadith does and does not say. It says that ninety-nine of His names carry this promise. It does not say that Allah has only ninety-nine: the scholars are agreed that His names are not limited to any list we hold.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("WHY THE LIST IS NOT IN THE HADITH")) {
+                    Text(verbatim: "The familiar numbered list of ninety-nine names, the one printed on posters and recited in songs, does not come from the narration in Bukhari and Muslim. Those two authentic reports state the count and the promise, and stop there.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "The enumerated list appears in **Jami at-Tirmidhi 3507**, and scholars of hadith grade that addition **daif (ضَعِيف)**, weak: Ahmad Shakir, al-Albani and Zubair Ali Zai all grade it so. The scholars, including at-Tirmidhi himself and later Ibn Taymiyyah and Ibn Hajar, held the enumeration to be the work of a narrator who gathered names from the Quran, not words the Prophet (peace and blessings be upon him) listed himself.")
+                        .font(.body)
+
+                    Text(verbatim: "This is why different scholars' lists of the ninety-nine do not perfectly agree, and why some names on the common list are not found as names in the Quran at all. None of this touches the hadith itself, which is authentic. It only means that the exact roll of ninety-nine is a scholarly compilation, and is treated as one.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("THE NAMES IN THE QURAN")) {
+                    Text(verbatim: "The Quran gathers many of the names together in the closing ayat of Surah al-Hashr:")
+                        .font(.body)
+                    ScriptureQuote(quran: "59:22")
+                    ScriptureQuote(quran: "59:23")
+                    ScriptureQuote(quran: "59:24")
+
+                    Text(verbatim: "And it names them as belonging to Him alone:")
+                        .font(.body)
+                    ScriptureQuote(quran: "20:8")
+                }
+
+                Section(header: ArticleHeader("HOW THEY ARE AFFIRMED")) {
+                    Text(verbatim: "Ahl as-Sunnah affirm the Names and Attributes exactly as Allah and His Messenger (peace and blessings be upon him) affirmed them: without denying their meanings, without asking how, without changing them into something else, and without likening Allah to His creation. Allah says: \u{201C}There is nothing like unto Him, and He is the Hearing, the Seeing\u{201D} (Quran 42:11).")
+                        .font(.body)
+
+                    Text(articleMarkdown: "Allah also warns against **ilhad (إِلحَاد)** in His names, the deviation named in 7:180 above: denying a name He affirmed, giving Him a name He never gave Himself, or twisting a name away from its meaning. The safe path is the one the Companions walked, affirming what was revealed and saying no more than it says.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    Text(verbatim: "The Most Beautiful Names are how Allah has made Himself known. Learn them, understand them, and call on Him by them: that is what the promise in the hadith asks for.")
+                        .font(.body)
+                }
+
+                ArticleSourcesSection(article: "NamesOfAllahPillarView")
+            }
+            .themedListRowBackground()
+        }
+        .selectableArticleList(article: "NamesOfAllahPillarView")
+        .navigationTitle("The 99 Names of Allah")
+    }
+}
+
 struct QuranPillarView: View {
     var body: some View {
         List {

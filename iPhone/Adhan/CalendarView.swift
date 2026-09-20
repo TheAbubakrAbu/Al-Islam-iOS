@@ -13,9 +13,12 @@ struct CalendarView: View {
     @AppStorage("hijriCalendarDisplayMode") private var savedModeRaw = DisplayMode.events.rawValue
     @State private var mode: DisplayMode
 
-    init() {
+    /// Pass a mode to force one half of the screen open regardless of what was last used - the Hijri
+    /// Converter's "See All Hijri Events" link asks for `.events`, since landing a reader who wants the
+    /// dates list on the month grid (because that is what they last looked at) is not what they tapped.
+    init(mode forced: DisplayMode? = nil) {
         let raw = UserDefaults.standard.string(forKey: "hijriCalendarDisplayMode") ?? DisplayMode.events.rawValue
-        _mode = State(initialValue: DisplayMode(rawValue: raw) ?? .events)
+        _mode = State(initialValue: forced ?? DisplayMode(rawValue: raw) ?? .events)
     }
     @State private var nearestEventId = ""
     @State private var hijriYear = 1445
@@ -56,6 +59,7 @@ struct CalendarView: View {
                 }
             }
             .navigationTitle("Hijri Calendar")
+            .openScreen(.hijriCalendar)
             .onChange(of: mode) { newValue in
                 savedModeRaw = newValue.rawValue
             }
@@ -76,7 +80,9 @@ struct CalendarView: View {
     }
 
     private var hijriInfoButton: some View {
-        NavigationLink {
+        // A toolbar button has no room for an "already here" caption, so this one simply disables:
+        // a greyed info glyph reads correctly as "nothing more to open from here".
+        OpenScreenLink(screen: .hijriArticle, captionless: true) {
             HijriCalendarView()
         } label: {
             Image(systemName: "info.circle")
@@ -150,7 +156,10 @@ struct CalendarView: View {
                             .foregroundColor(settings.accentColor.color)
                         }
 
-                        NavigationLink {
+                        // Both are `OpenScreenLink`s: this screen and the Converter each offer the
+                        // other, which is a corridor you could walk forever. Reached FROM the
+                        // Converter, the second row greys out rather than disappearing.
+                        OpenScreenLink(screen: .hijriArticle) {
                             HijriCalendarView()
                         } label: {
                             HStack(spacing: 8) {
@@ -161,7 +170,7 @@ struct CalendarView: View {
                             .foregroundColor(settings.accentColor.color)
                         }
 
-                        NavigationLink {
+                        OpenScreenLink(screen: .hijriConverter) {
                             DateView()
                         } label: {
                             HStack(spacing: 8) {

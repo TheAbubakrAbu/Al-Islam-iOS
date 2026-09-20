@@ -61,7 +61,21 @@ enum WordRange {
     static func words(_ text: String, _ range: ClosedRange<Int>) -> String {
         let tokens = text.split(whereSeparator: \.isWhitespace)
         guard range.lowerBound >= 0, range.lowerBound < tokens.count else { return "" }
-        return tokens[range.lowerBound...min(range.upperBound, tokens.count - 1)].joined(separator: " ")
+        let slice = tokens[range.lowerBound...min(range.upperBound, tokens.count - 1)].joined(separator: " ")
+        return trimmingQuotes(slice)
+    }
+
+    /// The shelf's translations often open a quoted saying with a straight quote glued to the first
+    /// word, e.g. `"Zaid took over the flag...`. `ScriptureQuote` wraps the span in its own curly
+    /// quotes, so the raw slice rendered with a doubled mark. Trimmed here, once, rather than by
+    /// nudging every range past the quote - the mark has no space after it, so moving the range
+    /// would eat the first WORD with it.
+    private static func trimmingQuotes(_ text: String) -> String {
+        var out = text
+        let marks: Set<Character> = ["\"", "\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}"]
+        while let first = out.first, marks.contains(first) { out.removeFirst() }
+        while let last = out.last, marks.contains(last) { out.removeLast() }
+        return out
     }
 
     /// Several ranges read in order, joined by an ellipsis: a quote that skips part of the narration.

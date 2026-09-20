@@ -728,6 +728,16 @@ struct SurahView: View {
             rowSheet = request
             return
         }
+        // "Keep Sheet Open": present the second sheet ON TOP of the actions sheet instead of
+        // swapping it out, so dismissing it lands back on the actions (Abu, 2026-09-19). The
+        // actions sheet hosts the stacked one itself - `AyahActionsSheet.stackedSheet` - because a
+        // sheet presented from THIS host while its own sheet is up is simply dropped by SwiftUI.
+        if settings.keepAyahSheetOpen, case .secondary(let secondary) = kind,
+           let current = rowSheet, case .actions = current.kind,
+           current.surah.id == surah.id, current.ayah.id == ayah.id {
+            AyahSheetStack.shared.present(secondary)
+            return
+        }
         rowSheet = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             rowSheet = request
@@ -738,6 +748,14 @@ struct SurahView: View {
     private func openRowSheet(surahID: Int, ayahID: Int) -> AyahRowSheetKind? {
         guard let rowSheet, rowSheet.surah.id == surahID, rowSheet.ayah.id == ayahID else { return nil }
         return rowSheet.kind
+    }
+
+    /// The ayah whose ACTIONS sheet is up, for the page reader's long-press tint - the page-mode twin of
+    /// `openRowSheet`. Only the actions sheet: with "Keep Sheet Open" off, the secondary it asks for
+    /// replaces it, and the tint goes with it, exactly as it did when the page owned the sheet.
+    private var pageActionsSheetAyah: HighlightedAyahRef? {
+        guard let rowSheet, case .actions = rowSheet.kind else { return nil }
+        return HighlightedAyahRef(surahID: rowSheet.surah.id, ayahID: rowSheet.ayah.id)
     }
     #endif
 
@@ -1902,12 +1920,15 @@ struct SurahView: View {
                     if arrivalTerm != nil { arrivalTerm = nil }
                     if arrivalAyahID != nil { arrivalAyahID = nil }
                 },
-                // The page reader's word cards are presented by THIS view, the same host the list rows
-                // use: a mushaf page is unmounted whenever it leaves the pager's window, and a view that
-                // owns a live `.sheet` takes that sheet down with it when it goes.
+                // EVERY page-mode sheet is presented by THIS view, the same host the list rows use: a
+                // mushaf page is unmounted whenever it leaves the pager's window, and a view that owns a
+                // live `.sheet` takes that sheet down with it when it goes. The page reports which sheet
+                // it wants and for which ayah; `presentRowSheet` does the rest, "Keep Sheet Open" included.
+                // (Docs/Page Mode Sheet Ownership.md)
                 onRequestSheet: { kind, surah, ayah in
                     presentRowSheet(kind, surah: surah, ayah: ayah)
                 },
+                actionsSheetAyah: pageActionsSheetAyah,
                 onChooseReciter: {
                     showReciterPickerSheet = true
                 },
@@ -3656,7 +3677,7 @@ struct SurahView: View {
                     settings.hapticFeedback()
                     showReciterPickerSheet = true
                 } label: {
-                    Label("Choose Reciter", systemImage: "headphones")
+                    ChooseReciterMenuLabel()
                 }
 
                 Divider()
@@ -3953,6 +3974,17 @@ struct SurahView: View {
                 .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
+        // HOLD the title to go straight to Choose Surah, in both readers (Abu, 2026-09-19). A tap still
+        // opens the full menu, where Choose Surah is only the first of a dozen items; holding is the
+        // shortcut for the one thing people come to this title for. `simultaneousGesture`, not
+        // `onLongPressGesture`: a Menu consumes the long press itself (that is how it shows its own
+        // preview), so a plain gesture modifier here would lose the race and never fire.
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                settings.hapticFeedback()
+                showSurahPickerSheet = true
+            }
+        )
         .confirmationDialog(
             "Use the beta text?",
             isPresented: $confirmBetaTextSwitch,

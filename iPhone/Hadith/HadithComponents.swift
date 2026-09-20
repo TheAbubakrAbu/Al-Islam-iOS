@@ -983,6 +983,145 @@ struct HadithLoadMoreControls: View {
 
 /// A bookmarked hadith row in the Quran-bookmark format: reference, ONE line of Arabic (trailing), ONE
 /// line of English - never the narrator. Opens the hadith through the reference resolver.
+/// The bookmarked-hadith menu and every sheet it opens, in one place so the LIST row and the GRID
+/// tile offer exactly the same actions (Abu, 2026-09-19: press-and-hold should work on tiles too).
+///
+/// `gridTileAction` decides the entrance: nil gives the row a `contextMenu`; non-nil wraps the tile in
+/// a `GridTileMenu`, whose tap runs the action and whose long press opens the menu - a `contextMenu`
+/// in a grid lifts the whole List row (every tile at once) as its preview.
+struct HadithBookmarkMenu: ViewModifier {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var userData = HadithUserData.shared
+
+    let bookmark: HadithBookmark
+    let book: HadithCatalogBook
+    var gridTileAction: (() -> Void)? = nil
+
+    @State private var showNoteSheet = false
+    @State private var noteDraft = ""
+    @State private var showRespectAlert = false
+    @State private var shareHadith: HadithBookData.Hadith? = nil
+
+    /// Removal and note-setting only need the identity fields; the store matches on slug + idInBook.
+    private var placeholderHadith: HadithBookData.Hadith {
+        HadithBookData.Hadith(
+            id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+            arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+        )
+    }
+
+    /// The bookmarked hadith's full row from its book pack - opening a book is synchronous and cheap
+    /// (mapped, not read), so resolving on menu tap is fine. Nil only if the pack is missing.
+    private var fullHadith: HadithBookData.Hadith? {
+        HadithStore.shared.book(book)?.hadith(numbered: bookmark.idInBook)
+    }
+
+    @ViewBuilder
+    private var menuItems: some View {
+        // HadithRow's menu grammar exactly - reference, bookmark, note actions, a divider,
+        // then Copy and Share - so a bookmarked hadith's menu reads like every hadith's menu.
+        Text(bookmark.reference)
+            .foregroundStyle(.secondary)
+
+        Button(role: .destructive) {
+            settings.hapticFeedback()
+            userData.toggleBookmarkOrConfirm(book: book, hadith: placeholderHadith, reference: bookmark.reference)
+        } label: {
+            Label("Remove Bookmark", systemImage: "bookmark.fill")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            noteDraft = bookmark.note ?? ""
+            showNoteSheet = true
+        } label: {
+            Label(bookmark.note == nil ? "Add Note" : "Edit Note", systemImage: "note.text")
+        }
+
+        if bookmark.note != nil {
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    userData.removeNote(slug: bookmark.slug, idInBook: bookmark.idInBook)
+                }
+            } label: {
+                Label("Remove Note", systemImage: "minus.circle")
+            }
+        }
+
+        Divider()
+
+        Button {
+            settings.hapticFeedback()
+            if let hadith = fullHadith {
+                UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+            }
+        } label: {
+            Label("Copy Hadith", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            shareHadith = fullHadith
+        } label: {
+            Label("Share Hadith", systemImage: "square.and.arrow.up")
+        }
+    }
+
+    func body(content: Content) -> some View {
+        Group {
+            if let gridTileAction {
+                GridTileMenu(primaryAction: gridTileAction) {
+                    menuItems
+                } label: {
+                    content
+                }
+            } else {
+                content.contextMenu { menuItems }
+            }
+        }
+        .sheet(item: $shareHadith) { hadith in
+            HadithShareSheet(book: book, hadith: hadith)
+                .smallMediumSheetPresentation()
+        }
+        .sheet(isPresented: $showNoteSheet) {
+            NoteEditorSheet(
+                title: "Note for \(bookmark.reference)",
+                text: $noteDraft,
+                onAttemptSave: { text in
+                    if textContainsProfanity(text) {
+                        showRespectAlert = true
+                        return false
+                    }
+                    withAnimation(.easeInOut) {
+                        userData.setNote(book: book, hadith: placeholderHadith, note: text)
+                    }
+                    return true
+                },
+                onCancel: {},
+                onSave: {}
+            )
+            .smallMediumSheetPresentation()
+        }
+        .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
+            Button("OK") {}
+        } message: {
+            Text("Please keep notes Islamic and respectful.")
+        }
+    }
+}
+
+extension View {
+    /// See `HadithBookmarkMenu`.
+    func hadithBookmarkMenu(
+        bookmark: HadithBookmark,
+        book: HadithCatalogBook,
+        gridTileAction: (() -> Void)? = nil
+    ) -> some View {
+        modifier(HadithBookmarkMenu(bookmark: bookmark, book: book, gridTileAction: gridTileAction))
+    }
+}
+
 struct HadithBookmarkRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
     /// Bookmark rows render only user marks - observe the user-data object, not the whole store.
@@ -999,20 +1138,9 @@ struct HadithBookmarkRow: View, Equatable {
         l.bookmark == r.bookmark && l.renderSettingsSignature == r.renderSettingsSignature
     }
 
-    @State private var showNoteSheet = false
-    @State private var noteDraft = ""
-    @State private var showRespectAlert = false
-    /// Set to the FULL hadith (resolved from the book pack on demand) when Share Hadith is tapped -
-    /// the bookmark itself only stores previews.
-    @State private var shareHadith: HadithBookData.Hadith? = nil
-
-    /// The bookmarked hadith's full row from its book pack - opening a book is synchronous and cheap
-    /// (mapped, not read), so resolving on menu tap is fine. Nil only if the pack is missing.
-    private func fullHadith(in book: HadithCatalogBook) -> HadithBookData.Hadith? {
-        HadithStore.shared.book(book)?.hadith(numbered: bookmark.idInBook)
-    }
-
-    /// Removal only needs the identity fields; the store matches on slug + idInBook.
+    /// The menu, its note editor and its share sheet all live in `HadithBookmarkMenu` now, so this row
+    /// and `HadithBookmarkGridTile` cannot drift apart. The swipe actions below still need the
+    /// identity-only hadith the store matches on (slug + idInBook).
     private var placeholderHadith: HadithBookData.Hadith {
         HadithBookData.Hadith(
             id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
@@ -1126,92 +1254,7 @@ struct HadithBookmarkRow: View, Equatable {
                 }
                 .padding(.vertical, 2)
             }
-            .contextMenu {
-                // HadithRow's menu grammar exactly - reference, bookmark, note actions, a divider,
-                // then Copy and Share - so a bookmarked hadith's menu reads like every hadith's menu.
-                Text(bookmark.reference)
-                    .foregroundStyle(.secondary)
-
-                Button(role: .destructive) {
-                    settings.hapticFeedback()
-                    let placeholder = HadithBookData.Hadith(
-                        id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
-                        arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
-                    )
-                    userData.toggleBookmarkOrConfirm(book: book, hadith: placeholder, reference: bookmark.reference)
-                } label: {
-                    Label("Remove Bookmark", systemImage: "bookmark.fill")
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    noteDraft = bookmark.note ?? ""
-                    showNoteSheet = true
-                } label: {
-                    Label(bookmark.note == nil ? "Add Note" : "Edit Note", systemImage: "note.text")
-                }
-
-                if bookmark.note != nil {
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut) {
-                            userData.removeNote(slug: bookmark.slug, idInBook: bookmark.idInBook)
-                        }
-                    } label: {
-                        Label("Remove Note", systemImage: "minus.circle")
-                    }
-                }
-
-                Divider()
-
-                Button {
-                    settings.hapticFeedback()
-                    if let hadith = fullHadith(in: book) {
-                        UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-                    }
-                } label: {
-                    Label("Copy Hadith", systemImage: "doc.on.doc")
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    shareHadith = fullHadith(in: book)
-                } label: {
-                    Label("Share Hadith", systemImage: "square.and.arrow.up")
-                }
-            }
-            .sheet(item: $shareHadith) { hadith in
-                HadithShareSheet(book: book, hadith: hadith)
-                    .smallMediumSheetPresentation()
-            }
-            .sheet(isPresented: $showNoteSheet) {
-                NoteEditorSheet(
-                    title: "Note for \(bookmark.reference)",
-                    text: $noteDraft,
-                    onAttemptSave: { text in
-                        if textContainsProfanity(text) {
-                            showRespectAlert = true
-                            return false
-                        }
-                        let placeholder = HadithBookData.Hadith(
-                            id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
-                            arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
-                        )
-                        withAnimation(.easeInOut) {
-                            userData.setNote(book: book, hadith: placeholder, note: text)
-                        }
-                        return true
-                    },
-                    onCancel: {},
-                    onSave: {}
-                )
-                .smallMediumSheetPresentation()
-            }
-            .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
-                Button("OK") {}
-            } message: {
-                Text("Please keep notes Islamic and respectful.")
-            }
+            .hadithBookmarkMenu(bookmark: bookmark, book: book)
         }
     }
 }
@@ -1242,13 +1285,53 @@ struct HadithBookmarkGridTile: View, Equatable {
     }
 
     var body: some View {
-        Button {
-            settings.hapticFeedback()
-            onTap()
-        } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(bookmark.reference)
+        // Press-and-hold gets the row's full menu (`HadithBookmarkMenu`); a tap opens the hadith.
+        // Falls back to a plain Button only if the bookmark's book is missing from the catalog.
+        Group {
+            if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+                tile.hadithBookmarkMenu(bookmark: bookmark, book: book, gridTileAction: {
+                    settings.hapticFeedback()
+                    onTap()
+                })
+            } else {
+                Button {
+                    settings.hapticFeedback()
+                    onTap()
+                } label: {
+                    tile
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        // The Quran bookmark tile's corner: the filled bookmark on the RIGHT, and tapping it is how the
+        // tile is unbookmarked. OUTSIDE the menu (like `gridFavoriteStar`) so the corner tap never
+        // opens the hadith and never fights the long press.
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: "bookmark.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(settings.accentColor.color)
+                // The 30pt target is centered on the glyph and sized BEFORE the corner paddings (the
+                // `gridFavoriteStar` fix): a target inflated after them swallowed the tile's right side.
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+                        HadithUserData.shared.toggleBookmarkOrConfirm(
+                            book: book, hadith: placeholderHadith, reference: bookmark.reference
+                        )
+                    }
+                }
+                .padding(.top, 1)
+                .padding(.trailing, 2)
+                .accessibilityLabel("Remove bookmark")
+        }
+    }
+
+    private var tile: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(bookmark.reference)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
                         .lineLimit(1)
@@ -1292,31 +1375,6 @@ struct HadithBookmarkGridTile: View, Equatable {
             .padding(10)
             .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // The Quran bookmark tile's corner: the filled bookmark on the RIGHT, and tapping it is how the
-        // tile is unbookmarked. Outside the Button (like `gridFavoriteStar`) so the corner tap never
-        // opens the hadith.
-        .overlay(alignment: .topTrailing) {
-            Image(systemName: "bookmark.fill")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(settings.accentColor.color)
-                // The 30pt target is centered on the glyph and sized BEFORE the corner paddings (the
-                // `gridFavoriteStar` fix): a target inflated after them swallowed the tile's right side.
-                .frame(width: 30, height: 30)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    if let book = HadithCatalogBook.bySlug[bookmark.slug] {
-                        HadithUserData.shared.toggleBookmarkOrConfirm(
-                            book: book, hadith: placeholderHadith, reference: bookmark.reference
-                        )
-                    }
-                }
-                .padding(.top, 1)
-                .padding(.trailing, 2)
-                .accessibilityLabel("Remove bookmark")
-        }
     }
 }
 

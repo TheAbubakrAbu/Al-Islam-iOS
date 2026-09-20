@@ -31,6 +31,9 @@ struct SettingsSearchEntry: Identifiable {
         case quranSettings
         case reciters
         case hadithSettings
+        /// Islam Settings: the fourth area, for everything outside the Quran, the prayer times and
+        /// the hadith books (the Arabic face, the alphabet controls, the Al-Islam tab itself).
+        case islamSettings
         case appearance
         case credits
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
@@ -40,6 +43,7 @@ struct SettingsSearchEntry: Identifiable {
         case prayerPage(SettingsAdhanPage)
         case quranPage(SettingsQuranPage)
         case hadithPage(SettingsHadithPage)
+        case islamPage(SettingsIslamPage)
 
         /// The chip icon a search result renders with - derived here so entries never repeat it.
         var icon: String {
@@ -54,6 +58,7 @@ struct SettingsSearchEntry: Identifiable {
             case .quranSettings: return "character.book.closed.ar"
             case .reciters: return "headphones"
             case .hadithSettings: return "text.book.closed.fill"
+            case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
@@ -61,6 +66,7 @@ struct SettingsSearchEntry: Identifiable {
             case .prayerPage(let page): return page.systemImage
             case .quranPage(let page): return page.systemImage
             case .hadithPage(let page): return page.systemImage
+            case .islamPage(let page): return page.systemImage
             }
         }
     }
@@ -149,6 +155,7 @@ struct SettingsView: View {
         case prayerSettings
         case quranSettings
         case hadithSettings
+        case islamSettings
     }
 
     /// What re-identifies the iPad detail stack: the selected destination, or a re-tap of the same
@@ -300,6 +307,12 @@ struct SettingsView: View {
         case "notifications": return .notifications
         case "quran": return .quranSettings
         case "hadith": return .hadithSettings
+        case "islam": return .islamSettings
+        // The Islam sub-pages, so each can be screenshotted without a tap.
+        case "islamArabic": return .islamPage(.arabicText)
+        case "islamAlphabet": return .islamPage(.alphabet)
+        case "islamLibraries": return .islamPage(.libraries)
+        case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "appearance": return .appearance
         default: return nil
         }
@@ -397,6 +410,8 @@ struct SettingsView: View {
                 SettingsQuranView()
             case .hadithSettings:
                 SettingsHadithView(presentedAsSheet: false)
+            case .islamSettings:
+                SettingsIslamView()
             }
         }
     }
@@ -465,13 +480,14 @@ struct SettingsView: View {
         systemImage: String,
         subtitle: String? = nil,
         tint: Color? = nil,
+        secondaryTint: Color? = nil,
         @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
         // LazyDestination, same as IslamView: building the destination eagerly meant every body pass of this
         // tab constructed the full Adhan/Quran/Notification settings trees - on the watch, where TabView
         // re-evaluates neighbouring tabs on every swipe, that WAS the tab-switch lag into Settings.
         NavigationLink(destination: LazyDestination(build: destination)) {
-            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint)
+            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint, chipSecondaryTint: secondaryTint)
         }
         .tint(settings.accentColor.color)
     }
@@ -479,9 +495,11 @@ struct SettingsView: View {
     /// A settings row in the iOS Settings app's visual grammar, tinted the app's way: the icon on a
     /// small accent-gradient chip, an optional caption under the title. `chipTint` overrides the
     /// accent (the reset row goes red).
-    private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil, chipTint: Color? = nil) -> some View {
+    /// `chipSecondaryTint` gives the chip a SECOND colour, corner to corner - Islam Settings wears both
+    /// brand colours because it is not one tab's area (see `AccentIconChip`).
+    private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil, chipTint: Color? = nil, chipSecondaryTint: Color? = nil) -> some View {
         return HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, tint: chipTint)
+            AccentIconChip(systemImage: systemImage, tint: chipTint, secondaryTint: chipSecondaryTint)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
@@ -508,6 +526,7 @@ struct SettingsView: View {
         systemImage: String,
         subtitle: String? = nil,
         tint: Color? = nil,
+        secondaryTint: Color? = nil,
         value: SettingsDestination
     ) -> some View {
         // A Button (not `NavigationLink(value:)`) so a re-tap of the ALREADY-selected row still
@@ -523,7 +542,7 @@ struct SettingsView: View {
                 }
             }
         } label: {
-            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint)
+            toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint, chipSecondaryTint: secondaryTint)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
@@ -555,6 +574,13 @@ struct SettingsView: View {
                          subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith) {
                 SettingsHadithView(presentedAsSheet: false)
             }
+            // The fourth area, for what belongs to none of the three above. It wears BOTH brand
+            // colours rather than one of its own, because it is not one tab (see `SettingsTint.islam`).
+            resourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
+                         subtitle: "Arabic font, alphabet, libraries, daily",
+                         tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary) {
+                SettingsIslamView()
+            }
             #endif
         }
     }
@@ -571,6 +597,9 @@ struct SettingsView: View {
                               subtitle: "Fonts, translations, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
             splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
                               subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
+            splitResourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
+                              subtitle: "Arabic font, alphabet, libraries, daily",
+                              tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary, value: .islamSettings)
         }
     }
 

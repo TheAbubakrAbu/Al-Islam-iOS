@@ -981,8 +981,13 @@ struct WordByWordSegment {
     /// Non-Hafs riwayat have no gloss pack, but their words still open the riwayah word card -
     /// every LETTERED token is tappable regardless of `glosses` (ornament-only tokens stay silent).
     var alwaysTappable: Bool = false
-    /// "Highlight Allah" for this ayah: the app setting, or the ayah's own pin (`AyahDisplayOverride`).
-    var highlightAllahNames: Bool = true
+    /// "Highlight Allah" for this ayah: the app setting, or the ayah's own pin
+    /// (`AyahDisplayOverride`) - and always OFF while a sheet's preview card is in plain text.
+    ///
+    /// NO DEFAULT, deliberately: it used to default to `true`, so any future segment built without
+    /// passing the flag would have painted the name red even in plain text, which is exactly the
+    /// bug plain text exists to prevent. Making it required means the compiler asks the question.
+    var highlightAllahNames: Bool
     /// The active search term's matches (UTF-16 ranges into `displayText`), painted in the accent.
     /// Non-empty puts the run into its search look: the plain text under the accent spans, tajweed
     /// standing down exactly as it does in `HighlightedSnippet` - so a searched row keeps THIS

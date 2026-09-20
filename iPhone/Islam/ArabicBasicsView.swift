@@ -33,11 +33,10 @@ struct ArabicBasicsView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The size slider stays: watching the letters grow IS the control. The face picker moved to
+            // Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19).
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
-
-                // The same Islam-tab face choice the alphabet and Tashkeel screens carry.
-                IslamArabicFontPicker()
             }
             .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)

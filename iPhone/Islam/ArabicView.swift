@@ -10,6 +10,11 @@ struct ArabicView: View {
     #else
     @State private var searchText = ""
     #endif
+    #if os(iOS)
+    /// The "About" card's single open door (one @State + one destination on the List:
+    /// every chip lives in the SAME List row, and two links in one row both fire).
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
     /// The letter a result asked to scroll to ("Scroll To Letter"), consumed once the search clears.
     @State private var scrollTarget: String?
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -316,6 +321,12 @@ struct ArabicView: View {
                 if keywordVisible {
                     searchResultsSection
                 }
+                #if os(iOS)
+                AboutSignsSection(heading: "About Arabic & the Quran",
+                                  systemImage: "textformat.size.ar",
+                                  doors: [.quran, .tajweed],
+                                  openDoor: $aboutDoor)
+                #endif
             }
             .themedListRowBackground()
 
@@ -345,12 +356,11 @@ struct ArabicView: View {
                 // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
                 // `arabicLetterTypeFloor(steps:)`, so the alphabet list still resizes - it just doesn't carry the
                 // control, which was crowding the bottom bar alongside the font picker and the search field.
-                // The one Islam-tab Arabic face picker, back above the search bar - the same control, on the
-                // same setting, that Duas, Dhikr, the 99 Names and the letter detail screens carry. It does
-                // NOT fold away on scroll (`collapsibleBarRow` stays off, as on Duas and Dhikr): that was
-                // what made it look like a row vanishing mid-scroll. It just rides with the bar.
-                arabicFontPicker
-
+                //
+                // The Arabic face picker is gone from here too (Abu, 2026-09-19): the same control on six
+                // screens, all writing one `settings.islamArabicFace`, is a SETTING. It lives once now, in
+                // Settings -> Islam Settings -> Arabic Text. The watch keeps its own in-list section
+                // (`arabicFontPickerSection`, above) - it has no Settings page to move it to.
                 HStack(spacing: 8) {
                     SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
 
@@ -409,6 +419,9 @@ struct ArabicView: View {
         }
         #endif
         .applyConditionalListStyle()
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("Arabic Alphabet")
         .onDisappear {
             ArabicSpeech.shared.stop()

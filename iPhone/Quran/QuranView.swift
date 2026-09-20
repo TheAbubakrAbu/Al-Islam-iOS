@@ -207,6 +207,16 @@ struct QuranView: View {
     @State private var isQuranSearchFocused = false
     @State private var scrollToSurahID: Int = -1
     @State private var showingSettingsSheet = false
+    /// Which summary door was tapped. One piece of state driving one destination: two hidden links in
+    /// the same List row both fired on any tap (Abu, 2026-09-19).
+    enum SummaryDoor: String, Identifiable, Hashable {
+        case themes, history
+        var id: String { rawValue }
+    }
+
+    /// Which summary door (Browse by Theme / History) was tapped - see `SummaryDoor`.
+    @State private var openSummaryDoor: SummaryDoor?
+
     #if DEBUG
     /// Drives the hidden "-openThemes" link, which only exists when the argument was passed.
     /// DEBUG builds only.
@@ -1303,6 +1313,17 @@ struct QuranView: View {
                 .navigationDestination(for: QuranRoute.self) { route in
                     routeDestination(route)
                 }
+                #if os(iOS)
+                // The ONE destination the summary doors share. On the stack, not on the row: a lazy
+                // row's own destination never fires, and a hidden link there is the crash the DEBUG
+                // note below records.
+                .pushDestination(isPresented: Binding(
+                    get: { openSummaryDoor != nil },
+                    set: { if !$0 { openSummaryDoor = nil } }
+                )) {
+                    summaryDoorDestination
+                }
+                #endif
                 #if DEBUG && os(iOS)
                 // "-openThemes" (DEBUG): the Browse by Theme screen pushed on launch, for headless
                 // verification of the theme rows. Through the stack's own destination, never a hidden
@@ -1316,6 +1337,15 @@ struct QuranView: View {
     }
 
     #if os(iOS)
+    @ViewBuilder
+    var summaryDoorDestination: some View {
+        switch openSummaryDoor {
+        case .themes:  themesBrowseDestination
+        case .history: quranHistoryDestination
+        case .none:    EmptyView()
+        }
+    }
+
     /// The Browse by Theme screen, built lazily (the topic corpus isn't touched until it's opened): the
     /// summary row's destination and the "-openThemes" hook's.
     private var themesBrowseDestination: some View {
@@ -2076,7 +2106,7 @@ struct QuranView: View {
             settings.hapticFeedback()
             showReciterPickerSheet = true
         } label: {
-            Label("Choose Reciter", systemImage: "headphones")
+            ChooseReciterMenuLabel()
         }
 
         Divider()
@@ -2423,13 +2453,26 @@ struct QuranView: View {
                     .buttonStyle(.plain)
                 }
 
+                // BUTTONS, not `chevronlessLink`s: a NavigationLink activates with every OTHER link
+                // in the same List row, so tapping either of these pushed both (Abu, 2026-09-19).
+                // One `@State` + one destination on the List instead - see `summaryDoorDestination`.
                 if ThematicTopicsStore.isBundled {
-                    summaryDoorChip(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
-                        .chevronlessLink { themesBrowseDestination }
+                    Button {
+                        settings.hapticFeedback()
+                        openSummaryDoor = .themes
+                    } label: {
+                        summaryDoorChip(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
+                    }
+                    .buttonStyle(.plain)
                 }
 
-                summaryDoorChip(title: "History", systemImage: "clock.arrow.circlepath")
-                    .chevronlessLink { quranHistoryDestination }
+                Button {
+                    settings.hapticFeedback()
+                    openSummaryDoor = .history
+                } label: {
+                    summaryDoorChip(title: "History", systemImage: "clock.arrow.circlepath")
+                }
+                .buttonStyle(.plain)
             }
             .padding(.vertical, 2)
         }
@@ -2525,24 +2568,24 @@ struct QuranView: View {
             #if os(iOS)
             let noteText = bookmarkedAyah.note?.trimmingCharacters(in: .whitespacesAndNewlines)
             let noteToShow = (noteText?.isEmpty == false) ? noteText : nil
-            Button {
-                settings.hapticFeedback()
-                push(surahID: surah.id, ayahID: ayah.id)
-            } label: {
-                SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow, grid: true)
-                    .equatable()
-            }
-            .buttonStyle(.plain)
             // The same per-ayah actions the bookmark LIST rows carry - Highlight included, so a saved
-            // ayah can be colored from the grid too, not only from the row layout.
-            .ayahContextMenuModifier(
-                surah: surah.id,
-                ayah: ayah.id,
-                favoriteSurahs: context.favoriteSurahs,
-                bookmarkedAyahs: context.bookmarkedAyahs,
-                searchText: $searchText,
-                scrollToSurahID: $scrollToSurahID
-            )
+            // ayah can be colored from the grid too, not only from the row layout. `gridTileAction`
+            // makes it a press-and-hold `GridTileMenu` rather than a `contextMenu`, which used to
+            // lift every tile in the section at once as its preview.
+            SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow, grid: true)
+                .equatable()
+                .ayahContextMenuModifier(
+                    surah: surah.id,
+                    ayah: ayah.id,
+                    favoriteSurahs: context.favoriteSurahs,
+                    bookmarkedAyahs: context.bookmarkedAyahs,
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID,
+                    gridTileAction: {
+                        settings.hapticFeedback()
+                        push(surahID: surah.id, ayahID: ayah.id)
+                    }
+                )
             #else
             Button {
                 settings.hapticFeedback()
@@ -2661,13 +2704,22 @@ struct QuranView: View {
     private func favoriteGridTile(surahID: Int, context: SearchDisplayContext) -> some View {
         if let surah = quranData.surah(surahID) {
             #if os(iOS)
-            Button {
+            GridTileMenu {
                 settings.hapticFeedback()
                 push(surahID: surah.id, ayahID: nil)
+            } menu: {
+                #if os(iOS)
+                SurahContextMenu(
+                    surahID: surah.id,
+                    surahName: surah.nameTransliteration,
+                    favoriteSurahs: context.favoriteSurahs,
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID
+                )
+                #endif
             } label: {
                 SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), grid: true)
             }
-            .buttonStyle(.plain)
             // The single tappable corner star, matching the main surah grid (SurahRow no longer draws its
             // own inline star).
             .gridFavoriteStar(
@@ -2951,7 +3003,7 @@ struct QuranView: View {
                 spacing: 10
             ) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
-                    specialAyahGridTile(item: item)
+                    specialAyahGridTile(item: item, context: context)
                 }
             }
             .padding(.vertical, 4)
@@ -2967,15 +3019,24 @@ struct QuranView: View {
         #endif
     }
 
-    private func specialAyahGridTile(item: (surah: Surah, ayah: Ayah)) -> some View {
-        Button {
-            settings.hapticFeedback()
-            push(surahID: item.surah.id, ayahID: item.ayah.id)
-        } label: {
-            SurahAyahRow(surah: item.surah, ayah: item.ayah, grid: true)
-                .equatable()
-        }
-        .buttonStyle(.plain)
+    /// A pages / sajdah / muqatta'at tile. It carried NO menu at all before 2026-09-19 - the row form
+    /// has the full per-ayah menu, and the grid had nothing; `gridTileAction` gives the tile the same
+    /// list as a press-and-hold.
+    private func specialAyahGridTile(item: (surah: Surah, ayah: Ayah), context: SearchDisplayContext) -> some View {
+        SurahAyahRow(surah: item.surah, ayah: item.ayah, grid: true)
+            .equatable()
+            .ayahContextMenuModifier(
+                surah: item.surah.id,
+                ayah: item.ayah.id,
+                favoriteSurahs: context.favoriteSurahs,
+                bookmarkedAyahs: context.bookmarkedAyahs,
+                searchText: $searchText,
+                scrollToSurahID: $scrollToSurahID,
+                gridTileAction: {
+                    settings.hapticFeedback()
+                    push(surahID: item.surah.id, ayahID: item.ayah.id)
+                }
+            )
     }
 
     private func specialAyahRow(item: (surah: Surah, ayah: Ayah), context: SearchDisplayContext) -> some View {
@@ -3300,9 +3361,19 @@ struct QuranView: View {
     }
 
     private func surahGridTile(surah: Surah, context: SearchDisplayContext) -> some View {
-        Button {
+        GridTileMenu {
             settings.hapticFeedback()
             push(surahID: surah.id, ayahID: nil)
+        } menu: {
+            #if os(iOS)
+            SurahContextMenu(
+                surahID: surah.id,
+                surahName: surah.nameTransliteration,
+                favoriteSurahs: context.favoriteSurahs,
+                searchText: $searchText,
+                scrollToSurahID: $scrollToSurahID
+            )
+            #endif
         } label: {
             SurahRow(
                 surah: surah,
@@ -3313,9 +3384,8 @@ struct QuranView: View {
                 grid: true
             )
         }
-        .buttonStyle(.plain)
-        // The same corner star every grid tile carries - context menus inside a grid-in-a-list-row lift the
-        // whole row, so the star is the grid's tap-to-favorite.
+        // The same corner star every grid tile carries, OUTSIDE the menu so its tap target does not
+        // fight the long press (see `GridTileMenu`).
         .gridFavoriteStar(
             isFavorite: context.favoriteSurahs.contains(surah.id),
             accent: settings.accentColor.color,
@@ -3537,13 +3607,22 @@ struct QuranView: View {
         if let surah = quranData.surah(row.surahID) {
             let route = preprocessedJuzRoute(row: row, surah: surah)
             let ayahID: Int? = { if case let .ayahs(_, ayah) = route { return ayah } else { return nil } }()
-            Button {
+            GridTileMenu {
                 settings.hapticFeedback()
                 push(surahID: surah.id, ayahID: ayahID)
+            } menu: {
+                #if os(iOS)
+                SurahContextMenu(
+                    surahID: surah.id,
+                    surahName: surah.nameTransliteration,
+                    favoriteSurahs: context.favoriteSurahs,
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID
+                )
+                #endif
             } label: {
                 juzGridLabel(row: row, surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id))
             }
-            .buttonStyle(.plain)
             // The single tappable corner star, matching the main surah grid.
             .gridFavoriteStar(
                 isFavorite: context.favoriteSurahs.contains(surah.id),

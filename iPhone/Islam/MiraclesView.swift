@@ -183,10 +183,36 @@ final class MiraclesStore: @unchecked Sendable {
     static let shared = MiraclesStore()
     private init() {}
 
+    /// The handful worth reading first, in this order (Abu, 2026-09-19: "a section for strongest
+    /// miracles ... that you think are best").
+    ///
+    /// Chosen on ONE test: how little room the argument leaves for coincidence or hindsight. A claim
+    /// scores highly when the Quran's wording is specific rather than poetic, when the fact was
+    /// genuinely unknown in 7th-century Arabia, and when the confirmation is a hard find - an
+    /// excavated city, a mummy, a measured structure - rather than a reading that only works once you
+    /// already know the answer. Archaeology leads because a buried city either is or is not where the
+    /// text said it was; the cosmology and embryology entries follow because their wording is
+    /// unusually concrete.
+    ///
+    /// Deliberately short: a "best of" that runs to forty entries is just the library again. These
+    /// are the app's own editorial pick, not the source site's - it publishes no ranking.
+    static let strongestSlugs = [
+        "ubar", "petra", "mummy", "haman",
+        "expanding_universe", "big_bang_crunch", "primordial_smoke",
+        "human_embryo", "fetal_development", "bones",
+        "internal_mountains", "mountains", "internal_waves", "photic_zone",
+        "iron", "fingerprints",
+    ]
+
     struct Library {
         let articles: [MiracleArticle]
         let bySlug: [String: MiracleArticle]
         let imageBase: URL?
+
+        /// `strongestSlugs`, in that order, skipping any the pack no longer carries.
+        var strongest: [MiracleArticle] {
+            MiraclesStore.strongestSlugs.compactMap { bySlug[$0] }
+        }
 
         func articles(in category: MiracleCategory) -> [MiracleArticle] {
             articles.filter { $0.category == category }
@@ -320,6 +346,7 @@ struct MiraclesView: View {
     @State private var results: [MiracleArticle] = []
     @State private var filterTask: Task<Void, Never>?
     @State private var barsCollapsed = false
+    @State private var openDoor: SignsAboutDoor?
     #if DEBUG
     @State private var debugArticle: MiracleArticle?
     @State private var debugOpen = false
@@ -355,6 +382,23 @@ struct MiraclesView: View {
                             .foregroundStyle(.secondary)
                     }
 
+                    let strongest = library.strongest
+                    if !strongest.isEmpty {
+                        Section(
+                            header: SectionPillHeader(title: "STRONGEST", count: strongest.count,
+                                                      icon: "star.fill", accentTitle: true),
+                            footer: Text("Where the Quran's wording is most specific and the confirmation hardest to argue with - an excavated city, a mummy, a measured structure. The app's own pick, not the source's.")
+                        ) {
+                            ForEach(strongest) { article in
+                                NavigationLink(destination: LazyDestination {
+                                    MiracleArticleView(article: article)
+                                }) {
+                                    MiracleArticleRow(article: article, showCategory: true, query: "").equatable()
+                                }
+                            }
+                        }
+                    }
+
                     ForEach(MiracleLevel.allCases) { level in
                         Section(header: Text(level.title.uppercased())) {
                             ForEach(MiracleCategory.allCases.filter { $0.level == level }) { category in
@@ -372,6 +416,11 @@ struct MiraclesView: View {
                             }
                         }
                     }
+
+                    AboutSignsSection(heading: "About the Quran & Its Signs",
+                                      systemImage: "sparkles",
+                                      doors: [.quran, .prophet, .god],
+                                      openDoor: $openDoor)
 
                     Section(footer: MiracleCreditFooter()) { EmptyView() }
                 } else {
@@ -405,6 +454,7 @@ struct MiraclesView: View {
             }
         }
         .applyConditionalListStyle()
+        .aboutSignsDestination($openDoor)
         .navigationTitle("Miracles of the Quran")
         .onChange(of: searchText) { text in scheduleFilter(text) }
         .collapseBarsOnScroll($barsCollapsed)
@@ -490,6 +540,9 @@ struct MiracleCategoryView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle(category.title)
+        #if os(iOS)
+        .openScreen(.miracleCategory, id: category.rawValue)
+        #endif
         .navigationBarTitleDisplayMode(.inline)
         .task {
             guard articles == nil else { return }
@@ -562,6 +615,9 @@ private struct MiracleCreditFooter: View {
 
 struct MiracleArticleView: View {
     @Environment(\.appearance) private var appearance
+    /// Which miracle categories are already on the stack, so an in-prose category link cannot
+    /// push one the reader is standing in. See `OpenScreens.swift`.
+    @Environment(\.openScreenInstances) private var openScreenInstances
     @ObservedObject private var quranData = QuranData.shared
 
     let article: MiracleArticle
@@ -569,6 +625,80 @@ struct MiracleArticleView: View {
     /// Previous and next within the same subject, so an article is a place in a list rather than a
     /// cul-de-sac the reader has to back out of.
     @State private var siblings: (previous: MiracleArticle?, next: MiracleArticle?) = (nil, nil)
+    /// Previous | Next side by side, the Quran reader's own pair (`SurahView.surahNavigationButtonPair`)
+    /// rather than two stacked full-width rows (Abu, 2026-09-19). BOTH slots always render: at the
+    /// subject's ends the dead direction stays visible but dimmed, reading "First"/"Last" where a title
+    /// would be, so it says "there is nothing before this" instead of quietly going missing.
+    @ViewBuilder
+    private var siblingNavigationPair: some View {
+        HStack(spacing: 10) {
+            siblingNavigationButton(title: "Previous", target: siblings.previous,
+                                    endNote: "First", systemImage: "chevron.left", trailing: false)
+            siblingNavigationButton(title: "Next", target: siblings.next,
+                                    endNote: "Last", systemImage: "chevron.right", trailing: true)
+        }
+    }
+
+    @ViewBuilder
+    private func siblingNavigationButton(title: String, target: MiracleArticle?, endNote: String,
+                                         systemImage: String, trailing: Bool) -> some View {
+        let label = HStack(spacing: 10) {
+            if !trailing { siblingNavigationChevron(systemImage, enabled: target != nil) }
+
+            VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(target != nil ? .primary : .secondary)
+
+                Text(target?.title ?? endNote)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
+
+            if trailing { siblingNavigationChevron(systemImage, enabled: target != nil) }
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+
+        if let target {
+            // A BUTTON that records which way was tapped, not a link. Two links in one List row
+            // activate TOGETHER on any tap, so the pair pushed the previous AND the next article at
+            // once (found 2026-09-19 in the app-wide audit; introduced with the pair itself).
+            //
+            // A plain `NavigationLink` wrapping the label is also wrong here: in a List row it draws
+            // its own grey disclosure chevron beside the accent disc, which is the double-arrow this
+            // pair was built to avoid. One `@State` + one destination on the List solves both.
+            Button {
+                Settings.shared.hapticFeedback()
+                openSibling = target
+            } label: {
+                label
+            }
+            .buttonStyle(.plain)
+        } else {
+            label.opacity(0.55)
+        }
+    }
+
+    /// The chevron in a soft accent disc - the reader's `surahNavigationChevron`, so the two pairs
+    /// read as the same control.
+    private func siblingNavigationChevron(_ systemImage: String, enabled: Bool) -> some View {
+        Image(systemName: systemImage)
+            .font(.footnote.weight(.bold))
+            .foregroundColor(enabled ? appearance.accent : .secondary)
+            .frame(width: 28, height: 28)
+            .background(
+                Circle().fill((enabled ? appearance.accent : Color.secondary).opacity(0.16))
+            )
+    }
+
+    /// The sibling (Previous / Next) the reader tapped. One piece of state driving ONE destination:
+    /// two hidden links in the same List row both fired on any tap.
+    @State private var openSibling: MiracleArticle?
+
     /// An in-app link followed from the prose: another article, or a subject's index.
     @State private var linkedArticle: MiracleArticle?
     @State private var linkedCategory: MiracleCategory?
@@ -577,6 +707,7 @@ struct MiracleArticleView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("MiracleArticleView")
+        ScrollViewReader { proxy in
         List {
             Group {
                 Section {
@@ -602,42 +733,9 @@ struct MiracleArticleView: View {
 
                 if siblings.previous != nil || siblings.next != nil {
                     Section(header: Text("IN \(article.category.title.uppercased())")) {
-                        if let previous = siblings.previous {
-                            NavigationLink(destination: LazyDestination {
-                                MiracleArticleView(article: previous)
-                            }) {
-                                Label {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Previous")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(.secondary)
-                                        Text(previous.title)
-                                            .font(.subheadline.weight(.semibold))
-                                    }
-                                } icon: {
-                                    Image(systemName: "chevron.left.circle")
-                                        .foregroundStyle(appearance.accent)
-                                }
-                            }
-                        }
-                        if let next = siblings.next {
-                            NavigationLink(destination: LazyDestination {
-                                MiracleArticleView(article: next)
-                            }) {
-                                Label {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Next")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(.secondary)
-                                        Text(next.title)
-                                            .font(.subheadline.weight(.semibold))
-                                    }
-                                } icon: {
-                                    Image(systemName: "chevron.right.circle")
-                                        .foregroundStyle(appearance.accent)
-                                }
-                            }
-                        }
+                        siblingNavigationPair
+                            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                            .id("siblings")
                     }
                 }
 
@@ -646,6 +744,16 @@ struct MiracleArticleView: View {
             .themedListRowBackground()
         }
         .selectableArticleList()
+        #if DEBUG
+        // `-miracleScrollToSiblings`: the Previous|Next pair sits under the whole article, and there
+        // is no scroll tooling in the simulator, so a screenshot run needs a way to reach it.
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-miracleScrollToSiblings") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation { proxy.scrollTo("siblings", anchor: .center) }
+            }
+        }
+        #endif
         .navigationTitle(article.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -683,6 +791,14 @@ struct MiracleArticleView: View {
                 linkOpen = true
             } else if url.host == "category", let raw = url.pathComponents.dropFirst().first,
                       let category = MiracleCategory(rawValue: raw) {
+                // Not if that category is already on the stack: a category lists its articles and an
+                // article's prose can link back to a category, so pushing one you are already inside
+                // builds Category -> Article -> Category -> Article without end (Abu, 2026-09-19).
+                // A prose link has no row to grey out, so the guard is here: the tap is simply
+                // ignored, which is what "you are already there" means for an inline link.
+                guard !openScreenInstances.contains(
+                    OpenScreenInstance(screen: .miracleCategory, id: category.rawValue)
+                ) else { return .handled }
                 Settings.shared.hapticFeedback()
                 linkedCategory = category
                 linkedArticle = nil
@@ -690,6 +806,13 @@ struct MiracleArticleView: View {
             }
             return .handled
         })
+        // The ONE destination the Previous | Next pair shares (see `siblingNavigationButton`).
+        .pushDestination(isPresented: Binding(
+            get: { openSibling != nil },
+            set: { if !$0 { openSibling = nil } }
+        )) {
+            if let openSibling { MiracleArticleView(article: openSibling) }
+        }
         .pushDestination(isPresented: $linkOpen) {
             if let linkedArticle {
                 MiracleArticleView(article: linkedArticle)
@@ -709,6 +832,7 @@ struct MiracleArticleView: View {
                 return (at > 0 ? rows[at - 1] : nil, at + 1 < rows.count ? rows[at + 1] : nil)
             }.value
             siblings = pair
+        }
         }
     }
 }

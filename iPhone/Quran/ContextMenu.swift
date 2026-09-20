@@ -467,6 +467,10 @@ struct AyahContextMenuModifier: ViewModifier {
     /// button opens the SAME menu the long-press does, from the same modifier, so both entrances
     /// share every sheet and confirmation for free.
     var inlineEllipsis: Bool = false
+    /// Grid tiles: the menu opens from a press-and-hold on the tile itself (`GridTileMenu`) and the
+    /// tap runs `gridTileAction`, instead of a `contextMenu`. A `contextMenu` inside a grid lifts the
+    /// WHOLE List row - every tile in the section at once - as its preview (Abu, 2026-09-19).
+    var gridTileAction: (() -> Void)? = nil
 
     @State var showAyahSheet = false
 
@@ -474,6 +478,9 @@ struct AyahContextMenuModifier: ViewModifier {
     @State private var draftNote: String = ""
     @State private var showRespectAlert = false
     @State private var showCustomRangeSheet = false
+    /// The per-ayah Play/Repeat submenus offer the reciter too, so a recitation can be started with
+    /// the right voice without leaving the ayah (Abu, 2026-09-19).
+    @State private var showReciterPickerSheet = false
     @State private var showTafsirSheet = false
     @State private var showSimilarAyahsSheet = false
     @State private var showMutashabihatSheet = false
@@ -572,6 +579,17 @@ struct AyahContextMenuModifier: ViewModifier {
     /// `inlineEllipsis` is on) the header ellipsis Menu - one list, two entrances, the HadithRow
     /// grammar. Lives on this modifier because every sheet it opens presents from here.
     #if os(iOS)
+    /// Who is reciting, and a way to change it, inside the Play and Repeat submenus.
+    @ViewBuilder
+    private var chooseReciterButton: some View {
+        Button {
+            settings.hapticFeedback()
+            showReciterPickerSheet = true
+        } label: {
+            ChooseReciterMenuLabel()
+        }
+    }
+
     @ViewBuilder
     private func menuItems(surahObj: Surah?) -> some View {
                 if ayahOfTheDay {
@@ -689,6 +707,10 @@ struct AyahContextMenuModifier: ViewModifier {
                     Divider()
 
                     Menu {
+                        chooseReciterButton
+
+                        Divider()
+
                         ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
                             Button {
                                 settings.hapticFeedback()
@@ -709,6 +731,10 @@ struct AyahContextMenuModifier: ViewModifier {
                     }
 
                     Menu {
+                        chooseReciterButton
+
+                        Divider()
+
                         Button {
                             settings.hapticFeedback()
                             showCustomRangeSheet = true
@@ -783,10 +809,20 @@ struct AyahContextMenuModifier: ViewModifier {
         let surahObj = quranData.surah(surah)
 
         #if os(iOS)
-        content
-            .contextMenu {
-                menuItems(surahObj: surahObj)
+        Group {
+            if let gridTileAction {
+                GridTileMenu(primaryAction: gridTileAction) {
+                    menuItems(surahObj: surahObj)
+                } label: {
+                    content
+                }
+            } else {
+                content
+                    .contextMenu {
+                        menuItems(surahObj: surahObj)
+                    }
             }
+        }
             .overlay(alignment: .topTrailing) {
                 if inlineEllipsis {
                     Menu {
@@ -838,6 +874,7 @@ struct AyahContextMenuModifier: ViewModifier {
                         .smallMediumSheetPresentation()
                 }
             }
+            .reciterPickerSheet(isPresented: $showReciterPickerSheet)
             .sheet(isPresented: $showCustomRangeSheet) {
                 if let surahObj = surahObj {
                     PlayCustomRangeSheet(
@@ -936,7 +973,8 @@ extension View {
         scrollToSurahID: Binding<Int>,
         lastRead: Bool = false,
         ayahOfTheDay: Bool = false,
-        inlineEllipsis: Bool = false
+        inlineEllipsis: Bool = false,
+        gridTileAction: (() -> Void)? = nil
     ) -> some View {
         self.modifier(AyahContextMenuModifier(
             surah: surah,
@@ -947,7 +985,8 @@ extension View {
             scrollToSurahID: scrollToSurahID,
             lastRead: lastRead,
             ayahOfTheDay: ayahOfTheDay,
-            inlineEllipsis: inlineEllipsis
+            inlineEllipsis: inlineEllipsis,
+            gridTileAction: gridTileAction
         ))
     }
 }

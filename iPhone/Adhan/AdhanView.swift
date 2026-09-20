@@ -902,24 +902,61 @@ private struct CurrentLocationRow: View {
         #endif
     }
 
-    /// The device's actual latitude/longitude, shown under the location (city) only while the big Qibla
-    /// compass is expanded - a precise readout of "where you actually are" beneath the resolved place name.
+    /// The altitude the row draws: the live fix, or in DEBUG the `-fakeAltitude <metres>` override.
+    /// CoreLocation in the simulator reports no vertical accuracy, so the real reading never arrives
+    /// there and the row could not otherwise be screenshotted.
+    private var displayedAltitude: (metres: Double, accuracy: Double)? {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-fakeAltitude"), args.indices.contains(index + 1),
+           let metres = Double(args[index + 1]) {
+            return (metres, 10)
+        }
+        #endif
+        return live.currentAltitude
+    }
+
+    /// The device's actual latitude/longitude, and its elevation when the fix carries one, shown under
+    /// the location (city) only while the big Qibla compass is expanded - a precise readout of "where
+    /// you actually are" beneath the resolved place name.
+    ///
+    /// The elevation is a SECOND line rather than a third item on the first: the coordinate pair already
+    /// fills the row's width at `caption2`, and appending to it pushed the whole thing into
+    /// `minimumScaleFactor` territory. It appears only when CoreLocation reports a usable vertical
+    /// reading (Abu, 2026-09-19) - see `LiveState.currentAltitude`.
     @ViewBuilder
     private var coordinatesLabel: some View {
         if showBigQibla,
            let loc = live.currentLocation,
            loc.latitude != 1000, loc.longitude != 1000 {
-            HStack(spacing: 6) {
-                Image(systemName: "globe")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(settings.accentColor.color)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "globe")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(settings.accentColor.color)
 
-                Text(formatCoordinates(latitude: loc.latitude, longitude: loc.longitude))
-                    .font(.caption2)
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    Text(formatCoordinates(latitude: loc.latitude, longitude: loc.longitude))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+
+                if let altitude = displayedAltitude {
+                    HStack(spacing: 6) {
+                        Image(systemName: "mountain.2.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(settings.accentColor.color)
+
+                        Text(formatElevation(metres: altitude.metres))
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -933,6 +970,15 @@ private struct CurrentLocationRow: View {
                     UIPasteboard.general.string = "\(loc.latitude), \(loc.longitude)"
                 } label: {
                     Label("Copy Coordinates", systemImage: "doc.on.doc")
+                }
+
+                if let altitude = displayedAltitude {
+                    Button {
+                        settings.hapticFeedback()
+                        UIPasteboard.general.string = formatElevation(metres: altitude.metres)
+                    } label: {
+                        Label("Copy Elevation", systemImage: "mountain.2")
+                    }
                 }
             }
             #endif
@@ -950,6 +996,24 @@ func formatCoordinates(latitude: Double, longitude: Double) -> String {
     let latDir = latitude >= 0 ? "N" : "S"
     let lonDir = longitude >= 0 ? "E" : "W"
     return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
+}
+
+/// An altitude in metres as e.g. "1,204 ft · 367 m above sea level". Both units, feet first: the one
+/// other distance this app prints (the Kaaba, in `QiblaView`) is in miles, so feet is the unit that
+/// matches it, and the metric value is what CoreLocation actually measured.
+///
+/// Rounded to whole units - GPS altitude is good to some tens of metres at best, so decimals here
+/// would be invented precision. A negative reading (below sea level, the Dead Sea and the like) is
+/// printed as "below sea level" rather than with a minus sign.
+func formatElevation(metres: Double) -> String {
+    let feet = metres * 3.280839895
+    let number = NumberFormatter()
+    number.numberStyle = .decimal
+    number.maximumFractionDigits = 0
+    let feetText = number.string(from: NSNumber(value: abs(feet).rounded())) ?? "0"
+    let metresText = number.string(from: NSNumber(value: abs(metres).rounded())) ?? "0"
+    let suffix = metres < 0 ? "below sea level" : "above sea level"
+    return "\(feetText) ft · \(metresText) m \(suffix)"
 }
 
 

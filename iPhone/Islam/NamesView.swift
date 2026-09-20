@@ -402,6 +402,11 @@ struct NamesView: View {
     @ObservedObject var namesData = NamesViewModel.shared
 
     @State private var searchText = ""
+    #if os(iOS)
+    /// The "About" card's single open door (one @State + one destination on the List:
+    /// every chip lives in the SAME List row, and two links in one row both fire).
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var expandedNameNumbers = Set<Int>()
@@ -676,6 +681,14 @@ struct NamesView: View {
                         }
                     }
                     finalInvocationSection
+                    #if os(iOS)
+                    // The article FIRST: this screen is the names themselves, and the article is the
+                    // half that explains what they are and what the hadith about them actually says.
+                    AboutSignsSection(heading: "About the Names of Allah",
+                                      systemImage: "signature",
+                                      doors: [.namesOfAllahArticle, .allah, .tawhid, .god],
+                                      openDoor: $aboutDoor)
+                    #endif
                 }
                 .themedListRowBackground()
             }
@@ -686,14 +699,10 @@ struct NamesView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The Arabic face picker used to float here, above the search bar. One control on six
+            // screens writing one `settings.islamArabicFace` is a SETTING, not a reading control: it
+            // now lives once, in Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19).
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The one Islam-tab Arabic face picker, above the search bar - identical control and setting
-                // on Duas, Dhikr, the Arabic Alphabet and the letter detail screens. It does not fold away
-                // on scroll (`collapsibleBarRow` stays off), which is what made it look like a vanishing row.
-                IslamArabicFontPicker()
-                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                    .conditionalGlassEffect(interactive: false)
-
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -705,6 +714,9 @@ struct NamesView: View {
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("99 Names of Allah")
         // A load that failed at launch gets another go the moment the page is actually opened.
         .onAppear { namesData.retryIfNeeded() }
@@ -1184,47 +1196,15 @@ private struct NameRow: View, Equatable {
     var body: some View {
         #if os(iOS)
         content
-            // LIST ROWS ONLY. `NameGridTile` deliberately has no menu: the grid is a LazyVGrid inside a single
-            // List row, so a context menu there lifts the WHOLE row - every tile at once - as its preview.
-            // Favoriting lives on the tile's own star instead (same rule as the Islam tab's resource grid).
+            // The same items the grid tile offers through `GridTileMenu` - one menu, both modes.
+            // While searching, the row's tap already clears the search and scrolls to the name
+            // (`handleNameTap`); the menu and the trailing swipe say so explicitly, the Quran list's way.
             .contextMenu {
-                Text("Name Actions")
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    Settings.shared.hapticFeedback()
-                    FocusOverlayPresenter.shared.present(.name(name))
-                } label: {
-                    Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
-                }
-
-                Button {
-                    Settings.shared.hapticFeedback()
-                    presentSystemShareSheet(items: [FocusItem.name(name).shareText])
-                } label: {
-                    Label("Share Name", systemImage: "square.and.arrow.up")
-                }
-
-                Divider()
-
-                favoriteMenuItem
-
-                Divider()
-
-                copyMenu
-
-                // While searching, the row's tap already clears the search and scrolls to the name
-                // (`handleNameTap`); the menu and the trailing swipe say so explicitly, the Quran list's way.
-                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Divider()
-
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        onTap()
-                    } label: {
-                        Label("Scroll To Name", systemImage: "arrow.down.circle")
-                    }
-                }
+                nameContextItems(
+                    name,
+                    isFavorite: isFavorite,
+                    onScrollTo: searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : onTap
+                )
             }
             .swipeActions(edge: .leading) {
                 Button {
@@ -1347,56 +1327,6 @@ private struct NameRow: View, Equatable {
     private var displayArabicName: String {
         name.displayArabicName
     }
-
-    #if os(iOS)
-    // The menu's actions reach `Settings.shared` directly rather than through an `@ObservedObject`: this row
-    // deliberately doesn't observe Settings (see the note at the top of the struct), and a menu that only
-    // *acts* on Settings needs no subscription - `isFavorite` is already a folded input.
-    @ViewBuilder
-    private var favoriteMenuItem: some View {
-        Button(role: isFavorite ? .destructive : nil) {
-            Settings.shared.hapticFeedback()
-            withAnimation(.easeInOut) {
-                Settings.shared.toggleNameFavorite(number: name.number)
-            }
-        } label: {
-            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
-        }
-    }
-
-    private var copyMenu: some View {
-        // The First Found entries are Quran references; apps without the Quran have none.
-        #if HAS_QURAN
-        let firstFoundLine = "First Found: \(name.firstFoundShort)\n"
-        #else
-        let firstFoundLine = ""
-        #endif
-        return Group {
-            menuItem("Copy All", text: """
-            Arabic: \(name.name.removeDiacriticsFromLastLetter())
-            Transliteration: \(name.transliteration)
-            Translation: \(name.meaning)
-            \(firstFoundLine)Description: \(name.desc)
-            """)
-            menuItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
-            menuItem("Copy Transliteration", text: name.transliteration)
-            menuItem("Copy Translation", text: name.meaning)
-            #if HAS_QURAN
-            menuItem("Copy First Found", text: name.firstFoundShort)
-            #endif
-            menuItem("Copy Description", text: name.desc)
-        }
-    }
-
-    private func menuItem(_ label: String, text: String) -> some View {
-        Button {
-            Settings.shared.hapticFeedback()
-            UIPasteboard.general.string = text
-        } label: {
-            Label(label, systemImage: "doc.on.doc")
-        }
-    }
-    #endif
 
     @ViewBuilder
     private var numberPill: some View {
@@ -1548,8 +1478,93 @@ private struct VerseReflectionCard: View {
     }
 }
 
-/// No `contextMenu` here, deliberately - see the note on `NameRow`'s: the whole grid is one List row, so a
-/// menu on a tile lifts every tile at once as its preview. The tile's star is the favorite action instead.
+#if os(iOS)
+/// The 99 Names menu, shared by `NameRow`'s `contextMenu` and `NameGridTile`'s press-and-hold
+/// `GridTileMenu`: one list of actions, in one order, whichever mode the screen is in.
+@ViewBuilder
+func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> Void)? = nil) -> some View {
+    Text("Name Actions")
+        .foregroundStyle(.secondary)
+
+    Button {
+        Settings.shared.hapticFeedback()
+        FocusOverlayPresenter.shared.present(.name(name))
+    } label: {
+        Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+    }
+
+    Button {
+        Settings.shared.hapticFeedback()
+        presentSystemShareSheet(items: [FocusItem.name(name).shareText])
+    } label: {
+        Label("Share Name", systemImage: "square.and.arrow.up")
+    }
+
+    Divider()
+
+    Button(role: isFavorite ? .destructive : nil) {
+        Settings.shared.hapticFeedback()
+        withAnimation(.easeInOut) {
+            Settings.shared.toggleNameFavorite(number: name.number)
+        }
+    } label: {
+        Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+    }
+
+    Divider()
+
+    nameCopyItems(name)
+
+    // Only while searching: the row's own tap already does this, and the grid tile has no other way.
+    if let onScrollTo {
+        Divider()
+
+        Button {
+            Settings.shared.hapticFeedback()
+            onScrollTo()
+        } label: {
+            Label("Scroll To Name", systemImage: "arrow.down.circle")
+        }
+    }
+}
+
+@ViewBuilder
+private func nameCopyItems(_ name: NameOfAllah) -> some View {
+    // The First Found entries are Quran references; apps without the Quran have none.
+    #if HAS_QURAN
+    let firstFoundLine = "First Found: \(name.firstFoundShort)\n"
+    #else
+    let firstFoundLine = ""
+    #endif
+    Group {
+        nameCopyItem("Copy All", text: """
+        Arabic: \(name.name.removeDiacriticsFromLastLetter())
+        Transliteration: \(name.transliteration)
+        Translation: \(name.meaning)
+        \(firstFoundLine)Description: \(name.desc)
+        """)
+        nameCopyItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
+        nameCopyItem("Copy Transliteration", text: name.transliteration)
+        nameCopyItem("Copy Translation", text: name.meaning)
+        #if HAS_QURAN
+        nameCopyItem("Copy First Found", text: name.firstFoundShort)
+        #endif
+        nameCopyItem("Copy Description", text: name.desc)
+    }
+}
+
+private func nameCopyItem(_ label: String, text: String) -> some View {
+    Button {
+        Settings.shared.hapticFeedback()
+        UIPasteboard.general.string = text
+    } label: {
+        Label(label, systemImage: "doc.on.doc")
+    }
+}
+#endif
+
+/// Press-and-hold opens the same menu the row carries (`GridTileMenu`); a tap opens the name
+/// fullscreen, which is the only "open" a tile has - expanding in place is a list-row idea.
 private struct NameGridTile: View, Equatable {
 
     let name: NameOfAllah
@@ -1572,6 +1587,36 @@ private struct NameGridTile: View, Equatable {
     }
 
     var body: some View {
+        #if os(iOS)
+        GridTileMenu {
+            Settings.shared.hapticFeedback()
+            FocusOverlayPresenter.shared.present(.name(name))
+        } menu: {
+            nameContextItems(name, isFavorite: isFavorite)
+        } label: {
+            tile
+        }
+        // OUTSIDE the menu's label: inside, the star's tap target fights the long press.
+        .gridFavoriteStar(
+            isFavorite: isFavorite,
+            accent: accentColor.color,
+            accessibilityName: name.transliteration
+        ) {
+            Settings.shared.toggleNameFavorite(number: name.number)
+        }
+        #else
+        tile
+            .gridFavoriteStar(
+                isFavorite: isFavorite,
+                accent: accentColor.color,
+                accessibilityName: name.transliteration
+            ) {
+                Settings.shared.toggleNameFavorite(number: name.number)
+            }
+        #endif
+    }
+
+    private var tile: some View {
         VStack(spacing: 3) {
             Text(name.displayArabicName)
                 .font(useFontArabic ? Font.arabic(fontArabic, size: 20) : .title3)
@@ -1602,17 +1647,6 @@ private struct NameGridTile: View, Equatable {
             useColor: isFavorite ? 0.25 : nil,
             customTint: isFavorite ? accentColor.color : nil
         )
-        .gridFavoriteStar(
-            isFavorite: isFavorite,
-            accent: accentColor.color,
-            accessibilityName: name.transliteration
-        ) {
-            Settings.shared.toggleNameFavorite(number: name.number)
-        }
-        .onTapGesture {
-            Settings.shared.hapticFeedback()
-            Settings.shared.toggleNameFavorite(number: name.number)
-        }
     }
 }
 

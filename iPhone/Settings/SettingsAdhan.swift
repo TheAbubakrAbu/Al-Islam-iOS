@@ -534,6 +534,21 @@ extension Settings {
         let isFresh = abs(loc.timestamp.timeIntervalSinceNow) <= 300
         guard isValid && isFresh else { return }
 
+        // Altitude rides along with the fix (shown under the expanded Qibla compass). A
+        // non-positive `verticalAccuracy` means this fix carries no usable altitude at all - keep
+        // whatever the last good one said rather than replacing it with a fabricated 0 m.
+        if loc.verticalAccuracy > 0 {
+            let reading = (metres: loc.altitude, accuracy: loc.verticalAccuracy)
+            Task { @MainActor in
+                let live = LiveState.shared
+                // Guarded: this runs on every fix, and an unchanged publish re-renders the tab.
+                if live.currentAltitude?.metres != reading.metres
+                    || live.currentAltitude?.accuracy != reading.accuracy {
+                    live.currentAltitude = reading
+                }
+            }
+        }
+
         if Self.isRefiningLocation {
             commitLocation(loc, refining: true)
             let elapsed = Date().timeIntervalSince(Self.refinementStartedAt ?? Date())
@@ -1551,6 +1566,27 @@ extension Settings {
         return (normal: normalList, full: fullList)
     }    
 
+    /// `prayersIncludingOptional` plus any optional TIME that a nag cascade needs even though the
+    /// user has not switched it on as a displayed prayer (Abu, 2026-09-19: "add it for midnight too
+    /// even if midnight is not an optional prayer").
+    ///
+    /// Only the scheduler uses this. `prayersIncludingOptional` still answers "what does the user
+    /// want to SEE", so turning on the Isha deadline does not put Islamic Midnight into the prayer
+    /// list, the sky card or the widgets - it only makes the time available to schedule against.
+    func prayersIncludingNaggedTimes(_ base: [Prayer], for date: Date) -> [Prayer] {
+        var list = prayersIncludingOptional(base, for: date)
+        #if os(iOS)
+        guard naggingMode, naggingIslamicMidnight,
+              !list.contains(where: { $0.nameTransliteration == "Islamic Midnight" }),
+              let here = currentLocation else { return list }
+        let midnight = optionalPrayers(for: date, at: here,
+                                       duha: false, islamicMidnight: true, lastThird: false)
+        guard !midnight.isEmpty else { return list }
+        list = (list + midnight).sorted { $0.time < $1.time }
+        #endif
+        return list
+    }
+
     func prayersIncludingOptional(_ base: [Prayer], for date: Date) -> [Prayer] {
         let optional = getOptionalPrayers(for: date)
         guard !optional.isEmpty else { return base }
@@ -2163,8 +2199,13 @@ extension Settings {
         #if DEBUG
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { (requests) in
-            for request in requests {
-                logger.debug("\(request.content.body)")
+            // NSLog, not `logger.debug`: this is read off `simctl spawn log stream` during a headless
+            // check, and the identifier matters as much as the text - it is what proves a wording
+            // change actually replaced the pending request rather than leaving a stale one behind
+            // (see `notificationContentSignature`).
+            NSLog("PENDINGNOTIFS count=%d", requests.count)
+            for request in requests.sorted(by: { $0.identifier < $1.identifier }) {
+                NSLog("PENDINGNOTIF %@ | %@", request.identifier, request.content.body)
             }
         }
         #endif
@@ -2296,6 +2337,47 @@ extension Settings {
         "Islamic Midnight": .init(enabled: \.notificationIslamicMidnight, preMinutes: \.preNotificationIslamicMidnight, nagging: \.naggingIslamicMidnight),
         "Last Third":    .init(enabled: \.notificationLastThird, preMinutes: \.preNotificationLastThird, nagging: \.naggingLastThird)
     ]
+
+    /// What each prayer's name MEANS, for the optional English gloss in a notification body:
+    /// "Time for Maghrib (sunset)". Abu turned the old version of this off because some notifications
+    /// kept their previous wording; see `notificationContentSignature` for why that happened and what
+    /// now prevents it.
+    ///
+    /// Lowercase on purpose - these are descriptions ("sunset"), not proper names, and they read as an
+    /// aside to the prayer's own name rather than as a second title. Shurooq and Jumuah already carried
+    /// a gloss before this setting existed, so they keep exactly the words they had.
+    static let prayerEnglishMeanings: [String: String] = [
+        "Fajr":             "dawn",
+        "Shurooq":          "end of Fajr",
+        "Dhuhr":            "midday",
+        "Dhuhr/Asr":        "midday and afternoon",
+        "Jumuah":           "Friday",
+        "Asr":              "afternoon",
+        "Maghrib":          "sunset",
+        "Maghrib/Isha":     "sunset and night",
+        "Isha":             "night",
+        "Duhaa":            "mid-morning",
+        "Islamic Midnight": "midpoint of the night",
+        "Last Third":       "last third of the night",
+    ]
+
+    /// A short stamp of every setting that changes what a prayer notification SAYS, appended to each
+    /// prayer identifier so a wording change forces a real replacement instead of leaving stale text
+    /// behind. See the comment at the `id` construction in `makePrayerNotificationRequest`.
+    ///
+    /// Deliberately only the settings that affect the BODY. The prayer's time, its name and the day are
+    /// already in the identifier, and the sound is not part of the text, so neither belongs here: a
+    /// signature that moved for unrelated reasons would churn the whole schedule on every launch, which
+    /// is exactly what the stable-identifier design was built to avoid.
+    ///
+    /// `~` as the separator because it cannot appear in a prayer name, so the prefix match in
+    /// `ownedNotificationIDPrefixes` (which keys on "<name>-") is unaffected.
+    static func notificationContentSignature(_ settings: Settings) -> String {
+        var stamp = ""
+        if settings.prayerNotificationEnglishNames { stamp += "e" }
+        if settings.travelingMode { stamp += "t" }
+        return stamp.isEmpty ? "" : "~\(stamp)"
+    }
 
     /// The identifier namespaces this scheduler OWNS and may prune: its prayer requests
     /// ("<name>-<minutes>-Y-M-D", one prefix per `notifTable` name), Hijri-event reminders ("Event-")
@@ -2537,7 +2619,7 @@ extension Settings {
                 }
             }
 
-            let todayList = prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day)
+            let todayList = prayersIncludingNaggedTimes(prayerObj.prayers, for: prayerObj.day)
             for prayer in todayList {
                 guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                 let includeNags = !nagCascadeIsAnswered(for: prayer, in: todayList, on: prayerObj.day)
@@ -2558,7 +2640,7 @@ extension Settings {
                 let extended = dayOffset > futureDays
                 let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
                 guard let list = getPrayerTimes(for: date) else { continue }
-                let dayList = prayersIncludingOptional(list, for: date)
+                let dayList = prayersIncludingNaggedTimes(list, for: date)
                 for prayer in dayList {
                     guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                     let includeNags = !extended && !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
@@ -2645,9 +2727,17 @@ extension Settings {
         #endif
 
         // Incremental refresh instead of wiping everything first: adding a request with an existing
-        // identifier replaces it in place (all our identifiers are stable), so unchanged notifications are
-        // never torn down - no brief window with zero pending, less churn, faster, and the system keeps the
-        // already-scheduled fire times steady. Afterwards, prune only the now-stale ones (past days,
+        // identifier replaces it in place, so unchanged notifications are never torn down - no brief
+        // window with zero pending, less churn, faster, and the system keeps the already-scheduled fire
+        // times steady.
+        //
+        // An identifier is stable for a given (prayer, offset, day) AND wording: the trailing content
+        // signature moves when a body-affecting setting changes, which is deliberate. That is what makes
+        // a wording change reach notifications this pass does not re-add - their old ids are no longer
+        // desired, so the prune below removes them. Without it, flipping the English-meanings switch
+        // left days of already-scheduled notifications reading the old way (Abu's report, and the reason
+        // he had turned that feature off).
+        // Afterwards, prune only the now-stale ones (past days,
         // prayers turned off, items pushed out by the cap).
         // The rest runs off main: building the request objects, the up-to-60 `center.add` XPC calls and
         // the prune. `UNUserNotificationCenter` is safe to call from any thread; the specs are values;
@@ -2692,6 +2782,15 @@ extension Settings {
             if !stale.isEmpty {
                 center.removePendingNotificationRequests(withIdentifiers: stale)
             }
+            #if DEBUG
+            // "-dumpNotifications": print every pending request (id + body) once the prune has run.
+            // The check that matters for a wording change is that NO pending body is left over from the
+            // previous setting - the prune is what removes those, so the dump has to come after it.
+            if ProcessInfo.processInfo.arguments.contains("-dumpNotifications") {
+                NSLog("PENDINGNOTIFS pruned=%d", stale.count)
+                Settings.shared.printAllScheduledNotifications()
+            }
+            #endif
             }
         }
 
@@ -2765,9 +2864,14 @@ extension Settings {
 
     /// The at-time identifier `makePrayerNotificationRequest` builds (minutes == nil → "0"), so a played
     /// adhan can prune the notification that would otherwise sound for the same moment.
+    ///
+    /// It must include the SAME content signature the scheduler appends, or this stops matching the
+    /// request it is meant to cancel and the notification fires over the adhan the app is already
+    /// playing. Rebuilt here rather than searched for because the caller has only a name and a date.
     private static func foregroundAdhanNotificationID(name: String, date: Date) -> String {
         let comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
         return "\(name)-0-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+            + notificationContentSignature(.shared)
     }
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {
@@ -2780,16 +2884,43 @@ extension Settings {
     }
     #endif
 
+    /// The nag cascade's body: name the prayer it is actually ASKING ABOUT, not just the one whose
+    /// time is approaching (Abu, 2026-09-19: "mention for each prayer what it is nagging for").
+    ///
+    /// "15m until Shurooq" told you a time was coming; it never said why you were being nagged. The
+    /// cascade before Shurooq exists because FAJR's window closes then, so the notification now
+    /// reads "Did you pray Fajr? Shurooq in 15m ..." - the question first, the deadline as context.
+    private func nagBody(asked: String, cascade: Prayer, minutes: Int, city: String) -> String {
+        // The gloss goes on the prayer being ASKED about, not on the deadline: "Did you pray Maghrib
+        // (sunset)? Isha in 30m" reads as one question, where glossing both would read as two.
+        let askedPart = prayerNotificationEnglishNames
+            ? asked + (Self.prayerEnglishMeanings[asked].map { " (\($0))" } ?? "")
+            : asked
+        let deadline = "\(cascade.displayName) in \(minutes)m"
+        let when = "[\(formatDate(cascade.time))]"
+        return "Did you pray \(askedPart)? \(deadline) in \(city)"
+             + (travelingMode ? " (traveling)" : "")
+             + " \(when)"
+    }
+
     private func buildBody(prayer: Prayer, minutesBefore: Int?, city: String) -> String {
         let englishPart: String = {
+            // Shurooq and Jumuah have always carried their gloss, switch or no switch: "Shurooq" alone
+            // does not say that Fajr's window just closed, and "Jumuah" is the one whose day matters.
             switch prayer.nameTransliteration {
             case "Shurooq":
                 return " (end of Fajr)"
             case "Jumuah":
                 return " (Friday)"
             default:
-                return ""
+                break
             }
+            // Everything else only when asked for (Abu, 2026-09-19). The gloss is looked up by the
+            // prayer's TRANSLITERATION, not its display name, so a custom prayer name still gets the
+            // right meaning - and a name with no entry simply gets nothing rather than a guess.
+            guard prayerNotificationEnglishNames,
+                  let meaning = Self.prayerEnglishMeanings[prayer.nameTransliteration] else { return "" }
+            return " (\(meaning))"
         }()
 
         if let m = minutesBefore {
@@ -3244,7 +3375,11 @@ extension Settings {
     func cancelPendingNags(cascadePrayerName: String, on date: Date = Date()) {
         let comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
         guard let y = comps.year, let m = comps.month, let d = comps.day else { return }
-        let suffix = "-\(y)-\(m)-\(d)"
+        // The date is no longer the END of the identifier: a content signature may follow it (see
+        // `notificationContentSignature`), so this matches the date SEGMENT rather than a suffix.
+        // Matched without the signature on purpose - a nag scheduled under the previous wording must
+        // still be cancellable, or answering the tracker would leave yesterday's cascade nagging.
+        let datePart = "-\(y)-\(m)-\(d)"
         let prefix = "\(cascadePrayerName)-"
 
         var cancellableMinutes = naggingCascade(start: naggingStartOffset)
@@ -3257,7 +3392,9 @@ extension Settings {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
             let ids = requests.map(\.identifier).filter { id in
-                guard id.hasPrefix(prefix), id.hasSuffix(suffix) else { return false }
+                // Either "…-y-m-d" or "…-y-m-d~<signature>"; the signature can only be last.
+                guard id.hasPrefix(prefix),
+                      id.hasSuffix(datePart) || id.contains(datePart + "~") else { return false }
                 // "Name-minutes-y-m-d": the name never contains "-", so minutes is the 2nd field.
                 let fields = id.split(separator: "-")
                 guard fields.count >= 2, let minutes = Int(fields[1]) else { return false }
@@ -3355,6 +3492,9 @@ extension Settings {
         // cascade offsets - the plain pre-notification and the at-time adhan stay plain.
         var categoryIdentifier: String?
         var nagPrayerName: String?
+        /// Set for a nag delivery: the body names the prayer being asked about instead of only the
+        /// approaching time (see `nagBody`).
+        var nagAskedName: String?
         #if os(iOS)
         if let m = minutes, m != 0, naggingMode,
            let prefs = Self.notifTable[prayer.nameTransliteration],
@@ -3362,6 +3502,14 @@ extension Settings {
            naggingCascade(start: naggingStartOffset).contains(m) {
             categoryIdentifier = Self.nagCategoryIdentifier
             nagPrayerName = prayer.nameTransliteration
+            let asked = naggedPrayerName(forCascade: prayer.nameTransliteration)
+            // Already answered (prayed, late, or recorded missed): the cascade is still scheduled for
+            // tomorrow, but TODAY's remaining nags must not ask again - that is the nagging the mark
+            // was meant to end. `cancelPendingNags` handles the live case; this covers a reschedule
+            // that happens after the answer.
+            if !isPrayerMarked(asked, on: trackerDate(forMarking: asked)) {
+                nagAskedName = asked
+            }
         }
         #endif
 
@@ -3373,13 +3521,33 @@ extension Settings {
         // trigger stays the absolute instant the prayer actually occurs.
         comps.timeZone = Calendar.current.timeZone
 
+        // The signature is part of the IDENTIFIER, and that is what makes a wording change actually
+        // land (Abu, 2026-09-19: "some notifications wouldn't be updated").
+        //
+        // `center.add` replaces a pending request only when the identifier matches exactly, and the
+        // prune only removes ids this pass did not ask for. So with a body-independent id, a pending
+        // notification whose id matched but whose TEXT had changed kept the old text forever: the add
+        // replaced it with identical-looking content only if this pass happened to re-add that exact
+        // day, and everything past the ~60-request cap was never revisited at all. Flipping the
+        // English-names switch left days of already-scheduled notifications reading the old way.
+        //
+        // Folding the body-affecting settings into the id means those stale requests no longer match
+        // anything desired, so the prune deletes them and the new wording is added in their place.
         let id = "\(prayer.nameTransliteration)-\(minutes ?? 0)-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
+            + Self.notificationContentSignature(self)
         // `intendedFireDate` is the absolute instant this notification is FOR. The foreground delegate
         // reads it and silences any delivery that arrives well past its moment - an adhan belongs to its
         // prayer time, never to "whenever the system got around to it".
         let spec = PendingNotificationSpec(
             identifier: id,
-            body: buildBody(prayer: prayer, minutesBefore: minutes, city: city),
+            body: {
+                #if os(iOS)
+                if let asked = nagAskedName, let m = minutes {
+                    return nagBody(asked: asked, cascade: prayer, minutes: m, city: city)
+                }
+                #endif
+                return buildBody(prayer: prayer, minutesBefore: minutes, city: city)
+            }(),
             soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: minutes),
             categoryIdentifier: categoryIdentifier,
             nagPrayerName: nagPrayerName,

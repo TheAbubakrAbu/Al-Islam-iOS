@@ -64,6 +64,9 @@ struct HadithView: View {
     /// Grid tiles are plain Buttons (a NavigationLink cell in a List draws a chevron); tapping one sets
     /// this, and a hidden `NavigationLink` behind the List performs the actual push.
     @State private var pushedBook: HadithCatalogBook?
+    /// Which summary door was tapped (Topics / Encyclopedia / History). One piece of state driving one
+    /// destination: three hidden links in the same List row all fired together. See `encyclopediaDoors`.
+    @State private var openDoor: SummaryDoor?
     #if DEBUG
     /// `-launchHadithEncyclopedia`: the Hadith Encyclopedia pushed on launch, the headless way in.
     @State private var debugOpenEncyclopedia = false
@@ -636,6 +639,14 @@ struct HadithView: View {
             // Column mode: the reading (detail) column shows its own Now Playing bar - suppress the
             // catalog's copy or recitation puts one identical bar in EACH column (the Quran tab's rule).
             .applyConditionalListStyle(disableNowPlayingInset: usesColumnNavigation)
+            // The ONE destination the three summary doors share. On the List, not on the row: a lazy
+            // row's own destination never fires (see `PushDestination`).
+            .pushDestination(isPresented: Binding(
+                get: { openDoor != nil },
+                set: { if !$0 { openDoor = nil } }
+            )) {
+                summaryDoorDestination
+            }
             .compactListSectionSpacing()
             // The grid/list flip animates the whole catalog, same as the Quran tab.
             .animation(.easeInOut, value: hadithGridMode)
@@ -1105,23 +1116,79 @@ struct HadithView: View {
     /// section instead.
     @ViewBuilder
     private var encyclopediaDoors: some View {
-        // Three chips on one row (2026-09-16: three full rows were most of the summary's height), each
-        // its own chevron-less link inside the row; the twin of the Quran tab's row.
+        // Three chips on one row (2026-09-16: three full rows were most of the summary's height).
+        //
+        // BUTTONS, not three `chevronlessLink`s. A `NavigationLink` - hidden or not - activates with
+        // EVERY other link in the same List row, so tapping any one of these three pushed all three
+        // at once (Abu, 2026-09-19: "opening Browse by Theme or History or Topics/Encyclopedia/
+        // History opens all 3"). Each chip now just records which door was tapped, and ONE
+        // `navigationDestination` on the List pushes that one. See `openDoor`.
         HStack(spacing: 10) {
             if HadithTopicsStore.isBundled {
-                doorChip(title: "Topics", systemImage: "square.grid.2x2.fill")
-                    .chevronlessLink { HadithTopicsView() }
+                doorButton(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
             }
 
             if HadeethEncStore.isBundled {
-                doorChip(title: "Encyclopedia", systemImage: "books.vertical.fill")
-                    .chevronlessLink { HadeethEncView() }
+                doorButton(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
             }
 
-            doorChip(title: "History", systemImage: "clock.arrow.circlepath")
-                .chevronlessLink { HadithHistoryView() }
+            doorButton(.history, title: "History", systemImage: "clock.arrow.circlepath")
         }
         .padding(.vertical, 2)
+    }
+
+    /// The doors under the summary. One `@State` + one destination, so exactly one screen opens.
+    enum SummaryDoor: String, Identifiable, Hashable {
+        case topics, encyclopedia, history
+        /// The two "About Hadith & the Sunnah" cards, which share the same one-destination plumbing.
+        case sunnah, hadithPillar
+        var id: String { rawValue }
+    }
+
+    /// One "About Hadith" card: a Button, for the same reason the summary doors are.
+    private func aboutDoorButton(_ title: String, door: SummaryDoor) -> some View {
+        Button {
+            settings.hapticFeedback()
+            openDoor = door
+        } label: {
+            HStack {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+            .padding(.horizontal, -2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func doorButton(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
+        Button {
+            settings.hapticFeedback()
+            openDoor = door
+        } label: {
+            doorChip(title: title, systemImage: systemImage)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The destination for `openDoor`, attached to the LIST (a lazy row's own destination never
+    /// fires - the same rule `PushDestination` documents).
+    @ViewBuilder
+    var summaryDoorDestination: some View {
+        switch openDoor {
+        case .topics:       HadithTopicsView()
+        case .encyclopedia: HadeethEncView()
+        case .history:      HadithHistoryView()
+        case .sunnah:       SunnahPillarView()
+        case .hadithPillar: HadithPillarView()
+        case .none:         EmptyView()
+        }
     }
 
     /// One door chip: the accent symbol and the name on glass. Deliberately the twin of the Quran
@@ -1162,37 +1229,12 @@ struct HadithView: View {
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                NavigationLink(destination: LazyDestination { SunnahPillarView() }) {
-                    HStack {
-                        Text("What is the Sunnah?")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .conditionalGlassEffect(clear: true, rectangle: true)
-                    .contentShape(Rectangle())
-                    .padding(.horizontal, -2)
-                }
-                .buttonStyle(.plain)
+                // BUTTONS: both cards are in ONE List row (this VStack is the whole section's row),
+                // and two NavigationLinks in a row activate together - tapping either pushed both
+                // pillar screens (2026-09-19 audit).
+                aboutDoorButton("What is the Sunnah?", door: .sunnah)
 
-                NavigationLink(destination: LazyDestination { HadithPillarView() }) {
-                    HStack {
-                        Text("What are Hadiths?")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                        
-                        Spacer()
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .conditionalGlassEffect(clear: true, rectangle: true)
-                    .contentShape(Rectangle())
-                    .padding(.horizontal, -2)
-                }
-                .buttonStyle(.plain)
+                aboutDoorButton("What are Hadiths?", door: .hadithPillar)
 
                 Text("Learn more under Al-Islam → Pillars and Beliefs.")
                     .font(.caption2)
@@ -2324,9 +2366,11 @@ struct HadithView: View {
     /// A compact tile in the 99-Names style: Arabic, English, and the number stacked centered - a
     /// Button that pushes through the hidden `pushedBook` link, so no List chevron ever appears.
     private func bookGridTile(_ book: HadithCatalogBook) -> some View {
-        Button {
+        GridTileMenu {
             settings.hapticFeedback()
             pushedBook = book
+        } menu: {
+            bookContextMenu(book)
         } label: {
             VStack(spacing: 3) {
                 HighlightedSnippet(
@@ -2372,13 +2416,14 @@ struct HadithView: View {
             .padding(.horizontal, 6)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .conditionalGlassEffect(
             clear: !store.isFavorite(book.slug),
             rectangle: true,
             useColor: store.isFavorite(book.slug) ? 0.25 : nil,
             customTint: store.isFavorite(book.slug) ? settings.accentColor.color : nil
         )
+        // OUTSIDE the menu's label, so the star's own tap target does not fight the long press that
+        // opens it (see `GridTileMenu`).
         .gridFavoriteStar(
             isFavorite: store.isFavorite(book.slug),
             accent: settings.accentColor.color,
@@ -2386,8 +2431,6 @@ struct HadithView: View {
         ) {
             store.toggleFavoriteOrConfirm(book)
         }
-        // No context menu on grid tiles - the long-press preview snapshot fought the tile's glass and
-        // the row form still carries the full menu.
     }
 }
 

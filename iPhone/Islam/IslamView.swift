@@ -80,20 +80,23 @@ struct IslamView: View {
     private enum IslamDestination: String, Hashable, CaseIterable {
         /// The on-device chat. Listed only where Apple Intelligence can run it (`available`).
         case arabicAlphabet
+        // The Tajweed Course was merged INTO Foundations (Abu, 2026-09-19): one subject, one door.
+        // The course is now that screen's lead section, so there is no `tajweedCourse` case.
         case tajweedFoundations
-        case tajweedCourse
+        case namesOfAllah
         case commonAdhkar
         case commonDuas
         case tasbihCounter
         case zakahCalculator
         case inheritanceCalculator
-        case namesOfAllah
         case hijriCalendarConverter
         case masjidLocator
         case halalFoodLocator
         case pillarsAndBasics
         case howToGuides
         case miraclesOfQuran
+        case propheciesOfProphet
+        case miraclesOfProphets
         case islamicWallpapers
         case journal
         case askAI
@@ -103,7 +106,6 @@ struct IslamView: View {
             case .askAI: return "Ask AI"
             case .arabicAlphabet: return "Arabic Alphabet"
             case .tajweedFoundations: return "Tajweed Foundations"
-            case .tajweedCourse: return "Tajweed Course"
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
             case .tasbihCounter: return "Tasbih Counter"
@@ -117,6 +119,8 @@ struct IslamView: View {
             case .pillarsAndBasics: return "Pillars & Beliefs"
             case .howToGuides: return "How-To Guides"
             case .miraclesOfQuran: return "Miracles of the Quran"
+            case .propheciesOfProphet: return "Prophecies of the Prophet"
+            case .miraclesOfProphets: return "Miracles of the Prophets"
             case .journal: return "Islamic Journal"
             }
         }
@@ -126,7 +130,6 @@ struct IslamView: View {
             case .askAI: return "sparkles"
             case .arabicAlphabet: return "textformat.size.ar"
             case .tajweedFoundations: return "waveform"
-            case .tajweedCourse: return "graduationcap"
             case .commonAdhkar: return "book.closed"
             case .commonDuas: return "text.book.closed"
             case .tasbihCounter: return "circles.hexagonpath.fill"
@@ -140,6 +143,8 @@ struct IslamView: View {
             case .pillarsAndBasics: return "moon.stars"
             case .howToGuides: return "list.bullet.rectangle"
             case .miraclesOfQuran: return "sparkle.magnifyingglass"
+            case .propheciesOfProphet: return "checkmark.seal"
+            case .miraclesOfProphets: return "staroflife"
             case .journal: return "square.and.pencil"
             }
         }
@@ -149,8 +154,7 @@ struct IslamView: View {
             switch self {
             case .askAI: return "Ask anything about Islam, on device"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
-            case .tajweedFoundations: return "The rules of beautiful recitation"
-            case .tajweedCourse: return "A guided course, lesson by lesson"
+            case .tajweedFoundations: return "A guided course, and the rules in full"
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
             case .commonDuas: return "Authenticated supplications with sources"
             case .tasbihCounter: return "Count dhikr with a tap"
@@ -164,6 +168,8 @@ struct IslamView: View {
             case .pillarsAndBasics: return "The Five Pillars and Six Beliefs"
             case .howToGuides: return "Wudu, salah, Jumuah, and more"
             case .miraclesOfQuran: return "Signs in creation, science, and history"
+            case .propheciesOfProphet: return "What he foretold, and what history did"
+            case .miraclesOfProphets: return "The signs given to the prophets, and to him"
             case .journal: return "Notes from khutbahs, classes, and your reading"
             }
         }
@@ -176,7 +182,6 @@ struct IslamView: View {
             case .askAI: return "Ask\nAI"
             case .arabicAlphabet: return "Arabic\nAlphabet"
             case .tajweedFoundations: return "Tajweed\nFoundations"
-            case .tajweedCourse: return "Tajweed\nCourse"
             case .commonAdhkar: return "Dhikr &\nRemembrances"
             case .commonDuas: return "Dua &\nSupplications"
             case .tasbihCounter: return "Tasbih\nCounter"
@@ -190,6 +195,8 @@ struct IslamView: View {
             case .pillarsAndBasics: return "Pillars &\nBeliefs"
             case .howToGuides: return "How-To\nGuides"
             case .miraclesOfQuran: return "Miracles of\nthe Quran"
+            case .propheciesOfProphet: return "Prophecies of\nthe Prophet"
+            case .miraclesOfProphets: return "Miracles of\nthe Prophets"
             case .journal: return "Islamic\nJournal"
             }
         }
@@ -199,8 +206,9 @@ struct IslamView: View {
             switch self {
             case .askAI: return ["chat", "question", "assistant", "apple intelligence"]
             case .arabicAlphabet: return ["letters", "harakat", "huruf", "alphabet", "tashkeel", "numbers"]
-            case .tajweedFoundations: return ["recitation", "rules", "makharij", "ghunnah", "qalqalah", "madd"]
-            case .tajweedCourse: return ["lessons", "course", "learn", "practice", "beginner", "step by step", "tajwid"]
+            case .tajweedFoundations: return ["recitation", "rules", "makharij", "ghunnah", "qalqalah", "madd",
+                                              // The merged course's own words, so "tajweed course" still lands here.
+                                              "lessons", "course", "learn", "practice", "beginner", "step by step", "tajwid"]
             case .commonAdhkar: return ["dhikr", "adhkar", "azkar", "remembrance", "tasbih", "subhanallah"]
             case .commonDuas: return ["dua", "duas", "supplication", "prayer", "invocation"]
             case .tasbihCounter: return ["counter", "beads", "misbaha", "count"]
@@ -214,6 +222,10 @@ struct IslamView: View {
             case .pillarsAndBasics: return ["beliefs", "aqeedah", "articles", "basics", "iman", "faith"]
             case .howToGuides: return ["how to", "guide", "steps", "wudu", "salah", "ghusl"]
             case .miraclesOfQuran: return ["miracles", "miracle", "science", "scientific", "signs", "creation", "embryology", "astronomy", "cosmology", "universe", "ijaz"]
+            case .propheciesOfProphet: return ["prophecy", "prophecies", "foretold", "predicted", "prediction", "future", "signs of the hour", "end times", "fulfilled"]
+            case .miraclesOfProphets: return ["miracles", "prophets", "moses", "musa", "jesus", "isa", "abraham", "ibrahim", "salih", "moon", "splitting", "staff", "sea", "proof", "prophethood",
+                                              "david", "dawud", "solomon", "sulayman", "jonah", "yunus", "whale", "iron", "jinn", "ants", "birds",
+                                              "night journey", "isra", "miraj", "ascension", "aqsa", "cradle", "she-camel", "fire"]
             case .journal: return ["journal", "notes", "note", "diary", "khutbah", "lecture", "class", "study", "reflection", "write"]
             }
         }
@@ -231,8 +243,6 @@ struct IslamView: View {
         static var available: [IslamDestination] {
             allCases.filter {
                 if $0 == .askAI { return OnDeviceAsk.isAvailable }
-                // The course is a pack, not code: no pack, no tile.
-                if $0 == .tajweedCourse { return TajweedLessonsStore.isBundled }
                 return true
             }
         }
@@ -622,18 +632,28 @@ struct IslamView: View {
     @ViewBuilder
     private func resourceItems(_ items: [IslamDestination]) -> some View {
         if settings.islamGridMode {
-            // No contextMenu on the tiles: a context menu inside a LazyVGrid-in-a-List-row lifts the WHOLE
-            // row (every tile at once) as the preview. Favoriting lives on the star inside each tile instead,
-            // the same pattern the Arabic-letter and 99-Names grids use.
+            // Ask AI is the odd one out: it is a conversation, not a reference page, and at one third
+            // of a row its label had to shrink to "Ask AI" with no room to say what it does. It spans
+            // the full width, with the caption the tiles cannot carry, and sits BELOW the grid
+            // (Abu, 2026-09-19: the references are what the tab is for; the assistant is the thing
+            // you reach for when they have not answered you). Pulled OUT of `items` so it never
+            // draws twice.
+            let askAI = items.first { $0 == .askAI }
+            let tiles = items.filter { $0 != .askAI }
+
+            // Press-and-hold offers the row's menu through `GridTileMenu` - a plain `contextMenu`
+            // here would lift the WHOLE row (every tile at once) as its preview, since the grid is
+            // one LazyVGrid inside a single List row.
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ForEach(items, id: \.self) { item in
-                    Button {
+                ForEach(tiles, id: \.self) { item in
+                    resourceGridStar(item, on: GridTileMenu {
                         settings.hapticFeedback()
                         islamPath.append(item)
+                    } menu: {
+                        favoriteToggleButton(item)
                     } label: {
                         resourceGridTile(item)
-                    }
-                    .buttonStyle(.plain)
+                    })
                     .id(Self.rowID(item))
                 }
             }
@@ -641,6 +661,23 @@ struct IslamView: View {
             // put the tiles 20pt from the container's top and bottom edges against 17pt at the
             // sides. Measured on the iPhone 17 Pro; 1 lands all four insets on 17pt.
             .padding(.vertical, 1)
+            // The banner is its own List row under the grid, with no separator between them: the
+            // grid's row draws none (it is one cell), so a rule above Ask AI would be the only
+            // hairline in the section and read as a divider between two unrelated things.
+            .listRowSeparator(.hidden)
+
+            if let askAI {
+                resourceGridStar(askAI, on: GridTileMenu {
+                    settings.hapticFeedback()
+                    islamPath.append(askAI)
+                } menu: {
+                    favoriteToggleButton(askAI)
+                } label: {
+                    askAIBanner(askAI)
+                })
+                .id(Self.rowID(askAI))
+                .listRowSeparator(.hidden)
+            }
         } else {
             ForEach(items, id: \.self) { item in
                 NavigationLink(value: item) {
@@ -670,6 +707,40 @@ struct IslamView: View {
         .tint(settings.accentColor.color)
     }
 
+    /// Ask AI's full-width banner in grid mode: the chip, the title, and the caption the one-third
+    /// tile had no room for. Deliberately the same glass and favorite tinting as a tile, so it reads
+    /// as the same family of control at a different size.
+    @available(iOS 16.0, *)
+    private func askAIBanner(_ item: IslamDestination) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: item.systemImage, size: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+        .conditionalGlassEffect(
+            clear: !settings.isIslamResourceFavorite(item.rawValue),
+            rectangle: true,
+            useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
+            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil
+        )
+    }
+
     @available(iOS 16.0, *)
     private func resourceGridTile(_ item: IslamDestination) -> some View {
         VStack(spacing: 6) {
@@ -694,7 +765,13 @@ struct IslamView: View {
             useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
             customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil
         )
-        .gridFavoriteStar(
+    }
+
+    /// The tile's corner star, applied OUTSIDE `GridTileMenu` (its 30 pt tap target would otherwise
+    /// fight the long press that opens the menu).
+    @available(iOS 16.0, *)
+    private func resourceGridStar<V: View>(_ item: IslamDestination, on view: V) -> some View {
+        view.gridFavoriteStar(
             isFavorite: settings.isIslamResourceFavorite(item.rawValue),
             accent: settings.accentColor.color,
             accessibilityName: item.title
@@ -761,8 +838,6 @@ struct IslamView: View {
             #else
             TajweedFoundationsView()
             #endif
-        case .tajweedCourse:
-            TajweedLessonsView()
         case .commonAdhkar:
             AdhkarView()
         case .commonDuas:
@@ -789,6 +864,10 @@ struct IslamView: View {
             GuidesView()
         case .miraclesOfQuran:
             MiraclesView()
+        case .propheciesOfProphet:
+            PropheciesView()
+        case .miraclesOfProphets:
+            ProphetMiraclesView()
         case .journal:
             JournalView()
         }
@@ -893,17 +972,22 @@ struct IslamView: View {
         if settings.islamGridMode {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
                 ForEach(items, id: \.self) { item in
-                    Button {
+                    resourceGridStar(item, on: GridTileMenu {
                         selectSplitResource(item)
+                    } menu: {
+                        favoriteToggleButton(item)
                     } label: {
                         resourceGridTile(item)
+                            // `GlassCorner.rectangle`, NOT a hardcoded number: this border outlines
+                            // the tile's own glass shape, and at 12 against the glass's 24 it cut
+                            // visible corners inside the tile it was meant to trace
+                            // (Abu, 2026-09-19, with a screenshot of the iPad sidebar).
                             .overlay(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous)
                                     .strokeBorder(settings.accentColor.color,
                                                   lineWidth: selectedResource == item ? 2 : 0)
                             )
-                    }
-                    .buttonStyle(.plain)
+                    })
                 }
             }
             // Same reasoning as the iPhone grid's inset: the section row carries ~16pt of its own.
@@ -977,11 +1061,14 @@ struct IslamView: View {
                 // The caption column is an iPhone luxury - the 40mm screen has no room for it.
                 #if os(iOS)
                 if let subtitle {
+                    // Two lines, at full size. It used to be one line shrunk to 80%, so the longer
+                    // subtitles ("Divide an estate by the Quranic shares") rendered smaller than
+                    // their neighbours AND still clipped - the rows read as ragged (Abu, 2026-09-19).
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 #endif
             }

@@ -1,13 +1,18 @@
 import SwiftUI
 import Foundation
 
-/// Whether any per-ayah sheet (tafsir, share, note, comparisons, page-mode actions...) is currently
-/// presented from the reader. The readers' "follow the recitation" scrolls/page-turns consult this and
-/// hold still while a sheet is up: auto-scrolling the List (or flipping the mushaf page) tears down the
-/// row/page that is PRESENTING the sheet, which dismissed the sheet mid-read on every ayah advance - and
-/// reclaiming a cell that is also a live presentation anchor is exactly the kind of teardown that can
-/// bring the whole presentation stack down. Following resumes on the first ayah advance after the sheet
-/// closes. Main-thread only (all writers are SwiftUI view callbacks).
+/// Whether any per-ayah sheet (tafsir, share, note, comparisons, actions...) is currently presented
+/// from the reader. The LIST reader's "follow the recitation" scroll consults this and holds still while
+/// a sheet is up: auto-scrolling the List tears down the row that is PRESENTING the sheet, which dismissed
+/// the sheet mid-read on every ayah advance - and reclaiming a cell that is also a live presentation
+/// anchor is exactly the kind of teardown that can bring the whole presentation stack down. Following
+/// resumes on the first ayah advance after the sheet closes. Main-thread only (all writers are SwiftUI
+/// view callbacks).
+///
+/// The PAGE reader no longer consults it (2026-09-20): `SurahView` hosts every page-mode sheet, so a
+/// page turn dismisses nothing and the recitation can keep turning pages behind an open sheet. The
+/// counter is still driven by the host's `rowSheet` hooks in both modes; only the list scroll reads it.
+/// See `Docs/Page Mode Sheet Ownership.md`.
 final class AyahSheetPresence: ObservableObject {
     static let shared = AyahSheetPresence()
     private init() {}

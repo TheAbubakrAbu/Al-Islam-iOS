@@ -884,6 +884,14 @@ struct ReminderOfTheDayCard: View {
 
     @State private var hadithLink: DailyReminderEntry.HadithLink?
 
+    /// Which header pill was tapped. One piece of state driving ONE destination - see the note in
+    /// the header above.
+    enum HeaderDoor: String, Identifiable, Hashable {
+        case reflections, hub
+        var id: String { rawValue }
+    }
+    @State private var openDoor: HeaderDoor?
+
     private var accent: Color { appearance.accent }
 
     var body: some View {
@@ -904,25 +912,38 @@ struct ReminderOfTheDayCard: View {
                         .foregroundColor(accent)
                 }
                 Spacer(minLength: 8)
-                // Both pills are chevron-less links: a plain NavigationLink in this row dragged a
-                // disclosure chevron to the card's edge.
+                // BUTTONS, not chevron-less links. Both pills sit in the same List row (the whole
+                // card is one row), and two NavigationLinks in a row activate TOGETHER - tapping
+                // either pushed Saved Reflections AND the Today screen (2026-09-19 audit). A plain
+                // NavigationLink is also wrong here: it drags a disclosure chevron to the card's
+                // edge, which is why they were chevron-less in the first place.
                 if !reflections.items.isEmpty {
-                    HStack(spacing: 4) {
-                        Image(systemName: "bookmark.fill")
-                        Text("\(reflections.items.count)")
-                            .monospacedDigit()
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        openDoor = .reflections
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bookmark.fill")
+                            Text("\(reflections.items.count)")
+                                .monospacedDigit()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(accent)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 5)
+                        .background(Capsule().fill(accent.opacity(0.12)))
                     }
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(accent)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(Capsule().fill(accent.opacity(0.12)))
-                    .chevronlessLink { SavedReflectionsView() }
+                    .buttonStyle(.plain)
                 }
                 if showsHubDoor {
                     // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-                    DailyHubDoorLabel()
-                        .chevronlessLink { DailyHubView() }
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        openDoor = .hub
+                    } label: {
+                        DailyHubDoorLabel()
+                    }
+                    .buttonStyle(.plain)
                 }
             }
 
@@ -998,6 +1019,17 @@ struct ReminderOfTheDayCard: View {
         .padding(.vertical, 6)
         .sheet(item: $hadithLink) { link in
             ReminderHadithSheet(link: link)
+        }
+        // The ONE destination the two header pills share.
+        .pushDestination(isPresented: Binding(
+            get: { openDoor != nil },
+            set: { if !$0 { openDoor = nil } }
+        )) {
+            switch openDoor {
+            case .reflections: SavedReflectionsView()
+            case .hub:         DailyHubView()
+            case .none:        EmptyView()
+            }
         }
     }
 }

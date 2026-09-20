@@ -364,6 +364,11 @@ private struct OptionalRowID: ViewModifier {
 struct AdhkarView: View {
     @ObservedObject var settings = Settings.shared
     @State private var searchText = ""
+    #if os(iOS)
+    /// The "About" card's single open door (one @State + one destination on the List:
+    /// every chip lives in the SAME List row, and two links in one row both fire).
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     /// The dhikr a result asked to scroll to ("Scroll To Dhikr"), consumed once the search clears.
@@ -558,6 +563,12 @@ struct AdhkarView: View {
                 Section {
                     SpeechQualityHint()
                 }
+                #if os(iOS)
+                AboutSignsSection(heading: "About Dhikr & Remembrance",
+                                  systemImage: "book.closed",
+                                  doors: [.allah, .tawhid, .makeDua],
+                                  openDoor: $aboutDoor)
+                #endif
             }
             .themedListRowBackground()
         }
@@ -565,13 +576,11 @@ struct AdhkarView: View {
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
+            // The Arabic face picker used to float here, above the search bar. It was the same control
+            // on six screens writing one `settings.islamArabicFace`, which is a SETTING, not a reading
+            // control - it now lives once, in Settings -> Islam Settings -> Arabic Text
+            // (Abu, 2026-09-19). The bar is just the search bar again.
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The floating font picker, back above the search bar. It no longer folds away on
-                // scroll (`collapsibleBarRow` stays off) - it just rides with the bar.
-                IslamArabicFontPicker()
-                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                    .conditionalGlassEffect(interactive: false)
-
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -585,6 +594,9 @@ struct AdhkarView: View {
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        #endif
         .navigationTitle("Dhikr & Remembrances")
         #if os(iOS)
         .onChange(of: searchText) { text in

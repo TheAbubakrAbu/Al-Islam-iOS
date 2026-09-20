@@ -766,6 +766,7 @@ struct QiraatExplorerView: View {
         .compactListSectionSpacing()
         .safeAreaInset(edge: .top, spacing: 0) { header }
         .navigationTitle("Qiraat Explorer")
+        .openScreen(.qiraatExplorer)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) { sizeMenu }

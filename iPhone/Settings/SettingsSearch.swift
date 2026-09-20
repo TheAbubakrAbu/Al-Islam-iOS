@@ -143,6 +143,36 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
     }
 }
 
+/// A sub-screen of Islam Settings - the fourth area, for everything that is not the Quran, the prayer
+/// times or the hadith books.
+enum SettingsIslamPage: String, CaseIterable, Hashable {
+    case arabicText, alphabet, libraries
+
+    var title: String {
+        switch self {
+        case .arabicText: return "Arabic Text"
+        case .alphabet: return "Arabic Alphabet"
+        case .libraries: return "Libraries"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .arabicText: return "textformat.ar"
+        case .alphabet: return "abc"
+        case .libraries: return "square.grid.2x2"
+        }
+    }
+
+    var caption: String {
+        switch self {
+        case .arabicText: return "The face for duas, dhikr, names, letters"
+        case .alphabet: return "Arabic size, English readings, sukoon"
+        case .libraries: return "Grid or rows, Word of the Day, Fajr"
+        }
+    }
+}
+
 // MARK: - Row tints
 
 /// The Settings hub's colours, one per area, so a glance finds the row before a word is read (the
@@ -153,6 +183,12 @@ enum SettingsTint {
     static let prayer = Color(red: 0.98, green: 0.75, blue: 0.18)
     static let hadith = Color(red: 0.24, green: 0.56, blue: 0.96)
     static let quran = Color.green
+    /// Islam Settings wears BOTH of Al-Islam's colours rather than one of its own: the section is
+    /// app-wide (the Arabic face, the libraries, the daily reminders) instead of belonging to a single
+    /// tab, so it gets the brand pair, yellow at the top-leading corner into green at the bottom-trailing
+    /// (Abu, 2026-09-19). Same two colours as the Top Accent Glow option in Appearance.
+    static let islam = Color(red: 0.98, green: 0.75, blue: 0.18)
+    static let islamSecondary = Color.green
     static let appearance = Color(red: 0.62, green: 0.40, blue: 0.93)
     static let credits = Color(white: 0.55)
     static let sky = Color(red: 0.98, green: 0.58, blue: 0.24)
@@ -167,12 +203,14 @@ struct SettingsRowLabel: View {
     var subtitle: String? = nil
     /// The chip's colour; nil is the app accent.
     var tint: Color? = nil
+    /// A second chip colour, for a row whose area is not one tab - see `AccentIconChip`.
+    var secondaryTint: Color? = nil
     /// A short state read-out ("On", "3 passages") at the trailing edge.
     var value: String? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, tint: tint)
+            AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint)
 
             // The title never wraps: a long value ("All passages · 2 themes") shrinks and then
             // truncates before the title gives up a line.
@@ -213,7 +251,7 @@ struct SettingsRowLabel: View {
 
 /// Which settings page an entry belongs to: the slice a page's own search bar searches.
 enum SettingsSearchScope: Hashable {
-    case notifications, prayer, quran, hadith, appearance, credits
+    case notifications, prayer, quran, hadith, islam, appearance, credits
 
     var placeholder: String {
         switch self {
@@ -221,6 +259,7 @@ enum SettingsSearchScope: Hashable {
         case .prayer: return "Search prayer settings"
         case .quran: return "Search Quran settings"
         case .hadith: return "Search hadith settings"
+        case .islam: return "Search Islam settings"
         case .appearance: return "Search appearance"
         case .credits: return "Search credits"
         }
@@ -233,6 +272,7 @@ enum SettingsSearchScope: Hashable {
         case .prayer: return "Prayer Settings"
         case .quran: return "Quran Settings"
         case .hadith: return "Hadith Settings"
+        case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits & Contact"
         }
@@ -245,6 +285,7 @@ enum SettingsSearchScope: Hashable {
         case .prayer: return "Prayer Settings"
         case .quran: return "Quran Settings"
         case .hadith: return "Hadith Settings"
+        case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits"
         }
@@ -256,7 +297,7 @@ extension SettingsSearchEntry.Destination {
     /// has nowhere to push and says "this page" instead.
     var isPageRoot: Bool {
         switch self {
-        case .notifications, .prayerSettings, .quranSettings, .hadithSettings, .appearance, .credits: return true
+        case .notifications, .prayerSettings, .quranSettings, .hadithSettings, .islamSettings, .appearance, .credits: return true
         default: return false
         }
     }
@@ -267,6 +308,7 @@ extension SettingsSearchEntry.Destination {
         case .prayerSettings, .prayerTracker, .travelingMode, .prayerCalculation, .skyColors, .prayerPage: return .prayer
         case .quranSettings, .reciters, .quranPage: return .quran
         case .hadithSettings, .hadithPage: return .hadith
+        case .islamSettings, .islamPage: return .islam
         case .appearance: return .appearance
         case .credits, .credit: return .credits
         }
@@ -281,6 +323,7 @@ extension SettingsSearchEntry {
         + prayerCalculationEntries
         + quranEntries
         + hadithEntries
+        + islamEntries
         + appearanceEntries
         + creditEntries
 
@@ -346,6 +389,8 @@ enum SettingsSearchDestinationView {
         case .quranPage(let page): SettingsQuranView(openPage: page)
         case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
         case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, openPage: page)
+        case .islamSettings: SettingsIslamView()
+        case .islamPage(let page): SettingsIslamView(openPage: page)
         case .appearance: AppearanceSettingsScreen()
         case .credits: CreditsView(presentedAsSheet: false)
         case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)

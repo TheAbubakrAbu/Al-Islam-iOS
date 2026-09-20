@@ -1228,13 +1228,51 @@ struct MoreNotificationView: View {
 
     @State private var showAlert: Bool = false
 
+    /// One nagging row: the time whose arrival closes a prayer's window, and the prayer it therefore
+    /// asks about. This is the SAME mapping `Settings.naggedPrayerName(forCascade:)` computes at
+    /// delivery - kept here as a table so the label can never disagree with the question that
+    /// actually gets asked (Abu, 2026-09-19).
+    ///
+    /// "Before Dhuhr" is deliberately absent: it used to ask "did you pray Fajr?" a second time,
+    /// hours after Fajr's window had already closed at sunrise. Sunrise is the real Fajr deadline,
+    /// so that row was nagging about something the person could no longer put right. Anyone who had
+    /// it on is migrated onto the Shurooq row (`Settings.migrateNaggingDhuhrIfNeeded`).
+    ///
+    /// Islamic Midnight IS here even though it is an optional TIME rather than a prayer: the
+    /// preferred window for Isha ends at the middle of the night ("When you pray 'Isha, its time is
+    /// until half of the night has passed", Sahih Muslim 612), so it is a real deadline. Duhaa and
+    /// Last Third are not - they are nafl, nothing is owed, and the tracker records only the five.
+    struct NaggingDeadline: Identifiable {
+        let id: String
+        /// The obligatory prayer the notification asks about.
+        let asks: String
+        let caption: String
+        let key: ReferenceWritableKeyPath<Settings, Bool>
+
+        static let all: [NaggingDeadline] = [
+            .init(id: "shurooq", asks: "Fajr",
+                  caption: "Before Shurooq, when Fajr's time ends.",
+                  key: \Settings.naggingSunrise),
+            .init(id: "asr", asks: "Dhuhr",
+                  caption: "Before Asr, when Dhuhr's time ends.",
+                  key: \Settings.naggingAsr),
+            .init(id: "maghrib", asks: "Asr",
+                  caption: "Before Maghrib, when Asr's time ends.",
+                  key: \Settings.naggingMaghrib),
+            .init(id: "isha", asks: "Maghrib",
+                  caption: "Before Isha, when Maghrib's time ends.",
+                  key: \Settings.naggingIsha),
+            .init(id: "midnight", asks: "Isha",
+                  caption: "Before Islamic Midnight, when Isha's preferred time ends.",
+                  key: \Settings.naggingIslamicMidnight),
+            .init(id: "fajr", asks: "Isha",
+                  caption: "Before Fajr, the last call before the night ends.",
+                  key: \Settings.naggingFajr),
+        ]
+    }
+
     private func turnOffNaggingModeIfAllOff() {
-        if !settings.naggingFajr &&
-           !settings.naggingSunrise &&
-           !settings.naggingDhuhr &&
-           !settings.naggingAsr &&
-           !settings.naggingMaghrib &&
-           !settings.naggingIsha {
+        if NaggingDeadline.all.allSatisfy({ !settings[keyPath: $0.key] }) {
 
             withAnimation {
                 settings.naggingMode = false
@@ -1243,6 +1281,24 @@ struct MoreNotificationView: View {
     }
 
     var body: some View {
+        #if DEBUG && os(iOS)
+        ScrollViewReader { proxy in
+            notificationBody
+                // "-scrollToEnglishMeanings": the WHAT THEY SAY section sits below the fold (further
+                // still in nagging mode), and a simulator screenshot cannot scroll.
+                .onAppear {
+                    guard ProcessInfo.processInfo.arguments.contains("-scrollToEnglishMeanings") else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { proxy.scrollTo("englishMeanings", anchor: .center) }
+                    }
+                }
+        }
+        #else
+        notificationBody
+        #endif
+    }
+
+    private var notificationBody: some View {
         List {
             Group {
             Section(header: Text("NAGGING MODE")) {
@@ -1266,19 +1322,16 @@ struct MoreNotificationView: View {
                                 settings.notificationMaghrib = true
                                 settings.notificationIsha = true
 
-                                settings.naggingFajr = true
-                                settings.naggingSunrise = true
-                                settings.naggingDhuhr = true
-                                settings.naggingAsr = true
-                                settings.naggingMaghrib = true
-                                settings.naggingIsha = true
+                                for deadline in NaggingDeadline.all {
+                                    settings[keyPath: deadline.key] = true
+                                }
                             } else {
-                                settings.naggingFajr = false
-                                settings.naggingSunrise = false
+                                for deadline in NaggingDeadline.all {
+                                    settings[keyPath: deadline.key] = false
+                                }
+                                // The retired "before Dhuhr" cascade, in case an old install still
+                                // has it set - otherwise it would keep firing with the mode "off".
                                 settings.naggingDhuhr = false
-                                settings.naggingAsr = false
-                                settings.naggingMaghrib = false
-                                settings.naggingIsha = false
                             }
                         }
                     }
@@ -1300,64 +1353,56 @@ struct MoreNotificationView: View {
                     .onChange(of: settings.naggingStartOffset) { _ in settings.hapticFeedback() }
                     .settingsDependent()
 
+                    // One row per DEADLINE, each saying which prayer it asks about (Abu, 2026-09-19).
+                    // The cascade before a time is about the obligatory prayer whose window that time
+                    // CLOSES - `Settings.naggedPrayerName(forCascade:)` has always worked this way;
+                    // the old labels ("Nagging before Dhuhr") just never said so.
                     Group {
-                        Toggle("Nagging before Fajr", isOn: Binding(
-                            get: { settings.naggingFajr },
-                            set: { newValue in
-                                settings.naggingFajr = newValue
-                                turnOffNaggingModeIfAllOff()
-                            }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingFajr) { _ in settings.hapticFeedback() }
+                        ForEach(NaggingDeadline.all) { deadline in
+                            Toggle(isOn: Binding(
+                                get: { settings[keyPath: deadline.key] },
+                                set: { newValue in
+                                    settings[keyPath: deadline.key] = newValue
+                                    turnOffNaggingModeIfAllOff()
+                                }
+                            ).animation(.easeInOut)) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Did you pray \(deadline.asks)?")
+                                        .font(.subheadline)
 
-                        Toggle("Nagging before Sunrise", isOn: Binding(
-                            get: { settings.naggingSunrise },
-                            set: { newValue in
-                                settings.naggingSunrise = newValue
-                                turnOffNaggingModeIfAllOff()
+                                    Text(deadline.caption)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingSunrise) { _ in settings.hapticFeedback() }
-
-                        Toggle("Nagging before Dhuhr", isOn: Binding(
-                            get: { settings.naggingDhuhr },
-                            set: { newValue in
-                                settings.naggingDhuhr = newValue
-                                turnOffNaggingModeIfAllOff()
-                            }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingDhuhr) { _ in settings.hapticFeedback() }
-
-                        Toggle("Nagging before Asr", isOn: Binding(
-                            get: { settings.naggingAsr },
-                            set: { newValue in
-                                settings.naggingAsr = newValue
-                                turnOffNaggingModeIfAllOff()
-                            }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingAsr) { _ in settings.hapticFeedback() }
-
-                        Toggle("Nagging before Maghrib", isOn: Binding(
-                            get: { settings.naggingMaghrib },
-                            set: { newValue in
-                                settings.naggingMaghrib = newValue
-                                turnOffNaggingModeIfAllOff()
-                            }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingMaghrib) { _ in settings.hapticFeedback() }
-
-                        Toggle("Nagging before Isha", isOn: Binding(
-                            get: { settings.naggingIsha },
-                            set: { newValue in
-                                settings.naggingIsha = newValue
-                                turnOffNaggingModeIfAllOff()
-                            }
-                        ).animation(.easeInOut))
-                        .onChange(of: settings.naggingIsha) { _ in settings.hapticFeedback() }
+                            .onChange(of: settings[keyPath: deadline.key]) { _ in settings.hapticFeedback() }
+                        }
                     }
                     .tint(settings.accentColor.color)
                     .settingsDependent()
                 }
+            }
+
+            // OUTSIDE the `!naggingMode` branch: the gloss is part of every prayer notification's
+            // wording, and a nag body names the prayer too, so hiding this control in nagging mode
+            // would hide a setting that is still in effect.
+            Section(header: Text("WHAT THEY SAY")) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Show English Meanings", isOn: $settings.prayerNotificationEnglishNames.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.prayerNotificationEnglishNames) { _ in settings.hapticFeedback() }
+
+                    Text("Adds each prayer's meaning to its notification, like \u{201C}Time for Maghrib (sunset)\u{201D}. Shurooq and Jumuah always name theirs.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                #if DEBUG
+                // On the ROW, not on the Toggle nested inside the VStack: `scrollTo` targets a list
+                // row, and an id buried in a row's subview is not one.
+                .id("englishMeanings")
+                #endif
             }
 
             if !settings.naggingMode {
@@ -1432,9 +1477,9 @@ struct MoreNotificationView: View {
                 if !settings.naggingSunrise {
                     NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
                 }
-                if !settings.naggingDhuhr {
-                    NotificationSettingsSection(prayerName: "Dhuhr", preNotificationTime: $settings.preNotificationDhuhr, isNotificationOn: $settings.notificationDhuhr)
-                }
+                // Always shown: "before Dhuhr" is no longer a nagging deadline (it asked about Fajr,
+                // whose window had already closed at sunrise), so nothing else owns this slot.
+                NotificationSettingsSection(prayerName: "Dhuhr", preNotificationTime: $settings.preNotificationDhuhr, isNotificationOn: $settings.notificationDhuhr)
                 if !settings.naggingAsr {
                     NotificationSettingsSection(prayerName: "Asr", preNotificationTime: $settings.preNotificationAsr, isNotificationOn: $settings.notificationAsr)
                 }
@@ -1622,7 +1667,8 @@ extension SettingsSearchEntry {
         .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
         .init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders)),
         .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationsPage(.prayerReminders)),
-        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
 
     static let adhanEntries: [SettingsSearchEntry] = [
