@@ -626,9 +626,8 @@ struct SurahAyahRow: View, Equatable {
     }
 
     private var tajweedAnimationKey: String {
-        let categorySignature = TajweedLegendCategory.allCases
-            .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
-            .joined()
+        // The shared signature, so a custom rule color repaints here as a hidden category does.
+        let categorySignature = settings.tajweedCategoryVisibilitySignature
         return [
             settings.showTajweedColors ? "1" : "0",
             settings.cleanArabicText ? "1" : "0",
@@ -1188,9 +1187,8 @@ struct AyahSearchRow: View, Equatable {
     }
 
     private var tajweedAnimationKey: String {
-        let categorySignature = TajweedLegendCategory.allCases
-            .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
-            .joined()
+        // The shared signature, so a custom rule color repaints here as a hidden category does.
+        let categorySignature = settings.tajweedCategoryVisibilitySignature
         return [
             settings.showTajweedColors ? "1" : "0",
             settings.cleanArabicText ? "1" : "0",

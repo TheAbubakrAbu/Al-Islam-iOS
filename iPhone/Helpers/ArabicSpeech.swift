@@ -335,6 +335,7 @@ struct SpeechQualityHint: View {
 /// into a Stop button while the queue is speaking. Renders nothing when the device has no Arabic voice.
 struct ListenAllPill: View {
     @ObservedObject private var speech = ArabicSpeech.shared
+    @Environment(\.appearance) private var appearance
 
     let texts: [String]
 
@@ -345,7 +346,7 @@ struct ListenAllPill: View {
                 Text(speech.isSpeakingQueue ? "Stop" : "Listen All")
             }
             .font(.caption.weight(.semibold))
-            .foregroundColor(Settings.shared.accentColor.color)
+            .foregroundColor(appearance.accent)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .conditionalGlassEffect()

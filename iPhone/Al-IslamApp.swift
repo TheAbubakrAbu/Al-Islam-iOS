@@ -21,6 +21,12 @@ struct AlIslamApp: App {
     @State private var isLaunching = true
     // Keeps the splash mounted through its fade-out (see `rootContent`).
     @State private var splashPresented = false
+    // The same for the About You question, which follows the splash (or, for everyone who already
+    // had the app, follows the launch screen directly).
+    @State private var aboutYouPresented = false
+    /// True once this launch has shown the splash: About You then knows it is talking to a new
+    /// install, the only reader whose suggested settings it may switch on ahead of time.
+    @State private var sawSplashThisLaunch = false
 
     init() {
         LaunchClock.mark("app init")
@@ -48,6 +54,10 @@ struct AlIslamApp: App {
     private enum RootStage: Equatable {
         case launch
         case splash
+        /// "Which describes you best?" (AboutYouView.swift). A stage rather than a sheet so that every
+        /// launch prompt (location, traveling mode, the review card, a tapped notification's
+        /// question) waits behind it instead of racing it: `appRevealed` is false until `.main`.
+        case aboutYou
         case main
     }
 
@@ -55,7 +65,8 @@ struct AlIslamApp: App {
         if isLaunching {
             return .launch
         }
-        return appearance.firstLaunch ? .splash : .main
+        if appearance.firstLaunch { return .splash }
+        return appearance.needsAboutYou ? .aboutYou : .main
     }
 
     private var rootTransitionAnimation: Animation {
@@ -142,6 +153,17 @@ struct AlIslamApp: App {
                     .allowsHitTesting(rootStage == .splash)
                     .zIndex(2)
             }
+
+            // About You sits UNDER the splash and the launch screen, opaque from the moment it is
+            // mounted, so whichever cover precedes it dissolves onto it (a view that faded IN here
+            // would show the tabs through two half-transparent covers mid-way). It fades only on its
+            // own way out, by the same explicit opacity as the splash and for the same reason.
+            if aboutYouPresented {
+                AboutYouView(isNewInstall: sawSplashThisLaunch)
+                    .opacity(rootStage == .main ? 0 : 1)
+                    .allowsHitTesting(rootStage == .aboutYou)
+                    .zIndex(1.8)
+            }
         }
         .animation(rootTransitionAnimation, value: rootStage)
         // The tabs are mounted (and side-effecting views like AdhanView build) before the cover lifts; let them
@@ -149,11 +171,25 @@ struct AlIslamApp: App {
         .environment(\.appRevealed, rootStage == .main)
         // Seed the LIVE mirror at mount: `onChange` below only fires on transitions, and the mirror
         // defaults to `true` - without this, the launch window would read as revealed.
-        .onAppear { AppReveal.revealed = (rootStage == .main) }
+        .onAppear {
+            AppReveal.revealed = (rootStage == .main)
+            // Mounted from the first frame when it is going to be needed, under the launch cover, so
+            // the cover never lifts onto the tabs for a frame before the question arrives.
+            if appearance.needsAboutYou { aboutYouPresented = true }
+        }
         .onChange(of: rootStage) { stage in
             // Keep the LIVE mirror in sync for escaping tasks (see `AppReveal`) - the environment value
             // above only reaches view bodies, and a frozen captured copy is what broke the review prompt.
             AppReveal.revealed = (stage == .main)
+            if stage == .splash { sawSplashThisLaunch = true }
+            if stage == .aboutYou {
+                aboutYouPresented = true
+            } else if stage == .main, aboutYouPresented {
+                // Answered or skipped: its opacity is animating to 0 above - unmount after the fade.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    if rootStage == .main { aboutYouPresented = false }
+                }
+            }
             if stage == .splash {
                 splashPresented = true
             } else if splashPresented {
@@ -171,25 +207,10 @@ private struct MainTabView: View {
     // an `@ObservedObject` subscription re-evaluated the ENTIRE TabView (all five tabs) on every
     // publish - Settings alone publishes on every page turn, GPS fix and countdown tick, and the
     // Quran load pipeline's 10-property core-load batch landed exactly while the under-cover warm
-    // needed the main thread. The one Settings field this body reads (`pendingNagQuestion`) arrives
-    // through its own publisher below. `warmUnderCover` reaches the singletons directly.
+    // needed the main thread. `warmUnderCover` reaches the singletons directly.
     private let settings = Settings.shared
-    @State private var pendingNagQuestion: Settings.PendingNagQuestion?
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
-
-    /// The in-app "Did you pray X?" answer: records the mark (on time or late) in the tracker and
-    /// silences the rest of that nag cascade, exactly as the notification's own action buttons do.
-    private func answerNagQuestion(mark: PrayerMark) {
-        if let question = pendingNagQuestion {
-            settings.markPrayerPrayedFromNag(
-                asked: question.prayerName,
-                cascadePrayerName: question.cascadePrayerName,
-                mark: mark
-            )
-        }
-        settings.pendingNagQuestion = nil
-    }
 
     private enum AppTab: String, Hashable { case adhan, quran, hadith, islam, settings }
 
@@ -217,9 +238,8 @@ private struct MainTabView: View {
                 }
             }
             #endif
-            // Tapping a nagging notification lands here with the question pending - asked at the TAB
-            // level so it appears whichever tab the app reopens on.
-            .onReceive(settings.$pendingNagQuestion) { pendingNagQuestion = $0 }
+            // (A tapped prayer notification's "Did you pray X?" is not hosted here: it is presented
+            // over whatever is on screen by `PrayerNotificationPrompt`, AppDelegate.swift.)
             // A Sunnah reminder's tap (or its "Open" row anywhere in Settings) lands on the Quran
             // tab; the tab's own `.onReceive` opens the reader from there.
             .onReceive(AppNavigation.shared.$pendingQuran) { target in
@@ -232,23 +252,12 @@ private struct MainTabView: View {
                 if case .hadithTab = target {
                     selectedTab = .hadith
                     AppNavigation.shared.pendingIslam = nil
+                } else if case .tab = target {
+                    selectedTab = .islam
+                    AppNavigation.shared.pendingIslam = nil
                 } else {
                     selectedTab = .islam
                 }
-            }
-            .confirmationDialog(
-                "Did you pray \(pendingNagQuestion?.prayerName ?? "this prayer")?",
-                isPresented: Binding(
-                    get: { pendingNagQuestion != nil },
-                    set: { if !$0 { settings.pendingNagQuestion = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Yes, on time") { answerNagQuestion(mark: .onTime) }
-                Button("Yes, but late") { answerNagQuestion(mark: .late) }
-                Button("Not yet", role: .cancel) { settings.pendingNagQuestion = nil }
-            } message: {
-                Text("Answering yes marks it in the prayer tracker and stops the remaining reminders.")
             }
             // Launch warmups, one .task per app domain (like AppLifecycle's sections): when this
             // root is copied into a companion app, delete the domains it doesn't ship.
@@ -257,6 +266,11 @@ private struct MainTabView: View {
             // Al-Adhan: an adhan whose moment passed in the last few minutes while the app was
             // closed. The scene-phase hook cannot cover this one - see the function's comment.
             .task { await AppLifecycle.playMissedAdhanAtLaunch() }
+            #if DEBUG
+            // "-spellingProbe": surah queries through the app's REAL `filteredSurahs`, so the fallback
+            // gate is checked against the live index (English names included), not a copy of the engine.
+            .task { await SpellingProbe.runIfRequested() }
+            #endif
             // The Reminder of the Day is a card at the top of the Islam tab, never a sheet (Abu,
             // 2026-09-12: the sheet clipped the card and covered the landing tab).
             #if DEBUG
@@ -834,6 +848,78 @@ enum DebugSelfShot {
         try? info.write(to: dir.appendingPathComponent("\(name).txt"), atomically: true, encoding: .utf8)
         print("SELFSHOT \(name) \(info)")
         exit(0)
+    }
+}
+#endif
+
+#if DEBUG && os(iOS)
+/// `-spellingProbe`: prints, for each query, what the Quran tab's surah search returns. `direct`
+/// says whether the ordinary search answered or the spelling fold had to. Read with `--console-pty`.
+enum SpellingProbe {
+    @MainActor
+    static func runIfRequested() async {
+        guard ProcessInfo.processInfo.arguments.contains("-spellingProbe") else { return }
+        let data = QuranData.shared
+        let deadline = Date().addingTimeInterval(40)
+        while data.quran.count < 114 || data.surahSearchIndex.count < 114, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        let queries = [
+            "yaseen", "yasin", "yacine", "bakara", "baqra", "rehman", "rahmaan", "alrahman", "kehf",
+            "kausar", "kevser", "lail", "quraish", "yousuf", "meryem", "noor", "mulk", "waqia", "vakia",
+            "zariyat", "zilzal", "ikhlaas", "ihlas", "falak", "naas", "mudassir", "muzammil", "takasur",
+            "jumma", "cuma", "casiye", "hucurat", "ambiya", "dhuha", "zuha", "fatah", "fateh", "tauba",
+            "tevbe", "baraah", "bani israil", "tabarak", "amma", "dahr", "lahab", "tabbat", "inshirah",
+            "tawhid", "joseph", "jonah", "mary", "noah", "abraham", "hamim sajdah", "iqra", "ilaf",
+            // Must stay what they were: a working query, a number, a filter, and junk.
+            "baqarah", "cow", "36", "makki", "xyz", "pizza", "chicago", "coca cola", "pacific"
+        ]
+        print("SPELLPROBE surahs=\(data.quran.count) curated=\(SurahSpelling.latin.count)")
+        for query in queries {
+            let found = data.filteredSurahs(query: query)
+            let names = found.prefix(4).map { "\($0.id) \($0.nameTransliteration)" }.joined(separator: ", ")
+            print("SPELLPROBE \"\(query)\" -> \(found.count)\(found.count > 4 ? " (first 4)" : ""): \(names)")
+        }
+        // The paths that ACT on one result. A wrong surah here is opened or played, not just listed,
+        // so an ambiguous or merely similar name must come back nil.
+        let single = ["al mumin", "al muminun", "ghafir", "yaseen", "rehman", "cuma", "baraah", "fatah",
+                      "tabarak", "bani israil", "sajdah", "ha mim sajdah", "xyz"]
+        for query in single {
+            let resolved = data.resolveSurahIdentifier(query)
+            var line = "SPELLPROBE one \"\(query)\" resolve=\(resolved.map { "\($0.id) \($0.nameTransliteration)" } ?? "nil")"
+            if #available(iOS 16.0, *) {
+                let siri = QuranPlaybackRouter.matchedSurah(for: query.normalizedSurahIntentQuery)
+                line += " siri=\(siri.map { "\($0.id) \($0.nameTransliteration)" } ?? "nil")"
+            }
+            print(line)
+        }
+        // Exhaustive: an alias table can steal a lookup it was never meant to touch, because the
+        // ordinary search matches by substring. Every standard name must still resolve to its own
+        // surah, and every curated alias to its owner, through the resolver that ACTS on the answer.
+        var stolen = 0, listed = 0
+        for surah in data.quran {
+            let resolved = data.resolveSurahIdentifier(surah.nameTransliteration)
+            if resolved?.id != surah.id {
+                stolen += 1
+                print("SPELLPROBE STOLEN standard \(surah.id) \(surah.nameTransliteration) -> \(resolved.map { "\($0.id) \($0.nameTransliteration)" } ?? "nil")")
+            }
+            if !data.filteredSurahs(query: surah.nameTransliteration).contains(where: { $0.id == surah.id }) { listed += 1 }
+        }
+        var wrong = 0, missing = 0, total = 0
+        for surah in data.quran {
+            for alias in (SurahSpelling.latin[surah.id] ?? []) + (SurahSpelling.arabic[surah.id] ?? []) {
+                total += 1
+                let resolved = data.resolveSurahIdentifier(alias)
+                if resolved == nil { missing += 1; print("SPELLPROBE UNRESOLVED \(surah.id) \"\(alias)\"") }
+                else if resolved?.id != surah.id {
+                    wrong += 1
+                    print("SPELLPROBE WRONG \(surah.id) \"\(alias)\" -> \(resolved!.id) \(resolved!.nameTransliteration)")
+                }
+            }
+        }
+        print("SPELLPROBE standard names: \(stolen) stolen, \(listed) missing from their own list search, of \(data.quran.count)")
+        print("SPELLPROBE aliases: \(wrong) resolve to the WRONG surah, \(missing) unresolved, of \(total)")
+        print("SPELLPROBE done")
     }
 }
 #endif

@@ -12,6 +12,9 @@ struct NameOfAllah: Identifiable, Equatable {
     let numberArabic: String
     let displayArabicName: String
     let searchTokens: [String]
+    /// The transliteration folded for spelling (`SpellingFold`): "rahmaan", "rehman" and "rahman"
+    /// are one name, and so are "kareem" and the "Al-Karim" the data happens to carry.
+    let spelling: SpellingFold.Entry
     let firstFoundSurah: Int?
     let firstFoundAyah: Int?
 
@@ -48,6 +51,7 @@ struct NameOfAllah: Identifiable, Equatable {
         firstFoundSurah = firstFound?.surah
         firstFoundAyah = firstFound?.ayah
 
+        spelling = SpellingFold.Entry(names: [transliteration])
         searchTokens = [
             Self.clean(name),
             Self.clean(transliteration),
@@ -378,12 +382,17 @@ final class NamesViewModel: ObservableObject {
             return cached
         }
 
-        let matches = namesOfAllah.filter { name in
+        let direct = namesOfAllah.filter { name in
             if cleanedQuery.allSatisfy(\.isNumber), let n = Int(cleanedQuery) {
                 return name.number == n
             }
             return name.searchTokens.contains { $0.contains(cleanedQuery) } || Int(cleanedQuery) == name.number
         }
+        // Nothing spelled that way: fold the spelling and ask again. A fallback only, so every query
+        // that already finds a name returns exactly what it did before.
+        let matches = direct.isEmpty
+            ? SpellingFold.matches(cleanedQuery, in: namesOfAllah, entry: \.spelling)
+            : direct
         // Every distinct prefix a user ever types lands here; without a bound the cache grows for the
         // app's lifetime. Recomputing a miss is a filter over 99 names, so wholesale eviction is fine.
         if filterCache.count >= 128 {
@@ -771,18 +780,18 @@ struct NamesView: View {
             guard ready.contains(Self.semanticCorpusID) else { return }
             runAISearch(query: searchText)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation { settings.namesGridMode.toggle() }
-                } label: {
-                    Image(systemName: settings.namesGridMode ? "list.bullet" : "square.grid.2x2")
-                }
-                .accessibilityLabel(settings.namesGridMode ? "Show list" : "Show grid")
-                .tint(settings.accentColor.accent2)
+        // The grid toggle, then the Islam Settings gear at the far right, in ONE toolbar (see
+        // `IslamSettingsToolbar` for why this screen places the gear itself).
+        .islamSettingsToolbar {
+            // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
+            Button {
+                settings.hapticFeedback()
+                withAnimation { settings.namesGridMode.toggle() }
+            } label: {
+                Image(systemName: settings.namesGridMode ? "list.bullet" : "square.grid.2x2")
             }
+            .accessibilityLabel(settings.namesGridMode ? "Show list" : "Show grid")
+            .tint(settings.accentColor.accent2)
         }
         #endif
     }
@@ -799,7 +808,7 @@ struct NamesView: View {
         Section(header: Text("DESCRIPTION")) {
             // The closing sentence explains the "First Found" labels, which only exist in apps that
             // ship the Quran - it goes with them.
-            Text(Self.namesDisclaimerText)
+            Text.islamText(Self.namesDisclaimerText, highlightAllah: settings.highlightAllahNamesIslam)
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -841,7 +850,7 @@ struct NamesView: View {
                     // Vowelled, and with no case ending on the final haa - the same treatment every one
                     // of the 99 names gets (`displayArabicName` strips only the last letter's diacritic).
                     VStack(spacing: 6) {
-                        Text("اللَّه")
+                        Text.islamArabic("اللَّه", highlightAllah: settings.highlightAllahNamesIslam)
                             .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 56) : .system(size: 48, weight: .semibold))
                             .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
                             .foregroundColor(settings.accentColor.color)
@@ -874,13 +883,13 @@ struct NamesView: View {
 
                     // The Quran tail of the paragraph, the 1:1 quote and the link into the mushaf
                     // only exist where the Quran does.
-                    Text(Self.allahIntroText)
+                    Text.islamText(Self.allahIntroText, highlightAllah: settings.highlightAllahNamesIslam)
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     #if HAS_QURAN
-                    Text("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)")
+                    Text.islamText("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)", highlightAllah: settings.highlightAllahNamesIslam)
                         .font(.footnote.italic())
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1116,7 +1125,7 @@ struct NamesView: View {
         #if HAS_QURAN
         Section(header: Text("MOST BEAUTIFUL NAMES")) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names.")
+                Text.islamText("Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names.", highlightAllah: settings.highlightAllahNamesIslam)
                     .font(.headline)
                     .foregroundStyle(.primary)
                 
@@ -1165,6 +1174,9 @@ private struct NameRow: View, Equatable {
     let customAccentHex: String
     let useFontArabic: Bool
     let fontArabic: String
+    /// Islam Settings' "Highlight Allah", captured like every other appearance input and folded
+    /// into `==` (this row observes nothing).
+    let highlightAllah: Bool
     let searchQuery: String
     let onTap: () -> Void
 
@@ -1189,6 +1201,7 @@ private struct NameRow: View, Equatable {
         self.customAccentHex = Settings.shared.customAccentColorHex
         self.useFontArabic = useFontArabic
         self.fontArabic = fontArabic
+        self.highlightAllah = Settings.shared.highlightAllahNamesIslam
         self.searchQuery = searchQuery
         self.onTap = onTap
     }
@@ -1267,6 +1280,7 @@ private struct NameRow: View, Equatable {
                             font: .caption,
                             accent: accentColor.color,
                             fg: .secondary,
+                            highlightAllahNames: highlightAllah,
                             guaranteeMatch: fieldMatches.meaning
                         )
                             .fixedSize(horizontal: false, vertical: true)
@@ -1289,6 +1303,7 @@ private struct NameRow: View, Equatable {
                             font: useFontArabic ? Font.arabic(fontArabic, size: 24) : .title3,
                             accent: accentColor.color,
                             fg: .primary,
+                            highlightAllahNames: highlightAllah,
                             guaranteeMatch: fieldMatches.arabic
                         )
                             .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
@@ -1369,6 +1384,7 @@ private struct NameRow: View, Equatable {
         lhs.customAccentHex == rhs.customAccentHex &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic &&
+        lhs.highlightAllah == rhs.highlightAllah &&
         lhs.searchQuery == rhs.searchQuery
     }
 }
@@ -1403,7 +1419,7 @@ private struct NameRowDetails: View {
                     .transition(.opacity)
                 }
 
-                Text(name.desc)
+                Text.islamText(name.desc, highlightAllah: settings.highlightAllahNamesIslam)
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .transition(.opacity)
@@ -1463,7 +1479,7 @@ private struct VerseReflectionCard: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
 
-            Text(contentText)
+            Text.islamText(contentText, highlightAllah: settings.highlightAllahNamesIslam)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1575,10 +1591,13 @@ private struct NameGridTile: View, Equatable {
     /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
     /// comparing only the enum case left tiles on the old tint (the `ReciterRow` fix, applied here).
     var customAccentHex: String = Settings.shared.customAccentColorHex
+    /// Islam Settings' "Highlight Allah", captured and compared like the rest.
+    var highlightAllah: Bool = Settings.shared.highlightAllahNamesIslam
 
     /// Every appearance input is a stored value, so equality of the values means the drawn tile is identical.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.name == rhs.name &&
+        lhs.highlightAllah == rhs.highlightAllah &&
         lhs.isFavorite == rhs.isFavorite &&
         lhs.accentColor == rhs.accentColor &&
         lhs.customAccentHex == rhs.customAccentHex &&
@@ -1618,7 +1637,7 @@ private struct NameGridTile: View, Equatable {
 
     private var tile: some View {
         VStack(spacing: 3) {
-            Text(name.displayArabicName)
+            Text.islamArabic(name.displayArabicName, highlightAllah: highlightAllah)
                 .font(useFontArabic ? Font.arabic(fontArabic, size: 20) : .title3)
                 .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                 .foregroundColor(accentColor.color)

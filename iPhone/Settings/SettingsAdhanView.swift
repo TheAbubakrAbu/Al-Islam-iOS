@@ -288,6 +288,12 @@ struct SettingsAdhanView: View {
     /// the sky. Every row carries its caption, so the screen reads as a table of contents.
     @ViewBuilder
     private var rootSections: some View {
+        // First on every settings page (Abu, 2026-09-20): what this side of the app can do that
+        // nothing on screen announces. See TipsAndTricks.swift.
+        #if os(iOS)
+        TipsSection(area: .adhan, resolve: resolveSearchDestination)
+        #endif
+
         notificationsSection
 
         Section(header: Text("PRAYER TIMES")) {
@@ -299,38 +305,10 @@ struct SettingsAdhanView: View {
         }
 
         #if os(iOS)
+        // One row, like every other area on this page (Abu, 2026-09-20): the sky's switches were the
+        // only controls sitting loose on a screen that is otherwise a table of contents.
         Section(header: Text("SKY")) {
-            VStack(alignment: .leading) {
-                Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
-
-                Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
-
-            // Nothing to color, and no ground for a skyline, when the sky isn't drawn.
-            if settings.showSkyView {
-                VStack(alignment: .leading) {
-                    Toggle("Skyline", isOn: $settings.showSkyScene.animation(.easeInOut))
-                        .font(.subheadline)
-                        .tint(settings.accentColor.color)
-                        .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
-
-                    Text("A mosque, pyramids and palm trees along the horizon, with the sun crossing by day and the moon by night. Also on the Solar Arc and Day & Night widgets.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
-                .settingsDependent()
-
-                adhanPageLink(.skyColors, tint: SettingsTint.sky) { SkyColorsView() }
-            }
+            adhanPageLink(.sky, tint: SettingsTint.sky) { skyDestination }
         }
 
         // No PRAYER TRACKER section here: "Mark Only After the Time Begins" moved onto the tracker
@@ -350,6 +328,55 @@ struct SettingsAdhanView: View {
         .tint(settings.accentColor.color)
     }
 
+    #if os(iOS)
+    /// Sky: whether the Adhan tab draws it, its skyline, and the door to its colors.
+    private var skyDestination: some View {
+        List {
+            Group {
+                Section(header: Text("SKY")) {
+                    VStack(alignment: .leading) {
+                        Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
+                            .font(.subheadline)
+                            .tint(settings.accentColor.color)
+                            .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
+
+                        Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 2)
+                    }
+                }
+
+                // Nothing to color, and no ground for a skyline, when the sky isn't drawn.
+                if settings.showSkyView {
+                    Section(header: Text("HORIZON")) {
+                        VStack(alignment: .leading) {
+                            Toggle("Skyline", isOn: $settings.showSkyScene.animation(.easeInOut))
+                                .font(.subheadline)
+                                .tint(settings.accentColor.color)
+                                .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
+
+                            Text("A mosque, pyramids and palm trees along the horizon, with the sun crossing by day and the moon by night. Also on the Solar Arc and Day & Night widgets.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.vertical, 2)
+                        }
+                    }
+
+                    Section(header: Text("COLORS")) {
+                        adhanPageLink(.skyColors, tint: SettingsTint.sky) { SkyColorsView() }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("Sky")
+    }
+    #endif
+
     /// The sub-screen behind each root row, for the deep links and the page search.
     @ViewBuilder
     private func adhanPageDestination(_ page: SettingsAdhanPage) -> some View {
@@ -359,6 +386,12 @@ struct SettingsAdhanView: View {
         case .optionalPrayers: optionalTimesDestination
         case .manualOffsets: prayerOffsetsDestination
         case .customPrayerNames: customPrayerNamesDestination
+        case .sky:
+            #if os(iOS)
+            skyDestination
+            #else
+            EmptyView()
+            #endif
         case .skyColors:
             #if os(iOS)
             SkyColorsView()
@@ -816,6 +849,8 @@ struct NotificationView: View {
                 Section {
                     permissionCard
                 }
+
+                TipsSection(area: .notifications, resolve: resolveSearchDestination)
                 #else
                 // watchOS has no detailed permission card UI; offer a simple request-access row instead.
                 Section(header: Text("PERMISSION")) {
@@ -967,7 +1002,18 @@ struct NotificationView: View {
                 Section(header: Text("PRAYER REMINDERS")) {
                     NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
                         SettingsRowLabel(title: "Prayer Notifications", systemImage: "bell.fill",
-                                         subtitle: "Per-prayer alerts, early warnings, nagging", tint: SettingsTint.notifications)
+                                         subtitle: SettingsNotificationsPage.prayerReminders.caption, tint: SettingsTint.notifications)
+                    }
+                    .tint(settings.accentColor.color)
+
+                    // Its own row here, not only a section inside Prayer Notifications: the mode is
+                    // the app's most unusual notification feature and was its hardest to find.
+                    NavigationLink(destination: LazyDestination { NaggingModeView() }) {
+                        SettingsRowLabel(title: "Nagging Mode",
+                                         systemImage: SettingsNotificationsPage.naggingMode.systemImage,
+                                         subtitle: SettingsNotificationsPage.naggingMode.caption,
+                                         tint: SettingsTint.notifications,
+                                         value: NaggingModeView.statusValue(settings))
                     }
                     .tint(settings.accentColor.color)
                 }
@@ -978,6 +1024,7 @@ struct NotificationView: View {
     private func notificationPageDestination(_ page: SettingsNotificationsPage) -> some View {
         switch page {
         case .prayerReminders: MoreNotificationView()
+        case .naggingMode: NaggingModeView()
         case .sunnahReminders: SunnahRemindersView()
         }
     }
@@ -1228,58 +1275,6 @@ struct MoreNotificationView: View {
 
     @State private var showAlert: Bool = false
 
-    /// One nagging row: the time whose arrival closes a prayer's window, and the prayer it therefore
-    /// asks about. This is the SAME mapping `Settings.naggedPrayerName(forCascade:)` computes at
-    /// delivery - kept here as a table so the label can never disagree with the question that
-    /// actually gets asked (Abu, 2026-09-19).
-    ///
-    /// "Before Dhuhr" is deliberately absent: it used to ask "did you pray Fajr?" a second time,
-    /// hours after Fajr's window had already closed at sunrise. Sunrise is the real Fajr deadline,
-    /// so that row was nagging about something the person could no longer put right. Anyone who had
-    /// it on is migrated onto the Shurooq row (`Settings.migrateNaggingDhuhrIfNeeded`).
-    ///
-    /// Islamic Midnight IS here even though it is an optional TIME rather than a prayer: the
-    /// preferred window for Isha ends at the middle of the night ("When you pray 'Isha, its time is
-    /// until half of the night has passed", Sahih Muslim 612), so it is a real deadline. Duhaa and
-    /// Last Third are not - they are nafl, nothing is owed, and the tracker records only the five.
-    struct NaggingDeadline: Identifiable {
-        let id: String
-        /// The obligatory prayer the notification asks about.
-        let asks: String
-        let caption: String
-        let key: ReferenceWritableKeyPath<Settings, Bool>
-
-        static let all: [NaggingDeadline] = [
-            .init(id: "shurooq", asks: "Fajr",
-                  caption: "Before Shurooq, when Fajr's time ends.",
-                  key: \Settings.naggingSunrise),
-            .init(id: "asr", asks: "Dhuhr",
-                  caption: "Before Asr, when Dhuhr's time ends.",
-                  key: \Settings.naggingAsr),
-            .init(id: "maghrib", asks: "Asr",
-                  caption: "Before Maghrib, when Asr's time ends.",
-                  key: \Settings.naggingMaghrib),
-            .init(id: "isha", asks: "Maghrib",
-                  caption: "Before Isha, when Maghrib's time ends.",
-                  key: \Settings.naggingIsha),
-            .init(id: "midnight", asks: "Isha",
-                  caption: "Before Islamic Midnight, when Isha's preferred time ends.",
-                  key: \Settings.naggingIslamicMidnight),
-            .init(id: "fajr", asks: "Isha",
-                  caption: "Before Fajr, the last call before the night ends.",
-                  key: \Settings.naggingFajr),
-        ]
-    }
-
-    private func turnOffNaggingModeIfAllOff() {
-        if NaggingDeadline.all.allSatisfy({ !settings[keyPath: $0.key] }) {
-
-            withAnimation {
-                settings.naggingMode = false
-            }
-        }
-    }
-
     var body: some View {
         #if DEBUG && os(iOS)
         ScrollViewReader { proxy in
@@ -1301,87 +1296,19 @@ struct MoreNotificationView: View {
     private var notificationBody: some View {
         List {
             Group {
+            // Nagging mode has a screen of its own now (Abu, 2026-09-20: "make nagging mode more
+            // customizable... front and center"): it outgrew a section, and as a section it sat
+            // three pushes deep where nobody found it. This is one of its three doors; the
+            // Notifications root and the Settings tab's featured cards are the other two.
             Section(header: Text("NAGGING MODE")) {
-                Text("Nagging mode helps those who struggle to pray on time. Once enabled, you'll get a notification at the chosen start time before each prayer, then another every 15 minutes, plus final reminders at 10 and 5 minutes remaining.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-
-                Toggle("Turn on Nagging Mode", isOn: Binding(
-                    get: { settings.naggingMode },
-                    set: { newValue in
-                        withAnimation {
-                            settings.naggingMode = newValue
-
-                            if newValue {
-                                settings.notificationFajr = true
-                                settings.notificationSunrise = true
-                                settings.notificationDhuhr = true
-                                settings.notificationAsr = true
-                                settings.notificationMaghrib = true
-                                settings.notificationIsha = true
-
-                                for deadline in NaggingDeadline.all {
-                                    settings[keyPath: deadline.key] = true
-                                }
-                            } else {
-                                for deadline in NaggingDeadline.all {
-                                    settings[keyPath: deadline.key] = false
-                                }
-                                // The retired "before Dhuhr" cascade, in case an old install still
-                                // has it set - otherwise it would keep firing with the mode "off".
-                                settings.naggingDhuhr = false
-                            }
-                        }
-                    }
-                ).animation(.easeInOut))
-                .font(.subheadline)
-                .tint(settings.accentColor.color)
-                .onChange(of: settings.naggingMode) { _ in settings.hapticFeedback() }
-
-                if settings.naggingMode {
-                    Picker("Starting Time", selection: $settings.naggingStartOffset) {
-                        Text("45 mins").tag(45)
-                        Text("30 mins").tag(30)
-                        Text("15 mins").tag(15)
-                        Text("10 mins").tag(10)
-                    }
-                    #if os(iOS)
-                    .pickerStyle(.segmented)
-                    #endif
-                    .onChange(of: settings.naggingStartOffset) { _ in settings.hapticFeedback() }
-                    .settingsDependent()
-
-                    // One row per DEADLINE, each saying which prayer it asks about (Abu, 2026-09-19).
-                    // The cascade before a time is about the obligatory prayer whose window that time
-                    // CLOSES - `Settings.naggedPrayerName(forCascade:)` has always worked this way;
-                    // the old labels ("Nagging before Dhuhr") just never said so.
-                    Group {
-                        ForEach(NaggingDeadline.all) { deadline in
-                            Toggle(isOn: Binding(
-                                get: { settings[keyPath: deadline.key] },
-                                set: { newValue in
-                                    settings[keyPath: deadline.key] = newValue
-                                    turnOffNaggingModeIfAllOff()
-                                }
-                            ).animation(.easeInOut)) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Did you pray \(deadline.asks)?")
-                                        .font(.subheadline)
-
-                                    Text(deadline.caption)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-                            .onChange(of: settings[keyPath: deadline.key]) { _ in settings.hapticFeedback() }
-                        }
-                    }
-                    .tint(settings.accentColor.color)
-                    .settingsDependent()
+                NavigationLink(destination: LazyDestination { NaggingModeView() }) {
+                    SettingsRowLabel(title: "Nagging Mode",
+                                     systemImage: SettingsNotificationsPage.naggingMode.systemImage,
+                                     subtitle: SettingsNotificationsPage.naggingMode.caption,
+                                     tint: SettingsTint.notifications,
+                                     value: NaggingModeView.statusValue(settings))
                 }
+                .tint(settings.accentColor.color)
             }
 
             // OUTSIDE the `!naggingMode` branch: the gloss is part of every prayer notification's
@@ -1667,7 +1594,13 @@ extension SettingsSearchEntry {
         .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
         .init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders)),
         .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationsPage(.prayerReminders)),
-        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Nagging Mode", path: "Notifications → Nagging Mode", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq struggle lazy miss prayers accountability", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Nagging Start Time & Repeat Interval", path: "Notifications → Nagging Mode", keywords: "nag lead start minutes before hour repeat every interval spacing how often frequency last calls final reminders 10 5", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Different Nagging Start for Each Prayer", path: "Notifications → Nagging Mode", keywords: "nag per prayer custom lead fajr shurooq asr maghrib isha midnight individual", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Check In After the Adhan", path: "Notifications → Nagging Mode", keywords: "nag follow up after adhan have you prayed yet early start of time beginning reminder later", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Nag Tone & Louder Last Call", path: "Notifications → Nagging Mode", keywords: "nag sound tone alarm loud louder final last call escalate chime ring echo takbir", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Add a Verse to the Last Call", path: "Notifications → Nagging Mode", keywords: "nag ayah verse quran wording reminder motivation last call", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Pause Nagging", path: "Notifications → Nagging Mode", keywords: "pause snooze silence hold sick travel flight day week resume nag", destination: .notificationsPage(.naggingMode)),
         .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
 
@@ -1680,9 +1613,9 @@ extension SettingsSearchEntry {
         .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
         .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames)),
         .init(title: "Mark Only After the Time Begins", path: "Al-Adhan → Prayer Tracker", keywords: "prayer tracker mark time begins lock gate future prayers order only after adhan", destination: .prayerTracker),
-        .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerSettings),
-        .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerSettings),
-        .init(title: "Sky Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky colors", destination: .prayerPage(.skyColors)),
+        .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings → Sky", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerPage(.sky)),
+        .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings → Sky", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerPage(.sky)),
+        .init(title: "Sky Colors", path: "Prayer Settings → Sky → Sky Colors", keywords: "background gradient sunrise sunset theme sky colors", destination: .prayerPage(.skyColors)),
     ]
 }
 #endif

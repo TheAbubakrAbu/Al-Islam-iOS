@@ -893,6 +893,37 @@ struct AyahActionsSheet: View {
         }
     }
 
+    /// "Keep Sheet Open", IN the sheet it is about (Abu, 2026-09-20; the switch already lived under
+    /// Quran Settings > Reading, which is a long way from where the question comes up). The same
+    /// stored setting, so either switch moves the other.
+    private var keepSheetOpenRow: some View {
+        Toggle(isOn: $settings.keepAyahSheetOpen.animation(.easeInOut)) {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.stack")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(settings.accentColor.accent1)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Keep Sheet Open")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(settings.accentColor.accent1)
+                    Text("Tafsir, Custom Range and the rest open on top of this sheet")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .tint(settings.accentColor.accent1)
+        .onChange(of: settings.keepAyahSheetOpen) { _ in settings.hapticFeedback() }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(settings.accentColor.accent1.opacity(0.10))
+        )
+    }
+
     /// One tinted row of the pair above the share button.
     private func textRow(title: String, systemImage: String, caption: String?, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -1012,6 +1043,8 @@ struct AyahActionsSheet: View {
                     actionGrid
 
                     copyShareRows
+
+                    keepSheetOpenRow
 
                     // With qiraah details on, the readings of the Ten at this ayah's variant words -
                     // who reads what, and what it means (Abu, 2026-09-07: "if qiraah is turned on

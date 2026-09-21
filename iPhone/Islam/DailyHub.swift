@@ -233,7 +233,7 @@ struct DailyHubView: View {
                         }
                     }
 
-                    Text(dua.arabic)
+                    Text.islamArabic(dua.arabic, highlightAllah: settings.highlightAllahNamesIslam)
                         .font(.custom(settings.nonQuranArabicFontName, size: 22))
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                         .multilineTextAlignment(.trailing)

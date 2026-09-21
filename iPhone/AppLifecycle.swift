@@ -92,6 +92,9 @@ enum AppLifecycle {
             try? await Task.sleep(nanoseconds: 250_000_000)
             if Task.isCancelled { return }
         }
+        #if DEBUG
+        ForegroundAdhanPlayer.debugCatchUpProbe()
+        #endif
         ForegroundAdhanPlayer.shared.playMissedAdhan()
     }
 

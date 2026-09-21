@@ -152,6 +152,9 @@ struct SurahSection: Identifiable, Hashable {
     let ayahEnd: Int
     let title: String
     let titleArabic: String
+    /// The surah's one passage, end to end: al-Fatihah, ash-Shura and ad-Dukhan have an overview in
+    /// the source and no outline under it, so Tilawa (and this app) washes each as one passage.
+    var isWholeSurah = false
 
     var ayahCount: Int { ayahEnd - ayahStart + 1 }
 
@@ -195,7 +198,8 @@ final class SurahSectionsStore: @unchecked Sendable {
                 ayahStart: start,
                 ayahEnd: end,
                 title: (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                titleArabic: (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                titleArabic: (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+                isWholeSurah: Self.isWholeSurahRow(row)
             ))
         }
         lock.lock(); defer { lock.unlock() }
@@ -203,7 +207,7 @@ final class SurahSectionsStore: @unchecked Sendable {
         return sectionsBySurah[surah] ?? sections
     }
 
-    /// Every passage of every surah (741 of them), mushaf order.
+    /// Every passage of every surah (744 of them), mushaf order.
     func allSections() -> [SurahSection] {
         lock.lock()
         if let cached = allSectionsCache { lock.unlock(); return cached }
@@ -248,7 +252,9 @@ final class SurahSectionsStore: @unchecked Sendable {
         var blocks: [String] = []
         if !overview.isEmpty { blocks.append(overview) }
         for row in sections {
-            guard row.count >= 4,
+            // The whole-surah row IS the overview above it (or a placeholder title where the source
+            // wrote none): it exists for the wash, and printing it here would say the lead twice.
+            guard row.count >= 4, !Self.isWholeSurahRow(row),
                   let start = row[0] as? Int, let end = row[1] as? Int else { continue }
             let english = (row[2] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let arabic = (row[3] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -260,6 +266,11 @@ final class SurahSectionsStore: @unchecked Sendable {
         }
         guard !blocks.isEmpty else { return nil }
         return blocks.joined(separator: "\n\n---\n\n")
+    }
+
+    /// A row's optional fifth element, 1, marks the whole-surah passage (see build_quran_themes.py).
+    private static func isWholeSurahRow(_ row: [Any]) -> Bool {
+        row.count > 4 && (row[4] as? Int) == 1
     }
 
     private func loadedTable() -> [String: Any]? {

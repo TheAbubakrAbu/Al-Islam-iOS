@@ -254,8 +254,15 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Canonical color for this rule everywhere in the app.
+    /// The color this rule paints in everywhere in the app: the reader's own pick when there is one
+    /// (`TajweedColorOverrides`, chosen on the rule's long-description card in the legend), else the
+    /// canonical one.
     var color: Color {
+        TajweedColorOverrides.shared.color(forKey: TajweedColorOverrides.key(for: self)) ?? defaultColor
+    }
+
+    /// Canonical color for this rule, before any custom pick.
+    var defaultColor: Color {
         switch self {
         case .lamShamsiyah: return Color(red: 0.7059, green: 0.7059, blue: 0.7059) // B4B4B4
         case .hamzatWaslSilent: return Color(red: 0.7059, green: 0.7059, blue: 0.7059) // B4B4B4
@@ -408,6 +415,159 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         @unknown default:
             return "Tajweed rule"
         }
+    }
+}
+
+// MARK: - Custom rule colors
+
+/// The reader's own color for a tajweed rule, replacing the canonical one wherever that rule paints:
+/// both readers, the word cards, the quick peek, and the legend itself. It is chosen in ONE place, the
+/// rule's long-description card in the Tajweed Legend (Abu, 2026-09-20), for Hafs and every riwayah.
+///
+/// Keys. A Hafs category is "hafs.<rawValue>". A print-derived riwayah rule is "riwayah.<rule key>",
+/// and a rule key is meaning-stable across the 19 packs (the property the legend's show/hide already
+/// rides on), so recoloring "idgham" recolors it in every riwayah that marks it. "khilaf_word" and
+/// "khilaf_harf" are one rule under two printed captions and share a color.
+///
+/// Storage: `Settings.tajweedCustomColors`, "key=RRGGBB" comma-joined and key-sorted, so the string
+/// is also a stable signature. Every render-invalidation signature that bakes tajweed colors in folds
+/// `signature` in; reading it re-syncs the parsed table with the stored string, which is how a value
+/// that arrived from outside (the Watch sync, a DEBUG seed) takes effect without a call to `adopt`.
+///
+/// The painters run on the prewarm queues as well as on main, so the table sits behind a lock.
+final class TajweedColorOverrides: @unchecked Sendable {
+    static let shared = TajweedColorOverrides()
+    static let storageKey = "tajweedCustomColors"
+
+    private struct RGB {
+        let red: Double
+        let green: Double
+        let blue: Double
+    }
+
+    private let lock = NSLock()
+    private var raw = ""
+    private var table: [String: RGB] = [:]
+
+    private init() {
+        adopt(raw: UserDefaults.standard.string(forKey: Self.storageKey) ?? "")
+    }
+
+    // MARK: Keys
+
+    static func key(for category: TajweedLegendCategory) -> String {
+        "hafs.\(category.rawValue)"
+    }
+
+    /// The two khilaf captions ("the word / the letter differing from Hafs") fold onto one key: the
+    /// same magenta marking the same thing, whichever wording that riwayah's print chose.
+    static func key(forRiwayahRule rule: String) -> String {
+        "riwayah.\(rule == "khilaf_word" ? "khilaf_harf" : rule)"
+    }
+
+    // MARK: Reading
+
+    /// The stored string, re-synced first: fold this into any cache key or Equatable signature whose
+    /// output bakes tajweed colors in.
+    var signature: String {
+        let stored = UserDefaults.standard.string(forKey: Self.storageKey) ?? ""
+        lock.lock()
+        let stale = stored != raw
+        lock.unlock()
+        if stale { adopt(raw: stored) }
+        return stored
+    }
+
+    var isEmpty: Bool {
+        lock.lock(); defer { lock.unlock() }
+        return table.isEmpty
+    }
+
+    func isCustomized(_ key: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return table[key] != nil
+    }
+
+    func color(forKey key: String) -> Color? {
+        lock.lock()
+        let rgb = table.isEmpty ? nil : table[key]
+        lock.unlock()
+        return rgb.map { Color(red: $0.red, green: $0.green, blue: $0.blue) }
+    }
+
+    #if canImport(UIKit)
+    func uiColor(forKey key: String) -> UIColor? {
+        lock.lock()
+        let rgb = table.isEmpty ? nil : table[key]
+        lock.unlock()
+        return rgb.map { UIColor(red: $0.red, green: $0.green, blue: $0.blue, alpha: 1) }
+    }
+    #endif
+
+    // MARK: Writing
+
+    /// The stored string with `key` set to `hex` ("RRGGBB"), or cleared when `hex` is nil or not a
+    /// color. Pure: the caller writes it to `Settings.tajweedCustomColors` (which publishes) and
+    /// then calls `adopt`.
+    func encoded(setting hex: String?, forKey key: String) -> String {
+        lock.lock()
+        var entries = Self.parse(raw)
+        lock.unlock()
+        if let hex, let normalized = Self.normalizedHex(hex) {
+            entries[key] = normalized
+        } else {
+            entries.removeValue(forKey: key)
+        }
+        return Self.encode(entries)
+    }
+
+    /// The stored string without any of `keys`.
+    func encoded(clearing keys: [String]) -> String {
+        lock.lock()
+        var entries = Self.parse(raw)
+        lock.unlock()
+        for key in keys { entries.removeValue(forKey: key) }
+        return Self.encode(entries)
+    }
+
+    /// Makes `raw` the table the painters read.
+    func adopt(raw newRaw: String) {
+        var parsed: [String: RGB] = [:]
+        for (key, hex) in Self.parse(newRaw) {
+            guard let value = UInt64(hex, radix: 16) else { continue }
+            parsed[key] = RGB(
+                red: Double((value >> 16) & 0xFF) / 255,
+                green: Double((value >> 8) & 0xFF) / 255,
+                blue: Double(value & 0xFF) / 255
+            )
+        }
+        lock.lock()
+        raw = newRaw
+        table = parsed
+        lock.unlock()
+    }
+
+    // MARK: Format
+
+    private static func parse(_ raw: String) -> [String: String] {
+        var entries: [String: String] = [:]
+        for pair in raw.split(separator: ",") {
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2, let hex = normalizedHex(String(parts[1])) else { continue }
+            entries[String(parts[0])] = hex
+        }
+        return entries
+    }
+
+    private static func encode(_ entries: [String: String]) -> String {
+        entries.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ",")
+    }
+
+    private static func normalizedHex(_ hex: String) -> String? {
+        var text = hex.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if text.hasPrefix("#") { text.removeFirst() }
+        guard text.count == 6, UInt64(text, radix: 16) != nil else { return nil }
+        return text
     }
 }
 

@@ -75,6 +75,8 @@ struct SettingsIslamView: View {
     /// push away - on the page-search scaffold, so "arabic font" typed here finds the face picker.
     private var settingsList: some View {
         SettingsScopedSearch(scope: .islam, resolve: resolveSearchDestination) {
+            TipsSection(area: .islam, resolve: resolveSearchDestination)
+
             Section(header: Text("READING")) {
                 islamPageLink(.arabicText) { arabicTextDestination }
                 islamPageLink(.alphabet) { alphabetDestination }
@@ -82,6 +84,17 @@ struct SettingsIslamView: View {
 
             Section(header: Text("THE TAB")) {
                 islamPageLink(.libraries) { librariesDestination }
+                // The same screen the Settings tab opens from its top card: the welcome's answer,
+                // the Start Here guide it switches on at the top of the Islam tab, and the replay.
+                AboutYouSettingsRow(tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary)
+            }
+
+            // The same screen Quran Settings and Notifications open (Abu, 2026-09-20: "sunnah
+            // reminders should also be in islam settings"). The reminders are acts of worship
+            // across the whole day, not only Quran reading, so this is a door they were missing,
+            // not a copy: one `SunnahRemindersView`, three ways in.
+            Section(header: Text("REMINDERS")) {
+                islamPageLink(.sunnahReminders) { SunnahRemindersView() }
             }
         }
     }
@@ -104,6 +117,7 @@ struct SettingsIslamView: View {
         case .arabicText: arabicTextDestination
         case .alphabet: alphabetDestination
         case .libraries: librariesDestination
+        case .sunnahReminders: SunnahRemindersView()
         }
     }
 
@@ -130,6 +144,23 @@ struct SettingsIslamView: View {
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
+                }
+
+                // The Islam tab's own switch (Abu, 2026-09-20), beside the Quran's and the hadith
+                // books': each area of the app decides for itself.
+                Section(header: Text("HIGHLIGHTS")) {
+                    VStack(alignment: .leading) {
+                        Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesIslam.animation(.easeInOut))
+                            .font(.subheadline)
+                            .tint(settings.accentColor.color)
+                            .onChange(of: settings.highlightAllahNamesIslam) { _ in settings.hapticFeedback() }
+
+                        Text("Shows the name of Allah in red in the duas, the dhikr and remembrances, the tasbih, the 99 Names, the daily cards, and the quotes in the articles and guides. The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 2)
+                    }
                 }
             }
             .themedListRowBackground()
@@ -244,10 +275,92 @@ struct SettingsIslamView: View {
     }
 }
 
+// MARK: - The way in from the Al-Islam tab
+
+/// The Islam Settings gear at the top right of the Al-Islam tab and of every resource it opens (Abu,
+/// 2026-09-20), the way the Quran and Hadith tabs carry theirs. Before this the screen could only be
+/// reached by leaving for the Settings tab, which is a long way to go to change the face of the dua
+/// you are reading.
+///
+/// One modifier rather than a button per screen: `IslamView` applies it at the single door every
+/// resource is opened through, so a new resource gets the gear without being told to. It reads the
+/// accent from the appearance snapshot instead of observing `Settings`, because it sits on the
+/// article pages too, and those are the trees a Settings publish must not re-diff.
+///
+/// A screen with a trailing button of its OWN (the alphabet's and the 99 Names' grid toggles, the
+/// calculator's Reset) hands that button in as `own` and is skipped at the door
+/// (`IslamDestination.placesOwnSettingsGear`). Both then sit in ONE toolbar, own button first, which
+/// is the only way to declare their order: an outer `.toolbar`'s items land BEFORE an inner one's, so
+/// the door's gear came out on the wrong side of the grid toggle, and with no spacer between them
+/// iOS 26 merged the pair into a single capsule (seen on the iPhone 17 Pro, 2026-09-20).
+struct IslamSettingsToolbar<Own: View>: ViewModifier {
+    @Environment(\.appearance) private var appearance
+    @State private var showIslamSettings = false
+    /// The screen's own trailing button, nil when it has none.
+    let own: (() -> Own)?
+
+    func body(content: Content) -> some View {
+        toolbar(on: content)
+            .sheet(isPresented: $showIslamSettings) {
+                SettingsIslamView(presentedAsSheet: true)
+                    .smallMediumSheetPresentation()
+            }
+    }
+
+    /// Four shapes and no `if` inside the toolbar builder: conditional toolbar content needs iOS 16,
+    /// and the spacer needs iOS 26. The spacer is what keeps the gear its own circle beside the
+    /// screen's button (the Hadith tab's trailing toolbar has the same one for the same reason).
+    @ViewBuilder
+    private func toolbar(on content: Content) -> some View {
+        if let own {
+            if #available(iOS 26.0, *) {
+                content.toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) { own() }
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                    ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+                }
+            } else {
+                content.toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) { own() }
+                    ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+                }
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        }
+    }
+
+    private var gearButton: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            showIslamSettings = true
+        } label: {
+            Image(systemName: "gear")
+        }
+        .accessibilityLabel("Islam settings")
+        .tint(appearance.accent)
+    }
+}
+
+extension View {
+    /// The gear alone, for a screen with no trailing button of its own.
+    func islamSettingsToolbar() -> some View {
+        modifier(IslamSettingsToolbar<EmptyView>(own: nil))
+    }
+
+    /// The screen's own trailing button, then the gear.
+    func islamSettingsToolbar<Own: View>(@ViewBuilder own: @escaping () -> Own) -> some View {
+        modifier(IslamSettingsToolbar(own: own))
+    }
+}
+
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     static let islamEntries: [SettingsSearchEntry] = [
-        .init(title: "Islam Settings", path: "Al-Islam", keywords: "islam arabic font dua dhikr names alphabet libraries", destination: .islamSettings),
+        .init(title: "Islam Settings", path: "Al-Islam", keywords: "islam arabic font dua dhikr names alphabet libraries sunnah reminders", destination: .islamSettings),
+        .init(title: "Highlight Allah (Islam)", path: "Islam Settings → Arabic Text", keywords: "highlight allah name red color dua dhikr adhkar tasbih articles islam", destination: .islamPage(.arabicText)),
         .init(title: "Arabic Font (Islam)", path: "Islam Settings → Arabic Text", keywords: "arabic font face uthmani indopak hijazi kufi basic dua dhikr adhkar names alphabet islam", destination: .islamPage(.arabicText)),
         .init(title: "Arabic Size (Alphabet)", path: "Islam Settings → Arabic Alphabet", keywords: "arabic size slider letters alphabet bigger larger floor", destination: .islamPage(.alphabet)),
         .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet)),
@@ -255,6 +368,7 @@ extension SettingsSearchEntry {
         .init(title: "Grid Mode (Al-Islam)", path: "Islam Settings → Libraries", keywords: "grid list tiles rows islam resources layout", destination: .islamPage(.libraries)),
         .init(title: "Word of the Day", path: "Islam Settings → Libraries", keywords: "word of the day arabic daily vocabulary root", destination: .islamPage(.libraries)),
         .init(title: "Turn Over at Fajr", path: "Islam Settings → Libraries", keywords: "daily rollover fajr midnight day boundary of the day", destination: .islamPage(.libraries)),
+        .init(title: "Sunnah Reminders (Islam)", path: "Islam Settings → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat reminder notification dua", destination: .islamPage(.sunnahReminders)),
     ]
 }
 

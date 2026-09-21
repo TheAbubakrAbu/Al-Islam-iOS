@@ -1130,6 +1130,39 @@ private extension UnicodeScalar {
     }
 }
 
+extension Text {
+    /// Text on the Islam tab (a dua, a dhikr, a name's description, an article's quote) with the name
+    /// of Allah in red when the reader has Islam Settings' "Highlight Allah" on: the Arabic name by
+    /// `HighlightedSnippet`'s own scan, so a word counts as the name here exactly when it does in the
+    /// Quran and hadith readers, and the English word "Allah" the way those readers paint it. Every
+    /// other run keeps whatever color the call site gives the `Text`.
+    static func islamText(_ source: String, highlightAllah: Bool) -> Text {
+        guard highlightAllah else { return Text(source) }
+        var ranges = HighlightedSnippet.arabicAllahRanges(in: source)
+        var searchStart = source.startIndex
+        while searchStart < source.endIndex,
+              let match = source.range(of: "Allah", options: [.caseInsensitive, .diacriticInsensitive],
+                                       range: searchStart..<source.endIndex) {
+            ranges.append(match)
+            searchStart = match.upperBound
+        }
+        guard !ranges.isEmpty else { return Text(source) }
+        var attributed = AttributedString(source)
+        for range in ranges {
+            if let start = AttributedString.Index(range.lowerBound, within: attributed),
+               let end = AttributedString.Index(range.upperBound, within: attributed) {
+                attributed[start..<end].foregroundColor = .red
+            }
+        }
+        return Text(attributed)
+    }
+
+    /// `islamText` under the name the Arabic-only call sites read best with.
+    static func islamArabic(_ source: String, highlightAllah: Bool) -> Text {
+        islamText(source, highlightAllah: highlightAllah)
+    }
+}
+
 extension String {
     var containsArabicLetters: Bool {
         unicodeScalars.contains { scalar in
@@ -1157,7 +1190,36 @@ extension AttributedString {
         for run in runs {
             hasher.combine(characters.distance(from: run.range.lowerBound, to: run.range.upperBound))
             if let color = run.foregroundColor { hasher.combine("\(color)") }
+            #if canImport(UIKit)
+            // The tajweed painters color through NSAttributedString, so their colors live in the UIKit
+            // scope and the SwiftUI read above is nil for every one of them: the digest saw run LENGTHS
+            // only. Hiding a rule moves the runs, which is why that was enough until a rule could be
+            // recolored in place (custom tajweed colors, 2026-09-20): same runs, new colors, same
+            // digest, and the memo served the old paint. Hashed by component, not by object: the riwayah
+            // palette builds a fresh dynamic UIColor per call, equal only to itself.
+            if let color = run.uiKit.foregroundColor { Self.combineComponents(of: color, into: &hasher) }
+            #endif
         }
         return hasher.finalize()
     }
+
+    #if canImport(UIKit)
+    private static func combineComponents(of color: UIColor, into hasher: inout Hasher) {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        #if os(watchOS)
+        color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        #else
+        // Resolved against one fixed appearance so a dynamic color hashes the same every time; its
+        // light value is enough to tell the palette's colors apart.
+        color.resolvedColor(with: lightTraits).getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        #endif
+        hasher.combine(Int((red * 255).rounded()))
+        hasher.combine(Int((green * 255).rounded()))
+        hasher.combine(Int((blue * 255).rounded()))
+    }
+
+    #if !os(watchOS)
+    private static let lightTraits = UITraitCollection(userInterfaceStyle: .light)
+    #endif
+    #endif
 }

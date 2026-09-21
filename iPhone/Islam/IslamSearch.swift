@@ -305,6 +305,13 @@ enum IslamArticleCatalog {
         all.map { ($0.id, IslamArticles.fold(([$0.title, $0.group] + $0.aliases).joined(separator: " "))) },
         uniquingKeysWith: { a, _ in a }
     )
+    /// Each row's title and aliases folded for spelling (`SpellingFold`), so "yousuf", "ibraheem"
+    /// and "dawood" reach Yusuf, Ibrahim and Dawud. The section name stays out: it is a heading, and
+    /// folding it would make every row in a section answer to it.
+    static let spellings: [String: SpellingFold.Entry] = Dictionary(
+        all.map { ($0.id, SpellingFold.Entry(names: [$0.title] + $0.aliases)) },
+        uniquingKeysWith: { a, _ in a }
+    )
 
     /// The article's index screen, told to push the article as it appears (`ArticleAutoOpen`). Before
     /// iOS 16 there is no `navigationDestination(isPresented:)`, so the article opens directly.
@@ -674,9 +681,15 @@ enum IslamArticleSearch {
     static func titleHits(_ query: String, homes: Set<IslamArticleHome>) -> [IslamArticleEntry] {
         let terms = words(query)
         guard !terms.isEmpty else { return [] }
-        return IslamArticleCatalog.all.filter { entry in
+        let direct = IslamArticleCatalog.all.filter { entry in
             guard homes.contains(entry.home), let haystack = IslamArticleCatalog.foldedHaystacks[entry.id] else { return false }
             return terms.allSatisfy { haystack.contains($0) }
+        }
+        guard direct.isEmpty else { return direct }
+        // No row spelled that way: fold the spelling and ask again. A fallback only.
+        let candidates = IslamArticleCatalog.all.filter { homes.contains($0.home) }
+        return SpellingFold.matches(query, in: candidates) {
+            IslamArticleCatalog.spellings[$0.id] ?? SpellingFold.Entry(names: [])
         }
     }
 

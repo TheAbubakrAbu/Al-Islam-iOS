@@ -15,6 +15,30 @@ struct AdhanSoundOption: Identifiable, Equatable {
     let title: String
 }
 
+/// The last calls a nag cascade ends on, on top of its regular interval (`Settings.naggingCascade`).
+/// `both` is what nagging mode always did.
+enum NaggingLastCalls: String, CaseIterable, Identifiable {
+    case both, five, none
+
+    var id: String { rawValue }
+
+    var minutes: [Int] {
+        switch self {
+        case .both: return [10, 5]
+        case .five: return [5]
+        case .none: return []
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .both: return "10 and 5 min"
+        case .five: return "5 min"
+        case .none: return "None"
+        }
+    }
+}
+
 extension Settings {
     /// Each adhan is one bundled recording, `<id>.caf` (AAC, the whole adhan), and two cuts a notification
     /// can carry: `<id>-30.caf` (its opening 30 seconds) and `<id>-short.caf` (a 5–15 second excerpt). iOS
@@ -2274,7 +2298,6 @@ extension Settings {
         /// Bundled sound file, nil for the system default.
         let soundFile: String?
         let categoryIdentifier: String?
-        let nagPrayerName: String?
         /// The absolute instant the notification is FOR (see `intendedFireDateUserInfoKey`).
         let intendedFireDate: Date
         let trigger: DateComponents
@@ -2316,7 +2339,6 @@ extension Settings {
             content.interruptionLevel = .timeSensitive
         }
         if let category = spec.categoryIdentifier { content.categoryIdentifier = category }
-        if let name = spec.nagPrayerName { content.userInfo[nagPrayerNameUserInfoKey] = name }
         #endif
         let trigger = UNCalendarNotificationTrigger(dateMatching: spec.trigger, repeats: false)
         return UNNotificationRequest(identifier: spec.identifier, content: content, trigger: trigger)
@@ -2456,7 +2478,7 @@ extension Settings {
     /// `includeNags` is the per-prayer, per-day verdict from `nagCascadeIsAnswered`: a cascade whose
     /// question is already answered ("yes, I prayed it" - or tracking is paused) is never scheduled at
     /// all, instead of being scheduled and then cancelled.
-    private func offsets(for prefs: NotifPrefs, includeNags: Bool = true) -> [Int] {
+    private func offsets(for prefs: NotifPrefs, before prayer: Prayer, includeNags: Bool = true) -> [Int] {
         var result: Set<Int> = []
 
         if self[keyPath: prefs.enabled] { result.insert(0) }
@@ -2467,7 +2489,10 @@ extension Settings {
         }
 
         if includeNags && naggingMode && self[keyPath: prefs.nagging] {
-            result.formUnion(naggingCascade(start: naggingStartOffset))
+            // A paused nag is left out here rather than built and dropped, so a pause frees its
+            // slots for the days further out instead of spending them on silence.
+            result.formUnion(naggingCascade(forCascadeBefore: prayer.nameTransliteration)
+                .filter { !isNaggingPaused(at: prayer.time.addingTimeInterval(-Double($0) * 60)) })
         }
         return result.sorted(by: >)
     }
@@ -2497,14 +2522,140 @@ extension Settings {
     /// A *set*, because the arithmetic overlaps for some starting values - a start of 20 walks down to 5, and
     /// the trailing `[10, 5]` re-adds 5. Duplicates each claimed a notification slot while resolving to the
     /// same identifier, so the second silently replaced the first and the budget was spent for nothing.
-    private func naggingCascade(start: Int) -> Set<Int> {
+    ///
+    /// Static and pure so the settings screen can describe the exact schedule it is about to build
+    /// (`NaggingModeView`'s "30, 15, 10 and 5 minutes before") instead of a paraphrase that drifts.
+    static func naggingCascade(start: Int, interval: Int, lastCalls: NaggingLastCalls) -> Set<Int> {
         guard start > 0 else { return [] }
+        let step = effectiveNaggingInterval(interval, forStart: start)
         var m = start
         var out: Set<Int> = []
-        while m > 15 { out.insert(m); m -= 15 }
+        while m > step { out.insert(m); m -= step }
         if m >= 5 { out.insert(m) }
-        out.formUnion([10, 5].filter { $0 < start })
+        out.formUnion(lastCalls.minutes.filter { $0 < start })
         return out
+    }
+
+    /// The interval a cascade really walks at. iOS holds 64 pending notifications for the whole app
+    /// and six deadlines share them with the adhans, so one cascade never takes more than
+    /// `naggingMaxStepsPerCascade` steps: a two-hour lead at five-minute spacing would be 24 requests
+    /// per prayer and would push tomorrow's adhans out of the queue. The settings screen offers only
+    /// the intervals that fit the chosen lead (`naggingIntervalChoices`); this clamp is for a value
+    /// that arrives some other way (a synced watch, an older build, a per-deadline lead).
+    static func effectiveNaggingInterval(_ interval: Int, forStart start: Int) -> Int {
+        let wanted = max(5, interval)
+        return naggingIntervalOptions.first { $0 >= wanted && start / $0 <= naggingMaxStepsPerCascade }
+            ?? naggingIntervalOptions.last ?? 30
+    }
+
+    static let naggingMaxStepsPerCascade = 8
+    static let naggingIntervalOptions = [5, 10, 15, 20, 30]
+    static let naggingStartOptions = [10, 15, 20, 30, 45, 60, 90, 120]
+    static let naggingFollowUpOptions = [0, 10, 15, 20, 30, 45, 60]
+
+    /// The intervals the picker may offer for a lead time: every one whose walk fits the step cap.
+    static func naggingIntervalChoices(forStart start: Int) -> [Int] {
+        naggingIntervalOptions.filter { start / $0 <= naggingMaxStepsPerCascade }
+    }
+
+    var naggingLastCalls: NaggingLastCalls {
+        get { NaggingLastCalls(rawValue: naggingLastCallsRaw) ?? .both }
+        set { naggingLastCallsRaw = newValue.rawValue }
+    }
+
+    /// The deadline a cascade belongs to, by the name of the time it runs down to. The ids are
+    /// `NaggingDeadline.id` (SettingsAdhanView.swift); the combined traveling rows share their
+    /// parent's, the same way `notifTable` shares the parent's switches.
+    static func nagDeadlineID(forCascadeBefore name: String) -> String? {
+        switch name {
+        case "Shurooq": return "shurooq"
+        case "Asr": return "asr"
+        case "Maghrib", "Maghrib/Isha": return "maghrib"
+        case "Isha": return "isha"
+        case "Islamic Midnight": return "midnight"
+        case "Fajr": return "fajr"
+        default: return nil
+        }
+    }
+
+    /// Decoded `naggingDeadlineStartsData`, keyed on the bytes it was decoded from rather than
+    /// cleared by a didSet: a watch sync writes the defaults key raw, past every didSet.
+    private static var naggingDeadlineStartsCache: (data: Data, starts: [String: Int])?
+
+    private var naggingDeadlineStarts: [String: Int] {
+        let data = naggingDeadlineStartsData
+        if let cached = Self.naggingDeadlineStartsCache, cached.data == data { return cached.starts }
+        let decoded = (try? JSONDecoder().decode([String: Int].self, from: data)) ?? [:]
+        Self.naggingDeadlineStartsCache = (data, decoded)
+        return decoded
+    }
+
+    /// How many minutes ahead of its deadline a cascade starts: the deadline's own lead when
+    /// "Different for Each Prayer" is on and one is stored, else the shared one.
+    func naggingStart(forDeadline id: String?) -> Int {
+        guard naggingPerDeadlineStart, let id, let own = naggingDeadlineStarts[id], own > 0 else {
+            return naggingStartOffset
+        }
+        return own
+    }
+
+    func setNaggingStart(_ minutes: Int, forDeadline id: String) {
+        var starts = naggingDeadlineStarts
+        starts[id] = minutes
+        naggingDeadlineStartsData = (try? JSONEncoder().encode(starts)) ?? Data()
+    }
+
+    /// The minutes-before a cascade fires at, for the time named `name`.
+    func naggingCascade(forCascadeBefore name: String) -> Set<Int> {
+        Self.naggingCascade(
+            start: naggingStart(forDeadline: Self.nagDeadlineID(forCascadeBefore: name)),
+            interval: naggingInterval,
+            lastCalls: naggingLastCalls
+        )
+    }
+
+    // MARK: Nagging: pause
+
+    /// True while `date` falls inside a pause. Only the "Did you pray?" reminders read this: the
+    /// adhans and the plain pre-notifications keep their times through a pause.
+    func isNaggingPaused(at date: Date) -> Bool {
+        naggingPausedUntil > 0 && date.timeIntervalSince1970 < naggingPausedUntil
+    }
+
+    /// The moment the current pause ends, or nil when nothing is paused (or the pause has run out).
+    var naggingPauseEnd: Date? {
+        guard naggingPausedUntil > Date().timeIntervalSince1970 else { return nil }
+        return Date(timeIntervalSince1970: naggingPausedUntil)
+    }
+
+    func pauseNagging(forHours hours: Int) {
+        naggingPausedUntil = Date().addingTimeInterval(Double(hours) * 3600).timeIntervalSince1970
+    }
+
+    func resumeNagging() {
+        naggingPausedUntil = 0
+    }
+
+    // MARK: Nagging: the last call's verse
+
+    /// The verses the last call may carry ("Add a Verse to the Last Call"). Saheeh International, word
+    /// for word as quran.qpk ships them (checked against the pack, 2026-09-20). 2:238, 20:14 and 2:45
+    /// are whole ayahs; 4:103 and 29:45 are one complete sentence of theirs, cited as such.
+    static let nagAyat: [(text: String, reference: String)] = [
+        ("Indeed, prayer has been decreed upon the believers a decree of specified times.", "Quran 4:103"),
+        ("Maintain with care the [obligatory] prayers and [in particular] the middle prayer and stand before Allah, devoutly obedient.", "Quran 2:238"),
+        ("Indeed, I am Allah. There is no deity except Me, so worship Me and establish prayer for My remembrance.", "Quran 20:14"),
+        ("And seek help through patience and prayer, and indeed, it is difficult except for the humbly submissive [to Allah]", "Quran 2:45"),
+        ("Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater.", "Quran 29:45"),
+    ]
+
+    /// Walks the list by day and by time of day, so neither a day's prayers nor one prayer's week
+    /// keeps repeating the same verse.
+    private static func nagAyah(for prayerTime: Date) -> (text: String, reference: String) {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = calendar.ordinality(of: .day, in: .era, for: prayerTime) ?? 0
+        let hour = calendar.component(.hour, from: prayerTime)
+        return nagAyat[abs(day &+ hour / 4) % nagAyat.count]
     }
 
     private func makeRefreshNagRequest(
@@ -2530,7 +2681,6 @@ extension Settings {
             body: "Please open the app to refresh today’s prayer times and notifications.",
             soundFile: nil,
             categoryIdentifier: nil,
-            nagPrayerName: nil,
             intendedFireDate: date,
             trigger: comps
         )
@@ -2623,8 +2773,11 @@ extension Settings {
             for prayer in todayList {
                 guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                 let includeNags = !nagCascadeIsAnswered(for: prayer, in: todayList, on: prayerObj.day)
-                for minutes in offsets(for: prefs, includeNags: includeNags) {
+                for minutes in offsets(for: prefs, before: prayer, includeNags: includeNags) {
                     collectPrayer(prayer, minutes == 0 ? nil : minutes)
+                }
+                if let followUp = makeNagFollowUpRequest(for: prayer, in: todayList, on: prayerObj.day, city: city) {
+                    reminderRequests.append(followUp)
                 }
             }
 
@@ -2644,8 +2797,13 @@ extension Settings {
                 for prayer in dayList {
                     guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
                     let includeNags = !extended && !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
-                    for minutes in offsets(for: prefs, includeNags: includeNags) {
+                    for minutes in offsets(for: prefs, before: prayer, includeNags: includeNags) {
                         collectPrayer(prayer, minutes == 0 ? nil : minutes, extended: extended)
+                    }
+                    // Near window only, like the cascades: a follow-up's premise (the prayer is
+                    // still unmarked) cannot be known days ahead.
+                    if !extended, let followUp = makeNagFollowUpRequest(for: prayer, in: dayList, on: date, city: city) {
+                        reminderRequests.append(followUp)
                     }
                 }
             }
@@ -2724,6 +2882,17 @@ extension Settings {
 
         #if DEBUG
         logger.debug("Prayer schedule: \(finalSpecs.count)/\(maxPending) requests, adhan coverage through \(latestAdhanFireDate.map { $0.formatted() } ?? "none")")
+        // "-dumpNotifications" also prints the PLAN: every request this pass is about to hand to iOS,
+        // with its sound. The pending dump below only shows what iOS accepted, which is nothing on
+        // a simulator whose notification permission is denied (and `simctl privacy` cannot grant
+        // it), so the plan is the only way to check the nag cascade's arithmetic there.
+        if ProcessInfo.processInfo.arguments.contains("-dumpNotifications") {
+            NSLog("PLANNEDNOTIFS count=%d of %d", finalSpecs.count, maxPending)
+            for spec in finalSpecs {
+                NSLog("PLANNEDNOTIF %@ | %@ | %@ | %@", spec.identifier, spec.soundFile ?? "system sound",
+                      spec.categoryIdentifier ?? "-", spec.body.replacingOccurrences(of: "\n", with: " // "))
+            }
+        }
         #endif
 
         // Incremental refresh instead of wiping everything first: adding a request with an existing
@@ -2838,18 +3007,34 @@ extension Settings {
     /// exactly the case Silent Mode override exists for (Abu, 2026-09-14: "if the adhan notification
     /// goes in and I open the app I would like it to play the adhan").
     ///
-    /// Yesterday is included alongside today: the window is small, but a prayer three minutes before
-    /// midnight is still three minutes ago at 00:01, by which time `prayers` has rolled to the new day.
+    /// Yesterday is included alongside today: the window is small, but a prayer a few minutes before
+    /// midnight is still a few minutes ago at 00:01.
+    ///
+    /// The days are counted from `now`, NEVER from `prayers.day`. The app is usually suspended, not
+    /// killed, so on the activation that matters most (unlocking at Fajr) `prayers` is still
+    /// YESTERDAY's snapshot: built from it, the candidates were yesterday and the day before, today's
+    /// Fajr was not among them, and the adhan silently never played (Abu, 2026-09-20). The stored
+    /// snapshot is reused only when it really is the day being asked about.
     func recentForegroundAdhan(within window: TimeInterval, now: Date = Date()) -> (date: Date, name: String, notificationID: String)? {
-        guard window > 0, let prayerObj = prayers else { return nil }
+        guard window > 0 else { return nil }
 
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
         var candidates: [(date: Date, name: String)] = []
-        for prayer in prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day) {
-            candidates.append((prayer.time, prayer.nameTransliteration))
-        }
-        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: prayerObj.day),
-           let list = getPrayerTimes(for: yesterday) {
-            for prayer in prayersIncludingOptional(list, for: yesterday) {
+        // Tomorrow too, not only yesterday: a day's table is computed for the LOCATION, so when the
+        // device clock's zone is not the location's (a traveler before the zone updates, or a manual
+        // zone), a prayer of day D+1 can fall on local day D. The `<= now` and window filters below
+        // make the extra day harmless everywhere else, and `rawPrayerCache` makes it cheap.
+        for offset in [0, -1, 1] {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today) else { continue }
+            let list: [Prayer]?
+            if let prayerObj = prayers, calendar.isDate(prayerObj.day, inSameDayAs: day) {
+                list = prayerObj.prayers
+            } else {
+                list = getPrayerTimes(for: day)
+            }
+            guard let list else { continue }
+            for prayer in prayersIncludingOptional(list, for: day) {
                 candidates.append((prayer.time, prayer.nameTransliteration))
             }
         }
@@ -3014,7 +3199,6 @@ extension Settings {
     static let nagCategoryIdentifier = "PRAYER_NAG"
     static let nagActionMarkPrayedIdentifier = "PRAYER_NAG_MARK_PRAYED"
     static let nagActionMarkPrayedLateIdentifier = "PRAYER_NAG_MARK_PRAYED_LATE"
-    static let nagPrayerNameUserInfoKey = "nagPrayerName"
 
     private static let prayerTrackerDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -3173,6 +3357,13 @@ extension Settings {
             } else if affectsLiveNags {
                 cancelPendingNags(cascadePrayerName: "Fajr", on: Date())
             }
+            if affectsLiveNags, target.contains("Isha") {
+                cancelMidnightNags(aboutIshaOf: date)
+            }
+            // And the "Have you prayed it yet?" follow-up, which asks about this very prayer.
+            if affectsLiveNags {
+                cancelNagFollowUps(about: prayerName, on: date)
+            }
         } else if naggingMode, affectsLiveNags {
             // Clearing re-arms them: the schedule is rebuilt, and the builder re-adds any nag
             // cascade that is no longer answered (see `nagCascadeIsAnswered`).
@@ -3318,34 +3509,164 @@ extension Settings {
         return true
     }
 
-    /// The prayer a nag BEFORE `cascadePrayerName` is actually about: the trackable prayer whose
-    /// window ends when it arrives - i.e. the previous obligatory prayer of the day. A pre-Fajr nag
-    /// is about Isha (the night prayer, begun the previous civil day).
-    func naggedPrayerName(forCascade cascadePrayerName: String) -> String {
-        guard let ordered = prayers?.prayers.sorted(by: { $0.time < $1.time }),
-              let cascadeIndex = ordered.firstIndex(where: { $0.nameTransliteration == cascadePrayerName })
-        else { return cascadePrayerName }
+    // MARK: - The question a prayer notification asks
 
-        let cascadeTime = ordered[cascadeIndex].time
-        if let previous = ordered.last(where: {
-            $0.time < cascadeTime && Self.trackablePrayerNames.contains($0.nameTransliteration)
-                && $0.nameTransliteration != cascadePrayerName
-        }) {
-            return previous.nameTransliteration
-        }
-        return "Isha"
+    /// A prayer notification reduced to what it announced: which time, how far ahead, and the instant
+    /// that time falls on. Built by the scheduler for the notification it is about to write, and read
+    /// back from a delivered one when it is tapped (`tappedPrayerNotification(from:deliveredAt:)`).
+    struct PrayerNotificationMoment: Equatable {
+        /// The time the notification is ABOUT: "Asr" for both "Time for Asr" and "30m until Asr".
+        let name: String
+        /// How many minutes before `prayerTime` it fires; 0 for the at-time notification.
+        let minutesBefore: Int
+        /// When `name` begins.
+        let prayerTime: Date
     }
 
-    /// The civil day a "\(prayerName) prayed just now" belongs to: if today's instance hasn't started
-    /// yet (answering a pre-Fajr nag about Isha in the small hours), the prayed instance was
-    /// yesterday's.
-    func trackerDate(forMarking prayerName: String, at now: Date = Date()) -> Date {
-        if let time = prayers?.prayers.first(where: { $0.nameTransliteration == prayerName })?.time,
-           time > now {
-            return Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+    /// "Did you pray X?", resolved: which prayer, the tracker day its answer belongs to, and when its
+    /// window closes.
+    struct PrayerQuestion: Equatable {
+        /// The tracker name asked about ("Asr", "Jumuah", "Dhuhr/Asr").
+        let prayerName: String
+        /// What a person reads for it: the user's own spelling when the prayer was renamed.
+        let displayName: String
+        /// When the asked prayer began.
+        let prayerTime: Date
+        /// The civil day its answer is recorded on.
+        let trackerDay: Date
+        /// When its window closes, nil when that could not be worked out. Before this moment a prayer
+        /// that was prayed was prayed on time, so "late" is not an answer anyone can honestly give
+        /// (Abu, 2026-09-20: "only present the late option if it's clicked after the prayer time").
+        let windowEnd: Date?
+
+        func allowsLateAnswer(at now: Date = Date()) -> Bool {
+            guard let windowEnd else { return true }
+            return now >= windowEnd
         }
-        return now
     }
+
+    /// The obligatory prayer a notification is about, and the day the tracker files it under.
+    ///
+    /// "Time for Asr" is about Asr. Everything else - a reminder BEFORE a time, and the two deadlines
+    /// that are not prayers (Shurooq, Islamic Midnight) - is about the prayer whose window that time
+    /// closes: the last obligatory one to begin before it, so "30m until Asr" asks about Dhuhr and a
+    /// pre-Fajr reminder asks about the Isha that began the previous evening.
+    ///
+    /// Resolved against the prayer lists of the days around the notification's OWN time, never
+    /// against "now". The helpers this replaces (`naggedPrayerName`, `trackerDate(forMarking:)`) read
+    /// today's stored list at the moment they ran, which went wrong three ways: Islamic Midnight is
+    /// never a row of that list, so its cascade asked "Did you pray Islamic Midnight?" and its "Yes"
+    /// recorded a mark under that name; a cascade scheduled in the morning checked YESTERDAY's answer
+    /// (today's Dhuhr had not begun), so a diligent tracker lost the question from the body; and a
+    /// notification tapped a day late marked today instead of the day it asked about.
+    private func askedPrayer(for moment: PrayerNotificationMoment) -> (prayer: Prayer, day: Date, instances: [(prayer: Prayer, day: Date)])? {
+        // Duhaa and the Last Third are nafl: nothing is owed, the tracker records only the five, and
+        // neither closes an obligatory prayer's window, so they have nothing to ask.
+        if Self.optionalPrayerNames.contains(moment.name), moment.name != "Islamic Midnight" { return nil }
+
+        // Three lists, not two. The day before, because a pre-Fajr reminder asks about the Isha that
+        // began the previous evening. The day after, because a list is computed for a civil DATE at
+        // the prayer location: with the phone's clock in another zone than that location (a trip, a
+        // manual city), "tomorrow's" Fajr can fall on today's date here - and a Shurooq tap that
+        // could not see it asked about yesterday's Isha instead (measured: Mecca on a Pacific clock).
+        var instances: [(prayer: Prayer, day: Date)] = []
+        for offset in [-1, 0, 1] {
+            guard let day = Calendar.current.date(byAdding: .day, value: offset, to: moment.prayerTime),
+                  let list = getPrayerTimes(for: day) else { continue }
+            instances += list
+                .filter { Self.trackablePrayerNames.contains($0.nameTransliteration) }
+                .map { ($0, day) }
+        }
+        instances.sort { $0.prayer.time < $1.prayer.time }
+
+        let asked: (prayer: Prayer, day: Date)?
+        if moment.minutesBefore == 0, Self.trackablePrayerNames.contains(moment.name) {
+            // Matched by what the name COVERS, so a "Dhuhr/Asr" notification written while traveling
+            // still finds Dhuhr once traveling mode is off (and the other way round).
+            let coverage = Self.canonicalCoverage(of: moment.name)
+            func distance(_ instance: (prayer: Prayer, day: Date)) -> TimeInterval {
+                abs(instance.prayer.time.timeIntervalSince(moment.prayerTime))
+            }
+            asked = instances
+                .filter { !Self.canonicalCoverage(of: $0.prayer.nameTransliteration).isDisjoint(with: coverage) }
+                .min { distance($0) < distance($1) }
+        } else {
+            asked = instances.last { $0.prayer.time < moment.prayerTime.addingTimeInterval(-60) }
+        }
+        return asked.map { ($0.prayer, $0.day, instances) }
+    }
+
+    /// The question a prayer notification asks, or nil when it asks none (the nafl times, no location).
+    func prayerQuestion(for moment: PrayerNotificationMoment) -> PrayerQuestion? {
+        guard let asked = askedPrayer(for: moment) else { return nil }
+        let name = asked.prayer.nameTransliteration
+
+        let windowEnd: Date? = {
+            // Isha's window closes at Islamic Midnight (Sahih Muslim 612), the EARLIEST deadline anyone
+            // holds. From then on both answers are offered, and the one who holds that it runs to
+            // Fajr answers "on time": the app still never rules on it (see the nagging deadlines).
+            if Self.canonicalCoverage(of: name).contains("Isha") {
+                guard let here = currentLocation else { return nil }
+                return optionalPrayers(for: asked.day, at: here, duha: false, islamicMidnight: true, lastThird: false)
+                    .first?.time
+            }
+            if name == "Fajr" {
+                return getPrayerTimes(for: asked.day, fullPrayers: true)?
+                    .first { $0.nameTransliteration == "Shurooq" }?.time
+            }
+            return asked.instances.first { $0.prayer.time > asked.prayer.time }?.prayer.time
+        }()
+
+        return PrayerQuestion(
+            prayerName: name,
+            displayName: asked.prayer.displayName,
+            prayerTime: asked.prayer.time,
+            trackerDay: asked.day,
+            windowEnd: windowEnd
+        )
+    }
+
+    /// Whether `question` still needs asking: not on an exempt day (the menses pause silences every
+    /// "Did you pray?"), and not once it has ANY answer - prayed, late or recorded missed. Asking
+    /// again would be exactly the nagging the mark was supposed to end.
+    func isUnanswered(_ question: PrayerQuestion) -> Bool {
+        !isTrackerExempt(on: question.trackerDay) && !isPrayerMarked(question.prayerName, on: question.trackerDay)
+    }
+
+    #if os(iOS)
+    /// Reads a delivered prayer notification back into its moment, or nil for every other kind (Hijri
+    /// events, refresh nags, the planner, the Quran reminders).
+    ///
+    /// Parsed from the IDENTIFIER ("<name>-<minutes>-y-m-d~<signature>", the name never contains "-")
+    /// rather than from a new userInfo key, so the two weeks of notifications an older build already
+    /// scheduled answer the same way as the ones this build writes.
+    static func tappedPrayerNotification(from request: UNNotificationRequest, deliveredAt delivered: Date) -> PrayerNotificationMoment? {
+        let fields = request.identifier.split(separator: "-")
+        guard fields.count >= 2 else { return nil }
+        let name = String(fields[0])
+        guard notifTable[name] != nil else { return nil }
+
+        let fired = (request.content.userInfo[intendedFireDateUserInfoKey] as? TimeInterval)
+            .map(Date.init(timeIntervalSince1970:)) ?? delivered
+
+        // A follow-up ("Dhuhr-a30-..."): it fired AFTER the prayer began and asks about that very
+        // prayer, which is exactly what the at-time moment resolves to.
+        if fields[1].hasPrefix(nagFollowUpMarker), let after = Int(fields[1].dropFirst()), after > 0 {
+            return PrayerNotificationMoment(
+                name: name,
+                minutesBefore: 0,
+                prayerTime: fired.addingTimeInterval(-TimeInterval(after) * 60)
+            )
+        }
+
+        guard let minutes = Int(fields[1]), minutes >= 0 else { return nil }
+        return PrayerNotificationMoment(
+            name: name,
+            minutesBefore: minutes,
+            prayerTime: fired.addingTimeInterval(TimeInterval(minutes) * 60)
+        )
+    }
+    #endif
 
     /// Whether a tracker slot can be marked yet, honouring `trackerRequiresPrayerTime`.
     ///
@@ -3362,11 +3683,38 @@ extension Settings {
         return start <= now
     }
 
-    /// The full "Yes, I prayed it" handling shared by the notification actions and the in-app dialog.
-    /// On time unless the "prayed it late" answer passes `.late`.
-    func markPrayerPrayedFromNag(asked prayerName: String, cascadePrayerName: String, mark: PrayerMark = .onTime) {
-        setPrayerMark(prayerName, on: trackerDate(forMarking: prayerName), mark: mark)
-        cancelPendingNags(cascadePrayerName: cascadePrayerName)
+    /// The full "Yes, I prayed it" handling shared by the notification's action buttons and the in-app
+    /// question: the mark goes on the day the question was about, and the reminders still asking it
+    /// go quiet. `setPrayerMark` silences the cascades it can work out from the day; the one the
+    /// answered notification itself belongs to is cancelled by name, whatever day it is from.
+    func answer(_ question: PrayerQuestion, mark: PrayerMark, from moment: PrayerNotificationMoment) {
+        setPrayerMark(question.prayerName, on: question.trackerDay, mark: mark)
+        if moment.minutesBefore > 0 {
+            cancelNagCascade(before: moment.name, at: moment.prayerTime)
+        }
+    }
+
+    /// Cancels the pending nags leading up to `prayerTime`. A cascade can straddle civil midnight
+    /// (Islamic Midnight at 00:10 starts nagging at 23:40), and its identifiers carry the day each nag
+    /// FIRES on, so both days are swept.
+    private func cancelNagCascade(before cascadePrayerName: String, at prayerTime: Date) {
+        let lead = naggingStart(forDeadline: Self.nagDeadlineID(forCascadeBefore: cascadePrayerName))
+        let firstNag = prayerTime.addingTimeInterval(-Double(lead) * 60)
+        cancelPendingNags(cascadePrayerName: cascadePrayerName, on: prayerTime)
+        if !Calendar.current.isDate(firstNag, inSameDayAs: prayerTime) {
+            cancelPendingNags(cascadePrayerName: cascadePrayerName, on: firstNag)
+        }
+    }
+
+    /// Isha has a second deadline with a cascade of its own, Islamic Midnight, which is never a row of
+    /// the stored list - so the successor walk in `cancelNagsAboutPrayer` cannot find it, and marking
+    /// Isha in the tracker left that cascade asking. `day` is the civil day Isha was recorded on.
+    private func cancelMidnightNags(aboutIshaOf day: Date) {
+        guard naggingMode, naggingIslamicMidnight, let here = currentLocation,
+              let midnight = optionalPrayers(for: day, at: here, duha: false, islamicMidnight: true, lastThird: false)
+                .first?.time
+        else { return }
+        cancelNagCascade(before: "Islamic Midnight", at: midnight)
     }
 
     /// Removes today's still-pending nag notifications scheduled under `cascadePrayerName`. Only the
@@ -3382,7 +3730,7 @@ extension Settings {
         let datePart = "-\(y)-\(m)-\(d)"
         let prefix = "\(cascadePrayerName)-"
 
-        var cancellableMinutes = naggingCascade(start: naggingStartOffset)
+        var cancellableMinutes = naggingCascade(forCascadeBefore: cascadePrayerName)
         if let prefs = Self.notifTable[cascadePrayerName] {
             cancellableMinutes.remove(self[keyPath: prefs.preMinutes])
         }
@@ -3450,8 +3798,18 @@ extension Settings {
 
     /// The bundled sound file for a prayer notification, nil for the system default. A filename, not a
     /// `UNNotificationSound`: the sound object is built with the request, off main.
-    private func prayerNotificationSoundFile(for prayer: Prayer, minutesBefore: Int?) -> String? {
+    private func prayerNotificationSoundFile(for prayer: Prayer, minutesBefore: Int?,
+                                             nag: (isNag: Bool, isLastCall: Bool) = (false, false)) -> String? {
         #if os(iOS)
+        // A nag may play a tone of its own, and its last call may play Alarm whatever the rest play:
+        // the one reminder of the cascade there is no later chance to hear.
+        if nag.isLastCall, naggingLoudLastCall, let alarm = alertToneSoundFilename(for: "alarm") {
+            return alarm
+        }
+        if nag.isNag, Self.supportedAlertToneIDs.contains(naggingSound) {
+            return alertToneSoundFilename(for: naggingSound)
+        }
+
         // Only an obligatory prayer's AT-TIME notification may play the adhan. Everything else - a
         // pre-alert, one of the non-obligatory times (Shurooq, Duhaa, Islamic Midnight, Last Third), or a
         // prayer whose adhan is switched off - is TELLING rather than CALLING, and gets the alert tone.
@@ -3475,6 +3833,138 @@ extension Settings {
         #endif
     }
 
+    /// Whether the reminder `minutes` before `prayer` is a nag delivery, and whether it is the LAST one
+    /// of its cascade (the one that may play Alarm and carry a verse).
+    ///
+    /// The pause is part of this test, not only of `offsets(for:before:)`: a plain pre-notification
+    /// that merely shares a cascade's minute must stay plain while nagging is paused, instead of
+    /// asking "Did you pray?" through the pause. iOS only, like the question itself: the tracker the
+    /// nags ask about does not exist on the watch.
+    private func nagDelivery(minutes: Int?, before prayer: Prayer, firingAt triggerTime: Date) -> (isNag: Bool, isLastCall: Bool) {
+        #if os(iOS)
+        guard let m = minutes, m != 0, naggingMode,
+              let prefs = Self.notifTable[prayer.nameTransliteration],
+              self[keyPath: prefs.nagging],
+              !isNaggingPaused(at: triggerTime) else { return (false, false) }
+        let cascade = naggingCascade(forCascadeBefore: prayer.nameTransliteration)
+        guard cascade.contains(m) else { return (false, false) }
+        return (true, m == cascade.min())
+        #else
+        return (false, false)
+        #endif
+    }
+
+    // MARK: Nagging: the follow-up after the adhan
+
+    /// Whether any switched-on deadline asks about `name`, which is what entitles it to a follow-up:
+    /// someone who turned off both Isha deadlines to keep their nights quiet does not want
+    /// "Have you prayed Isha yet?" at 10 PM either. The mapping is `NaggingDeadline.all` read the
+    /// other way round (the prayer asked about, to the deadlines that ask it).
+    private func nagFollowUpApplies(to name: String) -> Bool {
+        switch name {
+        case "Fajr": return naggingSunrise
+        case "Dhuhr", "Jumuah": return naggingAsr
+        case "Asr", "Dhuhr/Asr": return naggingMaghrib
+        case "Maghrib": return naggingIsha
+        case "Isha", "Maghrib/Isha": return naggingIslamicMidnight || naggingFajr
+        default: return false
+        }
+    }
+
+    /// The identifier marker of a follow-up: "Dhuhr-a30-2026-9-20". The "a" (after) keeps the second
+    /// field from parsing as minutes-BEFORE, so `cancelPendingNags` never mistakes one for a cascade
+    /// step, while the "<name>-" prefix keeps it inside this scheduler's prune namespace. Its date
+    /// is the PRAYER's day, not the day it fires on (an Isha follow-up can fire past midnight), so
+    /// marking a prayer can cancel exactly its own.
+    private static let nagFollowUpMarker = "a"
+
+    /// "Have you prayed Dhuhr yet?", `naggingFollowUpMinutes` after it began, while it is unmarked.
+    ///
+    /// The deadline cascades only speak when a window is about to close, which teaches praying at
+    /// the last minute. This is the other half: one nudge early in the window. It is skipped when it
+    /// would land inside the closing cascade (which has taken over by then) or past the next time.
+    private func makeNagFollowUpRequest(for prayer: Prayer, in dayList: [Prayer], on day: Date, city: String) -> (spec: PendingNotificationSpec, date: Date)? {
+        #if os(iOS)
+        let name = prayer.nameTransliteration
+        let after = naggingFollowUpMinutes
+        guard naggingMode, after > 0,
+              Self.trackablePrayerNames.contains(name),
+              nagFollowUpApplies(to: name),
+              !isTrackerExempt(on: day), !isPrayerMarked(name, on: day) else { return nil }
+
+        let fireDate = prayer.time.addingTimeInterval(Double(after) * 60)
+        guard fireDate > Date(), !isNaggingPaused(at: fireDate) else { return nil }
+
+        // The next time on the list closes (or, for Isha, nearly closes) this prayer's window.
+        let next = dayList.filter { $0.time > prayer.time }.min { $0.time < $1.time }
+        if let next {
+            var takeover = next.time.addingTimeInterval(-5 * 60)
+            if let prefs = Self.notifTable[next.nameTransliteration], self[keyPath: prefs.nagging] {
+                let lead = naggingStart(forDeadline: Self.nagDeadlineID(forCascadeBefore: next.nameTransliteration))
+                takeover = next.time.addingTimeInterval(-Double(lead) * 60)
+            }
+            guard fireDate < takeover else { return nil }
+        }
+
+        let askedPart = prayerNotificationEnglishNames
+            ? prayer.displayName + (Self.prayerEnglishMeanings[name].map { " (\($0))" } ?? "")
+            : prayer.displayName
+        // "ends at" only where the end is not in dispute: Isha's is (Islamic Midnight or Fajr), and
+        // the app does not rule on it (see the nagging deadlines).
+        let endsPart: String = {
+            guard let next, !Self.canonicalCoverage(of: name).contains("Isha") else { return "" }
+            return " [ends at \(formatDate(next.time))]"
+        }()
+        let body = "Have you prayed \(askedPart) yet? It began \(after)m ago in \(city)"
+            + (travelingMode ? " (traveling)" : "")
+            + endsPart
+
+        var trigger = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: fireDate)
+        trigger.timeZone = Calendar.current.timeZone
+        let stamp = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        let id = "\(name)-\(Self.nagFollowUpMarker)\(after)-\(stamp.year ?? 0)-\(stamp.month ?? 0)-\(stamp.day ?? 0)"
+            + Self.notificationContentSignature(self)
+        let spec = PendingNotificationSpec(
+            identifier: id,
+            body: body,
+            soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: after, nag: (true, false)),
+            categoryIdentifier: Self.nagCategoryIdentifier,
+            intendedFireDate: fireDate,
+            trigger: trigger
+        )
+        return (spec, fireDate)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Removes the pending follow-ups about `prayerName` on `day` (the prayer's own day, which is
+    /// what their identifiers carry). Matched by coverage, so marking "Dhuhr" from the history view
+    /// still finds a traveling day's "Dhuhr/Asr" follow-up.
+    private func cancelNagFollowUps(about prayerName: String, on day: Date) {
+        #if os(iOS)
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard !target.isEmpty else { return }
+        let comps = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        guard let y = comps.year, let m = comps.month, let d = comps.day else { return }
+        let datePart = "-\(y)-\(m)-\(d)"
+
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let ids = requests.map(\.identifier).filter { id in
+                guard id.hasSuffix(datePart) || id.contains(datePart + "~") else { return false }
+                let fields = id.split(separator: "-")
+                guard fields.count >= 2, fields[1].hasPrefix(Self.nagFollowUpMarker),
+                      Int(fields[1].dropFirst()) != nil else { return false }
+                return !Self.canonicalCoverage(of: String(fields[0])).isDisjoint(with: target)
+            }
+            if !ids.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: ids)
+            }
+        }
+        #endif
+    }
+
     /// Builds an at-time / pre-notification prayer request. `isAdhan` marks the at-time notification of a
     /// main prayer (the one that carries the adhan sound) so the scheduler can prioritize it.
     private func makePrayerNotificationRequest(for prayer: Prayer, preNotificationTime minutes: Int?, city: String) -> (spec: PendingNotificationSpec, date: Date, isAdhan: Bool)? {
@@ -3491,24 +3981,22 @@ extension Settings {
         // "Yes, I prayed it" action, and tapping it in asks the same question in-app. Only actual
         // cascade offsets - the plain pre-notification and the at-time adhan stay plain.
         var categoryIdentifier: String?
-        var nagPrayerName: String?
         /// Set for a nag delivery: the body names the prayer being asked about instead of only the
         /// approaching time (see `nagBody`).
         var nagAskedName: String?
+        let nag = nagDelivery(minutes: minutes, before: prayer, firingAt: triggerTime)
         #if os(iOS)
-        if let m = minutes, m != 0, naggingMode,
-           let prefs = Self.notifTable[prayer.nameTransliteration],
-           self[keyPath: prefs.nagging],
-           naggingCascade(start: naggingStartOffset).contains(m) {
+        if let m = minutes, nag.isNag {
             categoryIdentifier = Self.nagCategoryIdentifier
-            nagPrayerName = prayer.nameTransliteration
-            let asked = naggedPrayerName(forCascade: prayer.nameTransliteration)
             // Already answered (prayed, late, or recorded missed): the cascade is still scheduled for
             // tomorrow, but TODAY's remaining nags must not ask again - that is the nagging the mark
             // was meant to end. `cancelPendingNags` handles the live case; this covers a reschedule
-            // that happens after the answer.
-            if !isPrayerMarked(asked, on: trackerDate(forMarking: asked)) {
-                nagAskedName = asked
+            // that happens after the answer. The same resolver a tap uses, so the body and the
+            // in-app question can never name different prayers.
+            let moment = PrayerNotificationMoment(name: prayer.nameTransliteration, minutesBefore: m, prayerTime: prayer.time)
+            if let asked = askedPrayer(for: moment),
+               !isPrayerMarked(asked.prayer.nameTransliteration, on: asked.day) {
+                nagAskedName = asked.prayer.nameTransliteration
             }
         }
         #endif
@@ -3543,14 +4031,16 @@ extension Settings {
             body: {
                 #if os(iOS)
                 if let asked = nagAskedName, let m = minutes {
-                    return nagBody(asked: asked, cascade: prayer, minutes: m, city: city)
+                    let question = nagBody(asked: asked, cascade: prayer, minutes: m, city: city)
+                    guard nag.isLastCall, naggingAyahInLastCall else { return question }
+                    let ayah = Self.nagAyah(for: prayer.time)
+                    return question + "\n\u{201C}\(ayah.text)\u{201D} (\(ayah.reference))"
                 }
                 #endif
                 return buildBody(prayer: prayer, minutesBefore: minutes, city: city)
             }(),
-            soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: minutes),
+            soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: minutes, nag: nag),
             categoryIdentifier: categoryIdentifier,
-            nagPrayerName: nagPrayerName,
             intendedFireDate: triggerTime,
             trigger: comps
         )
@@ -3643,7 +4133,6 @@ extension Settings {
             body: body,
             soundFile: nil,
             categoryIdentifier: nil,
-            nagPrayerName: nil,
             intendedFireDate: finalDate,
             trigger: gregorianComps
         )

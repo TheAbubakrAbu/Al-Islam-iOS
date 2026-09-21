@@ -66,6 +66,9 @@ struct AppearanceEnvironment: Equatable {
     /// on every publish (a location tick, a countdown) while the reader scrolled.
     var islamArabicFontName: String
     var islamUsesCustomArabicFace: Bool
+    /// `Settings.highlightAllahNamesIslam`: the name of Allah in red across the Islam tab's Arabic.
+    /// Rides here for the same reason the faces do; `Text.islamArabic` is what spends it.
+    var highlightAllahIslam: Bool
     /// The Quran face (`Settings.fontArabic`) for the ayat quoted on those pages, and its custom flag.
     var quranArabicFontName: String
     var quranUsesCustomArabicFace: Bool
@@ -130,6 +133,7 @@ struct AppearanceEnvironment: Equatable {
             liquidGlass: liquidGlass(settings, profile: profile),
             islamArabicFontName: settings.nonQuranArabicFontName,
             islamUsesCustomArabicFace: settings.islamUsesCustomArabicFace,
+            highlightAllahIslam: settings.highlightAllahNamesIslam,
             quranArabicFontName: settings.fontArabic,
             quranUsesCustomArabicFace: settings.quranUsesCustomArabicFace,
             quranDisplayFace: settings.quranArabicFontName(for: nil),
@@ -144,10 +148,38 @@ struct AppearanceEnvironment: Equatable {
 }
 
 struct AppearanceEnvironmentKey: EnvironmentKey {
-    /// A one-time snapshot, for trees no root injects into (previews). Every real root applies
-    /// `.appearanceEnvironment()`, which keeps the value live.
-    static let defaultValue = AppearanceEnvironment.snapshot(Settings.shared, profile: PerformanceProfile.shared)
+    /// For trees no root injects into: previews, and off-tree renders (`ImageRenderer` share cards),
+    /// which never inherit the window's environment. Every real root applies
+    /// `.appearanceEnvironment()`, and SwiftUI only asks for this when the key is absent.
+    ///
+    /// Computed, NOT a `static let`: the one-time snapshot froze the accent, theme and faces at their
+    /// launch values for every reader below an un-injected root. That is how Al-Adhan and Al-Quran
+    /// shipped an accent that only changed after a restart (their roots are per-app files the port
+    /// never touches; `check_root_wiring.py` beside `sync_from_islam.sh` now fails the sync on it).
+    /// A fresh read is still not LIVE, since nothing invalidates the reader when Settings changes,
+    /// so an app root must inject; this only guarantees a fallback reader is right when it renders.
+    static var defaultValue: AppearanceEnvironment {
+        #if DEBUG
+        AppearanceDefaultTripwire.note()
+        #endif
+        return AppearanceEnvironment.snapshot(Settings.shared, profile: PerformanceProfile.shared)
+    }
 }
+
+#if DEBUG
+/// Says so, once, when an on-screen tree falls back to the key's default in the app process: the mark
+/// of a root (`WindowGroup`, a hand-made `UIHostingController`) that forgot `.appearanceEnvironment()`.
+/// Off-tree renders trip it too and are fine; the line names the fix so the difference is obvious.
+enum AppearanceDefaultTripwire {
+    nonisolated(unsafe) private static var noted = false
+
+    static func note() {
+        guard !noted, Settings.isAppProcess else { return }
+        noted = true
+        NSLog("APPEARANCE ENV default read: a view rendered outside any `.appearanceEnvironment()` root. Expected for ImageRenderer share cards and previews; if the app's chrome ignores accent or theme changes until a restart, the app root is missing `.appearanceEnvironment()`.")
+    }
+}
+#endif
 
 extension EnvironmentValues {
     var appearance: AppearanceEnvironment {
@@ -169,6 +201,8 @@ final class RootAppearance: ObservableObject {
 
     @Published private(set) var environment: AppearanceEnvironment
     @Published private(set) var firstLaunch: Bool
+    /// True until the About You question has been answered or skipped (the root's `.aboutYou` stage).
+    @Published private(set) var needsAboutYou: Bool
 
     private var cancellable: AnyCancellable?
     private var refreshScheduled = false
@@ -177,6 +211,7 @@ final class RootAppearance: ObservableObject {
         let settings = Settings.shared
         environment = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
         firstLaunch = settings.firstLaunch
+        needsAboutYou = Self.needsAboutYou(settings)
         cancellable = settings.objectWillChange.sink { [weak self] _ in self?.scheduleRefresh() }
         ObjectPublishCounter.attach(self, label: "RootAppearance")
     }
@@ -198,6 +233,21 @@ final class RootAppearance: ObservableObject {
         let next = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
         if next != environment { environment = next }
         if settings.firstLaunch != firstLaunch { firstLaunch = settings.firstLaunch }
+        let asks = Self.needsAboutYou(settings)
+        if asks != needsAboutYou { needsAboutYou = asks }
+    }
+
+    /// Everyone is asked once, including everyone who had the app before the question existed.
+    ///
+    /// DEBUG: a scripted launch (every headless recipe passes "-skipNotificationPrompt") is never
+    /// asked, or each of them would land on a screen it cannot tap past. "-showAboutYou" asks anyway
+    /// (it also resets the seen version in `Settings.init`), and wins over the automation marker.
+    private static func needsAboutYou(_ settings: Settings) -> Bool {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if !arguments.contains("-showAboutYou"), arguments.contains("-skipNotificationPrompt") { return false }
+        #endif
+        return settings.aboutYouVersionSeen < Settings.aboutYouCurrentVersion
     }
 }
 
@@ -428,10 +478,43 @@ struct SoftShadow: ViewModifier {
     }
 }
 
+/// See `settingsDependent()`. The rail reads the accent off the environment: it used to read
+/// `Settings.shared.accentColor` with nothing observing it, so an accent change left every rail on
+/// the old color until the app restarted (the Settings pages re-render, but a modifier with no
+/// changed input is never re-evaluated).
+private struct SettingsDependentRail: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    func body(content: Content) -> some View {
+        content
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 14)
+            .padding(.vertical, 4)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(appearance.accent.opacity(0.55))
+                    .frame(width: 3)
+                    .padding(.vertical, 2)
+            }
+    }
+}
+
 extension View {
     /// See `AppearanceEnvironmentInjector`.
     func appearanceEnvironment() -> some View {
         modifier(AppearanceEnvironmentInjector())
+    }
+
+    /// Marks a setting that only exists because the setting above it is on.
+    ///
+    /// A dependent switch shown flush with its parent reads as a peer, and a reader hunting for why
+    /// it vanished has nothing to look at. One step of indentation plus a thin accent rail on the
+    /// leading edge says "this belongs to the row above" without a second header or a nested box.
+    /// Used for the word-by-word lines, Hide Arabic Dots under Hide Tashkeel, the nagging schedule
+    /// under Nagging Mode, and their kin. Vertically fixed so a caption wraps instead of truncating
+    /// when the row animates in.
+    func settingsDependent() -> some View {
+        modifier(SettingsDependentRail())
     }
 
     /// `.shadow(...)` that the reduced performance tier skips. See `SoftShadow`.
@@ -1375,21 +1458,33 @@ struct CalculatorResultCard<Detail: View>: View {
 /// (Abu, 2026-09-19: the menu said only "Choose Reciter", so the current reciter was invisible until
 /// you opened the picker).
 ///
-/// A `Label` cannot carry a subtitle, but a menu Button whose label is a `VStack` of two `Text`s
-/// renders as a title with a smaller grey line under it - the shape Apple's own menus use. The
-/// `Image` has to come from a sibling `HStack` rather than `Label` to keep the glyph aligned to the
-/// title line.
+/// A `Label` cannot carry a subtitle, but a menu Button whose label is two `Text`s and an `Image`
+/// renders as a title with a smaller grey line under it - the shape Apple's own menus use. See
+/// `ReciterCaptionedMenuLabel` for the one form that works.
 struct ChooseReciterMenuLabel: View {
     var title: String = "Choose Reciter"
+
+    var body: some View {
+        ReciterCaptionedMenuLabel(title: title, systemImage: "headphones")
+    }
+}
+
+/// Any menu row captioned with the current reciter: "Choose Reciter" itself, and every "Play Surah"
+/// row, which starts a recitation and so should say whose (Abu, 2026-09-20).
+struct ReciterCaptionedMenuLabel: View {
+    let title: String
+    let systemImage: String
 
     var body: some View {
         // Read at BUILD time, not observed: a menu's content is rebuilt each time it opens, so the
         // caption is always current without this label subscribing to Settings.
         let reciter = Settings.shared.currentReciterDisplayName
-        return VStack(alignment: .leading, spacing: 1) {
-            Label(title, systemImage: "headphones")
-            Text(reciter)
-        }
+        // The three as bare SIBLINGS: a menu row reads its label's first Text as the title, the
+        // second as the grey subtitle and the Image as the glyph. Wrapped in a VStack (the 09-19
+        // version) the menu flattened the stack to its first Label and dropped the reciter line.
+        Text(title)
+        Text(reciter)
+        Image(systemName: systemImage)
     }
 }
 
@@ -1403,7 +1498,7 @@ struct ReciterPickerSheet: ViewModifier {
     func body(content: Content) -> some View {
         content.sheet(isPresented: $isPresented) {
             SheetNavigationContainer {
-                ReciterListView(dismissAfterSelectingReciter: true, autoScrollToInitialSelection: false)
+                ReciterListView(dismissAfterSelectingReciter: true)
                     .environmentObject(settings)
                     .sheetDismissToolbar()
             }

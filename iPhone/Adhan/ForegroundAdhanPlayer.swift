@@ -48,25 +48,73 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     ///
     /// The scheduled notification is capped at 30 seconds of sound and obeys the ringer switch; the
     /// in-app player is neither, which is what "Play adhan in Silent Mode" actually buys - and it used
-    /// to be unreachable unless the app happened to already be open at the exact minute. Three minutes
-    /// is long enough to cover seeing the notification and tapping it, and short enough that the adhan
-    /// never comes detached from the prayer it announces. (`fire`'s own 150 s drift guard is a
-    /// different thing: that one rejects a TIMER that woke up late.)
-    private static let catchUpWindow: TimeInterval = 180
+    /// to be unreachable unless the app happened to already be open at the exact minute. It was three
+    /// minutes, which "a couple of minutes later" routinely overshoots (Abu, 2026-09-20: opened the
+    /// phone a little after the time and never got the adhan). Ten is still inside the gap before any
+    /// iqamah, so the adhan never comes detached from the prayer it announces. (`fire`'s own 150 s
+    /// drift guard is a different thing: that one rejects a TIMER that woke up late.)
+    private static let catchUpWindow: TimeInterval = 600
 
-    /// The identifier of the last adhan this player sounded, persisted so a catch-up survives the app
-    /// being killed rather than backgrounded. Without it, launching twice inside the window would play
-    /// the same adhan twice - and being killed is the ordinary case here, since the app was closed.
-    private static let lastPlayedIDKey = "foregroundAdhanLastPlayedID"
+    /// How long after an activation a prayer-time refresh may still trigger the catch-up. The first
+    /// attempt can run before today's times (or the location) are in; the refresh that follows is
+    /// what finds the adhan. Bounded, so that a settings edit minutes later (a new calculation method
+    /// sliding a prayer into the window) can never start an adhan out of nowhere.
+    private static let activationRetryWindow: TimeInterval = 20
+
+    /// The MOMENT of the last adhan this player sounded ("Fajr@<epoch minute>"), persisted so a
+    /// catch-up survives the app being killed rather than backgrounded. Without it, launching twice
+    /// inside the window would play the same adhan twice - and being killed is the ordinary case
+    /// here, since the app was closed.
+    ///
+    /// The moment, not the notification identifier it used to be: the identifier ends in a signature
+    /// of the body-affecting settings, so flipping one of those inside the window changed the id of
+    /// the SAME prayer and the adhan played a second time.
+    private static let lastPlayedMomentKey = "foregroundAdhanLastPlayedMoment"
 
     private var timer: DispatchSourceTimer?
     private var player: AVAudioPlayer?
     private var pausedQuranForAdhan = false
-    private var lastPlayedID: String? {
-        get { UserDefaults.standard.string(forKey: Self.lastPlayedIDKey) }
-        set { UserDefaults.standard.set(newValue, forKey: Self.lastPlayedIDKey) }
+    private var lastPlayedMoment: String? {
+        get { UserDefaults.standard.string(forKey: Self.lastPlayedMomentKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.lastPlayedMomentKey) }
     }
+    private var activationRetryDeadline = Date.distantPast
+    /// The at-time notification the armed timer stands in for, and the one this player last sounded
+    /// (see `soundsInApp`). In memory only: they describe this foreground session.
+    private var armedNotificationID: String?
+    private var soundedNotificationID: String?
     private var cancellables = Set<AnyCancellable>()
+
+    #if DEBUG
+    /// `-adhanCatchUpProbe`: prints what the look-back finds for a `now` a few minutes after each of
+    /// TOMORROW's adhans while `prayers` still holds today, which is the overnight-suspend shape that
+    /// used to find nothing, plus the edges of the window. No audio; read it with `--console-pty`.
+    static func debugCatchUpProbe() {
+        guard ProcessInfo.processInfo.arguments.contains("-adhanCatchUpProbe") else { return }
+        let settings = Settings.shared
+        guard let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()),
+              let list = settings.getPrayerTimes(for: tomorrow) else {
+            print("ADHANPROBE no prayer times (no location?)")
+            return
+        }
+        print("ADHANPROBE stored day=\(settings.prayers?.day.description ?? "nil") window=\(Int(catchUpWindow))s zone=\(TimeZone.current.identifier)")
+        let stamp = DateFormatter()
+        stamp.dateFormat = "yyyy-MM-dd HH:mm"
+        print("ADHANPROBE asked for local day \(stamp.string(from: tomorrow).prefix(10))")
+        for prayer in list {
+            print("ADHANPROBE \(prayer.nameTransliteration) falls at local \(stamp.string(from: prayer.time))")
+            for minutes in [4.0, 9.5, 10.5] {
+                let now = prayer.time.addingTimeInterval(minutes * 60)
+                let found = settings.recentForegroundAdhan(within: catchUpWindow, now: now)
+                print("ADHANPROBE \(prayer.nameTransliteration) +\(minutes)m -> \(found.map { "\($0.name) key=\(momentKey(name: $0.name, date: $0.date))" } ?? "nil")")
+            }
+        }
+    }
+    #endif
+
+    private static func momentKey(name: String, date: Date) -> String {
+        "\(name)@\(Int(date.timeIntervalSince1970 / 60))"
+    }
 
     private override init() {
         super.init()
@@ -75,7 +123,13 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         Settings.shared.objectWillChange
             .merge(with: LiveState.shared.objectWillChange)
             .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .sink { [weak self] in self?.reschedule() }
+            .sink { [weak self] in
+                guard let self else { return }
+                // Just activated and the times changed under us: the look-back gets another go,
+                // because the first one may have run against yesterday's table or no location.
+                if Date() < self.activationRetryDeadline { self.playMissedAdhan(isActivation: false) }
+                self.reschedule()
+            }
             .store(in: &cancellables)
     }
 
@@ -98,6 +152,26 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         }
         t.resume()
         timer = t
+        armedNotificationID = next.notificationID
+    }
+
+    /// Whether this player is the one SOUNDING the at-time notification with this identifier, so the
+    /// foreground delegate must present it without its own sound.
+    ///
+    /// The scheduled notification and the armed timer are aimed at the same second, and the timer
+    /// has leeway, so the notification regularly wins: it reached `willPresent` still pending, was
+    /// granted `.sound`, and its 30-second clip played UNDER the full recording the timer started a
+    /// moment later: the adhan, twice at once (Abu, 2026-09-20: "make sure the adhan only plays
+    /// once"). Pruning the pending request in `fire` cannot help a delivery already in flight.
+    ///
+    /// True only while the timer is armed for exactly this notification and a recording exists to
+    /// play, or just after this player sounded it. Inactive or backgrounded, the timer is cancelled
+    /// and this is false, so the notification keeps its sound everywhere the app is not playing.
+    func soundsInApp(notificationID: String) -> Bool {
+        if notificationID == soundedNotificationID { return true }
+        guard notificationID == armedNotificationID else { return false }
+        let settings = Settings.shared
+        return settings.adhanFullSoundResource(for: settings.adhanNotificationSound) != nil
     }
 
     /// Stops the pending timer (e.g. when the app backgrounds). A currently-playing adhan is left to finish.
@@ -113,16 +187,20 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     /// Everything the timer path checks is checked here too, through the same helpers: the prayer must be
     /// an eligible at-time adhan, the chosen sound must be a real recording rather than "Default", and the
     /// adhan must not already have been played for that identifier.
-    func playMissedAdhan() {
+    func playMissedAdhan(isActivation: Bool = true) {
+        if isActivation { activationRetryDeadline = Date().addingTimeInterval(Self.activationRetryWindow) }
         guard !isPlaying else { return }
 
         let settings = Settings.shared
         guard let missed = settings.recentForegroundAdhan(within: Self.catchUpWindow) else { return }
-        guard missed.notificationID != lastPlayedID else { return }
+        let moment = Self.momentKey(name: missed.name, date: missed.date)
+        guard moment != lastPlayedMoment else { return }
         guard let resource = settings.adhanFullSoundResource(for: settings.adhanNotificationSound),
               let path = Bundle.main.path(forResource: resource, ofType: "caf") else { return }
 
-        lastPlayedID = missed.notificationID
+        lastPlayedMoment = moment
+        soundedNotificationID = missed.notificationID
+        activationRetryDeadline = .distantPast
         // The at-time notification for this moment is spent. Drop it if the system has somehow still not
         // delivered it, so it cannot sound on top of the recording now starting.
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [missed.notificationID])
@@ -133,10 +211,12 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     private func cancelTimer() {
         timer?.cancel()
         timer = nil
+        armedNotificationID = nil
     }
 
     private func fire(target: (date: Date, name: String, notificationID: String)) {
         timer = nil
+        armedNotificationID = nil
 
         // The adhan belongs to a MOMENT, not to whenever the timer managed to fire. If we're more than a
         // couple of minutes past the prayer's time (a sleep/wake drift, a suspended runloop), playing the
@@ -156,11 +236,13 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             return
         }
 
-        guard target.notificationID != lastPlayedID else {
+        let moment = Self.momentKey(name: target.name, date: target.date)
+        guard moment != lastPlayedMoment else {
             reschedule()
             return
         }
-        lastPlayedID = target.notificationID
+        lastPlayedMoment = moment
+        soundedNotificationID = target.notificationID
 
         // Drop the redundant scheduled notification so it can't double-sound late.
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [target.notificationID])

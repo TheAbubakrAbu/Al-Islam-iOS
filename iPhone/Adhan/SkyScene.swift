@@ -13,9 +13,10 @@ import SwiftUI
 // pyramids on its reflection, and each is a tall centre between two smaller outer
 // masses - the great pyramid answering the dome, the two small ones answering the minarets, all at
 // matching heights. Both keep clear of the middle, where the arc peaks and the countdown digits sit.
-// The palms that once stood east of the mosque are gone. The silhouette is always a DARKER shade of
-// the sky behind it (`silhouette(overSky:)`), at every hour, so it never has to cross the sky's own
-// luminance to get from one period's colour to the next.
+// The palms that once stood east of the mosque are gone. By day the silhouette is a DARKER shade of
+// the sky behind it; under a night sky it is MOONLIT, paler than the sky, because a darker shade of
+// Isha's navy is simply black (Abu, 2026-09-20). The turn between the two is a wash of light from the
+// tops of the buildings down, never a flat crossfade: see `SkylineTint` and `tint(overSky:)`.
 
 enum SkyScene {
     /// The tallest point of the scene above the horizon at scale 1 (the mosque's crescent, the great
@@ -39,15 +40,26 @@ enum SkyScene {
 
 
     /// Draws the scene into `context`. `rect` is the graph's rect, `horizonY` the ground line, `color`
-    /// the silhouette (see `silhouette(overSky:at:)` for one that suits the sky). Every length scales
+    /// one flat silhouette (see `tint(overSky:at:)` for the colours that suit a sky). Every length scales
     /// with the width, and again with the room above the horizon, so a 158 pt widget and a 360 pt card
     /// show the same skyline.
     static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, color: Color) {
+        draw(in: &context, rect: rect, horizonY: horizonY, tint: .flat(color))
+    }
+
+    static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, tint: SkylineTint) {
         let width = rect.width
         let room = horizonY - rect.minY
         guard width > 40, room > 12 else { return }
         let scale = min(max(0.55, min(1.0, width / 340)), (room - 2) / naturalHeight) * heightFactor
         let lit = Color.white.opacity(0.10)
+        // One fill for every building, running from the scene's tallest point down to the ground,
+        // so the turn to night can arrive at the domes and apexes before it reaches the doors.
+        let color = GraphicsContext.Shading.linearGradient(
+            Gradient(colors: [tint.top, tint.bottom]),
+            startPoint: CGPoint(x: rect.midX, y: horizonY - naturalHeight * scale),
+            endPoint: CGPoint(x: rect.midX, y: horizonY)
+        )
 
         func point(_ x: CGFloat, _ up: CGFloat) -> CGPoint {
             CGPoint(x: rect.minX + x * width, y: horizonY - up * scale)
@@ -58,14 +70,100 @@ enum SkyScene {
         if groundHeight > 1 {
             let ground = CGRect(x: rect.minX, y: horizonY, width: width, height: groundHeight)
             context.fill(Path(ground), with: .linearGradient(
-                Gradient(colors: [color.opacity(0.55), color.opacity(0)]),
+                Gradient(colors: [tint.ground, tint.ground.opacity(0)]),
                 startPoint: CGPoint(x: rect.midX, y: horizonY),
                 endPoint: CGPoint(x: rect.midX, y: horizonY + groundHeight)
             ))
         }
 
         drawPyramids(in: &context, point: point, color: color, lit: lit)
-        drawMosque(in: &context, point: point, width: width, scale: scale, color: color, lit: lit)
+        drawMosque(in: &context, point: point, width: width, scale: scale, color: color, lit: lit, glow: tint.glow)
+    }
+
+    /// The skyline's colours for a sky painted with `colors` (top to bottom), read at `location`
+    /// (0 top, 1 bottom) where the ground runs.
+    static func tint(overSky colors: [Color], at location: CGFloat) -> SkylineTint {
+        tint(overSky: skyComponents(of: colors, at: location))
+    }
+
+    /// How much of a NIGHT sky this is: 0 by day, 1 once the sky's luminance (where the ground runs)
+    /// is under `nightBelow`, smooth between. The thresholds sit between Isha (0.15...0.17, card and
+    /// widgets) and Maghrib (0.25...0.30) and Fajr (0.29...0.33), so every default period rests fully
+    /// on one side; a custom sky in the gap rests part-way, which `tint` draws legibly (see there).
+    static func nightFactor(overSky sky: (red: Double, green: Double, blue: Double)) -> Double {
+        let luminance = 0.2126 * sky.red + 0.7152 * sky.green + 0.0722 * sky.blue
+        return 1 - ease((luminance - nightBelow) / (dayAbove - nightBelow))
+    }
+
+    /// The skyline's colours over a settled `sky` (the widgets, which never animate).
+    static func tint(overSky sky: (red: Double, green: Double, blue: Double)) -> SkylineTint {
+        tint(overSky: sky, night: nightFactor(overSky: sky))
+    }
+
+    /// The skyline's colours over `sky`, `night` of the way from its day look to its night one.
+    ///
+    /// By day: the sky's own colour times `shade`, the darker-than-sky shadow described there.
+    /// By night: moonlit, the sky with 30% of a near-white mixed in, which over Isha's default navy
+    /// is the blue-grey RGB(86, 94, 118) the card wore before its silhouette went opaque. A darker
+    /// shade of that navy is RGB(10, 14, 28), which is black: "make the mosque and pyramids white or
+    /// gray or maybe just less black" (Abu, 2026-09-20).
+    ///
+    /// Going from darker-than-sky to paler-than-sky has to cross the sky's own colour; nothing
+    /// continuous avoids that, and a flat crossfade crosses it EVERYWHERE AT ONCE, which is the
+    /// frame in which the buildings used to vanish (see `shade`). So the two ends of the fill do not
+    /// turn together: the tops lead and the feet follow (`topMix`, `bottomMix`), and the crossing is
+    /// a narrow band that travels down the buildings, light catching the dome first, with everything
+    /// above it already pale and everything below it still dark. At rest both ends agree, so a
+    /// settled sky shows one flat colour, day or night.
+    ///
+    /// `night` is a parameter, NOT read off `sky` here, and that is what makes the turn smooth.
+    /// The first version derived it from the interpolated sky's luminance each frame, which looks
+    /// equivalent and is not: the sky's luminance falls through the whole threshold band in about a
+    /// fifth of the turn, so the wash ran in 40 ms of a 0.2 s scrub, one captured frame, a 91-point
+    /// jump on the dome (measured on a recording, 2026-09-20). `SkylineSilhouette` now walks `night`
+    /// itself from one period's value to the next, over the sky's own duration.
+    static func tint(overSky sky: (red: Double, green: Double, blue: Double), night: Double) -> SkylineTint {
+        let night = max(0, min(1, night))
+        // The tops lead and the feet follow. MEASURED on a recording of a scrub from midday into the
+        // night and its release back (2026-09-20, 60 fps, the dome and a pyramid sampled against the
+        // sky beside them), for three staggers:
+        //   1.6 / 0.6   largest single-frame step 21 RGB points, best-lit part never under 1.34x
+        //   1.8 / 0.8   28 points, 1.39x
+        //   2.0 / 1.0   33 points, 1.39x
+        // A wider stagger buys no legibility (the floor is set by the night-to-day return, where the
+        // sky brightens THROUGH the moonlit fill) and costs smoothness, so the gentlest one stays.
+        // For scale: the flat crossfade this replaces went through 1.00x for the whole building, and
+        // deriving `night` from the sky per frame jumped 91 points in one frame.
+        let topMix = ease(night * 1.6)
+        let bottomMix = ease(night * 1.6 - 0.6)
+
+        func fill(_ mix: Double) -> Color {
+            func channel(_ value: Double) -> Double {
+                let dark = value * shade
+                let pale = value * (1 - moonlight) + moonlight * 0.92
+                return dark + (pale - dark) * mix
+            }
+            return Color(red: channel(sky.red), green: channel(sky.green), blue: channel(sky.blue))
+        }
+
+        // The doorway and the windows: a lighter mark on a dark body by day, lamplight by night
+        // (a pale mark on a pale body would leave the mosque a blank block).
+        let glow = Color(red: 1, green: 1 - 0.14 * night, blue: 1 - 0.42 * night)
+            .opacity(0.10 + 0.72 * night)
+        // The ground band thins at night: at the day's 0.55 a pale fill reads as a lit strip of fog.
+        let ground = fill(bottomMix).opacity(0.55 - 0.30 * night)
+        return SkylineTint(top: fill(topMix), bottom: fill(bottomMix), ground: ground, glow: glow)
+    }
+
+    private static let nightBelow = 0.185
+    private static let dayAbove = 0.235
+    /// How much near-white moonlight is mixed into a night sky's own colour.
+    private static let moonlight = 0.30
+
+    /// Smoothstep on a `Double` (the `CGFloat` one below serves `dayFactor`).
+    private static func ease(_ x: Double) -> Double {
+        let t = max(0, min(1, x))
+        return t * t * (3 - 2 * t)
     }
 
     /// The silhouette colour for a sky painted with `colors` (top to bottom), read at `location`
@@ -131,9 +229,11 @@ enum SkyScene {
         return Color(red: Double(r) * shade, green: Double(g) * shade, blue: Double(b) * shade)
     }
 
-    /// How much of the sky's brightness the silhouette keeps. ALWAYS DARKER THAN ITS SKY, at every
-    /// hour, which is the whole design and is worth stating plainly because two cleverer versions of
-    /// this failed in ways that only showed up mid-animation.
+    /// How much of the sky's brightness the DAY silhouette keeps: darker than its sky. It used to be
+    /// the rule at every hour; since 2026-09-20 a night sky gets the moonlit fill instead (see
+    /// `tint(overSky:)`), and what follows is why that turn is a travelling wash and not a fade.
+    /// Worth stating plainly, because two cleverer versions of this failed in ways that only showed
+    /// up mid-animation.
     ///
     /// A silhouette is a shadow. It reads as one when it is darker than what is behind it, and the
     /// day/night crossfade this used to do (pale buildings at night, dark by day) had to pass THROUGH
@@ -169,7 +269,8 @@ enum SkyScene {
 
     // MARK: Pyramids
 
-    private static func drawPyramids(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint, color: Color, lit: Color) {
+    private static func drawPyramids(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
+                                     color: GraphicsContext.Shading, lit: Color) {
         // (left, apex x, right, height). The cluster MIRRORS the mosque's skeleton rather than merely
         // matching its bounding box (Abu, 2026-09-16, looking at the card: "look at that tiny pyramid
         // its nothing like the minaret"). The mosque is a tall centre between two smaller outer
@@ -207,7 +308,7 @@ enum SkyScene {
             body.addLine(to: point(apex, height))
             body.addLine(to: point(right, 0))
             body.closeSubpath()
-            context.fill(body, with: .color(color))
+            context.fill(body, with: color)
 
             // The sunward face, a shade lighter, so the shape reads as a solid and not a triangle.
             var face = Path()
@@ -222,7 +323,7 @@ enum SkyScene {
     // MARK: Mosque
 
     private static func drawMosque(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
-                                   width: CGFloat, scale: CGFloat, color: Color, lit: Color) {
+                                   width: CGFloat, scale: CGFloat, color: GraphicsContext.Shading, lit: Color, glow: Color) {
         // The mosque spans exactly `span` of the card, 0.665...0.965, matching the pyramid cluster's
         // 0.02...0.32, and its crescent reaches `naturalHeight` as the great pyramid's apex does. The
         // two stand either side of the middle, which the arc's peak and the countdown digits need
@@ -258,23 +359,23 @@ enum SkyScene {
             let shaft = shaftWidth
             let top = point(x, minaretHeight)
             let shaftRect = CGRect(x: top.x - shaft / 2, y: top.y, width: shaft, height: point(x, 0).y - top.y)
-            context.fill(Path(shaftRect), with: .color(color))
+            context.fill(Path(shaftRect), with: color)
             // The balcony ring and the cap.
             let ring = CGRect(x: top.x - shaft, y: point(x, minaretHeight * 0.68).y, width: shaft * 2, height: 2.5 * scale)
-            context.fill(Path(ring), with: .color(color))
+            context.fill(Path(ring), with: color)
             let cap = CGRect(x: top.x - shaft * 0.9, y: top.y - shaft * 0.9, width: shaft * 1.8, height: shaft * 1.8)
-            context.fill(Path(ellipseIn: cap), with: .color(color))
+            context.fill(Path(ellipseIn: cap), with: color)
             var finial = Path()
             finial.move(to: CGPoint(x: top.x, y: top.y - shaft * 0.9))
             finial.addLine(to: CGPoint(x: top.x, y: top.y - shaft * 0.9 - 3.5 * scale))
-            context.stroke(finial, with: .color(color), lineWidth: 1.2)
+            context.stroke(finial, with: color, lineWidth: 1.2)
         }
 
         // The two side domes, then the great dome, all standing on the body's roof line.
         for x in [centre - 0.095, centre + 0.095] {
             let domeCentre = point(x, baseHeight)
             let rect = CGRect(x: domeCentre.x - sideRadius, y: domeCentre.y - sideRadius, width: sideRadius * 2, height: sideRadius * 2)
-            context.fill(Path(ellipseIn: rect), with: .color(color))
+            context.fill(Path(ellipseIn: rect), with: color)
         }
         let domeCentre = point(centre, baseHeight + domeLift)
         var dome = Path()
@@ -287,7 +388,7 @@ enum SkyScene {
                           control: CGPoint(x: domeCentre.x + domeRadius * 0.18, y: domeCentre.y - domeRadius * 1.04))
         dome.addArc(center: domeCentre, radius: domeRadius, startAngle: .degrees(300), endAngle: .degrees(360), clockwise: false)
         dome.closeSubpath()
-        context.fill(dome, with: .color(color))
+        context.fill(dome, with: color)
         // A highlight on the dome's sunward curve.
         var domeLit = Path()
         domeLit.addArc(center: domeCentre, radius: domeRadius * 0.82, startAngle: .degrees(300), endAngle: .degrees(350), clockwise: false)
@@ -298,17 +399,17 @@ enum SkyScene {
         var finial = Path()
         finial.move(to: tip)
         finial.addLine(to: CGPoint(x: tip.x, y: tip.y - 4 * scale))
-        context.stroke(finial, with: .color(color), lineWidth: 1.2)
+        context.stroke(finial, with: color, lineWidth: 1.2)
         var crescent = Path()
         crescent.addArc(center: CGPoint(x: tip.x, y: tip.y - 7 * scale), radius: 2.4 * scale,
                         startAngle: .degrees(-40), endAngle: .degrees(220), clockwise: false)
-        context.stroke(crescent, with: .color(color), lineWidth: 1.3)
+        context.stroke(crescent, with: color, lineWidth: 1.3)
 
         // The body, over the domes' undersides. It sits INSIDE the minarets rather than spanning the
         // whole mosque: they stand at its corners, so it reaches their centres and no further.
         let bodyRect = CGRect(x: point(centre - minaretOffset, 0).x, y: point(centre, baseHeight).y,
                               width: minaretOffset * 2 * width, height: baseHeight * scale)
-        context.fill(Path(bodyRect), with: .color(color))
+        context.fill(Path(bodyRect), with: color)
 
         // The doorway's arch and two windows, lighter, so the body is a building and not a block.
         let doorWidth = min(width * 0.028, 9 * scale)
@@ -320,10 +421,10 @@ enum SkyScene {
                     startAngle: .degrees(180), endAngle: .degrees(360), clockwise: false)
         arch.addLine(to: CGPoint(x: door.maxX, y: door.maxY))
         arch.closeSubpath()
-        context.fill(arch, with: .color(lit))
+        context.fill(arch, with: .color(glow))
         for x in [centre - 0.06, centre + 0.06] {
             let window = CGRect(x: point(x, 0).x - 1.5 * scale, y: point(x, 6).y, width: 3 * scale, height: 4 * scale)
-            context.fill(Path(roundedRect: window, cornerRadius: 1.5 * scale), with: .color(lit))
+            context.fill(Path(roundedRect: window, cornerRadius: 1.5 * scale), with: .color(glow))
         }
     }
 }
@@ -332,13 +433,37 @@ enum SkyScene {
 /// the palms went, so the 10 fps timeline that swayed them went with them).
 struct SkySceneView: View {
     let horizonY: CGFloat
-    let color: Color
+    let tint: SkylineTint
+
+    init(horizonY: CGFloat, tint: SkylineTint) {
+        self.horizonY = horizonY
+        self.tint = tint
+    }
+
+    /// One flat colour, for a skyline that stands on no sky (the widgets' standard background).
+    init(horizonY: CGFloat, color: Color) {
+        self.init(horizonY: horizonY, tint: .flat(color))
+    }
 
     var body: some View {
         Canvas { context, size in
-            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, color: color)
+            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, tint: tint)
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// What the skyline is painted with: the buildings' fill at their tops and at the ground (one colour
+/// at rest, two while a day sky turns to a night one, see `SkyScene.tint(overSky:)`), the ground band
+/// under them, and the light in the mosque's doorway and windows.
+struct SkylineTint {
+    var top: Color
+    var bottom: Color
+    var ground: Color
+    var glow: Color
+
+    static func flat(_ color: Color) -> SkylineTint {
+        SkylineTint(top: color, bottom: color, ground: color.opacity(0.55), glow: Color.white.opacity(0.10))
     }
 }
 
@@ -373,29 +498,35 @@ struct SkySceneView: View {
 /// A first attempt made this a `View`, which compiled, looked right and still snapped.
 struct SkylineSilhouette: ViewModifier, Animatable {
     var sky: (red: Double, green: Double, blue: Double)
+    /// `SkyScene.nightFactor` of the sky being turned TO. It travels beside the sky's components
+    /// rather than being read off them each frame; `SkyScene.tint(overSky:night:)` says why.
+    var night: Double
     var horizonY: CGFloat
 
-    /// The sky's three components travel, and the silhouette is recomputed from them every frame.
-    /// It is NOT the silhouette's own colour that is interpolated: that is what made the turn from
-    /// Maghrib to Isha pass through 1.00x contrast, because the two ends sat on opposite sides of the
-    /// sky's luminance and the straight line between them ran through the sky itself. Interpolating
-    /// the sky and re-deriving a shade of it keeps the relationship at every step.
-    var animatableData: AnimatablePair<Double, AnimatablePair<Double, Double>> {
-        get { .init(sky.red, .init(sky.green, sky.blue)) }
-        set { sky = (newValue.first, newValue.second.first, newValue.second.second) }
+    /// FOUR numbers travel: the sky's three components, and how far into the night look the
+    /// skyline is. It is NOT the silhouette's own colour that is interpolated: that is what made the
+    /// turn from Maghrib to Isha pass through 1.00x contrast, because the two ends sat on opposite
+    /// sides of the sky's luminance and the straight line between them ran through the sky itself.
+    /// Interpolating the sky and re-deriving the fill from it keeps the relationship at every step.
+    var animatableData: AnimatablePair<Double, AnimatablePair<Double, AnimatablePair<Double, Double>>> {
+        get { .init(night, .init(sky.red, .init(sky.green, sky.blue))) }
+        set {
+            night = newValue.first
+            sky = (newValue.second.first, newValue.second.second.first, newValue.second.second.second)
+        }
     }
 
     func body(content: Content) -> some View {
-        SkySceneView(horizonY: horizonY,
-                     color: SkyScene.silhouette(overSky: Color(red: sky.red, green: sky.green, blue: sky.blue)))
+        SkySceneView(horizonY: horizonY, tint: SkyScene.tint(overSky: sky, night: night))
     }
 }
 
 extension View {
-    /// Replaces this view with the skyline, drawn at the colour for `day` over `sky`, animating both.
+    /// Replaces this view with the skyline, drawn for `sky` (its day or night look decided by that
+    /// sky's own luminance), animating the turn from whatever it was drawn for before.
     func skylineSilhouette(sky: (red: Double, green: Double, blue: Double),
                            horizonY: CGFloat) -> some View {
-        modifier(SkylineSilhouette(sky: sky, horizonY: horizonY))
+        modifier(SkylineSilhouette(sky: sky, night: SkyScene.nightFactor(overSky: sky), horizonY: horizonY))
     }
 }
 

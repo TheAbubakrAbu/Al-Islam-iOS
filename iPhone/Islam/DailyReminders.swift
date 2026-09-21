@@ -1055,7 +1055,7 @@ struct DailyReminderArabicText: View {
                     .font(Font.arabic(appearance.quranArabicFontName, size: size))
                     .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
             } else {
-                Text(text)
+                Text.islamArabic(text, highlightAllah: appearance.highlightAllahIslam)
                     .font(Font.arabic(appearance.islamArabicFontName, size: size))
                     .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
             }

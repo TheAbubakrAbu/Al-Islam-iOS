@@ -224,7 +224,7 @@ struct NameDetailView: View {
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundColor(accent)
                                     .padding(.top, 2)
-                                Text(depth.living)
+                                Text.islamText(depth.living, highlightAllah: appearance.highlightAllahIslam)
                                     .font(.subheadline.weight(.medium))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -237,7 +237,7 @@ struct NameDetailView: View {
                     Section(header: Text("ALSO KNOWN AS")) {
                         VStack(alignment: .leading, spacing: 8) {
                             if !name.desc.isEmpty {
-                                Text(name.desc)
+                                Text.islamText(name.desc, highlightAllah: appearance.highlightAllahIslam)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -277,7 +277,7 @@ struct NameDetailView: View {
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.secondary)
 
-                Text(name.displayArabicName)
+                Text.islamArabic(name.displayArabicName, highlightAllah: appearance.highlightAllahIslam)
                     .font(appearance.useFontArabic ? Font.arabic(appearance.islamArabicFontName, size: 48) : .system(size: 42, weight: .semibold))
                     .arabicFontDesign(custom: appearance.useFontArabic && appearance.islamArabicFontName != Settings.systemArabicFontName)
                     .foregroundColor(accent)
@@ -288,7 +288,7 @@ struct NameDetailView: View {
                 Text(name.transliteration)
                     .font(.title3.weight(.bold))
 
-                Text(name.meaning)
+                Text.islamText(name.meaning, highlightAllah: appearance.highlightAllahIslam)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

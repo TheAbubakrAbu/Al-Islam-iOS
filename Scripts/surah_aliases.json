@@ -1,0 +1,1839 @@
+{
+ "1": {
+  "standard": "Al-Fatihah",
+  "latin": [
+   "umm al-kitab",
+   "umm al-quran",
+   "fatihat al-kitab",
+   "fatihat al-quran",
+   "as-sab al-mathani",
+   "sab al-mathani",
+   "al-hamd",
+   "alhamd",
+   "al-quran al-azim",
+   "ash-shifa",
+   "ash-shafiyah",
+   "ar-ruqyah",
+   "al-wafiyah",
+   "al-kafiyah",
+   "ash-shukr",
+   "al-munajat",
+   "at-tafwid",
+   "fotiha"
+  ],
+  "arabic": [
+   "أم الكتاب",
+   "أم القرآن",
+   "فاتحة الكتاب",
+   "فاتحة القرآن",
+   "السبع المثاني",
+   "سبع المثاني",
+   "الحمد",
+   "القرآن العظيم",
+   "الشفاء",
+   "الشافية",
+   "الرقية",
+   "الوافية",
+   "الكافية",
+   "الشكر",
+   "المناجاة",
+   "التفويض"
+  ],
+  "notes": "Classical names from Itqan (25 names listed) and Dawsari; Al-Hamd and As-Sab' al-Mathani also in enwiki and dewiki lists. DROPPED as shared: Al-Asas (also a name of 112), Al-Kanz (also 3), An-Nur (standard name of 24), As-Salah and Ad-Du'a (generic words; a search for them is not a search for this surah). 'alhamd' one-word spelling is background knowledge (South Asian usage). fotiha = uzwiki."
+ },
+ "2": {
+  "standard": "Al-Baqarah",
+  "latin": [
+   "bakara",
+   "al-bekara",
+   "fustat al-quran",
+   "sanam al-quran",
+   "al-kursi"
+  ],
+  "arabic": [
+   "فسطاط القرآن",
+   "سنام القرآن",
+   "الكرسي"
+  ],
+  "notes": "Fustat al-Qur'an and Sanam al-Qur'an from Itqan; Surat al-Kursi from Dawsari. DROPPED as shared with 3: Az-Zahra / Az-Zahrawan. bakara = trwiki, al-bekara = hrwiki."
+ },
+ "3": {
+  "standard": "Ali 'Imran",
+  "latin": [
+   "taybah",
+   "taj al-quran",
+   "âl-i imrân",
+   "al-e-imran",
+   "ale imran",
+   "oli imron"
+  ],
+  "arabic": [
+   "طيبة",
+   "تاج القرآن"
+  ],
+  "notes": "Taybah from Itqan; Taj al-Qur'an from Dawsari. DROPPED as generic words (Dawsari only): Al-Aman, Al-Istighfar. DROPPED as shared: Az-Zahra (with 2), Al-Kanz (with 1), Al-Mujadilah (standard name of 58), At-Tawhid (kept for 112 only). al-i imran = trwiki, al-e-imran = itsislam, oli imron = uzwiki."
+ },
+ "4": {
+  "standard": "An-Nisa",
+  "latin": [
+   "an-nisa al-kubra",
+   "an-nisa at-tula",
+   "niso"
+  ],
+  "arabic": [
+   "النساء الكبرى",
+   "النساء الطولى"
+  ],
+  "notes": "An-Nisa al-Kubra / at-Tula from Dawsari and arwiki; only the full forms are given because bare An-Nisa is the standard name and An-Nisa al-Qusra is 65. niso = uzwiki."
+ },
+ "5": {
+  "standard": "Al-Ma'idah",
+  "latin": [
+   "al-uqud",
+   "al-munqidhah",
+   "al-ahbar",
+   "al-akhyar",
+   "maide",
+   "al-maeda",
+   "moida"
+  ],
+  "arabic": [
+   "العقود",
+   "المنقذة",
+   "الأحبار",
+   "الأخيار"
+  ],
+  "notes": "Al-'Uqud and Al-Munqidhah from Itqan (Al-'Uqud also enwiki); Al-Ahbar, Al-Akhyar from Dawsari. DROPPED as shared with 9: Al-Muba'thirah. maide = trwiki, al-maeda = itsislam, moida = uzwiki."
+ },
+ "6": {
+  "standard": "Al-An'am",
+  "latin": [
+   "al-hujjah",
+   "al-mardiyyah",
+   "en'âm",
+   "en'am",
+   "enam",
+   "anom"
+  ],
+  "arabic": [
+   "الحجة",
+   "المرضية"
+  ],
+  "notes": "Al-Hujjah and Al-Mardiyyah from Dawsari only (ijtihadi names, rare). enam = trwiki, anom = uzwiki."
+ },
+ "7": {
+  "standard": "Al-A'raf",
+  "latin": [
+   "alif lam mim sad",
+   "al-miqat",
+   "al-airaaf",
+   "arof"
+  ],
+  "arabic": [
+   "المص",
+   "الميقات",
+   "أطول الطوليين"
+  ],
+  "notes": "From Dawsari (Atwal at-Tulayayn also in Itqan as 'Tula at-Tulayayn'). al-airaaf = itsislam, arof = uzwiki."
+ },
+ "8": {
+  "standard": "Al-Anfal",
+  "latin": [
+   "badr",
+   "enfal",
+   "al-enfal",
+   "anfol"
+  ],
+  "arabic": [
+   "بدر"
+  ],
+  "notes": "Badr from Itqan, enwiki, arwiki. DROPPED: Al-Jihad (Dawsari only, generic word); arwiki also lists Al-Qital (kept for 47) and Al-Furqan (standard name of 25). enfal = trwiki, al-enfal = hrwiki, anfol = uzwiki."
+ },
+ "9": {
+  "standard": "At-Tawbah",
+  "latin": [
+   "baraah",
+   "bara'ah",
+   "al-baraah",
+   "al-fadihah",
+   "al-adhab",
+   "al-buhuth",
+   "al-munaqqirah",
+   "al-hafirah",
+   "al-muthirah",
+   "al-mudamdimah",
+   "al-mukhziyah",
+   "al-munakkilah",
+   "al-musharridah",
+   "al-muhlikah",
+   "al-mustaqsiyah",
+   "tevbe",
+   "at-tevba",
+   "at-tauba",
+   "at-taubah",
+   "tavba"
+  ],
+  "arabic": [
+   "براءة",
+   "البراءة",
+   "الفاضحة",
+   "العذاب",
+   "البحوث",
+   "المنقرة",
+   "الحافرة",
+   "المثيرة",
+   "المدمدمة",
+   "المخزية",
+   "المنكلة",
+   "المشردة",
+   "المهلكة",
+   "المستقصية"
+  ],
+  "notes": "Bara'ah is the co-equal classical name (Itqan, Dawsari, enwiki, dewiki, arwiki). Other names from Itqan and Dawsari. DROPPED as shared: Al-Muqashqishah (also 109 and 112), Al-Muba'thirah (also 5). tevbe = trwiki, at-tevba = hrwiki, at-tauba = dewiki, at-taubah = idwiki, tavba = uzwiki."
+ },
+ "10": {
+  "standard": "Yunus",
+  "latin": [
+   "jonah",
+   "jonas",
+   "jona",
+   "junus"
+  ],
+  "arabic": [],
+  "notes": "NOT INCLUDED: As-Sabi'ah ('the seventh', Dawsari and arwiki), not a usable search name. Jonah = enwiki list, Jonas = coran-en-ligne (French), Jona / Junus = hrwiki."
+ },
+ "11": {
+  "standard": "Hud",
+  "latin": [
+   "houd"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari: none known). houd is the French spelling, background knowledge, not seen on a page this session."
+ },
+ "12": {
+  "standard": "Yusuf",
+  "latin": [
+   "joseph",
+   "josip",
+   "jusuf",
+   "youssef",
+   "yousuf"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari and arwiki: Yusuf is its only name). Joseph = enwiki list and coran-en-ligne; Josip / Jusuf = hrwiki. youssef, yousuf are background knowledge."
+ },
+ "13": {
+  "standard": "Ar-Ra'd",
+  "latin": [
+   "ar-raad"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name found. ar-raad = oumma / itsislam spelling."
+ },
+ "14": {
+  "standard": "Ibrahim",
+  "latin": [
+   "abraham",
+   "ibrohim",
+   "ebrahim"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari, arwiki). Abraham = enwiki list, hrwiki, coran-en-ligne. ibrohim = uzwiki. ebrahim is background knowledge (Persian spelling)."
+ },
+ "15": {
+  "standard": "Al-Hijr",
+  "latin": [
+   "rubama",
+   "hicr",
+   "al-hidžr",
+   "al-hidzr",
+   "al-hidschr"
+  ],
+  "arabic": [
+   "ربما"
+  ],
+  "notes": "Rubama from Dawsari only (rare). hicr = trwiki, al-hidzr = hrwiki, al-hidschr = dewiki."
+ },
+ "16": {
+  "standard": "An-Nahl",
+  "latin": [
+   "an-niam",
+   "an-naim"
+  ],
+  "arabic": [
+   "النعم",
+   "النعيم"
+  ],
+  "notes": "An-Ni'am from Itqan (Qatadah); An-Na'im from Dawsari."
+ },
+ "17": {
+  "standard": "Al-Isra",
+  "latin": [
+   "bani israil",
+   "bani israel",
+   "bani-israel",
+   "banu israil",
+   "subhan",
+   "al-aqsa",
+   "isro"
+  ],
+  "arabic": [
+   "بني إسرائيل",
+   "سبحان",
+   "الأقصى"
+  ],
+  "notes": "Bani Isra'il and Subhan from Itqan, Dawsari, arwiki, enwiki, dewiki; Al-Aqsa from Dawsari. Bani-Israel is the standard South Asian title (itsislam; urwiki). banu israil is a grammatical variant, background knowledge. isro = uzwiki."
+ },
+ "18": {
+  "standard": "Al-Kahf",
+  "latin": [
+   "ashab al-kahf",
+   "al-hailah",
+   "kehf",
+   "al-kehf"
+  ],
+  "arabic": [
+   "أصحاب الكهف",
+   "الحائلة"
+  ],
+  "notes": "Ashab al-Kahf and Al-Ha'ilah from Itqan and Dawsari. kehf = trwiki, al-kehf = hrwiki."
+ },
+ "19": {
+  "standard": "Maryam",
+  "latin": [
+   "mary",
+   "marie",
+   "marija",
+   "meryem",
+   "merjem",
+   "kaf ha ya ayn sad"
+  ],
+  "arabic": [
+   "كهيعص"
+  ],
+  "notes": "Kaf Ha Ya 'Ayn Sad from Dawsari. Mary = enwiki intro, Marie = coran-en-ligne, Marija / Merjem = hrwiki, Meryem = trwiki."
+ },
+ "20": {
+  "standard": "Taha",
+  "latin": [
+   "al-kalim",
+   "at-taklim",
+   "tâhâ",
+   "toha"
+  ],
+  "arabic": [
+   "الكليم",
+   "التكليم"
+  ],
+  "notes": "Al-Kalim / At-Taklim from Itqan (via al-Sakhawi), enwiki, arwiki. CAUTION: under a q=k fold 'kalim' sits one vowel from 'kalam/kalem' (68); exact forms are distinct, but do not fuzzy-match this one. DROPPED as shared with 28: Surat Musa. toha = uzwiki."
+ },
+ "21": {
+  "standard": "Al-Anbiya",
+  "latin": [
+   "iqtaraba",
+   "al-ambiya",
+   "ambiya",
+   "ambiyaa",
+   "enbiyâ",
+   "enbiya",
+   "al-enbija",
+   "anbiyo"
+  ],
+  "arabic": [
+   "اقترب"
+  ],
+  "notes": "Iqtaraba from Dawsari. Note 54 is 'Iqtarabat' (with final t); kept distinct. al-ambiya (assimilated n to m) = irfan-ul-quran.com title seen in search results; ambiyaa doubling is a spelling variant of it. enbiya = trwiki, al-enbija = hrwiki, anbiyo = uzwiki."
+ },
+ "22": {
+  "standard": "Al-Hajj",
+  "latin": [
+   "hac",
+   "al-hadždž",
+   "al-hadzdz",
+   "al-haddsch",
+   "al-hagg",
+   "hagg"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari, arwiki). hac = trwiki, al-hadzdz = hrwiki, al-haddsch = dewiki. hagg (Egyptian g) was supplied in the brief, background knowledge."
+ },
+ "23": {
+  "standard": "Al-Mu'minun",
+  "latin": [
+   "qad aflaha",
+   "qad aflaha al-muminun",
+   "al-falah",
+   "mü'minun",
+   "müminun",
+   "al-mumenoon",
+   "mominun"
+  ],
+  "arabic": [
+   "قد أفلح",
+   "قد أفلح المؤمنون",
+   "الفلاح"
+  ],
+  "notes": "From Dawsari. AMBIGUITY: Al-Mu'min (singular) is 40, Al-Mu'minun (plural) is 23; nothing singular is listed here. muminun = trwiki, al-mumenoon = itsislam, mominun = uzwiki."
+ },
+ "24": {
+  "standard": "An-Nur",
+  "latin": [],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari, arwiki: An-Nur is its only name). 'An-Nur' as a name of Al-Fatihah was dropped from 1."
+ },
+ "25": {
+  "standard": "Al-Furqan",
+  "latin": [
+   "tabarak al-furqan",
+   "furkan",
+   "al-furqane",
+   "furqon"
+  ],
+  "arabic": [
+   "تبارك الفرقان"
+  ],
+  "notes": "Tabarak al-Furqan: reported by Ibn 'Ashur as the Tunisian teachers' name (quoted on arwiki). Only the full form is given because bare Tabarak is 67. furkan = trwiki / hrwiki, al-furqane = qcom-fr, furqon = uzwiki."
+ },
+ "26": {
+  "standard": "Ash-Shu'ara",
+  "latin": [
+   "ta sin mim ash-shuara",
+   "al-jamiah",
+   "az-zullah",
+   "şu'ara",
+   "su'ara",
+   "şuara",
+   "suara",
+   "aš-šuara",
+   "as-suara",
+   "asy-syuara",
+   "ach-chuara",
+   "shuaro"
+  ],
+  "arabic": [
+   "طسم الشعراء",
+   "الجامعة",
+   "الظلة"
+  ],
+  "notes": "Al-Jami'ah from Itqan (tafsir of Malik); the rest from Dawsari. Bare Ta Sin Mim DROPPED as shared with 28. suara = trwiki, as-suara = hrwiki, asy-syuara = idwiki, ach-chuara = qcom-fr / frwiki, shuaro = uzwiki."
+ },
+ "27": {
+  "standard": "An-Naml",
+  "latin": [
+   "sulayman",
+   "al-hudhud",
+   "ta sin",
+   "ta sin sulayman",
+   "neml",
+   "an-neml"
+  ],
+  "arabic": [
+   "سليمان",
+   "الهدهد",
+   "طس",
+   "طس سليمان"
+  ],
+  "notes": "Sulayman from Itqan and enwiki; Al-Hudhud and Ta Sin from Dawsari; 'Ta Sin Sulayman' appears in Itqan's own prose. neml = trwiki, an-neml = hrwiki."
+ },
+ "28": {
+  "standard": "Al-Qasas",
+  "latin": [
+   "kasas",
+   "al-kasas",
+   "qasos"
+  ],
+  "arabic": [],
+  "notes": "Dawsari lists Ta Sin Mim and Surat Musa; BOTH DROPPED as shared (Ta Sin Mim with 26, Musa with 20). kasas = trwiki, al-kasas = hrwiki, qasos = uzwiki."
+ },
+ "29": {
+  "standard": "Al-'Ankabut",
+  "latin": [
+   "ankebût",
+   "ankebut",
+   "al-ankebut",
+   "al-ankaboot"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari). ankebut = trwiki, al-ankebut = hrwiki, al-ankaboot = itsislam."
+ },
+ "30": {
+  "standard": "Ar-Rum",
+  "latin": [
+   "rome",
+   "romans",
+   "byzantium",
+   "al-room"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari: none known). Rome / Byzantium = enwiki list 'title refers to' column; romans was requested in the brief. al-room = itsislam."
+ },
+ "31": {
+  "standard": "Luqman",
+  "latin": [
+   "lokman",
+   "lukman",
+   "luqmon",
+   "loqman"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name. lokman = trwiki, lukman = hrwiki, luqmon = uzwiki. loqman is background knowledge."
+ },
+ "32": {
+  "standard": "As-Sajdah",
+  "latin": [
+   "alif lam mim tanzil",
+   "alif lam mim tanzil as-sajdah",
+   "al-madaji",
+   "sajdat luqman",
+   "secde",
+   "as-sedžda",
+   "as-sedzda",
+   "as-sadschda"
+  ],
+  "arabic": [
+   "الم تنزيل",
+   "الم تنزيل السجدة",
+   "المضاجع",
+   "سجدة لقمان"
+  ],
+  "notes": "Al-Madaji' from Itqan and enwiki; the others from Dawsari. AMBIGUITY: 'As-Sajdah' alone is 32; 41 is 'Ha Mim as-Sajdah'. DROPPED: Al-Munjiyah (kept for 67, where it is far better known), bare At-Tanzil. secde = trwiki, as-sedzda = hrwiki, as-sadschda = dewiki."
+ },
+ "33": {
+  "standard": "Al-Ahzab",
+  "latin": [
+   "ahzâb",
+   "ahzob"
+  ],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari, arwiki: only one name). ahzob = uzwiki."
+ },
+ "34": {
+  "standard": "Saba",
+  "latin": [
+   "sheba",
+   "sebe"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name. Sheba = enwiki list; sebe = trwiki."
+ },
+ "35": {
+  "standard": "Fatir",
+  "latin": [
+   "al-malaikah",
+   "al-mala'ikah",
+   "malaika",
+   "fotir",
+   "fâtır",
+   "fatır"
+  ],
+  "arabic": [
+   "الملائكة"
+  ],
+  "notes": "Al-Mala'ikah from Itqan, Dawsari, arwiki, enwiki, dewiki. fatir = trwiki, fotir = uzwiki."
+ },
+ "36": {
+  "standard": "Ya-Sin",
+  "latin": [
+   "qalb al-quran",
+   "habib an-najjar",
+   "al-muimmah",
+   "ad-dafiah",
+   "al-qadiyah",
+   "ja-sin",
+   "yosin"
+  ],
+  "arabic": [
+   "قلب القرآن",
+   "حبيب النجار",
+   "المعمة",
+   "الدافعة",
+   "القاضية"
+  ],
+  "notes": "Qalb al-Qur'an, Al-Mu'immah, Ad-Dafi'ah, Al-Qadiyah from Itqan (hadith graded munkar there); Habib an-Najjar from Dawsari and arwiki. ja-sin = hrwiki, yosin = uzwiki."
+ },
+ "37": {
+  "standard": "As-Saffat",
+  "latin": [
+   "adh-dhabih",
+   "az-zinah",
+   "soffot"
+  ],
+  "arabic": [
+   "الذبيح",
+   "الزينة"
+  ],
+  "notes": "Adh-Dhabih from Itqan (al-Ja'bari; al-Suyuti says it needs a supporting report); Az-Zinah from Dawsari and arwiki. soffot = uzwiki."
+ },
+ "38": {
+  "standard": "Sad",
+  "latin": [
+   "dawud",
+   "suaad",
+   "sod"
+  ],
+  "arabic": [
+   "داود"
+  ],
+  "notes": "Surat Dawud from Itqan (al-Sakhawi), Dawsari, enwiki. suaad = itsislam, sod = uzwiki."
+ },
+ "39": {
+  "standard": "Az-Zumar",
+  "latin": [
+   "al-ghuraf",
+   "zümer",
+   "zumer"
+  ],
+  "arabic": [
+   "الغرف"
+  ],
+  "notes": "Al-Ghuraf from Itqan, Dawsari, enwiki. zumer = trwiki."
+ },
+ "40": {
+  "standard": "Ghafir",
+  "latin": [
+   "al-mumin",
+   "ha mim al-mumin",
+   "at-tawl",
+   "momin",
+   "al-momin",
+   "mü'min",
+   "mu'min",
+   "mümin",
+   "mumin",
+   "gafir",
+   "gofir"
+  ],
+  "arabic": [
+   "المؤمن",
+   "حم المؤمن",
+   "الطول",
+   "حم الأولى"
+  ],
+  "notes": "Al-Mu'min and At-Tawl from Itqan; Ha Mim al-Mu'min from Dawsari; Al-Mu'min also enwiki, dewiki, arwiki, urwiki, hrwiki, itsislam, and it is the standard Turkish title (trwiki). AMBIGUITY: Al-Mu'min (singular) is 40 only, Al-Mu'minun (plural) is 23; a prefix search for 'mumin' will surface both, which is correct. momin spelling was supplied in the brief (South Asian), background knowledge. gafir = oumma, gofir = uzwiki."
+ },
+ "41": {
+  "standard": "Fussilat",
+  "latin": [
+   "ha mim as-sajdah",
+   "ha mim sajdah",
+   "ha mim sajda",
+   "haa-meem-sajdah",
+   "hamim sajdah",
+   "al-masabih",
+   "al-aqwat",
+   "sajdat al-mumin",
+   "fussilet"
+  ],
+  "arabic": [
+   "حم السجدة",
+   "حم سجدة",
+   "المصابيح",
+   "الأقوات",
+   "سجدة المؤمن"
+  ],
+  "notes": "Ha Mim as-Sajdah from Dawsari, arwiki, enwiki, urwiki, itsislam (standard South Asian title); Al-Masabih from Itqan and enwiki; Al-Aqwat, Sajdat al-Mu'min from Dawsari. AMBIGUITY: Itqan and Dawsari also give bare 'As-Sajdah' for 41; DROPPED because it is the standard name of 32. Bare 'Ha Mim' (dewiki) DROPPED because seven surahs open with it. fussilet = trwiki."
+ },
+ "42": {
+  "standard": "Ash-Shura",
+  "latin": [
+   "ha mim ayn sin qaf",
+   "ayn sin qaf",
+   "şûrâ",
+   "sura",
+   "şura",
+   "aš-šura",
+   "as-sura",
+   "asy-syura",
+   "asch-schura",
+   "ach-chura",
+   "as-shoura",
+   "shuro"
+  ],
+  "arabic": [
+   "حم عسق",
+   "عسق"
+  ],
+  "notes": "Ha Mim 'Ayn Sin Qaf from Dawsari and enwiki. sura = trwiki, as-sura = hrwiki, asy-syura = idwiki, asch-schura = dewiki, ach-chura = qcom-fr, as-shoura = oumma, shuro = uzwiki."
+ },
+ "43": {
+  "standard": "Az-Zukhruf",
+  "latin": [
+   "ha mim az-zukhruf",
+   "zuhruf",
+   "az-zuhruf",
+   "az-zuchruf",
+   "zuxruf"
+  ],
+  "arabic": [
+   "حم الزخرف"
+  ],
+  "notes": "Ha Mim az-Zukhruf from Dawsari. zuhruf = trwiki / hrwiki / qcom-fr, az-zuchruf = dewiki, zuxruf = uzwiki. Note 'Az-Zukhruf' as a name of 55 was dropped from 55."
+ },
+ "44": {
+  "standard": "Ad-Dukhan",
+  "latin": [
+   "ha mim ad-dukhan",
+   "al-mubarakah",
+   "duhan",
+   "ad-duhan",
+   "ad-duchan",
+   "duxon"
+  ],
+  "arabic": [
+   "حم الدخان",
+   "المباركة"
+  ],
+  "notes": "From Dawsari. duhan = trwiki / hrwiki / qcom-fr, ad-duchan = dewiki, duxon = uzwiki."
+ },
+ "45": {
+  "standard": "Al-Jathiyah",
+  "latin": [
+   "ha mim al-jathiyah",
+   "ash-shariah",
+   "casiye",
+   "al-džasija",
+   "al-dzasija",
+   "al-dschathiya",
+   "al-jasiyah",
+   "al-jasia",
+   "al-jassiya",
+   "al-jatiya",
+   "josiya"
+  ],
+  "arabic": [
+   "حم الجاثية",
+   "الشريعة"
+  ],
+  "notes": "Ash-Shari'ah from Itqan, Dawsari, enwiki, arwiki. AMBIGUITY: Itqan (al-Kirmani), Dawsari and arwiki also give 'Ad-Dahr' for 45; DROPPED here because Ad-Dahr is the well-known name of 76. casiye = trwiki, al-dzasija = hrwiki, al-dschathiya = dewiki, al-jasiyah = idwiki, al-jasia = dawateislami, al-jassiya = itsislam, al-jatiya = qcom-fr, josiya = uzwiki."
+ },
+ "46": {
+  "standard": "Al-Ahqaf",
+  "latin": [
+   "ha mim al-ahqaf",
+   "ahkaf",
+   "al-ahkaf",
+   "ahqof"
+  ],
+  "arabic": [
+   "حم الأحقاف"
+  ],
+  "notes": "Ha Mim al-Ahqaf from Dawsari. ahkaf = trwiki / hrwiki, ahqof = uzwiki."
+ },
+ "47": {
+  "standard": "Muhammad",
+  "latin": [
+   "al-qital",
+   "alladhina kafaru",
+   "muhammed",
+   "mohammed",
+   "mohamed",
+   "mohammad",
+   "mahomet"
+  ],
+  "arabic": [
+   "القتال",
+   "الذين كفروا"
+  ],
+  "notes": "Al-Qital from Itqan, Dawsari, enwiki, dewiki, arwiki; Alladhina Kafaru from Dawsari and arwiki. muhammed = trwiki, hrwiki, qcom-fr, oumma. mohammed, mohamed, mohammad, mahomet were supplied in the brief, background knowledge."
+ },
+ "48": {
+  "standard": "Al-Fath",
+  "latin": [
+   "fetih",
+   "al-feth",
+   "al-fateh",
+   "fateh",
+   "al-fatah",
+   "fatah"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari). 'Al-Fath' as a name of 110 was dropped from 110. fetih = trwiki, al-feth = hrwiki, al-fateh = itsislam. fatah was requested by the coordinator and is background knowledge; I did not find it on a page."
+ },
+ "49": {
+  "standard": "Al-Hujurat",
+  "latin": [
+   "hucurât",
+   "hucurat",
+   "al-hudžurat",
+   "al-hudzurat",
+   "al-hudschurat",
+   "al-hujraat",
+   "hujurot"
+  ],
+  "arabic": [],
+  "notes": "DROPPED: Al-Akhlaq (Dawsari only, generic word). hucurat = trwiki, al-hudzurat = hrwiki, al-hudschurat = dewiki, al-hujraat = itsislam / frwiki, hujurot = uzwiki."
+ },
+ "50": {
+  "standard": "Qaf",
+  "latin": [
+   "al-basiqat",
+   "qaf wal-quran al-majid",
+   "kaf",
+   "qof"
+  ],
+  "arabic": [
+   "الباسقات",
+   "ق والقرآن المجيد"
+  ],
+  "notes": "Al-Basiqat from Itqan, Dawsari, enwiki, arwiki. kaf = trwiki / hrwiki, qof = uzwiki."
+ },
+ "51": {
+  "standard": "Adh-Dhariyat",
+  "latin": [
+   "wadh-dhariyat",
+   "wa adh-dhariyat",
+   "zariyat",
+   "az-zariyat",
+   "az-zaariyat",
+   "ad-dariyat",
+   "ad-darijat",
+   "zoriyot"
+  ],
+  "arabic": [
+   "والذاريات"
+  ],
+  "notes": "Wadh-Dhariyat (with the waw, as titled by al-Bukhari) from arwiki. zariyat = trwiki / idwiki / dawateislami, az-zaariyat = itsislam, ad-dariyat = qcom-fr / oumma, ad-darijat = hrwiki, zoriyot = uzwiki."
+ },
+ "52": {
+  "standard": "At-Tur",
+  "latin": [
+   "wat-tur",
+   "wa at-tur"
+  ],
+  "arabic": [
+   "والطور"
+  ],
+  "notes": "Wat-Tur (al-Bukhari's heading) from Dawsari's text."
+ },
+ "53": {
+  "standard": "An-Najm",
+  "latin": [
+   "wan-najm",
+   "wa an-najm",
+   "necm",
+   "an-nedžm",
+   "an-nedzm",
+   "an-nadschm"
+  ],
+  "arabic": [
+   "والنجم"
+  ],
+  "notes": "Wan-Najm from Dawsari's text. necm = trwiki, an-nedzm = hrwiki, an-nadschm = dewiki."
+ },
+ "54": {
+  "standard": "Al-Qamar",
+  "latin": [
+   "iqtarabat",
+   "iqtarabat as-saah",
+   "kamer",
+   "al-kamer"
+  ],
+  "arabic": [
+   "اقتربت",
+   "اقتربت الساعة"
+  ],
+  "notes": "Iqtarabat from Itqan, Dawsari, arwiki, enwiki. Note 21 is 'Iqtaraba' (no final t); kept distinct. DROPPED: bare As-Sa'ah (Dawsari only, generic word). kamer = trwiki, al-kamer = hrwiki."
+ },
+ "55": {
+  "standard": "Ar-Rahman",
+  "latin": [
+   "arus al-quran",
+   "rehman",
+   "ar-rehman",
+   "rohman",
+   "ar-rohman"
+  ],
+  "arabic": [
+   "عروس القرآن"
+  ],
+  "notes": "'Arus al-Qur'an from Itqan, Dawsari, arwiki. DROPPED: Dawsari also lists 'Az-Zukhruf' (standard name of 43). ar-rohman = uzwiki. rehman was supplied in the brief (South Asian), background knowledge."
+ },
+ "56": {
+  "standard": "Al-Waqi'ah",
+  "latin": [
+   "idha waqaat",
+   "vakıa",
+   "vakia",
+   "al-vakia",
+   "voqea",
+   "waqia",
+   "al-waqia"
+  ],
+  "arabic": [
+   "إذا وقعت"
+  ],
+  "notes": "No alternate classical name (Dawsari, arwiki); Idha Waqa'at is the opening words, background knowledge. vakia = trwiki / hrwiki, voqea = uzwiki, al-waqia = itsislam."
+ },
+ "57": {
+  "standard": "Al-Hadid",
+  "latin": [],
+  "arabic": [],
+  "notes": "No alternate name found (Dawsari: only Al-Hadid)."
+ },
+ "58": {
+  "standard": "Al-Mujadilah",
+  "latin": [
+   "az-zihar",
+   "qad samia",
+   "qad sami allah",
+   "mücadele",
+   "mucadele",
+   "al-mudžadela",
+   "al-mudzadela",
+   "al-mudschadala",
+   "mujodala",
+   "al-mujadalah"
+  ],
+  "arabic": [
+   "الظهار",
+   "قد سمع"
+  ],
+  "notes": "Az-Zihar (mushaf of Ubayy) from Itqan, Dawsari, enwiki, arwiki; Qad Sami'a from Dawsari and arwiki. mucadele = trwiki, al-mudzadela = hrwiki, al-mudschadala = dewiki, mujodala = uzwiki, al-mujadalah = qcom-fr. 'Al-Mujadilah' as a name of 3 and of 67 was dropped from both."
+ },
+ "59": {
+  "standard": "Al-Hashr",
+  "latin": [
+   "bani an-nadir",
+   "banu an-nadir",
+   "bani nadir",
+   "haşr",
+   "hasr",
+   "al-hašr",
+   "al-hasr",
+   "al-hasyr",
+   "al-haschr",
+   "al-hachr"
+  ],
+  "arabic": [
+   "بني النضير",
+   "بنو النضير"
+  ],
+  "notes": "Bani an-Nadir (Ibn 'Abbas, in al-Bukhari) from Itqan, Dawsari, arwiki. hasr = trwiki, al-hasr = hrwiki / oumma, al-hasyr = idwiki, al-haschr = dewiki, al-hachr = frwiki / qcom-fr."
+ },
+ "60": {
+  "standard": "Al-Mumtahanah",
+  "latin": [
+   "al-imtihan",
+   "al-mawaddah",
+   "al-mumtahinah",
+   "mümtehine",
+   "mumtehine"
+  ],
+  "arabic": [
+   "الامتحان",
+   "المودة"
+  ],
+  "notes": "Al-Imtihan and Al-Mawaddah from Itqan (Jamal al-Qurra'), Dawsari, arwiki. Al-Mumtahinah (kasrah reading) discussed in Itqan. mumtehine = trwiki."
+ },
+ "61": {
+  "standard": "As-Saff",
+  "latin": [
+   "al-hawariyyin",
+   "al-hawariyyun",
+   "saf",
+   "soff"
+  ],
+  "arabic": [
+   "الحواريين",
+   "الحواريون"
+  ],
+  "notes": "Al-Hawariyyin from Itqan, Dawsari, enwiki, arwiki; DROPPED: Surat 'Isa (Dawsari only); someone typing Isa is unlikely to want 61. saf = trwiki, soff = uzwiki."
+ },
+ "62": {
+  "standard": "Al-Jumu'ah",
+  "latin": [
+   "cuma",
+   "cum'a",
+   "al-džumua",
+   "al-dzumua",
+   "al-dschumua",
+   "jumma",
+   "juma",
+   "al-jumua",
+   "gomaa",
+   "al-gomaa"
+  ],
+  "arabic": [],
+  "notes": "No alternate classical name (Dawsari). cuma = trwiki, al-dzumua = hrwiki, al-dschumua = dewiki, juma = uzwiki, al-jumua = itsislam / oumma. jumma (South Asian) and gomaa (Egyptian) were supplied in the brief, background knowledge."
+ },
+ "63": {
+  "standard": "Al-Munafiqun",
+  "latin": [
+   "idha jaaka al-munafiqun",
+   "münafikun",
+   "munafikun",
+   "al-munafikun",
+   "munofiqun"
+  ],
+  "arabic": [
+   "إذا جاءك المنافقون"
+  ],
+  "notes": "Idha Ja'aka al-Munafiqun from Dawsari. munafikun = trwiki / hrwiki, munofiqun = uzwiki."
+ },
+ "64": {
+  "standard": "At-Taghabun",
+  "latin": [
+   "teğabun",
+   "tegabun",
+   "at-tegabun",
+   "at-tagabun",
+   "tagobun"
+  ],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari, arwiki). tegabun = trwiki / hrwiki, at-tagabun = idwiki / qcom-fr, tagobun = uzwiki."
+ },
+ "65": {
+  "standard": "At-Talaq",
+  "latin": [
+   "an-nisa al-qusra",
+   "an-nisa as-sughra",
+   "talâk",
+   "talak",
+   "at-talak",
+   "taloq"
+  ],
+  "arabic": [
+   "النساء القصرى",
+   "النساء الصغرى"
+  ],
+  "notes": "An-Nisa al-Qusra (Ibn Mas'ud, in al-Bukhari) from Itqan and Dawsari; An-Nisa as-Sughra from arwiki (article on 4). Full forms only: bare An-Nisa is 4. talak = trwiki / hrwiki, taloq = uzwiki."
+ },
+ "66": {
+  "standard": "At-Tahrim",
+  "latin": [
+   "lima tuharrim",
+   "lim tuharrim",
+   "al-mutaharrim"
+  ],
+  "arabic": [
+   "لم تحرم",
+   "المتحرم"
+  ],
+  "notes": "From Itqan, Dawsari, enwiki. DROPPED: Dawsari also lists Surat an-Nabi (too close to An-Naba, 78) and Surat an-Nisa (standard name of 4)."
+ },
+ "67": {
+  "standard": "Al-Mulk",
+  "latin": [
+   "tabarak",
+   "tabarak alladhi biyadihi al-mulk",
+   "tabarak al-mulk",
+   "al-munjiyah",
+   "al-maniah",
+   "al-mannaah",
+   "mülk",
+   "tebareke"
+  ],
+  "arabic": [
+   "تبارك",
+   "تبارك الذي بيده الملك",
+   "تبارك الملك",
+   "المنجية",
+   "المانعة",
+   "الواقية",
+   "المناعة"
+  ],
+  "notes": "Tabarak, Al-Mani'ah, Al-Munjiyah, Al-Waqiyah, Al-Manna'ah from Itqan; also Dawsari, arwiki, enwiki. Al-Waqiyah is given in ARABIC ONLY: its Latin spelling is one letter from Al-Waqi'ah (56). DROPPED: Al-Mujadilah (standard name of 58). mulk = trwiki. tebareke (Turkish) was supplied in the brief, background knowledge."
+ },
+ "68": {
+  "standard": "Al-Qalam",
+  "latin": [
+   "nun",
+   "nun wal-qalam",
+   "noon",
+   "kalem",
+   "al-kalem"
+  ],
+  "arabic": [
+   "ن",
+   "ن والقلم",
+   "نون"
+  ],
+  "notes": "Nun and Nun wal-Qalam from Dawsari, arwiki (al-Bukhari / at-Tirmidhi headings), enwiki, dewiki. kalem = trwiki / hrwiki. 'Al-Qalam' as a name of 96 was dropped from 96."
+ },
+ "69": {
+  "standard": "Al-Haqqah",
+  "latin": [
+   "as-silsilah",
+   "hakka",
+   "al-hakka"
+  ],
+  "arabic": [
+   "السلسلة",
+   "الواعية"
+  ],
+  "notes": "As-Silsilah (al-Fayruzabadi) from Dawsari and arwiki; Al-Wa'iyah from Dawsari, ARABIC ONLY (Latin is one letter from Al-Waqi'ah, 56). hakka = trwiki / hrwiki."
+ },
+ "70": {
+  "standard": "Al-Ma'arij",
+  "latin": [
+   "saala sail",
+   "saala",
+   "sa'ala sa'il",
+   "me'aric",
+   "mearic",
+   "al-mearidž",
+   "al-mearidz",
+   "al-maaridsch",
+   "maorij"
+  ],
+  "arabic": [
+   "سأل سائل",
+   "سأل",
+   "الواقع",
+   "المواقع"
+  ],
+  "notes": "Sa'ala Sa'il from Itqan, Dawsari, enwiki, arwiki. Al-Waqi' (Itqan, Dawsari) and Al-Mawaqi' (arwiki) are given in ARABIC ONLY: the Latin spelling is one letter from Al-Waqi'ah (56). mearic = trwiki, al-mearidz = hrwiki, al-maaridsch = dewiki, maorij = uzwiki."
+ },
+ "71": {
+  "standard": "Nuh",
+  "latin": [
+   "noah",
+   "noe",
+   "noa",
+   "inna arsalna nuhan",
+   "nooh",
+   "nouh"
+  ],
+  "arabic": [
+   "إنا أرسلنا نوحا"
+  ],
+  "notes": "Inna Arsalna Nuhan (al-Bukhari's heading) from Dawsari and arwiki. Noah = enwiki list, Noa = hrwiki, Noe = coran-en-ligne (French, accent stripped), nooh = itsislam. nouh is background knowledge (French)."
+ },
+ "72": {
+  "standard": "Al-Jinn",
+  "latin": [
+   "qul uhiya",
+   "qul uhiya ilayya",
+   "cin",
+   "al-džinn",
+   "al-dzinn",
+   "al-dschinn",
+   "jin",
+   "al-jin"
+  ],
+  "arabic": [
+   "قل أوحي",
+   "قل أوحي إلي"
+  ],
+  "notes": "Qul Uhiya from Itqan (grammar section), Dawsari, arwiki. NOT INCLUDED: enwiki alone lists 'Al-Wahy'; single weak source. cin = trwiki, al-dzinn = hrwiki, al-dschinn = dewiki, jin = uzwiki / dawateislami."
+ },
+ "73": {
+  "standard": "Al-Muzzammil",
+  "latin": [
+   "müzzemmil",
+   "muzzemmil",
+   "al-muzemmil"
+  ],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari, arwiki: only one name). muzzemmil = trwiki, al-muzemmil = hrwiki."
+ },
+ "74": {
+  "standard": "Al-Muddaththir",
+  "latin": [
+   "müddessir",
+   "muddessir",
+   "müddesir",
+   "muddesir",
+   "al-muddessir",
+   "al-muddassir",
+   "al-mudassir",
+   "al-muddattir"
+  ],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari). muddessir = trwiki / hrwiki, al-muddassir = idwiki / itsislam, al-mudassir = dawateislami, al-muddattir = qcom-fr / oumma."
+ },
+ "75": {
+  "standard": "Al-Qiyamah",
+  "latin": [
+   "la uqsimu bi-yawm al-qiyamah",
+   "kıyamet",
+   "kiyamet",
+   "kıyâmet",
+   "al-kijama",
+   "qiyomat",
+   "qayamat",
+   "qiyamat"
+  ],
+  "arabic": [
+   "لا أقسم بيوم القيامة"
+  ],
+  "notes": "La Uqsimu bi-Yawm al-Qiyamah from Dawsari and arwiki. AMBIGUITY: bare 'La Uqsimu' is used for both 75 and 90; DROPPED from both, full forms kept. kiyamet = trwiki, al-kijama = hrwiki, qiyomat = uzwiki. qayamat / qiyamat (South Asian) supplied in the brief, background knowledge."
+ },
+ "76": {
+  "standard": "Al-Insan",
+  "latin": [
+   "ad-dahr",
+   "dahr",
+   "dahar",
+   "hal ata",
+   "hal ata ala al-insan",
+   "al-abrar",
+   "al-amshaj",
+   "inson"
+  ],
+  "arabic": [
+   "الدهر",
+   "هل أتى",
+   "هل أتى على الإنسان",
+   "الأبرار",
+   "الأمشاج"
+  ],
+  "notes": "Ad-Dahr from Dawsari, arwiki, enwiki, dewiki, urwiki, itsislam, dawateislami (standard South Asian title); Hal Ata from Dawsari and enwiki; Al-Abrar, Al-Amshaj from Dawsari. Note 88 is 'Hal Ataka' (kept distinct). Ad-Dahr is also a rare name of 45; assigned to 76 only. dahar spelling supplied in the brief, background knowledge. inson = uzwiki."
+ },
+ "77": {
+  "standard": "Al-Mursalat",
+  "latin": [
+   "wal-mursalat",
+   "wal-mursalat urfan",
+   "al-urf",
+   "mürselat",
+   "murselat",
+   "al-mursalate"
+  ],
+  "arabic": [
+   "والمرسلات",
+   "والمرسلات عرفا",
+   "العرف"
+  ],
+  "notes": "From Dawsari. murselat = trwiki, al-mursalate = qcom-fr / oumma."
+ },
+ "78": {
+  "standard": "An-Naba",
+  "latin": [
+   "amma",
+   "amma yatasaalun",
+   "am yatasaalun",
+   "at-tasaul",
+   "al-musirat",
+   "nebe"
+  ],
+  "arabic": [
+   "عم",
+   "عم يتساءلون",
+   "التساؤل",
+   "المعصرات"
+  ],
+  "notes": "'Amma, At-Tasa'ul, Al-Mu'sirat from Itqan; 'Amma Yatasa'alun from Dawsari; 'Amma also enwiki (and arwiki: Juz' 'Amma). nebe = trwiki."
+ },
+ "79": {
+  "standard": "An-Nazi'at",
+  "latin": [
+   "as-sahirah",
+   "at-tammah",
+   "noziot",
+   "an-naziate"
+  ],
+  "arabic": [
+   "الساهرة",
+   "الطامة"
+  ],
+  "notes": "From Dawsari (As-Sahirah also enwiki). noziot = uzwiki, an-naziate = qcom-fr / oumma."
+ },
+ "80": {
+  "standard": "'Abasa",
+  "latin": [
+   "as-safarah",
+   "as-sakhkhah",
+   "al-ama",
+   "ibn umm maktum",
+   "abese",
+   "abas"
+  ],
+  "arabic": [
+   "السفرة",
+   "الصاخة",
+   "الأعمى",
+   "ابن أم مكتوم"
+  ],
+  "notes": "From Dawsari and arwiki (As-Safarah also enwiki). abese = trwiki, abas = itsislam."
+ },
+ "81": {
+  "standard": "At-Takwir",
+  "latin": [
+   "kuwwirat",
+   "idha ash-shamsu kuwwirat",
+   "tekvir",
+   "at-takvir",
+   "takvir"
+  ],
+  "arabic": [
+   "كورت",
+   "إذا الشمس كورت"
+  ],
+  "notes": "From Dawsari and arwiki. tekvir = trwiki, at-takvir = hrwiki, takvir = uzwiki."
+ },
+ "82": {
+  "standard": "Al-Infitar",
+  "latin": [
+   "infatarat",
+   "idha as-samau infatarat",
+   "al-munfatirah",
+   "infitor"
+  ],
+  "arabic": [
+   "انفطرت",
+   "إذا السماء انفطرت",
+   "المنفطرة"
+  ],
+  "notes": "From Dawsari and arwiki. infitor = uzwiki."
+ },
+ "83": {
+  "standard": "Al-Mutaffifin",
+  "latin": [
+   "at-tatfif",
+   "tatfif",
+   "wayl lil-mutaffifin",
+   "al-mutaffifun",
+   "al-mutaffifune"
+  ],
+  "arabic": [
+   "التطفيف",
+   "ويل للمطففين",
+   "المطففون"
+  ],
+  "notes": "At-Tatfif and Wayl lil-Mutaffifin from Dawsari and arwiki. al-mutaffifun (nominative) = hrwiki, uzwiki Arabic column; al-mutaffifune = qcom-fr / oumma."
+ },
+ "84": {
+  "standard": "Al-Inshiqaq",
+  "latin": [
+   "inshaqqat",
+   "idha as-samau inshaqqat",
+   "ash-shafaq",
+   "inşikak",
+   "insikak",
+   "al-inšikak",
+   "al-insikak",
+   "al-insyiqaq",
+   "al-inschiqaq",
+   "al-inchiqaq",
+   "inshiqoq"
+  ],
+  "arabic": [
+   "انشقت",
+   "إذا السماء انشقت",
+   "الشفق"
+  ],
+  "notes": "Inshaqqat from Dawsari and arwiki; Ash-Shafaq from arwiki only. DROPPED: Dawsari's 'Kadh' (too obscure). insikak = trwiki / hrwiki / oumma, al-insyiqaq = idwiki, al-inschiqaq = dewiki, al-inchiqaq = qcom-fr / islam-informations, inshiqoq = uzwiki."
+ },
+ "85": {
+  "standard": "Al-Buruj",
+  "latin": [
+   "as-sama dhat al-buruj",
+   "was-samai dhat al-buruj",
+   "büruc",
+   "buruc",
+   "al-burudž",
+   "al-burudz",
+   "al-burudsch"
+  ],
+  "arabic": [
+   "السماء ذات البروج",
+   "والسماء ذات البروج"
+  ],
+  "notes": "From Dawsari and arwiki. buruc = trwiki, al-burudz = hrwiki, al-burudsch = dewiki."
+ },
+ "86": {
+  "standard": "At-Tariq",
+  "latin": [
+   "as-sama wat-tariq",
+   "was-samai wat-tariq",
+   "târık",
+   "tarik",
+   "tarık",
+   "at-tarik",
+   "toriq"
+  ],
+  "arabic": [
+   "السماء والطارق",
+   "والسماء والطارق"
+  ],
+  "notes": "From Dawsari. tarik = trwiki / hrwiki, toriq = uzwiki."
+ },
+ "87": {
+  "standard": "Al-A'la",
+  "latin": [
+   "sabbih",
+   "sabbih isma rabbika al-ala",
+   "sabbihisma"
+  ],
+  "arabic": [
+   "سبح",
+   "سبح اسم ربك الأعلى"
+  ],
+  "notes": "From Dawsari and arwiki. sabbihisma (run-together spelling) is background knowledge."
+ },
+ "88": {
+  "standard": "Al-Ghashiyah",
+  "latin": [
+   "hal ataka",
+   "hal ataka hadith al-ghashiyah",
+   "gaşiye",
+   "gasiye",
+   "al-gašija",
+   "al-gasija",
+   "al-ghasyiyah",
+   "al-ghaschiya",
+   "al-ghachiyah",
+   "al-gachiyah",
+   "goshiya"
+  ],
+  "arabic": [
+   "هل أتاك",
+   "هل أتاك حديث الغاشية"
+  ],
+  "notes": "Hal Ataka from Dawsari and arwiki. Note 76 is 'Hal Ata' (kept distinct). gasiye = trwiki, al-gasija = hrwiki, al-ghasyiyah = idwiki, al-ghaschiya = dewiki, al-ghachiyah = islam-informations, al-gachiyah = qcom-fr, goshiya = uzwiki."
+ },
+ "89": {
+  "standard": "Al-Fajr",
+  "latin": [
+   "wal-fajr",
+   "fecr",
+   "al-fedžr",
+   "al-fedzr",
+   "al-fadschr"
+  ],
+  "arabic": [
+   "والفجر"
+  ],
+  "notes": "Wal-Fajr from Dawsari (arwiki: no other name). fecr = trwiki, al-fedzr = hrwiki, al-fadschr = dewiki."
+ },
+ "90": {
+  "standard": "Al-Balad",
+  "latin": [
+   "la uqsimu bi-hadha al-balad",
+   "al-aqabah",
+   "beled",
+   "al-beled"
+  ],
+  "arabic": [
+   "لا أقسم بهذا البلد",
+   "العقبة"
+  ],
+  "notes": "From Dawsari and arwiki. Bare 'La Uqsimu' DROPPED (shared with 75). beled = trwiki / hrwiki."
+ },
+ "91": {
+  "standard": "Ash-Shams",
+  "latin": [
+   "wash-shams",
+   "wash-shamsi wa duhaha",
+   "şems",
+   "sems",
+   "aš-šems",
+   "as-sems",
+   "asy-syams",
+   "asch-schams",
+   "ach-chams"
+  ],
+  "arabic": [
+   "والشمس",
+   "والشمس وضحاها"
+  ],
+  "notes": "From Dawsari and arwiki. sems = trwiki, as-sems = hrwiki, asy-syams = idwiki, asch-schams = dewiki, ach-chams = qcom-fr / oumma / islam-informations."
+ },
+ "92": {
+  "standard": "Al-Layl",
+  "latin": [
+   "wal-layl",
+   "wal-layli idha yaghsha",
+   "leyl",
+   "al-lejl",
+   "al-lail"
+  ],
+  "arabic": [
+   "والليل",
+   "والليل إذا يغشى"
+  ],
+  "notes": "From Dawsari and arwiki. leyl = trwiki, al-lejl = hrwiki, al-lail = idwiki / dewiki / itsislam."
+ },
+ "93": {
+  "standard": "Ad-Duha",
+  "latin": [
+   "wad-duha",
+   "wadduha",
+   "ad-dhuha",
+   "dhuha",
+   "ad-douha",
+   "douha",
+   "zuha",
+   "az-zuha",
+   "zuho",
+   "doha",
+   "ad-doha",
+   "wad-duha wal-layl"
+  ],
+  "arabic": [
+   "والضحى",
+   "والضحى والليل"
+  ],
+  "notes": "Wad-Duha from Dawsari and arwiki (al-Bukhari's heading). ad-dhuha = enwiki title and itsislam; wadduha = equraninstitute.com URL seen in search results; ad-douha = islam-informations (French); zuho = uzwiki. zuha and doha were requested in the brief and are background knowledge (South Asian and Gulf spellings); not found on a page this session."
+ },
+ "94": {
+  "standard": "Ash-Sharh",
+  "latin": [
+   "al-inshirah",
+   "inshirah",
+   "alam nashrah",
+   "alam nashrah laka",
+   "al-alm-nashrah",
+   "al-yusr",
+   "inşirah",
+   "insirah",
+   "al-inširah",
+   "al-insirah",
+   "al-insyirah",
+   "asch-scharh",
+   "ach-charh"
+  ],
+  "arabic": [
+   "الانشراح",
+   "ألم نشرح",
+   "اليسر"
+  ],
+  "notes": "Al-Inshirah and Alam Nashrah from Dawsari and arwiki (Alam Nashrah is the heading in al-Bukhari and at-Tirmidhi); Alam Nashrah is the standard South Asian title (urwiki, itsislam, dawateislami); Al-Inshirah is the standard Turkish, Bosnian and Indonesian title. Al-Yusr from Dawsari. insirah = trwiki / hrwiki, al-insyirah = idwiki, asch-scharh = dewiki, ach-charh = qcom-fr / islam-informations."
+ },
+ "95": {
+  "standard": "At-Tin",
+  "latin": [
+   "wat-tin",
+   "wat-tin waz-zaytun",
+   "az-zaytun",
+   "at-teen"
+  ],
+  "arabic": [
+   "والتين",
+   "والتين والزيتون",
+   "الزيتون"
+  ],
+  "notes": "From Dawsari and arwiki. at-teen = itsislam."
+ },
+ "96": {
+  "standard": "Al-'Alaq",
+  "latin": [
+   "iqra",
+   "iqra bismi rabbika",
+   "iqra bismi rabbik",
+   "ikra",
+   "alak",
+   "al-alek"
+  ],
+  "arabic": [
+   "اقرأ",
+   "اقرأ باسم ربك",
+   "اقرأ باسم ربك الذي خلق"
+  ],
+  "notes": "Iqra' from Dawsari, arwiki, enwiki, dewiki. DROPPED: Dawsari also lists 'Al-Qalam' (standard name of 68). alak = trwiki, al-alek = hrwiki. ikra is background knowledge (Turkish spelling)."
+ },
+ "97": {
+  "standard": "Al-Qadr",
+  "latin": [
+   "inna anzalnahu",
+   "inna anzalnahu fi laylat al-qadr",
+   "laylat al-qadr",
+   "kadir",
+   "al-kadr"
+  ],
+  "arabic": [
+   "إنا أنزلناه",
+   "إنا أنزلناه في ليلة القدر",
+   "ليلة القدر"
+  ],
+  "notes": "From Dawsari and arwiki. kadir = trwiki, al-kadr = hrwiki."
+ },
+ "98": {
+  "standard": "Al-Bayyinah",
+  "latin": [
+   "lam yakun",
+   "lam yakun alladhina kafaru",
+   "lam yakon",
+   "ahl al-kitab",
+   "al-bariyyah",
+   "al-munfakkin",
+   "al-infikak",
+   "beyyine",
+   "al-bejjina",
+   "al-baiyinah"
+  ],
+  "arabic": [
+   "لم يكن",
+   "لم يكن الذين كفروا",
+   "أهل الكتاب",
+   "البرية",
+   "المنفكين",
+   "الانفكاك",
+   "القيمة"
+  ],
+  "notes": "Lam Yakun, Ahl al-Kitab (mushaf of Ubayy), Al-Bariyyah, Al-Infikak from Itqan; also Dawsari, arwiki, enwiki. Al-Qayyimah is given in ARABIC ONLY (Latin too close to Al-Qiyamah, 75). DROPPED: Itqan and arwiki also report 'Al-Qiyamah' (standard name of 75) and 'Al-Balad' (standard name of 90). beyyine = trwiki, al-bejjina = hrwiki, al-baiyinah = dawateislami. lam yakon is a spelling variant, background knowledge."
+ },
+ "99": {
+  "standard": "Az-Zalzalah",
+  "latin": [
+   "az-zilzal",
+   "zilzal",
+   "al-zalzaal",
+   "az-zalzal",
+   "idha zulzilat",
+   "zulzilat"
+  ],
+  "arabic": [
+   "الزلزال",
+   "إذا زلزلت",
+   "زلزلت"
+  ],
+  "notes": "Az-Zilzal and Idha Zulzilat from Dawsari; Az-Zilzal is the standard Turkish, Bosnian and South Asian title (trwiki, hrwiki, urwiki, dawateislami). al-zalzaal = itsislam."
+ },
+ "100": {
+  "standard": "Al-'Adiyat",
+  "latin": [
+   "wal-adiyat",
+   "al-adijat",
+   "adiyot",
+   "al-adiyate"
+  ],
+  "arabic": [
+   "والعاديات"
+  ],
+  "notes": "Wal-'Adiyat from Dawsari's text. al-adijat = hrwiki, adiyot = uzwiki, al-adiyate = qcom-fr / oumma."
+ },
+ "101": {
+  "standard": "Al-Qari'ah",
+  "latin": [
+   "karia",
+   "al-karia",
+   "qoria"
+  ],
+  "arabic": [],
+  "notes": "No alternate name (Dawsari: none known). karia = trwiki / hrwiki, qoria = uzwiki."
+ },
+ "102": {
+  "standard": "At-Takathur",
+  "latin": [
+   "alhakum",
+   "alhakum at-takathur",
+   "al-hakum",
+   "al-maqbarah",
+   "tekasür",
+   "tekasur",
+   "at-tekasur",
+   "at-takasur",
+   "at-takaasur",
+   "at-takatur",
+   "takosur"
+  ],
+  "arabic": [
+   "ألهاكم",
+   "ألهاكم التكاثر",
+   "المقبرة"
+  ],
+  "notes": "Alhakum at-Takathur and Al-Maqbarah from Dawsari. tekasur = trwiki / hrwiki, at-takasur = idwiki / dawateislami, at-takaasur = itsislam, at-takatur = qcom-fr / oumma, takosur = uzwiki."
+ },
+ "103": {
+  "standard": "Al-'Asr",
+  "latin": [
+   "wal-asr",
+   "asar",
+   "al-asar"
+  ],
+  "arabic": [
+   "والعصر"
+  ],
+  "notes": "Wal-'Asr (al-Bukhari's heading) from arwiki. asar (South Asian) supplied in the brief, background knowledge."
+ },
+ "104": {
+  "standard": "Al-Humazah",
+  "latin": [
+   "wayl li-kulli humazah",
+   "al-hutamah",
+   "hümeze",
+   "humeze"
+  ],
+  "arabic": [
+   "ويل لكل همزة",
+   "الحطمة"
+  ],
+  "notes": "From Dawsari and arwiki (Al-Hutamah via al-Fayruzabadi). humeze = trwiki."
+ },
+ "105": {
+  "standard": "Al-Fil",
+  "latin": [
+   "alam tara",
+   "alam tara kayfa",
+   "al-feel"
+  ],
+  "arabic": [
+   "ألم تر",
+   "ألم تر كيف"
+  ],
+  "notes": "From Dawsari and arwiki. al-feel = itsislam."
+ },
+ "106": {
+  "standard": "Quraysh",
+  "latin": [
+   "ilaf",
+   "li-ilaf",
+   "li-ilafi quraysh",
+   "li-ilaf quraysh",
+   "kureyş",
+   "kureys",
+   "kurejš",
+   "kurejs",
+   "quraisy",
+   "quraisch",
+   "quraych",
+   "qouraych",
+   "qoraysh",
+   "quraish",
+   "koreish"
+  ],
+  "arabic": [
+   "إيلاف",
+   "لإيلاف",
+   "لإيلاف قريش"
+  ],
+  "notes": "Li-Ilaf Quraysh and Li-Ilaf from Dawsari and arwiki; bare Ilaf was named in the brief and is the same name without the particle. kureys = trwiki, kurejs = hrwiki, quraisy = idwiki, quraisch = dewiki, quraych = qcom-fr, qouraych = islam-informations, qoraysh = oumma, quraish = itsislam / frwiki. koreish (older English) is background knowledge."
+ },
+ "107": {
+  "standard": "Al-Ma'un",
+  "latin": [
+   "araayta",
+   "ara'ayta",
+   "araayta alladhi",
+   "ad-din",
+   "al-yatim",
+   "at-takdhib"
+  ],
+  "arabic": [
+   "أرأيت",
+   "أرأيت الذي",
+   "أرأيت الذي يكذب",
+   "الدين",
+   "اليتيم",
+   "التكذيب"
+  ],
+  "notes": "Ara'ayta and Ad-Din from Itqan; also Dawsari, arwiki, enwiki; Al-Yatim (al-Biqa'i) and At-Takdhib from Dawsari and arwiki. AMBIGUITY: 'Ad-Din' is also reported for 109 (al-Fayruzabadi); assigned to 107 only, following Itqan. maun = trwiki / hrwiki."
+ },
+ "108": {
+  "standard": "Al-Kawthar",
+  "latin": [
+   "inna ataynaka",
+   "inna ataynaka al-kawthar",
+   "kevser",
+   "al-kevser",
+   "al-kausar",
+   "kausar",
+   "al-kauser",
+   "al-kauthar",
+   "kavsar",
+   "al-kawtar"
+  ],
+  "arabic": [
+   "إنا أعطيناك",
+   "إنا أعطيناك الكوثر",
+   "النحر"
+  ],
+  "notes": "Inna A'taynaka al-Kawthar from Dawsari; An-Nahr from Dawsari is ARABIC ONLY (Latin is one letter from An-Nahl, 16). kevser = trwiki / hrwiki, al-kausar = idwiki / dawateislami, al-kauser = itsislam, al-kauthar = dewiki, kavsar = uzwiki, al-kawtar = qcom-fr."
+ },
+ "109": {
+  "standard": "Al-Kafirun",
+  "latin": [
+   "qul ya ayyuha al-kafirun",
+   "al-ibadah",
+   "al-munabadhah",
+   "kâfirûn",
+   "kofirun",
+   "al-kafirune"
+  ],
+  "arabic": [
+   "قل يا أيها الكافرون",
+   "العبادة",
+   "المنابذة"
+  ],
+  "notes": "Al-'Ibadah from Itqan (Jamal al-Qurra'), Dawsari, enwiki; Al-Munabadhah from Dawsari. DROPPED as shared: Al-Muqashqishah (also 9, 112), Al-Ikhlas (standard name of 112), Ad-Din (kept for 107). kofirun = uzwiki, al-kafirune = qcom-fr / oumma."
+ },
+ "110": {
+  "standard": "An-Nasr",
+  "latin": [
+   "idha jaa nasr allah",
+   "idha jaa nasrullah",
+   "idha jaa nasr allah wal-fath",
+   "at-tawdi"
+  ],
+  "arabic": [
+   "إذا جاء نصر الله والفتح",
+   "إذا جاء نصر الله",
+   "التوديع"
+  ],
+  "notes": "At-Tawdi' (Ibn Mas'ud) from Itqan, Dawsari, enwiki, arwiki; the opening-words name from Dawsari. DROPPED: Dawsari also lists 'Al-Fath' (standard name of 48)."
+ },
+ "111": {
+  "standard": "Al-Masad",
+  "latin": [
+   "tabbat",
+   "tabbat yada",
+   "tabbat yada abi lahab",
+   "al-lahab",
+   "lahab",
+   "abu lahab",
+   "abi lahab",
+   "al-lahb",
+   "tebbet",
+   "al-leheb",
+   "leheb",
+   "al-massad"
+  ],
+  "arabic": [
+   "تبت",
+   "تبت يدا أبي لهب",
+   "اللهب",
+   "أبي لهب",
+   "أبو لهب"
+  ],
+  "notes": "Tabbat from Itqan (which treats Tabbat as the primary name), Dawsari, arwiki, enwiki; Abu Lahab and Al-Lahab from Dawsari, arwiki, dewiki, enwiki (George Sale). Al-Lahab is the standard Indonesian, Bosnian and South Asian title (idwiki, hrwiki, urwiki, dawateislami); Tebbet is the standard Turkish title (trwiki). al-lahb = itsislam, al-massad = frwiki."
+ },
+ "112": {
+  "standard": "Al-Ikhlas",
+  "latin": [
+   "at-tawhid",
+   "tawhid",
+   "tauhid",
+   "tevhid",
+   "qul huwa allahu ahad",
+   "qul huwallahu ahad",
+   "qul hu allah",
+   "as-samad",
+   "ihlas",
+   "al-ihlas",
+   "al-ichlas",
+   "ixlos"
+  ],
+  "arabic": [
+   "التوحيد",
+   "قل هو الله أحد",
+   "الصمد"
+  ],
+  "notes": "At-Tawhid from Dawsari, arwiki (Tunisian mushafs), enwiki; Qul Huwa Allahu Ahad is the name used in the hadith reports (Dawsari, arwiki); As-Samad from Dawsari. DROPPED as shared: Al-Asas (also 1), Al-Muqashqishah (also 9, 109). ihlas = trwiki / hrwiki / qcom-fr, al-ichlas = dewiki, ixlos = uzwiki. tauhid, tevhid, 'qul hu allah' are spelling variants from background knowledge."
+ },
+ "113": {
+  "standard": "Al-Falaq",
+  "latin": [
+   "qul audhu bi-rabb al-falaq",
+   "qul audhu bi rabbil falaq",
+   "felak",
+   "al-felek"
+  ],
+  "arabic": [
+   "قل أعوذ برب الفلق"
+  ],
+  "notes": "From Dawsari and arwiki. DROPPED as shared with 114: Al-Mu'awwidhatayn, Al-Mushaqshiqatayn. felak = trwiki, al-felek = hrwiki."
+ },
+ "114": {
+  "standard": "An-Nas",
+  "latin": [
+   "qul audhu bi-rabb an-nas",
+   "qul audhu bi rabbin nas"
+  ],
+  "arabic": [
+   "قل أعوذ برب الناس"
+  ],
+  "notes": "From Dawsari and arwiki (al-Bukhari's heading). DROPPED as shared with 113: Al-Mu'awwidhatayn, Al-Mushaqshiqatayn."
+ }
+}

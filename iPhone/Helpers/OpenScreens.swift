@@ -52,6 +52,18 @@ enum OpenScreen: String, Hashable, CaseIterable {
     // back to a category.
     case miracleCategory
 
+    // The alphabet's tajweed pages: a letter lists the families it belongs to, and a family lists its
+    // letters. Both repeat with different data, so they are matched by id (`OpenScreenInstance`): the
+    // letter or the family you came through is greyed, every other one is still a fair place to go.
+    // The two indexes are plain screens, reachable from a letter page and leading back to letters.
+    case arabicLetter
+    case letterFamily
+    case letterFamilies
+    case soundAlikes
+    /// A Tajweed Foundations topic page (by id: "qalqalah", "madd"...). The topic shows its letters as
+    /// tiles, and a letter's page links back to the topic that explains its rule.
+    case tajweedTopic
+
     /// What a disabled row says in place of its caption, when the row itself does not supply one.
     var alreadyHereCaption: String {
         switch self {
@@ -68,6 +80,11 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .hadeethEncCategory:  return "You are in this topic"
         case .hadeethEncHadith:    return "You are reading this hadith"
         case .miracleCategory:     return "You are in this category"
+        case .arabicLetter:        return "You are on this letter's page"
+        case .letterFamily:        return "You are on this family's page"
+        case .letterFamilies:      return "You are in Letter Families"
+        case .soundAlikes:         return "You are in Sound-Alike Letters"
+        case .tajweedTopic:        return "You came here from this page"
         }
     }
 }

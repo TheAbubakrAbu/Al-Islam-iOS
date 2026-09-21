@@ -36,6 +36,9 @@ enum QuranOpenTarget: Equatable {
 /// Where a Reminder of the Day card opens on the Islam (or Hadith) tab.
 enum IslamOpenTarget: Equatable {
     case hadithTab
+    /// The Islam tab itself, nothing pushed: where About You lands someone who is there to learn,
+    /// on the Start Here guide.
+    case tab
     case duas
     case adhkar
     case names(Int?)

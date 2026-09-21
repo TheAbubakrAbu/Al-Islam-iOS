@@ -380,17 +380,6 @@ extension View {
         }
     }
 
-    /// Marks a setting that only exists because the setting above it is on.
-    ///
-    /// A dependent switch shown flush with its parent reads as a peer, and a reader hunting for why
-    /// it vanished has nothing to look at. One step of indentation plus a thin accent rail on the
-    /// leading edge says "this belongs to the row above" without a second header or a nested box.
-    /// Used for the word-by-word lines, Hide Arabic Dots under Hide Tashkeel, the nagging schedule
-    /// under Nagging Mode, and their kin. Vertically fixed so a caption wraps instead of truncating
-    /// when the row animates in.
-    func settingsDependent() -> some View {
-        modifier(SettingsDependentRail())
-    }
 }
 
 #if os(iOS)
@@ -410,21 +399,6 @@ private struct RegularIdiomTypeBoost: ViewModifier {
 /// The indent + accent rail behind `settingsDependent()`. Reads the accent straight off Settings:
 /// every view that uses the rail already observes Settings, so the rail follows accent changes
 /// without observing anything itself (and the watch, which has no appearance environment, compiles).
-private struct SettingsDependentRail: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.leading, 14)
-            .padding(.vertical, 4)
-            .overlay(alignment: .leading) {
-                Capsule()
-                    .fill(Settings.shared.accentColor.color.opacity(0.55))
-                    .frame(width: 3)
-                    .padding(.vertical, 2)
-            }
-    }
-}
-
 extension String {
     /// آ (U+0622) written as its canonical parts: ا + the combining maddah (U+0653).
     ///
@@ -822,6 +796,203 @@ extension String {
         let start = index(startIndex, offsetBy: lower, limitedBy: endIndex) ?? endIndex
         let end = index(startIndex, offsetBy: upper, limitedBy: endIndex) ?? endIndex
         return self[start..<end]
+    }
+}
+
+// MARK: - Spelling fold (romanized Arabic names)
+
+/// One forgiving comparison for every list of ROMANIZED ARABIC NAMES the app searches: the 114
+/// surahs, the Names of Allah, the reciters (Abu, 2026-09-20: "Rahman versus Rahmaan ... Ayoub,
+/// Ayyoub, Ayub"). There is no standard romanization, so the same name arrives as Yasin, Yaseen,
+/// Ya-Sin and Yacine, and a plain substring test only knows the one spelling the data happens to
+/// carry. Enumerating spellings by hand cannot keep up with that; folding BOTH sides to one key can.
+///
+/// Two keys, tried in order, and ONLY when the ordinary search found nothing, so a query that works
+/// today returns exactly what it returned before:
+///
+///  1. `key`: every vowel run becomes one "a", so length and quality stop mattering (Rahman,
+///     Rahmaan, Rehman; Yusuf, Yousef, Yoosuf), while the consonants and their ORDER still do.
+///  2. `skeleton`: the vowels go entirely, which also forgives an elided one (Baqra for Baqarah).
+///
+/// Both keys fold the consonants people swap: q/k/c, dh/z, th/s, kh/h, gh/g/j, v/w, ph/f, doubled
+/// letters, and a trailing h (Baqarah, Baqara). `y` and `w` count as vowels except at the start of
+/// a word, which is what makes Layl/Lail, Quraysh/Quraish, Kawthar/Kausar/Kevser and Maryam/Mariam
+/// meet. Different NAMES for one thing (Bara'ah for at-Tawbah) are not spelling and cannot be
+/// folded: those live in the curated tables next to each list.
+///
+/// A match must be a whole word, or the START of one (so it still works while typing): never an
+/// arbitrary substring, because a key this lossy is short, and "ab" sits inside half the list.
+enum SpellingFold {
+    private static let articles: Set<String> = [
+        "al", "el", "ul", "il", "ar", "as", "ash", "at", "ath", "ad", "adh", "an", "az", "ats", "adz"
+    ]
+    private static let vowels: Set<Character> = ["a", "e", "i", "o", "u"]
+    /// Longest first: a digraph has to be read before either of its letters is.
+    private static let consonantFolds: [(String, String)] = [
+        ("ph", "f"), ("ck", "k"), ("dh", "z"), ("th", "s"), ("kh", "h"), ("gh", "j"), ("sh", "$"),
+        ("q", "k"), ("c", "k"), ("g", "j"), ("v", "w")
+    ]
+
+    /// The words of `text`: lowercased, accents stripped, apostrophes dropped (they are a letter in
+    /// some romanizations and nothing in others), split on anything that is not a letter or digit.
+    private static func words(_ text: String) -> [String] {
+        var plain = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased()
+        plain = plain.replacingOccurrences(of: "\u{131}", with: "i")   // Turkish dotless i is not an accent
+        var out: [String] = []
+        var current = ""
+        for character in plain {
+            if character == "'" || character == "\u{2019}" || character == "\u{2018}" || character == "`"
+                || character == "\u{2BF}" || character == "\u{2BE}" { continue }
+            if character.isLetter || character.isNumber {
+                current.append(character)
+            } else if !current.isEmpty {
+                out.append(current)
+                current = ""
+            }
+        }
+        if !current.isEmpty { out.append(current) }
+        return out
+    }
+
+    private static func foldWord(_ word: String, keepVowels: Bool) -> String {
+        var folded = word
+        for (from, to) in consonantFolds {
+            folded = folded.replacingOccurrences(of: from, with: to)
+        }
+        var out = ""
+        var previous: Character?
+        let characters = Array(folded)
+        for (index, character) in characters.enumerated() {
+            // y and w lead a syllable only at the very start of a word; anywhere else they are the
+            // tail of a diphthong or a glide, and romanizations disagree about writing them at all.
+            let isVowel = vowels.contains(character) || ((character == "y" || character == "w") && index > 0)
+            let symbol: Character = isVowel ? "a" : character
+            if symbol == previous { continue }   // doubled letters and vowel runs collapse alike
+            previous = symbol
+            if isVowel, !keepVowels, !out.isEmpty { continue }   // the skeleton keeps only a leading vowel
+            out.append(symbol)
+        }
+        // Baqarah / Baqara, Nuh / Nu: a closing h after a vowel is written by some and not others.
+        if out.hasSuffix(keepVowels ? "ah" : "h"), out.count > 2 { out.removeLast() }
+        return out
+    }
+
+    /// The words of a NAME, articles dropped: they are assimilated, glued or omitted at will.
+    private static func nameWords(_ name: String) -> [String] {
+        let all = words(name)
+        return all.count > 1 ? all.filter { !articles.contains($0) } : all
+    }
+
+    /// Everything a query could be the start of, precomputed per name: each word, and the run of
+    /// words from each word onward glued together (so "abdelbaset" meets "Abdul Basit").
+    struct Entry: Equatable {
+        fileprivate let keyed: [String]
+        fileprivate let skeletons: [String]
+
+        init(names: [String]) {
+            var keyed = Set<String>()
+            var skeletons = Set<String>()
+            func forms(of name: String, keepVowels: Bool) -> [String] {
+                let raw = SpellingFold.nameWords(name)
+                let parts = raw.map { SpellingFold.foldWord($0, keepVowels: keepVowels) }
+                var out = parts.indices.flatMap { [parts[$0], parts[$0...].joined()] }
+                // An article glued onto the word ("Alafasy"): also reachable without it ("Afasy").
+                for (index, word) in raw.enumerated() where word.count >= 6 && (word.hasPrefix("al") || word.hasPrefix("el")) {
+                    let bare = SpellingFold.foldWord(String(word.dropFirst(2)), keepVowels: keepVowels)
+                    out.append(bare)
+                    out.append(([bare] + parts[(index + 1)...]).joined())
+                }
+                return out.filter { $0.count >= 2 }
+            }
+            for name in names {
+                keyed.formUnion(forms(of: name, keepVowels: true))
+                skeletons.formUnion(forms(of: name, keepVowels: false))
+            }
+            // Sorted: a Set's order is not stable, and rows that hold an entry compare with `==`.
+            self.keyed = keyed.sorted()
+            self.skeletons = skeletons.sorted()
+        }
+    }
+
+    /// A query folded once, then asked about many entries.
+    struct Query {
+        fileprivate let keyed: [String]
+        fileprivate let skeletons: [String]
+
+        /// `nil` when the text has nothing foldable to say (digits only, Arabic script, too short).
+        init?(_ text: String) {
+            let parts = SpellingFold.words(text)
+            guard !parts.isEmpty, parts.contains(where: { $0.contains(where: \.isLetter) }),
+                  parts.joined().allSatisfy({ $0.isASCII }) else { return nil }
+            var forms = [parts]
+            if parts.count > 1, let first = parts.first, SpellingFold.articles.contains(first) {
+                forms.append(Array(parts.dropFirst()))
+            }
+            // A glued, unassimilated article ("alrahman" for ar-Rahman): try the rest of the word too.
+            if parts.count == 1, let only = parts.first, only.count >= 5,
+               only.hasPrefix("al") || only.hasPrefix("el") {
+                forms.append([String(only.dropFirst(2))])
+            }
+            // `c` has no one reading: k in "Mecca", j in the Turkish "Cuma" and "Casiye", s in the
+            // French "Yacine"; "ch" is sh in "Rachid" and kh in the older Indonesian "Ichlas". Picking
+            // one sent "cebbar" to al-Kabeer instead of al-Jabbar, so a query with a c is asked every
+            // way and the match tiers decide. Names themselves keep the plain reading (c as k).
+            forms = forms.flatMap { form -> [[String]] in
+                guard form.contains(where: { $0.contains("c") }) else { return [form] }
+                var readings: [[String]] = []
+                for digraph in ["sh", "kh"] {
+                    for single in ["k", "j", "s"] {
+                        let reading = form.map {
+                            $0.replacingOccurrences(of: "ch", with: digraph).replacingOccurrences(of: "c", with: single)
+                        }
+                        if !readings.contains(reading) { readings.append(reading) }
+                    }
+                }
+                return readings
+            }
+            func fold(_ keepVowels: Bool) -> [String] {
+                var seen = Set<String>()
+                return forms.map { $0.map { SpellingFold.foldWord($0, keepVowels: keepVowels) }.joined() }
+                    .filter { $0.count >= 2 && seen.insert($0).inserted }
+            }
+            keyed = fold(true)
+            skeletons = fold(false)
+            guard !keyed.isEmpty || !skeletons.isEmpty else { return nil }
+        }
+    }
+
+    enum Strength: Int, Comparable {
+        case skeletonPrefix, skeletonExact, keyPrefix, keyExact
+        static func < (lhs: Strength, rhs: Strength) -> Bool { lhs.rawValue < rhs.rawValue }
+    }
+
+    static func strength(of query: Query, in entry: Entry) -> Strength? {
+        func test(_ needles: [String], _ haystack: [String], exact: Strength, prefix: Strength) -> Strength? {
+            var best: Strength?
+            for needle in needles {
+                if haystack.contains(needle) { return exact }
+                // A prefix this short would be the start of everything.
+                if needle.count >= 3, haystack.contains(where: { $0.hasPrefix(needle) }) { best = prefix }
+            }
+            return best
+        }
+        return test(query.keyed, entry.keyed, exact: .keyExact, prefix: .keyPrefix)
+            ?? test(query.skeletons, entry.skeletons, exact: .skeletonExact, prefix: .skeletonPrefix)
+    }
+
+    /// The items the fold finds, best tier only: when some name IS the query once folded, a merely
+    /// similar start is noise ("ayub" is Ayyub, not also Abu and Abdul). Order within the tier is
+    /// the caller's own.
+    static func matches<Item>(_ text: String, in items: [Item], entry: (Item) -> Entry) -> [Item] {
+        guard let query = Query(text) else { return [] }
+        var best: Strength?
+        var scored: [(Item, Strength)] = []
+        for item in items {
+            guard let strength = strength(of: query, in: entry(item)) else { continue }
+            scored.append((item, strength))
+            if best.map({ strength > $0 }) ?? true { best = strength }
+        }
+        return scored.filter { $0.1 == best }.map(\.0)
     }
 }
 

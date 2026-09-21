@@ -527,12 +527,16 @@ final class TajweedStore {
         return visibleCategories.contains(category)
     }
 
+    /// The snapshot's signature: one "1"/"0" per category, then "#" and the reader's custom rule
+    /// colors (`TajweedColorOverrides`). The paint ops and the painted strings both bake the colors
+    /// in, so a recolored rule has to miss both caches the way a hidden one does.
     private func snapshotVisibility() -> String {
         let visible = Set(TajweedLegendCategory.allCases.filter { settings.isTajweedCategoryVisible($0) })
         visibilityLock.lock()
         visibleCategories = visible
         visibilityLock.unlock()
         return TajweedLegendCategory.allCases.map { visible.contains($0) ? "1" : "0" }.joined()
+            + "#" + TajweedColorOverrides.shared.signature
     }
 
 
@@ -696,7 +700,8 @@ final class TajweedStore {
         let displayText = projection?.displayText ?? text
 
         guard !text.isEmpty else { return nil }
-        guard visibilitySignature.contains("1") else { return nil }
+        // Only the category bits: a custom color's hex after the "#" may well carry a "1".
+        guard visibilitySignature.prefix(TajweedLegendCategory.allCases.count).contains("1") else { return nil }
 
         // Use NSAttributedString for UTF-16 painting. Per-code-unit Swift `Range(NSRange,in: String)` often
         // fails inside Arabic grapheme clusters, so `AttributedString.Index(..., within:)` skipped all colors.
@@ -2317,7 +2322,7 @@ final class TajweedStore {
     private func tajweedVisibilitySignature() -> String {
         TajweedLegendCategory.allCases
             .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
-            .joined(separator: "")
+            .joined(separator: "") + "#" + TajweedColorOverrides.shared.signature
     }
 
     private struct CharacterClusterInfo {
@@ -4546,10 +4551,15 @@ final class QuranData: ObservableObject {
             return exact
         }
 
-        return surahSearchIndex.first(where: {
+        if let loose = surahSearchIndex.first(where: {
             $0.searchableBlob.contains(cleaned) || $0.compactSearchableBlob.contains(compactCleaned)
-        })
-            .flatMap { surah($0.surahID) }
+        }).flatMap({ surah($0.surahID) }) {
+            return loose
+        }
+        // A spelling nothing above carries ("yaseen"): only a folded name that IS the query, and only
+        // when it names one surah; this picks a surah to act on, so a near miss must stay a miss.
+        let folded = SurahSpelling.matches(trimmed, in: quran, exactOnly: true)
+        return folded.count == 1 ? folded.first : nil
     }
 
     func resolveJuzIdentifier(_ raw: String) -> Int? {
@@ -4798,7 +4808,7 @@ final class QuranData: ObservableObject {
             return nil
         }()
 
-        let matches: [Surah] = surahSearchIndex.compactMap { entry -> Surah? in
+        let direct: [Surah] = surahSearchIndex.compactMap { entry -> Surah? in
             if let revelationSearchMode {
                 guard let s = surah(entry.surahID) else { return nil }
                 switch revelationSearchMode {
@@ -4820,6 +4830,13 @@ final class QuranData: ObservableObject {
             }
             return nil
         }
+
+        // Nothing spelled that way: fold the spelling and ask again ("yaseen", "bakara", "rehman").
+        // A fallback only, so a query that already finds a surah returns exactly what it did, and
+        // never for a number or a Makkan/Madinan filter, which are not names at all.
+        let matches = (direct.isEmpty && numericQuery == nil && revelationSearchMode == nil)
+            ? SurahSpelling.matches(trimmed, in: quran)
+            : direct
 
         guard settings.quranSortMode == .revelation else {
             return matches

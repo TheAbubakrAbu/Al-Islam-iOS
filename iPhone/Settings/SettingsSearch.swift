@@ -52,7 +52,7 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
 
 /// The prayer settings' sub-screens.
 enum SettingsAdhanPage: String, CaseIterable, Hashable {
-    case prayerCalculation, travelingMode, optionalPrayers, manualOffsets, customPrayerNames, skyColors
+    case prayerCalculation, travelingMode, optionalPrayers, manualOffsets, customPrayerNames, sky, skyColors
 
     var title: String {
         switch self {
@@ -61,6 +61,7 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
         case .optionalPrayers: return "Optional Prayers"
         case .manualOffsets: return "Manual Offsets"
         case .customPrayerNames: return "Custom Prayer Names"
+        case .sky: return "Sky"
         case .skyColors: return "Sky Colors"
         }
     }
@@ -72,6 +73,7 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
         case .optionalPrayers: return "moon.stars"
         case .manualOffsets: return "slider.horizontal.3"
         case .customPrayerNames: return "character.cursor.ibeam"
+        case .sky: return "sun.horizon.fill"
         case .skyColors: return "paintpalette"
         }
     }
@@ -83,6 +85,7 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
         case .optionalPrayers: return "Duha, Islamic midnight, last third"
         case .manualOffsets: return "Nudge each prayer and the Hijri date"
         case .customPrayerNames: return "Call the prayers what you call them"
+        case .sky: return "Sun arc, moon and stars, skyline, colors"
         case .skyColors: return "Two colors per prayer for the sky"
         }
     }
@@ -90,11 +93,12 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
 
 /// The notification settings' sub-screens.
 enum SettingsNotificationsPage: String, CaseIterable, Hashable {
-    case prayerReminders, sunnahReminders
+    case prayerReminders, naggingMode, sunnahReminders
 
     var title: String {
         switch self {
         case .prayerReminders: return "Prayer Reminders"
+        case .naggingMode: return "Nagging Mode"
         case .sunnahReminders: return "Sunnah Reminders"
         }
     }
@@ -102,13 +106,15 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
     var systemImage: String {
         switch self {
         case .prayerReminders: return "bell.and.waves.left.and.right.fill"
+        case .naggingMode: return "exclamationmark.bubble.fill"
         case .sunnahReminders: return "bell.badge"
         }
     }
 
     var caption: String {
         switch self {
-        case .prayerReminders: return "Per-prayer alerts, early warnings, nagging"
+        case .prayerReminders: return "Per-prayer alerts and early warnings"
+        case .naggingMode: return "Asks \u{201C}Did you pray?\u{201D} until you answer"
         case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
         }
     }
@@ -146,13 +152,14 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
 /// A sub-screen of Islam Settings - the fourth area, for everything that is not the Quran, the prayer
 /// times or the hadith books.
 enum SettingsIslamPage: String, CaseIterable, Hashable {
-    case arabicText, alphabet, libraries
+    case arabicText, alphabet, libraries, sunnahReminders
 
     var title: String {
         switch self {
         case .arabicText: return "Arabic Text"
         case .alphabet: return "Arabic Alphabet"
         case .libraries: return "Libraries"
+        case .sunnahReminders: return "Sunnah Reminders"
         }
     }
 
@@ -161,14 +168,18 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         case .arabicText: return "textformat.ar"
         case .alphabet: return "abc"
         case .libraries: return "square.grid.2x2"
+        case .sunnahReminders: return "bell.badge"
         }
     }
 
     var caption: String {
         switch self {
-        case .arabicText: return "The face for duas, dhikr, names, letters"
+        case .arabicText: return "The face for duas, dhikr, names, letters; Highlight Allah"
         case .alphabet: return "Arabic size, English readings, sukoon"
         case .libraries: return "Grid or rows, Word of the Day, Fajr"
+        // The same words the Quran and Notifications rows carry: it is the same screen, reached
+        // from a third door.
+        case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
         }
     }
 }
@@ -251,7 +262,9 @@ struct SettingsRowLabel: View {
 
 /// Which settings page an entry belongs to: the slice a page's own search bar searches.
 enum SettingsSearchScope: Hashable {
-    case notifications, prayer, quran, hadith, islam, appearance, credits
+    /// `general` is the Settings tab's own root (About You, every Tips & Tricks list): no page
+    /// searches that slice, the root's search covers it.
+    case notifications, prayer, quran, hadith, islam, appearance, credits, general
 
     var placeholder: String {
         switch self {
@@ -262,6 +275,7 @@ enum SettingsSearchScope: Hashable {
         case .islam: return "Search Islam settings"
         case .appearance: return "Search appearance"
         case .credits: return "Search credits"
+        case .general: return "Search settings"
         }
     }
 
@@ -275,6 +289,7 @@ enum SettingsSearchScope: Hashable {
         case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits & Contact"
+        case .general: return "Settings"
         }
     }
 
@@ -288,6 +303,7 @@ enum SettingsSearchScope: Hashable {
         case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits"
+        case .general: return "Settings"
         }
     }
 }
@@ -310,6 +326,17 @@ extension SettingsSearchEntry.Destination {
         case .hadithSettings, .hadithPage: return .hadith
         case .islamSettings, .islamPage: return .islam
         case .appearance: return .appearance
+        case .aboutYou: return .general
+        // A page's own tips belong to that page's search; the door to all of them, to the root's.
+        case .tips(let area):
+            switch area {
+            case .adhan: return .prayer
+            case .notifications: return .notifications
+            case .quran: return .quran
+            case .hadith: return .hadith
+            case .islam: return .islam
+            case .app, .none: return .general
+            }
         case .credits, .credit: return .credits
         }
     }
@@ -325,6 +352,8 @@ extension SettingsSearchEntry {
         + hadithEntries
         + islamEntries
         + appearanceEntries
+        + aboutYouEntries
+        + tipsEntries
         + creditEntries
 
     static func entries(in scope: SettingsSearchScope) -> [SettingsSearchEntry] {
@@ -392,6 +421,9 @@ enum SettingsSearchDestinationView {
         case .islamSettings: SettingsIslamView()
         case .islamPage(let page): SettingsIslamView(openPage: page)
         case .appearance: AppearanceSettingsScreen()
+        case .aboutYou: AboutYouSettingsView()
+        case .tips(let area):
+            if let area { TipsView(area: area) } else { TipsHubView() }
         case .credits: CreditsView(presentedAsSheet: false)
         case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
         }

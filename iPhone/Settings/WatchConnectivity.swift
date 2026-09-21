@@ -481,6 +481,10 @@ extension Settings {
         "customFajrAngle", "customIshaAngle",
         "calculationAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
         "naggingMode", "naggingStartOffset", "adhanNotificationSound", "showPrayerInfo",
+        // The nagging options (2026-09-20). Not `naggingPausedUntil`: a pause is a moment, not a
+        // preference, and a paired watch schedules nothing for it to silence.
+        "naggingInterval", "naggingLastCalls", "naggingPerDeadlineStart", "naggingDeadlineStarts",
+        "naggingFollowUpMinutes", "naggingSound", "naggingLoudLastCall", "naggingAyahInLastCall",
         "shortAdhanFajr", "shortAdhanDhuhr", "shortAdhanAsr", "shortAdhanMaghrib", "shortAdhanIsha",
         "adhanSoundFajr", "adhanSoundDhuhr", "adhanSoundAsr", "adhanSoundMaghrib", "adhanSoundIsha",
         "notificationFajr", "notificationSunrise", "notificationDhuhr", "notificationAsr",
@@ -509,6 +513,9 @@ extension Settings {
         "showTajweedSukoonJazm", "showTajweedMaddNatural2", "showTajweedMaddNaturalMiniature",
         "showTajweedMaddSeparated", "showTajweedMaddConnected", "showTajweedMaddNecessary6",
         "showTajweedMadd246",
+        // The reader's custom rule colors (phone-only editor, the legend's long-description cards):
+        // the watch paints the same rules, so it wears the same colors.
+        "tajweedCustomColors",
         // Sharing / copy
         "shareShowAyahInformation", "shareShowSurahInformation",
         "copyAyahArabic", "copyAyahTransliteration", "copyAyahEnglishSaheeh", "copyAyahEnglishMustafa",

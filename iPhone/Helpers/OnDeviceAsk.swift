@@ -38,6 +38,11 @@ enum OnDeviceAsk {
     /// several times per body (Performance Guide, Phase 6 step 12). Availability only changes on a
     /// model download or a Settings flip, so a short TTL keeps every screen honest.
     static var isAvailable: Bool {
+        #if DEBUG
+        // "-forceAskAIRow": list Ask AI where Apple Intelligence is missing (a simulator), so the
+        // layouts that carry its row and banner can be looked at. The chat itself still cannot run.
+        if ProcessInfo.processInfo.arguments.contains("-forceAskAIRow") { return true }
+        #endif
         guard #available(iOS 26.0, *) else { return false }
         let now = CFAbsoluteTimeGetCurrent()
         if let cached = availabilityCache, now - cached.at < availabilityTTL { return cached.available }

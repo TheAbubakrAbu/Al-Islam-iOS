@@ -3,8 +3,8 @@
 
 Checks the packs ON DISK: they inflate as raw deflate; every topic ayah ref and
 every section range is a real ayah of this app's Quran; sections stay in order;
-and (when the Tilawa sources are reachable) a fresh build reproduces both packs
-byte for byte.
+every one of the 114 surahs carries at least one passage; and (when the Tilawa
+sources are reachable) a fresh build reproduces both packs byte for byte.
 
 Run:  python3 Scripts/verify_quran_themes.py [tilawa-root]
 """
@@ -73,6 +73,17 @@ def main() -> None:
             last_start = start
             if not (row[2] or row[3]):
                 problems.append(f"surah {surah}: titleless section {start}-{end}")
+            if len(row) > 4 and row[4] == 1:
+                # The whole-surah row stands in for an outline, so it must be the only row and
+                # must cover the surah end to end.
+                if len(entry.get("sections", [])) != 1 or (start, end) != (1, counts[surah]):
+                    problems.append(f"surah {surah}: whole-surah row is not the surah's one passage")
+
+    # Every surah is washed by "Highlight Every Passage": al-Fatihah once had no passage at all,
+    # because its only source row is an overview and overviews were dropped.
+    for surah in sorted(counts):
+        if not sections.get(str(surah), {}).get("sections"):
+            problems.append(f"surah {surah}: no passage, so thematic highlighting skips it")
 
     tilawa = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else _builder.DEFAULT_TILAWA
     if (tilawa / "assets" / "quran" / "thematic-topics.json").exists():

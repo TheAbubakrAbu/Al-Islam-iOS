@@ -81,7 +81,7 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "alif",
         showTashkeel: false,
         sound: "a",
-        englishSound: "Alif carries the sound of whatever mark sits on it: “a” as in “father” when long.",
+        englishSound: "Alif has no sound of its own: it stretches the fatha before it into a long “aa”, like the a in “father”.",
         weight: .followsPrevious,
         weightRule: "Alif has no weight of its own; it follows the heaviness or lightness of the previous letter."
     ),

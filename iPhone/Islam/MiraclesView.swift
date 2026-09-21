@@ -912,7 +912,9 @@ struct MiracleProse: View {
         self.links = links
         self.style = style
         let accent = Settings.shared.accentColor.color
-        let key = "\(text.hashValue):\(links.count):\(Settings.shared.accentColor.rawValue)" as NSString
+        // The hex rides beside the case: `.custom` resolves through it, so the case alone does not
+        // move while the Appearance color picker is dragged and the memo kept the old color.
+        let key = "\(text.hashValue):\(links.count):\(Settings.shared.accentColor.rawValue):\(Settings.shared.customAccentColorHex)" as NSString
         if let cached = Self.memo.object(forKey: key) {
             attributed = cached.value
         } else {

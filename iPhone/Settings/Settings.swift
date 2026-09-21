@@ -344,6 +344,36 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 }
             }
         }
+        // "-seedInt key=30[,key=5…]" - the integer twin of -seedBool, for Int @AppStorage settings
+        // (e.g. `-seedInt naggingStartOffset=60,naggingInterval=20,naggingFollowUpMinutes=30`).
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-seedInt"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            for pair in ProcessInfo.processInfo.arguments[idx + 1].split(separator: ",") {
+                let kv = pair.split(separator: "=", maxSplits: 1)
+                if kv.count == 2, let value = Int(kv[1]) {
+                    UserDefaults.standard.set(value, forKey: String(kv[0]))
+                }
+            }
+        }
+        // "-seedNagStarts shurooq=20,maghrib=90" - per-deadline nagging leads (`NaggingDeadline.id`
+        // to minutes), which live in one JSON blob no other seed can write. Also switches the
+        // per-deadline mode on, since the leads are ignored without it.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-seedNagStarts"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            var starts: [String: Int] = [:]
+            for pair in ProcessInfo.processInfo.arguments[idx + 1].split(separator: ",") {
+                let kv = pair.split(separator: "=", maxSplits: 1)
+                if kv.count == 2, let value = Int(kv[1]) { starts[String(kv[0])] = value }
+            }
+            UserDefaults.standard.set((try? JSONEncoder().encode(starts)) ?? Data(), forKey: "naggingDeadlineStarts")
+            UserDefaults.standard.set(true, forKey: "naggingPerDeadlineStart")
+        }
+        // "-showAboutYou" - ask the About You question on this launch even though it was answered
+        // (and even in a scripted run, see `RootAppearance.needsAboutYou`). "-aboutYouPick <raw>"
+        // and "-aboutYouPage 2" then preselect an answer and land on the second page.
+        if ProcessInfo.processInfo.arguments.contains("-showAboutYou") {
+            UserDefaults.standard.set(0, forKey: "aboutYouVersionSeen")
+        }
         // "-seedString key=value[,key=value…]" - the string twin of -seedBool, for raw-string
         // @AppStorage settings (e.g. `-seedString islamArabicFontFace=kufi`). Values may not contain
         // commas or "=".
@@ -390,6 +420,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     case "hideEnglishInArabicLetters": shared.hideEnglishInArabicLetters = kv[1] == "1"
                     case "quranicSukoonInLetterPractice": shared.quranicSukoonInLetterPractice = kv[1] == "1"
                     case "showDuha": shared.showDuha = kv[1] == "1"
+                    // The Appearance accent picker, headlessly: "accentColor=red", or "accentColor=custom"
+                    // with "customAccentColorHex=FF2D55" to move the custom stop. Anything on screen still
+                    // in the old color afterwards is a stale accent reader.
+                    case "accentColor": shared.accentColor = AccentColor(rawValue: kv[1]) ?? shared.accentColor
+                    case "customAccentColorHex": shared.customAccentColorHex = kv[1]
+                    // A tajweed rule's custom color, through the setter the legend's long-description
+                    // cards use: "tajweedColor=hafs.qalqalah:FF00FF" ("hafs.<category>" or
+                    // "riwayah.<rule key>"; a hex of "-" returns the rule to its canonical color). An
+                    // ayah on screen still in the old color afterwards is a stale equatable row or a
+                    // stale paint cache.
+                    case "tajweedColor":
+                        let parts = kv[1].split(separator: ":", maxSplits: 1).map(String.init)
+                        if parts.count == 2 {
+                            shared.setTajweedCustomColor(parts[1] == "-" ? nil : parts[1], forKey: parts[0])
+                        }
                     // The reader's riwayah chip, headlessly. Canonical tags ("Warsh an Nafi"); pass
                     // "Hafs" to return to the default - a step with an empty value never reaches here
                     // (the split above drops empty pieces).
@@ -1025,17 +1070,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// what you forgot to mark at the time - and future days are already blocked a day at a time.
     @AppStorage("trackerRequiresPrayerTime") var trackerRequiresPrayerTime: Bool = false
 
-    /// Set when a nagging notification is tapped: the prayer tab asks "Did you pray X?" and a yes
-    /// marks the tracker and silences the rest of that cascade.
-    struct PendingNagQuestion: Identifiable, Equatable {
-        let id = UUID()
-        /// The prayer being asked about (the one whose window is ending).
-        let prayerName: String
-        /// The upcoming prayer whose identifier the nag cascade is scheduled under.
-        let cascadePrayerName: String
-    }
-    @Published var pendingNagQuestion: PendingNagQuestion?
-
     // MARK: - [Al-Adhan] Prayer - live state & hijri (app-storage persistence)
 
     @AppStorage("hijriDate") private var hijriDateData: String?
@@ -1163,6 +1197,55 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("naggingStartOffset") var naggingStartOffset: Int = 30 {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
+
+    // The nagging options added on 2026-09-20 (Abu: "make nagging mode more customizable"). Every
+    // default below reproduces what the mode did before they existed (every 15 minutes, last calls
+    // at 10 and 5, one start time for all, the alert tone, nothing after the adhan), so nobody's
+    // reminders change until they change a setting. The cascade arithmetic that reads them is
+    // `naggingCascade(forCascadeBefore:)` in SettingsAdhan.swift.
+
+    /// Minutes between reminders while a cascade runs down to its deadline.
+    @AppStorage("naggingInterval") var naggingInterval: Int = 15 {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// The last calls right before the deadline: raw `NaggingLastCalls` ("both" = 10 and 5 minutes).
+    @AppStorage("naggingLastCalls") var naggingLastCallsRaw: String = "both" {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// Off: every deadline starts `naggingStartOffset` minutes ahead. On: each deadline reads its own
+    /// start from `naggingDeadlineStartsData`, falling back to the shared one where none is stored.
+    @AppStorage("naggingPerDeadlineStart") var naggingPerDeadlineStart: Bool = false {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// JSON `[deadline id: minutes]` (ids are `NaggingDeadline.id`: shurooq, asr, maghrib, isha,
+    /// midnight, fajr). Read through `naggingStart(forDeadline:)`.
+    @AppStorage("naggingDeadlineStarts") var naggingDeadlineStartsData: Data = Data() {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// One "Have you prayed X yet?" this many minutes AFTER a prayer begins, while it is still
+    /// unmarked. 0 is off. The deadline cascades only speak up when a window is about to close;
+    /// this is the nudge to pray early instead.
+    @AppStorage("naggingFollowUpMinutes") var naggingFollowUpMinutes: Int = 0 {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// The tone the nags play: an alert tone id, or "" to follow the Alert Tone setting.
+    @AppStorage("naggingSound") var naggingSound: String = "" {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// The final reminder of every cascade plays Alarm, whatever the other nags play.
+    @AppStorage("naggingLoudLastCall") var naggingLoudLastCall: Bool = false {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// Appends a verse about the prayer to the final reminder (`Settings.nagAyat`).
+    @AppStorage("naggingAyahInLastCall") var naggingAyahInLastCall: Bool = false {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+    /// Epoch seconds the nags stay silent until; 0 when not paused. Prayer-time notifications are
+    /// untouched by a pause, only the "Did you pray?" reminders are held back.
+    @AppStorage("naggingPausedUntil") var naggingPausedUntil: Double = 0 {
+        didSet { self.fetchPrayerTimesDebounced(notification: true) }
+    }
+
     @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
         didSet {
             #if os(iOS)
@@ -2074,6 +2157,28 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         riwayahTajweedHiddenRules = set.sorted().joined(separator: ",")
     }
 
+    /// The reader's own tajweed rule colors, for Hafs and every riwayah: "key=RRGGBB" comma-joined and
+    /// key-sorted (`TajweedColorOverrides` owns the format and the keys). Changed only from a rule's
+    /// long-description card in the Tajweed Legend.
+    @AppStorage("tajweedCustomColors") var tajweedCustomColors: String = ""
+
+    /// Sets (`hex` = "RRGGBB") or clears (nil) one rule's custom color. The stored string publishes,
+    /// and every signature that bakes tajweed colors in folds it, so both readers repaint.
+    func setTajweedCustomColor(_ hex: String?, forKey key: String) {
+        let next = TajweedColorOverrides.shared.encoded(setting: hex, forKey: key)
+        guard next != tajweedCustomColors else { return }
+        tajweedCustomColors = next
+        TajweedColorOverrides.shared.adopt(raw: next)
+    }
+
+    /// Returns these rules to their canonical colors.
+    func resetTajweedCustomColors(forKeys keys: [String]) {
+        let next = TajweedColorOverrides.shared.encoded(clearing: keys)
+        guard next != tajweedCustomColors else { return }
+        tajweedCustomColors = next
+        TajweedColorOverrides.shared.adopt(raw: next)
+    }
+
     @AppStorage("showArabicText") var showArabicText: Bool = true
     /// ON by default, like the tajweed colors (user rule): the divine name reads red out of the box.
     /// A user who explicitly turned it off has a stored false, which this default never overrides.
@@ -2230,6 +2335,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// until the user actually flips it.
     /// ON by default, matching the Quran toggle's new default (user rule).
     @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = true
+    /// The Islam tab's own "Highlight Allah" toggle (Abu, 2026-09-20): the duas, the dhikr, the
+    /// tasbih, the daily cards and the quotes on the article pages. A third switch for the same
+    /// reason the hadith one exists, each area of the app decides for itself; ON by default like the
+    /// other two. Set in Islam Settings, Arabic Text.
+    @AppStorage("highlightAllahNamesIslam") var highlightAllahNamesIslam: Bool = true
     /// Hadith text sizes, independent of the Quran's own sliders.
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4) * Settings.readerDefaultScale).rounded()
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize) * Settings.readerDefaultScale).rounded()
@@ -2745,6 +2855,20 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // MARK: - [Shared] App-wide appearance & misc @AppStorage
 
     @AppStorage("THEfirstLaunch") var firstLaunch = true
+
+    // About You (2026-09-20): the one question the app asks everyone, new or not, once: raised
+    // Muslim, revert, just getting started, or learning about Islam (`UserBackground`,
+    // AboutYouView.swift). It is asked by a root stage of its own, after the splash for a new
+    // install and straight after the launch screen for everyone who already had the app, which is
+    // why "seen" is a version and not a Bool: bump `aboutYouCurrentVersion` and it is asked again.
+    static let aboutYouCurrentVersion = 1
+    @AppStorage("aboutYouVersionSeen") var aboutYouVersionSeen: Int = 0
+    /// Raw `UserBackground`; "" until answered, and again if the reader chooses not to say.
+    @AppStorage("userBackground") var userBackgroundRaw: String = ""
+    /// The Islam tab's Start Here guide, put away by the reader (About You brings it back).
+    @AppStorage("startHereHidden") var startHereHidden: Bool = false
+    /// The Start Here steps already opened, comma separated.
+    @AppStorage("startHereVisited") var startHereVisitedRaw: String = ""
 
     @AppStorage("hapticOn") var hapticOn: Bool = true
 

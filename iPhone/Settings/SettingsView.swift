@@ -35,6 +35,10 @@ struct SettingsSearchEntry: Identifiable {
         /// the hadith books (the Arabic face, the alphabet controls, the Al-Islam tab itself).
         case islamSettings
         case appearance
+        /// About You: who the reader says they are, and the Start Here guide it switches on.
+        case aboutYou
+        /// Tips & Tricks: one area's list, or all six behind one door when nil.
+        case tips(TipArea?)
         case credits
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
         case credit(String)
@@ -60,6 +64,8 @@ struct SettingsSearchEntry: Identifiable {
             case .hadithSettings: return "text.book.closed.fill"
             case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
+            case .aboutYou: return "person.crop.circle.fill"
+            case .tips: return "lightbulb.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
             case .notificationsPage(let page): return page.systemImage
@@ -85,6 +91,19 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var confirmEraseEverything = false
     @State private var settingsSearchText = ""
+
+    #if os(iOS)
+    /// The featured card that was tapped. ONE programmatic push serves every card, because several
+    /// links inside one List row all fire on any tap (see `SettingsSpotlightSection`).
+    @State private var spotlightTarget: AppTip?
+    @State private var openSpotlight = false
+
+    /// `pushDestination` is `navigationDestination(isPresented:)`, which needs iOS 16.
+    private static var canPushProgrammatically: Bool {
+        if #available(iOS 16.0, *) { return true }
+        return false
+    }
+    #endif
 
     #if os(iOS)
     // Split-view multitasking (Slide Over, 1/3 Split View, narrow Stage Manager windows) makes an iPad
@@ -261,6 +280,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
+            .pushDestination(isPresented: $openSpotlight) {
+                if let destination = spotlightTarget?.destination { searchDestinationView(destination) }
+            }
             #if DEBUG
             // `-openCredit <CreditItem.id>`: what a credit row in the search results does, headlessly.
             .debugPushDestination(isPresented: $debugOpenProfile) { ProfileView() }
@@ -304,6 +326,7 @@ struct SettingsView: View {
     private static var debugSettingsPage: SettingsSearchEntry.Destination? {
         switch launchValue("-settingsOpen") {
         case "prayer": return .prayerSettings
+        case "prayerSky": return .prayerPage(.sky)
         case "notifications": return .notifications
         case "quran": return .quranSettings
         case "hadith": return .hadithSettings
@@ -312,7 +335,17 @@ struct SettingsView: View {
         case "islamArabic": return .islamPage(.arabicText)
         case "islamAlphabet": return .islamPage(.alphabet)
         case "islamLibraries": return .islamPage(.libraries)
+        case "islamReminders": return .islamPage(.sunnahReminders)
         case "prayerReminders": return .notificationsPage(.prayerReminders)
+        case "nagging": return .notificationsPage(.naggingMode)
+        case "aboutYou": return .aboutYou
+        case "tips": return .tips(nil)
+        case "tipsAdhan": return .tips(.adhan)
+        case "tipsNotifications": return .tips(.notifications)
+        case "tipsQuran": return .tips(.quran)
+        case "tipsHadith": return .tips(.hadith)
+        case "tipsIslam": return .tips(.islam)
+        case "tipsApp": return .tips(.app)
         case "appearance": return .appearance
         default: return nil
         }
@@ -375,6 +408,8 @@ struct SettingsView: View {
         #if os(iOS)
         Section {
             ProfileSettingsRow()
+            // Who the reader says they are (the welcome's one question), changeable here.
+            AboutYouSettingsRow()
         }
         #endif
 
@@ -389,6 +424,15 @@ struct SettingsView: View {
             settingsHubSection
             #endif
         }
+
+        // Front and center (Abu, 2026-09-20): the app's unusual settings as cards, directly under the
+        // hub, each opening the screen that owns it, with every Tips & Tricks list one row below.
+        #if os(iOS)
+        SettingsSpotlightSection(rows: split || !Self.canPushProgrammatically) { tip in
+            spotlightTarget = tip
+            openSpotlight = true
+        }
+        #endif
 
         appearanceSection
         resetSection
@@ -577,7 +621,7 @@ struct SettingsView: View {
             // The fourth area, for what belongs to none of the three above. It wears BOTH brand
             // colours rather than one of its own, because it is not one tab (see `SettingsTint.islam`).
             resourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                         subtitle: "Arabic font, alphabet, libraries, daily",
+                         subtitle: "Arabic font, alphabet, libraries, reminders",
                          tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary) {
                 SettingsIslamView()
             }
@@ -598,7 +642,7 @@ struct SettingsView: View {
             splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
                               subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
             splitResourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                              subtitle: "Arabic font, alphabet, libraries, daily",
+                              subtitle: "Arabic font, alphabet, libraries, reminders",
                               tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary, value: .islamSettings)
         }
     }
@@ -704,7 +748,7 @@ struct SettingsView: View {
         Button {
             leaveReview()
         } label: {
-            toolLabel("Leave a Review", systemImage: "star.bubble.fill", chipTint: Color(red: 0.98, green: 0.72, blue: 0.20))
+            toolLabel("Leave a Review", systemImage: "star.bubble.fill")
         }
         .contextMenu {
             Text("Review")

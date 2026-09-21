@@ -243,7 +243,11 @@ struct SurahContextMenu: View {
 
                 quranPlayer.playSurah(surahNumber: surahID, surahName: surahName)
             } label: {
+                #if os(iOS)
+                ReciterCaptionedMenuLabel(title: "Play Surah", systemImage: "play.fill")
+                #else
                 Label("Play Surah", systemImage: "play.fill")
+                #endif
             }
         }
 

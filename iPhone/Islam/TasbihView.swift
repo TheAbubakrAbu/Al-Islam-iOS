@@ -535,7 +535,8 @@ struct ActiveTasbihCard: View {
                 // free-count LABEL the user typed is their own text, not Arabic, so it stays in the UI face.
                 // `usesCustomArabicFace` is false when the reader picked the Basic font, in which case the
                 // rounded system face is correct and the design opt-out must not fire.
-                Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Other Dhikr" : freeLabel))
+                Text.islamArabic(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Other Dhikr" : freeLabel),
+                                 highlightAllah: settings.highlightAllahNamesIslam)
                     .font(
                         selectedDhikr != nil && usesCustomArabicFace
                             ? Font.arabic(settings.nonQuranArabicFontName, size: 26, relativeTo: .title3)
@@ -737,7 +738,7 @@ struct TasbihRow: View {
 
     private var textColumn: some View {
         VStack(alignment: .leading) {
-            Text(tasbih.arabicText)
+            Text.islamArabic(tasbih.arabicText, highlightAllah: settings.highlightAllahNamesIslam)
                 // The ISLAM-tab Arabic face, not the Quran glyph font: the Quran faces carry a huge
                 // line box (phantom padding above and below) and shape into runs that truncate
                 // instead of wrapping in a narrow column.

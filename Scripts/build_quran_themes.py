@@ -19,6 +19,8 @@ ThematicTopics: {"topics": [ {id, name, description, domain, category,
 SurahSections:  {"1": {"overview": "<english overview or ''>",
                        "sections": [[start, end, "<english>", "<arabic>"], ...]},
                  ...}                                        - sections in order.
+                 A fifth element, 1, marks the whole-surah row of a surah that has no other
+                 passage (1, 42, 44): the wash and the passage list use it, the outline skips it.
 
 RUN:  python3 Scripts/build_quran_themes.py [tilawa-root]
 Fails, writing nothing, on any ayah reference outside this app's Quran.
@@ -46,6 +48,12 @@ QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
 OUT_TOPICS = ROOT / "Resources" / "Data" / "Quran" / "ThematicTopics.json.xz"
 OUT_SECTIONS = ROOT / "Resources" / "Data" / "Quran" / "SurahSections.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
+
+# Quranpedia's placeholder where a surah has no written overview, and the title the whole-surah
+# passage wears in its place (Tilawa's "reader.sections.kindOverview" label). The classifier reads
+# "overview" as the signs of Allah, so the wash matches Tilawa's.
+GENERIC_OVERVIEW = "surah overview"
+WHOLE_SURAH_TITLE = "Surah Overview"
 
 
 def ayah_counts() -> dict[int, int]:
@@ -115,6 +123,7 @@ def main() -> None:
             continue
         overview = ""
         body: list[list] = []
+        whole: list | None = None
         # Sorted by position, not the source's `order`: quranpedia occasionally numbers a
         # thematically-grouped passage out of reading order (surah 7), and an outline is read
         # top to bottom against the text.
@@ -127,12 +136,26 @@ def main() -> None:
             english = (row.get("titleEn") or "").strip()
             arabic = (row.get("title") or "").strip()
             if row.get("kind") == "overview":
-                # The whole-surah summary reads as a lead paragraph, not a range row.
+                # The whole-surah summary reads as a lead paragraph, not a range row. The source's
+                # placeholder ("Surah overview", in both languages) says nothing and is dropped.
+                if english.lower() == GENERIC_OVERVIEW:
+                    english = ""
+                if arabic.lower() == GENERIC_OVERVIEW or arabic.isascii():
+                    arabic = ""
                 overview = english or overview
+                whole = [start, end, english or WHOLE_SURAH_TITLE, arabic, 1]
                 continue
             if not english and not arabic:
                 continue
             body.append([start, end, english, arabic])
+            section_rows += 1
+        if not body and whole is not None:
+            # A surah whose ONLY row is its overview (al-Fatihah, ash-Shura, ad-Dukhan) is one
+            # passage in Tilawa, and its thematic highlighting washes it as one. Dropping the row
+            # left these three surahs with no passage at all, so "Highlight Every Passage" skipped
+            # them. The trailing 1 marks the row as the whole-surah one: the outline already leads
+            # with the overview, so it does not print the row again.
+            body.append(whole)
             section_rows += 1
         if overview or body:
             sections_out[str(surah)] = {"overview": overview, "sections": body}

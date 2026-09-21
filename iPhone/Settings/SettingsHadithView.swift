@@ -92,6 +92,8 @@ struct SettingsHadithView: View {
     /// page-search scaffold, so "font" here finds the size sliders.
     private var settingsList: some View {
         SettingsScopedSearch(scope: .hadith, resolve: resolveSearchDestination) {
+            TipsSection(area: .hadith, resolve: resolveSearchDestination)
+
             Section(header: Text("READING")) {
                 hadithPageLink(.readingView) { readingViewDestination }
                 hadithPageLink(.arabicText) { arabicTextDestination }

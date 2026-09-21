@@ -1055,6 +1055,8 @@ final class QuranPlayer: ObservableObject {
             return reciters.randomElement()
         }
 
+        // A saved reciter the catalog no longer carries reverts to the default instead of failing.
+        settings.revertToDefaultReciterIfMissing()
         return settings.resolvedSelectedReciterIgnoringRandom()
     }
 

@@ -1714,7 +1714,7 @@ struct QuranView: View {
         }
         .sheet(isPresented: $showReciterPickerSheet) {
             NavigationView {
-                ReciterListView(dismissAfterSelectingReciter: true, autoScrollToInitialSelection: false)
+                ReciterListView(dismissAfterSelectingReciter: true)
                     .environmentObject(settings)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {

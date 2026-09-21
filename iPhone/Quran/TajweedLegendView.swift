@@ -714,6 +714,40 @@ struct TajweedLegendView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// "More Detail", the one place a rule's color changes, and the way back to the canonical colors
+    /// for the rules listed under it (shown only once one of them has been recolored).
+    @ViewBuilder
+    private func moreDetailHeader(colorKeys: [String]) -> some View {
+        // Read through Settings so the button appears and leaves with the stored string.
+        let _ = settings.tajweedCustomColors
+        let customized = colorKeys.filter { TajweedColorOverrides.shared.isCustomized($0) }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("More Detail")
+                    .font(.headline)
+
+                Spacer(minLength: 8)
+
+                if !customized.isEmpty {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation { settings.resetTajweedCustomColors(forKeys: customized) }
+                    } label: {
+                        Label("Reset Colors", systemImage: "arrow.counterclockwise")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(settings.accentColor.color)
+                }
+            }
+
+            Text("Tap a card to show or hide its rule. Each rule's color can be changed from its card here.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     @ViewBuilder
     private func detailItemCard(_ item: TajweedLegendCategory) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -753,6 +787,14 @@ struct TajweedLegendView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            TajweedRuleColorRow(
+                colorKey: TajweedColorOverrides.key(for: item),
+                ruleName: item.transliteration,
+                current: item.color,
+                customCaption: "Your color",
+                defaultCaption: "Default color"
+            )
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -854,7 +896,11 @@ struct TajweedLegendView: View {
                     }
                     .tint(settings.accentColor.color)
 
-                    Text("If you turn it off, go to Quran Settings → Arabic Text to turn it back on")
+                    // Lit themes keep the reader's Legend button up on their own, so with them on this
+                    // switch stays one tap away and the trip to Settings is not needed.
+                    Text(ThemeHighlights.shared.isEmpty
+                         ? "If you turn it off, go to Quran Settings → Arabic Text to turn it back on"
+                         : "Theme highlights keep the Legend button in the reader, so you can turn this back on from here")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -899,8 +945,7 @@ struct TajweedLegendView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("More Detail")
-                            .font(.headline)
+                        moreDetailHeader(colorKeys: entries.map(\.colorKey))
 
                         QiraahTajweedLegendView(tag: riwayahTag)
                     }
@@ -931,8 +976,7 @@ struct TajweedLegendView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("More Detail")
-                            .font(.headline)
+                        moreDetailHeader(colorKeys: TajweedLegendCategory.allCases.map { TajweedColorOverrides.key(for: $0) })
 
                         ForEach(sections) { section in
                             VStack(alignment: .leading, spacing: 10) {
@@ -1048,6 +1092,16 @@ struct QiraahTajweedLegendView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            // A rule key means the same thing in every pack, so the pick follows the rule, not the
+            // riwayah: the caption says so, because the change reaches past the legend on screen.
+            TajweedRuleColorRow(
+                colorKey: entry.colorKey,
+                ruleName: entry.english,
+                current: entry.color,
+                customCaption: "Your color, in every riwayah that marks this rule",
+                defaultCaption: "The printed mushaf's color"
+            )
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -1064,6 +1118,97 @@ struct QiraahTajweedLegendView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(entry.color.opacity(0.2), lineWidth: 1)
         )
+    }
+}
+
+/// The color control at the foot of a rule's long-description card: the ONLY place a tajweed rule's
+/// color changes (Abu, 2026-09-20), for the Hafs categories and the riwayah rules alike.
+///
+/// The system picker reports every step of a drag across its spectrum. Each stored change republishes
+/// Settings and sends both readers to repaint, so the pick is committed once the hand has rested
+/// (`commitDelay`); the well itself follows the finger meanwhile.
+struct TajweedRuleColorRow: View {
+    @ObservedObject private var settings = Settings.shared
+
+    /// `TajweedColorOverrides` key of the rule.
+    let colorKey: String
+    /// Names the rule for VoiceOver ("Color for Qalqalah").
+    let ruleName: String
+    /// The color the rule wears now, custom or canonical.
+    let current: Color
+    let customCaption: String
+    let defaultCaption: String
+
+    @State private var draft: Color?
+    @State private var commit: Task<Void, Never>?
+
+    private static let commitDelay: UInt64 = 250_000_000
+
+    private var isCustom: Bool {
+        // Read through Settings so the caption and Reset follow the stored string.
+        let _ = settings.tajweedCustomColors
+        return draft != nil || TajweedColorOverrides.shared.isCustomized(colorKey)
+    }
+
+    private var selection: Binding<Color> {
+        Binding(
+            get: { draft ?? current },
+            set: { picked in
+                draft = picked
+                commit?.cancel()
+                commit = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: Self.commitDelay)
+                    guard !Task.isCancelled else { return }
+                    settings.setTajweedCustomColor(picked.hexString, forKey: colorKey)
+                    draft = nil
+                }
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider()
+
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Color")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(isCustom ? customCaption : defaultCaption)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                if isCustom {
+                    Button {
+                        settings.hapticFeedback()
+                        commit?.cancel()
+                        draft = nil
+                        withAnimation { settings.setTajweedCustomColor(nil, forKey: colorKey) }
+                    } label: {
+                        Text("Reset")
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(settings.accentColor.color)
+                    .accessibilityLabel("Reset the color for \(ruleName)")
+                }
+
+                ColorPicker("Color for \(ruleName)", selection: selection, supportsOpacity: false)
+                    .labelsHidden()
+            }
+        }
+        // The card around this row toggles the rule on a tap; a near miss beside the color well must
+        // not hide the rule the reader is busy recoloring.
+        .contentShape(Rectangle())
+        .onTapGesture {}
     }
 }
 

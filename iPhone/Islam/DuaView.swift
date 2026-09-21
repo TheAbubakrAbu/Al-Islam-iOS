@@ -1689,7 +1689,7 @@ struct HisnDuaOfTheDayCard: View {
             .font(.caption2.weight(.bold))
             .foregroundColor(settings.accentColor.color)
 
-            Text(entry.arabic)
+            Text.islamArabic(entry.arabic, highlightAllah: settings.highlightAllahNamesIslam)
                 .font(.custom(settings.nonQuranArabicFontName, size: 24))
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)

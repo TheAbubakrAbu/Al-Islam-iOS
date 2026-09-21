@@ -953,7 +953,7 @@ struct IstikharahView: View {
                 }
 
                 Section(header: ArticleHeader("THE ARABIC")) {
-                    Text(verbatim: "اللَّهُمَّ إِنِّي أَستَخِيرُكَ بِعِلمِكَ وَأَستَقدِرُكَ بِقُدرَتِكَ، وَأَسأَلُكَ مِن فَضلِكَ العَظِيمِ، فَإِنَّكَ تَقدِرُ وَلاَ أَقدِرُ، وَتَعلَمُ وَلاَ أَعلَمُ، وَأَنتَ عَلاَّمُ الغُيُوبِ. اللَّهُمَّ إِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ خَيرٌ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاقدُرهُ لِي وَيَسِّرهُ لِي ثُمَّ بَارِك لِي فِيهِ، وَإِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ شَرٌّ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاصرِفهُ عَنِّي وَاصرِفنِي عَنهُ، وَاقدُر لِي الخَيرَ حَيثُ كَانَ ثُمَّ أَرضِنِي بِهِ")
+                    Text.islamArabic("اللَّهُمَّ إِنِّي أَستَخِيرُكَ بِعِلمِكَ وَأَستَقدِرُكَ بِقُدرَتِكَ، وَأَسأَلُكَ مِن فَضلِكَ العَظِيمِ، فَإِنَّكَ تَقدِرُ وَلاَ أَقدِرُ، وَتَعلَمُ وَلاَ أَعلَمُ، وَأَنتَ عَلاَّمُ الغُيُوبِ. اللَّهُمَّ إِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ خَيرٌ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاقدُرهُ لِي وَيَسِّرهُ لِي ثُمَّ بَارِك لِي فِيهِ، وَإِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ شَرٌّ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاصرِفهُ عَنِّي وَاصرِفنِي عَنهُ، وَاقدُر لِي الخَيرَ حَيثُ كَانَ ثُمَّ أَرضِنِي بِهِ", highlightAllah: appearance.highlightAllahIslam)
                         .font(appearance.islamArabicFont(base: 22, relativeTo: .title2))
                         .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                         .lineSpacing(6)
@@ -1532,7 +1532,7 @@ struct BecomeMuslimView: View {
                 Section(header: ArticleHeader("THE TESTIMONY")) {
                     Text(verbatim: "Say, understanding and meaning it:")
                         .font(.body)
-                    Text(verbatim: "أَشهَدُ أَن لَا إِلَٰهَ إِلَّا اللَّهُ، وَأَشهَدُ أَنَّ مُحَمَّدًا رَسُولُ اللَّهِ")
+                    Text.islamArabic("أَشهَدُ أَن لَا إِلَٰهَ إِلَّا اللَّهُ، وَأَشهَدُ أَنَّ مُحَمَّدًا رَسُولُ اللَّهِ", highlightAllah: appearance.highlightAllahIslam)
                         .font(appearance.islamArabicFont(base: 24, relativeTo: .title2))
                         .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                         .multilineTextAlignment(.trailing)

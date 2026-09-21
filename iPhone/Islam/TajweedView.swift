@@ -19,6 +19,7 @@ struct TajweedFoundationsView: View {
         "Lip Movement",
         "Tajweed Hints in the Mushaf",
         "Makhaarij (Articulation)",
+        "Sifaat (Letter Qualities)",
         "Heavy and Light",
         "Shams and Qamar: Al",
         "Madd (Elongation)",
@@ -111,6 +112,29 @@ struct TajweedFoundationsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 #endif
+            }
+
+            // Tajweed is about letters before it is about rules, so the alphabet's own index of them
+            // is offered here too: where each is made, how it sounds, which rules it triggers.
+            Section {
+                NavigationLink(destination: LazyDestination { LetterFamiliesView() }) {
+                    ArabicTopicLinkLabel(
+                        specimen: "ص س ز",
+                        title: "Letter Families",
+                        caption: "Every letter by makhraj, sifaat and rule, in Arabic and English",
+                        preview: "الهَمس  الصَّفِير  القَلقَلَة  الغُنَّة"
+                    )
+                }
+
+                NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) {
+                    ArabicTopicLinkLabel(
+                        specimen: "س ص",
+                        title: "Sound-Alike Letters",
+                        caption: "The pairs people mix up, side by side, with what separates them"
+                    )
+                }
+            } header: {
+                Text("THE LETTERS")
             }
 
             Section("OVERVIEW") {
@@ -274,6 +298,11 @@ struct TajweedFoundationsView: View {
             TajweedInMushafView()
         } else if topic == "Makhaarij (Articulation)" {
             TajweedMakharijView()
+        } else if topic == "Sifaat (Letter Qualities)" {
+            // The qualities shelf of the alphabet's Letter Families: the five opposing pairs and the
+            // qualities with no opposite, every one named in Arabic and English (Abu, 2026-09-20).
+            LetterFamiliesView(title: "Sifaat", axes: LetterAxis.Shelf.qualities.axes)
+                .openScreen(.letterFamilies, id: "sifaat")
         } else if topic == "Heavy and Light" {
             TajweedHeavyLightView()
         } else if topic == "Shams and Qamar: Al" {
@@ -730,6 +759,8 @@ private struct TajweedInMushafView: View {
 
 private struct TajweedMakharijView: View {
     @ObservedObject var settings = Settings.shared
+    /// The letter a tile asked to open. The tiles share List rows, so the List owns the one destination.
+    @State private var door: ArabicDoor?
 
     private var arabicHeadlineFont: Font {
         Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -809,10 +840,8 @@ private struct TajweedMakharijView: View {
                 Text("Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ء هـ ع ح غ خ")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.halq.letters, tint: LetterTraits.halq.legendColor) { door = .letter($0) }
 
                 Text("Sub-Zones (for awareness)")
                     .font(.subheadline.weight(.semibold))
@@ -914,10 +943,8 @@ private struct TajweedMakharijView: View {
                 Text("Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ب م ف")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.shafatan.letters, tint: LetterTraits.shafatan.legendColor) { door = .letter($0) }
 
                 Text("How They Work")
                     .font(.subheadline.weight(.semibold))
@@ -926,6 +953,7 @@ private struct TajweedMakharijView: View {
                     Text("ب: full lip closure")
                     Text("م: lip closure + nasal sound")
                     Text("ف: upper teeth lightly touch lower lip")
+                    Text("و: both lips rounded and pushed forward, never closing (as a consonant; the long vowel waaw comes from the empty space of the mouth)")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -964,16 +992,114 @@ private struct TajweedMakharijView: View {
                     .font(.body)
                     .foregroundColor(settings.accentColor.color)
             }
+
+            // The same families the Arabic Alphabet groups its letters by, named in both languages,
+            // so the rule and the letters it belongs to are one tap apart in either direction.
+            Section {
+                LetterFamilyLink(family: LetterTraits.jawf) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.jawf.systemImage,
+                        tint: LetterTraits.jawf.legendColor,
+                        title: LetterTraits.jawf.title,
+                        arabic: LetterTraits.jawf.arabic,
+                        caption: LetterTraits.jawf.summary,
+                        letters: LetterTraits.jawf.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.halq) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.halq.systemImage,
+                        tint: LetterTraits.halq.legendColor,
+                        title: LetterTraits.halq.title,
+                        arabic: LetterTraits.halq.arabic,
+                        caption: LetterTraits.halq.summary,
+                        letters: LetterTraits.halq.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.aqsaLisan) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.aqsaLisan.systemImage,
+                        tint: LetterTraits.aqsaLisan.legendColor,
+                        title: LetterTraits.aqsaLisan.title,
+                        arabic: LetterTraits.aqsaLisan.arabic,
+                        caption: LetterTraits.aqsaLisan.summary,
+                        letters: LetterTraits.aqsaLisan.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.wasatLisan) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.wasatLisan.systemImage,
+                        tint: LetterTraits.wasatLisan.legendColor,
+                        title: LetterTraits.wasatLisan.title,
+                        arabic: LetterTraits.wasatLisan.arabic,
+                        caption: LetterTraits.wasatLisan.summary,
+                        letters: LetterTraits.wasatLisan.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.haffatLisan) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.haffatLisan.systemImage,
+                        tint: LetterTraits.haffatLisan.legendColor,
+                        title: LetterTraits.haffatLisan.title,
+                        arabic: LetterTraits.haffatLisan.arabic,
+                        caption: LetterTraits.haffatLisan.summary,
+                        letters: LetterTraits.haffatLisan.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.tarafLisan) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.tarafLisan.systemImage,
+                        tint: LetterTraits.tarafLisan.legendColor,
+                        title: LetterTraits.tarafLisan.title,
+                        arabic: LetterTraits.tarafLisan.arabic,
+                        caption: LetterTraits.tarafLisan.summary,
+                        letters: LetterTraits.tarafLisan.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.shafatan) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.shafatan.systemImage,
+                        tint: LetterTraits.shafatan.legendColor,
+                        title: LetterTraits.shafatan.title,
+                        arabic: LetterTraits.shafatan.arabic,
+                        caption: LetterTraits.shafatan.summary,
+                        letters: LetterTraits.shafatan.letters
+                    )
+                }
+
+                GuardedScreenLink(screen: .letterFamilies, id: "makhraj") {
+                    LetterFamiliesView(title: "Makharij", axes: [.makhraj])
+                        .openScreen(.letterFamilies, id: "makhraj")
+                } label: {
+                    Label("The Seventeen Exits in Full", systemImage: "list.number")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+                }
+            } header: {
+                Text("ON THE ALPHABET")
+            } footer: {
+                Text("The seven zones, deepest first. Every letter page names the exact point its letter is made at.")
+            }
             }
             .themedListRowBackground()
         }
         .selectableArticleList()
+        .arabicDoorDestination($door)
+        .openScreen(.tajweedTopic, id: "makharij")
         .navigationTitle("Makhaarij")
     }
 }
 
 private struct TajweedHeavyLightView: View {
     @ObservedObject var settings = Settings.shared
+    /// The letter a tile asked to open. The tiles share List rows, so the List owns the one destination.
+    @State private var door: ArabicDoor?
 
     private var arabicHeadlineFont: Font {
         Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1001,10 +1127,8 @@ private struct TajweedHeavyLightView: View {
                 Text("Always Heavy Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("خ ص ض غ ط ق ظ")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.heavy.letters, tint: LetterTraits.heavy.legendColor) { door = .letter($0) }
 
                 Text("They are pronounced with:")
                     .font(.subheadline.weight(.semibold))
@@ -1035,10 +1159,8 @@ private struct TajweedHeavyLightView: View {
                 Text("Always Light Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ء ب ت ث ج ح د ذ ز س ش ف ك م ن هـ و ي")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.light.letters, tint: LetterTraits.light.legendColor) { door = .letter($0) }
 
                 Text("They are pronounced with:")
                     .font(.subheadline.weight(.semibold))
@@ -1162,16 +1284,94 @@ private struct TajweedHeavyLightView: View {
                     .font(.body)
                     .foregroundColor(settings.accentColor.color)
             }
+
+            // The same families the Arabic Alphabet groups its letters by, named in both languages,
+            // so the rule and the letters it belongs to are one tap apart in either direction.
+            Section {
+                LetterFamilyLink(family: LetterTraits.heavy) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.heavy.systemImage,
+                        tint: LetterTraits.heavy.legendColor,
+                        title: LetterTraits.heavy.title,
+                        arabic: LetterTraits.heavy.arabic,
+                        caption: LetterTraits.heavy.summary,
+                        letters: LetterTraits.heavy.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.light) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.light.systemImage,
+                        tint: LetterTraits.light.legendColor,
+                        title: LetterTraits.light.title,
+                        arabic: LetterTraits.light.arabic,
+                        caption: LetterTraits.light.summary,
+                        letters: LetterTraits.light.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.conditionalWeight) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.conditionalWeight.systemImage,
+                        tint: LetterTraits.conditionalWeight.legendColor,
+                        title: LetterTraits.conditionalWeight.title,
+                        arabic: LetterTraits.conditionalWeight.arabic,
+                        caption: LetterTraits.conditionalWeight.summary,
+                        letters: LetterTraits.conditionalWeight.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.followsPrevious) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.followsPrevious.systemImage,
+                        tint: LetterTraits.followsPrevious.legendColor,
+                        title: LetterTraits.followsPrevious.title,
+                        arabic: LetterTraits.followsPrevious.arabic,
+                        caption: LetterTraits.followsPrevious.summary,
+                        letters: LetterTraits.followsPrevious.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.istila) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.istila.systemImage,
+                        tint: LetterTraits.istila.legendColor,
+                        title: LetterTraits.istila.title,
+                        arabic: LetterTraits.istila.arabic,
+                        caption: LetterTraits.istila.summary,
+                        letters: LetterTraits.istila.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.itbaq) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.itbaq.systemImage,
+                        tint: LetterTraits.itbaq.legendColor,
+                        title: LetterTraits.itbaq.title,
+                        arabic: LetterTraits.itbaq.arabic,
+                        caption: LetterTraits.itbaq.summary,
+                        letters: LetterTraits.itbaq.letters
+                    )
+                }
+            } header: {
+                Text("ON THE ALPHABET")
+            } footer: {
+                Text("Heaviness comes from two qualities: the tongue rising (isti\u{2019}la), and for the heaviest four, clamping as well (itbaq).")
+            }
             }
             .themedListRowBackground()
         }
         .selectableArticleList()
+        .arabicDoorDestination($door)
+        .openScreen(.tajweedTopic, id: "heavyLight")
         .navigationTitle("Heavy and Light")
     }
 }
 
 private struct TajweedShamsQamarView: View {
     @ObservedObject var settings = Settings.shared
+    /// The letter a tile asked to open. The tiles share List rows, so the List owns the one destination.
+    @State private var door: ArabicDoor?
 
     private var arabicHeadlineFont: Font {
         Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1214,10 +1414,12 @@ private struct TajweedShamsQamarView: View {
                 Text("Qamariyyah Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ا ب ج ح خ ع غ ف ق ك م هـ و ي")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                Text("The classic list opens with an alif. It is really the hamza, as in ٱلۡأَرۡض: no word begins with a bare alif.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.moonLetters.letters, tint: LetterTraits.moonLetters.legendColor) { door = .letter($0) }
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "ٱلۡقَمَر", english: "al-qamar", arabicFont: arabicHeadlineFont)
@@ -1256,10 +1458,8 @@ private struct TajweedShamsQamarView: View {
                 Text("Shamsiyyah Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ت ث د ذ ر ز س ش ص ض ط ظ ل ن")
-                    .font(arabicHeadlineFont)
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                // Tiles, not a line of text: each letter opens its own page (Abu, 2026-09-20).
+                LetterTileStrip(letters: LetterTraits.sunLetters.letters, tint: LetterTraits.sunLetters.legendColor) { door = .letter($0) }
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "ٱلشَّمۡس", english: "ash-shams", arabicFont: arabicHeadlineFont)
@@ -1289,10 +1489,42 @@ private struct TajweedShamsQamarView: View {
                 .font(.body)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            // The same families the Arabic Alphabet groups its letters by, named in both languages,
+            // so the rule and the letters it belongs to are one tap apart in either direction.
+            Section {
+                LetterFamilyLink(family: LetterTraits.sunLetters) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.sunLetters.systemImage,
+                        tint: LetterTraits.sunLetters.legendColor,
+                        title: LetterTraits.sunLetters.title,
+                        arabic: LetterTraits.sunLetters.arabic,
+                        caption: LetterTraits.sunLetters.summary,
+                        letters: LetterTraits.sunLetters.letters
+                    )
+                }
+
+                LetterFamilyLink(family: LetterTraits.moonLetters) {
+                    LetterTraitRow(
+                        systemImage: LetterTraits.moonLetters.systemImage,
+                        tint: LetterTraits.moonLetters.legendColor,
+                        title: LetterTraits.moonLetters.title,
+                        arabic: LetterTraits.moonLetters.arabic,
+                        caption: LetterTraits.moonLetters.summary,
+                        letters: LetterTraits.moonLetters.letters
+                    )
+                }
+            } header: {
+                Text("ON THE ALPHABET")
+            } footer: {
+                Text("Every letter page says which side it is on, with a word from the Quran.")
+            }
             }
             .themedListRowBackground()
         }
         .selectableArticleList()
+        .arabicDoorDestination($door)
+        .openScreen(.tajweedTopic, id: "shamsQamar")
         .navigationTitle("Shams and Qamar")
     }
 }

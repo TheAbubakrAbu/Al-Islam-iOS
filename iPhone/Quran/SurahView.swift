@@ -2222,7 +2222,7 @@ struct SurahView: View {
         }
         .sheet(isPresented: $showReciterPickerSheet) {
             NavigationView {
-                ReciterListView(dismissAfterSelectingReciter: true, autoScrollToInitialSelection: false)
+                ReciterListView(dismissAfterSelectingReciter: true)
                     .environmentObject(settings)
                     .toolbar {
                         ToolbarItem(placement: .navigationBarLeading) {
@@ -3519,7 +3519,13 @@ struct SurahView: View {
         // On the facsimile the legend ALWAYS shows (user rule): the print's own colour code is on screen
         // and can't be turned off, and the legend sheet explains exactly that - the riwayah's print
         // legend when one is bundled, the Hafs tajweed legend otherwise.
-        let legendVisible = tajweedCanRenderNow || (arabicPage && language.isPDF)
+        let tajweedLegendApplies = tajweedCanRenderNow || (arabicPage && language.isPDF)
+        // Theme washes are a second thing on the page that needs explaining, so either one keeps the
+        // Legend button up (the sheet's picker switches between the two, and each side carries its own
+        // switch, so whichever is off can be turned on from there). The facsimile is an image of the
+        // print: nothing washes it.
+        let themesApply = !language.isPDF && !themeHighlights.isEmpty
+        let legendVisible = tajweedLegendApplies || themesApply
         // The picker ALWAYS shows when the reader is on a non-Hafs riwayah: being in another qiraah
         // is itself the comparison context, and it's also the way back. The toggle only decides
         // whether Hafs - the default everyone starts on - carries the extra control.
@@ -3535,7 +3541,7 @@ struct SurahView: View {
                     // fixed-size labels); the search stretches into whatever is left over - and when there
                     // isn't enough, it is the one that shrinks, scaling its label down first.
                     if legendVisible {
-                        TajweedLegendMenu()
+                        ReaderLegendMenu(tajweedApplies: tajweedLegendApplies, themesApply: themesApply)
                             .layoutPriority(1)
                     }
 
@@ -3575,17 +3581,20 @@ struct SurahView: View {
         // Same rule as the page reader's bar: a non-Hafs riwayah always gets the picker; the
         // comparison-mode toggle only adds it on Hafs.
         let comparisonVisible = settings.qiraatComparisonMode || !settings.isHafsDisplay
+        // Same rule as the page bar: lit themes keep the Legend button up on their own.
+        let themesApply = !themeHighlights.isEmpty
+        let legendVisible = tajweedCanRenderNow || themesApply
 
-        // Same shape as the page reader's bar: the global search only appears alongside the tajweed
-        // legend or the riwayah picker, stretches between them, and matches their height. Labeled
+        // Same shape as the page reader's bar: the global search only appears alongside the legend or
+        // the riwayah picker, stretches between them, and matches their height. Labeled
         // "Global" because this reader has its own search bar right below, and this button is the "take
         // what I typed THERE" escape to the whole Quran.
-        if tajweedCanRenderNow || comparisonVisible {
+        if legendVisible || comparisonVisible {
             HStack(alignment: .bottom, spacing: 4) {
                 // Same rule as the page bar: the flanking controls take the space they need, the search
                 // fills the leftover and is the first to shrink when the row runs tight.
-                if tajweedCanRenderNow {
-                    TajweedLegendMenu()
+                if legendVisible {
+                    ReaderLegendMenu(tajweedApplies: tajweedCanRenderNow, themesApply: themesApply)
                         .layoutPriority(1)
                 }
 
@@ -3774,7 +3783,8 @@ struct SurahView: View {
                         surahName: surah.nameTransliteration
                     )
                 } label: {
-                    Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
+                    ReciterCaptionedMenuLabel(title: canResumeLast ? "Play from Beginning" : "Play Surah",
+                                                  systemImage: "memories")
                 }
             } label: {
                 playbackMenuControlLabel {
@@ -4804,19 +4814,46 @@ struct ArabicTextRiwayahPicker: View {
 }
 
 #if os(iOS)
-private struct TajweedLegendMenu: View {
+/// Which of the reader's two color codes the legend sheet is showing.
+enum ReaderLegendPage: String {
+    case tajweed, themes
+}
+
+/// The reader's Legend button. It explains BOTH color codes a page can wear, the tajweed rules on the
+/// letters and the theme washes behind the ayahs, so it is up whenever either one is on (Abu,
+/// 2026-09-20). The sheet's picker switches between the two, and each side leads with its own switch,
+/// so the one that is off can be turned on without leaving the reader.
+private struct ReaderLegendMenu: View {
     @ObservedObject private var settings = Settings.shared
+
+    /// Tajweed colors are on the page (or it is the facsimile, whose print colors cannot be turned off).
+    let tajweedApplies: Bool
+    /// At least one theme or passage is lit.
+    let themesApply: Bool
 
     @State private var showingSheet = false
     /// The long-press quick peek: the first few legend entries in a small popover, so a color can be
     /// checked without opening (and then dismissing) the full legend sheet.
     @State private var showingQuickPeek = false
+    /// The side last looked at, which decides where the sheet opens when both color codes are on.
+    @AppStorage("readerLegendPage") private var lastPage = ReaderLegendPage.tajweed.rawValue
 
     var expandsToFillRow: Bool = false
 
-    /// The first few rows of whichever legend applies right now: the displayed riwayah's own printed
-    /// color code when one is bundled, the Hafs tajweed rules otherwise. (color, name, subtitle).
+    /// Where the sheet (and the peek) opens: the only color code on the page when there is just one,
+    /// the side last looked at when both are on.
+    private var openingPage: ReaderLegendPage {
+        if tajweedApplies && themesApply { return ReaderLegendPage(rawValue: lastPage) ?? .tajweed }
+        return themesApply ? .themes : .tajweed
+    }
+
+    /// The first few rows of whichever legend applies right now: the seven theme meanings, the
+    /// displayed riwayah's own printed color code when one is bundled, or the Hafs tajweed rules.
+    /// (color, name, subtitle).
     private var quickPeekEntries: [(color: Color, title: String, subtitle: String)] {
+        if openingPage == .themes {
+            return ThemeWashColor.allCases.map { ($0.color, $0.meaning, $0.name.capitalized) }
+        }
         if let tag = settings.riwayahTajweedPackTag {
             return QiraahTajweedStore.shared.legend(for: tag).prefix(6).map {
                 ($0.color, $0.english, $0.arabic)
@@ -4897,11 +4934,55 @@ private struct TajweedLegendMenu: View {
             }
         }
         .sheet(isPresented: $showingSheet) {
-            NavigationView {
-                TajweedLegendView()
+            ReaderLegendSheet(initialPage: openingPage)
+                .smallMediumSheetPresentation()
+        }
+    }
+}
+
+/// The legend sheet: the tajweed legend and the theme legend behind one segmented picker in the bar.
+private struct ReaderLegendSheet: View {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.presentationMode) private var presentationMode
+
+    @State private var page: ReaderLegendPage
+    @AppStorage("readerLegendPage") private var lastPage = ReaderLegendPage.tajweed.rawValue
+
+    init(initialPage: ReaderLegendPage) {
+        _page = State(initialValue: initialPage)
+    }
+
+    var body: some View {
+        NavigationView {
+            Group {
+                switch page {
+                case .tajweed:
+                    TajweedLegendView(showsDismissButton: false)
+                case .themes:
+                    ThemeHighlightsView { surahID, ayahID in
+                        // The reader is under this sheet: close it first, so the ayah opens in view.
+                        presentationMode.wrappedValue.dismiss()
+                        AppNavigation.shared.open(.ayah(surahID, ayahID))
+                    }
+                }
             }
-            .navigationViewStyle(.stack)
-            .smallMediumSheetPresentation()
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    // Never an animated binding: the segmented indicator bounces under one.
+                    Picker("Legend", selection: $page) {
+                        Text("Tajweed").tag(ReaderLegendPage.tajweed)
+                        Text("Themes").tag(ReaderLegendPage.themes)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 210)
+                }
+            }
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+        .onChange(of: page) { newPage in
+            settings.hapticFeedback()
+            lastPage = newPage.rawValue
         }
     }
 }

@@ -132,9 +132,9 @@ struct SolarArcGraph: View {
             if showsScene {
                 let horizonY = yPosition(of: day.horizon, in: rect)
                 SkySceneView(horizonY: horizonY,
-                             color: skyStyle
-                                ? SkyScene.silhouette(overSky: entry.skyColors, at: horizonY / max(rect.height, 1))
-                                : Color.secondary.opacity(0.45))
+                             tint: skyStyle
+                                ? SkyScene.tint(overSky: entry.skyColors, at: horizonY / max(rect.height, 1))
+                                : .flat(Color.secondary.opacity(0.45)))
             }
 
             ForEach(dots) { prayer in

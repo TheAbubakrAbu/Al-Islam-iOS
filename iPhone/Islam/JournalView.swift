@@ -543,30 +543,30 @@ struct JournalView: View {
         .onReceive(store.$entries) { _ in refreshShown() }
         .onChange(of: filter) { _ in refreshShown() }
         .onChange(of: searchText) { _ in scheduleRefresh() }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
+        // The journal's own menu, then the Islam Settings gear at the far right, in ONE toolbar (see
+        // `IslamSettingsToolbar` for why this screen places the gear itself).
+        .islamSettingsToolbar {
+            Menu {
+                Button {
+                    settings.hapticFeedback()
+                    editing = JournalEntry()
+                } label: { Label("New Entry", systemImage: "square.and.pencil") }
+                if !store.entries.isEmpty {
                     Button {
                         settings.hapticFeedback()
-                        editing = JournalEntry()
-                    } label: { Label("New Entry", systemImage: "square.and.pencil") }
-                    if !store.entries.isEmpty {
-                        Button {
-                            settings.hapticFeedback()
-                            // The text of every entry is built detached, then the sheet presents.
-                            let snapshot = store.entries
-                            Task {
-                                let text = await Task.detached(priority: .userInitiated) { JournalStore.exportText(entries: snapshot) }.value
-                                presentSystemShareSheet(items: [text])
-                            }
-                        } label: { Label("Export as Text", systemImage: "square.and.arrow.up") }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                        // The text of every entry is built detached, then the sheet presents.
+                        let snapshot = store.entries
+                        Task {
+                            let text = await Task.detached(priority: .userInitiated) { JournalStore.exportText(entries: snapshot) }.value
+                            presentSystemShareSheet(items: [text])
+                        }
+                    } label: { Label("Export as Text", systemImage: "square.and.arrow.up") }
                 }
-                .fixedMenuOrder()
-                .tint(accent)
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
+            .fixedMenuOrder()
+            .tint(accent)
         }
         .sheet(item: $editing) { entry in
             JournalEditorSheet(entry: entry)

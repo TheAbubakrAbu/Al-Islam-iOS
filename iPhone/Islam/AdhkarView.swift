@@ -102,6 +102,7 @@ extension Settings {
         [
             nonQuranArabicFontName,
             islamUsesCustomArabicFace ? "1" : "0",
+            highlightAllahNamesIslam ? "1" : "0",
             accentColor.rawValue,
             customAccentColorHex
         ].joined(separator: "|")
@@ -214,6 +215,7 @@ struct AdhkarRow: View, Equatable {
                 font: arabicFont,
                 accent: appearance.accent,
                 fg: appearance.accent,
+                highlightAllahNames: appearance.highlightAllahIslam,
                 guaranteeMatch: matches(arabicText)
             )
                 .arabicFontDesign(custom: usesCustomArabicFace)
@@ -259,6 +261,7 @@ struct AdhkarRow: View, Equatable {
                 font: .subheadline,
                 accent: appearance.accent,
                 fg: .secondary,
+                highlightAllahNames: appearance.highlightAllahIslam,
                 guaranteeMatch: matches(translation)
             )
             .fixedSize(horizontal: false, vertical: true)

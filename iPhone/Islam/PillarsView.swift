@@ -292,7 +292,9 @@ private struct ScriptureQuoteBody: View, Equatable {
 
     /// The Arabic as one `Text`: plain, or with the tokens outside `emphasis` lightened.
     private func arabicText(_ arabic: String) -> Text {
-        guard let emphasis else { return Text(arabic.decomposingAlefMadda) }
+        guard let emphasis else {
+            return Text.islamArabic(arabic.decomposingAlefMadda, highlightAllah: appearance.highlightAllahIslam)
+        }
         let tokens = arabic.split(separator: " ", omittingEmptySubsequences: true)
         var out = Text("")
         for (index, token) in tokens.enumerated() {
@@ -322,8 +324,65 @@ private struct ScriptureQuoteBody: View, Equatable {
         return text
     }
 
+    /// `text` with its closing citation lifted out: "“...” (Quran 7:180)" reads as the quote and,
+    /// under it, "Quran 7:180". Only a closing parenthetical that carries a number counts, so an
+    /// aside such as "(peace be upon him)" stays in the sentence. `text` itself is untouched: it is
+    /// what the copy menu hands over, citation included.
+    private var quoteAndCitation: (quote: String, citation: String?) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasSuffix(")") else { return (trimmed, nil) }
+        var depth = 0
+        var open: String.Index?
+        var index = trimmed.endIndex
+        while index > trimmed.startIndex {
+            index = trimmed.index(before: index)
+            let character = trimmed[index]
+            if character == ")" { depth += 1 }
+            if character == "(" {
+                depth -= 1
+                if depth == 0 { open = index; break }
+            }
+        }
+        guard let open else { return (trimmed, nil) }
+        let citation = String(trimmed[trimmed.index(after: open)..<trimmed.index(before: trimmed.endIndex)])
+        guard citation.contains(where: \.isNumber) else { return (trimmed, nil) }
+        let quote = trimmed[..<open].trimmingCharacters(in: .whitespacesAndNewlines)
+        return (quote, citation)
+    }
+
+    /// The card's ground: the accent falling away corner to corner, a hairline in the same color, a
+    /// solid bar down the leading edge (the blockquote's oldest sign), and a large faint glyph in
+    /// the far corner that says which kind of text this is, a book for the Quran and a quotation
+    /// mark for a narration. Plain shapes on purpose: an article carries dozens of these, and the
+    /// watch compiles this file.
+    private var cardBackground: some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return shape
+            .fill(
+                LinearGradient(colors: [accent.opacity(0.17), accent.opacity(0.05)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .overlay(
+                Image(systemName: dimmed ? "quote.closing" : "book.closed.fill")
+                    .font(.system(size: 64, weight: .bold))
+                    .foregroundColor(accent.opacity(0.07))
+                    .rotationEffect(.degrees(dimmed ? 0 : -12))
+                    .offset(x: 10, y: 14),
+                alignment: .bottomTrailing
+            )
+            .overlay(
+                Rectangle()
+                    .fill(accent.opacity(0.85))
+                    .frame(width: 3),
+                alignment: .leading
+            )
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(accent.opacity(0.2), lineWidth: 1))
+    }
+
     var body: some View {
         let _ = RenderCounter.hit("ScriptureQuote")
+        let parts = quoteAndCitation
         let quote = VStack(alignment: .leading, spacing: 10) {
             if let arabic, !arabic.isEmpty {
                 arabicText(arabic)
@@ -339,13 +398,35 @@ private struct ScriptureQuoteBody: View, Equatable {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Text(text)
-                .font(.title3)
+            // The size of the prose around it (Abu, 2026-09-20: "the same size as everything
+            // else"). It was `.title3` in the accent, which made every quote shout over its article;
+            // the card now does the setting-apart, so the words can read like the rest of the page.
+            if !parts.quote.isEmpty {
+                Text.islamText(parts.quote, highlightAllah: appearance.highlightAllahIslam)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let citation = parts.citation {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: dimmed ? "text.book.closed.fill" : "book.closed.fill")
+                        .font(.caption2)
+                    Text(citation)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 .foregroundColor(accent)
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 12)
+        .padding(.leading, 15)
+        .padding(.trailing, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
+        .padding(.vertical, 3)
         #if os(iOS)
         // Kept as `Text`s rather than a `SelectableProse`: the context menu below already covers
         // "copy the whole quote, citation included", which is what a quote is normally wanted for,

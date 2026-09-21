@@ -293,7 +293,7 @@ struct DuaSessionView: View {
 
     private func duaCard(_ item: DuaItem) -> some View {
         VStack(spacing: 14) {
-            Text(item.arabicText)
+            Text.islamArabic(item.arabicText, highlightAllah: settings.highlightAllahNamesIslam)
                 .font(
                     settings.islamUsesCustomArabicFace
                         ? Font.arabic(settings.nonQuranArabicFontName, size: 26, relativeTo: .title2)
@@ -477,7 +477,7 @@ struct DuaSessionView: View {
 
             // No streak, no badge, no "you're on fire" - finishing is the reward, and inventing a
             // scoreboard around dhikr is exactly the thing this app doesn't do.
-            Text("تَقَبَّلَ اللهُ مِنَّا وَمِنكُم")
+            Text.islamArabic("تَقَبَّلَ اللهُ مِنَّا وَمِنكُم", highlightAllah: settings.highlightAllahNamesIslam)
                 .font(
                     settings.islamUsesCustomArabicFace
                         ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .body)

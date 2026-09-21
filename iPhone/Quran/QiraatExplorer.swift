@@ -1792,7 +1792,7 @@ struct QiraatExplorerView: View {
     /// values the bar and the reference block derive from them.
     private func refreshRows() {
         let tags = enabledTags
-        let key = "\(surahID)|\(hafsAyah)|\(everyDifference ? 1 : 0)|\(settings.accentColor.rawValue)|\(tags.joined(separator: ","))"
+        let key = "\(surahID)|\(hafsAyah)|\(everyDifference ? 1 : 0)|\(settings.accentColor.rawValue)|\(settings.customAccentColorHex)|\(tags.joined(separator: ","))"
         guard key != rowsKey else { return }
         #if DEBUG
         let started = DispatchTime.now().uptimeNanoseconds

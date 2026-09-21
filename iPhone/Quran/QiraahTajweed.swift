@@ -37,8 +37,13 @@ final class QiraahTajweedStore: @unchecked Sendable {
         let arabic: String
         let english: String
         var id: String { key }
-        var color: Color { Color(QiraahTajweedStore.uiColor(for: letter)) }
-        var uiColor: UIColor { QiraahTajweedStore.uiColor(for: letter) }
+        var color: Color { Color(uiColor) }
+        /// The reader's own color for this rule when they picked one, else the print's.
+        var uiColor: UIColor { QiraahTajweedStore.uiColor(forRule: key, letter: letter) }
+        /// The print's own color, before any custom pick.
+        var defaultColor: Color { Color(QiraahTajweedStore.uiColor(for: letter)) }
+        /// Where this rule's custom color is stored (`TajweedColorOverrides`).
+        var colorKey: String { TajweedColorOverrides.key(forRiwayahRule: key) }
         var shortDescription: String { QiraahTajweedStore.shortDescriptions[key] ?? "" }
         var longDescription: String { QiraahTajweedStore.longDescriptions[key] ?? "" }
     }
@@ -167,8 +172,9 @@ final class QiraahTajweedStore: @unchecked Sendable {
     }
 
     /// The magenta the prints ring khilaf-numbered ayahs with - one place, so
-    /// every surface (list suffix, page medallion) uses the same tone.
-    static var khilafNumberColor: UIColor { uiColor(for: "m") }
+    /// every surface (list suffix, page medallion) uses the same tone. It is the khilaf rule's
+    /// color, so it follows the reader's custom pick for that rule.
+    static var khilafNumberColor: UIColor { uiColor(forRule: "khilaf_harf", letter: "m") }
 
     func pack(for tag: String) -> Pack? {
         let key = Settings.Riwayah.canonicalTag(tag)
@@ -188,6 +194,14 @@ final class QiraahTajweedStore: @unchecked Sendable {
     }
 
     // MARK: - Colors
+
+    /// The color a rule paints in: the reader's own pick for that rule KEY when there is one (keys
+    /// are meaning-stable across riwayat, so one pick recolors the rule in every riwayah that marks
+    /// it), else the print palette's color for the pack's letter.
+    static func uiColor(forRule key: String, letter: Character) -> UIColor {
+        TajweedColorOverrides.shared.uiColor(forKey: TajweedColorOverrides.key(forRiwayahRule: key))
+            ?? uiColor(for: letter)
+    }
 
     /// The print palette, adjusted per appearance for on-screen legibility.
     /// r red, b blue, m magenta, c cyan, o orange, g green, e sea green, l royal, y olive.
@@ -302,7 +316,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
                     // Around the stop signs, never over them: the waqf ornaments ride on a word's last
                     // letter in these texts, so a whole-word or last-cluster wash would tint them too.
                     for run in Self.subrangesExcludingStopSigns(range, in: units) {
-                        ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: run)
+                        ns.addAttribute(.foregroundColor, value: Self.uiColor(forRule: key, letter: rule.letter), range: run)
                         painted = true
                     }
                 }

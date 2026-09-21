@@ -41,9 +41,11 @@ struct SurahEntityQuery: EntityQuery, EntityStringQuery {
         if let number = Int(normalized), (1...114).contains(number) {
             return all.filter { $0.id == number }.map(entity)
         }
-        return all.filter { surah in
+        let direct = all.filter { surah in
             surah.normalizedSearchNames.contains { $0.contains(normalized) }
-        }.map(entity)
+        }
+        // Dictation spells a surah however it likes ("Yaseen", "Rehman"): fold when nothing matched.
+        return (direct.isEmpty ? SurahSpelling.matches(normalized, in: all) : direct).map(entity)
     }
 }
 
@@ -181,9 +183,18 @@ enum QuranPlaybackRouter {
             return data.quran.first(where: { $0.id == number })
         }
 
-        return data.quran.first(where: { surah in
+        // A name that IS the query beats one that merely contains it. "al mumin" (Ghafir, 40) sits
+        // inside "al muminun" (23), and taking the first container opened the wrong surah.
+        if let exact = data.quran.first(where: { $0.normalizedSearchNames.contains(normalizedQuery) }) {
+            return exact
+        }
+        if let direct = data.quran.first(where: { surah in
             surah.normalizedSearchNames.contains { $0.contains(normalizedQuery) }
-        })
+        }) {
+            return direct
+        }
+        let folded = SurahSpelling.matches(normalizedQuery, in: data.quran, exactOnly: true)
+        return folded.count == 1 ? folded.first : nil
     }
 }
 

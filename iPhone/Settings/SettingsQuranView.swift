@@ -170,6 +170,10 @@ struct SettingsQuranView: View {
     /// Reminders sit ABOVE Favorites and Bookmarks (Abu, 2026-09-12).
     @ViewBuilder
     private var rootSections: some View {
+        #if os(iOS)
+        TipsSection(area: .quran, resolve: resolveSearchDestination)
+        #endif
+
         Section(header: Text("READING")) {
             quranPageLink(.recitation) { recitationDestination }
             quranPageLink(.readingView) { readingViewsDestination }
@@ -1662,15 +1666,20 @@ struct ReciterListView: View {
         orderedUniqueReciters.filter { settings.isReciterFavorite(reciterID: $0.id) }
     }
 
-    /// Matches row `.id(...)` for `ScrollViewReader.scrollTo`.
+    private static let favoriteRowIDPrefix = "favorite"
+
+    /// Matches row `.id(...)` for `ScrollViewReader.scrollTo`. A favorited reciter lands on its
+    /// FAVORITES row: that copy is the one at the top of the list, where the reader keeps it.
     private var reciterListScrollTargetID: String {
         if settings.reciter == Settings.randomReciterName {
             return Settings.randomReciterName
         }
-        if !settings.reciterId.isEmpty {
-            return settings.reciterId
+        let id = settings.resolvedSelectedReciterIgnoringRandom()?.id ?? settings.reciterId
+        guard !id.isEmpty else { return settings.reciter }
+        if settings.isReciterFavorite(reciterID: id) {
+            return "\(Self.favoriteRowIDPrefix)|\(id)"
         }
-        return settings.resolvedSelectedReciterIgnoringRandom()?.id ?? settings.reciter
+        return id
     }
 
     private var normalizedSearchText: String {
@@ -1995,20 +2004,33 @@ struct ReciterListView: View {
         var order: [String] = []
         var entries: [String: SearchEntry] = [:]
 
-        for section in searchableReciterSections {
-            let sectionMatchesTitle = matchesSectionTitle(section, query: normalizedSearchText)
-            let matched = sectionMatchesTitle
+        func collect(_ matches: (ReciterSectionGroup) -> [Reciter]) {
+            for section in searchableReciterSections {
+                for reciter in matches(section) {
+                    if entries[reciter.id] == nil {
+                        entries[reciter.id] = SearchEntry(reciter: reciter, sections: [])
+                        order.append(reciter.id)
+                    }
+                    if entries[reciter.id]?.sections.contains(where: { $0.id == section.id }) == false {
+                        entries[reciter.id]?.sections.append(section)
+                    }
+                }
+            }
+        }
+
+        collect { section in
+            matchesSectionTitle(section, query: normalizedSearchText)
                 ? section.reciters
                 : section.reciters.filter { reciterMatchesSearch($0, query: normalizedSearchText) }
+        }
 
-            for reciter in matched {
-                if entries[reciter.id] == nil {
-                    entries[reciter.id] = SearchEntry(reciter: reciter, sections: [])
-                    order.append(reciter.id)
-                }
-                if entries[reciter.id]?.sections.contains(where: { $0.id == section.id }) == false {
-                    entries[reciter.id]?.sections.append(section)
-                }
+        // Nothing spelled that way: ask again with the spelling folded ("ayoub", "ayyoub", "ayub"
+        // are all Ayyub). Only ever a fallback, so a query that already works is untouched.
+        if order.isEmpty {
+            let everyone = searchableReciterSections.flatMap(\.reciters)
+            let found = Set(SpellingFold.matches(searchText, in: everyone, entry: ReciterSpelling.entry).map(\.id))
+            if !found.isEmpty {
+                collect { section in section.reciters.filter { found.contains($0.id) } }
             }
         }
 
@@ -2305,7 +2327,9 @@ struct ReciterListView: View {
 
     private func reciterMatchesSearch(_ reciter: Reciter, query: String) -> Bool {
         guard !query.isEmpty else { return false }
-        return normalized(reciter.name).contains(query)
+        if normalized(reciter.name).contains(query) { return true }
+        // The other names he is known and searched by (see `ReciterSpelling`).
+        return ReciterSpelling.otherNames(for: reciter).contains { normalized($0).contains(query) }
     }
 
     /// Entry point for a reciter tap. A reciter with no ayah feed (ayahs fall back to Minshawi) is
@@ -2418,7 +2442,10 @@ struct ReciterListView: View {
                 } else {
                     if !favoriteReciters.isEmpty {
                         Section(header: Text("FAVORITES")) {
-                            reciterButtons(favoriteReciters)
+                            // Prefixed like the featured Minshawi rows: a favorite is ALSO listed in its
+                            // own section further down, and two rows sharing one view id is what made
+                            // `scrollTo` unreliable for a favorited reciter.
+                            reciterButtons(favoriteReciters, idPrefix: Self.favoriteRowIDPrefix)
                         }
                     }
 
@@ -2771,11 +2798,8 @@ struct ReciterListView: View {
             .onAppear {
                 settings.migrateLegacyReciterIdIfNeeded()
 
-                if settings.reciter.isEmpty
-                    || (settings.reciter != Settings.randomReciterName && settings.resolvedSelectedReciterIgnoringRandom() == nil) {
-                    withAnimation {
-                        settings.applyDefaultReciterSelection()
-                    }
+                withAnimation {
+                    settings.revertToDefaultReciterIfMissing()
                 }
 
                 #if os(iOS)

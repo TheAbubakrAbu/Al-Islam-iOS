@@ -929,11 +929,47 @@ private struct SurahInfoPlaybackCard: View {
     /// itself, so starting a surah leaves you looking at the surah instead of at the info you just read.
     var onStartedPlaying: () -> Void = {}
 
+    @State private var showReciterPicker = false
+
     private var isPlayingThisSurah: Bool {
         (quranPlayer.isPlaying || quranPlayer.isPaused) && quranPlayer.currentSurahNumber == surahNumber
     }
 
     var body: some View {
+        VStack(spacing: 8) {
+            playButtons
+            reciterCaption
+        }
+        .reciterPickerSheet(isPresented: $showReciterPicker)
+    }
+
+    /// Who Play Surah will play, and the way to change it (Abu, 2026-09-20): the button started a
+    /// recitation without ever saying whose, and the picker was a trip back out to a play menu.
+    private var reciterCaption: some View {
+        Button {
+            settings.hapticFeedback()
+            showReciterPicker = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "headphones")
+                Text(settings.currentReciterDisplayName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Reciter: \(settings.currentReciterDisplayName)")
+        .accessibilityHint("Opens the reciter list")
+    }
+
+    private var playButtons: some View {
         HStack(spacing: 10) {
             Button {
                 settings.hapticFeedback()

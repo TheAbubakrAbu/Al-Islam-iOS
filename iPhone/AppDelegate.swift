@@ -1,6 +1,7 @@
 #if os(iOS)
 import BackgroundTasks
 import CoreLocation
+import SwiftUI
 import UIKit
 import UserNotifications
 
@@ -86,6 +87,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         ) { _ in
             Settings.shared.fetchPrayerTimes(force: true)
         }
+        #if DEBUG
+        PrayerNotificationPrompt.handleLaunchArguments()
+        #endif
         return true
     }
 
@@ -106,18 +110,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             completionHandler([.list])
             return
         }
+        // The in-app player is sounding this adhan itself (its timer is armed for this very
+        // notification, or has just fired): show the banner, but never a second adhan under the first.
+        if ForegroundAdhanPlayer.shared.soundsInApp(notificationID: notification.request.identifier) {
+            completionHandler([.banner, .list])
+            return
+        }
         completionHandler([.banner, .list, .sound])
     }
 
-    // Handles nag-notification responses: the "Yes, I prayed it" action marks the tracker and cancels
-    // the rest of that cascade directly; a plain tap opens the app and raises the same question as an
-    // in-app dialog (see AdhanView).
+    // Handles prayer-notification responses. A nag's "Yes" actions mark the tracker and cancel the
+    // rest of that cascade straight from the lock screen; a plain tap on ANY prayer notification (the
+    // adhan, a pre-notification, a nag) opens the app and raises "Did you pray X?" there
+    // (`PrayerNotificationPrompt`, below).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let content = response.notification.request.content
+        let request = response.notification.request
+        let content = request.content
         // A Sunnah reminder: open the Quran where the reminder points (`SunnahReminderStore`). The
         // target is parked on `AppNavigation`; the tab view and the Quran tab take it from there.
         if let encoded = content.userInfo[SunnahReminderStore.targetUserInfoKey] as? String,
@@ -126,8 +138,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             completionHandler()
             return
         }
-        guard content.categoryIdentifier == Settings.nagCategoryIdentifier,
-              let cascadeName = content.userInfo[Settings.nagPrayerNameUserInfoKey] as? String else {
+        guard let moment = Settings.tappedPrayerNotification(from: request, deliveredAt: response.notification.date) else {
             completionHandler()
             return
         }
@@ -136,24 +147,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         DispatchQueue.main.async {
             let settings = Settings.shared
             // A nag action can COLD-LAUNCH the app in the background (no scene, no .onAppear fetch),
-            // leaving `prayers` holding yesterday's snapshot - and `naggedPrayerName`/`trackerDate`
-            // read that snapshot. Un-refreshed, a 5 AM "did you pray Isha?" resolved against
-            // yesterday's Isha time and marked TODAY instead of yesterday. Refresh first; when the
-            // snapshot is already today's, this is a no-op.
+            // leaving `prayers` holding yesterday's snapshot, and silencing the answered cascade walks
+            // that snapshot. Refresh first; when it is already today's, this is a no-op. (The question
+            // itself resolves against the notification's own day, not this snapshot: un-refreshed, a
+            // 5 AM "did you pray Isha?" once marked TODAY instead of yesterday.)
             settings.fetchPrayerTimes()
-            let asked = settings.naggedPrayerName(forCascade: cascadeName)
             switch actionIdentifier {
-            case Settings.nagActionMarkPrayedIdentifier:
-                settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName)
-            case Settings.nagActionMarkPrayedLateIdentifier:
-                settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName, mark: .late)
-            case UNNotificationDefaultActionIdentifier:
-                // Already answered (from the tracker, or an earlier nag in the cascade) - whether prayed
-                // or recorded as missed, asking "did you pray it?" again would be exactly the nagging
-                // the mark was supposed to end.
-                if !settings.isPrayerMarked(asked, on: settings.trackerDate(forMarking: asked)) {
-                    settings.pendingNagQuestion = .init(prayerName: asked, cascadePrayerName: cascadeName)
+            case Settings.nagActionMarkPrayedIdentifier, Settings.nagActionMarkPrayedLateIdentifier:
+                // Both actions stay on the notification whatever the hour: a category's buttons are
+                // fixed when it is registered, so they cannot follow the window closing the way the
+                // in-app question does. The answer is recorded as given.
+                if let question = settings.prayerQuestion(for: moment) {
+                    let late = actionIdentifier == Settings.nagActionMarkPrayedLateIdentifier
+                    settings.answer(question, mark: late ? .late : .onTime, from: moment)
                 }
+            case UNNotificationDefaultActionIdentifier:
+                PrayerNotificationPrompt.ask(about: moment)
             default:
                 break
             }
@@ -291,5 +300,165 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             }
         }
     }
+}
+
+// MARK: - "Did you pray X?" after a notification tap
+
+/// The question a tapped prayer notification raises once the app is open (Abu, 2026-09-20: "always
+/// show the did you pray X confirmation dialog if one clicks on a prayer notification").
+///
+/// Presented UIKit-side on the topmost view controller, the `RemovalConfirmation` route, instead of
+/// a `.confirmationDialog` on the tab view, which is what it used to be. That one could only ask
+/// when nothing else was presented: SwiftUI drops a root-level dialog while any sheet is up, so a
+/// tap that reopened the app on an open sheet asked nothing. It also came up over the launch
+/// screen on a cold start, and on iOS 26 it was anchored to the whole tab view as a popover, which
+/// has no Cancel button. It lived in the per-app root as well, which the sibling apps never merge.
+@MainActor
+enum PrayerNotificationPrompt {
+    private static var waiting: Task<Void, Never>?
+    private static weak var presented: UIAlertController?
+
+    static func ask(about moment: Settings.PrayerNotificationMoment) {
+        waiting?.cancel()
+        waiting = Task { @MainActor in
+            // A tap that cold-starts the app lands here while the launch screen is still up. The
+            // reveal flips at the START of the cover's 0.5 s fade, so a launch waits that out too:
+            // the question arrives on the app, never over the launch screen.
+            let launching = !AppReveal.revealed
+            await AppReveal.waitUntilRevealed()
+            if launching { try? await Task.sleep(nanoseconds: 700_000_000) }
+
+            // Then until the screen can take it: the scene is still inactive for a beat after a tap
+            // foregrounds the app, and another alert (the traveling-mode dialog at launch) has to be
+            // answered first. A minute, then the tap is old news.
+            for _ in 0..<200 {
+                guard !Task.isCancelled else { return }
+                if present(moment) { return }
+                try? await Task.sleep(nanoseconds: 300_000_000)
+            }
+        }
+    }
+
+    /// False while the screen cannot take a presentation yet; true once the question is up, or once
+    /// it turns out there is nothing to ask.
+    private static func present(_ moment: Settings.PrayerNotificationMoment) -> Bool {
+        // A second tap while the first question is still up replaces it.
+        if let presented, presented.presentingViewController != nil {
+            presented.dismiss(animated: false)
+            return false
+        }
+        guard UIApplication.shared.applicationState == .active,
+              let top = topmostViewController(),
+              !(top is UIAlertController),
+              top.transitionCoordinator == nil, !top.isBeingPresented, !top.isBeingDismissed
+        else { return false }
+
+        // Resolved now, not at the tap: a launch takes seconds, and whether "late" is an answer
+        // depends on the moment the question is actually read.
+        let settings = Settings.shared
+        guard let question = settings.prayerQuestion(for: moment), settings.isUnanswered(question) else {
+            #if DEBUG
+            print("PRAYER TAP \(moment.name)-\(moment.minutesBefore): nothing to ask")
+            #endif
+            return true
+        }
+        let offersLate = question.allowsLateAnswer()
+        #if DEBUG
+        print("PRAYER TAP \(moment.name)-\(moment.minutesBefore): asks \(question.prayerName) on \(question.trackerDay.formatted(date: .numeric, time: .omitted)), window ends \(question.windowEnd?.formatted(date: .omitted, time: .shortened) ?? "unknown"), late offered \(offersLate)")
+        #endif
+
+        // iPad (and the Mac) get an alert: their action sheets are popovers, which need an anchor
+        // this question does not have and which drop the Cancel button - and Dismiss is always
+        // there (Abu, 2026-09-20). iPhone keeps the sheet that slides up from the bottom.
+        let alert = UIAlertController(
+            title: "Did you pray \(question.displayName)\(dayPhrase(for: question))?",
+            message: settings.naggingMode
+                ? "Answering yes marks it in the prayer tracker and stops the remaining reminders."
+                : "Answering yes marks it in the prayer tracker.",
+            preferredStyle: UIDevice.current.userInterfaceIdiom == .phone ? .actionSheet : .alert
+        )
+        func answer(_ mark: PrayerMark) -> (UIAlertAction) -> Void {
+            { _ in
+                settings.hapticFeedback()
+                settings.answer(question, mark: mark, from: moment)
+            }
+        }
+        // "Late" only once the prayer's window has closed. Until then a prayer that was prayed was
+        // prayed on time, so there is one yes and it does not need the qualifier.
+        alert.addAction(UIAlertAction(title: offersLate ? "Yes, on time" : "Yes, I prayed it", style: .default, handler: answer(.onTime)))
+        if offersLate {
+            alert.addAction(UIAlertAction(title: "Yes, but late", style: .default, handler: answer(.late)))
+        }
+        alert.addAction(UIAlertAction(title: "Dismiss", style: .cancel))
+        alert.view.tintColor = UIColor(settings.accentColor.color)
+
+        top.present(alert, animated: true)
+        presented = alert
+        return true
+    }
+
+    /// Nothing for the prayer's most recent instance; " yesterday", " on Thursday" or " on Sep 12" for
+    /// a notification tapped after a later one began, so an old notification in Notification Center
+    /// asks about (and marks) the day it was for instead of passing as today's.
+    private static func dayPhrase(for question: Settings.PrayerQuestion, now: Date = Date()) -> String {
+        // The next instance begins a day later, give or take the minutes prayer times drift.
+        guard now.timeIntervalSince(question.prayerTime) > 23.5 * 3600 else { return "" }
+        let calendar = Calendar.current
+        let days = calendar.dateComponents(
+            [.day], from: calendar.startOfDay(for: question.trackerDay), to: calendar.startOfDay(for: now)
+        ).day ?? 0
+        let formatter = DateFormatter()
+        switch days {
+        case ...1:
+            return " yesterday"
+        case 2...6:
+            formatter.dateFormat = "EEEE"
+        default:
+            formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        }
+        return " on \(formatter.string(from: question.trackerDay))"
+    }
+
+    #if DEBUG
+    /// "-simulatePrayerTap Asr:30": what tapping the "30m until Asr" notification does ("Asr:0" is
+    /// the at-time one), with the time read off today's list; a third field offsets the day
+    /// ("Asr:30:-1" is yesterday's). Runs from launch, like a tap that cold-starts the app, so the
+    /// launch-cover wait is exercised too. The resolved question is printed ("PRAYER TAP ...").
+    static func handleLaunchArguments() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-simulatePrayerTap"), arguments.indices.contains(index + 1) else { return }
+        let fields = arguments[index + 1].split(separator: ":").map(String.init)
+        guard fields.count >= 2, let minutes = Int(fields[1]) else { return }
+        let settings = Settings.shared
+        guard let day = Calendar.current.date(byAdding: .day, value: fields.count > 2 ? Int(fields[2]) ?? 0 : 0, to: Date()),
+              let here = settings.currentLocation else {
+            print("PRAYER TAP \(arguments[index + 1]): no location")
+            return
+        }
+        let listed = (settings.getPrayerTimes(for: day) ?? [])
+            + settings.optionalPrayers(for: day, at: here, duha: true, islamicMidnight: true, lastThird: true)
+        guard let prayer = listed.first(where: { $0.nameTransliteration == fields[0] }) else {
+            print("PRAYER TAP \(arguments[index + 1]): no such time in \(listed.map(\.nameTransliteration))")
+            return
+        }
+        // Through the same door as a real tap: a request carrying the identifier and userInfo the
+        // scheduler writes, read back by the parser, so a change to either shows up here.
+        let fired = prayer.time.addingTimeInterval(-Double(minutes) * 60)
+        let stamp = Calendar.current.dateComponents([.year, .month, .day], from: fired)
+        let content = UNMutableNotificationContent()
+        content.userInfo[Settings.intendedFireDateUserInfoKey] = fired.timeIntervalSince1970
+        let request = UNNotificationRequest(
+            identifier: "\(fields[0])-\(minutes)-\(stamp.year ?? 0)-\(stamp.month ?? 0)-\(stamp.day ?? 0)"
+                + Settings.notificationContentSignature(settings),
+            content: content,
+            trigger: nil
+        )
+        guard let moment = Settings.tappedPrayerNotification(from: request, deliveredAt: fired) else {
+            print("PRAYER TAP \(request.identifier): not read as a prayer notification")
+            return
+        }
+        ask(about: moment)
+    }
+    #endif
 }
 #endif

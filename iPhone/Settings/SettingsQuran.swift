@@ -365,6 +365,20 @@ extension Settings {
            reciterId != resolved.id {
             reciterId = resolved.id
         }
+        revertToDefaultReciterIfMissing()
+    }
+
+    /// A saved reciter that is no longer in the catalog (retired, renamed, or removed in an update)
+    /// falls back to the default one (Abu, 2026-09-20). Without this the stale name kept showing in
+    /// every "who is reciting" caption and pressing play failed with "could not be found" until the
+    /// reader happened to open the reciter list. Runs at launch, when the list opens, and from the
+    /// player just before it would have failed. Returns whether it had to revert.
+    @discardableResult
+    func revertToDefaultReciterIfMissing() -> Bool {
+        guard reciter != Self.randomReciterName else { return false }
+        guard reciter.isEmpty || resolvedSelectedReciterIgnoringRandom() == nil else { return false }
+        applyDefaultReciterSelection()
+        return true
     }
 
     /// If the user has a legacy name-only save, attach a stable id. When several rows share the same display name (e.g. Ahmad Deban in multiple riwayat), prefer the Hafs / default surah feed (`qiraah == nil`).
@@ -482,11 +496,13 @@ extension Settings {
     }
 
     /// One character per legend category, "1"/"0" for visible/hidden - the per-category slice of the
-    /// tajweed configuration, shared by every render-invalidation signature that bakes colors in.
+    /// tajweed configuration, shared by every render-invalidation signature that bakes colors in. The
+    /// reader's custom rule colors (Hafs and riwayah alike) ride along: a recolored rule has to repaint
+    /// every equatable row and every composed page exactly as a hidden one does.
     var tajweedCategoryVisibilitySignature: String {
         TajweedLegendCategory.allCases
             .map { isTajweedCategoryVisible($0) ? "1" : "0" }
-            .joined()
+            .joined() + "#" + TajweedColorOverrides.shared.signature
     }
 
     // MARK: - Last listened (typed accessors)

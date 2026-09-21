@@ -764,19 +764,24 @@ struct InheritanceCalculatorView: View {
                     Button("Done") { amountFocused = false }
                 }
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    settings.hapticFeedback()
-                    storedCounts = ""
-                    estate = ""
-                    funeral = ""
-                    debts = ""
-                    bequest = ""
-                } label: {
-                    Text("Reset")
-                }
-                .disabled(storedCounts.isEmpty && estate.isEmpty && funeral.isEmpty && debts.isEmpty && bequest.isEmpty)
+        }
+        // Reset, then the Islam Settings gear at the far right, in ONE toolbar (see
+        // `IslamSettingsToolbar` for why this screen places the gear itself).
+        .islamSettingsToolbar {
+            Button {
+                settings.hapticFeedback()
+                storedCounts = ""
+                estate = ""
+                funeral = ""
+                debts = ""
+                bequest = ""
+            } label: {
+                // The Tasbih counter's reset glyph, not the word: "Reset" as text beside the gear
+                // left the title too little room, and it truncated to "Inheritance Calcula...".
+                Image(systemName: "arrow.counterclockwise")
             }
+            .accessibilityLabel("Reset")
+            .disabled(storedCounts.isEmpty && estate.isEmpty && funeral.isEmpty && debts.isEmpty && bequest.isEmpty)
         }
     }
 

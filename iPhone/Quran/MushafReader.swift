@@ -404,9 +404,11 @@ struct SurahPageReader<Controls: View>: View {
     /// page must never resize - so an inline field at the bottom would be covered by the keyboard it raises.
     @State private var showTypedJump = false
     @State private var typedJumpText = ""
-    /// The page geometry captured as the jump picker OPENS - before its inset shrinks the live one. The
-    /// wheel's predictive warms compose at THIS geometry, because it is what the page returns to the
-    /// moment the picker closes and the jump lands; fits at the picker-shrunken height would all near-miss.
+    /// The page geometry captured as the jump picker OPENS; the wheel's predictive warms compose at
+    /// THIS geometry. It dates from when the picker sat in the bottom inset and shrank the live page
+    /// (fits at the shrunken height all near-missed once it closed). The picker is an overlay now and
+    /// the page keeps its height, so this equals the live geometry unless something else (the mini
+    /// player mounting) moves the inset while the wheel is open - the case it still covers.
     @State private var pickerBaseGeometry: (width: CGFloat, height: CGFloat)?
 
     // In-page find: the query, and which of the current matches is active.
@@ -679,6 +681,8 @@ struct SurahPageReader<Controls: View>: View {
                 .background(MushafPagerProbeView())
             }
         }
+        // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
+        .overlay { jumpPickerDismissScrim }
         // The surah header, PINNED AT THE TOP again (user rule, final position) - but tiny: caption2
         // text (`micro`), clamped dynamic type, and almost no air above or below, so the page loses as
         // little height as possible. One header for the whole pager (it only re-renders when
@@ -700,6 +704,11 @@ struct SurahPageReader<Controls: View>: View {
                 .clipped()
                 .opacity(bottomBarsCollapsed ? 0 : 1)
                 .allowsHitTesting(!bottomBarsCollapsed)
+                // The page / juz wheel floats up from the footer instead of sitting in this inset,
+                // so the page is never re-fit around it. Outside the clip above on purpose.
+                .overlay(alignment: wideBottomBars ? .bottomTrailing : .bottom) {
+                    jumpPickerOverlay(pages: pages)
+                }
         }
         // The reader's width decides whether the two bottom bars share a row (`bottomBars`).
         .background(
@@ -1395,7 +1404,11 @@ struct SurahPageReader<Controls: View>: View {
 
         return Button {
             settings.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed.toggle() }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                bottomBarsCollapsed.toggle()
+                // The wheel hangs off the footer being folded away; it goes with it.
+                activePicker = nil
+            }
         } label: {
             Image(systemName: bottomBarsCollapsed ? "chevron.up" : "chevron.down")
                 .font(.caption.weight(.bold))
@@ -1502,25 +1515,61 @@ struct SurahPageReader<Controls: View>: View {
                 surahTotal
             )
 
-            VStack(spacing: 8) {
-                if let target = activePicker {
-                    inlinePicker(target: target, pages: pages)
-                }
+            // The page / juz wheel is NOT in this stack any more: it floats above the footer as an
+            // overlay (`jumpPickerOverlay`), so opening it no longer grows the bottom inset and
+            // re-fits the page.
+            //
+            // The collapse control moved OUT of this row to the strip at the screen's bottom edge,
+            // so the pill and the play control sit at their plain 8pt apart again.
+            HStack(spacing: 8) {
+                pageInfoPill(page: page, surah: footerSurah, pages: pages,
+                             surahPosition: surahPosition, surahTotal: surahTotal,
+                             juzPosition: juzPosition, juzTotal: juzTotal)
 
-                // The collapse control moved OUT of this row to the strip at the screen's bottom edge,
-                // so the pill and the play control sit at their plain 8pt apart again.
-                HStack(spacing: 8) {
-                    pageInfoPill(page: page, surah: footerSurah, pages: pages,
-                                 surahPosition: surahPosition, surahTotal: surahTotal,
-                                 juzPosition: juzPosition, juzTotal: juzTotal)
-
-                    if let footerSurah {
-                        pageFooterPlayButton(surah: footerSurah)
-                    }
+                if let footerSurah {
+                    pageFooterPlayButton(surah: footerSurah)
                 }
             }
             .padding(.horizontal, 24)
             .padding(.bottom, BottomBarCushion.standard)
+        }
+    }
+
+    /// The page / juz wheel, floating just above the footer pill that opened it (Abu, 2026-09-20:
+    /// "make it take over an overlay rather than shrinking the quran like for page/juz").
+    ///
+    /// It used to sit INSIDE the bottom inset, above the pill. A mushaf page is typeset to the height
+    /// it is given, so unfolding ~150 pt of picker there re-fit the whole page smaller, and closing it
+    /// grew it back. As an overlay it covers the row above the footer (legend / search / riwayah, and
+    /// the mini player when one is up) and the bottom of the page for as long as it is open, and the
+    /// page underneath never moves.
+    ///
+    /// Attached to the bottom bars OUTSIDE their `.clipped()`: the wheel is taller than the bars, and
+    /// the fold's clip would cut it off at their top edge.
+    @ViewBuilder
+    private func jumpPickerOverlay(pages: [MushafPage]) -> some View {
+        if let target = activePicker, !bottomBarsCollapsed {
+            inlinePicker(target: target, pages: pages)
+                // Wide layout: the footer is the trailing half of the row, so the wheel stays over it.
+                .frame(maxWidth: wideBottomBars ? max(readerWidth / 2 - 48, 0) : .infinity)
+                .padding(.horizontal, 24)
+                .padding(.bottom, footerHeight + BottomBarCushion.standard + 8)
+        }
+    }
+
+    /// While the wheel floats over the page, a tap anywhere on the page closes it (the way a tap
+    /// outside a menu does) instead of marking an ayah underneath something the reader is not looking
+    /// at. It also holds the page still under the wheel: the wheel was seeded from the page on
+    /// screen, and a swipe underneath would leave it pointing at a page the reader has left.
+    @ViewBuilder
+    private var jumpPickerDismissScrim: some View {
+        if activePicker != nil, !bottomBarsCollapsed {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut) { activePicker = nil }
+                }
+                .accessibilityHidden(true)
         }
     }
 
@@ -1765,7 +1814,9 @@ struct SurahPageReader<Controls: View>: View {
         }
         .frame(maxWidth: .infinity)
         .conditionalGlassEffect(rectangle: true)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        // Grows out of the footer it hangs above. It slid up from the bottom edge while it was part
+        // of the inset; as an overlay that slide would cross the pill.
+        .transition(.scale(scale: 0.92, anchor: .bottom).combined(with: .opacity))
         // The typed-number fast path. An alert so the number pad can't cover the input (the reader
         // deliberately ignores the keyboard inset - see the note on `showTypedJump`). The TextField only
         // renders inside alerts on iOS 16+, which is why the keyboard button that raises this is gated.
@@ -1913,7 +1964,8 @@ struct SurahPageReader<Controls: View>: View {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
                     } label: {
-                        Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
+                        ReciterCaptionedMenuLabel(title: canResumeLast ? "Play from Beginning" : "Play Surah",
+                                                  systemImage: "memories")
                     }
                 } label: {
                     playControlLabel
@@ -3330,8 +3382,11 @@ struct MushafPageComposer {
 
         centered.alignment = .center
         centered.paragraphSpacingBefore = lineSpacing
-        text.addAttribute(.paragraphStyle, value: centered,
-                          range: NSRange(location: lineStart, length: text.length - lineStart))
+        let tail = NSRange(location: lineStart, length: text.length - lineStart)
+        text.addAttribute(.paragraphStyle, value: centered, range: tail)
+        // A color attribute only: it tells `MushafPageLayoutManager` to run this line's washes out to
+        // the margins, and moves no glyph.
+        text.addAttribute(.mushafWashFillsMeasure, value: true, range: tail)
         return true
     }
 
@@ -5281,6 +5336,77 @@ final class PageZoomScrollView: UIScrollView {
     }
 }
 
+extension NSAttributedString.Key {
+    /// On the opening spread's centered closing line: its background washes fill to the margins.
+    static let mushafWashFillsMeasure = NSAttributedString.Key("mushafWashFillsMeasure")
+}
+
+/// The composed page's layout manager. It differs from the stock one in a single place: a wash on the
+/// opening spread's CENTERED closing line.
+///
+/// Every other line of a page is justified to both margins, so an ayah's `.backgroundColor` paints a
+/// clean block. The centered line ends short of the margins on both sides, and TextKit carried the
+/// wash to the right margin (the range runs to the end of the text) but stopped it at the last glyph
+/// on the left, so a lit passage on pages 1 and 2 ended in a block with one corner bitten out (Abu,
+/// 2026-09-20: "broken for first 2 pages cause it's centered"). Here a rect that reaches the line's
+/// ink on either side is carried on to that margin, so the block closes square. A rect that stops
+/// inside the line (two ayahs of different colors sharing it) keeps its inner edge, so neighbouring
+/// washes never overlap and double up.
+final class MushafPageLayoutManager: NSLayoutManager {
+    private var drawingOrigin: CGPoint = .zero
+
+    override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: CGPoint) {
+        drawingOrigin = origin
+        super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
+    }
+
+    override func fillBackgroundRectArray(_ rectArray: UnsafePointer<CGRect>, count rectCount: Int,
+                                          forCharacterRange charRange: NSRange, color: UIColor) {
+        guard rectCount > 0, let storage = textStorage, charRange.length > 0,
+              NSMaxRange(charRange) <= storage.length else {
+            super.fillBackgroundRectArray(rectArray, count: rectCount, forCharacterRange: charRange, color: color)
+            return
+        }
+        var fillsMeasure = false
+        storage.enumerateAttribute(.mushafWashFillsMeasure, in: charRange) { value, _, stop in
+            if value != nil {
+                fillsMeasure = true
+                stop.pointee = true
+            }
+        }
+        guard fillsMeasure else {
+            super.fillBackgroundRectArray(rectArray, count: rectCount, forCharacterRange: charRange, color: color)
+            return
+        }
+
+        // The centered lines this range touches, in the drawing's coordinates.
+        var lines: [(fragment: CGRect, used: CGRect)] = []
+        enumerateLineFragments(forGlyphRange: glyphRange(forCharacterRange: charRange, actualCharacterRange: nil)) {
+            fragment, used, _, lineGlyphs, _ in
+            let lineStart = self.characterIndexForGlyph(at: lineGlyphs.location)
+            guard lineStart < storage.length,
+                  storage.attribute(.mushafWashFillsMeasure, at: lineStart, effectiveRange: nil) != nil else { return }
+            lines.append((fragment.offsetBy(dx: self.drawingOrigin.x, dy: self.drawingOrigin.y),
+                          used.offsetBy(dx: self.drawingOrigin.x, dy: self.drawingOrigin.y)))
+        }
+
+        var rects = Array(UnsafeBufferPointer(start: rectArray, count: rectCount))
+        for index in rects.indices {
+            let rect = rects[index]
+            guard let line = lines.first(where: { $0.fragment.minY <= rect.midY && rect.midY < $0.fragment.maxY }) else { continue }
+            let reachesLeft = rect.minX <= line.used.minX + 1
+            let reachesRight = rect.maxX >= line.used.maxX - 1
+            let minX = reachesLeft ? line.fragment.minX : rect.minX
+            let maxX = reachesRight ? line.fragment.maxX : rect.maxX
+            rects[index] = CGRect(x: minX, y: rect.minY, width: maxX - minX, height: rect.height)
+        }
+        rects.withUnsafeBufferPointer { buffer in
+            guard let base = buffer.baseAddress else { return }
+            super.fillBackgroundRectArray(base, count: rectCount, forCharacterRange: charRange, color: color)
+        }
+    }
+}
+
 struct MushafPageTextView: UIViewRepresentable {
     let attributed: NSAttributedString
     let ranges: [MushafAyahRange]
@@ -5509,7 +5635,16 @@ struct MushafPageTextView: UIViewRepresentable {
         #if DEBUG
         MushafPagerProbe.trace("makeUIView \(ranges.first.map { "\($0.surahID):\($0.ayahID)" } ?? "?")")
         #endif
-        let tv = UITextView()
+        // The page's own TextKit-1 stack, for `MushafPageLayoutManager` (the centered closing line's
+        // wash). The text view takes its storage and layout manager from the container it is given.
+        let storage = NSTextStorage()
+        let manager = MushafPageLayoutManager()
+        let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
+        manager.addTextContainer(container)
+        storage.addLayoutManager(manager)
+        // NSLayoutManager does not retain its NSTextStorage; the coordinator lives as long as the view.
+        context.coordinator.textStorage = storage
+        let tv = UITextView(frame: .zero, textContainer: container)
         tv.isEditable = false
         tv.isSelectable = false
         tv.isScrollEnabled = false
@@ -5689,6 +5824,8 @@ struct MushafPageTextView: UIViewRepresentable {
 
         weak var textView: UITextView?
         weak var scrollView: UIScrollView?
+        /// Held for the text view: a layout manager does not retain its storage.
+        var textStorage: NSTextStorage?
         var ranges: [MushafAyahRange] = []
 
         // MARK: PDF-style zoom (fitted page only - the host enables zooming there)

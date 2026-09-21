@@ -19,36 +19,70 @@ struct ArabicView: View {
     @State private var scrollTarget: String?
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @AppStorage("arabicFilterMode") private var filterModeRaw: String = ArabicFilterMode.normal.rawValue
-    /// List of rows, or a grid of tiles - the same choice the 99 Names screen offers. Watch is always a list.
+    @AppStorage("arabicFilterMode") private var filterModeRaw: String = "normal"
+    /// The ONE family the active grouping is narrowed to (a chip in the banner), nil for all of them.
+    /// Not stored: it belongs to the grouping it was picked under, and resets with it.
+    @State private var focusedFamilyID: String?
+    /// Where a tile or chip on this screen leads: the Explore row, the banner's About link, a family
+    /// header's info button. One state and one destination, because they share List rows.
+    @State private var door: ArabicDoor?
 
-    private enum ArabicFilterMode: String, CaseIterable, Identifiable {
-        case normal
-        case similarity
-        case heavyLight
+    /// How the 28 letters are laid out: in order, by shared shape, or by one of the tajweed axes
+    /// (`LetterAxis`: where letters are made, how they sound, what they do to their neighbours).
+    ///
+    /// Stored as a string. "normal", "similarity" and "heavyLight" are the three raw values this
+    /// screen has always written, so an existing choice survives; an axis stores its own raw value.
+    private enum Grouping: Equatable {
+        case alphabetical
+        case shape
+        case axis(LetterAxis)
 
-        var id: String { rawValue }
+        init(raw: String) {
+            switch raw {
+            case "similarity": self = .shape
+            case "heavyLight": self = .axis(.weight)
+            default: self = LetterAxis(rawValue: raw).map(Grouping.axis) ?? .alphabetical
+            }
+        }
+
+        var raw: String {
+            switch self {
+            case .alphabetical: return "normal"
+            case .shape: return "similarity"
+            case .axis(let axis): return axis.rawValue
+            }
+        }
 
         var title: String {
             switch self {
-            case .normal: return "Normal Grouping"
-            case .similarity: return "Similar Letters"
-            case .heavyLight: return "Heavy vs Light"
+            case .alphabetical: return "Alphabetical Order"
+            case .shape: return "Similar Shapes"
+            case .axis(let axis): return axis.title
             }
         }
 
         var icon: String {
             switch self {
-            case .normal: return "square.grid.2x2"
-            case .similarity: return "square.grid.3x3"
-            case .heavyLight: return "circle.lefthalf.filled"
+            case .alphabetical: return "square.grid.2x2"
+            case .shape: return "square.grid.3x3"
+            case .axis(let axis): return axis.systemImage
             }
+        }
+
+        var axis: LetterAxis? {
+            if case .axis(let axis) = self { return axis }
+            return nil
         }
     }
 
-    private var filterMode: ArabicFilterMode {
-        get { ArabicFilterMode(rawValue: filterModeRaw) ?? .normal }
-        set { filterModeRaw = newValue.rawValue }
+    private var grouping: Grouping { Grouping(raw: filterModeRaw) }
+
+    private func setGrouping(_ grouping: Grouping) {
+        settings.hapticFeedback()
+        withAnimation(.easeInOut) {
+            filterModeRaw = grouping.raw
+            focusedFamilyID = nil
+        }
     }
 
     private let similarityGroups: [[String]] = [
@@ -119,17 +153,27 @@ struct ArabicView: View {
             parts.append(rule)
         }
 
+        // Every family the letter belongs to: "whistling", "safeer", "hams", "throat", "sun",
+        // "ikhfaa"... so the search doubles as a filter by tajweed trait.
+        parts += LetterTraits.searchTerms(for: letter.letter)
+
         return parts.contains { $0.contains(st) }
     }
 
-    private var filteredStandardForMode: [LetterData] {
-        switch filterMode {
-        case .normal, .similarity:
-            return filteredStandard
-        case .heavyLight:
-            return filteredStandard.filter { $0.weight != nil }
+    /// Families whose own name matches the query, offered above the letters: typing "safeer" should
+    /// lead to the whistling family itself, not only to its three letters.
+    private var matchingFamilies: [LetterFamily] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard query.count >= 3 else { return [] }
+        return LetterTraits.allFamilies.filter { family in
+            family.name.lowercased().contains(query)
+                || family.meaning.lowercased().contains(query)
+                || family.arabic.contains(query)
+                || family.keywords.contains { $0.contains(query) }
         }
     }
+
+    private var filteredStandardForMode: [LetterData] { filteredStandard }
 
     #if os(iOS)
     // AI (semantic) letter search - the hadith book search's exact grammar, over the alphabet:
@@ -157,6 +201,19 @@ struct ArabicView: View {
         case nil: break
         }
         if let rule = letter.weightRule { parts.append(rule) }
+        if let glyph = LetterTraits.profileLetter(for: letter) {
+            if let zone = LetterTraits.makharij(of: glyph).last.flatMap({ LetterTraits.family(id: $0.zoneID) }) {
+                parts.append("It is made at \(zone.meaning.lowercased()) (\(zone.name)).")
+            }
+            let qualities = LetterTraits.sifaat(of: glyph).map { "\($0.name) (\($0.meaning.lowercased()))" }
+            if !qualities.isEmpty { parts.append("Its qualities: \(qualities.joined(separator: ", ")).") }
+            if let rule = LetterTraits.family(of: glyph, on: .noonSakinah) {
+                parts.append("After noon sakinah or tanween it causes \(rule.name) (\(rule.meaning.lowercased())).")
+            }
+            if let lam = LetterTraits.family(of: glyph, on: .lamOfAl) {
+                parts.append("It is one of the \(lam.meaning.lowercased()).")
+            }
+        }
         return parts.joined(separator: " ")
     }
 
@@ -173,7 +230,7 @@ struct ArabicView: View {
         let texts = Self.semanticCorpusItems.map { Self.letterEnglishText($0) }
         // Keyed by the letter's id, so index -> letter resolution survives any reorder of the source.
         let keys = Self.semanticCorpusItems.map { String($0.id) }
-        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v2-\(texts.count)", texts: texts, keys: keys)
     }
 
     private func runAISearch(query: String) {
@@ -346,6 +403,21 @@ struct ArabicView: View {
                     .first(where: { $0.letter == letter }) else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { gridSelection = match }
         }
+        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|basics|families|soundAlikes|quiz|family:<id>",
+        // and "-arabicGrouping <axis raw value>" to land on a grouping: push one of the topic pages. Their
+        // rows sit below the fold of a list that cannot be scrolled from a script.
+        .background(debugTopicLink)
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            if let idx = arguments.firstIndex(of: "-arabicGrouping"), arguments.indices.contains(idx + 1) {
+                filterModeRaw = arguments[idx + 1]
+                if let idx = arguments.firstIndex(of: "-arabicFamily"), arguments.indices.contains(idx + 1) {
+                    focusedFamilyID = arguments[idx + 1]
+                }
+            }
+            guard Self.debugTopic != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugTopicOpen = true }
+        }
         #endif
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
@@ -365,50 +437,18 @@ struct ArabicView: View {
                     SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
 
                     Menu {
-                        Text("Arabic Sort")
-                            .foregroundStyle(.secondary)
-
-                        ForEach(ArabicFilterMode.allCases) { mode in
-                            Button {
-                                settings.hapticFeedback()
-                                withAnimation(.easeInOut) {
-                                    filterModeRaw = mode.rawValue
-                                }
-                            } label: {
-                                Label(
-                                    mode.title,
-                                    systemImage: mode == filterMode ? "checkmark" : mode.icon
-                                )
-                            }
-                        }
-
-                        Divider()
-
-                        Text("Display")
-                            .foregroundStyle(.secondary)
-
-                        // Lets the marks be practised from the Arabic alone, without reading the answer off the
-                        // transliteration underneath.
-                        Button {
-                            settings.hapticFeedback()
-                            withAnimation(.easeInOut) {
-                                settings.hideEnglishInArabicLetters.toggle()
-                            }
-                        } label: {
-                            Label(
-                                settings.hideEnglishInArabicLetters ? "Show English" : "Hide English",
-                                systemImage: settings.hideEnglishInArabicLetters ? "eye" : "eye.slash"
-                            )
-                        }
+                        groupingMenuItems
                     } label: {
                         adaptiveMenuButtonLabel {
-                            Image(systemName: filterMode.icon)
+                            Image(systemName: grouping.icon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .foregroundColor(settings.accentColor.color)
                                 .transition(.opacity)
                         }
                     }
+                    .fixedMenuOrder()
+                    .accessibilityLabel("Group the alphabet")
                 }
                 .minimizedBarStyle(barsCollapsed)
             }
@@ -419,6 +459,7 @@ struct ArabicView: View {
         }
         #endif
         .applyConditionalListStyle()
+        .arabicDoorDestination($door)
         #if os(iOS)
         .aboutSignsDestination($aboutDoor)
         #endif
@@ -450,18 +491,18 @@ struct ArabicView: View {
             guard ready.contains(Self.semanticCorpusID) else { return }
             runAISearch(query: searchText)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // The one app-wide grid toggle - flipping it here flips Quran, Names, and Islam too.
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation { settings.arabicGridMode.toggle() }
-                } label: {
-                    Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
-                }
-                .accessibilityLabel(isGridMode ? "Show list" : "Show grid")
-                .tint(settings.accentColor.accent2)
+        // The grid toggle, then the Islam Settings gear at the far right, in ONE toolbar (see
+        // `IslamSettingsToolbar` for why this screen places the gear itself).
+        .islamSettingsToolbar {
+            // The one app-wide grid toggle - flipping it here flips Quran, Names, and Islam too.
+            Button {
+                settings.hapticFeedback()
+                withAnimation { settings.arabicGridMode.toggle() }
+            } label: {
+                Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
             }
+            .accessibilityLabel(isGridMode ? "Show list" : "Show grid")
+            .tint(settings.accentColor.accent2)
         }
         #endif
         }
@@ -582,6 +623,40 @@ struct ArabicView: View {
     }
     #endif
 
+    #if DEBUG
+    /// "-arabicTopic <name>" - see the `.onAppear` that consumes it.
+    private static var debugTopic: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let idx = arguments.firstIndex(of: "-arabicTopic"), arguments.indices.contains(idx + 1) else { return nil }
+        return arguments[idx + 1]
+    }
+
+    @State private var debugTopicOpen = false
+
+    @ViewBuilder
+    private var debugTopicLink: some View {
+        NavigationLink(isActive: $debugTopicOpen) {
+            switch Self.debugTopic {
+            case "tashkeel": TashkeelLettersView()
+            case "defaultTashkeel": DefaultTashkeelView()
+            case "baaHaa": BaaHaaShapesView()
+            case "families": LetterFamiliesView()
+            case "soundAlikes": SoundAlikeLettersView()
+            case "quiz": LetterQuizView()
+            case let topic? where topic.hasPrefix("family:"):
+                // "-arabicTopic family:safeer": one family's page.
+                if let family = LetterTraits.family(id: String(topic.dropFirst("family:".count))) {
+                    LetterFamilyView(family: family)
+                }
+            default: ArabicBasicsView()
+            }
+        } label: {
+            EmptyView()
+        }
+        .opacity(0)
+    }
+    #endif
+
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showFavoriteLetters") private var showFavoriteLetters = true
 
@@ -679,50 +754,64 @@ struct ArabicView: View {
     @ViewBuilder
     private var mainLetterSections: some View {
         if searchText.isEmpty {
+            exploreSection
+
             standardLetterSections
-
-            Section("TASHKEEL") {
-                NavigationLink {
-                    TashkeelLettersView()
-                } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Letters with Tashkeel")
-                                .foregroundColor(.primary)
-
-                            Text("Every letter carrying one harakah at a time")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    } icon: {
-                        Text("\u{0640}\u{064E}")
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
 
-            Section("ARABIC BASICS") {
+            // Everything about reading the script in ONE place (Abu, 2026-09-20: the page was "all
+            // over the place"). These were three separate sections of one or two rows each, scattered
+            // between the letters and the numbers. Separate List rows, one link each.
+            Section {
+                NavigationLink {
+                    TashkeelLettersView()
+                } label: {
+                    ArabicTopicLinkLabel(
+                        specimen: "\u{0628}\u{064E}",
+                        title: "Letters with Tashkeel",
+                        caption: "Every letter carrying one harakah at a time",
+                        preview: "بَ  بِ  بُ  بۡ  بّ  بً  بٍ  بٌ"
+                    )
+                }
+
+                NavigationLink {
+                    DefaultTashkeelView()
+                } label: {
+                    ArabicTopicLinkLabel(
+                        specimen: "\u{0628}\u{064A}",
+                        title: "Default Tashkeel",
+                        caption: "The marks you assume when a word is printed with none",
+                        preview: "با \u{2190} بَا    بي \u{2190} بِي    بو \u{2190} بُو",
+                        face: .plain
+                    )
+                }
+
+                // Not a letter, so not a tile among the special letters: the one joined shape whose
+                // fifteen readings differ only by dots. Opens the full table (Abu, 2026-09-20).
+                NavigationLink {
+                    BaaHaaShapesView()
+                } label: {
+                    ArabicTopicLinkLabel(
+                        specimen: BaaHaaShapesView.skeleton,
+                        title: "Baa Shape on a Haa Shape",
+                        caption: "One outline, fifteen letter pairs told apart only by their dots",
+                        preview: "بحـ  تجـ  نخـ  يحـ  ثجـ",
+                        face: .uthmani
+                    )
+                }
+
                 NavigationLink {
                     ArabicBasicsView()
                 } label: {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Basic Grammar")
-                                .foregroundColor(.primary)
-
-                            Text("Gender, duals, plurals, and the three case endings")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    } icon: {
-                        Text("ال")
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                    .padding(.vertical, 4)
+                    ArabicTopicLinkLabel(
+                        specimen: "ال",
+                        title: "Basic Grammar",
+                        caption: "Gender, duals, plurals, and the three case endings"
+                    )
                 }
+            } header: {
+                Text("READING THE SCRIPT")
             }
 
             Section(header: SectionPillHeader(title: "ARABIC NUMBERS", count: numbers.count)) {
@@ -735,31 +824,274 @@ struct ArabicView: View {
         }
     }
 
+    /// The study tools, as tiles at the very top: below twenty-eight letters nobody would find them.
+    /// Buttons writing the one `door`, not links: the tiles share a List row.
+    private var exploreSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 8) {
+                exploreTile("Letter\nFamilies", specimen: "ص س ز", caption: "Makharij, sifaat and rules") { door = .families }
+                exploreTile("Sound-Alike\nLetters", specimen: "س ص", caption: "Hear the pairs people mix up") { door = .soundAlikes }
+                #if os(iOS)
+                exploreTile("Letter\nQuiz", specimen: "؟", caption: "Ten questions, five ways") { door = .quiz }
+                #endif
+            }
+            .padding(.horizontal, -8)
+            .padding(.vertical, -6)
+        } header: {
+            Text("EXPLORE")
+        }
+    }
+
+    private func exploreTile(_ title: String, specimen: String, caption: String, action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            VStack(spacing: 4) {
+                Text(specimen)
+                    .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 24, relativeTo: .title2) : .title2)
+                    .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+                    .frame(height: 34)
+
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+
+                Text(caption)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .top)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 6)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(clear: true, rectangle: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title.replacingOccurrences(of: "\n", with: " ")). \(caption)")
+    }
+
     @ViewBuilder
     private var standardLetterSections: some View {
-        switch filterMode {
-        case .normal:
+        switch grouping {
+        case .alphabetical:
             countedLetterSection("STANDARD ARABIC LETTERS", standardArabicLetters, shuffle: true)
-        case .similarity:
+        case .shape:
             ForEach(similarityGroups.indices, id: \.self) { idx in
                 let group = similarityGroups[idx]
                 let header = idx == 0 ? "VOWEL LETTERS" : Self.similarityHeader(for: group)
                 countedLetterSection(header, group.compactMap { letterData(for: $0) })
             }
-        case .heavyLight:
-            countedLetterSection("FOLLOWS PREVIOUS", standardArabicLetters.filter { $0.weight == .followsPrevious })
+        case .axis(let axis):
+            axisBanner(axis)
 
-            countedLetterSection("CONDITIONAL", standardArabicLetters.filter { $0.weight == .conditional })
+            ForEach(shownFamilies(of: axis)) { family in
+                familySection(family)
+            }
 
-            countedLetterSection("HEAVY LETTERS", standardArabicLetters.filter { $0.weight == .heavy })
-
-            countedLetterSection("LIGHT LETTERS", (standardArabicLetters + otherArabicLetters).filter {
-                $0.weight == .light
-                    || $0.transliteration == "taa marbuuTah"
-                    || $0.transliteration.lowercased().contains("hamza")
-            })
+            // The letters no family of this axis claims, so the alphabet is always all there.
+            if focusedFamilyID == nil {
+                let rest = LetterTraits.unclaimedLetters(of: axis).compactMap { letterData(for: $0) }
+                if !rest.isEmpty {
+                    countedLetterSection(axis.restTitle.uppercased(), rest, footer: axis.restNote)
+                }
+            }
         }
     }
+
+    /// The families of `axis` on show: all of them, or the one a banner chip narrowed it to.
+    private func shownFamilies(of axis: LetterAxis) -> [LetterFamily] {
+        guard let focusedFamilyID, axis.families.contains(where: { $0.id == focusedFamilyID }) else {
+            return axis.families
+        }
+        return axis.families.filter { $0.id == focusedFamilyID }
+    }
+
+    /// One family of the active grouping: its name in both languages over its letters, with what
+    /// the letters share underneath and an info button that opens the family's own page.
+    private func familySection(_ family: LetterFamily) -> some View {
+        Section {
+            letterCollection(family.letters.compactMap { letterData(for: $0) })
+        } header: {
+            HStack(alignment: .center, spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("\(family.name.uppercased()) \u{00B7} \(family.meaning.uppercased())")
+
+                    Text(family.arabic)
+                        .font(.footnote)
+                        .foregroundColor(family.legendColor ?? settings.accentColor.color)
+                        .textCase(nil)
+                }
+
+                Spacer(minLength: 8)
+
+                CountPill(count: family.letters.count)
+
+                Image(systemName: "info")
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(settings.accentColor.color)
+                    .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
+                    .conditionalGlassEffect(circle: true)
+                    .onTapGesture {
+                        settings.hapticFeedback()
+                        door = .family(family)
+                    }
+                    .accessibilityLabel("About \(family.name)")
+                    .accessibilityAddTraits(.isButton)
+            }
+        } footer: {
+            Text(family.summary)
+        }
+    }
+
+    /// What the active grouping IS, above the letters it regroups: the question it asks in both
+    /// languages, a chip per family to narrow the alphabet to just that one, and the way back.
+    private func axisBanner(_ axis: LetterAxis) -> some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    AccentIconChip(systemImage: axis.systemImage, size: 34)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(axis.title)
+                            .font(.headline)
+
+                        Text(axis.transliteration)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text(axis.arabic)
+                        .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 19, relativeTo: .body) : .body)
+                        .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
+                        .foregroundColor(settings.accentColor.color)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.5)
+                }
+
+                Text(axis.question)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        familyChip(title: "All", systemImage: "square.grid.2x2", isOn: focusedFamilyID == nil, tint: nil) {
+                            focusedFamilyID = nil
+                        }
+
+                        ForEach(axis.families) { family in
+                            familyChip(title: family.name, systemImage: family.systemImage,
+                                       isOn: focusedFamilyID == family.id, tint: family.legendColor) {
+                                focusedFamilyID = focusedFamilyID == family.id ? nil : family.id
+                            }
+                        }
+                    }
+                    .padding(.vertical, 1)
+                }
+            }
+            .padding(.vertical, 4)
+
+            Button {
+                settings.hapticFeedback()
+                door = .axes(title: axis.title, axes: [axis])
+            } label: {
+                Label("About These Families", systemImage: "book")
+                    .font(.subheadline)
+                    .foregroundColor(settings.accentColor.color)
+            }
+
+            Button {
+                setGrouping(.alphabetical)
+            } label: {
+                Label("Back to Alphabetical Order", systemImage: "arrow.uturn.backward")
+                    .font(.subheadline)
+                    .foregroundColor(settings.accentColor.color)
+            }
+        } header: {
+            Text("GROUPED BY")
+        }
+    }
+
+    private func familyChip(title: String, systemImage: String, isOn: Bool, tint: Color?, action: @escaping () -> Void) -> some View {
+        let color = tint ?? settings.accentColor.color
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) { action() }
+        } label: {
+            Label(title, systemImage: systemImage)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .foregroundColor(isOn ? .white : color)
+                .background(Capsule().fill(isOn ? color : color.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    #if os(iOS)
+    /// The grouping menu. Every tajweed grouping is named in English AND Arabic (Abu, 2026-09-20):
+    /// the Arabic term is the one a teacher will use.
+    @ViewBuilder
+    private var groupingMenuItems: some View {
+        Text("Group the Alphabet")
+            .foregroundStyle(.secondary)
+
+        groupingButton(.alphabetical)
+        groupingButton(.shape)
+
+        Divider()
+
+        ForEach(LetterAxis.Shelf.allCases) { shelf in
+            if shelf.axes.count == 1, let only = shelf.axes.first {
+                groupingButton(.axis(only))
+            } else {
+                Menu {
+                    ForEach(shelf.axes) { axis in
+                        groupingButton(.axis(axis))
+                    }
+                } label: {
+                    Label("\(shelf.transliteration) \u{00B7} \(shelf.arabic)",
+                          systemImage: shelf.axes.contains { grouping == .axis($0) } ? "checkmark" : shelfIcon(shelf))
+                }
+            }
+        }
+    }
+
+    private func shelfIcon(_ shelf: LetterAxis.Shelf) -> String {
+        switch shelf {
+        case .place: return "mouth"
+        case .qualities: return "waveform"
+        case .rules: return "text.book.closed"
+        }
+    }
+
+    private func groupingButton(_ option: Grouping) -> some View {
+        Button {
+            setGrouping(option)
+        } label: {
+            Label(
+                option.axis.map { "\($0.title) \u{00B7} \($0.arabic)" } ?? option.title,
+                systemImage: option == grouping ? "checkmark" : option.icon
+            )
+        }
+    }
+    #endif
 
     @ViewBuilder
     private var searchResultsSection: some View {
@@ -767,6 +1099,23 @@ struct ArabicView: View {
             // ONE scan per pass: the rows and the count pill share the same merged result list -
             // as two separate accesses each computed property re-filtered every letter per keystroke.
             let results = filteredStandardForMode + filteredOther
+            let families = matchingFamilies
+            if !families.isEmpty {
+                Section(header: SectionPillHeader(title: "LETTER FAMILIES", count: families.count)) {
+                    ForEach(families) { family in
+                        LetterFamilyLink(family: family) {
+                            LetterTraitRow(
+                                systemImage: family.systemImage,
+                                tint: family.legendColor,
+                                title: family.title,
+                                arabic: family.arabic,
+                                caption: family.summary,
+                                letters: family.letters
+                            )
+                        }
+                    }
+                }
+            }
             Section {
                 if results.isEmpty {
                     #if os(iOS)
