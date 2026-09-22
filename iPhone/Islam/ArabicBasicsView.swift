@@ -642,7 +642,7 @@ struct BaaHaaShapesView: View {
         } header: {
             Text("ALL 15 COMBINATIONS")
         } footer: {
-            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmani face, the hand the mushaf is printed in; other faces may draw the two letters side by side.")
+            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmani hand the mushaf is printed in; the app's own Arabic faces write the two letters side by side.")
         }
     }
 
@@ -675,37 +675,221 @@ struct BaaHaaShapesView: View {
             ArabicExampleRow(
                 arabic: "نَحۡنُ",
                 transliteration: "nahnu",
-                note: "We: noon on Haa"
+                note: "We: noon on Haa",
+                fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "تَحۡتِهَا",
                 transliteration: "tahtihaa",
-                note: "Beneath it: taa on Haa"
+                note: "Beneath it: taa on Haa",
+                fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "يُحِبُّ",
                 transliteration: "yuhibbu",
-                note: "He loves: yaa on Haa"
+                note: "He loves: yaa on Haa",
+                fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "بِحَمۡدِ",
                 transliteration: "bihamdi",
-                note: "With the praise of: baa on Haa"
+                note: "With the praise of: baa on Haa",
+                fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "تَجۡرِي",
                 transliteration: "tajree",
-                note: "Flows: taa on jeem"
+                note: "Flows: taa on jeem",
+                fontName: Settings.hafsUthmaniFontName
             )
             ArabicExampleRow(
                 arabic: "يَخۡرُجُ",
                 transliteration: "yakhruju",
-                note: "Comes out: yaa on khaa"
+                note: "Comes out: yaa on khaa",
+                fontName: Settings.hafsUthmaniFontName
             )
         } header: {
             Text("WORDS YOU MEET IN THE QURAN")
         } footer: {
-            Text("These rows follow your Arabic font setting. Choose the Uthmani face in Islam Settings to see them stacked the way the mushaf prints them.")
+            Text("Drawn in the mushaf's own Uthmani hand, the way the Quran reader prints them, whatever your Arabic face is. Everywhere else in the app the pair is written side by side, so these rows are where to learn the stacked form.")
+        }
+    }
+}
+
+// MARK: - Laam alif
+
+/// The one joined shape that is compulsory, laam onto alif, and the marks it carries: the sibling of
+/// `BaaHaaShapesView` (Abu, 2026-09-22: "make another thing similar to baa shape on a haa shape" for
+/// laam alif, with the two AL + hamza shapes from the laam alif letter page, ٱلۡأَ and ٱلۡأٓ). The
+/// shape, the forms it takes with each kind of alif, those two shapes, and the words it is met in.
+/// The reader's own face throughout: every face joins the pair, so there is no hand to insist on.
+struct LaamAlifShapesView: View {
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+    @ObservedObject private var settings = Settings.shared
+
+    /// Laam and alif, which every face draws as the one shape.
+    static let skeleton = "\u{0644}\u{0627}"
+
+    /// The shape with each alif it can be joined to. The joined-from-before form is last: the same
+    /// ligature, hanging off the letter before it.
+    private static let forms: [(form: String, name: String)] = [
+        ("\u{0644}\u{0627}", "plain"),
+        ("\u{0644}\u{0623}", "hamza above"),
+        ("\u{0644}\u{0625}", "hamza below"),
+        ("\u{0644}\u{064E}\u{0627}\u{0653}", "madd sign"),
+        ("\u{0640}\u{0644}\u{0627}", "joined from before"),
+    ]
+
+    private func arabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        settings.useFontArabic ? settings.scalableIslamArabicFont(base: base, relativeTo: style) : .system(style)
+    }
+
+    private var usesCustomFace: Bool { settings.useFontArabic && settings.islamUsesCustomArabicFace }
+
+    var body: some View {
+        List {
+            Group {
+                shapeSection
+                formsSection
+                LaamAlifHamzaSections()
+                quranSection
+            }
+            .themedListRowBackground()
+        }
+        .selectableArticleList()
+        .navigationTitle("Laam Alif")
+        .onDisappear {
+            ArabicSpeech.shared.stop()
+            ArabicPracticeSelection.shared.clear()
+        }
+        #if os(iOS)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                ArabicSizeSlider()
+            }
+            .minimizedBarStyle(barsCollapsed)
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                HideEnglishToolbarButton()
+            }
+        }
+        #endif
+    }
+
+    private var shapeSection: some View {
+        Section {
+            VStack(spacing: 4) {
+                Text(Self.skeleton)
+                    .font(arabicFont(base: 64, relativeTo: .largeTitle))
+                    .arabicFontDesign(custom: usesCustomFace)
+                    .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+
+                Text("laam joined onto alif, as one shape")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .rowSeparatorFromLeadingEdge()
+            .accessibilityElement(children: .combine)
+
+            Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
+                .font(.body)
+
+            Text("The sound does not change: read it as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there. Only when the alif comes second does the laam fold over it.")
+                .font(.body)
+        } header: {
+            Text("THE SHAPE")
+        }
+    }
+
+    private var formsSection: some View {
+        Section {
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Self.forms, id: \.name) { item in
+                    VStack(spacing: 2) {
+                        Text(item.form)
+                            .font(arabicFont(base: 34, relativeTo: .largeTitle))
+                            .arabicFontDesign(custom: usesCustomFace)
+                            .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
+                            .foregroundColor(settings.accentColor.color)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.4)
+                            .frame(height: 48)
+
+                        if !settings.hideEnglishInArabicLetters {
+                            Text(item.name)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.7)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            // Right to left, like the script: the plain shape first, on the right.
+            .environment(\.layoutDirection, .rightToLeft)
+            .padding(.vertical, 4)
+        } header: {
+            Text("ONE SHAPE, WHATEVER THE ALIF CARRIES")
+        } footer: {
+            Text("A hamza above or below the alif, or the madd sign over it, rides on the same shape. After a letter that joins (فَلَا, إِلَّا) the shape hangs off that letter; after one that does not (وَلَا, أَلَا) it stands on its own. Alif maqSoorah is not an alif here: لَىٰ, as in عَلَىٰ, is laam then a dotless yaa, and the two stay apart.")
+        }
+    }
+
+    private var quranSection: some View {
+        Section {
+            ArabicExampleRow(
+                arabic: "لَا",
+                transliteration: "laa",
+                note: "No, not (2:2): the shape on its own"
+            )
+            ArabicExampleRow(
+                arabic: "لَآ إِلَٰهَ إِلَّا ٱللَّهُ",
+                transliteration: "laaa ilaaha illallaah",
+                note: "There is no god but Allah (37:35): the madd sign, then the shaddah, on the same shape"
+            )
+            ArabicExampleRow(
+                arabic: "أَلَا",
+                transliteration: "alaa",
+                note: "Unquestionably (6:31): alif, then a laam alif"
+            )
+            ArabicExampleRow(
+                arabic: "فَلَا",
+                transliteration: "falaa",
+                note: "So not (2:22): hanging off the faa before it"
+            )
+            ArabicExampleRow(
+                arabic: "وَلَا",
+                transliteration: "walaa",
+                note: "And not (1:7): waaw does not join, so the shape stands alone"
+            )
+            ArabicExampleRow(
+                arabic: "ٱلۡإِنسَٰنَ",
+                transliteration: "al-insaana",
+                note: "Man (10:12): AL on a hamza below the alif"
+            )
+            ArabicExampleRow(
+                arabic: "لَأَنتُمۡ",
+                transliteration: "la-antum",
+                note: "You are indeed (59:13): the emphatic laam on a hamza above"
+            )
+        } header: {
+            Text("WORDS YOU MEET IN THE QURAN")
+        } footer: {
+            Text("These rows follow your Arabic font setting. Whichever face you read in, the laam and the alif are one shape.")
         }
     }
 }

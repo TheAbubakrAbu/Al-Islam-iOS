@@ -337,6 +337,11 @@
 		72FB30080000000000000009 /* Hijazi.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30070000000000000006 /* Hijazi.ttf */; };
 		72FB300D0000000000000009 /* Hijazi3.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB300A0000000000000006 /* Hijazi3.ttf */; };
 		72FB300E0000000000000009 /* Hijazi4.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB300B0000000000000006 /* Hijazi4.ttf */; };
+		5D7F5520634446C8BC8D86D9 /* Uthmani-NoStack.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9DB0DD4965EE43E3A03A61EF /* Uthmani-NoStack.ttf */; };
+		E3A255593A65433E8A2B6A5B /* Hijazi-NoStack.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 33A5804A1D5C40B0BE667499 /* Hijazi-NoStack.ttf */; };
+		660F1210AC7640D19D9C4C99 /* Hijazi3-NoStack.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B914DF0D4630441FA1BFA790 /* Hijazi3-NoStack.ttf */; };
+		8080E8E933EC451CB5DCBECC /* Hijazi4-NoStack.ttf in Resources */ = {isa = PBXBuildFile; fileRef = B36023ED720842E5AACE55EA /* Hijazi4-NoStack.ttf */; };
+		FD4E2367793C4B09B1D8C5DD /* Uthmani-NoStack.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9DB0DD4965EE43E3A03A61EF /* Uthmani-NoStack.ttf */; };
 		73A100112F90000100ABCDE1 /* QuranProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100012F90000100ABCDE1 /* QuranProvider.swift */; };
 		73A100122F90000100ABCDE1 /* LastReadAyahWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100022F90000100ABCDE1 /* LastReadAyahWidget.swift */; };
 		73A100132F90000100ABCDE1 /* LastListenedSurahWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100032F90000100ABCDE1 /* LastListenedSurahWidget.swift */; };
@@ -813,6 +818,10 @@
 		72FB30070000000000000006 /* Hijazi.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Hijazi.ttf; sourceTree = "<group>"; };
 		72FB300A0000000000000006 /* Hijazi3.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Hijazi3.ttf; sourceTree = "<group>"; };
 		72FB300B0000000000000006 /* Hijazi4.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Hijazi4.ttf; sourceTree = "<group>"; };
+		9DB0DD4965EE43E3A03A61EF /* Uthmani-NoStack.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Uthmani-NoStack.ttf"; sourceTree = "<group>"; };
+		33A5804A1D5C40B0BE667499 /* Hijazi-NoStack.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Hijazi-NoStack.ttf"; sourceTree = "<group>"; };
+		B914DF0D4630441FA1BFA790 /* Hijazi3-NoStack.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Hijazi3-NoStack.ttf"; sourceTree = "<group>"; };
+		B36023ED720842E5AACE55EA /* Hijazi4-NoStack.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Hijazi4-NoStack.ttf"; sourceTree = "<group>"; };
 		73A100012F90000100ABCDE1 /* QuranProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranProvider.swift; sourceTree = "<group>"; };
 		73A100022F90000100ABCDE1 /* LastReadAyahWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastReadAyahWidget.swift; sourceTree = "<group>"; };
 		73A100032F90000100ABCDE1 /* LastListenedSurahWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastListenedSurahWidget.swift; sourceTree = "<group>"; };
@@ -1273,6 +1282,10 @@
 				72FB30070000000000000006 /* Hijazi.ttf */,
 				72FB300A0000000000000006 /* Hijazi3.ttf */,
 				72FB300B0000000000000006 /* Hijazi4.ttf */,
+				9DB0DD4965EE43E3A03A61EF /* Uthmani-NoStack.ttf */,
+				33A5804A1D5C40B0BE667499 /* Hijazi-NoStack.ttf */,
+				B914DF0D4630441FA1BFA790 /* Hijazi3-NoStack.ttf */,
+				B36023ED720842E5AACE55EA /* Hijazi4-NoStack.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -1701,6 +1714,10 @@
 				72FB30080000000000000009 /* Hijazi.ttf in Resources */,
 				72FB300D0000000000000009 /* Hijazi3.ttf in Resources */,
 				72FB300E0000000000000009 /* Hijazi4.ttf in Resources */,
+				5D7F5520634446C8BC8D86D9 /* Uthmani-NoStack.ttf in Resources */,
+				E3A255593A65433E8A2B6A5B /* Hijazi-NoStack.ttf in Resources */,
+				660F1210AC7640D19D9C4C99 /* Hijazi3-NoStack.ttf in Resources */,
+				8080E8E933EC451CB5DCBECC /* Hijazi4-NoStack.ttf in Resources */,
 				7DAD00000000000000000006 /* bukhari.hpk in Resources */,
 				1512B1EE2D344C24B3633D6D /* HadeethEnc.henc in Resources */,
 				A0D6623086764BFEA59414BC /* HadithTopics.json.xz in Resources */,
@@ -1797,6 +1814,7 @@
 			files = (
 				7E5A0000000000000000000A /* Images.xcassets in Resources */,
 				724B8BD32FADD98500804C3D /* Uthmani.ttf in Resources */,
+				FD4E2367793C4B09B1D8C5DD /* Uthmani-NoStack.ttf in Resources */,
 				7A9A000000000000000000D2 /* quran.qpk in Resources */,
 				7A9A000000000000000000D4 /* surahinfos.qpk in Resources */,
 				7A9A000000000000000000D6 /* qiraat.qpk in Resources */,

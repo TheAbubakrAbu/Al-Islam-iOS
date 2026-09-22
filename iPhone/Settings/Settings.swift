@@ -117,6 +117,11 @@ final class StoredContentObserver {
 }
 
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
+    #if DEBUG
+    private static var publishTrace: AnyCancellable?
+    private static var publishTraceCount = 0
+    private static var publishTraceSnapshot: [String: String]?
+    #endif
     static let shared = Settings()
     // Internal (not private): the per-domain extension files (SettingsQuran and friends) mirror their
     // typed accessors into the App Group suite for widgets/Siri, same as the members below do.
@@ -368,6 +373,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
            let forced = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
             self.travelingMode = forced != 0
+        }
+        // "-publishStacks": log the call stack of every 40th Settings publish (a layout-loop probe).
+        if ProcessInfo.processInfo.arguments.contains("-publishStacks") {
+            DefaultsWriteTrace.install()
+            Self.publishTrace = objectWillChange.sink { _ in
+                Self.publishTraceCount += 1
+                if Self.publishTraceCount % 40 == 1 {
+                    NSLog("PUBLISH STACK #%d\n%@", Self.publishTraceCount, Thread.callStackSymbols.prefix(30).joined(separator: "\n"))
+                }
+                // Which defaults keys moved since the last publish.
+                let now = UserDefaults.standard.dictionaryRepresentation().mapValues { "\($0)" }
+                if let last = Self.publishTraceSnapshot {
+                    let changed = now.filter { last[$0.key] != $0.value }.map { "\($0.key)=\($0.value.prefix(60))" }
+                    let removed = last.keys.filter { now[$0] == nil }
+                    if !changed.isEmpty || !removed.isEmpty {
+                        NSLog("PUBLISH KEYS #%d changed=%@ removed=%@", Self.publishTraceCount, changed.joined(separator: " | "), removed.joined(separator: ","))
+                    }
+                }
+                Self.publishTraceSnapshot = now
+            }
         }
         // "-seedBool key=1[,key=0…]" - raw UserDefaults bool seeds BEFORE anything derives from
         // them, for headless verification of boolean @AppStorage settings (external `defaults
@@ -2729,7 +2754,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// The Arabic face for the NON-Quran Arabic screens (Hadith, Adhkar, Duas, 99 Names, Arabic Alphabet).
     /// Independent of the Quran's own font picker. Kufi and Hijazi are the same faces the Quran picker
     /// offers (`kufiFontName` / `hijaziFontName`); the watch never sees them - this choice reaches the
-    /// watch only through the legacy Quranic-vs-Basic flag, and the watch bundles neither face.
+    /// watch only through the legacy Quranic-vs-Basic flag, and the watch bundles neither face (it does
+    /// bundle the Uthmani twin below).
     enum IslamArabicFace: String, CaseIterable {
         case uthmani, indopak, kufi, hijazi, basic
 
@@ -2737,14 +2763,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         /// no precomposed آ, which plain Arabic prose leans on constantly (5,616 times in six hadith
         /// books alone); every Arabic string is handed through `decomposingAlefMadda` first, so the
         /// face draws it from its own parts instead of falling back mid-word.
+        ///
+        /// Uthmani and Hijazi resolve to their "NoStack" TWINS (Abu, 2026-09-22: "have it where no
+        /// stack is used"): the same fonts with the rule that rides a letter above a following ج ح خ
+        /// switched off, so بحـ is written ب then ح, side by side, on every learning screen. The Quran
+        /// reader keeps the originals, which stack the way the printed mushaf does; the Baa on Haa
+        /// page draws its shapes in the original on purpose. IndoPak has the stacking drawn into its
+        /// haa glyphs and cannot be unstacked; Kufi never stacks.
         var fontName: String {
             switch self {
-            case .uthmani: return Settings.hafsUthmaniFontName
+            case .uthmani: return Settings.hafsUthmaniNoStackFontName
             case .indopak: return Settings.indopakFontName
             case .kufi: return Settings.kufiFontName
             // "Hijazi" follows whichever mark style the Quran font picker is on (light, bold or dot
             // vowels), so the 99 Names / Duas screens match the reader instead of needing a second picker.
-            case .hijazi: return Settings.currentHijaziFontName
+            case .hijazi: return Settings.currentHijaziNoStackFontName
             case .basic: return Settings.systemArabicFontName
             }
         }
@@ -2754,7 +2787,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         var historyCaption: String {
             switch self {
             case .uthmani:
-                return "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it."
+                return "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it. Outside the Quran the app writes it without the mushaf's stacking, so a letter before ج ح خ sits beside it rather than riding above; the Baa on Haa page shows the stacked form."
             case .indopak:
                 return "Indopak is the mushaf hand of the Indian subcontinent: a Naskh shaped by Nastaliq, the Persian script developed in Iran in the 8th and 9th centuries AH (14th and 15th centuries CE) and credited to Mir Ali Tabrizi. It came east with the Mughals and became the standard printed mushaf of India, Pakistan and Bangladesh, and of South Asian communities everywhere."
             case .hijazi:
@@ -2807,6 +2840,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     
     static let randomReciterName = "Random Reciter"
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
+    /// The Hafs face with the mushaf's letter-over-haa stacking switched off (بحـ written as ب then
+    /// ح, side by side): `Resources/Fonts/Uthmani-NoStack.ttf`, built from `Uthmani.ttf` by
+    /// `Scripts/build_nostack_fonts.py` (rerun it after any change to the source font). The
+    /// NON-Quran Arabic screens read in it (`IslamArabicFace.uthmani`); the Quran reader keeps
+    /// `hafsUthmaniFontName`, the mushaf's own stacking hand.
+    static let hafsUthmaniNoStackFontName = "KFGQPCHAFSUthmanicScript-Regula-NoStack"
     /// Migration sentinel only. The app once bundled the KFGQPC Qunbul face (as `Qiraat.ttf`)
     /// for non-Hafs qiraat and for all non-Quran Arabic; it is no longer shipped, and any stored
     /// `fontArabic` still holding this name is migrated to the Hafs face at launch.
@@ -2842,6 +2881,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         var id: String { rawValue }
         var fontName: String { rawValue }
+        /// The style's twin without the letter-over-haa stacking (`Hijazi*-NoStack.ttf`, see
+        /// `hafsUthmaniNoStackFontName`): what the non-Quran screens read Hijazi in.
+        var noStackFontName: String { rawValue + "-NoStack" }
 
         var label: String {
             switch self {
@@ -2859,6 +2901,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static var currentHijaziFontName: String {
         let name = Settings.shared.fontArabic
         return isHijaziFontName(name) ? name : hijaziFontName
+    }
+    /// `currentHijaziFontName`'s no-stacking twin: the Islam tab's Hijazi (`IslamArabicFace.hijazi`).
+    static var currentHijaziNoStackFontName: String {
+        (HijaziMarkStyle(rawValue: Settings.shared.fontArabic) ?? .light).noStackFontName
     }
     /// Migration sentinels: names the IndoPak face briefly shipped under during testing. A stored
     /// value matching one is rewritten at launch, or the reader keeps a name no font answers to.
@@ -3393,3 +3439,29 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 }
+
+
+#if DEBUG
+/// "-publishStacks" companion: swizzles `-[NSUserDefaults setObject:forKey:]` and logs the key and the
+/// writer's stack for every 40th write, so a defaults write that repeats on every render pass can be
+/// traced to its call site.
+enum DefaultsWriteTrace {
+    static var count = 0
+    static func install() {
+        guard let original = class_getInstanceMethod(UserDefaults.self, NSSelectorFromString("setObject:forKey:")),
+              let swizzled = class_getInstanceMethod(UserDefaults.self, #selector(UserDefaults.traced_set(_:forKey:))) else { return }
+        method_exchangeImplementations(original, swizzled)
+    }
+}
+
+extension UserDefaults {
+    @objc func traced_set(_ value: Any?, forKey key: String) {
+        DefaultsWriteTrace.count += 1
+        if DefaultsWriteTrace.count % 40 == 1 {
+            NSLog("DEFAULTS WRITE #%d %@ = %@\n%@", DefaultsWriteTrace.count, key, String(describing: value ?? "nil").prefix(60) as NSString,
+                  Thread.callStackSymbols.prefix(22).joined(separator: "\n"))
+        }
+        traced_set(value, forKey: key)
+    }
+}
+#endif

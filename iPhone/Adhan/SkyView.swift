@@ -322,11 +322,12 @@ struct SkyCard: View {
     ///   all the way down and up"; 2026-09-18: the arc went above the text and the countdown
     ///   entirely, so no text is struck through by the graph).
     /// - The GROUND the pyramids and the mosque stand on - the horizon line, the silhouette and the
-    ///   ground band - runs along the top of the PROGRESS BAR (`groundLineTop`, measured through
-    ///   `SkyGroundLineKey`): the bar reads as the ground, and "TIME LEFT" and the digits sit in the
-    ///   sky between the pyramids and the mosque. Abu, 2026-09-21: first "between Time Left and the
-    ///   countdown, just the ground, not the graph", then "put the ground level where the countdown
-    ///   progress view is".
+    ///   ground band - runs BETWEEN "TIME LEFT" and the digits (`groundLineTop`, the digits' top,
+    ///   measured through `SkyGroundLineKey`): the caption sits in the sky between the pyramids and
+    ///   the mosque, and the digits and the bar stand under the ground. Abu, 2026-09-21: first
+    ///   "between Time Left and the countdown, just the ground, not the graph", then "put the ground
+    ///   level where the countdown progress view is"; 2026-09-22: "bring back the ground between
+    ///   time left and the countdown".
     private let arcTopInset: CGFloat = 68
     private let arcBottomInset: CGFloat = 88
 
@@ -339,15 +340,15 @@ struct SkyCard: View {
     /// The graph's horizon crossing sits this far above the countdown block, in the air over "TIME LEFT".
     private static let groundAir: CGFloat = 4
 
-    /// The top of the PROGRESS BAR (its 1 pt of padding included), as `PrayerCountdown` reports it
-    /// through `SkyGroundLineKey`; nil until the first layout. The estimate is 200 less the bottom
-    /// padding, the footer line, its top padding and the padded bar, so the first frame's ground
-    /// does not jump either.
+    /// The top of the countdown DIGITS (under the "TIME LEFT" caption), as `PrayerCountdown` reports
+    /// it through `SkyGroundLineKey`; nil until the first layout. The estimate is the block's top
+    /// (`estimatedDigitsTop`) plus the caption's line and the 2 pt under it, so the first frame's
+    /// ground does not jump either.
     @State private var groundLineTop: CGFloat?
-    private static let estimatedGroundLineTop: CGFloat = 156
-    /// The ground line sits this far above the bar's padded frame: a hair of air, so the white
-    /// horizon line and the accent bar read as ground and bar rather than as one thick bar.
-    private static let groundLineAir: CGFloat = 2
+    private static let estimatedGroundLineTop: CGFloat = 122
+    /// The ground line sits this far above the digits' frame: the middle of the 2 pt between the
+    /// caption and the digits, so it touches neither.
+    private static let groundLineAir: CGFloat = 1
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -682,9 +683,9 @@ struct SkyCard: View {
             // The GRAPH's horizon: where the arc crosses from day to night, and where the plain
             // card draws its horizon line.
             let horizonY = shape.yPosition(of: curve.horizon, in: rect)
-            // The GROUND with the skyline on: the drawn line, the silhouette and the band, along the
-            // top of the progress bar, well below the graph's crossing (see `arcTopInset`). The
-            // plain card has no skyline, so its line stays on the graph.
+            // The GROUND with the skyline on: the drawn line, the silhouette and the band, between
+            // "TIME LEFT" and the digits, below the graph's crossing (see `arcTopInset`). The plain
+            // card has no skyline, so its line stays on the graph.
             let groundLineY = showsScene
                 ? (groundLineTop ?? Self.estimatedGroundLineTop) - Self.groundLineAir
                 : horizonY

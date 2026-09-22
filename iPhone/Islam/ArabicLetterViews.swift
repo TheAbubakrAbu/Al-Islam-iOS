@@ -114,6 +114,7 @@ struct TashkeelLettersView: View {
                 markPickerSection
                 lettersSection
                 allMarksSection
+                defaultTashkeelSection
             }
             .themedListRowBackground()
 
@@ -422,6 +423,28 @@ struct TashkeelLettersView: View {
             Text("EVERY MARK ON EVERY LETTER")
         } footer: {
             Text("Read each row right to left: fatha, kasra, damma, sukoon, then the three tanween, and beneath them the shaddah carrying each vowel. The \"an\" tanween is written with its silent alif, as it appears at the end of words. Tap a row to select it: the selected row offers play, and a chevron that writes the shaddah line out beneath as the two letters it stands for.")
+        }
+    }
+
+    /// Default Tashkeel, reached from here since 2026-09-22 (Abu: "merge letters with tashkeel with
+    /// default tashkeel"): the same subject from the other side, the marks a reader supplies when a
+    /// word is printed with none. One Explore tile opens the pair; the article keeps its own page
+    /// because it is prose and this screen is a table.
+    private var defaultTashkeelSection: some View {
+        Section {
+            NavigationLink {
+                DefaultTashkeelView()
+            } label: {
+                ArabicTopicLinkLabel(
+                    specimen: "\u{0628}\u{064A}",
+                    title: "Default Tashkeel",
+                    caption: "The marks you assume when a word is printed with none",
+                    preview: "با \u{2190} بَا    بي \u{2190} بِي    بو \u{2190} بُو",
+                    face: .plain
+                )
+            }
+        } header: {
+            Text("WHEN NO MARKS ARE PRINTED")
         }
     }
 
@@ -1249,7 +1272,8 @@ struct ArabicLetterPage: View {
             }
 
             if letterData.transliteration == "laam alif" {
-                laamAlifArticleSections
+                // Shared with `LaamAlifShapesView`, the ligature's own topic page (2026-09-22).
+                LaamAlifHamzaSections()
             }
 
             if letterData.transliteration == "alif madd" {
@@ -1446,74 +1470,6 @@ struct ArabicLetterPage: View {
         } footer: {
             Text("The mushaf writes the final yaa without dots too, so the SHAPE cannot tell you which letter it is. Read the vowel before it: after a fatha (or under a dagger alif) it is alif maqSoorah and sounds \"aa\"; after a kasra it is yaa and sounds \"ee\". Outside the Quran, modern print dots the yaa (ي) and leaves the maqsurah bare (ى), so there the dots decide.")
         }
-    }
-
-    /// The two shapes kept from the retired LETTERS JOINED TOGETHER section. They live on the laam alif
-    /// page rather than in the alphabet because neither is a letter: they are the definite article
-    /// written onto a hamza, and the pair differs ONLY by the madd sign.
-    ///
-    /// Each gets its own section with the shape drawn LARGE in the Arabic face (Abu, 2026-09-20). They
-    /// used to be two bold lines of body text inside PURPOSE, where the one mark that separates them is
-    /// a couple of pixels of system font and the two read as the same word.
-    @ViewBuilder
-    private var laamAlifArticleSections: some View {
-        Section {
-            laamAlifShape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}", caption: "alif waSl + laam + hamza with fatHah")
-
-            Text("The definite article on a word that begins with a hamza carrying a short fatHah: one beat, \"a\".")
-                .font(.body)
-
-            ArabicExampleRow(
-                arabic: "ٱلۡأَرۡضِ",
-                transliteration: "al-ardi",
-                note: "The earth (Quran 2:11)"
-            )
-        } header: {
-            Text("AL + HAMZA WITH FATHAH")
-        }
-
-        Section {
-            laamAlifShape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{0653}", caption: "alif waSl + laam + hamza with the madd sign")
-
-            Text("The same article on a word beginning with a LONG \"aa\": the madd sign (ٓ) over the hamza holds it about twice as long. This is the alif madd (آ) you already know, written the way the mushaf writes it here, as a hamza carrying the madd rather than as the single letter آ.")
-                .font(.body)
-
-            ArabicExampleRow(
-                arabic: "ٱلۡأٓخِرَةِ",
-                transliteration: "al-aakhirati",
-                note: "The Hereafter (Quran 2:102)"
-            )
-        } header: {
-            Text("AL + ALIF MADD")
-        } footer: {
-            Text("The two differ only in the mark above the hamza, and that mark is the whole difference in length: one beat against about two.")
-        }
-    }
-
-    /// One of the two shapes above, centered and large, with how it is built spelled out beneath.
-    private func laamAlifShape(_ shape: String, caption: String) -> some View {
-        VStack(spacing: 4) {
-            Text(shape)
-                .font(
-                    useQuranicFontForLetter
-                        ? settings.scalableIslamArabicFont(base: 52, relativeTo: .largeTitle)
-                        : .system(size: 48)
-                )
-                .arabicFontDesign(custom: useQuranicFontForLetter && settings.islamUsesCustomArabicFace)
-                .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
-                .foregroundColor(settings.accentColor.color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.4)
-
-            Text(caption)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, useQuranicFontForLetter ? 0 : 6)
-        .rowSeparatorFromLeadingEdge()
-        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -2589,6 +2545,10 @@ struct ArabicExampleRow: View {
     let arabic: String
     let transliteration: String
     let note: String
+    /// A face to draw the Arabic in whatever the reader's setting: the Baa on Haa page hands its
+    /// Quran words the mushaf's own Uthmani face, because the stack is what they demonstrate and
+    /// the app's faces write the pair side by side (2026-09-22).
+    var fontName: String? = nil
 
     private var useQuranicFont: Bool { useFontArabic }
 
@@ -2618,8 +2578,9 @@ struct ArabicExampleRow: View {
             Spacer(minLength: 8)
 
             Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
-                .font(useQuranicFont ? appearance.islamArabicFont(base: 24, relativeTo: .title2) : .title2)
-                .arabicFontDesign(custom: useQuranicFont && appearance.islamUsesCustomArabicFace)
+                .font(fontName.map { Font.arabic($0, size: 24, relativeTo: .title2) }
+                      ?? (useQuranicFont ? appearance.islamArabicFont(base: 24, relativeTo: .title2) : .title2))
+                .arabicFontDesign(custom: fontName != nil || (useQuranicFont && appearance.islamUsesCustomArabicFace))
                 .arabicLetterTypeFloor(steps: letterSizeSteps)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
@@ -3357,5 +3318,82 @@ extension View {
             self
         }
         #endif
+    }
+}
+
+// MARK: - The article on a hamza
+
+/// The two shapes the definite article makes on a hamza, ٱلۡأَ ("al-a") and ٱلۡأٓ ("al-aa"), as List
+/// sections. Kept from the retired LETTERS JOINED TOGETHER section, they live on the laam alif letter
+/// page and, since 2026-09-22, on `LaamAlifShapesView` too (Abu: "add Ala and Alaa from laam alif").
+/// Neither is a letter: they are the article written onto a hamza, and the pair differs ONLY by the
+/// madd sign.
+///
+/// Each gets its own section with the shape drawn LARGE in the Arabic face (Abu, 2026-09-20). They
+/// used to be two bold lines of body text inside PURPOSE, where the one mark that separates them is
+/// a couple of pixels of system font and the two read as the same word.
+struct LaamAlifHamzaSections: View {
+    @ObservedObject private var settings = Settings.shared
+
+    var body: some View {
+        Group {
+            Section {
+                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{064E}", caption: "alif waSl + laam + hamza with fatHah")
+
+                Text("The definite article on a word that begins with a hamza carrying a short fatHah: one beat, \"a\".")
+                    .font(.body)
+
+                ArabicExampleRow(
+                    arabic: "ٱلۡأَرۡضِ",
+                    transliteration: "al-ardi",
+                    note: "The earth (Quran 2:11)"
+                )
+            } header: {
+                Text("AL + HAMZA WITH FATHAH")
+            }
+
+            Section {
+                shape("\u{0671}\u{0644}\u{06E1}\u{0623}\u{0653}", caption: "alif waSl + laam + hamza with the madd sign")
+
+                Text("The same article on a word beginning with a LONG \"aa\": the madd sign (ٓ) over the hamza holds it about twice as long. This is the alif madd (آ) you already know, written the way the mushaf writes it here, as a hamza carrying the madd rather than as the single letter آ.")
+                    .font(.body)
+
+                ArabicExampleRow(
+                    arabic: "ٱلۡأٓخِرَةِ",
+                    transliteration: "al-aakhirati",
+                    note: "The Hereafter (Quran 2:102)"
+                )
+            } header: {
+                Text("AL + ALIF MADD")
+            } footer: {
+                Text("The two differ only in the mark above the hamza, and that mark is the whole difference in length: one beat against about two.")
+            }
+        }
+    }
+
+    /// One of the two shapes, centered and large, with how it is built spelled out beneath.
+    private func shape(_ shape: String, caption: String) -> some View {
+        VStack(spacing: 4) {
+            Text(shape)
+                .font(
+                    settings.useFontArabic
+                        ? settings.scalableIslamArabicFont(base: 52, relativeTo: .largeTitle)
+                        : .system(size: 48)
+                )
+                .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
+                .arabicLetterTypeFloor(steps: settings.arabicLetterSizeIndex)
+                .foregroundColor(settings.accentColor.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
+
+            Text(caption)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, settings.useFontArabic ? 0 : 6)
+        .rowSeparatorFromLeadingEdge()
+        .accessibilityElement(children: .combine)
     }
 }

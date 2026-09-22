@@ -17,6 +17,11 @@ enum ArabicDoor {
     case soundAlikes
     case quiz
     case readingTest
+    /// The reading topics: Explore tiles since 2026-09-22, link rows of their own before that.
+    case tashkeel
+    case baaHaa
+    case laamAlif
+    case basics
 }
 
 extension LetterTraits {
@@ -78,6 +83,10 @@ private struct ArabicDoorDestination: ViewModifier {
         case .soundAlikes: SoundAlikeLettersView()
         case .quiz: quizDestination
         case .readingTest: readingTestDestination
+        case .tashkeel: TashkeelLettersView()
+        case .baaHaa: BaaHaaShapesView()
+        case .laamAlif: LaamAlifShapesView()
+        case .basics: ArabicBasicsView()
         case nil: EmptyView()
         }
     }

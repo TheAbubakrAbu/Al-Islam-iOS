@@ -77,11 +77,53 @@ struct ArabicView: View {
 
     private var grouping: Grouping { Grouping(raw: filterModeRaw) }
 
-    private func setGrouping(_ grouping: Grouping) {
+    private func setGrouping(_ option: Grouping) {
         settings.hapticFeedback()
         withAnimation(.easeInOut) {
-            filterModeRaw = grouping.raw
+            filterModeRaw = option.raw
             focusedFamilyID = nil
+        }
+        if let axis = option.axis { remember(axis) }
+    }
+
+    /// The axes a shelf's chips offer. Heavy or Light is the exception: it is one of the rules, but
+    /// it was a grouping of its own before the shelves existed and keeps its own menu button
+    /// (Abu, 2026-09-22: "alphabetical order, similar shapes and heavy versus light"), so the Ahkaam
+    /// shelf does not list it a second time.
+    private static func shelfAxes(_ shelf: LetterAxis.Shelf) -> [LetterAxis] {
+        shelf.axes.filter { $0 != .weight }
+    }
+
+    /// True when the active grouping is one of `shelf`'s own axes (its menu button then shows a check).
+    private func isOnShelf(_ shelf: LetterAxis.Shelf) -> Bool {
+        guard let axis = grouping.axis else { return false }
+        return Self.shelfAxes(shelf).contains(axis)
+    }
+
+    /// The last axis chosen on each shelf, so the shelf's menu button lands where the reader left it
+    /// (the shelf's first axis until then). Two shelves have more than one axis; the makharij shelf
+    /// has only its own.
+    @AppStorage("arabicShelfAxisQualities") private var rememberedQualitiesAxis: String = ""
+    @AppStorage("arabicShelfAxisRules") private var rememberedRulesAxis: String = ""
+
+    private func preferredAxis(of shelf: LetterAxis.Shelf) -> LetterAxis {
+        let axes = Self.shelfAxes(shelf)
+        let remembered: String
+        switch shelf {
+        case .place: remembered = ""
+        case .qualities: remembered = rememberedQualitiesAxis
+        case .rules: remembered = rememberedRulesAxis
+        }
+        if let axis = LetterAxis(rawValue: remembered), axes.contains(axis) { return axis }
+        return axes.first ?? .makhraj
+    }
+
+    private func remember(_ axis: LetterAxis) {
+        guard Self.shelfAxes(axis.shelf).contains(axis) else { return }
+        switch axis.shelf {
+        case .place: break
+        case .qualities: rememberedQualitiesAxis = axis.rawValue
+        case .rules: rememberedRulesAxis = axis.rawValue
         }
     }
 
@@ -407,7 +449,7 @@ struct ArabicView: View {
                     .first(where: { $0.letter == letter }) else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { gridSelection = match }
         }
-        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|basics|families|soundAlikes|quiz|readingTest|family:<id>",
+        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|laamAlif|basics|families|soundAlikes|quiz|readingTest|family:<id>",
         // and "-arabicGrouping <axis raw value>" to land on a grouping: push one of the topic pages. Their
         // rows sit below the fold of a list that cannot be scrolled from a script.
         .background(debugTopicLink)
@@ -644,6 +686,7 @@ struct ArabicView: View {
             case "tashkeel": TashkeelLettersView()
             case "defaultTashkeel": DefaultTashkeelView()
             case "baaHaa": BaaHaaShapesView()
+            case "laamAlif": LaamAlifShapesView()
             case "families": LetterFamiliesView()
             case "soundAlikes": SoundAlikeLettersView()
             case "quiz": LetterQuizView()
@@ -765,60 +808,9 @@ struct ArabicView: View {
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
 
-            // Everything about reading the script in ONE place (Abu, 2026-09-20: the page was "all
-            // over the place"). These were three separate sections of one or two rows each, scattered
-            // between the letters and the numbers. Separate List rows, one link each.
-            Section {
-                NavigationLink {
-                    TashkeelLettersView()
-                } label: {
-                    ArabicTopicLinkLabel(
-                        specimen: "\u{0628}\u{064E}",
-                        title: "Letters with Tashkeel",
-                        caption: "Every letter carrying one harakah at a time",
-                        preview: "بَ  بِ  بُ  بۡ  بّ  بً  بٍ  بٌ"
-                    )
-                }
-
-                NavigationLink {
-                    DefaultTashkeelView()
-                } label: {
-                    ArabicTopicLinkLabel(
-                        specimen: "\u{0628}\u{064A}",
-                        title: "Default Tashkeel",
-                        caption: "The marks you assume when a word is printed with none",
-                        preview: "با \u{2190} بَا    بي \u{2190} بِي    بو \u{2190} بُو",
-                        face: .plain
-                    )
-                }
-
-                // Not a letter, so not a tile among the special letters: the one joined shape whose
-                // fifteen readings differ only by dots. Opens the full table (Abu, 2026-09-20).
-                NavigationLink {
-                    BaaHaaShapesView()
-                } label: {
-                    ArabicTopicLinkLabel(
-                        specimen: BaaHaaShapesView.skeleton,
-                        title: "Baa Shape on a Haa Shape",
-                        caption: "One outline, fifteen letter pairs told apart only by their dots",
-                        preview: "بحـ  تجـ  نخـ  يحـ  ثجـ",
-                        face: .uthmani
-                    )
-                }
-
-                NavigationLink {
-                    ArabicBasicsView()
-                } label: {
-                    ArabicTopicLinkLabel(
-                        specimen: "ال",
-                        title: "Basic Grammar",
-                        caption: "Gender, duals, plurals, and the three case endings"
-                    )
-                }
-            } header: {
-                Text("READING THE SCRIPT")
-            }
-
+            // The reading topics (Tashkeel, the stacked ٮحـ, laam alif, Basic Grammar) used to be a
+            // section of link rows here, between the letters and the numbers. They are Explore tiles
+            // at the top now (Abu, 2026-09-22), so everything there is to study is in one place.
             Section(header: SectionPillHeader(title: "ARABIC NUMBERS", count: numbers.count)) {
                 numberCollection
             }
@@ -829,67 +821,107 @@ struct ArabicView: View {
         }
     }
 
-    /// The study tools, as tiles at the very top: below twenty-eight letters nobody would find them.
-    /// Buttons writing the one `door`, not links: the tiles share a List row.
+    /// One study tool on the Explore shelf.
+    private struct ExploreTile: Identifiable {
+        let id: String
+        let title: String
+        let caption: String
+        /// An Arabic specimen, or a symbol for a tool with no Arabic to show.
+        var specimen: String? = nil
+        var systemImage: String? = nil
+        /// Which face draws the specimen: the reader's, or the Uthmani hand for a shape only it draws.
+        var face: ArabicTopicLinkLabel.Face = .reader
+        let door: ArabicDoor
+    }
+
+    #if os(iOS)
+    /// The Reading Test tile's caption shows the ladder's progress once there is some.
+    @ObservedObject private var readingProgress = ReadingTestProgress.shared
+
+    private var readingTestCaption: String {
+        let total = ReadingTier.all.count
+        let passed = readingProgress.passedCount
+        return passed > 0 ? "\(passed) of \(total) tiers passed" : "\(total) tiers \u{00B7} letter quiz"
+    }
+    #endif
+
+    /// Every study tool, in the order they are met: the letters' families and look-alikes, the
+    /// test, then the script's own topics, and grammar last.
+    private var exploreTiles: [ExploreTile] {
+        var tiles: [ExploreTile] = [
+            ExploreTile(id: "families", title: "Letter Families", caption: "Makharij, sifaat, rules",
+                        specimen: "ص س ز", door: .families),
+            ExploreTile(id: "soundAlikes", title: "Sound-Alikes", caption: "Pairs people mix up",
+                        specimen: "س ص", door: .soundAlikes),
+        ]
+        #if os(iOS)
+        // The Letter Quiz lives on the test's page (one tile opens both); the watch has neither.
+        tiles.append(ExploreTile(id: "readingTest", title: "Reading Test", caption: readingTestCaption,
+                                 systemImage: "text.book.closed.fill", door: .readingTest))
+        #endif
+        tiles += [
+            ExploreTile(id: "tashkeel", title: "Tashkeel", caption: "Every mark on every letter",
+                        specimen: "\u{0628}\u{064E}", door: .tashkeel),
+            ExploreTile(id: "baaHaa", title: "Baa on Haa", caption: "One shape, fifteen pairs",
+                        specimen: BaaHaaShapesView.skeleton, face: .uthmani, door: .baaHaa),
+            ExploreTile(id: "laamAlif", title: "Laam Alif", caption: "The compulsory ligature",
+                        specimen: LaamAlifShapesView.skeleton, door: .laamAlif),
+            ExploreTile(id: "basics", title: "Basic Grammar", caption: "Gender, duals, plurals, and the three case endings",
+                        specimen: "ال", door: .basics),
+        ]
+        return tiles
+    }
+
+    /// Three to a row on the phone, two on the watch. A row left with a single tile draws it wide.
+    private var exploreRows: [[ExploreTile]] {
+        #if os(watchOS)
+        return exploreTiles.chunked(into: 2)
+        #else
+        return exploreTiles.chunked(into: 3)
+        #endif
+    }
+
+    /// The study tools, as tiles at the very top: below twenty-eight letters nobody would find them,
+    /// and ALL of them are here now (Abu, 2026-09-22: "put them all with basic grammar at the top in
+    /// explore"), where the reading topics used to be a section of link rows further down. Two pairs
+    /// were merged the same day so the shelf stays two rows of three and one wide tile: the Letter
+    /// Quiz is on the Reading Test's page, Default Tashkeel on the Tashkeel table's. Buttons writing
+    /// the one `door`, not links: the tiles of a row share a List row.
     private var exploreSection: some View {
         Section {
-            HStack(alignment: .top, spacing: 8) {
-                exploreTile("Letter Families", specimen: "ص س ز", caption: "Makharij, sifaat, rules") { door = .families }
-                exploreTile("Sound-Alikes", specimen: "س ص", caption: "Pairs people mix up") { door = .soundAlikes }
-                #if os(iOS)
-                exploreTile("Letter Quiz", systemImage: "checkmark.circle", caption: "Ten questions") { door = .quiz }
-                #endif
+            ForEach(Array(exploreRows.enumerated()), id: \.offset) { _, row in
+                if row.count == 1, let tile = row.first {
+                    wideExploreTile(tile)
+                } else {
+                    HStack(alignment: .top, spacing: 8) {
+                        ForEach(row) { tile in
+                            exploreTile(tile)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
-            .padding(.vertical, 2)
-
-            #if os(iOS)
-            // A row of its own, under the tiles: a fourth tile made all four too narrow to read, and
-            // the test is the one thing here a learner comes back to (it shows how far they are).
-            // A Button writing the one `door`, like the tiles.
-            Button {
-                settings.hapticFeedback()
-                door = .readingTest
-            } label: {
-                ReadingTestEntryLabel()
-            }
-            .buttonStyle(.plain)
-            #endif
         } header: {
             Text("EXPLORE")
         }
     }
 
-    private func exploreTile(
-        _ title: String, specimen: String? = nil, systemImage: String? = nil, caption: String,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func exploreTile(_ tile: ExploreTile) -> some View {
         Button {
             settings.hapticFeedback()
-            action()
+            door = tile.door
         } label: {
             VStack(spacing: 3) {
-                Group {
-                    if let specimen {
-                        Text(specimen)
-                            .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 22, relativeTo: .title3) : .title3)
-                            .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
-                    } else if let systemImage {
-                        Image(systemName: systemImage)
-                            .font(.title3.weight(.semibold))
-                    }
-                }
-                .foregroundColor(settings.accentColor.color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.4)
-                .frame(height: 30)
+                exploreSpecimen(tile, base: 22, relativeTo: .title3)
+                    .frame(height: 30)
 
-                Text(title)
+                Text(tile.title)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                Text(caption)
+                Text(tile.caption)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -906,8 +938,87 @@ struct ArabicView: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title). \(caption)")
+        .accessibilityLabel("\(tile.title). \(tile.caption)")
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// A tile on a row of its own, laid out sideways so the width is used: the specimen in its box,
+    /// the title and the caption beside it, a chevron at the end.
+    private func wideExploreTile(_ tile: ExploreTile) -> some View {
+        Button {
+            settings.hapticFeedback()
+            door = tile.door
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                exploreSpecimen(tile, base: 24, relativeTo: .title2)
+                    .frame(width: 46, height: 46)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(settings.accentColor.color.opacity(0.12))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tile.title)
+                        .font(.body.weight(.semibold))
+                        .foregroundColor(.primary)
+
+                    Text(tile.caption)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(Color.secondary.opacity(0.6))
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(settings.accentColor.color.opacity(0.09))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(tile.title). \(tile.caption)")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    /// The tile's specimen (or symbol), accent-tinted, in the face the tile asks for.
+    private func exploreSpecimen(_ tile: ExploreTile, base: CGFloat, relativeTo style: Font.TextStyle) -> some View {
+        Group {
+            if let specimen = tile.specimen {
+                Text(specimen)
+                    .font(exploreFont(tile.face, base: base, relativeTo: style))
+                    .arabicFontDesign(custom: exploreUsesCustomFace(tile.face))
+            } else if let systemImage = tile.systemImage {
+                Image(systemName: systemImage)
+                    .font(.title3.weight(.semibold))
+            }
+        }
+        .foregroundColor(settings.accentColor.color)
+        .lineLimit(1)
+        .minimumScaleFactor(0.4)
+    }
+
+    private func exploreFont(_ face: ArabicTopicLinkLabel.Face, base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        switch face {
+        case .uthmani: return Font.arabic(Settings.hafsUthmaniFontName, size: base, relativeTo: style)
+        case .reader where settings.useFontArabic: return settings.scalableIslamArabicFont(base: base, relativeTo: style)
+        case .reader, .plain: return .system(style)
+        }
+    }
+
+    private func exploreUsesCustomFace(_ face: ArabicTopicLinkLabel.Face) -> Bool {
+        switch face {
+        case .uthmani: return true
+        case .reader: return settings.useFontArabic && settings.islamUsesCustomArabicFace
+        case .plain: return false
+        }
     }
 
     @ViewBuilder
@@ -1013,6 +1124,23 @@ struct ArabicView: View {
                     .minimumScaleFactor(0.5)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
+                // The shelf's other axes, as chips (Abu, 2026-09-22: the menu names the shelf, the
+                // page picks the axis, "one can customize it in that row"). Heavy or Light has its
+                // own menu button and no siblings here.
+                let siblings = Self.shelfAxes(axis.shelf)
+                if siblings.count > 1, siblings.contains(axis) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(siblings) { sibling in
+                                axisChip(sibling, isOn: sibling == axis) {
+                                    setGrouping(.axis(sibling))
+                                }
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
+                }
+
                 Text(axis.question)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -1048,7 +1176,12 @@ struct ArabicView: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("GROUPED BY")
+            // The shelf's name joins the heading when the banner carries its chips ("GROUPED BY ·
+            // SIFAAT"); a lone axis keeps the plain heading.
+            let siblings = Self.shelfAxes(axis.shelf)
+            Text(siblings.count > 1 && siblings.contains(axis)
+                 ? "GROUPED BY \u{00B7} \(axis.shelf.transliteration.uppercased())"
+                 : "GROUPED BY")
         }
     }
 
@@ -1094,9 +1227,33 @@ struct ArabicView: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
+    /// A chip for one axis of the active shelf: outlined, unlike the tinted family chips under it,
+    /// because the two rows ask different questions (which axis, then which family).
+    private func axisChip(_ axis: LetterAxis, isOn: Bool, action: @escaping () -> Void) -> some View {
+        let color = settings.accentColor.color
+        return Button {
+            action()
+        } label: {
+            Label(axis.title, systemImage: axis.systemImage)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .foregroundColor(isOn ? .white : color)
+                .background(Capsule().fill(isOn ? color : Color.clear))
+                .overlay(Capsule().strokeBorder(color.opacity(isOn ? 0 : 0.45), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
     #if os(iOS)
-    /// The grouping menu. Every tajweed grouping is named in English AND Arabic (Abu, 2026-09-20):
-    /// the Arabic term is the one a teacher will use.
+    /// The grouping menu, FLAT (Abu, 2026-09-22: "don't make them a menu in a menu"): the three
+    /// groupings this screen has always had, alphabetical, similar shapes and heavy or light, then
+    /// one button per tajweed shelf. A shelf button lands on the shelf's remembered axis, and the
+    /// banner above the letters carries a chip for each axis on that shelf, so the choice inside a
+    /// shelf is made on the page, not in a submenu. Every tajweed grouping is named in English AND
+    /// Arabic (Abu, 2026-09-20): the Arabic term is the one a teacher will use.
     @ViewBuilder
     private var groupingMenuItems: some View {
         Text("Group the Alphabet")
@@ -1104,22 +1261,21 @@ struct ArabicView: View {
 
         groupingButton(.alphabetical)
         groupingButton(.shape)
+        groupingButton(.axis(.weight))
 
         Divider()
 
         ForEach(LetterAxis.Shelf.allCases) { shelf in
-            if shelf.axes.count == 1, let only = shelf.axes.first {
-                groupingButton(.axis(only))
-            } else {
-                Menu {
-                    ForEach(shelf.axes) { axis in
-                        groupingButton(.axis(axis))
-                    }
-                } label: {
-                    Label("\(shelf.transliteration) \u{00B7} \(shelf.arabic)",
-                          systemImage: shelf.axes.contains { grouping == .axis($0) } ? "checkmark" : shelfIcon(shelf))
-                }
-            }
+            shelfButton(shelf)
+        }
+    }
+
+    private func shelfButton(_ shelf: LetterAxis.Shelf) -> some View {
+        Button {
+            setGrouping(.axis(preferredAxis(of: shelf)))
+        } label: {
+            Label("\(shelf.transliteration) \u{00B7} \(shelf.arabic)",
+                  systemImage: isOnShelf(shelf) ? "checkmark" : shelfIcon(shelf))
         }
     }
 

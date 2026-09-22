@@ -91,12 +91,6 @@ struct PrayerCountdown: View {
             VStack(spacing: Self.digitsToBarSpacing) {
                 bigTimeLeft(next: next)
                 countdownProgress(next: next)
-                    // The skyline's GROUND (the horizon line, the pyramids and the mosque, the
-                    // ground band) stands on the progress bar: the bar IS the ground, and the
-                    // caption and the digits sit in the sky between the two structures (Abu,
-                    // 2026-09-21: "put the ground level where the countdown progress view is").
-                    // Only the drawn ground: the solar graph keeps the block's top (`bigTimeLeft`).
-                    .reportingSkyGroundLine()
             }
             .lineLimit(1)
             .minimumScaleFactor(0.25)
@@ -270,6 +264,14 @@ struct PrayerCountdown: View {
             .foregroundStyle(.secondary)
 
             CountdownDigits(target: next.time)
+                // The skyline's GROUND (the horizon line, the pyramids and the mosque, the ground
+                // band) runs between the caption and these digits: "TIME LEFT" sits in the sky
+                // between the two structures, and the digits and the bar stand under the ground.
+                // Abu, 2026-09-21: "between Time Left and the countdown, just the ground, not the
+                // graph"; it stood on the progress bar for a day and came back on 2026-09-22
+                // ("bring back the ground between time left and the countdown"). Only the drawn
+                // ground: the solar graph keeps the whole block's top, below.
+                .reportingSkyGroundLine()
         }
         .frame(maxWidth: .infinity)
         // The solar GRAPH's horizon crossing sits just ABOVE this whole block - the sun rises and
@@ -755,10 +757,11 @@ struct SkyDigitsTopKey: PreferenceKey {
     }
 }
 
-/// The top of the PROGRESS BAR (under the digits), in `SkyCard.groundSpace`: where the skyline's
-/// drawn ground runs, so the buildings stand on the bar. Separate from `SkyDigitsTopKey` because the
-/// two pin different things: the block's top pins the solar graph's horizon crossing, the bar's top
-/// pins the ground the pyramids and the mosque stand on. Nil until the first layout.
+/// The top of the countdown DIGITS (under the "TIME LEFT" caption), in `SkyCard.groundSpace`: where
+/// the skyline's drawn ground runs, between the caption and the digits. Separate from
+/// `SkyDigitsTopKey` because the two pin different things: the block's top pins the solar graph's
+/// horizon crossing, the digits' top pins the ground the pyramids and the mosque stand on. Nil until
+/// the first layout.
 struct SkyGroundLineKey: PreferenceKey {
     static let defaultValue: CGFloat? = nil
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {

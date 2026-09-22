@@ -93,6 +93,7 @@ struct ReadingTestView: View {
         List {
             Group {
                 introSection
+                letterQuizSection
 
                 ForEach(ReadingStage.allCases) { stage in
                     Section(header: stageHeader(stage)) {
@@ -237,6 +238,24 @@ struct ReadingTestView: View {
                 .font(.caption2)
                 .textCase(nil)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The Letter Quiz, on this page since 2026-09-22 (Abu: "merge reading test with letter quiz"):
+    /// the alphabet's two ways of testing yourself, behind one Explore tile. One row to its chooser
+    /// rather than its five modes as rows here: the ladder is this page's subject and should start
+    /// within a screen of the top.
+    private var letterQuizSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination { LetterQuizView() }) {
+                ArabicTopicLinkLabel(
+                    specimen: "\u{0628}",
+                    title: "Letter Quiz",
+                    caption: "Name a letter, find it, read its joined form, place its family, or pick the one you hear. Ten questions a round."
+                )
+            }
+        } footer: {
+            Text("One letter at a time. The ladder below asks you to read them joined into words.")
         }
     }
 
@@ -1557,70 +1576,3 @@ private struct ReadingKeySheet: View {
     }
 }
 
-// MARK: - The way in
-
-/// The Reading Test's row on the Arabic Alphabet screen: what it is, and how far the learner is.
-struct ReadingTestEntryLabel: View {
-    @Environment(\.appearance) private var appearance
-    @ObservedObject private var progress = ReadingTestProgress.shared
-
-    /// The whole ladder in one word, taken from the bank and not typed: letter by letter, then
-    /// joined, then with nothing on it. Reads from the right, so the arrows point the way it goes.
-    private static let preview: String? = {
-        guard let item = (ReadingTestBank.words["vowels"] ?? []).first(where: { $0.reading == "kataba" }) else { return nil }
-        let word = ReadingTestText.display(item.arabic, mushafMarks: false)
-        return "\(ReadingTestText.spaced(word))  \u{2190}  \(word)  \u{2190}  \(ReadingTestText.bare(word))"
-    }()
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: "text.book.closed.fill")
-                .font(.title3.weight(.semibold))
-                .foregroundColor(.white)
-                .frame(width: 46, height: 46)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(LinearGradient(colors: [appearance.accent.opacity(0.95), appearance.accent.opacity(0.65)],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Reading Test")
-                    .font(.body.weight(.semibold))
-                    .foregroundColor(.primary)
-
-                Text("\(ReadingTier.all.count) tiers, from single letters to words with no tashkeel")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if progress.passedCount > 0 {
-                    ProgressView(value: Double(progress.passedCount), total: Double(ReadingTier.all.count))
-                        .tint(appearance.accent)
-                        .padding(.top, 2)
-
-                    Text("\(progress.passedCount) of \(ReadingTier.all.count) passed")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(appearance.accent)
-                } else if let preview = Self.preview {
-                    Text(preview)
-                        .font(.callout)
-                        .foregroundColor(appearance.accent.opacity(0.85))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .padding(.top, 2)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundColor(Color.secondary.opacity(0.6))
-        }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Reading Test. \(ReadingTier.all.count) tiers, from single letters to words with no tashkeel.")
-    }
-}
