@@ -364,6 +364,12 @@ struct SurahPageReader<Controls: View>: View {
     /// The band the PAGER itself gets (the reader minus every bar), which decides whether two pages
     /// fit side by side (`spreadActive`). Zero until first measured.
     @State private var pagerSize: CGSize = .zero
+    /// The pinned header's and the bottom bars' natural heights, as last laid out (0 until measured).
+    /// Read only at a rest (`noteBandState`), so a fold mid-animation never records a transient.
+    @State private var headerHeight: CGFloat = 0
+    @State private var barsHeight: CGFloat = 0
+    /// Debounce ticket for `noteBandState`: the band is recorded once it has held still for a beat.
+    @State private var bandNoteTicket = 0
     /// Pages mounted to either side of the centre (a computed constant: the reader is generic,
     /// so a static stored property is not allowed here). A spread mounts two pages per pager child,
     /// so the same reach in SWIPES needs more pages: 6 is three spreads to either side.
@@ -755,7 +761,9 @@ struct SurahPageReader<Controls: View>: View {
                     onToggleSelection: onToggleSelection,
                     bottomBarsCollapsed: bottomBarsCollapsed,
                     // In a spread the ONE spine is the gutter between the pages (`spreadSpine`).
-                    showsSpine: !spreadActive
+                    showsSpine: !spreadActive,
+                    // Where the band is heading (see `anticipateBand`); each page of a spread gets half.
+                    targetBand: targetBand.map { spreadActive ? CGSize(width: $0.width / 2, height: $0.height) : $0 }
                 )
             }
         }
@@ -782,12 +790,127 @@ struct SurahPageReader<Controls: View>: View {
         .accessibilityHidden(true)
     }
 
+    // MARK: Chrome states and their bands (see `MushafPageRenderCache.twinBands`)
+
+    /// The mini player's state as the reader's band sees it: not mounted, the small card, the big card.
+    private var playerState: String {
+        guard quranPlayer.isPlaying || quranPlayer.isPaused else { return "none" }
+        return settings.nowPlayingExpanded ? "big" : "small"
+    }
+
+    private func chromeKey(collapsed: Bool, player: String, find: Bool, select: Bool) -> String {
+        "w\(Int(pagerSize.width))|c\(collapsed ? 1 : 0)|p\(player)|f\(find ? 1 : 0)|s\(select ? 1 : 0)"
+    }
+
+    /// Everything that decides the band's height, in one key: the bars folded or not, the mini player
+    /// (none / small / big), the find bar, the select bar, and the band's width (rotation, an iPad
+    /// window). The band is recorded under this key once it rests (`noteBandState`).
+    private var chromeStateKey: String {
+        chromeKey(collapsed: bottomBarsCollapsed, player: playerState, find: searchActive, select: isSelecting)
+    }
+
+    /// What the collapse strip gains when the bars fold (its tap target grows and its cushion tightens:
+    /// `bottomBarsToggleStrip`), so the folded band is the header plus the bars MINUS this. Measured on
+    /// the iPhone 17 Pro simulator, 2026-09-21: band 529 expanded, 665 collapsed, header + bars 138.
+    private var collapseStripDelta: CGFloat { 2 }
+
+    /// The band the fold would give, from the band `band` measured in the OTHER state: the header and
+    /// the bars fold in and out of it. Only from the expanded side (the folded strip hides the heights
+    /// the estimate needs; a fold that has never happened before starts expanded anyway).
+    private func foldEstimate(from band: CGSize, collapsedNow: Bool) -> CGSize? {
+        guard headerHeight > 0, barsHeight > 0 else { return nil }
+        let delta = headerHeight + barsHeight - collapseStripDelta
+        return CGSize(width: band.width, height: band.height + (collapsedNow ? delta : -delta))
+    }
+
+    /// The band the pager is HEADING to after a chrome change, handed to every mounted page the moment
+    /// the change starts (`MushafPageContent.targetBand`). The pager's UIKit frame animates through a
+    /// fold or a mounting mini player, and the SwiftUI page inside only learns its new size when that
+    /// animation ends, so the old typesetting used to sit in the growing (or shrinking) frame for the
+    /// whole animation and swap at the end. Told the destination up front, the page re-typesets at the
+    /// start, and the animation just reveals or covers its bottom lines. Cleared when the band arrives,
+    /// or after a beat if it never does (a band this reader has not rested at yet, or a wrong guess).
+    @State private var targetBand: CGSize?
+    @State private var targetBandTicket = 0
+
+    private func anticipateBand(for key: String, previousKey: String) {
+        var band = MushafPageRenderCache.knownBand(for: key)
+        if band == nil {
+            // A fold is the one change whose destination can be computed before it ever happened.
+            // Read off the KEYS, not `self`: an onChange action runs with the view value of the pass
+            // that installed it, so the state properties here may still describe the old state.
+            let flipped = previousKey
+                .replacingOccurrences(of: "|c0|", with: "|c?|")
+                .replacingOccurrences(of: "|c1|", with: "|c0|")
+                .replacingOccurrences(of: "|c?|", with: "|c1|")
+            if flipped == key { band = foldEstimate(from: pagerSize, collapsedNow: key.contains("|c1|")) }
+        }
+        guard let band, band != pagerSize else { return }
+        targetBand = band
+        targetBandTicket &+= 1
+        let ticket = targetBandTicket
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            guard ticket == targetBandTicket else { return }
+            targetBand = nil
+        }
+    }
+
+    /// Records the band the reader is resting at, a beat after it last moved. Every band change
+    /// (`updatePagerSize`) and every chrome-state change re-arms the beat, so an animated fold or a
+    /// mounting mini player records only where it comes to rest.
+    private func scheduleBandNote() {
+        bandNoteTicket &+= 1
+        let ticket = bandNoteTicket
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            guard ticket == bandNoteTicket else { return }
+            noteBandState()
+        }
+    }
+
+    private func noteBandState() {
+        guard pagerSize.width > 0, pagerSize.height > 0 else { return }
+        MushafPageRenderCache.noteKnownBand(key: chromeStateKey, band: pagerSize)
+        #if DEBUG
+        MushafPageRenderCache.fitTrace("CHROME \(chromeStateKey) band=\(Int(pagerSize.width))x\(Int(pagerSize.height)) header=\(Int(headerHeight.rounded())) bars=\(Int(barsHeight.rounded()))")
+        #endif
+        refreshTwinBands()
+    }
+
+    /// The bands one chrome change away from the current one, for the render cache to keep warm:
+    /// the fold flipped, the mini player mounted / stopped / resized, the find bar, the select bar.
+    /// Each comes from the band recorded the last time the reader was in that state; the fold alone
+    /// is also ESTIMATED from the measured header and bars, so the very first collapse is warm too.
+    private func refreshTwinBands() {
+        var twins: [(width: CGFloat, height: CGFloat)] = []
+        func add(_ key: String, estimate: CGSize? = nil) {
+            if let band = MushafPageRenderCache.knownBand(for: key) ?? estimate {
+                twins.append(MushafPageContent.textGeometry(in: band))
+            }
+        }
+        let collapsed = bottomBarsCollapsed, player = playerState, find = searchActive, select = isSelecting
+        add(chromeKey(collapsed: !collapsed, player: player, find: find, select: select), estimate: foldEstimate(from: pagerSize, collapsedNow: collapsed))
+        add(chromeKey(collapsed: collapsed, player: player == "none" ? "small" : "none", find: find, select: select))
+        if player != "none" {
+            add(chromeKey(collapsed: collapsed, player: player == "small" ? "big" : "small", find: find, select: select))
+        }
+        add(chromeKey(collapsed: collapsed, player: player, find: !find, select: select))
+        add(chromeKey(collapsed: collapsed, player: player, find: find, select: !select))
+        MushafPageRenderCache.twinBands = twins
+    }
+
     /// Whole points only: a Mac window being dragged reports fractional sizes every frame, and the
     /// spread rule has no use for them.
     private func updatePagerSize(_ size: CGSize) {
         let rounded = CGSize(width: size.width.rounded(), height: size.height.rounded())
         guard rounded != pagerSize else { return }
         pagerSize = rounded
+        scheduleBandNote()
+        // The anticipated band has arrived (or the pager went somewhere else: a beat later the
+        // ticket clears it and the pages follow the live frame).
+        if let target = targetBand, abs(target.width - rounded.width) <= 1, abs(target.height - rounded.height) <= 1 {
+            targetBand = nil
+            targetBandTicket &+= 1
+        }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-pageFitLog") {
             // The rule restated on the NEW size: `spreadActive` still reads the old state here.
@@ -884,6 +1007,12 @@ struct SurahPageReader<Controls: View>: View {
         // `headerSurah` names a different surah), and it folds with the collapse.
         .safeAreaInset(edge: .top, spacing: 0) {
             topSurahHeader
+                // Measured INSIDE the collapse frame: what the header takes when it is up.
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { headerHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { headerHeight = $0 }
+                })
                 .frame(height: bottomBarsCollapsed ? 0 : nil)
                 .clipped()
                 .opacity(bottomBarsCollapsed ? 0 : 1)
@@ -895,6 +1024,11 @@ struct SurahPageReader<Controls: View>: View {
         // re-fits to the taller band it gains (debounced, in `MushafPageContent`).
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomBars(pages: pages)
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { barsHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { barsHeight = $0 }
+                })
                 .frame(height: bottomBarsCollapsed ? 0 : nil)
                 .clipped()
                 .opacity(bottomBarsCollapsed ? 0 : 1)
@@ -1139,6 +1273,12 @@ struct SurahPageReader<Controls: View>: View {
         // NEW qiraah's signature (wrong page content served from cache).
         .onChange(of: settings.displayQiraahForArabic) { _ in
             reseedAfterRepagination()
+        }
+        // A chrome change that leaves the band's height alone (a same-height bar swap) still names a
+        // new state for the band to be recorded under, and new twins to warm.
+        .onChange(of: chromeStateKey) { [previous = chromeStateKey] key in
+            scheduleBandNote()
+            anticipateBand(for: key, previousKey: previous)
         }
         // Kept as a safety net for any other source of a count change (an index past the new end leaves
         // the TabView with no selected tag - a blank pager).
@@ -2292,6 +2432,10 @@ private struct MushafPageContent: View {
     var bottomBarsCollapsed: Bool = false
     /// Off inside a two-page spread, where the reader draws one spine down the gutter instead.
     var showsSpine: Bool = true
+    /// The frame this page is about to be given (the reader's `anticipateBand`), while the chrome
+    /// animates towards it: the page typesets for THAT band now, anchored to the top of the frame it
+    /// still has, and the animation reveals or covers the difference. nil once the frame has arrived.
+    var targetBand: CGSize? = nil
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -2301,8 +2445,14 @@ private struct MushafPageContent: View {
     /// Narrow on purpose (they were 20/6): every point of margin is paid for twice horizontally and
     /// once per page vertically, and the maximize-font rule says the text takes it instead. The faces'
     /// own line-box air keeps the page from touching the chrome even at these values.
-    private static let textPadding: CGFloat = 12
-    private static let verticalPadding: CGFloat = 2
+    fileprivate static let textPadding: CGFloat = 12
+    fileprivate static let verticalPadding: CGFloat = 2
+
+    /// The page-TEXT geometry a pager band of `band` gives a page: what the render cache keys on.
+    /// The reader uses it to name the bands one chrome change away (`MushafPageRenderCache.twinBands`).
+    fileprivate static func textGeometry(in band: CGSize) -> (width: CGFloat, height: CGFloat) {
+        (max(band.width - textPadding * 2, 1), max(band.height - verticalPadding * 2, 1))
+    }
 
     #if DEBUG
     /// "-openPageSheet" fires once per launch, on the first page that carries the target ayah.
@@ -2380,7 +2530,12 @@ private struct MushafPageContent: View {
     var body: some View {
         RenderCounter.hit("MushafPageContent")
         return GeometryReader { geo in
-            let width = max(geo.size.width - Self.textPadding * 2, 1)
+            // The band the page typesets for: the frame it is heading to during a chrome animation
+            // (`targetBand`), else the frame it has. A GeometryReader places its content top-leading,
+            // so a page typeset for a taller or shorter band than the live frame keeps its top edge
+            // where it is and the animating chrome does the rest.
+            let band = targetBand ?? geo.size
+            let width = max(band.width - Self.textPadding * 2, 1)
             // The page's FRAME is the region it can show - every piece of reader chrome is already subtracted
             // from it. Measured on an iPhone 16 Pro (points, screen 874 tall) with the reader open:
             //
@@ -2394,7 +2549,7 @@ private struct MushafPageContent: View {
             // covers nothing, and because a ScrollView TOP-pins content shorter than its viewport, all 44
             // landed as dead space BELOW the page. That was the "page sits too high" bug: the block was
             // centered correctly, but inside a band 44pt shorter than the one it was drawn in.
-            let visibleHeight = max(geo.size.height, 1)
+            let visibleHeight = max(band.height, 1)
             // The height the TEXT actually gets: the visible region minus its own vertical padding, nothing
             // else. The fit verifies against the real TextKit layout, so no slack is reserved on top.
             let textHeight = max(visibleHeight - Self.verticalPadding * 2, 1)
@@ -2402,49 +2557,36 @@ private struct MushafPageContent: View {
             // the background queue, instead of freezing the swipe while ~30 compose/measure passes run on
             // the main thread. `renderTick` is the re-read signal the async render fires.
             let _ = renderTick
-            if let rendered = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight) {
-                renderedPageBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
-            } else if let stale = MushafPageRenderCache.nearestRendered(page: page, width: width, height: textHeight) {
-                // The height budget moved a few points (a bar appeared/disappeared, the mini player
-                // mounted, a transition is mid-flight): keep the last good render of THIS page on screen
-                // while the exact fit lands in the background - content over a loading flash. Same width
-                // and settings, so the text re-wraps identically; only the fitted size can be a hair off
-                // for the beat the refit takes.
-                renderedPageBody(rendered: stale, width: width, visibleHeight: visibleHeight)
-                    // The page's content span is part of the id: a repagination hands this view a page
-                    // with the same number and different ayahs, and the running task still holds the old
-                    // one - it must restart with the page actually on screen.
-                    .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
-                        // Debounced: during a chrome transition (a picker collapsing after a jump, the
-                        // mini player mounting) the height SWEEPS through intermediate values frame by
-                        // frame, and composing for each transient fitted the page to heights it never
-                        // rests at - the first one to land showed the page briefly fitted SHORT before
-                        // the settled fit grew it back (the shrink-then-grow flash on every picker
-                        // jump), while churning the fit queues with throwaway work. The task id cancels
-                        // this on every geometry change, so the sleep lets only a geometry that has
-                        // held still for a beat reach the fit queue; the last good render of this page
-                        // stays up meanwhile.
-                        // A geometry some page has already finished a fit at is proven to be one the
-                        // reader rests at, so the debounce would only add 150 ms of blank page to every
-                        // cold swipe during an ordinary read - it applies to UNPROVEN geometries only.
-                        let settled = MushafPageRenderCache.hasSettledRender(width: width, height: textHeight)
-                        if !settled {
-                            try? await Task.sleep(nanoseconds: 150_000_000)
-                            guard !Task.isCancelled else { return }
-                        }
-                        MushafPageRenderCache.fitTrace("TASK \(MushafPageRenderCache.traceLabel(page)) \(Int(width.rounded()))x\(Int(textHeight.rounded())) settled=\(settled)")
-                        MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
-                            renderTick &+= 1
-                        }
-                    }
-            } else {
-                // Truly cold: nothing composed for this page at any nearby height. The spinner shows the
-                // moment a page is cold (user rule: a load that is really happening is never hidden);
-                // the work of making this branch RARE is elsewhere - the ring's direction-first order
-                // and its deeper reach ahead of travel, the jumps that wait for their landing page's
-                // render (`turnPage`), and the settled-geometry fast path in the task below.
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            let exact = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight)
+            // The height budget moved (a bar appeared/disappeared, the mini player mounted, a transition
+            // is mid-flight): keep a good render of THIS page on screen while the exact fit lands in the
+            // background - content over a loading flash. Same width and settings, so the text re-wraps
+            // identically; a render for a taller band is drawn scaled into this one (`renderedPageBody`).
+            let shown = exact ?? MushafPageRenderCache.nearestRendered(page: page, width: width, height: textHeight)
+            ZStack {
+                if let shown {
+                    renderedPageBody(rendered: shown, width: width, visibleHeight: visibleHeight)
+                        // One render, one view: a different render is a different typesetting of the
+                        // page, and the swap between them CROSSFADES (the `.animation` below) instead of
+                        // cutting - the re-wrap after a chrome change, the exact fit replacing a scaled
+                        // fallback, and the page appearing over its spinner all fade in over 0.2 s.
+                        .id(ObjectIdentifier(shown))
+                        .transition(.opacity)
+                } else {
+                    // Truly cold: nothing composed for this page at any nearby height. The spinner shows the
+                    // moment a page is cold (user rule: a load that is really happening is never hidden);
+                    // the work of making this branch RARE is elsewhere - the ring's direction-first order
+                    // and its deeper reach ahead of travel, the jumps that wait for their landing page's
+                    // render (`turnPage`), the chrome twins kept warm, and the settled-geometry fast path
+                    // in the task below.
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: shown.map(ObjectIdentifier.init))
+            .overlay {
+                if exact == nil {
                     // `.task(id:)`, NOT `.onAppear`: if the geometry changes while the fit is in flight
                     // (rotation, a bar appearing), the finished render lands under the OLD key, the body
                     // re-checks under the NEW one and misses - and an onAppear that already fired would
@@ -2454,27 +2596,33 @@ private struct MushafPageContent: View {
                     // The page's content span is part of the id: a repagination hands this view a page
                     // with the same number and different ayahs, and the running task still holds the old
                     // one - it must restart with the page actually on screen.
-                    .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
-                        // The same debounce as the stale branch above, for the same reason: a cold
-                        // picker-jump lands mid-transition, and fitting every transient height not only
-                        // queued the settled fit behind throwaway work - the first transient to finish
-                        // became this page's "nearest" render and flashed the page fitted short. Only a
-                        // geometry that holds still reaches the fit queue. (The reader's own prewarm
-                        // already requested the landing page at the settled geometry in parallel, so
-                        // this request is usually just the backstop.)
-                        // A geometry some page has already finished a fit at is proven to be one the
-                        // reader rests at, so the debounce would only add 150 ms of blank page to every
-                        // cold swipe during an ordinary read - it applies to UNPROVEN geometries only.
-                        let settled = MushafPageRenderCache.hasSettledRender(width: width, height: textHeight)
-                        if !settled {
-                            try? await Task.sleep(nanoseconds: 150_000_000)
-                            guard !Task.isCancelled else { return }
+                    Color.clear
+                        .allowsHitTesting(false)
+                        .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
+                            // Debounced: during a chrome transition (a picker collapsing after a jump, the
+                            // mini player mounting) the height SWEEPS through intermediate values frame by
+                            // frame, and composing for each transient fitted the page to heights it never
+                            // rests at - the first one to land showed the page briefly fitted SHORT before
+                            // the settled fit grew it back (the shrink-then-grow flash on every picker
+                            // jump), while churning the fit queues with throwaway work. The task id cancels
+                            // this on every geometry change, so the sleep lets only a geometry that has
+                            // held still for a beat reach the fit queue; the last good render of this page
+                            // stays up meanwhile.
+                            // A geometry some page has already finished a fit at, or one the reader is
+                            // known to rest at in some chrome state, is proven to be one the reader rests
+                            // at, so the debounce would only add 150 ms of blank page to every cold swipe
+                            // during an ordinary read - it applies to UNPROVEN geometries only.
+                            let settled = MushafPageRenderCache.hasSettledRender(width: width, height: textHeight)
+                            if !settled {
+                                try? await Task.sleep(nanoseconds: 150_000_000)
+                                guard !Task.isCancelled else { return }
+                            }
+                            MushafPageRenderCache.fitTrace("TASK \(MushafPageRenderCache.traceLabel(page)) \(Int(width.rounded()))x\(Int(textHeight.rounded())) settled=\(settled)")
+                            MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
+                                renderTick &+= 1
+                            }
                         }
-                        MushafPageRenderCache.fitTrace("TASK \(MushafPageRenderCache.traceLabel(page)) \(Int(width.rounded()))x\(Int(textHeight.rounded())) settled=\(settled)")
-                        MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
-                            renderTick &+= 1
-                        }
-                    }
+                }
             }
         }
         .overlay(alignment: spineIsLeading ? .leading : .trailing) { if showsSpine { spineRule } }
@@ -5008,6 +5156,8 @@ enum MushafPageRenderCache {
             enqueueFit(page: page, width: geometry.width, height: geometry.height,
                        key: key, config: config, generation: generation)
         }
+        // The bands one tap away, once the reader has been still for a beat (see `warmTwins`).
+        scheduleTwinWarm()
     }
 
     /// The single fit executor shared by the prewarm ring and the visible page's `renderAsync`. Whoever asks
@@ -5234,18 +5384,33 @@ enum MushafPageRenderCache {
         return hit
     }
 
-    /// The most recent render each page produced or served, by page number. The HEIGHT budget jitters
+    /// The most recent renders each page produced or served, by page number. The HEIGHT budget jitters
     /// constantly (a bar appears, the mini player mounts, a transition mid-flight), and every jitter is
     /// a new cache key; without this map each jitter flashed the loading spinner over a page that was
-    /// JUST on screen. Held STRONGLY but tightly bounded at 12 - the mounted pages plus their immediate
-    /// ring, which is all the fallback exists for. (Weak references were tried and reverted: NSCache
-    /// count-limit churn during an ordinary flip run evicted a mounted page's older-height render while
-    /// it was still the only fallback for the next jitter - the spinner came back. Twelve attributed
-    /// pages is small; the old bound of 64 was what undercut memory-pressure eviction.)
-    private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, span: String, rendered: MushafRenderedPage)] = [:]
+    /// JUST on screen. Held STRONGLY but tightly bounded: 12 pages (the mounted pages plus their
+    /// immediate ring, which is all the fallback exists for), and up to `budgetsPerPage` renders each.
+    /// (Weak references were tried and reverted: NSCache count-limit churn during an ordinary flip run
+    /// evicted a mounted page's older-height render while it was still the only fallback for the next
+    /// jitter - the spinner came back. A few dozen attributed pages is small; the old bound of 64 pages
+    /// was what undercut memory-pressure eviction.)
+    ///
+    /// SEVERAL budgets per page (2026-09-21), not the last one: while the chrome animates (the bars
+    /// folding, the mini player mounting) the band sweeps between two heights the reader rests at,
+    /// and both renders are usually cached (`warmTwins`). Keeping both lets `nearestRendered` hand
+    /// the page the render fitted for the TALLER band throughout the sweep, scaled into the band, so
+    /// the fold reads as one smooth zoom instead of the old page drifting, then snapping to the new fit.
+    private struct FallbackRender {
+        let width: CGFloat
+        let budget: CGFloat
+        let signature: String
+        let span: String
+        let rendered: MushafRenderedPage
+    }
+    private static var latestByPage: [Int: [FallbackRender]] = [:]
     /// Insertion order for eviction, oldest first.
     private static var latestOrder: [Int] = []
     private static let latestLimit = 12
+    private static let budgetsPerPage = 3
 
     /// Memory-warning purge (AppLifecycle): a page with no fallback shows its spinner once, then refits.
     static func purgeFallbackRenders() {
@@ -5258,7 +5423,16 @@ enum MushafPageRenderCache {
         if latestByPage[page.page] != nil {
             latestOrder.removeAll { $0 == page.page }
         }
-        latestByPage[page.page] = (width, budget, signature, page.contentSpan, rendered)
+        // Only renders that could still be served alongside this one are worth keeping: the same
+        // width, settings and ayahs. A different width or signature can never be shown for this page
+        // again (see `nearestRendered`), and a second render at the same budget is this one, older.
+        var entries = (latestByPage[page.page] ?? []).filter {
+            Int($0.width.rounded()) == Int(width.rounded()) && $0.signature == signature && $0.span == page.contentSpan
+                && Int($0.budget.rounded()) != Int(budget.rounded())
+        }
+        entries.append(FallbackRender(width: width, budget: budget, signature: signature, span: page.contentSpan, rendered: rendered))
+        if entries.count > budgetsPerPage { entries.removeFirst(entries.count - budgetsPerPage) }
+        latestByPage[page.page] = entries
         latestOrder.append(page.page)
         while latestOrder.count > latestLimit {
             let evicted = latestOrder.removeFirst()
@@ -5270,6 +5444,14 @@ enum MushafPageRenderCache {
     /// exact fit runs. Same width and same settings only: the text re-wraps identically at the same width
     /// (so nothing clips), while a different width or changed settings would show genuinely wrong content.
     ///
+    /// Which one, when several are held: the one fitted for the nearest budget AT OR ABOVE the band,
+    /// else the nearest below. A taller render is drawn scaled down into the band (`renderedPageBody`),
+    /// so during a chrome animation the page zooms smoothly with the band and, once the band stops,
+    /// the exact fit for it is either that same render (the band grew into it) or one of the same
+    /// height (the band shrank onto it): the swap between typesettings happens at equal size, never as
+    /// a jump. A shorter render would sit small in the band with air around it - the "page shrinks,
+    /// then grows back" flash - so it is the last resort.
+    ///
     /// Close-enough budgets only. The fallback exists for height jitters (a bar mounting, the mini
     /// player appearing) AND the bottom-chrome collapse, whose band is up to ~40% of the page - the
     /// old 30%-of-new-height bound refused the collapse jump, so toggling the chevron flashed the
@@ -5279,13 +5461,18 @@ enum MushafPageRenderCache {
     /// LARGER of the two budgets (collapse: ~38%, accepted; mid-launch: ~50%, still refused) and only
     /// a budget that far off gets the honest spinner. The refit itself is fast (see `visibleFitQueue`).
     static func nearestRendered(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
-        guard let entry = latestByPage[page.page],
-              Int(entry.width.rounded()) == Int(width.rounded()),
-              entry.signature == settingsSignature,
-              // Same ayahs: page 13 of another riwayah's pagination is not this page (`contentSpan`).
-              entry.span == page.contentSpan,
-              abs(entry.budget - height) <= max(entry.budget, height) * 0.45 else { return nil }
-        fitTrace("STALE \(traceLabel(page)) want=\(Int(width.rounded()))x\(Int(height.rounded())) have=\(Int(entry.width.rounded()))x\(Int(entry.budget.rounded())) rendered=\(Int(entry.rendered.height.rounded()))")
+        let signature = settingsSignature
+        let candidates = (latestByPage[page.page] ?? []).filter { entry in
+            Int(entry.width.rounded()) == Int(width.rounded())
+                && entry.signature == signature
+                // Same ayahs: page 13 of another riwayah's pagination is not this page (`contentSpan`).
+                && entry.span == page.contentSpan
+                && abs(entry.budget - height) <= max(entry.budget, height) * 0.45
+        }
+        let above = candidates.filter { $0.budget >= height - 0.5 }.min { $0.budget < $1.budget }
+        let below = candidates.filter { $0.budget < height - 0.5 }.max { $0.budget < $1.budget }
+        guard let entry = above ?? below else { return nil }
+        fitTrace("STALE \(traceLabel(page)) want=\(Int(width.rounded()))x\(Int(height.rounded())) have=\(Int(entry.width.rounded()))x\(Int(entry.budget.rounded())) rendered=\(Int(entry.rendered.height.rounded())) held=\(candidates.count)")
         return entry.rendered
     }
 
@@ -5298,10 +5485,107 @@ enum MushafPageRenderCache {
     /// Whether a page has ever finished a fit at exactly this geometry (see `settledGeometries`).
     static func hasSettledRender(width: CGFloat, height: CGFloat) -> Bool {
         settledGeometries.contains(geometryToken(width: width, height: height))
+            || knownBands.contains { Int($0.width.rounded()) == Int(width.rounded()) && Int($0.height.rounded()) == Int(height.rounded()) }
     }
 
     private static func geometryToken(width: CGFloat, height: CGFloat) -> String {
         "\(Int(width.rounded()))x\(Int(height.rounded()))"
+    }
+
+    // MARK: Chrome twins (2026-09-21)
+    //
+    // A mushaf page is typeset to the band it is given, and the band changes whenever the reader's chrome
+    // does: the bottom bars fold, the mini player mounts or stops, the find bar or the select bar opens.
+    // Each of those used to leave the visible page cold at its new height: the page sat at its OLD size
+    // for a beat (or, when the fallback was refused, showed a spinner) and then jumped to the new fit -
+    // Abu, 2026-09-21: "it randomly shrinks and appears". The reader now reports the band it rests at in
+    // each chrome state (`noteKnownBand`, persisted so a fresh launch already knows them) and the bands
+    // one tap away (`twinBands`), and `warmTwins` fits the page on screen and its two neighbours at
+    // those bands while the reader is idle. A chrome change is then a cache hit at its final geometry,
+    // and `nearestRendered` scales the taller of the two renders through the animation between them.
+
+    /// Persisted: the pager band (the page's frame) the reader rested at per chrome state
+    /// (`SurahPageReader`'s state key), so a state the reader has ever been in has a known band from
+    /// the first open on.
+    private static var knownBandsByKey: [String: CGSize] = {
+        guard let url = knownBandsURL, let data = try? Data(contentsOf: url),
+              let raw = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: [Double]] else { return [:] }
+        var loaded: [String: CGSize] = [:]
+        for (key, value) in raw where value.count == 2 { loaded[key] = CGSize(width: value[0], height: value[1]) }
+        return loaded
+    }()
+    nonisolated private static var knownBandsURL: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("mushaf-known-bands.plist")
+    }
+    /// The known bands as page-TEXT geometries (what the cache keys on).
+    private static var knownBands: [(width: CGFloat, height: CGFloat)] {
+        knownBandsByKey.values.map { MushafPageContent.textGeometry(in: $0) }
+    }
+
+    static func knownBand(for key: String) -> CGSize? { knownBandsByKey[key] }
+
+    /// The reader rested at `band` (the pager's frame) in chrome state `key`.
+    static func noteKnownBand(key: String, band: CGSize) {
+        let text = MushafPageContent.textGeometry(in: band)
+        guard !isDegenerate(width: text.width, height: text.height) else { return }
+        if let known = knownBandsByKey[key],
+           Int(known.width.rounded()) == Int(band.width.rounded()), Int(known.height.rounded()) == Int(band.height.rounded()) { return }
+        knownBandsByKey[key] = band
+        fitTrace("BAND \(key) = \(Int(band.width.rounded()))x\(Int(band.height.rounded()))")
+        let snapshot = knownBandsByKey.mapValues { [Double($0.width), Double($0.height)] }
+        let url = knownBandsURL
+        persistedMetricsSaveQueue.async {
+            guard let url, let data = try? PropertyListSerialization.data(fromPropertyList: snapshot, format: .binary, options: 0) else { return }
+            try? data.write(to: url, options: .atomic)
+        }
+    }
+
+    /// The page-text geometries one tap away from the reader's current chrome state, set by the reader
+    /// (`SurahPageReader.refreshTwinBands`). Warmed for the visible page and its neighbours once the
+    /// reader has been still for a beat.
+    static var twinBands: [(width: CGFloat, height: CGFloat)] = [] {
+        didSet { scheduleTwinWarm() }
+    }
+    private static var twinWork: DispatchWorkItem?
+
+    /// Warms the twins a beat after the reader's last movement: every main ring sweep (a swipe) pushes
+    /// the twin sweep back, so a flip run never pays for bands it is not looking at.
+    static func scheduleTwinWarm(after delay: TimeInterval = 1.0) {
+        twinWork?.cancel()
+        let work = DispatchWorkItem { warmTwins() }
+        twinWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
+    private static func warmTwins() {
+        guard !AppPerformance.isLowPowerMode,
+              let context = lastPrewarmContext, let live = lastGeometry,
+              !isDegenerate(width: live.width, height: live.height),
+              !context.pages.isEmpty, context.pages[0].paginationKey == displayedPaginationKey else { return }
+        let pages = context.pages
+        var seen: Set<String> = [geometryToken(width: live.width, height: live.height)]
+        let twins = twinBands.filter { twin in
+            !isDegenerate(width: twin.width, height: twin.height)
+                && seen.insert(geometryToken(width: twin.width, height: twin.height)).inserted
+        }.prefix(3)
+        guard !twins.isEmpty else { return }
+        // The CURRENT generation, so the next swipe's sweep retires any twin fit that has not started.
+        let generation = prewarmGeneration
+        let config = MushafComposeConfig.current()
+        let signature = settingsSignature
+        let ring = [context.index, context.index + 1, context.index - 1].filter { pages.indices.contains($0) }
+        fitTrace("TWINS around=\(traceLabel(pages[ring[0]])) bands=\(twins.map { geometryToken(width: $0.width, height: $0.height) })")
+        for twin in twins {
+            for i in ring {
+                let page = pages[i]
+                let key = cacheKey(page: page, width: twin.width, height: twin.height, signature: signature)
+                guard cache.object(forKey: key) == nil, pendingRenders[key] == nil else { continue }
+                pendingRenders[key] = []
+                enqueueFit(page: page, width: twin.width, height: twin.height,
+                           key: key, config: config, generation: generation)
+            }
+        }
     }
 
     /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -

@@ -251,25 +251,33 @@ struct NowPlayingView: View {
                     TinyProgressBar(fraction: safeElapsed / total, color: settings.accentColor.color)
                 }
 
-                HStack(spacing: 10) {
+                // This row must never be wider than the card it sits in. Two rigid 40 pt time labels,
+                // two spacers with their default minimum, and 18 pt between five icons added up to a
+                // minimum width of ~323 pt, and a phone's reader offers this card 314: the row pushed
+                // the WHOLE reader out to 411 pt on a 402 pt screen (measured 2026-09-21). The page
+                // reader then composed every page 9 pt wider than the screen, every cached render
+                // missed (the width is in the cache key), and expanding the player, and stopping
+                // playback while expanded, both showed the spinner over a page that was just there.
+                // Flexible everything: the labels shrink to their text, the spacers to nothing.
+                HStack(spacing: 8) {
                     Text(total > 0 ? Self.formatMMSS(safeElapsed) : "")
-                        .frame(width: 40, alignment: .leading)
+                        .frame(minWidth: 0, idealWidth: 40, maxWidth: 40, alignment: .leading)
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
-                    HStack(spacing: 18) {
+                    HStack(spacing: 14) {
                         transportButtons(isPlaying: isPlaying)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 0)
 
                     Text(total > 0 ? Self.formatMMSS(total) : "")
-                        .frame(width: 40, alignment: .trailing)
+                        .frame(minWidth: 0, idealWidth: 40, maxWidth: 40, alignment: .trailing)
                 }
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.6)
             }
             // The progress bar / times tick every 0.5s and on play/resume. Opt this subtree out of any
             // implicit animation inherited from the player card so the bar jumps to its position instead of
@@ -391,7 +399,7 @@ struct NowPlayingView: View {
             if nowPlaying.isPlaying || nowPlaying.isPaused {
                 transportRowWithProgress(isPlaying: isPlaying)
             } else {
-                HStack(spacing: 22) {
+                HStack(spacing: 14) {
                     transportButtons(isPlaying: isPlaying)
                 }
             }

@@ -7,18 +7,6 @@
 		<string>com.Quran.Elmallah.Islamic-Pillars.fetchPrayerTimes</string>
 		<string>com.Quran.Elmallah.Islamic-Pillars.processingRefresh</string>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Needed to accurately determine prayer times based on where you are (your location stays on your device).</string>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>Needed to accurately determine prayer times based on where you are (your location stays on your device).</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Needed to accurately determine prayer times based on where you are (your location stays on your device).</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Used to save wallpapers you choose to your Photo Library.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Uthmani.ttf</string>
