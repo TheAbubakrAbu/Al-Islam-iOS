@@ -37,6 +37,8 @@ struct SettingsSearchEntry: Identifiable {
         case appearance
         /// About You: who the reader says they are, and the Start Here guide it switches on.
         case aboutYou
+        /// iCloud Backup: this device's profile, the others in the account, restore.
+        case cloudBackup
         /// Tips & Tricks: one area's list, or all six behind one door when nil.
         case tips(TipArea?)
         case credits
@@ -48,6 +50,7 @@ struct SettingsSearchEntry: Identifiable {
         case quranPage(SettingsQuranPage)
         case hadithPage(SettingsHadithPage)
         case islamPage(SettingsIslamPage)
+        case appearancePage(SettingsAppearancePage)
 
         /// The chip icon a search result renders with - derived here so entries never repeat it.
         var icon: String {
@@ -65,6 +68,7 @@ struct SettingsSearchEntry: Identifiable {
             case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
             case .aboutYou: return "person.crop.circle.fill"
+            case .cloudBackup: return "icloud.fill"
             case .tips: return "lightbulb.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
@@ -73,6 +77,7 @@ struct SettingsSearchEntry: Identifiable {
             case .quranPage(let page): return page.systemImage
             case .hadithPage(let page): return page.systemImage
             case .islamPage(let page): return page.systemImage
+            case .appearancePage(let page): return page.systemImage
             }
         }
     }
@@ -238,19 +243,10 @@ struct SettingsView: View {
 
     private var settingsList: some View {
         #if os(iOS)
+        // (The Classic Look switch used to be scrolled to here by "-scrollToClassicLook". It lives on
+        // Appearance's Look and Feel page now: "-settingsOpen appearanceLook" lands on it.)
         settingsListChrome(
-            ScrollViewReader { proxy in
-                List { settingsListContent(split: false) }
-                #if DEBUG
-                // "-scrollToClassicLook": land on the Classic Look switch (screenshot runs).
-                .onAppear {
-                    guard ProcessInfo.processInfo.arguments.contains("-scrollToClassicLook") else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation { proxy.scrollTo("classicLook", anchor: .center) }
-                    }
-                }
-                #endif
-            },
+            List { settingsListContent(split: false) },
             disableNowPlayingInset: false
         )
         #else
@@ -339,6 +335,7 @@ struct SettingsView: View {
         case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "nagging": return .notificationsPage(.naggingMode)
         case "aboutYou": return .aboutYou
+        case "cloudBackup": return .cloudBackup
         case "tips": return .tips(nil)
         case "tipsAdhan": return .tips(.adhan)
         case "tipsNotifications": return .tips(.notifications)
@@ -347,6 +344,8 @@ struct SettingsView: View {
         case "tipsIslam": return .tips(.islam)
         case "tipsApp": return .tips(.app)
         case "appearance": return .appearance
+        case "appearanceColors": return .appearancePage(.customColors)
+        case "appearanceLook": return .appearancePage(.lookAndFeel)
         default: return nil
         }
     }
@@ -410,6 +409,8 @@ struct SettingsView: View {
             ProfileSettingsRow()
             // Who the reader says they are (the welcome's one question), changeable here.
             AboutYouSettingsRow()
+            // The optional iCloud save: profiles, restore, back up now.
+            CloudBackupSettingsRow()
         }
         #endif
 
@@ -678,7 +679,9 @@ struct SettingsView: View {
 
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Reset restores every setting (appearance, prayer, and Quran options) to its default and keeps your bookmarks, favorites, khatm progress, and saved location.\n\nErase removes those too.")
+                // Generated from the same table the iCloud page's What's Included reads, so a new
+                // kind of content is named here without a second edit.
+                Text("Reset puts every setting back to its default (appearance, prayer, notification, Quran, hadith and Islam options) and keeps everything you made: \(ContentCategory.listSentence). It also keeps your saved location and this \(CloudDevice.kind)'s iCloud Backup.\n\nErase removes all of that too.")
             }
             // A second confirmation, because this one cannot be undone.
             .confirmationDialog(
@@ -694,7 +697,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes your bookmarks, favorite surahs, letters and names, khatm progress, reading and listening positions, search history, and saved locations, leaving the app exactly as it was on a fresh install. This cannot be undone.")
+                Text("This deletes everything you made on this \(CloudDevice.kind): \(ContentCategory.listSentence), plus your search history and saved locations. The app is left as it was on a fresh install, and this \(CloudDevice.kind) forgets its iCloud Backup profile (the backup already in iCloud stays until you delete it there). This cannot be undone.")
             }
         }
         #endif
@@ -901,7 +904,10 @@ struct SettingsView: View {
 /// section otherwise lives inline on the Settings tab with nothing to navigate to.
 struct AppearanceSettingsScreen: View {
     var body: some View {
-        SettingsScopedSearch(scope: .appearance) {
+        SettingsScopedSearch(scope: .appearance, resolve: { destination in
+            if case .appearancePage(let page) = destination { return AnyView(AppearancePageView(page: page)) }
+            return nil
+        }) {
             Section {
                 SettingsAppearanceView()
             }
@@ -911,62 +917,116 @@ struct AppearanceSettingsScreen: View {
 }
 
 extension SettingsSearchEntry {
-    static let appearanceEntries: [SettingsSearchEntry] = [
-        .init(title: "Accent Color", path: "Appearance", keywords: "green color swatch tint custom hex theme", destination: .appearance),
+    static let appearanceEntries: [SettingsSearchEntry] = appearanceControlEntries.filter { entry in
+        LaunchTab.isOffered || entry.title != "Open the App On"
+    }
+
+    private static let appearanceControlEntries: [SettingsSearchEntry] = [
+        .init(title: "Accent Color", path: "Appearance", keywords: "green color swatch tint theme", destination: .appearance),
         .init(title: "App Theme (Light / Dark / Sepia / Gray)", path: "Appearance", keywords: "dark mode light mode night reading sepia gray paper background", destination: .appearance),
-        .init(title: "Custom Background Color", path: "Appearance", keywords: "custom color background hex picker theme", destination: .appearance),
-        .init(title: "Top Accent Glow", path: "Appearance", keywords: "glow wash gradient accent top background flat hide al islam green yellow brand", destination: .appearance),
-        .init(title: "Default List View", path: "Appearance", keywords: "list style plain grouped inset layout", destination: .appearance),
-        .init(title: "Classic Look (No Liquid Glass)", path: "Appearance", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearance),
-        .init(title: "Haptic Feedback", path: "Appearance", keywords: "vibration taptic buzz feedback toggle", destination: .appearance),
+        .init(title: "Custom Background Color", path: "Appearance → Custom Colors", keywords: "custom color background hex picker theme", destination: .appearancePage(.customColors)),
+        .init(title: "Custom Accent Color", path: "Appearance → Custom Colors", keywords: "custom color accent hex picker tint own", destination: .appearancePage(.customColors)),
+        .init(title: "Top Accent Glow", path: "Appearance → Custom Colors", keywords: "glow wash gradient accent top background flat hide al islam green yellow brand", destination: .appearancePage(.customColors)),
+        .init(title: "Open the App On", path: "Appearance → Look and Feel", keywords: "launch start first tab open adhan quran hadith islam default home landing", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
     ]
 }
-#endif
 
-struct SettingsAppearanceView: View {
-    @ObservedObject var settings = Settings.shared
+// MARK: - The tab the app opens on
 
-    #if os(iOS)
-    /// The iPad sidebar gives the five-segment theme control about 54 pt a segment, and "System"
-    /// showed as "Syst..." there (2026-09-06 iPad pass); iPads say "Auto". Keyed on the idiom, not
-    /// the size class: a split view's sidebar column reports `.compact` even on a 13-inch iPad.
-    private var systemThemeLabel: String {
-        UIDevice.current.userInterfaceIdiom != .phone ? "Auto" : "System"
+/// The four tabs the app can open on (`Settings.launchTabRaw`). Settings itself is not offered:
+/// nobody opens an app to change it.
+enum LaunchTab: String, CaseIterable, Identifiable {
+    case adhan, quran, hadith, islam
+
+    var id: String { rawValue }
+
+    /// See `SettingsAppearancePage.offersLaunchTab`: Al-Islam only.
+    static var isOffered: Bool { SettingsAppearancePage.offersLaunchTab }
+
+    var title: String {
+        switch self {
+        case .adhan: return "Adhan"
+        case .quran: return "Quran"
+        case .hadith: return "Hadith"
+        case .islam: return "Islam"
+        }
     }
-    #endif
+}
 
-    // Accent-swatch grid metrics. The watch gets fewer, smaller swatches with tighter gutters so each circle
-    // actually FITS its column (see the note on the grid below); the phone keeps the roomier original.
-    #if os(watchOS)
-    private static let swatchColumns = 4
-    private static let swatchDiameter: CGFloat = 22
-    private static let swatchSpacing: CGFloat = 6
-    private static let swatchGridVerticalPadding: CGFloat = 4
-    #else
-    private static let swatchColumns = 4
-    private static let swatchDiameter: CGFloat = 30
-    private static let swatchSpacing: CGFloat = 12
-    private static let swatchGridVerticalPadding: CGFloat = 16
-    #endif
+extension Settings {
+    var launchTab: LaunchTab {
+        get { LaunchTab(rawValue: launchTabRaw) ?? .adhan }
+        set { launchTabRaw = newValue.rawValue }
+    }
+}
 
-    private func accentSwatch(_ accentColor: AccentColor) -> some View {
-        // Every preset is a single colour, so a plain circle is right here.
-        Circle()
-            .fill(accentColor.color)
-            .frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
-            .overlay(
-                Circle()
-                    .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 2)
-            )
-            .accessibilityLabel(accentColor.displayName)
-            .onTapGesture {
-                settings.hapticFeedback()
+/// "Open the App On": one control, shown on Appearance's Look and Feel page and on About You (which
+/// is where Abu went looking for it, under a toggle whose name read as if it did this).
+struct LaunchTabPicker: View {
+    @ObservedObject private var settings = Settings.shared
 
-                withAnimation {
-                    settings.accentColor = accentColor
+    /// Plain, never animated: an animated selection binding makes the segmented indicator slide,
+    /// snap back and slide again.
+    private var selection: Binding<LaunchTab> {
+        Binding(
+            get: { settings.launchTab },
+            set: { newValue in
+                settings.launchTab = newValue
+                settings.launchTabChosen = true
+            }
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Open the App On")
+                .font(.subheadline)
+
+            Picker("Open the App On", selection: selection) {
+                ForEach(LaunchTab.allCases) { tab in
+                    Text(tab.title).tag(tab)
                 }
             }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: settings.launchTabRaw) { _ in settings.hapticFeedback() }
+
+            Text("The tab you land on when the app opens. A notification or a reminder you tap still opens where it points.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+        }
     }
+}
+
+// MARK: - Appearance sub-screens
+
+/// One of Appearance's two sub-screens (`SettingsAppearancePage`): the controls that used to run
+/// down the Settings tab under the swatches, unchanged, one push away.
+struct AppearancePageView: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let page: SettingsAppearancePage
+
+    var body: some View {
+        List {
+            Group {
+                switch page {
+                case .customColors: customColorsSections
+                case .lookAndFeel: lookAndFeelSections
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle(page.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: Custom Colors
 
     /// Reads/writes the stored custom hex; picking a color also switches the active accent to `.custom`.
     private var customAccentColorBinding: Binding<Color> {
@@ -1014,6 +1074,200 @@ struct SettingsAppearanceView: View {
         )
     }
 
+    /// One line: color well, label, then a toggle tinted with the custom color itself (not the accent).
+    private func colorRow(_ title: String, color: Binding<Color>, enabled: Binding<Bool>, tint: Color) -> some View {
+        HStack(spacing: 12) {
+            ColorPicker("", selection: color, supportsOpacity: false)
+                .labelsHidden()
+
+            Text(title)
+                .font(.subheadline)
+
+            Spacer()
+
+            Toggle("", isOn: enabled.animation(.easeInOut))
+                .labelsHidden()
+                .tint(tint)
+        }
+    }
+
+    @ViewBuilder
+    private var customColorsSections: some View {
+        Section {
+            VStack(alignment: .leading) {
+                colorRow("Custom Background", color: customBackgroundColorBinding, enabled: customBackgroundEnabledBinding,
+                         tint: Color(hex: settings.customBackgroundColorHex) ?? .gray)
+                    .onChange(of: settings.colorSchemeString) { _ in settings.hapticFeedback() }
+
+                Text("Pick any background color for the whole app. Light or dark text is chosen automatically so it stays readable.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+
+            VStack(alignment: .leading) {
+                colorRow("Custom Color", color: customAccentColorBinding, enabled: customColorEnabledBinding,
+                         tint: Color(hex: settings.customAccentColorHex) ?? .green)
+                    .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
+
+                Text("An accent of your own in place of the swatches on the Settings tab. Turning it off goes back to the app's green.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+        } header: {
+            Text("YOUR OWN COLORS")
+        }
+
+        Section {
+            VStack(alignment: .leading) {
+                Toggle("Top Accent Glow", isOn: $settings.showAccentGlow.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.showAccentGlow) { _ in settings.hapticFeedback() }
+
+                Text("A soft wash of your accent color at the top of each screen. Turn it off for a flat background.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+
+                if settings.showAccentGlow {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
+
+                        Text("Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .settingsDependent()
+                }
+            }
+        } header: {
+            Text("THE GLOW")
+        }
+    }
+
+    // MARK: Look and Feel
+
+    @ViewBuilder
+    private var lookAndFeelSections: some View {
+        if LaunchTab.isOffered {
+            Section {
+                LaunchTabPicker()
+            } header: {
+                Text("WHEN THE APP OPENS")
+            }
+        }
+
+        Section {
+            VStack(alignment: .leading) {
+                Toggle("Default List View", isOn: $settings.defaultView.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.defaultView) { _ in settings.hapticFeedback() }
+
+                Text("The default list view is the standard interface found in many of Apple's first party apps, including Notes.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+
+            if #available(iOS 26.0, *) {
+                VStack(alignment: .leading) {
+                    Toggle("Classic Look (No Liquid Glass)", isOn: $settings.classicLook.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
+
+                    Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery. The search bar keeps its Liquid Glass.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+
+                    if !settings.classicLook {
+                        VStack(alignment: .leading) {
+                            Toggle("Automatically in Low Power Mode", isOn: $settings.classicLookInLowPower.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: settings.classicLookInLowPower) { _ in settings.hapticFeedback() }
+
+                            Text("Uses the Classic Look while Low Power Mode is on and brings Liquid Glass back when it is off.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.vertical, 2)
+                        }
+                        .settingsDependent()
+                    }
+                }
+            }
+        } header: {
+            Text("HOW IT LOOKS")
+        }
+
+        Section {
+            Toggle("Haptic Feedback", isOn: $settings.hapticOn.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.hapticOn) { _ in settings.hapticFeedback() }
+        } header: {
+            Text("HOW IT FEELS")
+        }
+    }
+}
+#endif
+
+/// The APPEARANCE section of the Settings tab: the two controls people reach for (the theme and the
+/// accent swatches), then a door to each sub-screen. The watch has only the swatches and the haptics
+/// switch, so it keeps both inline.
+struct SettingsAppearanceView: View {
+    @ObservedObject var settings = Settings.shared
+
+    #if os(iOS)
+    /// The iPad sidebar gives the five-segment theme control about 54 pt a segment, and "System"
+    /// showed as "Syst..." there (2026-09-06 iPad pass); iPads say "Auto". Keyed on the idiom, not
+    /// the size class: a split view's sidebar column reports `.compact` even on a 13-inch iPad.
+    private var systemThemeLabel: String {
+        UIDevice.current.userInterfaceIdiom != .phone ? "Auto" : "System"
+    }
+    #endif
+
+    // Accent-swatch grid metrics. The watch gets fewer, smaller swatches with tighter gutters so each circle
+    // actually FITS its column (see the note on the grid below); the phone keeps the roomier original.
+    #if os(watchOS)
+    private static let swatchColumns = 4
+    private static let swatchDiameter: CGFloat = 22
+    private static let swatchSpacing: CGFloat = 6
+    private static let swatchGridVerticalPadding: CGFloat = 4
+    #else
+    private static let swatchColumns = 4
+    private static let swatchDiameter: CGFloat = 30
+    private static let swatchSpacing: CGFloat = 12
+    private static let swatchGridVerticalPadding: CGFloat = 16
+    #endif
+
+    private func accentSwatch(_ accentColor: AccentColor) -> some View {
+        // Every preset is a single colour, so a plain circle is right here.
+        Circle()
+            .fill(accentColor.color)
+            .frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
+            .overlay(
+                Circle()
+                    .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 2)
+            )
+            .accessibilityLabel(accentColor.displayName)
+            .onTapGesture {
+                settings.hapticFeedback()
+
+                withAnimation {
+                    settings.accentColor = accentColor
+                }
+            }
+    }
+
     var body: some View {
         #if os(iOS)
         VStack(alignment: .leading) {
@@ -1029,29 +1283,6 @@ struct SettingsAppearanceView: View {
             .onChange(of: settings.colorSchemeString) { _ in settings.hapticFeedback() }
 
             Text("System follows your device. Light theme in Light Mode, Dark theme in Dark Mode. Other themes are ignored.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
-
-        VStack(alignment: .leading) {
-            HStack(spacing: 12) {
-                ColorPicker("", selection: customBackgroundColorBinding, supportsOpacity: false)
-                    .labelsHidden()
-
-                Text("Custom Background")
-                    .font(.subheadline)
-
-                Spacer()
-
-                Toggle("", isOn: customBackgroundEnabledBinding.animation(.easeInOut))
-                    .labelsHidden()
-                    .tint(Color(hex: settings.customBackgroundColorHex) ?? .gray)
-            }
-            // (Haptic on theme change is already handled by the Color Theme picker's onChange above.)
-
-            Text("Pick any background color for the whole app. Light or dark text is chosen automatically so it stays readable.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1074,25 +1305,8 @@ struct SettingsAppearanceView: View {
                 }
             }
             .padding(.vertical, Self.swatchGridVerticalPadding)
-
             #if os(iOS)
-            // One line: color well, label, then a toggle tinted with the custom color itself (not the accent).
-            HStack(spacing: 12) {
-                ColorPicker("", selection: customAccentColorBinding, supportsOpacity: false)
-                    .labelsHidden()
-
-                Text("Custom Color")
-                    .font(.subheadline)
-
-                Spacer()
-
-                Toggle("", isOn: customColorEnabledBinding.animation(.easeInOut))
-                    .labelsHidden()
-                    .tint(Color(hex: settings.customAccentColorHex) ?? .green)
-            }
-            .padding(.horizontal, 24)
             .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
-
             #endif
 
             #if os(iOS)
@@ -1101,85 +1315,25 @@ struct SettingsAppearanceView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
-                .padding(.top, 10)
             #endif
         }
 
         #if os(iOS)
-        VStack(alignment: .leading) {
-            Toggle("Top Accent Glow", isOn: $settings.showAccentGlow.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.showAccentGlow) { _ in settings.hapticFeedback() }
-
-            Text("A soft wash of your accent color at the top of each screen. Turn it off for a flat background.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-
-            if settings.showAccentGlow {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
-
-                    Text("Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .settingsDependent()
+        // One List row each: a row may hold only one link.
+        ForEach(SettingsAppearancePage.allCases, id: \.self) { page in
+            NavigationLink(destination: LazyDestination { AppearancePageView(page: page) }) {
+                SettingsRowLabel(title: page.title, systemImage: page.systemImage, subtitle: page.caption,
+                                 tint: SettingsTint.appearance)
             }
+            .tint(settings.accentColor.color)
         }
-
-        VStack(alignment: .leading) {
-            Toggle("Default List View", isOn: $settings.defaultView.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.defaultView) { _ in settings.hapticFeedback() }
-
-            Text("The default list view is the standard interface found in many of Apple's first party apps, including Notes.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
-
-        if #available(iOS 26.0, *) {
-            VStack(alignment: .leading) {
-                Toggle("Classic Look (No Liquid Glass)", isOn: $settings.classicLook.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
-
-                Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery. The search bar keeps its Liquid Glass.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-
-                if !settings.classicLook {
-                    VStack(alignment: .leading) {
-                        Toggle("Automatically in Low Power Mode", isOn: $settings.classicLookInLowPower.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: settings.classicLookInLowPower) { _ in settings.hapticFeedback() }
-
-                        Text("Uses the Classic Look while Low Power Mode is on and brings Liquid Glass back when it is off.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
-                    .settingsDependent()
-                }
-            }
-            .id("classicLook")
-        }
-        #endif
-
+        #else
         VStack(alignment: .leading) {
             Toggle("Haptic Feedback", isOn: $settings.hapticOn.animation(.easeInOut))
                 .font(.subheadline)
                 .onChange(of: settings.hapticOn) { _ in settings.hapticFeedback() }
         }
+        #endif
     }
 }
 

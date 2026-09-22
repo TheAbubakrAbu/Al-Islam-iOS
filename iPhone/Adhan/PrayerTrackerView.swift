@@ -322,7 +322,13 @@ private struct TrackerPrayerToggle: View {
         let tint = mark?.tint(accent: settings.accentColor.accent2) ?? .secondary
         let canMark = settings.canMarkPrayer(startingAt: prayer.time, on: date)
 
-        Menu {
+        // `GridTileMenu`, for its fast hold (this slot is where that pattern was first proved).
+        GridTileMenu {
+            settings.hapticFeedback()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                settings.recordTrackerMark(mark == nil ? .onTime : nil, for: prayer.nameTransliteration, on: date)
+            }
+        } menu: {
             TrackerMarkPicker(prayerName: prayer.nameTransliteration, date: date)
         } label: {
             VStack(spacing: 6) {
@@ -364,14 +370,7 @@ private struct TrackerPrayerToggle: View {
                     .minimumScaleFactor(0.55)
             }
             .contentShape(Rectangle())
-        } primaryAction: {
-            settings.hapticFeedback()
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                settings.recordTrackerMark(mark == nil ? .onTime : nil, for: prayer.nameTransliteration, on: date)
-            }
         }
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
         // Dimmed rather than hidden: the five slots keep their places, so the row still reads as the
         // whole day with the rest of it still to come.
         .disabled(!canMark)
@@ -1163,18 +1162,16 @@ struct PrayerTrackerView: View {
         .contentShape(Rectangle())
 
         if record.counts && hasBegun {
-            Menu {
-                TrackerMarkPicker(prayerName: prayerName, date: record.date)
-            } label: {
-                face
-            } primaryAction: {
+            GridTileMenu {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut(duration: 0.15)) {
                     settings.recordTrackerMark(mark == nil ? .onTime : nil, for: prayerName, on: record.date)
                 }
+            } menu: {
+                TrackerMarkPicker(prayerName: prayerName, date: record.date)
+            } label: {
+                face
             }
-            .menuIndicator(.hidden)
-            .buttonStyle(.plain)
             .accessibilityLabel("\(prayerName), \(dateLabel): \(mark?.spokenTitle ?? "not marked")")
             .accessibilityHint("Tap to mark prayed on time. Press and hold for late or missed.")
         } else {

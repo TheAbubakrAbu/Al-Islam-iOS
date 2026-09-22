@@ -20,6 +20,8 @@ struct HadithReferenceView: View {
     /// The citation's variant letter when the lookup carried one ("muslim 8a" -> "a"). Only
     /// meaningful without `chapter`.
     var suffix: String? = nil
+    /// "muslim introduction 9": the number is the Introduction chapter's own (Sahih Muslim).
+    var introduction: Bool = false
     /// Interpret `hadith` as the internal row number (idInBook), never as a citation - for records
     /// saved by row key whose hadith can no longer be resolved directly. Without this, a stale row
     /// key in a drifted book would be read citation-first and could open a DIFFERENT hadith.
@@ -31,21 +33,15 @@ struct HadithReferenceView: View {
 
     private var resolved: HadithBookData.Hadith? {
         guard let data else { return nil }
-        if let chapter {
-            guard data.chapters.indices.contains(chapter - 1) else { return nil }
-            let inChapter = data.hadiths(in: data.chapters[chapter - 1])
-            let offset = inChapter.startIndex + (hadith - 1)
-            guard hadith >= 1, offset < inChapter.endIndex else { return nil }
-            return inChapter[offset]
-        }
+        if let chapter { return data.hadith(chapterPosition: chapter, position: hadith) }
         if byRowNumber { return data.hadith(numbered: hadith) }
         // Citation-first: "muslim 8" is the hadith CITED 8 (standard sunnah.com numbering), falling
         // back to the internal row number for the books that have no citations.
-        return data.hadith(referenced: hadith, suffix: suffix)
+        return data.hadith(referenced: hadith, suffix: suffix, introduction: introduction)
     }
 
     /// The number as the user asked for it - base plus any variant letter ("8a").
-    private var requestedNumber: String { "\(hadith)\(suffix ?? "")" }
+    private var requestedNumber: String { "\(introduction ? "Introduction " : "")\(hadith)\(suffix ?? "")" }
 
     var body: some View {
         Group {
@@ -206,9 +202,11 @@ struct HadithRow: View, Equatable {
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
     var searchText: String = ""
-    /// The Quran ayah-search rows' scale: caption-sized type for search results. The FULL Arabic and
-    /// English always render (no line clipping, and the show-Arabic/English toggles don't apply) so the
-    /// highlighted match is visible wherever it falls in the text.
+    /// The Quran ayah-search rows' scale: caption-sized type for search results, and the
+    /// show-Arabic/English toggles don't apply. With a `searchText` the row is a search RESULT and
+    /// shows a snippet, not the narration: the stretch around the first match in each language
+    /// (`HadithSearchSnippet`), so a page of results is a page and the match is always in view. The
+    /// whole hadith is one tap away. Without a `searchText` the full text renders, as before.
     var compact: Bool = false
     /// Show the "3 -" within-chapter position before the citation. Only the chapter reading
     /// screens pass true: in search results and standalone cards the ordinal is noise ("3 - 1000
@@ -263,6 +261,7 @@ struct HadithRow: View, Equatable {
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
     @State private var showSummarize = false
+    @State private var showSelectTextSheet = false
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited (the sunnah.com citation when
     /// one exists, the internal row number for the books that have none).
@@ -445,6 +444,27 @@ struct HadithRow: View, Equatable {
         let arabicFont: Font = arabicUsesCustomFace
             ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize)
             : .system(size: arabicFontSize)
+        // A search result shows the stretch around its first match (nil: short enough to show whole,
+        // or not a search result). The spans are the ones a snippet of the WHOLE text would paint,
+        // re-based onto the window, so the highlight survives the cut. The Arabic is windowed only
+        // when the match is IN it; otherwise it keeps its opening, clamped to two lines.
+        let isSearchResult = compact && !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // A bare number is the row's identity, not a text match (see `searchVisibility`): its digits
+        // inside a narration are no anchor, so such a row shows its opening.
+        let anchorTerm = HadithBookData.citationNumber(inQuery: searchText) == nil ? searchText : ""
+        let arabicCarriesMatch = visibility.mArabic || visibility.guaranteeArabic || !cross.arabic.isEmpty
+        let arabicWindow = isSearchResult && arabicCarriesMatch
+            ? HadithSearchSnippet.window(
+                of: text.arabic,
+                spans: HighlightedSnippet.matchSpans(in: text.arabic, term: anchorTerm, guaranteeMatch: visibility.guaranteeArabic) + cross.arabic,
+                length: HadithSearchSnippet.arabicLength)
+            : nil
+        let englishWindow = isSearchResult
+            ? HadithSearchSnippet.window(
+                of: text.text,
+                spans: HighlightedSnippet.matchSpans(in: text.text, term: anchorTerm, guaranteeMatch: visibility.guaranteeText) + cross.text,
+                length: HadithSearchSnippet.englishLength)
+            : nil
         return VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
                 // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
@@ -541,16 +561,19 @@ struct HadithRow: View, Equatable {
                 HighlightedSnippet(
                     // A clamped row shows two lines, so a giant narration's opening is all it needs,
                     // and the opening is short enough for the chosen face.
-                    source: compact ? HadithArabicChunks.preview(text.arabic) : text.arabic,
-                    term: searchText,
+                    source: arabicWindow?.text ?? (compact ? HadithArabicChunks.preview(text.arabic) : text.arabic),
+                    // A window arrives with its spans already worked out over the whole narration.
+                    term: arabicWindow == nil ? searchText : "",
                     font: arabicFont,
                     accent: settings.accentColor.color,
                     fg: .primary,
+                    // A result whose match is in the English keeps the Arabic's opening, two lines of it.
+                    lineLimit: isSearchResult && !arabicCarriesMatch ? 2 : nil,
                     highlightAllahNames: settings.highlightAllahNamesHadith,
-                    guaranteeMatch: visibility.guaranteeArabic,
+                    guaranteeMatch: arabicWindow == nil && visibility.guaranteeArabic,
                     // The classical faces draw "،" as an ornament circle - commas fall back to the
                     // system face.
-                    extraHighlightRanges: cross.arabic
+                    extraHighlightRanges: arabicWindow?.spans ?? cross.arabic
                 )
                 .arabicFontDesign(custom: arabicUsesCustomFace)
                 .multilineTextAlignment(.trailing)
@@ -587,14 +610,14 @@ struct HadithRow: View, Equatable {
 
                 if !text.text.isEmpty {
                     HighlightedSnippet(
-                        source: text.text,
-                        term: searchText,
+                        source: englishWindow?.text ?? text.text,
+                        term: englishWindow == nil ? searchText : "",
                         font: .system(size: englishFontSize),
                         accent: settings.accentColor.color,
                         fg: .primary,
                         highlightAllahNames: settings.highlightAllahNamesHadith,
-                        guaranteeMatch: visibility.guaranteeText,
-                        extraHighlightRanges: cross.text
+                        guaranteeMatch: englishWindow == nil && visibility.guaranteeText,
+                        extraHighlightRanges: englishWindow?.spans ?? cross.text
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -624,8 +647,40 @@ struct HadithRow: View, Equatable {
         }
         .padding(.vertical, compact ? 2 : 4)
         .contextMenu { menuContent }
+        // The ayah rows' swipes (2026-09-21): bookmark on the leading edge, copy and share on the
+        // trailing one. Inert outside a List (the standalone cards), harmless there.
+        .swipeActions(edge: .leading) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
+            } label: {
+                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+            }
+            .tint(settings.accentColor.color)
+        }
+        .swipeActions(edge: .trailing) {
+            Button {
+                settings.hapticFeedback()
+                showShareSheet = true
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .tint(settings.accentColor.color)
+
+            Button {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .tint(.secondary)
+        }
         .sheet(isPresented: $showShareSheet) {
             HadithShareSheet(book: book, hadith: hadith)
+                .smallMediumSheetPresentation()
+        }
+        .sheet(isPresented: $showSelectTextSheet) {
+            SelectHadithTextSheet(book: book, hadith: hadith)
                 .smallMediumSheetPresentation()
         }
         #if os(iOS) && canImport(FoundationModels)
@@ -716,6 +771,15 @@ struct HadithRow: View, Equatable {
 
         Divider()
 
+        // The ayah rows' Select Text (2026-09-21): the narration lifted into a sheet where a drag
+        // selects text instead of fighting the list for the scroll.
+        Button {
+            settings.hapticFeedback()
+            showSelectTextSheet = true
+        } label: {
+            Label("Select Text", systemImage: "highlighter")
+        }
+
         // ONE share surface and ONE copy, both driven by the same composition options - the pile of
         // per-field copy actions collapsed into the Share Hadith sheet.
         Button {
@@ -769,6 +833,159 @@ struct HadithRecentSearches: View {
             },
             onRemove: { settings.removeHadithSearchHistory($0) }
         )
+    }
+}
+
+// MARK: - Search-result snippets
+
+/// The stretch of a narration a compact search row shows: about `length` UTF-16 units around the
+/// first match, opened at the sentence the match is in when that sentence starts close by, closed at
+/// a sentence end when one is near and at a word otherwise, with "\u{2026}" on each side that was cut.
+/// The text itself is never touched: the window is a slice of it, and the ellipses sit outside.
+enum HadithSearchSnippet {
+    struct Window {
+        let text: String
+        /// The highlight spans that fall inside the window, re-based onto `text` (UTF-16).
+        let spans: [NSRange]
+    }
+
+    static let englishLength = 220
+    /// Longer in units, not on screen: vocalized Arabic spends nearly a unit on marks per letter.
+    static let arabicLength = 320
+    /// How far back a sentence start may sit and still open the window.
+    private static let sentenceReach = 120
+    /// What stays in front of the match when its sentence started further back than that.
+    private static let lead = 70
+
+    private static let sentenceEnds: Set<unichar> = [0x2E, 0x21, 0x3F, 0x0A, 0x061F, 0x06D4]
+    private static let whitespace: Set<unichar> = [0x20, 0x0A, 0x09, 0x0D, 0xA0]
+    /// What may trail a sentence end before the next sentence begins: closing quotes and brackets.
+    private static let closers: Set<unichar> = [0x22, 0x27, 0x29, 0x5D, 0x201D, 0x2019, 0xBB]
+
+    /// Nil when the text is short enough to show whole (the caller keeps its ordinary path).
+    /// `spans` are UTF-16 ranges over `source`, in any order; the earliest one is the anchor. With no
+    /// span at all (a meaning match) the window is the opening.
+    static func window(of source: String, spans: [NSRange], length: Int) -> Window? {
+        let text = source as NSString
+        let total = text.length
+        guard total > length + 60 else { return nil }
+        let valid = spans.filter { $0.location >= 0 && $0.length > 0 && NSMaxRange($0) <= total }
+            .sorted { $0.location < $1.location }
+        let anchorStart = valid.first?.location ?? 0
+        let anchorEnd = valid.first.map(NSMaxRange) ?? 0
+
+        var start = 0
+        if anchorStart > lead {
+            start = sentenceStart(in: text, before: anchorStart)
+                ?? wordStart(in: text, from: anchorStart - lead, before: anchorStart)
+        }
+        while start < anchorStart, whitespace.contains(text.character(at: start)) { start += 1 }
+        var end = min(total, max(start + length, anchorEnd))
+        if end < total {
+            let earliest = max(anchorEnd, start + length * 3 / 5)
+            end = sentenceEnd(in: text, from: earliest, to: min(total, start + length + 60))
+                ?? wordEnd(in: text, from: end, after: max(anchorEnd, start + 1))
+        } else if start > 0, end - start < length {
+            // The match sits near the end: spend the unused length in front of it.
+            start = min(start, wordStart(in: text, from: max(0, total - length), before: start))
+        }
+        guard start > 0 || end < total else { return nil }
+
+        // Every cut above lands on whitespace or a sentence mark; this only matters for a text with
+        // neither in reach, where a cut must still not split a letter from its marks.
+        let cut = text.rangeOfComposedCharacterSequences(for: NSRange(location: start, length: max(0, end - start)))
+        var slice = text.substring(with: cut)
+        while let last = slice.unicodeScalars.last, CharacterSet.whitespacesAndNewlines.contains(last) {
+            slice.unicodeScalars.removeLast()
+        }
+        let opens = cut.location > 0
+        let closes = NSMaxRange(cut) < total
+        let shown = NSRange(location: cut.location, length: (slice as NSString).length)
+        // A paragraph takes its direction from its first strong character. A window into an English
+        // narration that happens to open at ﷺ (an Arabic-script character) laid the whole English
+        // passage out right to left, punctuation flipped. When the window's first strong character
+        // disagrees with the full text's, an invisible mark restores the text's own direction.
+        let mark: String = {
+            guard let whole = firstStrongIsRTL(source), let part = firstStrongIsRTL(slice), whole != part else { return "" }
+            return whole ? "\u{200F}" : "\u{200E}"
+        }()
+        let head = mark + (opens ? "\u{2026}" : "")
+        let shift = cut.location - (head as NSString).length
+        let rebased: [NSRange] = valid.compactMap { span in
+            let clipped = NSIntersectionRange(span, shown)
+            return clipped.length > 0 ? NSRange(location: clipped.location - shift, length: clipped.length) : nil
+        }
+        // A window that closes on a finished sentence sets its ellipsis off with a space: "debt. …"
+        // says more follows, where "debt.…" read as a typo.
+        let endsSentence = (slice as NSString).length > 0 && {
+            let last = (slice as NSString).character(at: (slice as NSString).length - 1)
+            return sentenceEnds.contains(last) || closers.contains(last)
+        }()
+        let tail = closes ? (endsSentence ? " \u{2026}" : "\u{2026}") : ""
+        return Window(text: head + slice + tail, spans: rebased)
+    }
+
+    /// Nil when the text has no letter at all.
+    private static func firstStrongIsRTL(_ text: String) -> Bool? {
+        for scalar in text.unicodeScalars {
+            let value = scalar.value
+            // The honorific ligatures (ﷺ and its neighbours) are symbols, not letters, yet they are
+            // strongly right-to-left, and they are exactly what opens these windows.
+            if (0xFDF0...0xFDFD).contains(value) { return true }
+            guard scalar.properties.isAlphabetic else { continue }
+            return (0x0590...0x08FF).contains(value) || (0xFB1D...0xFDFF).contains(value) || (0xFE70...0xFEFF).contains(value)
+        }
+        return nil
+    }
+
+    /// Where the sentence holding `location` begins, when that is within `sentenceReach` of it.
+    private static func sentenceStart(in text: NSString, before location: Int) -> Int? {
+        let floor = max(0, location - sentenceReach)
+        var index = location - 1
+        while index >= floor {
+            if sentenceEnds.contains(text.character(at: index)) {
+                var next = index + 1
+                while next < location, closers.contains(text.character(at: next)) { next += 1 }
+                // A full stop inside a word or a number ("3.5") is not a sentence end; a line break always is.
+                let isLineBreak = text.character(at: index) == 0x0A
+                if isLineBreak || (next < location && whitespace.contains(text.character(at: next))) {
+                    while next < location, whitespace.contains(text.character(at: next)) { next += 1 }
+                    return next
+                }
+            }
+            index -= 1
+        }
+        return floor == 0 ? 0 : nil
+    }
+
+    /// The first sentence end in `from..<to`, as the index just past it (closers included).
+    private static func sentenceEnd(in text: NSString, from: Int, to: Int) -> Int? {
+        guard from < to else { return nil }
+        var index = from
+        while index < to {
+            if sentenceEnds.contains(text.character(at: index)) {
+                var next = index + 1
+                while next < text.length, closers.contains(text.character(at: next)) { next += 1 }
+                if next >= text.length || whitespace.contains(text.character(at: next)) { return next }
+            }
+            index += 1
+        }
+        return nil
+    }
+
+    /// The first word start at or after `from` (never past `limit`).
+    private static func wordStart(in text: NSString, from: Int, before limit: Int) -> Int {
+        guard from > 0 else { return 0 }
+        var index = from
+        while index < limit, !whitespace.contains(text.character(at: index - 1)) { index += 1 }
+        return min(index, limit)
+    }
+
+    /// The last word end at or before `from`; `from` itself when no word ends after `floor`.
+    private static func wordEnd(in text: NSString, from: Int, after floor: Int) -> Int {
+        var index = min(from, text.length - 1)
+        while index > floor, !whitespace.contains(text.character(at: index)) { index -= 1 }
+        return index > floor ? index : from
     }
 }
 
@@ -1139,8 +1356,8 @@ struct HadithBookmarkRow: View, Equatable {
     }
 
     /// The menu, its note editor and its share sheet all live in `HadithBookmarkMenu` now, so this row
-    /// and `HadithBookmarkGridTile` cannot drift apart. The swipe actions below still need the
-    /// identity-only hadith the store matches on (slug + idInBook).
+    /// and `HadithBookmarkGridTile` cannot drift apart. The badge tap and the leading swipe below
+    /// still need the identity-only hadith the store matches on (slug + idInBook).
     private var placeholderHadith: HadithBookData.Hadith {
         HadithBookData.Hadith(
             id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
@@ -1255,6 +1472,16 @@ struct HadithBookmarkRow: View, Equatable {
                 .padding(.vertical, 2)
             }
             .hadithBookmarkMenu(bookmark: bookmark, book: book)
+            // The Quran bookmark rows' leading swipe: the bookmark itself (after the confirmation).
+            .swipeActions(edge: .leading) {
+                Button {
+                    settings.hapticFeedback()
+                    userData.toggleBookmarkOrConfirm(book: book, hadith: placeholderHadith, reference: bookmark.reference)
+                } label: {
+                    Image(systemName: "bookmark.fill")
+                }
+                .tint(settings.accentColor.color)
+            }
         }
     }
 }
@@ -2158,6 +2385,105 @@ struct HadithShareSheet: View {
         return UIGraphicsImageRenderer(size: canvas.size).image { _ in
             UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
             blackCard.draw(at: .zero)
+        }
+    }
+}
+
+/// "Select Text" for a hadith - the ayah rows' `SelectAyahTextSheet`, for a narration (2026-09-21).
+///
+/// The reading row already has "Copy Hadith", but that copies the whole thing in the share sheet's
+/// format. Selecting inside a row in the chapter list is fussy at best, because the row competes
+/// for the same drag with the list's scroll. Lifting the text into a sheet of its own gives the
+/// selection somewhere to live, and each block also gets a one-tap copy for when the whole block
+/// is what you wanted.
+struct SelectHadithTextSheet: View {
+    @ObservedObject var settings = Settings.shared
+
+    let book: HadithCatalogBook
+    let hadith: HadithBookData.Hadith
+
+    @State private var copiedLabel: String?
+
+    private var reference: String { "\(book.englishTitle) \(hadith.displayNumber)" }
+
+    private var arabicFont: UIFont {
+        let size = CGFloat(settings.hadithArabicFontSize)
+        if settings.hadithArabicWantsCustomFace, let custom = UIFont(name: settings.nonQuranArabicFontName, size: size) {
+            return custom
+        }
+        return .systemFont(ofSize: size)
+    }
+
+    private var englishFont: UIFont { .systemFont(ofSize: CGFloat(settings.hadithEnglishFontSize)) }
+
+    var body: some View {
+        let text = hadith.allText
+        NavigationView {
+            List {
+                Group {
+                    if !text.arabic.isEmpty {
+                        selectableBlock(title: "ARABIC", text: text.arabic, font: arabicFont, isArabic: true)
+                    }
+
+                    if !text.narrator.isEmpty {
+                        selectableBlock(title: "NARRATOR", text: text.narrator, font: englishFont, isArabic: false)
+                    }
+
+                    if !text.text.isEmpty {
+                        selectableBlock(title: "ENGLISH", text: text.text, font: englishFont, isArabic: false)
+                    }
+
+                    Section {
+                        Text("Press and drag over any part of the text above to select it, then copy. The button on each block copies that whole block.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .themedListRowBackground()
+            }
+            .applyConditionalListStyle()
+            .navigationTitle(reference)
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+    }
+
+    @ViewBuilder
+    private func selectableBlock(title: String, text: String, font: UIFont, isArabic: Bool) -> some View {
+        Section {
+            // A real (read-only) UITextView, not `Text(...).textSelection(.enabled)` - see the note
+            // on `SelectableTextView` in Helpers/SelectableText.swift for why the modifier can't do
+            // this job inside a List.
+            SelectableTextView(text: text, font: font, isArabic: isArabic, lineSpacing: isArabic ? 8 : 2)
+                .padding(.vertical, 4)
+        } header: {
+            HStack {
+                Text(title)
+
+                Spacer()
+
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = text
+                    withAnimation(.easeInOut) { copiedLabel = title }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation(.easeInOut) {
+                            if copiedLabel == title { copiedLabel = nil }
+                        }
+                    }
+                } label: {
+                    Label(
+                        copiedLabel == title ? "Copied" : "Copy",
+                        systemImage: copiedLabel == title ? "checkmark" : "doc.on.doc"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                }
+                .buttonStyle(.plain)
+                .textCase(nil)
+            }
         }
     }
 }

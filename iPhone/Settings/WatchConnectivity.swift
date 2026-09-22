@@ -503,7 +503,7 @@ extension Settings {
         "useFontArabic", "THEfontArabic", "fontArabicSize", "englishFontSize",
         "showTajweedColors", "reciter", "reciterId", "reciteType", "displayQiraah",
         "showOtherQiraatReciters", "qiraatComparisonMode",
-        "quranSummaryMode", "quranGridMode", "quranPageMode", "mushafPageLanguage", "showFullSurahRow", "showMuqattaatHelper",
+        "quranGridMode", "quranPageMode", "mushafPageLanguage", "showFullSurahRow", "showMuqattaatHelper",
         "showPageJuzDividers", "searchForSurahs", "showBookmarks", "showFavorites",
         "saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah", "showAyahOfTheDay",
         // [Al-Quran] Tajweed categories
@@ -537,9 +537,9 @@ extension Settings {
     /// The phone runs the detection and syncs the RESULT; a paired watch consumes it and skips its own check
     /// (`ownsTravelingModeAutoCheck` / `ownsAutomaticCalculationCheck`). A standalone watch has no peer to
     /// receive from, keeps both checks, and is unaffected by this list.
-    static let phoneAuthoritativeSyncKeys: Set<String> = [
-        "travelingMode", "prayerCalculation", "calculationAutomatic",
-    ]
+    static let phoneAuthoritativeSyncKeys: Set<String> = Set(
+        appGroupPreferences.filter { $0.watch == .phoneToWatch }.map(\.key) + ["calculationAutomatic"]
+    )
 
     /// The watch's activity days (`ActivityLog.mirrorPayload`): sent by the watch alone, merged by
     /// the phone alone (`ActivityLog.mergeWatchDays`), never a setting. One way, watch -> phone.
@@ -553,34 +553,31 @@ extension Settings {
     func watchSyncSnapshot() -> [String: Any] {
         var dict: [String: Any] = [:]
 
-        // Core @Published settings live in the app-group store. Transmit one only if it was *chosen* - the
-        // mere existence of the key isn't enough, because a process that assigns a default creates the key
-        // too. See `Settings.explicitlySetKeys`.
-        let chosen = explicitlySetKeys
-        if chosen.contains("accentColor") { dict["accentColor"] = accentColor.rawValue }
-        if chosen.contains("customAccentColorHex") { dict["customAccentColorHex"] = customAccentColorHex }
-        // `customBackgroundColorHex` deliberately does NOT sync (either direction): the reading themes
-        // are phone-only looks. On the watch a themed flat row color erased the native rounded section
-        // cards and painted the whole ground gray (user report), so the watch keeps its black ground.
-        if chosen.contains("hanafiMadhab") { dict["hanafiMadhab"] = hanafiMadhab }
-        if chosen.contains("hijriOffset") { dict["hijriOffset"] = hijriOffset }
-        if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
-        if chosen.contains("customPrayerNames") { dict["customPrayerNames"] = customPrayerNames }
-
-        // The phone-authoritative keys sync ONE WAY: phone -> watch, value only. The phone is the sole
-        // authority - it owns the home location and runs every auto-check. A watch-side flip stays on the
-        // watch (its snapshot simply never carries the key), so the watch can never overwrite the phone's
-        // state. See `phoneAuthoritativeSyncKeys`.
+        // Core @Published settings live in the app-group store (`Settings.appGroupPreferences`, the one
+        // table the reset, the restore and the backup read too). Transmit one only if it was *chosen* -
+        // the mere existence of the key isn't enough, because a process that assigns a default creates
+        // the key too. See `Settings.explicitlySetKeys`.
+        //
+        // The table's `watch` column: `.never` is `customBackgroundColorHex`, which does NOT sync in
+        // either direction (the reading themes are phone-only looks; on the watch a themed flat row
+        // color erased the native rounded section cards and painted the whole ground gray). The
+        // `.phoneToWatch` keys sync ONE WAY, value only: the phone is the sole authority - it owns the
+        // home location and runs every auto-check. A watch-side flip stays on the watch (its snapshot
+        // simply never carries the key), so the watch can never overwrite the phone's state. See
+        // `phoneAuthoritativeSyncKeys`.
         //
         // `prayerCalculation` used to be sent only when `calculationAutomatic` was OFF, because both devices
         // ran the detection and the gate was the only thing damping the resulting loop. Now that a paired
         // watch doesn't run it at all (`ownsAutomaticCalculationCheck`), the gate has to go: with the watch
         // no longer deriving a method, withholding the phone's automatic one would leave a paired watch
         // computing its prayer times from whatever method it happened to be holding.
-        #if os(iOS)
-        if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
-        if chosen.contains("prayerCalculation") { dict["prayerCalculation"] = prayerCalculation }
-        #endif
+        let chosen = explicitlySetKeys
+        for preference in Self.appGroupPreferences where preference.watch != .never && chosen.contains(preference.key) {
+            #if os(watchOS)
+            if preference.watch == .phoneToWatch { continue }
+            #endif
+            dict[preference.key] = preference.current(self)
+        }
         #if os(watchOS)
         // The wrist's own reading and listening days, for the phone's streak (decision C of the
         // Tilawa Guide). Absent while the watch has nothing to report: "no opinion", never a delete.
@@ -618,29 +615,19 @@ extension Settings {
     func applyWatchSyncSnapshot(_ dict: [String: Any]) {
         var changed = false
 
-        if let raw = dict["accentColor"] as? String, let c = AccentColor(rawValue: raw), c != accentColor { accentColor = c; changed = true }
-        if let v = dict["customAccentColorHex"] as? String, v != customAccentColorHex { customAccentColorHex = v; changed = true }
-        // `customBackgroundColorHex` is deliberately NOT applied - reading themes are phone-only (see
-        // `watchSyncSnapshot`); an older peer build may still send it, and it must not land here.
-        if let v = dict["hanafiMadhab"] as? Bool, v != hanafiMadhab { hanafiMadhab = v; changed = true }
-        if let v = dict["hijriOffset"] as? Int, v != hijriOffset { hijriOffset = v; changed = true }
-        if let v = dict["highLatitudeRule"] as? String, v != highLatitudeRule { highLatitudeRule = v; changed = true }
-        if let v = dict["customPrayerNames"] as? [String: String], v != customPrayerNames { customPrayerNames = v; changed = true }
-
-        // Phone -> watch only: the watch adopts the phone's travelingMode and prayerCalculation; the phone
-        // ignores both keys entirely (an older watch build may still send them - they must not win). The
-        // recompute below runs with auto-checks off, so receiving a method can't make this device
-        // immediately re-detect and argue with it.
-        #if os(watchOS)
-        if let v = dict["travelingMode"] as? Bool, v != travelingMode {
-            travelingMode = v
-            changed = true
+        // The app-group preferences, through their setters (`assign` refuses a wrong type and a
+        // value already held). `.never` (`customBackgroundColorHex`) is never applied - reading
+        // themes are phone-only (see `watchSyncSnapshot`); an older peer build may still send it, and
+        // it must not land here. `.phoneToWatch`: the watch adopts the phone's travelingMode and
+        // prayerCalculation; the phone ignores both keys entirely (an older watch build may still send
+        // them - they must not win). The recompute below runs with auto-checks off, so receiving a
+        // method can't make this device immediately re-detect and argue with it.
+        for preference in Self.appGroupPreferences where preference.watch != .never {
+            #if os(iOS)
+            if preference.watch == .phoneToWatch { continue }
+            #endif
+            if let value = dict[preference.key], preference.assign(self, value) { changed = true }
         }
-        if let v = dict["prayerCalculation"] as? String, v != prayerCalculation {
-            prayerCalculation = v
-            changed = true
-        }
-        #endif
 
         #if os(iOS)
         // The watch's activity days: merged into the log, not a setting, so they never mark `changed`
@@ -678,21 +665,14 @@ extension Settings {
             changed = true
         }
 
-        // switchHijriDateAtMaghrib lives in standard defaults but is mirrored into the App Group for the
-        // widget/complication providers; the raw store.set above bypasses its didSet, so refresh the mirror.
-        // On the watch this is the main write path for the key - the complication would never see it otherwise.
-        appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
-
-        // Same story for the sky palette (see `skyGradientsJSON`'s didSet): the complication reads the
-        // App Group mirror, and on the watch this sync is the only thing that ever writes the key.
-        appGroupUserDefaults?.setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
-
-        // Same for the six manual prayer offsets: their didSet mirrors were bypassed by the raw
-        // store.set above, and on the watch this sync IS the write path - without this the
-        // complication recomputes prayer times with offsets of 0.
-        for key in Settings.prayerOffsetKeys {
-            mirrorOffsetToAppGroup(store.integer(forKey: key), key: key)
-        }
+        // Several synced keys live in standard defaults but are mirrored into the App Group for the
+        // widget/complication providers (the Hijri switch, the sky palette, the six manual prayer
+        // offsets, the custom Fajr/Isha angles...). The raw store.set above bypasses each didSet, so
+        // the mirrors are refreshed here, all of them: on the watch this sync IS the write path, and
+        // without it the complication recomputes prayer times with offsets of 0. The list is
+        // `Settings.appGroupMirroredStorageKeys`; this block used to name eight of them by hand and
+        // missed the two custom angles, which the watch does receive.
+        remirrorAppGroupPreferences()
 
         guard changed else { return }
 

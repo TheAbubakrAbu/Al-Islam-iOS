@@ -574,6 +574,29 @@ final class AchievementsStore: ObservableObject {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.reset() }
         }
+        storageObserver = StoredContentObserver(reload: { AchievementsStore.shared.reloadFromStorage() })
+    }
+
+    private var storageObserver: StoredContentObserver?
+
+    /// Set by a restore: the next `sync` banks whatever the restored content already earns WITHOUT
+    /// a banner. A merge can lift several counts over their thresholds at once, and a run of
+    /// "Achievement unlocked" cards for work done on another device months ago is the launch-day
+    /// flood the seed exists to prevent, one restore later.
+    private var banksNextSyncSilently = false
+
+    /// The ledger on disk changed underneath this object (a restore, a reset): take it, drop any
+    /// banner in flight, and look at the new content once it has settled.
+    private func reloadFromStorage() {
+        refreshTask?.cancel()
+        dismissTask?.cancel()
+        queue.removeAll()
+        current = nil
+        AchievementBannerPresenter.shared.dismiss()
+        unlockedAt = (UserDefaults.standard.dictionary(forKey: Self.unlockedKey) as? [String: Double]) ?? [:]
+        seeded = UserDefaults.standard.bool(forKey: Self.seededKey)
+        banksNextSyncSilently = true
+        scheduleRefresh(delay: 1.5)
     }
 
     // MARK: Reading
@@ -670,6 +693,8 @@ final class AchievementsStore: ObservableObject {
             return
         }
 
+        let silent = banksNextSyncSilently
+        banksNextSyncSilently = false
         let fresh = earned.filter { unlockedAt[$0.id] == nil }
         guard !fresh.isEmpty else { return }
 
@@ -677,6 +702,7 @@ final class AchievementsStore: ObservableObject {
         for badge in fresh { unlockedAt[badge.id] = now }
         persist()
 
+        guard !silent else { return }
         queue.append(contentsOf: fresh)
         showNext()
     }

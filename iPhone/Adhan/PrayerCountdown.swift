@@ -91,6 +91,12 @@ struct PrayerCountdown: View {
             VStack(spacing: Self.digitsToBarSpacing) {
                 bigTimeLeft(next: next)
                 countdownProgress(next: next)
+                    // The skyline's GROUND (the horizon line, the pyramids and the mosque, the
+                    // ground band) stands on the progress bar: the bar IS the ground, and the
+                    // caption and the digits sit in the sky between the two structures (Abu,
+                    // 2026-09-21: "put the ground level where the countdown progress view is").
+                    // Only the drawn ground: the solar graph keeps the block's top (`bigTimeLeft`).
+                    .reportingSkyGroundLine()
             }
             .lineLimit(1)
             .minimumScaleFactor(0.25)
@@ -266,9 +272,9 @@ struct PrayerCountdown: View {
             CountdownDigits(target: next.time)
         }
         .frame(maxWidth: .infinity)
-        // The skyline's ground runs just ABOVE this whole block - the caption and the digits both
-        // sit under the horizon, in clear air (Abu, 2026-09-18: the line used to cut through
-        // "TIME LEFT"). See `SkyCard.arcTopInset`.
+        // The solar GRAPH's horizon crossing sits just ABOVE this whole block - the sun rises and
+        // sets over the caption and the digits both, in clear air (Abu, 2026-09-18: the arc used to
+        // cut through "TIME LEFT"). See `SkyCard.arcTopInset`.
         .reportingSkyDigitsTop()
     }
 
@@ -748,6 +754,17 @@ struct SkyDigitsTopKey: PreferenceKey {
         value = nextValue() ?? value
     }
 }
+
+/// The top of the PROGRESS BAR (under the digits), in `SkyCard.groundSpace`: where the skyline's
+/// drawn ground runs, so the buildings stand on the bar. Separate from `SkyDigitsTopKey` because the
+/// two pin different things: the block's top pins the solar graph's horizon crossing, the bar's top
+/// pins the ground the pyramids and the mosque stand on. Nil until the first layout.
+struct SkyGroundLineKey: PreferenceKey {
+    static let defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue() ?? value
+    }
+}
 #endif
 
 private extension View {
@@ -757,6 +774,19 @@ private extension View {
         #if os(iOS)
         background(GeometryReader { geo in
             Color.clear.preference(key: SkyDigitsTopKey.self,
+                                   value: geo.frame(in: .named(SkyCard.groundSpace)).minY)
+        })
+        #else
+        self
+        #endif
+    }
+
+    /// Reports the view's top edge as the skyline's ground line (see `SkyGroundLineKey`).
+    @ViewBuilder
+    func reportingSkyGroundLine() -> some View {
+        #if os(iOS)
+        background(GeometryReader { geo in
+            Color.clear.preference(key: SkyGroundLineKey.self,
                                    value: geo.frame(in: .named(SkyCard.groundSpace)).minY)
         })
         #else

@@ -83,6 +83,21 @@ final class ExtraRemindersStore: ObservableObject {
         custom = loadedCustom
         config = loadedConfig
         ObjectPublishCounter.attach(self, label: "ExtraRemindersStore")
+        storageObserver = StoredContentObserver(reload: { ExtraRemindersStore.shared.reloadFromStorage() })
+    }
+
+    private var storageObserver: StoredContentObserver?
+
+    /// The reminders on disk changed underneath this object (a restore, a reset): take them, and
+    /// rebuild the pending queue from them (see `SunnahReminderStore.reloadFromStorage`).
+    private func reloadFromStorage() {
+        let storedCustom = Self.loadCustom(from: .standard)
+        let storedConfig = Self.loadConfig(from: .standard)
+        guard storedCustom != custom || storedConfig != config else { return }
+        custom = storedCustom
+        config = storedConfig
+        Settings.SunnahReminderBudget.invalidateLiveCount()
+        scheduleReschedule()
     }
 
     private nonisolated static func loadCustom(from defaults: UserDefaults) -> [CustomReminder] {

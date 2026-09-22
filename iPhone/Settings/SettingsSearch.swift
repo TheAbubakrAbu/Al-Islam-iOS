@@ -184,6 +184,40 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
     }
 }
 
+/// A sub-screen of Appearance. The section sits inline on the Settings tab, and it had grown to a
+/// dozen controls there (Abu, 2026-09-21: "parts of the appearance settings should be placed in a
+/// navigationlink like other settings"): the theme and the accent swatches stay on the tab, and
+/// everything set once and left alone is one push away, the way the other areas are laid out.
+enum SettingsAppearancePage: String, CaseIterable, Hashable {
+    case customColors, lookAndFeel
+
+    /// "Open the App On" is Al-Islam's alone. The companion apps share these files but not their
+    /// roots (each has its own tabs, and nothing there reads the choice), so they leave the picker
+    /// out: a control the app never reads is exactly what that setting was added to put right.
+    static let offersLaunchTab = AppIdentifiers.appName == "Al-Islam"
+
+    var title: String {
+        switch self {
+        case .customColors: return "Custom Colors"
+        case .lookAndFeel: return "Look and Feel"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .customColors: return "eyedropper.halffull"
+        case .lookAndFeel: return "slider.horizontal.3"
+        }
+    }
+
+    var caption: String {
+        switch self {
+        case .customColors: return "Your own background and accent, the glow"
+        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, list style, Classic Look, haptics" : "List style, Classic Look, haptics"
+        }
+    }
+}
+
 // MARK: - Row tints
 
 /// The Settings hub's colours, one per area, so a glance finds the row before a word is read (the
@@ -325,8 +359,8 @@ extension SettingsSearchEntry.Destination {
         case .quranSettings, .reciters, .quranPage: return .quran
         case .hadithSettings, .hadithPage: return .hadith
         case .islamSettings, .islamPage: return .islam
-        case .appearance: return .appearance
-        case .aboutYou: return .general
+        case .appearance, .appearancePage: return .appearance
+        case .aboutYou, .cloudBackup: return .general
         // A page's own tips belong to that page's search; the door to all of them, to the root's.
         case .tips(let area):
             switch area {
@@ -353,6 +387,7 @@ extension SettingsSearchEntry {
         + islamEntries
         + appearanceEntries
         + aboutYouEntries
+        + cloudBackupEntries
         + tipsEntries
         + creditEntries
 
@@ -421,7 +456,9 @@ enum SettingsSearchDestinationView {
         case .islamSettings: SettingsIslamView()
         case .islamPage(let page): SettingsIslamView(openPage: page)
         case .appearance: AppearanceSettingsScreen()
+        case .appearancePage(let page): AppearancePageView(page: page)
         case .aboutYou: AboutYouSettingsView()
+        case .cloudBackup: CloudBackupSettingsView()
         case .tips(let area):
             if let area { TipsView(area: area) } else { TipsHubView() }
         case .credits: CreditsView(presentedAsSheet: false)

@@ -219,7 +219,8 @@ struct IslamView: View {
             case .askAI: return ["chat", "question", "assistant", "apple intelligence"]
             case .arabicAlphabet: return ["letters", "harakat", "huruf", "alphabet", "tashkeel", "numbers",
                                           "sifaat", "sifat", "makharij", "whistling", "safeer", "hams", "families",
-                                          "sound-alike", "quiz", "sun letters", "moon letters"]
+                                          "sound-alike", "quiz", "sun letters", "moon letters",
+                                          "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation"]
             case .tajweedFoundations: return ["recitation", "rules", "makharij", "ghunnah", "qalqalah", "madd",
                                               // The merged course's own words, so "tajweed course" still lands here.
                                               "lessons", "course", "learn", "practice", "beginner", "step by step", "tajwid"]

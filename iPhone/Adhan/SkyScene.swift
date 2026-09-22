@@ -18,36 +18,68 @@ import SwiftUI
 // Isha's navy is simply black (Abu, 2026-09-20). The turn between the two is a wash of light from the
 // tops of the buildings down, never a flat crossfade: see `SkylineTint` and `tint(overSky:)`.
 
+/// Which structures stand on the ground: the mosque and the pyramids as mirror images (the default),
+/// or the same one on both sides. Stored raw in `Settings.skySceneStyle`, read back through
+/// `Settings.skylineStyle` (which the widgets can also answer). "Off" is not a style: that is the
+/// existing Skyline switch (`showSkyScene`), and the picker folds the two into one row.
+enum SkySceneStyle: String, CaseIterable, Identifiable {
+    case pyramidsMosque
+    case pyramids
+    case mosques
+
+    static let storageKey = "skySceneStyle"
+    static let defaultStyle: SkySceneStyle = .pyramidsMosque
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .pyramidsMosque: return "Pyramids & Mosque"
+        case .pyramids: return "Pyramids"
+        case .mosques: return "Mosques"
+        }
+    }
+}
+
 enum SkyScene {
     /// The tallest point of the scene above the horizon at scale 1 (the mosque's crescent, the great
     /// pyramid's apex), in points. `draw` shrinks the scene when the room above the horizon is
     /// shorter than this.
     static let naturalHeight: CGFloat = 43
 
-    /// How much of the card's width each of the two structures covers. They are mirror images about
-    /// the middle: the pyramids centred on `1 - mosqueCentre`, the mosque on `mosqueCentre`, each
-    /// spanning this. Both `drawPyramids` and `drawMosque` derive their positions from these two, so
-    /// the sides cannot drift apart the way they did when each carried its own hand-written numbers.
-    private static let clusterSpan: CGFloat = 0.255
-    private static let mosqueCentre: CGFloat = 0.828
-
     /// Every height, multiplied by this before it is drawn (Abu, 2026-09-16: "just make them both a
-    /// little smaller"). Width shrinks with it through `clusterSpan`, by the same 0.85, so the two
-    /// structures keep their proportions and stay each other's mirror; `mosqueCentre` moves out a
-    /// little as the span narrows, to hold the mosque's outer edge at the 0.965 that keeps its minaret
-    /// clear of the card's rounded corner.
-    private static let heightFactor: CGFloat = 0.85
+    /// little smaller"; 2026-09-21: "a little smaller" again, 0.85 -> 0.75). Width shrinks with it
+    /// through `clusterSpan`, by the same factor, so the two structures keep their proportions and
+    /// stay each other's mirror.
+    private static let heightFactor: CGFloat = 0.75
+
+    /// How much of the card's width each of the two structures covers: the 0.30 the shapes were
+    /// drawn against, shrunk with `heightFactor`. They are mirror images about the middle, each
+    /// spanning this. Both `drawPyramids` and `drawMosque` derive their positions from this and
+    /// `edgeInset`, so the sides cannot drift apart the way they did when each carried its own
+    /// hand-written numbers.
+    private static let clusterSpan: CGFloat = 0.30 * heightFactor
+
+    /// Where the skyline's OUTERMOST ink sits, in points from the card's edges: the pyramids' first
+    /// foot on the left, the mosque's far minaret ring on the right. 16, the same as the card's
+    /// content padding, so the skyline starts exactly where "CURRENT" starts and ends exactly where
+    /// "UPCOMING" ends (Abu, 2026-09-21: "put the ends the same place as where the text starts").
+    /// The centres used to be fractions (mosque 0.828) that only happened to land near 16 pt at the
+    /// card's width; pinning the edge in points holds it at every width and every `heightFactor`.
+    static let edgeInset: CGFloat = 16
 
 
     /// Draws the scene into `context`. `rect` is the graph's rect, `horizonY` the ground line, `color`
     /// one flat silhouette (see `tint(overSky:at:)` for the colours that suit a sky). Every length scales
     /// with the width, and again with the room above the horizon, so a 158 pt widget and a 360 pt card
     /// show the same skyline.
-    static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, color: Color) {
-        draw(in: &context, rect: rect, horizonY: horizonY, tint: .flat(color))
+    static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, color: Color,
+                     style: SkySceneStyle = .defaultStyle) {
+        draw(in: &context, rect: rect, horizonY: horizonY, tint: .flat(color), style: style)
     }
 
-    static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, tint: SkylineTint) {
+    static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, tint: SkylineTint,
+                     style: SkySceneStyle = .defaultStyle) {
         let width = rect.width
         let room = horizonY - rect.minY
         guard width > 40, room > 12 else { return }
@@ -76,8 +108,30 @@ enum SkyScene {
             ))
         }
 
-        drawPyramids(in: &context, point: point, color: color, lit: lit)
-        drawMosque(in: &context, point: point, width: width, scale: scale, color: color, lit: lit, glow: tint.glow)
+        // The inset as a fraction of THIS width: the west structure starts at it, the east one ends
+        // at it, and each is centred half a span in from there. Which structure stands where is the
+        // style's call (Abu, 2026-09-21: "both pyramids, or both mosques, but by default it's this").
+        let inset = edgeInset / width
+        let west = inset + clusterSpan / 2
+        let east = 1 - inset - clusterSpan / 2
+        func pyramids(at centre: CGFloat) {
+            drawPyramids(in: &context, point: point, clusterCentre: centre, color: color, lit: lit)
+        }
+        func mosque(at centre: CGFloat) {
+            drawMosque(in: &context, point: point, centre: centre,
+                       width: width, scale: scale, color: color, lit: lit, glow: tint.glow)
+        }
+        switch style {
+        case .pyramidsMosque:
+            pyramids(at: west)
+            mosque(at: east)
+        case .pyramids:
+            pyramids(at: west)
+            pyramids(at: east)
+        case .mosques:
+            mosque(at: west)
+            mosque(at: east)
+        }
     }
 
     /// The skyline's colours for a sky painted with `colors` (top to bottom), read at `location`
@@ -270,7 +324,7 @@ enum SkyScene {
     // MARK: Pyramids
 
     private static func drawPyramids(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
-                                     color: GraphicsContext.Shading, lit: Color) {
+                                     clusterCentre: CGFloat, color: GraphicsContext.Shading, lit: Color) {
         // (left, apex x, right, height). The cluster MIRRORS the mosque's skeleton rather than merely
         // matching its bounding box (Abu, 2026-09-16, looking at the card: "look at that tiny pyramid
         // its nothing like the minaret"). The mosque is a tall centre between two smaller outer
@@ -283,12 +337,11 @@ enum SkyScene {
         // while the mosque's sat on its. Equal boxes, visibly unequal skylines.
         //
         // The cluster spans `clusterSpan` centred on `clusterCentre`, which is the mosque's centre
-        // reflected about the card (1 - 0.815 = 0.185), so the two sit at mirrored offsets from the
-        // middle. Widths are NOT mirrored from the minarets: a minaret is a 5 pt shaft, and a pyramid
+        // reflected about the card (both half a span in from `edgeInset`), so the two sit at
+        // mirrored offsets from the middle. Widths are NOT mirrored from the minarets: a minaret is a 5 pt shaft, and a pyramid
         // that narrow at 38 high would be a needle. Each keeps the proportions its own shape needs
         // (a slope near 1.5, which reads as a pyramid) while the skeleton, the span and the heights
         // are what mirror.
-        let clusterCentre = 1 - mosqueCentre
         // Half-bases chosen for a slope (height over half-base) of about 1.4, near Giza's 1.27, so
         // these read as pyramids and not as spikes. The bases overlap, which is what a cluster does.
         // Written against the original 0.30 span, so they narrow with it and the slopes hold.
@@ -323,12 +376,13 @@ enum SkyScene {
     // MARK: Mosque
 
     private static func drawMosque(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
-                                   width: CGFloat, scale: CGFloat, color: GraphicsContext.Shading, lit: Color, glow: Color) {
-        // The mosque spans exactly `span` of the card, 0.665...0.965, matching the pyramid cluster's
-        // 0.02...0.32, and its crescent reaches `naturalHeight` as the great pyramid's apex does. The
-        // two stand either side of the middle, which the arc's peak and the countdown digits need
-        // clear. The right edge stops short of the card's own so nothing is clipped by the rounded
-        // corner (0.98 clipped the minaret; only a screenshot caught it, the build was clean).
+                                   centre: CGFloat, width: CGFloat, scale: CGFloat,
+                                   color: GraphicsContext.Shading, lit: Color, glow: Color) {
+        // The mosque spans exactly `span` of the card ending `edgeInset` points from the right edge,
+        // the mirror of the pyramid cluster starting `edgeInset` from the left, and its crescent
+        // reaches `naturalHeight` as the great pyramid's apex does. The two stand either side of the
+        // middle, which the arc's peak and the countdown digits need clear. The inset also keeps the
+        // minaret clear of the rounded corner (0.98 clipped it; only a screenshot caught it).
         //
         // MEASURE THE OUTERMOST INK, not the body. Getting this wrong is what made the mosque read
         // as wider and shorter than the pyramids even though the numbers here said 0.30 and 43:
@@ -342,7 +396,6 @@ enum SkyScene {
         // Both are derived here rather than written as literals, so a change of scale, shaft or dome
         // radius carries through instead of quietly unmatching the two again. Check a change against
         // a screenshot, not the build: the last mismatch compiled perfectly for weeks.
-        let centre = mosqueCentre
         let span = clusterSpan
         let baseHeight: CGFloat = 9
         let domeRadius = 15 * scale
@@ -434,20 +487,24 @@ enum SkyScene {
 struct SkySceneView: View {
     let horizonY: CGFloat
     let tint: SkylineTint
+    /// Defaults to the saved choice, read the way this process can (`Settings.skylineStyle`), so the
+    /// widgets need no plumbing; the card passes its observed value so a change redraws at once.
+    let style: SkySceneStyle
 
-    init(horizonY: CGFloat, tint: SkylineTint) {
+    init(horizonY: CGFloat, tint: SkylineTint, style: SkySceneStyle = Settings.shared.skylineStyle) {
         self.horizonY = horizonY
         self.tint = tint
+        self.style = style
     }
 
     /// One flat colour, for a skyline that stands on no sky (the widgets' standard background).
-    init(horizonY: CGFloat, color: Color) {
-        self.init(horizonY: horizonY, tint: .flat(color))
+    init(horizonY: CGFloat, color: Color, style: SkySceneStyle = Settings.shared.skylineStyle) {
+        self.init(horizonY: horizonY, tint: .flat(color), style: style)
     }
 
     var body: some View {
         Canvas { context, size in
-            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, tint: tint)
+            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, tint: tint, style: style)
         }
         .allowsHitTesting(false)
     }
@@ -502,6 +559,7 @@ struct SkylineSilhouette: ViewModifier, Animatable {
     /// rather than being read off them each frame; `SkyScene.tint(overSky:night:)` says why.
     var night: Double
     var horizonY: CGFloat
+    var style: SkySceneStyle
 
     /// FOUR numbers travel: the sky's three components, and how far into the night look the
     /// skyline is. It is NOT the silhouette's own colour that is interpolated: that is what made the
@@ -517,7 +575,7 @@ struct SkylineSilhouette: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        SkySceneView(horizonY: horizonY, tint: SkyScene.tint(overSky: sky, night: night))
+        SkySceneView(horizonY: horizonY, tint: SkyScene.tint(overSky: sky, night: night), style: style)
     }
 }
 
@@ -525,8 +583,8 @@ extension View {
     /// Replaces this view with the skyline, drawn for `sky` (its day or night look decided by that
     /// sky's own luminance), animating the turn from whatever it was drawn for before.
     func skylineSilhouette(sky: (red: Double, green: Double, blue: Double),
-                           horizonY: CGFloat) -> some View {
-        modifier(SkylineSilhouette(sky: sky, night: SkyScene.nightFactor(overSky: sky), horizonY: horizonY))
+                           horizonY: CGFloat, style: SkySceneStyle) -> some View {
+        modifier(SkylineSilhouette(sky: sky, night: SkyScene.nightFactor(overSky: sky), horizonY: horizonY, style: style))
     }
 }
 
@@ -539,6 +597,15 @@ extension Settings {
         if Self.isAppProcess { return showSkyScene }
         guard let stored = Self.skySceneSharedSuite?.object(forKey: "showSkyScene") as? Bool else { return true }
         return stored
+    }
+
+    /// Which structures the skyline draws, the same way: the app reads its own `skySceneStyle`, the
+    /// widget extension the app-group mirror, defaulting to the mosque-and-pyramids pair.
+    var skylineStyle: SkySceneStyle {
+        let raw = Self.isAppProcess
+            ? skySceneStyle
+            : (Self.skySceneSharedSuite?.string(forKey: SkySceneStyle.storageKey) ?? "")
+        return SkySceneStyle(rawValue: raw) ?? .defaultStyle
     }
 }
 #endif

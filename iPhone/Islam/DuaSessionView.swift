@@ -33,9 +33,21 @@ final class DuaSessionProgress: ObservableObject {
         }
     }
 
+    private var storageObserver: StoredContentObserver?
+
     private init() {
         let data = UserDefaults.standard.data(forKey: Self.storageKey) ?? Data()
         positions = (try? JSONDecoder().decode([String: Int].self, from: data)) ?? [:]
+        storageObserver = StoredContentObserver(reload: { DuaSessionProgress.shared.reloadFromStorage() })
+    }
+
+    /// The positions on disk changed underneath this object (a restore, an erase). Assigning
+    /// writes the same bytes straight back through the `didSet`, which is harmless; keeping the
+    /// old dictionary was not, since the next `record` wrote all of it over the restored one.
+    private func reloadFromStorage() {
+        let data = UserDefaults.standard.data(forKey: Self.storageKey) ?? Data()
+        let stored = (try? JSONDecoder().decode([String: Int].self, from: data)) ?? [:]
+        if stored != positions { positions = stored }
     }
 
     /// The saved position, clamped to the collection as it exists NOW - a content update that shortens

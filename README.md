@@ -106,9 +106,11 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 ## Learn the Arabic Alphabet Easily
 - View Arabic letters, special letters, and numbers.
 - Learn letter forms, diacritics, and Quranic stopping signs for better recitation.
+- Take the Reading Test: 21 tiers in the order a qaa'idah teaches reading, from single letters and short vowels through sukoon, shaddah, and the marks of the mushaf, to words printed with no tashkeel at all. Each tier tests reading, spelling, and listening, with Beginner Mode's letter-by-letter spacing as the hint, and every word is taken from the Quran's own text.
 
 ## Fully Customizable and User-Friendly
 - Customize Quran text size, Arabic fonts, accent colors, sky colors, and prayer settings.
+- Choose the tab the app opens on: Adhan, Quran, Hadith, or Islam.
 - Settings organized into dedicated Adhan, Quran, and Hadith screens, with a settings search that jumps straight to any option, and understands meaning, so "make text bigger" finds the font controls.
 - Widgets and Apple Watch support for quick prayer time access, including full-surah recitation on the watch.
 - Simple and clean interface for effortless navigation.

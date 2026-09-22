@@ -186,6 +186,7 @@ enum QuranRankedSearch {
         cachedLanes = built
         lanesBuildingKey = nil
         lanesLock.unlock()
+        QuranData.adoptTranslationVocabulary(built.vocabulary)
         lanesBuilt.leave()
         return (built, ms)
     }
@@ -581,15 +582,21 @@ enum QuranRankedSearch {
         let index: Int
         let score: Int
         let matched: Int
+        /// Reached through the consonant skeleton alone (see the last-resort rule in `search`).
+        var viaSkeleton = false
     }
 
     // MARK: - Search
 
     /// The ranked ayahs for `raw`. Runs off the main thread on an immutable snapshot; the first call
     /// after an index build also derives the corpus lanes (a few tens of milliseconds).
-    static func search(_ raw: String, snapshot: QuranData.VerseSearchSnapshot, limit: Int) -> Outcome {
+    static func search(_ raw: String, snapshot: QuranData.VerseSearchSnapshot, limit: Int,
+                       scope: QuranSearchScope? = nil) -> Outcome {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !snapshot.verseIndex.isEmpty else { return Outcome() }
+        // The lanes fold translation and transliteration into one text, so a Search In filter on a
+        // Latin query is the exact scan's to answer alone.
+        if let scope, scope.lane != .all, !trimmed.containsArabicLetters { return Outcome() }
         // Digits are references and count queries, which other lanes answer; operator syntax belongs to
         // the exact scan.
         if trimmed.rangeOfCharacter(from: .decimalDigits) != nil { return Outcome() }
@@ -625,6 +632,7 @@ enum QuranRankedSearch {
 
         for index in entries.indices {
             if index & 0x1FF == 0, Task.isCancelled { return Outcome() }
+            if let scope, !scope.contains(surah: entries[index].surah, ayah: entries[index].ayah) { continue }
             let arabicText = lanes.arabic[index]
             let englishText = lanes.english[index]
             if !query.requiredBytes.isEmpty {
@@ -635,6 +643,7 @@ enum QuranRankedSearch {
             var score = 0
             var matched = 0
             var position = 0
+            var viaSkeleton = false
 
             if query.isArabic {
                 var field = scoreField(arabicText, query: query, weight: arabicWeight)
@@ -648,6 +657,7 @@ enum QuranRankedSearch {
                                                     query: query, weight: arabicWeight, wholeBonus: wholeWordBonus),
                        skeleton.matched > (field?.matched ?? 0) {
                         field = skeleton
+                        viaSkeleton = true
                     }
                 }
                 if let field {
@@ -670,6 +680,7 @@ enum QuranRankedSearch {
                     score = skeleton.score
                     matched = skeleton.matched
                     position = skeleton.position
+                    viaSkeleton = true
                 }
             }
 
@@ -678,11 +689,18 @@ enum QuranRankedSearch {
             score += Swift.max(0, brevityWeight - lanes.wordCounts[index] / brevityWordsPerPoint)
             score += Swift.max(0, positionWeight - position / positionCharsPerPoint)
             if matched > best { best = matched }
-            candidates.append(Candidate(index: index, score: score, matched: matched))
+            candidates.append(Candidate(index: index, score: score, matched: matched, viaSkeleton: viaSkeleton))
         }
 
         // Everything carrying the WHOLE query, or, when nothing does, the rows covering the most of it.
-        let kept = candidates.filter { $0.matched == best }
+        //
+        // The skeleton is the LAST resort: when any ayah carries the words themselves (as typed or by
+        // stem), the rows that only share their consonants stand down. Without this a run of consonants
+        // across a word break outranked the word with a prefix on it: "الصبر" led with 23:86
+        // (ٱلسَّبۡعِ وَرَبُّ reads l-s-b-r), above every بِٱلصَّبۡرِ in the Quran.
+        let covering = candidates.filter { $0.matched == best }
+        let direct = covering.filter { !$0.viaSkeleton }
+        let kept = (direct.isEmpty ? covering : direct)
             .sorted { $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index }
         var outcome = Outcome()
         outcome.total = kept.count

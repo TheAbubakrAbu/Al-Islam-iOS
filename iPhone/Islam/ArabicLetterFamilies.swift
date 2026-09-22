@@ -16,6 +16,7 @@ enum ArabicDoor {
     case families
     case soundAlikes
     case quiz
+    case readingTest
 }
 
 extension LetterTraits {
@@ -30,6 +31,13 @@ private struct ArabicDoorDestination: ViewModifier {
     /// The door last opened, kept so the page being popped still has content while it slides away
     /// (the binding is already nil by then).
     @State private var lastDoor: ArabicDoor?
+    /// The screens open down to HERE. A `navigationDestination` page takes its environment from the
+    /// navigation stack, not from the view that declared it, so without handing these on a letter
+    /// opened from a tile arrived believing nothing was open above it, and its link back to the page
+    /// it came from stayed live (measured: Qalqalah topic, qaaf tile, "Learn the Qalqalah Rule").
+    /// A classic NavigationLink's destination does inherit them, which is why links never needed this.
+    @Environment(\.openScreens) private var openScreens
+    @Environment(\.openScreenInstances) private var openScreenInstances
 
     private var isPresented: Binding<Bool> {
         Binding(
@@ -54,8 +62,14 @@ private struct ArabicDoorDestination: ViewModifier {
         }
     }
 
-    @ViewBuilder
     private var destination: some View {
+        page
+            .environment(\.openScreens, openScreens)
+            .environment(\.openScreenInstances, openScreenInstances)
+    }
+
+    @ViewBuilder
+    private var page: some View {
         switch door ?? lastDoor {
         case .letter(let letter): ArabicLetterView(letterData: letter)
         case .family(let family): LetterFamilyView(family: family)
@@ -63,6 +77,7 @@ private struct ArabicDoorDestination: ViewModifier {
         case .families: LetterFamiliesView()
         case .soundAlikes: SoundAlikeLettersView()
         case .quiz: quizDestination
+        case .readingTest: readingTestDestination
         case nil: EmptyView()
         }
     }
@@ -72,6 +87,16 @@ private struct ArabicDoorDestination: ViewModifier {
     private var quizDestination: some View {
         #if os(iOS)
         LetterQuizView()
+        #else
+        EmptyView()
+        #endif
+    }
+
+    /// The Reading Test is a phone screen for the same reason, and its files are in the phone target only.
+    @ViewBuilder
+    private var readingTestDestination: some View {
+        #if os(iOS)
+        ReadingTestView()
         #else
         EmptyView()
         #endif
@@ -258,12 +283,25 @@ struct LetterTraitRow: View {
             .foregroundColor(tint ?? appearance.accent)
     }
 
+    /// The Arabic term under the English one: the layout that always fits.
+    private var stackedHeading: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            titleText.fixedSize(horizontal: false, vertical: true)
+            arabicText
+        }
+    }
+
     /// The Arabic term sits opposite the English one when the two fit on a line, and under it when
     /// they do not. It is never shrunk or cut to make room: a long rule name used to squeeze it down
     /// to an unreadable stub with an ellipsis.
+    ///
+    /// Phone only. A watch face has no room for the pair side by side, and `ViewThatFits` with two
+    /// children does not back-deploy there: the Watch target warned that the builder's tuple content
+    /// only conforms to View from watchOS 26 and "may crash on earlier versions of the OS".
     @ViewBuilder
     private var heading: some View {
-        if #available(iOS 16.0, watchOS 9.0, *) {
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     titleText
@@ -271,17 +309,14 @@ struct LetterTraitRow: View {
                     arabicText
                 }
 
-                VStack(alignment: .leading, spacing: 1) {
-                    titleText.fixedSize(horizontal: false, vertical: true)
-                    arabicText
-                }
+                stackedHeading
             }
         } else {
-            VStack(alignment: .leading, spacing: 1) {
-                titleText.fixedSize(horizontal: false, vertical: true)
-                arabicText
-            }
+            stackedHeading
         }
+        #else
+        stackedHeading
+        #endif
     }
 
     var body: some View {
@@ -310,6 +345,9 @@ struct LetterTraitRow: View {
                         .minimumScaleFactor(0.35)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .environment(\.layoutDirection, .rightToLeft)
+                        // The mushaf faces carry a very tall line box, which left the letters
+                        // floating a line below the sentence they belong to.
+                        .padding(.top, appearance.useFontArabic && appearance.islamUsesCustomArabicFace ? -8 : 0)
                 }
             }
         }
@@ -1057,6 +1095,7 @@ struct SoundAlikeLettersView: View {
                 }
             }
             .padding(.vertical, 4)
+            .rowSeparatorFromLeadingEdge()
 
             Text(pair.tip)
                 .font(.subheadline)
@@ -1131,22 +1170,26 @@ struct SoundAlikeLettersView: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(.secondary)
 
-            if shared {
-                Label(isPlace ? "Same exit: \(firstText)" : "Both: \(firstText)", systemImage: "equal.circle")
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: shared ? "equal.circle" : "arrow.left.arrow.right.circle.fill")
                     .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Label("\(pair.first)  \(firstText)", systemImage: "arrow.left.arrow.right.circle.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(appearance.accent)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundColor(shared ? .secondary : appearance.accent)
+                    .frame(width: 18)
 
-                Text("\(pair.second)  \(secondText)")
+                if shared {
+                    Text(isPlace ? "Same exit: \(firstText)" : "Both: \(firstText)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(pair.first)  \(firstText)")
+                        Text("\(pair.second)  \(secondText)")
+                    }
                     .font(.caption.weight(.semibold))
                     .foregroundColor(appearance.accent)
-                    .padding(.leading, 26)
                     .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .accessibilityElement(children: .combine)
@@ -1206,7 +1249,7 @@ struct LetterQuizView: View {
             case .name: return "ب"
             case .glyph: return "؟"
             case .form: return "ـعـ"
-            case .family: return "ص س ز"
+            case .family: return "ص"
             case .listen: return "نُون"
             }
         }
@@ -1625,7 +1668,7 @@ struct LetterQuizView: View {
         let (choices, answer) = shuffledChoices(right: right, wrong: Array(outsiders), arabic: true)
         return Question(
             prompt: family.arabic,
-            ask: "Which of these is a \(family.name) letter? \(family.summary)",
+            ask: "Which of these letters belongs to \(family.name) (\(family.meaning))? \(family.summary)",
             choices: choices, answer: answer,
             explanation: "\(family.title): \(family.letters.joined(separator: " "))"
         )

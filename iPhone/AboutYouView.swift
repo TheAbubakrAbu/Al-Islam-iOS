@@ -150,6 +150,8 @@ struct AboutYouView: View {
     @State private var transliteration = false
     @State private var englishMeanings = false
     @State private var prayerNotifications = true
+    /// "Open the app on the Islam tab", offered to the two answers that mean "I am here to learn".
+    @State private var openOnIslamTab = false
     @State private var didSeedSuggestions = false
 
     private var isDarkMode: Bool { (settings.colorScheme ?? systemColorScheme) == .dark }
@@ -410,6 +412,15 @@ struct AboutYouView: View {
                                  "Off if you are only here to read. You can bring them back in Settings.",
                                  isOn: $prayerNotifications)
             }
+
+            // Abu, 2026-09-21: he read "Start Here on the Islam Tab" as "open the app on the Islam
+            // tab", and said that would be good to have. It is offered here, in the open, and is
+            // an ordinary setting afterwards (Appearance, Look and Feel, and About You).
+            if background.landsOnIslamTab {
+                suggestionToggle("Open the app on the Islam tab",
+                                 "Where the Start Here guide is. Any tab can be chosen later in Settings.",
+                                 isOn: $openOnIslamTab)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -489,6 +500,8 @@ struct AboutYouView: View {
         englishMeanings = settings.prayerNotificationEnglishNames || isNewInstall
         prayerNotifications = settings.notificationFajr || settings.notificationDhuhr || settings.notificationAsr
             || settings.notificationMaghrib || settings.notificationIsha
+        // Suggested only to someone who has not picked an opening tab of their own.
+        openOnIslamTab = settings.launchTab == .islam || (choice?.landsOnIslamTab == true && !settings.launchTabChosen)
     }
 
     private func finish(saving: Bool) {
@@ -496,6 +509,13 @@ struct AboutYouView: View {
             settings.userBackground = choice
             if choice.wantsStartHere { settings.startHereHidden = false }
 
+            if choice.landsOnIslamTab {
+                if openOnIslamTab, settings.launchTab != .islam {
+                    settings.launchTab = .islam
+                } else if !openOnIslamTab, settings.launchTab == .islam {
+                    settings.launchTab = .adhan
+                }
+            }
             if choice != .raised {
                 if transliteration != settings.showTransliteration { settings.showTransliteration = transliteration }
                 if englishMeanings != settings.prayerNotificationEnglishNames { settings.prayerNotificationEnglishNames = englishMeanings }
@@ -591,7 +611,10 @@ struct AboutYouSettingsView: View {
                 if settings.userBackground?.wantsStartHere == true {
                     Section {
                         VStack(alignment: .leading) {
-                            Toggle("Start Here on the Islam Tab", isOn: Binding(
+                            // Was "Start Here on the Islam Tab", which reads as "start the app on
+                            // the Islam tab" (Abu read it that way himself, 2026-09-21). It shows a
+                            // guide; the opening tab is the picker in the next section.
+                            Toggle("Show the Start Here Guide", isOn: Binding(
                                 get: { !settings.startHereHidden },
                                 set: { newValue in withAnimation(.easeInOut) { settings.startHereHidden = !newValue } }
                             ))
@@ -599,13 +622,17 @@ struct AboutYouSettingsView: View {
                             .tint(settings.accentColor.color)
                             .onChange(of: settings.startHereHidden) { _ in settings.hapticFeedback() }
 
-                            Text("A short guided path at the top of the Islam tab. It ticks off each step as you open it.")
+                            Text("A short guided path shown at the top of the Islam tab. It ticks off each step as you open it. This does not change which tab the app opens on.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .padding(.vertical, 2)
                         }
                     }
+                }
+
+                Section {
+                    LaunchTabPicker()
                 }
 
                 Section {
@@ -694,7 +721,8 @@ extension SettingsSearchEntry {
     static let aboutYouEntries: [SettingsSearchEntry] = [
         .init(title: "About You", path: "Settings", keywords: "born raised muslim revert convert new beginner non muslim learning welcome onboarding tutorial intro change answer start here guide who are you background", destination: .aboutYou),
         .init(title: "Replay the Welcome Tutorial", path: "Settings → About You", keywords: "tutorial onboarding welcome replay again redo intro walkthrough", destination: .aboutYou),
-        .init(title: "Start Here on the Islam Tab", path: "Settings → About You", keywords: "start here guide beginner path steps islam tab hide show learn", destination: .aboutYou),
+        .init(title: "Show the Start Here Guide", path: "Settings → About You", keywords: "start here guide beginner path steps islam tab hide show learn", destination: .aboutYou),
+        .init(title: "Open the App On", path: "Settings → About You", keywords: "launch start first tab open adhan quran hadith islam default home landing", destination: .aboutYou),
     ]
 }
 #endif

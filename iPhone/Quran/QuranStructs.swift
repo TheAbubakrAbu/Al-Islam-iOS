@@ -419,8 +419,13 @@ enum SurahSpelling {
 
     /// The surahs a folded spelling finds. `exactOnly` is for callers that must pick ONE surah and
     /// act on it (Siri, "open surah ..."): a merely similar start is not enough to act on.
-    static func matches(_ text: String, in surahs: [Surah], exactOnly: Bool = false) -> [Surah] {
+    /// `wholeKeyOnly` is stricter still, for a query that is an ordinary English word: the vowel-less
+    /// skeleton of "mercy" read with a j is m-r-j, which IS al-Ma'arij's.
+    static func matches(_ text: String, in surahs: [Surah], exactOnly: Bool = false, wholeKeyOnly: Bool = false) -> [Surah] {
         guard let query = SpellingFold.Query(text) else { return [] }
+        if wholeKeyOnly {
+            return surahs.filter { SpellingFold.strength(of: query, in: entry(for: $0)) == .keyExact }
+        }
         if exactOnly {
             return surahs.filter {
                 let strength = SpellingFold.strength(of: query, in: entry(for: $0))

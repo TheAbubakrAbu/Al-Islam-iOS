@@ -119,7 +119,7 @@ struct TajweedFoundationsView: View {
             Section {
                 NavigationLink(destination: LazyDestination { LetterFamiliesView() }) {
                     ArabicTopicLinkLabel(
-                        specimen: "ص س ز",
+                        specimen: "ص",
                         title: "Letter Families",
                         caption: "Every letter by makhraj, sifaat and rule, in Arabic and English",
                         preview: "الهَمس  الصَّفِير  القَلقَلَة  الغُنَّة"
@@ -128,7 +128,7 @@ struct TajweedFoundationsView: View {
 
                 NavigationLink(destination: LazyDestination { SoundAlikeLettersView() }) {
                     ArabicTopicLinkLabel(
-                        specimen: "س ص",
+                        specimen: "ذظ",
                         title: "Sound-Alike Letters",
                         caption: "The pairs people mix up, side by side, with what separates them"
                     )

@@ -5,6 +5,9 @@ import UIKit
 
 enum AyahSecondarySheet: String, Identifiable {
     case tafsir, similarAyahs, mutashabihat, qiraah, translations, customRange, note, share, selectText
+    /// "Summarize with AI" on the ayah itself (2026-09-21, parity with the hadith rows, which had it
+    /// on their menu while the ayah offered it only inside the tafsir and comparison sheets).
+    case summarize
     var id: String { rawValue }
 }
 
@@ -206,7 +209,55 @@ struct AyahSecondarySheetContent: View {
 
         case .selectText:
             SelectAyahTextSheet(surah: surah, ayah: ayah)
+
+        case .summarize:
+            AyahSummarizeSheet(surahNumber: surah.id, ayahNumber: ayah.id)
         }
+    }
+}
+
+/// The ayah's own "Summarize with AI" sheet: the model reads all three families for the ayah (the
+/// bundled tafsirs first, then the riwayat and the translations - `AyahAISources`), the same
+/// gathering the tafsir sheet's sparkles button does, reached from the row instead. One builder for
+/// the row menu, the tab rows' menu and the actions sheet, so none of the three can drift.
+struct AyahSummarizeSheet: View {
+    let surahNumber: Int
+    let ayahNumber: Int
+
+    var body: some View {
+        #if canImport(FoundationModels)
+        SummarizeSheet(
+            title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+            sourceText: "",
+            multiSource: true,
+            gatherSource: {
+                let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+                let online = await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: anchor)
+                return OnDeviceAsk.combinedSource(
+                    AyahAISources.combinedSections(
+                        surahNumber: surahNumber,
+                        ayahNumber: ayahNumber,
+                        emphasis: .tafsir,
+                        onlineTranslations: online
+                    )
+                )
+            },
+            excludedNote: AyahAISources.arabicExcludedNote
+        )
+        #else
+        EmptyView()
+        #endif
+    }
+
+    /// Whether the entry points should offer the sheet at all: Apple Intelligence on, and a Hafs
+    /// reading (the tafsirs and translations are Hafs-keyed; the anchor covers the other riwayat's
+    /// numbering, but a beta text's words may not be the ones the sources discuss).
+    static var isOffered: Bool {
+        #if canImport(FoundationModels)
+        return OnDeviceAsk.isAvailable
+        #else
+        return false
+        #endif
     }
 }
 
@@ -834,6 +885,16 @@ struct AyahActionsSheet: View {
             list.append(AyahAction(id: "customRange", title: "Play Custom Range", systemImage: "slider.horizontal.3", action: {
                 settings.hapticFeedback()
                 onRequestSheet?(.customRange)
+            }))
+        }
+
+        // Last, like the hadith rows put it: the one tile that leaves the ayah for a sheet of prose.
+        // Absent on a device without Apple Intelligence rather than present and dead (the
+        // OnDeviceAsk pattern).
+        if canShowTafsir, AyahSummarizeSheet.isOffered {
+            list.append(AyahAction(id: "summarize", title: "Summarize with AI", systemImage: "text.append", action: {
+                settings.hapticFeedback()
+                onRequestSheet?(.summarize)
             }))
         }
 

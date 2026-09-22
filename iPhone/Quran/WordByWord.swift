@@ -279,8 +279,9 @@ enum CrossLanguageWordHighlight {
     /// corpus lexicon can't be: the gloss always comes from the exact token that matched, so looser
     /// matching can never import a neighbouring word's meaning.
     static func englishTermsForArabicMatch(query: String, surah: Int, ayah: Int,
-                                           rawText: String, displayText: String) -> [String] {
-        let key = "a→e\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
+                                           rawText: String, displayText: String,
+                                           wordRule: SearchWordRule = .anywhere) -> [String] {
+        let key = "a→e\(wordRule.rawValue)\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
         if let cached = termsCache.object(forKey: key) { return cached.terms }
 
         var terms: [String] = []
@@ -299,7 +300,7 @@ enum CrossLanguageWordHighlight {
 
         // Lane 1: the matched spans → the tokens they touch (a phrase query or a loose Arabic match
         // can cover several), in order, deduped.
-        for match in HighlightedSnippet.matchRanges(of: query, in: displayText) {
+        for match in HighlightedSnippet.matchRanges(of: query, in: displayText, wordRule: wordRule) {
             let span = NSRange(match, in: displayText)
             for (index, token) in tokenRanges.enumerated()
             where NSIntersectionRange(span, token).length > 0 && seenTokens.insert(index).inserted {
@@ -336,7 +337,10 @@ enum CrossLanguageWordHighlight {
     /// The Arabic spans an ARABIC query lights in the ayah itself, through the SAME morphology lane 2
     /// uses - so the reader can also tint صلاتهم when the query was صلاة, beyond what the plain
     /// substring highlighter finds. Returns only tokens the base highlighter would MISS.
-    static func arabicSpansForArabicQuery(query: String, in displayText: String) -> [NSRange] {
+    static func arabicSpansForArabicQuery(query: String, in displayText: String,
+                                          wordRule: SearchWordRule = .anywhere) -> [NSRange] {
+        // A word FAMILY is the opposite of what Whole Word, Starts With and Ends With ask for.
+        guard wordRule == .anywhere else { return [] }
         let key = "a→a\u{0000}\(query)\u{0000}\(displayText.hashValue)" as NSString
         if let cached = spansCache.object(forKey: key) { return cached.spans }
 

@@ -48,16 +48,8 @@ struct DailyReminderEntry: Identifiable, Equatable {
         let slug: String
         let citation: String
 
-        /// "1923" -> (1923, nil); "35a" -> (35, "a").
-        var parts: (number: Int, suffix: String?) {
-            var digits = citation
-            var suffix: String?
-            if let last = digits.last, last.isLetter {
-                suffix = String(last)
-                digits = String(digits.dropLast())
-            }
-            return (Int(digits) ?? 0, suffix)
-        }
+        /// "1923" -> (1923, nil); "35a" -> (35, "a"); "1211aa" -> (1211, "aa").
+        var parts: (number: Int, suffix: String?) { HadithCitation.parts(citation) }
     }
 
     let id: String
@@ -806,11 +798,29 @@ final class SavedReflectionsStore: ObservableObject {
     @Published private(set) var items: [SavedReflection] = []
     private var keys: Set<String> = []
     private static let fileName = "reflections.json"
+    private var storageObserver: StoredContentObserver?
+
+    /// The file's writes, in order (see `ActivityLog.ioQueue`): a restore waits here for a save
+    /// already on its way, so it can never land on top of the restored file.
+    private static let ioQueue = DispatchQueue(label: "SavedReflectionsStore.io", qos: .utility)
 
     private init() {
         ObjectPublishCounter.attach(self, label: "SavedReflectionsStore")
+        storageObserver = StoredContentObserver(
+            flush: { SavedReflectionsStore.ioQueue.sync {} },
+            reload: { SavedReflectionsStore.shared.reloadFromStorage() }
+        )
         guard let url = Self.fileURL, let data = try? Data(contentsOf: url),
               let decoded = try? JSONDecoder().decode([SavedReflection].self, from: data) else { return }
+        items = decoded
+        keys = Set(decoded.map(\.key))
+    }
+
+    /// The file changed underneath this object (a restore): read it again, the key index with it.
+    private func reloadFromStorage() {
+        Self.ioQueue.sync {}
+        let decoded = Self.fileURL.flatMap { try? Data(contentsOf: $0) }
+            .flatMap { try? JSONDecoder().decode([SavedReflection].self, from: $0) } ?? []
         items = decoded
         keys = Set(decoded.map(\.key))
     }
@@ -847,7 +857,7 @@ final class SavedReflectionsStore: ObservableObject {
     private func save() {
         guard let url = Self.fileURL else { return }
         let snapshot = items
-        DispatchQueue.global(qos: .utility).async {
+        Self.ioQueue.async {
             guard let data = try? JSONEncoder().encode(snapshot) else { return }
             try? data.write(to: url, options: .atomic)
         }

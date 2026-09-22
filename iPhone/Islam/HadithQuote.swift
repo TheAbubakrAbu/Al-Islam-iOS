@@ -13,6 +13,17 @@ import Foundation
 // translation alone: `arabic: 22...58` is the matn, `english: 4...61` the quoted sentence. The
 // citation the reader sees is carried as written ("Sahih al-Bukhari 6306, Sahih Muslim 2705").
 
+/// The standard citation split for a lookup: "6306" -> (6306, nil); "1163a" -> (1163, "a");
+/// "1211aa" -> (1211, "aa"), the two-letter run sunnah.com uses past "z" on two Sahih Muslim
+/// numbers. Every parser of a stored citation goes through here so none of them stops at one letter.
+enum HadithCitation {
+    static func parts(_ citation: String) -> (number: Int, suffix: String?) {
+        let letters = String(citation.reversed().prefix { $0.isLetter }.reversed())
+        let digits = String(citation.dropLast(letters.count))
+        return (Int(digits) ?? 0, letters.isEmpty ? nil : letters)
+    }
+}
+
 /// One narration on the shelf: its collection and its citation ("6306", "1163a"), or, where a
 /// citation string names more than one row of the book (Tirmidhi and Bulugh carry duplicates;
 /// Muslim's Muqaddimah shares its numbers with the main book's lettered variants), its number in
@@ -34,15 +45,7 @@ struct HadithQuoteReference: Hashable {
     var numbered: Int? { citation.first == "#" ? Int(citation.dropFirst()) : nil }
 
     /// "6306" -> (6306, nil); "1163a" -> (1163, "a"): what `HadithBookData.hadith(referenced:suffix:)` takes.
-    var parts: (number: Int, suffix: String?) {
-        var digits = citation
-        var suffix: String?
-        if let last = digits.last, last.isLetter {
-            suffix = String(last)
-            digits = String(digits.dropLast())
-        }
-        return (Int(digits) ?? 0, suffix)
-    }
+    var parts: (number: Int, suffix: String?) { HadithCitation.parts(citation) }
 
     var link: String { "\(slug):\(citation)" }
 }

@@ -311,26 +311,43 @@ struct SkyCard: View {
     /// drop much below 88 or the line grazes the caption at Arctic midsummer. Re-derive all three numbers
     /// whenever the columns or the countdown block change height.
     ///
-    /// All of that is the PLAIN card's geometry (skyline off). With the skyline on the horizon is the
-    /// ground the pyramids and the mosque stand on, and it is pinned just ABOVE the whole countdown
-    /// block - "TIME LEFT" and the digits together (`digitsTop`, measured through `SkyDigitsTopKey`):
-    /// the sun rises out of the pyramids and sets behind the mosque, the day's arc always peaks at
-    /// `arcTopInset`, and the night's path dips as far under the ground as the day rises above it,
-    /// behind the caption, the digits and the bar (Abu, 2026-09-16: first "at the countdown", then,
-    /// when that pinned the night to a shallow dip, "a real solar graph going all the way down and
-    /// up", then "in between Time Left and the countdown"; 2026-09-18: the line went above the text
-    /// and the countdown entirely, so nothing is struck through by the horizon).
+    /// All of that is the PLAIN card's geometry (skyline off). With the skyline on, two different
+    /// things are pinned to the countdown, and they are NOT the same line (Abu, 2026-09-21):
+    ///
+    /// - The solar GRAPH's horizon crossing sits just above the whole countdown block - "TIME LEFT"
+    ///   and the digits together (`digitsTop`, measured through `SkyDigitsTopKey`). The day's arc
+    ///   always peaks at `arcTopInset`, and the night's path dips as far under that crossing as the
+    ///   day rises above it, behind the caption, the digits and the bar (Abu, 2026-09-16: first "at
+    ///   the countdown", then, when that pinned the night to a shallow dip, "a real solar graph going
+    ///   all the way down and up"; 2026-09-18: the arc went above the text and the countdown
+    ///   entirely, so no text is struck through by the graph).
+    /// - The GROUND the pyramids and the mosque stand on - the horizon line, the silhouette and the
+    ///   ground band - runs along the top of the PROGRESS BAR (`groundLineTop`, measured through
+    ///   `SkyGroundLineKey`): the bar reads as the ground, and "TIME LEFT" and the digits sit in the
+    ///   sky between the pyramids and the mosque. Abu, 2026-09-21: first "between Time Left and the
+    ///   countdown, just the ground, not the graph", then "put the ground level where the countdown
+    ///   progress view is".
     private let arcTopInset: CGFloat = 68
     private let arcBottomInset: CGFloat = 88
 
     /// The top of the countdown BLOCK ("TIME LEFT" and the digits under it) in the card's coordinate
     /// space, as `PrayerCountdown` reports it; nil until the first layout. The estimate stands in for
-    /// that first frame so the ground does not jump: 200 less the bottom padding, the footer line, its
+    /// that first frame so the graph does not jump: 200 less the bottom padding, the footer line, its
     /// top padding, the bar, the digits, and the caption above them.
     @State private var digitsTop: CGFloat?
     private static let estimatedDigitsTop: CGFloat = 108
-    /// The ground line sits this far above the countdown block, in the air over "TIME LEFT".
+    /// The graph's horizon crossing sits this far above the countdown block, in the air over "TIME LEFT".
     private static let groundAir: CGFloat = 4
+
+    /// The top of the PROGRESS BAR (its 1 pt of padding included), as `PrayerCountdown` reports it
+    /// through `SkyGroundLineKey`; nil until the first layout. The estimate is 200 less the bottom
+    /// padding, the footer line, its top padding and the padded bar, so the first frame's ground
+    /// does not jump either.
+    @State private var groundLineTop: CGFloat?
+    private static let estimatedGroundLineTop: CGFloat = 156
+    /// The ground line sits this far above the bar's padded frame: a hair of air, so the white
+    /// horizon line and the accent bar read as ground and bar rather than as one thick bar.
+    private static let groundLineAir: CGFloat = 2
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -447,6 +464,9 @@ struct SkyCard: View {
         .coordinateSpace(name: Self.groundSpace)
         .onPreferenceChange(SkyDigitsTopKey.self) { top in
             if top != digitsTop { digitsTop = top }
+        }
+        .onPreferenceChange(SkyGroundLineKey.self) { top in
+            if top != groundLineTop { groundLineTop = top }
         }
         .overlay(alignment: .top) { scrubReadout }
         .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
@@ -648,16 +668,26 @@ struct SkyCard: View {
             let rect = CGRect(origin: .zero, size: geo.size)
             let displayedFraction = window.fraction(of: displayedDate)
             let showsScene = settings.showSkyScene
-            // The skyline pins the ground just above the countdown block - over "TIME LEFT" and the
-            // digits both (see `arcTopInset`) - and the night dips as deep as the day climbs, short
-            // of the card's bottom edge.
+            let sceneStyle = settings.skylineStyle
+            // The skyline pins the GRAPH's horizon crossing just above the countdown block - over
+            // "TIME LEFT" and the digits both (see `arcTopInset`) - and the night dips as deep as
+            // the day climbs, short of the card's bottom edge. The drawn ground is pinned lower,
+            // see `groundLineY` below.
             let groundY = (digitsTop ?? Self.estimatedDigitsTop) - Self.groundAir
             let ground = showsScene
                 ? SkyGround(y: groundY,
                             depth: min(groundY - (rect.minY + arcTopInset), rect.maxY - Self.troughInset - groundY))
                 : nil
             let shape = SolarArcShape(curve: curve, topInset: arcTopInset, bottomInset: arcBottomInset, ground: ground)
+            // The GRAPH's horizon: where the arc crosses from day to night, and where the plain
+            // card draws its horizon line.
             let horizonY = shape.yPosition(of: curve.horizon, in: rect)
+            // The GROUND with the skyline on: the drawn line, the silhouette and the band, along the
+            // top of the progress bar, well below the graph's crossing (see `arcTopInset`). The
+            // plain card has no skyline, so its line stays on the graph.
+            let groundLineY = showsScene
+                ? (groundLineTop ?? Self.estimatedGroundLineTop) - Self.groundLineAir
+                : horizonY
             let sunHeight = curve.height(at: displayedFraction)
             let sunPoint = CGPoint(
                 x: xPosition(forFraction: displayedFraction, in: rect),
@@ -682,8 +712,8 @@ struct SkyCard: View {
                 // Edge to edge, like the arc it belongs to. Inset by 12 on each side it read as a shorter,
                 // unrelated line floating inside a wider graph.
                 Path { path in
-                    path.move(to: CGPoint(x: rect.minX, y: horizonY))
-                    path.addLine(to: CGPoint(x: rect.maxX, y: horizonY))
+                    path.move(to: CGPoint(x: rect.minX, y: groundLineY))
+                    path.addLine(to: CGPoint(x: rect.maxX, y: groundLineY))
                 }
                 .stroke(Color.white.opacity(0.45), lineWidth: 1)
 
@@ -700,7 +730,7 @@ struct SkyCard: View {
                     .position(sunPoint)
                 if showsScene {
                     sun.mask(alignment: .top) {
-                        Rectangle().frame(height: max(horizonY - rect.minY, 0))
+                        Rectangle().frame(height: max(groundLineY - rect.minY, 0))
                     }
                 } else {
                     // 1 by day, 0.45 by night, interpolated - not a two-value switch.
@@ -727,13 +757,13 @@ struct SkyCard: View {
                 // It must be a ViewModifier: as a plain `View` conforming to `Animatable` the same
                 // code compiles and is ignored (see `SkylineSilhouette`).
                 if showsScene {
-                    let location = horizonY / max(rect.height, 1)
+                    let location = groundLineY / max(rect.height, 1)
                     let sky = SkyScene.skyComponents(of: skyColors, at: location)
                     // Keyed on the sky itself, which is the only thing the silhouette is derived
                     // from now. One modifier: stacking three `.animation`s would let them fight over
                     // the same transaction.
                     Color.clear
-                        .skylineSilhouette(sky: sky, horizonY: horizonY)
+                        .skylineSilhouette(sky: sky, horizonY: groundLineY, style: sceneStyle)
                         // Matches the gradient's own duration, scrub included - the silhouette is mixed
                         // FROM the sky, so if the two turn at different speeds the mosque drifts out of
                         // step with the sky behind it.

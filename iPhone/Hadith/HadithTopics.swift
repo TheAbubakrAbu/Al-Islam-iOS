@@ -26,15 +26,9 @@ struct HadithTopicEntry: Identifiable {
     let tags: [String]
     let rank: Int
 
-    /// "1923" -> (1923, nil); "35a" -> (35, "a").
+    /// "1923" -> (1923, nil); "35a" -> (35, "a"); "1211aa" -> (1211, "aa").
     var citationParts: (number: Int, suffix: String?) {
-        var digits = citation
-        var suffix: String?
-        if let last = digits.last, last.isLetter {
-            suffix = String(last)
-            digits = String(digits.dropLast())
-        }
-        return (Int(digits) ?? 0, suffix)
+        HadithCitation.parts(citation)
     }
 }
 

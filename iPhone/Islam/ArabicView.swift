@@ -136,6 +136,10 @@ struct ArabicView: View {
             letter.transliteration.lowercased()
         ]
 
+        // The alphabet spells this letter "nuun", and every tajweed page in the app calls it "noon"
+        // (noon sakinah): either spelling has to find it.
+        if letter.transliteration == "nuun" { parts += ["noon", "nun"] }
+
         if let weight = letter.weight {
             switch weight {
             case .followsPrevious:
@@ -403,7 +407,7 @@ struct ArabicView: View {
                     .first(where: { $0.letter == letter }) else { return }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { gridSelection = match }
         }
-        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|basics|families|soundAlikes|quiz|family:<id>",
+        // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|basics|families|soundAlikes|quiz|readingTest|family:<id>",
         // and "-arabicGrouping <axis raw value>" to land on a grouping: push one of the topic pages. Their
         // rows sit below the fold of a list that cannot be scrolled from a script.
         .background(debugTopicLink)
@@ -643,6 +647,7 @@ struct ArabicView: View {
             case "families": LetterFamiliesView()
             case "soundAlikes": SoundAlikeLettersView()
             case "quiz": LetterQuizView()
+            case "readingTest": ReadingTestView()
             case let topic? where topic.hasPrefix("family:"):
                 // "-arabicTopic family:safeer": one family's page.
                 if let family = LetterTraits.family(id: String(topic.dropFirst("family:".count))) {
@@ -829,56 +834,80 @@ struct ArabicView: View {
     private var exploreSection: some View {
         Section {
             HStack(alignment: .top, spacing: 8) {
-                exploreTile("Letter\nFamilies", specimen: "ص س ز", caption: "Makharij, sifaat and rules") { door = .families }
-                exploreTile("Sound-Alike\nLetters", specimen: "س ص", caption: "Hear the pairs people mix up") { door = .soundAlikes }
+                exploreTile("Letter Families", specimen: "ص س ز", caption: "Makharij, sifaat, rules") { door = .families }
+                exploreTile("Sound-Alikes", specimen: "س ص", caption: "Pairs people mix up") { door = .soundAlikes }
                 #if os(iOS)
-                exploreTile("Letter\nQuiz", specimen: "؟", caption: "Ten questions, five ways") { door = .quiz }
+                exploreTile("Letter Quiz", systemImage: "checkmark.circle", caption: "Ten questions") { door = .quiz }
                 #endif
             }
-            .padding(.horizontal, -8)
-            .padding(.vertical, -6)
+            .padding(.vertical, 2)
+
+            #if os(iOS)
+            // A row of its own, under the tiles: a fourth tile made all four too narrow to read, and
+            // the test is the one thing here a learner comes back to (it shows how far they are).
+            // A Button writing the one `door`, like the tiles.
+            Button {
+                settings.hapticFeedback()
+                door = .readingTest
+            } label: {
+                ReadingTestEntryLabel()
+            }
+            .buttonStyle(.plain)
+            #endif
         } header: {
             Text("EXPLORE")
         }
     }
 
-    private func exploreTile(_ title: String, specimen: String, caption: String, action: @escaping () -> Void) -> some View {
+    private func exploreTile(
+        _ title: String, specimen: String? = nil, systemImage: String? = nil, caption: String,
+        action: @escaping () -> Void
+    ) -> some View {
         Button {
             settings.hapticFeedback()
             action()
         } label: {
-            VStack(spacing: 4) {
-                Text(specimen)
-                    .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 24, relativeTo: .title2) : .title2)
-                    .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.4)
-                    .frame(height: 34)
+            VStack(spacing: 3) {
+                Group {
+                    if let specimen {
+                        Text(specimen)
+                            .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 22, relativeTo: .title3) : .title3)
+                            .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
+                    } else if let systemImage {
+                        Image(systemName: systemImage)
+                            .font(.title3.weight(.semibold))
+                    }
+                }
+                .foregroundColor(settings.accentColor.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
+                .frame(height: 30)
 
                 Text(title)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
                 Text(caption)
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .top)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(settings.accentColor.color.opacity(0.09))
+            )
             .contentShape(Rectangle())
-            .conditionalGlassEffect(clear: true, rectangle: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title.replacingOccurrences(of: "\n", with: " ")). \(caption)")
+        .accessibilityLabel("\(title). \(caption)")
+        .accessibilityAddTraits(.isButton)
     }
 
     @ViewBuilder
@@ -959,7 +988,7 @@ struct ArabicView: View {
     private func axisBanner(_ axis: LetterAxis) -> some View {
         Section {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 12) {
+                HStack(alignment: .center, spacing: 12) {
                     AccentIconChip(systemImage: axis.systemImage, size: 34)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -971,16 +1000,18 @@ struct ArabicView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    Spacer(minLength: 8)
-
-                    Text(axis.arabic)
-                        .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 19, relativeTo: .body) : .body)
-                        .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
-                        .foregroundColor(settings.accentColor.color)
-                        .multilineTextAlignment(.trailing)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.5)
+                    Spacer(minLength: 0)
                 }
+
+                // Its own line: beside the title, a long Arabic name (the noon sakinah's) squeezed
+                // the English into a two-word column.
+                Text(axis.arabic)
+                    .font(settings.useFontArabic ? settings.scalableIslamArabicFont(base: 21, relativeTo: .title3) : .title3)
+                    .arabicFontDesign(custom: settings.useFontArabic && settings.islamUsesCustomArabicFace)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text(axis.question)
                     .font(.subheadline)
@@ -1002,28 +1033,47 @@ struct ArabicView: View {
                     }
                     .padding(.vertical, 1)
                 }
+
+                // Inside the banner, not rows of their own: as two more rows the banner was taller
+                // than the letters it introduces.
+                HStack(spacing: 8) {
+                    bannerAction("About These Families", systemImage: "book") {
+                        door = .axes(title: axis.title, axes: [axis])
+                    }
+
+                    bannerAction("Alphabetical", systemImage: "arrow.uturn.backward") {
+                        setGrouping(.alphabetical)
+                    }
+                }
             }
             .padding(.vertical, 4)
-
-            Button {
-                settings.hapticFeedback()
-                door = .axes(title: axis.title, axes: [axis])
-            } label: {
-                Label("About These Families", systemImage: "book")
-                    .font(.subheadline)
-                    .foregroundColor(settings.accentColor.color)
-            }
-
-            Button {
-                setGrouping(.alphabetical)
-            } label: {
-                Label("Back to Alphabetical Order", systemImage: "arrow.uturn.backward")
-                    .font(.subheadline)
-                    .foregroundColor(settings.accentColor.color)
-            }
         } header: {
             Text("GROUPED BY")
         }
+    }
+
+    private func bannerAction(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.caption.weight(.semibold))
+
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .foregroundColor(settings.accentColor.color)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(clear: true, rectangle: true)
+        }
+        .buttonStyle(.plain)
     }
 
     private func familyChip(title: String, systemImage: String, isOn: Bool, tint: Color?, action: @escaping () -> Void) -> some View {

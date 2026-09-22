@@ -317,6 +317,24 @@ struct SettingsAdhanView: View {
         #endif
     }
 
+    /// The Skyline row's one value: "off" while the skyline is hidden, else the style's raw value.
+    /// Picking a style also turns the skyline on, so one menu covers both settings.
+    private var skylineChoice: Binding<String> {
+        Binding(
+            get: { settings.showSkyScene ? settings.skySceneStyle : "off" },
+            set: { choice in
+                if choice == "off" {
+                    withAnimation(.easeInOut) { settings.showSkyScene = false }
+                } else {
+                    settings.skySceneStyle = choice
+                    if !settings.showSkyScene {
+                        withAnimation(.easeInOut) { settings.showSkyScene = true }
+                    }
+                }
+            }
+        )
+    }
+
     private func adhanPageLink<Destination: View>(
         _ page: SettingsAdhanPage,
         tint: Color? = SettingsTint.prayer,
@@ -352,12 +370,22 @@ struct SettingsAdhanView: View {
                 if settings.showSkyView {
                     Section(header: Text("HORIZON")) {
                         VStack(alignment: .leading) {
-                            Toggle("Skyline", isOn: $settings.showSkyScene.animation(.easeInOut))
-                                .font(.subheadline)
-                                .tint(settings.accentColor.color)
-                                .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
+                            // One row for off / which structures: "off" is the old Skyline switch,
+                            // the three styles set it on and pick the shapes (Abu, 2026-09-21).
+                            // Plain binding, never animated: see the picker rule.
+                            Picker("Skyline", selection: skylineChoice) {
+                                Text("Off").tag("off")
+                                ForEach(SkySceneStyle.allCases) { style in
+                                    Text(style.title).tag(style.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .font(.subheadline)
+                            .tint(settings.accentColor.color)
+                            .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
+                            .onChange(of: settings.skySceneStyle) { _ in settings.hapticFeedback() }
 
-                            Text("A mosque, pyramids and palm trees along the horizon, with the sun crossing by day and the moon by night. Also on the Solar Arc and Day & Night widgets.")
+                            Text("Pyramids to the west and a mosque to the east along the horizon, with the sun crossing by day and the moon by night. Choose the pair, only pyramids, or only mosques. Also on the Solar Arc and Day & Night widgets.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)

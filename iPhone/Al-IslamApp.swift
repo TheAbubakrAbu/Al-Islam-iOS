@@ -24,6 +24,7 @@ struct AlIslamApp: App {
     // The same for the About You question, which follows the splash (or, for everyone who already
     // had the app, follows the launch screen directly).
     @State private var aboutYouPresented = false
+    @State private var cloudOfferPresented = false
     /// True once this launch has shown the splash: About You then knows it is talking to a new
     /// install, the only reader whose suggested settings it may switch on ahead of time.
     @State private var sawSplashThisLaunch = false
@@ -58,6 +59,8 @@ struct AlIslamApp: App {
         /// launch prompt (location, traveling mode, the review card, a tapped notification's
         /// question) waits behind it instead of racing it: `appRevealed` is false until `.main`.
         case aboutYou
+        /// "Save your progress to iCloud?" (CloudBackupViews.swift), once, after About You.
+        case cloudOffer
         case main
     }
 
@@ -66,7 +69,8 @@ struct AlIslamApp: App {
             return .launch
         }
         if appearance.firstLaunch { return .splash }
-        return appearance.needsAboutYou ? .aboutYou : .main
+        if appearance.needsAboutYou { return .aboutYou }
+        return appearance.needsCloudOffer ? .cloudOffer : .main
     }
 
     private var rootTransitionAnimation: Animation {
@@ -160,9 +164,18 @@ struct AlIslamApp: App {
             // own way out, by the same explicit opacity as the splash and for the same reason.
             if aboutYouPresented {
                 AboutYouView(isNewInstall: sawSplashThisLaunch)
-                    .opacity(rootStage == .main ? 0 : 1)
+                    .opacity(rootStage == .main || rootStage == .cloudOffer ? 0 : 1)
                     .allowsHitTesting(rootStage == .aboutYou)
                     .zIndex(1.8)
+            }
+
+            // The iCloud offer sits under About You (1.7 < 1.8): About You fades out onto it the way
+            // the splash fades onto About You, and it fades only on its own way out.
+            if cloudOfferPresented {
+                CloudOfferView()
+                    .opacity(rootStage == .main ? 0 : 1)
+                    .allowsHitTesting(rootStage == .cloudOffer)
+                    .zIndex(1.7)
             }
         }
         .animation(rootTransitionAnimation, value: rootStage)
@@ -176,6 +189,7 @@ struct AlIslamApp: App {
             // Mounted from the first frame when it is going to be needed, under the launch cover, so
             // the cover never lifts onto the tabs for a frame before the question arrives.
             if appearance.needsAboutYou { aboutYouPresented = true }
+            if appearance.needsCloudOffer { cloudOfferPresented = true }
         }
         .onChange(of: rootStage) { stage in
             // Keep the LIVE mirror in sync for escaping tasks (see `AppReveal`) - the environment value
@@ -184,10 +198,17 @@ struct AlIslamApp: App {
             if stage == .splash { sawSplashThisLaunch = true }
             if stage == .aboutYou {
                 aboutYouPresented = true
-            } else if stage == .main, aboutYouPresented {
+            } else if stage != .aboutYou, aboutYouPresented {
                 // Answered or skipped: its opacity is animating to 0 above - unmount after the fade.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    if rootStage == .main { aboutYouPresented = false }
+                    if rootStage != .aboutYou { aboutYouPresented = false }
+                }
+            }
+            if stage == .cloudOffer {
+                cloudOfferPresented = true
+            } else if stage == .main, cloudOfferPresented {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    if rootStage == .main { cloudOfferPresented = false }
                 }
             }
             if stage == .splash {
@@ -221,10 +242,11 @@ private struct MainTabView: View {
     static let debugSwitchTabNotification = Notification.Name("AlIslamDebugSwitchTab")
     #endif
 
-    // We land the user on Adhan, so Adhan is the initial tab and builds first. The Quran tab is realized during
+    // Adhan is the initial tab and builds first, whichever tab the reader has chosen to open on (it is
+    // the default, and the warm walk below ends on `launchTab`). The Quran tab is realized during
     // `warmUnderCover()` - briefly selected so `TabView` builds and RETAINS its heavy view tree, then we settle
-    // back on Adhan. All of this happens behind the launch cover, and the launch screen waits for it to finish
-    // (see `LaunchWarmup`) before it reveals - so the user only ever sees a fully-built Adhan tab, and the first
+    // on the opening tab. All of this happens behind the launch cover, and the launch screen waits for it to finish
+    // (see `LaunchWarmup`) before it reveals - so the user only ever sees a fully-built opening tab, and the first
     // tap on Quran reuses the warm tab instantly. No visible tab flip, no first-tap stall.
     @State private var selectedTab: AppTab = .adhan
     @State private var didWarm = false
@@ -299,6 +321,11 @@ private struct MainTabView: View {
                 await AppReveal.waitUntilRevealed()
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 Settings.shared.logDailyRolloverProbe()
+            }
+            // "-cloudKeyAudit", "-cloudDumpSnapshot", "-cloudRestoreFile", "-cloudStoreProbe",
+            // "-cloudDiffSnapshots": the iCloud backup's local half, headless (see CloudBackupDebug).
+            .task {
+                await CloudBackupDebug.runLaunchArguments(storeProbe: CloudBackupStoreProbe.report)
             }
             #endif
             #if DEBUG
@@ -665,9 +692,10 @@ private struct MainTabView: View {
         LaunchWarmup.shared.markWarm()
     }
 
-    /// The tab the app lands on after the under-cover warm. Always Adhan for users; a DEBUG launch argument
-    /// lets UI automation land straight on a tab it wants to exercise (there is no other way to drive the
-    /// simulator's tab bar from a test harness without an XCUITest target).
+    /// The tab the app lands on after the under-cover warm: the reader's choice ("Open the App On",
+    /// `Settings.launchTab`), which is Adhan until they make one. A DEBUG launch argument wins over
+    /// it, so UI automation can land straight on the tab it wants to exercise (there is no other way
+    /// to drive the simulator's tab bar from a test harness without an XCUITest target).
     private var launchTab: AppTab {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
@@ -675,7 +703,12 @@ private struct MainTabView: View {
         if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
         if ProcessInfo.processInfo.arguments.contains("-launchTabSettings") { return .settings }
         #endif
-        return .adhan
+        switch settings.launchTab {
+        case .adhan: return .adhan
+        case .quran: return .quran
+        case .hadith: return .hadith
+        case .islam: return .islam
+        }
     }
 
     // The broad Quran warm moved to `QuranLaunchWarmup.prewarmAll()` in the Quran module (MushafReader.swift);
@@ -802,7 +835,13 @@ enum DebugSelfShot {
                 let active = scenes().filter { $0.activationState == .foregroundActive }
                 guard !active.isEmpty else { return false }
                 for scene in active {
-                    scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+                    scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
+                        // An iPad in a windowed multitasking mode refuses this ("the current windowing
+                        // mode does not allow for programmatic changes"), and setting the device
+                        // orientation by key does nothing there either (tried 2026-09-21). Resize the
+                        // window with an idb drag on its corner handle instead.
+                        NSLog("LANDSCAPE refused: %@", error.localizedDescription)
+                    }
                 }
                 return true
             }

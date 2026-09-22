@@ -152,9 +152,19 @@ final class JournalStore: ObservableObject {
         return documents.appendingPathComponent("journal.json")
     }
 
+    private var storageObserver: StoredContentObserver?
+
+    /// The journal file's writes, in order (see `ActivityLog.ioQueue`): a restore waits here for a
+    /// save already on its way, so it can never land on top of the restored file.
+    private static let ioQueue = DispatchQueue(label: "JournalStore.io", qos: .utility)
+
     private init() {
         ObjectPublishCounter.attach(self, label: "JournalStore")
         load()
+        storageObserver = StoredContentObserver(
+            flush: { JournalStore.ioQueue.sync {} },
+            reload: { JournalStore.shared.reloadFromStorage() }
+        )
         #if DEBUG
         // "-journalSeed": two sample entries when the journal is empty, for screenshots.
         if entries.isEmpty, ProcessInfo.processInfo.arguments.contains("-journalSeed") {
@@ -256,7 +266,7 @@ final class JournalStore: ObservableObject {
         tagsCache = nil
         let snapshot = entries
         let url = Self.fileURL
-        DispatchQueue.global(qos: .utility).async {
+        Self.ioQueue.async {
             do {
                 let data = try JSONEncoder().encode(snapshot)
                 try data.write(to: url, options: .atomic)
@@ -270,6 +280,15 @@ final class JournalStore: ObservableObject {
         guard let data = try? Data(contentsOf: Self.fileURL),
               let saved = try? JSONDecoder().decode([JournalEntry].self, from: data) else { return }
         entries = saved
+    }
+
+    /// The file changed underneath this object (a restore): read it again. Every edit here writes
+    /// the WHOLE journal, so a stale copy kept past a restore would replace it with the next pin.
+    private func reloadFromStorage() {
+        Self.ioQueue.sync {}
+        tagsCache = nil
+        let saved = (try? Data(contentsOf: Self.fileURL)).flatMap { try? JSONDecoder().decode([JournalEntry].self, from: $0) }
+        entries = saved ?? []
     }
 
     #if DEBUG
@@ -291,6 +310,16 @@ final class JournalStore: ObservableObject {
         persist()
     }
     #endif
+}
+
+/// Where the journal is kept, in a sentence that is true either way: on the device only, or in the
+/// user's iCloud Backup profile as well (docs/iCloud Sync Guide.md, decision 7).
+@MainActor
+private var journalKeepingLine: String {
+    if CloudBackupManager.shared.isEnabled {
+        return "Your journal is kept on this device and in your iCloud Backup profile (Settings, iCloud Backup). Export it as text any time from the menu."
+    }
+    return "Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it, and iCloud Backup in Settings can keep it too). Export it as text any time from the menu."
 }
 
 // MARK: - Prompts
@@ -522,7 +551,7 @@ struct JournalView: View {
 
                 if query.isEmpty, !store.entries.isEmpty {
                     Section(footer:
-                        Text("Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it). Export it as text any time from the menu.")
+                        Text(journalKeepingLine)
                             .font(.caption2)
                     ) { EmptyView() }
                 }

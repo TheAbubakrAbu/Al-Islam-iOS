@@ -178,6 +178,10 @@ enum AppLifecycle {
 
     @MainActor
     private static func sharedScenePhaseChanged(to phase: ScenePhase) {
+        // The iCloud backup's automatic pass: silent, throttled, and a no-op when nothing changed
+        // (see CloudBackupManager.automaticSaveIfDue). Leaving the foreground is the main trigger,
+        // AFTER the flushes above have landed the pending writes it will read.
+        CloudBackupManager.shared.automaticSaveIfDue(reason: phase == .active ? .foreground : .background)
         guard phase != .active else { return }
         // Send any just-made setting change before the app is suspended, so it can't be lost (and
         // can't be reverted by a stale synced value on the next launch).

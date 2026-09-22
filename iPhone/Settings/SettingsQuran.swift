@@ -1231,14 +1231,27 @@ extension Settings {
     }
 
     func addQuranSearchHistory(_ query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        quranSearchHistory = Self.searchHistory(quranSearchHistory, adding: query)
+    }
 
-        var history = quranSearchHistory.filter {
-            $0.caseInsensitiveCompare(trimmed) != .orderedSame
+    /// Recent searches keep what was SEARCHED, not what was typed on the way there: "mer", "merc"
+    /// and "mercy" are one search, so a new entry retires every older one it finishes the last word
+    /// of (an older, longer one it is a prefix of stays, because that was a search of its own).
+    static func searchHistory(_ history: [String], adding query: String) -> [String] {
+        let added = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !added.isEmpty else { return history }
+        let folded = added.lowercased()
+        var kept = history.filter { entry in
+            let old = entry.lowercased()
+            guard old != folded else { return false }
+            // Only a HALF-TYPED older entry goes ("merc" once "mercy" is searched). "mercy" stays when
+            // "mercy of Allah" is searched: the new text continues after a finished word, so the
+            // older one was a search in its own right.
+            guard folded.hasPrefix(old) else { return true }
+            return folded[folded.index(folded.startIndex, offsetBy: old.count)].isWhitespace
         }
-        history.insert(trimmed, at: 0)
-        quranSearchHistory = Array(history.prefix(10))
+        kept.insert(added, at: 0)
+        return Array(kept.prefix(10))
     }
 
     func removeQuranSearchHistory(_ query: String) {
@@ -1304,6 +1317,11 @@ extension Settings {
     /// True when the user tapped "Hide for Today" on the Ayah of the Day card for the current day.
     var isAyahOfTheDayHiddenToday: Bool {
         ayahOfTheDayHiddenDate == dailyDayKey()
+    }
+
+    /// The same, for the Hadith of the Day tile on the Hadith tab.
+    var isHadithOfTheDayHiddenToday: Bool {
+        hadithOfTheDayHiddenDate == dailyDayKey()
     }
 
     /// Words that keep an ayah/hadith out of the daily rotations - not because anything is wrong with

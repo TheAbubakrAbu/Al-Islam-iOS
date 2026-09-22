@@ -102,9 +102,20 @@ final class ActivityLog: ObservableObject {
     private static let watchFileName = "activity-log-watch.json"
     private static let keepDays = 400
     private var saveWork: DispatchWorkItem?
+    private var storageObserver: StoredContentObserver?
+
+    /// Every file write of this log, in order. A global queue ran them in no order at all, which
+    /// was harmless while the only writer was this object and is not once a restore can replace
+    /// the file: `flushSynchronously` and `reloadFromStorage` wait here for the writes ahead of
+    /// them, so an older write still in flight can never land on top of a restored file.
+    private static let ioQueue = DispatchQueue(label: "ActivityLog.io", qos: .utility)
 
     private init() {
         load()
+        storageObserver = StoredContentObserver(
+            flush: { ActivityLog.shared.flushSynchronously() },
+            reload: { ActivityLog.shared.reloadFromStorage() }
+        )
         #if DEBUG
         // "-activitySeed": six weeks of plausible days (with a few gaps), for screenshots of the
         // profile's activity card and the analytics screen. In memory only; nothing is written.
@@ -211,7 +222,7 @@ final class ActivityLog: ObservableObject {
         refreshSummary()
         if let url = Self.watchFileURL {
             let snapshot = watchDays
-            DispatchQueue.global(qos: .utility).async {
+            Self.ioQueue.async {
                 guard let data = try? JSONEncoder().encode(snapshot) else { return }
                 try? data.write(to: url, options: .atomic)
             }
@@ -420,6 +431,25 @@ final class ActivityLog: ObservableObject {
         save()
     }
 
+    /// `flush()`, and both files are on disk when it returns (`Settings.flushPendingWritesNotification`).
+    private func flushSynchronously() {
+        flush()
+        Self.ioQueue.sync {}
+    }
+
+    /// The files changed underneath this object (a restore): read them again, once every write
+    /// this object had queued is out of the way.
+    private func reloadFromStorage() {
+        Self.ioQueue.sync {}
+        saveWork?.cancel()
+        saveWork = nil
+        pending.removeAll()
+        days = [:]
+        watchDays = [:]
+        load()
+        refreshSummary()
+    }
+
     private func save() {
         guard let url = Self.fileURL else { return }
         var trimmed = days
@@ -429,7 +459,7 @@ final class ActivityLog: ObservableObject {
             }
         }
         let snapshot = trimmed
-        DispatchQueue.global(qos: .utility).async {
+        Self.ioQueue.async {
             guard let data = try? JSONEncoder().encode(snapshot) else { return }
             try? data.write(to: url, options: .atomic)
         }

@@ -954,6 +954,19 @@ struct SettingsQuranView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
+
+            // An iPad or a Mac only: a phone is never wide enough to open the book.
+            if UIDevice.current.userInterfaceIdiom != .phone {
+                Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
+
+                Text("In reading mode, shows two facing pages like an open mushaf whenever the window is wide enough for both at full size, such as an iPad in landscape or a wide Mac window. A narrow or portrait window shows one page.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
         }
     }
     #endif

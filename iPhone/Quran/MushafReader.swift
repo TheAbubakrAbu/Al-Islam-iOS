@@ -270,6 +270,13 @@ private enum PageFindMemo {
     static var matches: [MushafFindMatch] = []
 }
 
+/// Everything that names where the page reader should land, as ONE `onChange` value (see the handler).
+private struct ReseedKey: Equatable {
+    let surahID: Int
+    let ayahID: Int?
+    let token: Int
+}
+
 struct SurahPageReader<Controls: View>: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
@@ -354,14 +361,18 @@ struct SurahPageReader<Controls: View>: View {
     /// The reader's own width, for the wide-layout bottom bars (see `bottomBars`).
     @State private var readerWidth: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// The band the PAGER itself gets (the reader minus every bar), which decides whether two pages
+    /// fit side by side (`spreadActive`). Zero until first measured.
+    @State private var pagerSize: CGSize = .zero
     /// Pages mounted to either side of the centre (a computed constant: the reader is generic,
-    /// so a static stored property is not allowed here).
-    private var windowRadius: Int { 4 }
+    /// so a static stored property is not allowed here). A spread mounts two pages per pager child,
+    /// so the same reach in SWIPES needs more pages: 6 is three spreads to either side.
+    private var windowRadius: Int { spreadActive ? 6 : 4 }
     /// How far the selection may drift from the window's centre before the window follows it at the
     /// pager's next rest (`recentreWindow`). Smaller = more reloads, each at rest and invisible, and
     /// more slack kept ahead for a run of swipes; larger = fewer reloads. 2 leaves two pages mounted
     /// ahead when the follow is requested and four right after it.
-    private var recentreLead: Int { 2 }
+    private var recentreLead: Int { spreadActive ? 4 : 2 }
     /// Extra centres for `pageWindow` while an animated turn is in flight: the page being LEFT and
     /// the page being turned TO, so the mounted set does not change inside the animated transaction
     /// (an insertion there renders as a crossfade, not a slide). Cleared once the slide has finished.
@@ -413,6 +424,9 @@ struct SurahPageReader<Controls: View>: View {
 
     // In-page find: the query, and which of the current matches is active.
     @State private var pageSearchText = ""
+    /// The find bar's filter buttons (Match, Words, Without, Search In). This find only, never saved.
+    @State private var findFilters = QuranSearchFilters.readerSession()
+    @State private var showFindFilterSheet = false
     @State private var currentMatchIndex = 0
     @FocusState private var pageSearchFocused: Bool
     /// Non-nil when the find has been widened from THIS PAGE to a whole surah - it holds which surah, captured
@@ -427,9 +441,14 @@ struct SurahPageReader<Controls: View>: View {
     /// find bar is open (including each recitation tick - the reader observes the player), and `syncMatch` /
     /// `goToMatch` ask again per event. The fold runs once per scope+page+query; every repeat is a hit.
     private func matchesOnPage(_ pages: [MushafPage]) -> [MushafFindMatch] {
-        let query = settings.cleanSearch(pageSearchText.removingAyahSearchOperators, whitespace: true)
+        // The filter buttons compile into the query; typed operator symbols are dropped on the way.
+        let compiled = findFilters.compile(pageSearchText)
+        let query = settings.cleanSearch(compiled.navigation, whitespace: true)
             .removingArabicDiacriticsAndSigns
         guard !query.isEmpty, pages.indices.contains(pageIndex) else { return [] }
+        let booleanQuery = QuranBooleanQuery(compiled.exact)
+        // Search In: a Latin query reads one lane alone.
+        let lane = compiled.navigation.containsArabicLetters ? .all : findFilters.lane
         // Vocative-joined twin ("يا نساء" → "يانساء") tried alongside the typed form - the mushaf glues
         // يا onto the word it calls, so the spaced typing alone can never substring-match.
         let joinedQuery: String? = {
@@ -444,15 +463,17 @@ struct SurahPageReader<Controls: View>: View {
         // The page index is part of the key ONLY for a page-scoped find. A surah-wide result doesn't depend
         // on which page is showing - and stepping through its matches TURNS pages, so keying on the page
         // there re-folded the entire surah (48 pages for al-Baqarah) on every single step.
-        let scopeKey = findSurahID.map { "surah\($0)" } ?? "page\(pageIndex)"
-        let memoKey = "\(scopeKey)|\(settings.displayQiraahForArabic ?? "")|\(query)|"
+        // A spread's "this page" is both pages on screen, and the key names the mode with them.
+        let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+        let scopeKey = findSurahID.map { "surah\($0)" } ?? "page\(onScreen.map(String.init).joined(separator: "+"))"
+        let memoKey = "\(scopeKey)|\(settings.displayQiraahForArabic ?? "")|\(query)|\(compiled.exact)|\(lane.rawValue)|"
             + (hamzaFilter != nil ? settings.cleanSearchKeepingHamza(pageSearchText, whitespace: true) : "")
         if PageFindMemo.key == memoKey { return PageFindMemo.matches }
 
         // Widened to a surah: every page that carries any of that surah, in page order. Otherwise just the
         // page on screen - the find bar's default, and what the reader gets before asking for more.
         let scanned: [Int] = {
-            guard let findSurahID else { return [pageIndex] }
+            guard let findSurahID else { return onScreen }
             return pages.indices.filter { i in
                 pages[i].segments.contains { $0.surah.id == findSurahID }
             }
@@ -467,19 +488,35 @@ struct SurahPageReader<Controls: View>: View {
                 // they do in the whole-Quran search. The clean text alone had the dagger pre-stripped,
                 // which is why pasted Uthmani ("ٱسۡتَوَىٰ") and alif spellings used to miss on-page.
                 let rawArabic = ayah.displayArabicText(surahId: segment.surah.id, clean: false, qiraahOverride: settings.displayQiraahForArabic)
-                let sources = [
+                let arabicSources = [
                     rawArabic,
                     rawArabic.removingDaggerAlifForSearch,
-                    ayah.displayArabicText(surahId: segment.surah.id, clean: true, qiraahOverride: settings.displayQiraahForArabic),
-                    ayah.textTransliteration,
-                    ayah.textEnglishSaheeh,
-                    ayah.textEnglishMustafa
+                    ayah.displayArabicText(surahId: segment.surah.id, clean: true, qiraahOverride: settings.displayQiraahForArabic)
                 ]
-                let matched = sources.contains { source in
-                    let folded = settings.cleanSearch(source, whitespace: true).removingArabicDiacriticsAndSigns
-                    if folded.contains(query) { return true }
-                    if let joinedQuery, folded.contains(joinedQuery) { return true }
-                    return false
+                let sources: [String]
+                switch lane {
+                case .all: sources = arabicSources + [ayah.textTransliteration, ayah.textEnglishSaheeh, ayah.textEnglishMustafa]
+                case .translation: sources = [ayah.textEnglishSaheeh, ayah.textEnglishMustafa]
+                case .transliteration: sources = [ayah.textTransliteration, settings.foldedTransliterationForSearch(ayah.textTransliteration)]
+                }
+                let foldedSources = sources.map { settings.cleanSearch($0, whitespace: true).removingArabicDiacriticsAndSigns }
+                let matched: Bool
+                if let booleanQuery {
+                    // A shaped query (Whole Word, All Words, Without...) reads the ayah as ONE text, so
+                    // "every word" can find its words in different lanes and "without" sees them all.
+                    let haystack = foldedSources.joined(separator: " ")
+                    matched = booleanQuery.matches(
+                        haystack: haystack,
+                        tokens: QuranBooleanQuery.tokens(of: haystack),
+                        tashkeel: { QuranBooleanQuery.tashkeelBlob(rawArabic) },
+                        exactEnglish: {
+                            QuranBooleanQuery.exactPhraseBlob([ayah.textTransliteration, ayah.textEnglishSaheeh, ayah.textEnglishMustafa].joined(separator: " "))
+                        }
+                    )
+                } else {
+                    matched = foldedSources.contains { folded in
+                        folded.contains(query) || (joinedQuery.map(folded.contains) ?? false)
+                    }
                 }
                 guard matched else { continue }
                 // A hamza the reader actually typed has to be present in the ayah, not folded away.
@@ -499,10 +536,87 @@ struct SurahPageReader<Controls: View>: View {
     /// Where to land when the reader opens: the page holding `initialAyah` of the surah we came from, else
     /// the page holding the last-read ayah, else that surah's first page.
     private func startingPageIndex(in pages: [MushafPage]) -> Int {
-        let targetAyah = initialAyah
-            ?? (settings.lastReadSurah == surah.id && settings.lastReadAyah > 0 ? settings.lastReadAyah : nil)
+        startingPageIndex(in: pages, surahID: surah.id, ayahID: initialAyah)
+    }
 
-        return MushafPagination.pageIndex(surahID: surah.id, ayahID: targetAyah, in: pages) ?? 0
+    /// The same, for a landing named explicitly (see the `ReseedKey` handler: an `onChange` action
+    /// must not read the landing off `self`).
+    private func startingPageIndex(in pages: [MushafPage], surahID: Int, ayahID: Int?) -> Int {
+        let targetAyah = ayahID
+            ?? (settings.lastReadSurah == surahID && settings.lastReadAyah > 0 ? settings.lastReadAyah : nil)
+
+        return MushafPagination.pageIndex(surahID: surahID, ayahID: targetAyah, in: pages) ?? 0
+    }
+
+    // MARK: Two-page spread (iPad / Mac)
+
+    /// Whether the pager shows the mushaf as an open book, two pages side by side (Abu, 2026-09-21:
+    /// "on mac/ipad if certain width/height aspect ratio support 2 pages rather than just 1").
+    ///
+    /// A fitted page is typeset to the smaller of what its width and its height allow, and a mushaf
+    /// page is roughly 0.6 wide for 1 tall. In a landscape iPad or a wide Mac window the single page
+    /// is height-limited and most of the width sits empty; two pages at half the width each are
+    /// STILL height-limited there, so the spread costs the text nothing and fills the band. The rule
+    /// is exactly that: half the band must be at least 0.56 of its height (a hair under the natural
+    /// aspect, so a near miss still opens the book), and at least 400 pt, so a page in a spread is
+    /// never narrower than a phone's. Portrait iPads (11 and 13 inch) stay on one page; landscape
+    /// opens the book with or without the sidebar. Never on a phone.
+    ///
+    /// `pageIndex` stays a REAL page index in both modes (footer, find, last read and every jump
+    /// read it as one). Only the pager differs: it mounts spreads, tagged by their leading page,
+    /// behind `pagerSelection`.
+    private var spreadActive: Bool {
+        guard settings.mushafTwoPageSpread,
+              UIDevice.current.userInterfaceIdiom != .phone,
+              pagerSize.width >= 800, pagerSize.height > 0 else { return false }
+        return pagerSize.width / 2 >= pagerSize.height * 0.56
+    }
+
+    /// The first page of the spread holding `index`: the ODD page, which sits on the right the way
+    /// the Madinah print has it (al-Fatihah on the right facing the opening of al-Baqarah). Paired
+    /// by page NUMBER, not index parity, so a pagination with a gap still pairs true neighbours.
+    private func spreadLeading(_ index: Int, in pages: [MushafPage]) -> Int {
+        guard spreadActive, pages.indices.contains(index), index > 0,
+              pages[index].page % 2 == 0,
+              pages[index - 1].page == pages[index].page - 1 else { return index }
+        return index - 1
+    }
+
+    /// The left-hand (even) page facing the leading page at `leading`, if the book has one.
+    private func spreadPartner(of leading: Int, in pages: [MushafPage]) -> Int? {
+        guard spreadActive, pages.indices.contains(leading), pages.indices.contains(leading + 1),
+              pages[leading].page % 2 == 1,
+              pages[leading + 1].page == pages[leading].page + 1 else { return nil }
+        return leading + 1
+    }
+
+    /// The page indices on screen, in reading order: the one page, or both pages of the spread.
+    private func visiblePageIndices(around index: Int, in pages: [MushafPage]) -> [Int] {
+        guard pages.indices.contains(index) else { return [] }
+        let leading = spreadLeading(index, in: pages)
+        return [leading] + (spreadPartner(of: leading, in: pages).map { [$0] } ?? [])
+    }
+
+    /// Whether `target` is the physical page right before or right after what is on screen.
+    private func isNextToScreen(_ target: Int, onScreen: [Int]) -> Bool {
+        guard let first = onScreen.first, let last = onScreen.last else { return false }
+        return target == first - 1 || target == last + 1
+    }
+
+    /// The pager's selection. One page at a time it IS `$pageIndex`, untouched, so the phone pager
+    /// keeps the exact binding its page-turn tuning was measured with. In a spread the pager's tags
+    /// are leading pages: the getter names the spread holding `pageIndex`, and a swipe lands
+    /// `pageIndex` on the new spread's first page (a write naming the spread already showing is
+    /// dropped, so it cannot knock the reader off the second page of it).
+    private func pagerSelection(in pages: [MushafPage]) -> Binding<Int> {
+        guard spreadActive else { return $pageIndex }
+        return Binding(
+            get: { spreadLeading(pageIndex, in: pages) },
+            set: { leading in
+                guard leading != spreadLeading(pageIndex, in: pages) else { return }
+                pageIndex = leading
+            }
+        )
     }
 
     /// A programmatic landing (initial seed, in-place surah swap, a picker or search jump): the
@@ -532,12 +646,14 @@ struct SurahPageReader<Controls: View>: View {
     ///   of moving it was tried and blanks just the same (any change to the pager's children mid-slide
     ///   does), so there is no cheaper answer than a bigger `windowRadius`.
     /// - Otherwise: defer until the selection has held still for a beat, then re-centre at rest.
-    private func recentreWindow(on index: Int) {
+    private func recentreWindow(on index: Int, in pages: [MushafPage]) {
         if windowCentre < 0 {
             windowCentre = index
             return
         }
-        let drift = abs(index - windowCentre)
+        // Measured between SPREADS when the book is open: the second page of the spread already
+        // centred has not drifted at all.
+        let drift = abs(spreadLeading(index, in: pages) - spreadLeading(windowCentre, in: pages))
         if drift >= windowRadius {
             windowCentre = index
             return
@@ -589,18 +705,96 @@ struct SurahPageReader<Controls: View>: View {
     /// time cost ~900 ms of main thread. Indices are the REAL page indices (`.tag(index)` unchanged),
     /// so selection, jumps and the prewarm ring keep their contract; a page that leaves the window is
     /// torn down and rebuilt from the render cache when it returns.
-    private func pageWindow(count: Int) -> [Int] {
+    ///
+    /// With the book open (`spreadActive`) the pager's children are SPREADS, so the ring is folded
+    /// onto each spread's leading page: that is the tag, and the spread view mounts its partner.
+    private func pageWindow(in pages: [MushafPage]) -> [Int] {
+        let count = pages.count
         guard count > 0 else { return [] }
         func ring(_ centre: Int) -> ClosedRange<Int> {
-            let c = min(max(centre, 0), count - 1)
+            let c = spreadLeading(min(max(centre, 0), count - 1), in: pages)
             return max(0, c - windowRadius)...min(count - 1, c + windowRadius)
         }
         var indices = Set(ring(windowCentre >= 0 ? windowCentre : pageIndex))
         for anchor in windowAnchors { indices.formUnion(ring(anchor)) }
+        if spreadActive { indices = Set(indices.map { spreadLeading($0, in: pages) }) }
         #if DEBUG
         MushafPagerProbe.traceWindow(indices.sorted(), pageIndex: pageIndex)
         #endif
         return indices.sorted()
+    }
+
+    /// One page of the pager: the printed facsimile or the composed page. Shared by the single
+    /// page and by both halves of a spread, which take half the band each.
+    @ViewBuilder
+    private func pagerPage(_ index: Int, pages: [MushafPage],
+                           liveSearch: (matches: [HighlightedAyahRef], term: String, rule: SearchWordRule)?) -> some View {
+        Group {
+            // The facsimile swaps only the page BODY. Everything the reader wraps around it -
+            // the pinned surah header, the page/juz pickers and meters in the footer, search,
+            // the play control - is shared, so the printed mushaf behaves like the composed
+            // one everywhere except the ink.
+            if let facsimile = facsimileDocument {
+                MushafPDFPageBody(document: facsimile, mushafPage: pages[index].page)
+            } else if !facsimileKey.isEmpty {
+                // The edition is still extracting (first open of a `.pdf.xz`).
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                MushafPageContent(
+                    page: pages[index],
+                    onRequestSheet: onRequestSheet,
+                    actionsSheetAyah: actionsSheetAyah,
+                    onShowSurahInfo: { headerInfoSurah = $0 },
+                    highlightedAyah: $highlightedAyah,
+                    arrivalHighlight: arrivalHighlight,
+                    onClearArrival: onClearArrival,
+                    searchHighlight: liveSearch,
+                    isSelecting: isSelecting,
+                    selectedAyahs: selectedAyahs,
+                    onToggleSelection: onToggleSelection,
+                    bottomBarsCollapsed: bottomBarsCollapsed,
+                    // In a spread the ONE spine is the gutter between the pages (`spreadSpine`).
+                    showsSpine: !spreadActive
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Each page's own contents keep the app's reading direction; only the *paging* is
+        // flipped (and, in a spread, the side each page sits on).
+        .environment(\.layoutDirection, layoutDirection)
+    }
+
+    /// The open book's gutter: the single-page spine hairline, drawn once down the middle.
+    private var spreadSpine: some View {
+        LinearGradient(
+            colors: [
+                settings.accentColor.color.opacity(0),
+                settings.accentColor.color.opacity(0.55),
+                settings.accentColor.color.opacity(0),
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(width: 2)
+        .padding(.vertical, 24)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// Whole points only: a Mac window being dragged reports fractional sizes every frame, and the
+    /// spread rule has no use for them.
+    private func updatePagerSize(_ size: CGSize) {
+        let rounded = CGSize(width: size.width.rounded(), height: size.height.rounded())
+        guard rounded != pagerSize else { return }
+        pagerSize = rounded
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-pageFitLog") {
+            // The rule restated on the NEW size: `spreadActive` still reads the old state here.
+            let opens = rounded.width >= 800 && rounded.width / 2 >= rounded.height * 0.56
+            NSLog("PAGEFIT pager band %.0fx%.0f spreadRule=%d", rounded.width, rounded.height, opens ? 1 : 0)
+        }
+        #endif
     }
 
     var body: some View {
@@ -611,13 +805,14 @@ struct SurahPageReader<Controls: View>: View {
         // every matching ayah on the page gets its matched substrings in accent, and the whole page drops
         // its tajweed colors while the query is live (see `MushafPageTextView.searchHighlight`).
         let findMatches: [MushafFindMatch] = searchActive ? matchesOnPage(pages) : []
-        let liveSearch: (matches: [HighlightedAyahRef], term: String)? = {
+        let liveSearch: (matches: [HighlightedAyahRef], term: String, rule: SearchWordRule)? = {
             guard searchActive else { return nil }
-            let term = pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Plain words: a typed symbol is inert in the search, so it must not reach the paint either.
+            let term = QuranSearchFilters.plainWords(pageSearchText)
             guard !term.isEmpty else { return nil }
             // Every match, whichever page it is on: a page only ever paints the refs it actually contains,
             // so a surah-wide match set lights each page's own hits and nothing else.
-            return (findMatches.map(\.ref), term)
+            return (findMatches.map(\.ref), term, findFilters.highlightWordRule)
         }()
 
         Group {
@@ -633,45 +828,35 @@ struct SurahPageReader<Controls: View>: View {
                 // it mirrored each page's CONTENT while still starting index 0 on the LEFT, which is exactly backwards.
                 // Reversing the emission puts index 0 on the right in a plain LTR pager, and every index-based path
                 // (selection, prewarm, jump-to-page) is untouched because `.tag(index)` still carries the real index.
-                TabView(selection: $pageIndex) {
+                TabView(selection: pagerSelection(in: pages)) {
                     // `MushafPageContent` is a view struct, not an inline builder, so SwiftUI only evaluates
                     // a page's (expensive) Arabic body when that page is actually on screen - otherwise all
                     // ~600 pages would render up front.
                     // Iterating `indices.reversed()` (a lazy range) instead of `Array(enumerated()).reversed()`
                     // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
                     // player tick while audio runs) just so the diff can walk it.
-                    ForEach(pageWindow(count: pages.count).reversed(), id: \.self) { index in
+                    ForEach(pageWindow(in: pages).reversed(), id: \.self) { index in
                         Group {
-                            // The facsimile swaps only the page BODY. Everything the reader wraps around it -
-                            // the pinned surah header, the page/juz pickers and meters in the footer, search,
-                            // the play control - is shared, so the printed mushaf behaves like the composed
-                            // one everywhere except the ink.
-                            if let facsimile = facsimileDocument {
-                                MushafPDFPageBody(document: facsimile, mushafPage: pages[index].page)
-                            } else if !facsimileKey.isEmpty {
-                                // The edition is still extracting (first open of a `.pdf.xz`).
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            if spreadActive {
+                                // The open book. `index` is the spread's leading (odd) page, which
+                                // sits on the RIGHT; its partner faces it on the left. Pinned to a
+                                // left-to-right stack so "right" means right whatever the app's
+                                // direction; each page restores its own direction inside.
+                                HStack(spacing: 0) {
+                                    if let partner = spreadPartner(of: index, in: pages) {
+                                        pagerPage(partner, pages: pages, liveSearch: liveSearch)
+                                    } else {
+                                        // A leaf with no facing page (an odd page count's last one).
+                                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    }
+                                    pagerPage(index, pages: pages, liveSearch: liveSearch)
+                                }
+                                .environment(\.layoutDirection, .leftToRight)
+                                .overlay { spreadSpine }
                             } else {
-                                MushafPageContent(
-                                    page: pages[index],
-                                    onRequestSheet: onRequestSheet,
-                                    actionsSheetAyah: actionsSheetAyah,
-                                    onShowSurahInfo: { headerInfoSurah = $0 },
-                                    highlightedAyah: $highlightedAyah,
-                                    arrivalHighlight: arrivalHighlight,
-                                    onClearArrival: onClearArrival,
-                                    searchHighlight: liveSearch,
-                                    isSelecting: isSelecting,
-                                    selectedAyahs: selectedAyahs,
-                                    onToggleSelection: onToggleSelection,
-                                    bottomBarsCollapsed: bottomBarsCollapsed
-                                )
+                                pagerPage(index, pages: pages, liveSearch: liveSearch)
                             }
                         }
-                            // Each page's own contents keep the app's reading direction; only the *paging* is
-                            // flipped below.
-                            .environment(\.layoutDirection, layoutDirection)
                             .tag(index)
                     }
                 }
@@ -679,6 +864,16 @@ struct SurahPageReader<Controls: View>: View {
                 // Finds the UIKit pager behind the TabView, so window changes can wait for it to rest
                 // (`whenPagerRests`). Inert: no size of its own, no touches.
                 .background(MushafPagerProbeView())
+                // The pager's own band, for `spreadActive`: a paged TabView is laid out INSIDE the
+                // safe area, so its frame is already the region between the bars that a page gets
+                // (the proxy's safe-area insets describe the bars around it, not a slice of it).
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { updatePagerSize(proxy.size) }
+                            .onChange(of: proxy.size) { updatePagerSize($0) }
+                    }
+                )
             }
         }
         // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
@@ -772,7 +967,8 @@ struct SurahPageReader<Controls: View>: View {
                let turns = Int(ProcessInfo.processInfo.arguments[flag + 1]) {
                 for i in 0..<max(turns, 0) {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3 + 0.25 * Double(i)) {
-                        withAnimation(.easeInOut(duration: 0.35)) { pageIndex += 1 }
+                        // One SWIPE forward: a whole spread when the book is open.
+                        withAnimation(.easeInOut(duration: 0.35)) { pageIndex += spreadActive ? 2 : 1 }
                     }
                 }
             }
@@ -804,7 +1000,7 @@ struct SurahPageReader<Controls: View>: View {
                         } else if action.hasPrefix("="), let i = Int(action.dropFirst()) {
                             turnPage(to: i, in: pages, suppressClear: false)
                         } else if let n = Int(action) {
-                            withAnimation(.easeInOut(duration: 0.35)) { pageIndex += n }
+                            withAnimation(.easeInOut(duration: 0.35)) { pageIndex += n * (spreadActive ? 2 : 1) }
                         }
                     }
                 }
@@ -831,24 +1027,27 @@ struct SurahPageReader<Controls: View>: View {
             reportAnchor(on: pageIndex, in: pages)
             MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
         }
-        .onChange(of: surah.id) { _ in
-            // The surah was swapped in place (surah picker, next-surah, a search hit). The reader used to be
-            // torn down and recreated via `.id(surah.id)` for this - a full rebuild of the 604-page pager on
-            // the main thread. Re-seeding the index in the LIVE pager is the cheap equivalent.
-            reseedToStartingPage(in: pages)
-        }
-        // The picked surah can equal the `surah` prop after the reader paged away from it - no id change,
-        // no onChange above. The parent bumps the token on EVERY navigation, so this one always fires
-        // (re-seeding twice in one update is a harmless no-op: the second sees target == pageIndex).
-        .onChange(of: jumpToken) { _ in
-            reseedToStartingPage(in: pages)
+        // The surah was swapped in place (surah picker, next-surah, a search hit). The reader used to be
+        // torn down and recreated via `.id(surah.id)` for this - a full rebuild of the 604-page pager on
+        // the main thread. Re-seeding the index in the LIVE pager is the cheap equivalent.
+        //
+        // The picked surah can equal the `surah` prop after the reader paged away from it - no id change.
+        // The parent bumps the token on EVERY navigation, so the key always changes.
+        //
+        // ONE key, and the landing is read from the value the handler is GIVEN (2026-09-21). These were
+        // two handlers that read `surah` and `initialAyah` off `self`, and an `onChange` action runs
+        // with the view value of the pass that installed it, not the pass that fired it: a Choose Surah
+        // pick of 2:255 from al-Kahf re-seeded once as (18, ayah 10) and once as (2, no ayah), and
+        // landed on al-Baqarah's first page instead of Ayat al-Kursi's (logged).
+        .onChange(of: ReseedKey(surahID: surah.id, ayahID: initialAyah, token: jumpToken)) { key in
+            reseedToStartingPage(in: pages, surahID: key.surahID, ayahID: key.ayahID)
         }
         .onChange(of: pageIndex) { index in
             // Which way the reader is moving, for the ring's order: a run of swipes keeps the pages
             // AHEAD of it warm first. A seed or a far jump (no previous page yet) stays symmetric.
             let direction = previousPageIndex >= 0 ? (index - previousPageIndex).signum() : 0
             previousPageIndex = index
-            recentreWindow(on: index)
+            recentreWindow(on: index, in: pages)
             // Leaving a page resets its pinch zoom to the fitted view (user rule: same as the PDF) -
             // otherwise the adjacent page stays mounted zoomed-in and greets you magnified on return.
             NotificationCenter.default.post(name: PageZoomScrollView.resetZoomNotification, object: nil)
@@ -882,6 +1081,7 @@ struct SurahPageReader<Controls: View>: View {
             saveLastRead(surahID: surah.id, ayahID: ayah.id)
         }
         .onChange(of: pageSearchText) { _ in syncMatch(pages: pages, resetIndex: true) }
+        .onChange(of: findFilters) { _ in syncMatch(pages: pages, resetIndex: true) }
         // Follow the recitation ACROSS page boundaries - the list reader's rule (SurahView scrolls on
         // every ayah advance). Without this the accent follow-along vanished the moment recitation
         // crossed onto the next page, and the reader had to be swiped by hand.
@@ -898,13 +1098,16 @@ struct SurahPageReader<Controls: View>: View {
                     segment.surah.id == surahID && segment.ayahs.contains { $0.id == ayahID }
                 }
             }
-            guard !contains(pages[pageIndex]) else { return }
-            guard let target = pages.firstIndex(where: contains), target != pageIndex else { return }
+            // "On screen" is both pages of an open spread: the recitation crossing from the right
+            // page to the left one is not a page turn.
+            let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+            guard !onScreen.contains(where: { contains(pages[$0]) }) else { return }
+            guard let target = pages.firstIndex(where: contains), !onScreen.contains(target) else { return }
             // Only follow a NATURAL progression: the next/previous physical page, or a jump within a
             // surah this page already shows. Listening to some unrelated far-away surah from the mini
             // player must not yank the reader across the book.
-            let showsPlayingSurah = pages[pageIndex].segments.contains { $0.surah.id == surahID }
-            guard abs(target - pageIndex) == 1 || showsPlayingSurah else { return }
+            let showsPlayingSurah = onScreen.contains { pages[$0].segments.contains { $0.surah.id == surahID } }
+            guard isNextToScreen(target, onScreen: onScreen) || showsPlayingSurah else { return }
             // Recitation crossing a page boundary TURNS the page, it doesn't cut to it.
             turnPage(to: target, in: pages)
         }
@@ -922,10 +1125,11 @@ struct SurahPageReader<Controls: View>: View {
             func containsStart(_ page: MushafPage) -> Bool {
                 page.segments.contains { $0.surah.id == surahID && $0.ayahs.contains { $0.id == 1 } }
             }
-            guard !pages[pageIndex].segments.contains(where: { $0.surah.id == surahID }),
+            let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+            guard !onScreen.contains(where: { pages[$0].segments.contains { $0.surah.id == surahID } }),
                   let target = pages.firstIndex(where: containsStart),
-                  target != pageIndex else { return }
-            guard abs(target - pageIndex) == 1 else { return }
+                  !onScreen.contains(target) else { return }
+            guard isNextToScreen(target, onScreen: onScreen) else { return }
             turnPage(to: target, in: pages)
         }
         // A qiraah switch re-paginates the book. Keyed on the QIRAAH, not `pages.count`: dropping ayahs
@@ -998,6 +1202,13 @@ struct SurahPageReader<Controls: View>: View {
     /// carries on, instead of the page being swapped out from under the reciter.
     private func turnPage(to target: Int, in pages: [MushafPage], suppressClear: Bool = true) {
         guard pages.indices.contains(target), target != pageIndex else { return }
+        // The other page of the spread already open: nothing turns, the reader's position just moves
+        // onto it (footer, last read). Same latch contract as a real turn.
+        if spreadActive, spreadLeading(target, in: pages) == spreadLeading(pageIndex, in: pages) {
+            if suppressClear { suppressNextPageTurnClear = true }
+            pageIndex = target
+            return
+        }
         // Compose the destination BEFORE the turn starts, so what slides in is the page rather than its
         // loading spinner. (`.onChange(of: pageIndex)` prewarms too, but that runs as the turn begins.)
         MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
@@ -1046,8 +1257,8 @@ struct SurahPageReader<Controls: View>: View {
     /// target lies (user rule: "as if I was actually swiping, whether it goes back or forward") - the
     /// old instant landing for deliberate navigation is gone. `turnPage` keeps the arrival highlight a
     /// search hit or picker set (its suppressed page-turn clear).
-    private func reseedToStartingPage(in pages: [MushafPage]) {
-        let target = startingPageIndex(in: pages)
+    private func reseedToStartingPage(in pages: [MushafPage], surahID: Int, ayahID: Int?) {
+        let target = startingPageIndex(in: pages, surahID: surahID, ayahID: ayahID)
         if target != pageIndex {
             turnPage(to: target, in: pages)
             // `.onChange(of: pageIndex)` reports + prewarms + saves.
@@ -1184,8 +1395,11 @@ struct SurahPageReader<Controls: View>: View {
         }
 
         // A bare surah name: offer the surah itself. Requiring a resolvable name keeps ordinary
-        // word searches from sprouting a bogus jump row.
-        if let surah = quranData.resolveSurahIdentifier(raw) { return [(surah, nil)] }
+        // word searches from sprouting a bogus jump row. PLAINLY named: the resolver alone accepts any
+        // run of letters inside any alias, which offered al-Hijr (also called ربما) for the word رب.
+        if let surah = quranData.resolveSurahIdentifier(raw), quranData.plainlyNames(raw, surah: surah) {
+            return [(surah, nil)]
+        }
         return []
     }
 
@@ -1259,6 +1473,14 @@ struct SurahPageReader<Controls: View>: View {
             .padding(.vertical, 8)
             .conditionalGlassEffect(rectangle: true)
 
+            // The same buttons as the reader's search bar, bled to the screen edges so the row scrolls
+            // under the find bar's own side padding.
+            QuranSearchFilterBar(filters: $findFilters, surahs: [], inReader: true) {
+                showFindFilterSheet = true
+            }
+            .padding(.horizontal, -(settings.defaultView ? 20 : 16))
+            .padding(.vertical, -4)
+
             // The typed-reference row: "2:255" / "Baqarah 255" / a bare surah name offers a direct jump,
             // the way the list search's SURAH / AYAH result sections answer the same queries. Above the
             // scope row because when it appears it is almost always what was meant.
@@ -1325,6 +1547,10 @@ struct SurahPageReader<Controls: View>: View {
         // block, so the find bar floats evenly between the title and the surah strip.
         .padding(.top, 5)
         .padding(.bottom, 5)
+        .sheet(isPresented: $showFindFilterSheet) {
+            QuranSearchFilterSheet(filters: $findFilters, surahs: [], inReader: true)
+                .smallMediumSheetPresentation()
+        }
     }
 
     /// The two scope buttons share a label so they read as one pair rather than two differently-sized pills.
@@ -1573,6 +1799,15 @@ struct SurahPageReader<Controls: View>: View {
         }
     }
 
+    /// "Page 5", or "Pages 5–6" while both are on screen as a spread.
+    private func pageLabel(for page: MushafPage, in pages: [MushafPage]) -> String {
+        let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+        guard onScreen.count == 2, let first = onScreen.first, let last = onScreen.last else {
+            return "Page \(page.page)"
+        }
+        return "Pages \(pages[first].page)–\(pages[last].page)"
+    }
+
     /// The footer row's height. The info panel and the play control both take it, so the two read as one bar
     /// rather than a tall block next to a small button. (A computed property, not a `static let`: a generic type
     /// can't hold static stored properties.)
@@ -1601,7 +1836,7 @@ struct SurahPageReader<Controls: View>: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     jumpButton(
-                        title: "Page \(page.page) / \(pages.count)  \(percent(page.page, of: pages.count))",
+                        title: "\(pageLabel(for: page, in: pages)) / \(pages.count)  \(percent(page.page, of: pages.count))",
                         target: .page,
                         color: settings.accentColor.accent1,
                         seed: {
@@ -1964,8 +2199,9 @@ struct SurahPageReader<Controls: View>: View {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
                     } label: {
-                        ReciterCaptionedMenuLabel(title: canResumeLast ? "Play from Beginning" : "Play Surah",
-                                                  systemImage: "memories")
+                        // No reciter caption here: this menu's Choose Reciter row already carries
+                        // it (Abu, 2026-09-21: "no point in saying the name twice").
+                        Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
                     }
                 } label: {
                     playControlLabel
@@ -2044,7 +2280,7 @@ private struct MushafPageContent: View {
     var onClearArrival: (() -> Void)? = nil
     /// The in-page find, while its query is live: every matching ayah's matched substrings in accent,
     /// tajweed flattened for the whole page (see `MushafPageTextView.searchHighlight`).
-    var searchHighlight: (matches: [HighlightedAyahRef], term: String)? = nil
+    var searchHighlight: (matches: [HighlightedAyahRef], term: String, rule: SearchWordRule)? = nil
     /// Multi-select: while on, taps toggle whichever ayah was touched - of EITHER surah the page carries -
     /// instead of marking it; selected ayahs take the accent tint.
     var isSelecting: Bool = false
@@ -2054,6 +2290,8 @@ private struct MushafPageContent: View {
     /// then (collapsed, the visible band's top edge hides navigation-bar dead space; uncollapsed,
     /// both edges are real chrome and plain centering is already visually even).
     var bottomBarsCollapsed: Bool = false
+    /// Off inside a two-page spread, where the reader draws one spine down the gutter instead.
+    var showsSpine: Bool = true
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -2239,7 +2477,7 @@ private struct MushafPageContent: View {
                     }
             }
         }
-        .overlay(alignment: spineIsLeading ? .leading : .trailing) { spineRule }
+        .overlay(alignment: spineIsLeading ? .leading : .trailing) { if showsSpine { spineRule } }
         // No pinned surah header here: it belongs to the READER (`SurahPageReader.pinnedSurahHeader`), one
         // for the whole pager. A header per page rode INSIDE the pager, so every turn - including one
         // between two pages of the SAME surah - slid it out and slid an identical copy in.
@@ -2437,7 +2675,8 @@ private struct MushafPageContent: View {
                     mark: markedAyah ?? sheetAyahTint,
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
                     searchHighlight: searchHighlight.map { highlight in
-                        (matches: highlight.matches.map { (surahID: $0.surahID, ayahID: $0.ayahID) }, term: highlight.term)
+                        (matches: highlight.matches.map { (surahID: $0.surahID, ayahID: $0.ayahID) }, term: highlight.term,
+                         rule: highlight.rule)
                     },
                     selected: isSelecting ? selectedAyahs.map { (surahID: $0.surahID, ayahID: $0.ayahID) } : [],
                     bookmarked: bookmarkedAyahsOnPage,
@@ -5430,7 +5669,7 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The in-page find, while its query is live: EVERY matching ayah gets its matched substrings in the
     /// accent, and the WHOLE page drops its tajweed colors so the matches are the only color on it - the
     /// page-mode twin of how matched list rows render (accent snippet, tajweed off).
-    var searchHighlight: (matches: [(surahID: Int, ayahID: Int)], term: String)? = nil
+    var searchHighlight: (matches: [(surahID: Int, ayahID: Int)], term: String, rule: SearchWordRule)? = nil
     /// Multi-select: every listed ayah carries the accent selection tint.
     var selected: [(surahID: Int, ayahID: Int)] = []
     /// Bookmarked ayahs on this page: each gets a small bookmark glyph drawn just ABOVE its number ornament,
@@ -5535,7 +5774,8 @@ struct MushafPageTextView: UIViewRepresentable {
             guard searchIsActive, let searchHighlight else { return [] }
             return searchHighlight.matches.compactMap { match in
                 guard let ayahRange = range(of: (match.surahID, match.ayahID)) else { return nil }
-                let exact = Self.matchRanges(of: searchTerm, in: text.string, within: ayahRange)
+                let exact = Self.matchRanges(of: searchTerm, in: text.string, within: ayahRange,
+                                             wordRule: searchHighlight.rule)
                 guard !exact.isEmpty else { return nil }
                 return (ayahRange, exact)
             }
@@ -5615,7 +5855,8 @@ struct MushafPageTextView: UIViewRepresentable {
     /// this page shows (an English query while the page shows Arabic, or a different translation) yields
     /// no ranges - the caller then leaves the ayah un-painted (just the arrival mark), instead of the old
     /// whole-ayah wash.
-    static func matchRanges(of term: String, in fullText: String, within ayahRange: NSRange) -> [NSRange] {
+    static func matchRanges(of term: String, in fullText: String, within ayahRange: NSRange,
+                            wordRule: SearchWordRule = .anywhere) -> [NSRange] {
         let full = fullText as NSString
         guard ayahRange.location >= 0, ayahRange.location + ayahRange.length <= full.length else { return [] }
         // A print-matched page carries its line breaks as U+2028 in place of word spaces; fold them
@@ -5623,7 +5864,7 @@ struct MushafPageTextView: UIViewRepresentable {
         // ranges below stay exact.
         let ayahText = full.substring(with: ayahRange).replacingOccurrences(of: "\u{2028}", with: " ")
 
-        return HighlightedSnippet.matchRanges(of: term, in: ayahText).map { range in
+        return HighlightedSnippet.matchRanges(of: term, in: ayahText, wordRule: wordRule).map { range in
             // `range` is into `ayahText`; convert to a UTF-16 NSRange there, then shift by the ayah's
             // offset within the whole page (both are UTF-16 offsets, so the shift is exact).
             let local = NSRange(range, in: ayahText)
@@ -5764,7 +6005,7 @@ struct MushafPageTextView: UIViewRepresentable {
         let key: ((surahID: Int, ayahID: Int)?) -> String = { $0.map { "\($0.surahID):\($0.ayahID)" } ?? "" }
         let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
         let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
-        let searchKey = searchHighlight.map { "\($0.term)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
+        let searchKey = searchHighlight.map { "\($0.term)#\($0.rule.rawValue)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
         // The color is part of the key: recoloring a highlight changes the page's wash and its badge while
         // the bookmark set itself is unchanged, and without the color that repaint would be skipped.
         let bookmarkKey = bookmarked

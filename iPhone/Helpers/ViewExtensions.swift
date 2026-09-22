@@ -203,6 +203,9 @@ final class RootAppearance: ObservableObject {
     @Published private(set) var firstLaunch: Bool
     /// True until the About You question has been answered or skipped (the root's `.aboutYou` stage).
     @Published private(set) var needsAboutYou: Bool
+    /// True until the iCloud Backup offer has been taken or declined (the root's `.cloudOffer` stage,
+    /// after About You).
+    @Published private(set) var needsCloudOffer: Bool
 
     private var cancellable: AnyCancellable?
     private var refreshScheduled = false
@@ -212,6 +215,7 @@ final class RootAppearance: ObservableObject {
         environment = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
         firstLaunch = settings.firstLaunch
         needsAboutYou = Self.needsAboutYou(settings)
+        needsCloudOffer = Self.needsCloudOffer(settings)
         cancellable = settings.objectWillChange.sink { [weak self] _ in self?.scheduleRefresh() }
         ObjectPublishCounter.attach(self, label: "RootAppearance")
     }
@@ -235,6 +239,8 @@ final class RootAppearance: ObservableObject {
         if settings.firstLaunch != firstLaunch { firstLaunch = settings.firstLaunch }
         let asks = Self.needsAboutYou(settings)
         if asks != needsAboutYou { needsAboutYou = asks }
+        let offers = Self.needsCloudOffer(settings)
+        if offers != needsCloudOffer { needsCloudOffer = offers }
     }
 
     /// Everyone is asked once, including everyone who had the app before the question existed.
@@ -248,6 +254,20 @@ final class RootAppearance: ObservableObject {
         if !arguments.contains("-showAboutYou"), arguments.contains("-skipNotificationPrompt") { return false }
         #endif
         return settings.aboutYouVersionSeen < Settings.aboutYouCurrentVersion
+    }
+
+    /// The iCloud offer follows the same rule (`-showCloudOffer` forces it). iPhone and iPad only:
+    /// the watch has no CloudKit here.
+    private static func needsCloudOffer(_ settings: Settings) -> Bool {
+        #if os(iOS)
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if !arguments.contains("-showCloudOffer"), arguments.contains("-skipNotificationPrompt") { return false }
+        #endif
+        return settings.cloudOfferVersionSeen < Settings.cloudOfferCurrentVersion
+        #else
+        return false
+        #endif
     }
 }
 
@@ -1469,16 +1489,30 @@ struct ChooseReciterMenuLabel: View {
     }
 }
 
-/// Any menu row captioned with the current reciter: "Choose Reciter" itself, and every "Play Surah"
-/// row, which starts a recitation and so should say whose (Abu, 2026-09-20).
+/// A menu row captioned with the current reciter: "Choose Reciter" itself, and a "Play Surah" row in
+/// a menu that has NO Choose Reciter row (the surah-row context menu). A menu names the reciter
+/// ONCE: where Choose Reciter carries it, Play Surah is a plain Label (Abu, 2026-09-21: "no point in
+/// saying the name twice").
 struct ReciterCaptionedMenuLabel: View {
     let title: String
     let systemImage: String
 
+    // OBSERVED, not read once at build time. The 09-20 version read `Settings.shared` bare on the
+    // belief that a menu's content is rebuilt each time it opens; it is not. A `Menu`'s items are
+    // built when its HOST's body runs, and reopening the menu shows the same items again. So after
+    // Choose Reciter -> pick -> reopen, the page reader's footer menu still named the old reciter,
+    // because nothing in the reader had re-rendered in between (Abu, 2026-09-21, reproduced with idb:
+    // the store said Saud Al-Shuraim, the reopened menu said Saad Al-Ghamdi). Subscribing here lets
+    // the reciter write re-run this label, and SwiftUI carries that into the menu's items.
+    @ObservedObject private var settings = Settings.shared
+
+    init(title: String, systemImage: String) {
+        self.title = title
+        self.systemImage = systemImage
+    }
+
     var body: some View {
-        // Read at BUILD time, not observed: a menu's content is rebuilt each time it opens, so the
-        // caption is always current without this label subscribing to Settings.
-        let reciter = Settings.shared.currentReciterDisplayName
+        let reciter = settings.currentReciterDisplayName
         // The three as bare SIBLINGS: a menu row reads its label's first Text as the title, the
         // second as the grey subtitle and the Image as the glyph. Wrapped in a VStack (the 09-19
         // version) the menu flattened the stack to its first Label and dropped the reciter line.
@@ -1522,22 +1556,178 @@ struct ReciterPickerSheet: ViewModifier {
 /// - Put `.contentShape(Rectangle())` INSIDE the label, so the whole tile is pressable.
 /// - Keep `gridFavoriteStar` OUTSIDE this call. Inside the label its 30 pt tap target competes with the
 ///   menu's long press; outside, the star keeps its own tap and the rest of the tile keeps the menu.
+///
+/// THE FAST HOLD (2026-09-21). Abu found the hold "very slow", here and on the prayer tracker. Measured:
+/// the menu opened at ~0.45 s, which is simply UIKit's context-menu delay. SwiftUI backs this `Menu`
+/// with a `UIButton` whose hold timer is a private recognizer (`_UITouchDurationObservingGestureRecognizer`),
+/// so there is no public way to shorten it. What IS public: `UIControl.performPrimaryAction()` (iOS 17.4)
+/// presents the menu of a button that shows its menu as the primary action, which is exactly what a
+/// SwiftUI `Menu` WITHOUT `primaryAction` is. So the fast path keeps such a menu behind the label as an
+/// untouchable anchor, and lays its own tap + `GridTileMenuHold.duration` recognizers over the tile; the
+/// hold finds the anchor's button by frame and fires it. Below iOS 17.4, under VoiceOver (whose users
+/// get the system's own menu semantics), and if the button is ever not found (a future SwiftUI backing
+/// the menu some other way), the tile is the plain `Menu(primaryAction:)` it always was.
 struct GridTileMenu<Label: View, Menu: View>: View {
     let primaryAction: () -> Void
     @ViewBuilder let menu: () -> Menu
     @ViewBuilder let label: () -> Label
 
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @ObservedObject private var hold = GridTileMenuHold.shared
+    @State private var isPressed = false
+
     var body: some View {
-        SwiftUI.Menu {
-            menu()
-        } label: {
+        if #available(iOS 17.4, *), !voiceOverOn, !hold.isUnavailable {
             label()
-        } primaryAction: {
-            primaryAction()
+                // The dim a plain button gives its label while a finger is on it.
+                .opacity(isPressed ? 0.55 : 1)
+                .background(
+                    SwiftUI.Menu {
+                        menu()
+                    } label: {
+                        Color.clear
+                    }
+                    .menuIndicator(.hidden)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                )
+                .overlay(
+                    GridTileHoldLayer(isEnabled: isEnabled, isPressed: $isPressed, onTap: primaryAction)
+                )
+                // Switch Control and Voice Control see a button, as they do on the system path.
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { primaryAction() }
+        } else {
+            SwiftUI.Menu {
+                menu()
+            } label: {
+                label()
+            } primaryAction: {
+                primaryAction()
+            }
+            // The tile IS the control - a menu chevron drawn into a 4-across grid cell is noise.
+            .menuIndicator(.hidden)
+            .buttonStyle(.plain)
         }
-        // The tile IS the control - a menu chevron drawn into a 4-across grid cell is noise.
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
+    }
+}
+
+/// The fast hold's one tunable and its kill switch. See `GridTileMenu`.
+final class GridTileMenuHold: ObservableObject {
+    static let shared = GridTileMenuHold()
+
+    /// Half the system's delay. Shorter than this and a thumb resting before a scroll opens menus.
+    static let duration: TimeInterval = 0.25
+
+    /// Set the first time a hold finds no menu button to fire: every tile then falls back to the
+    /// system `Menu(primaryAction:)`, slow but certain, for the rest of the run.
+    @Published private(set) var isUnavailable = false
+
+    func markUnavailable() {
+        if !isUnavailable { isUnavailable = true }
+    }
+}
+
+/// The clear UIKit layer over a fast-hold tile: tap runs the tile's action, a short hold (or a
+/// secondary click, for a pointer) opens the anchor menu underneath.
+private struct GridTileHoldLayer: UIViewRepresentable {
+    let isEnabled: Bool
+    @Binding var isPressed: Bool
+    let onTap: () -> Void
+
+    func makeUIView(context: Context) -> HoldView {
+        let view = HoldView()
+        view.backgroundColor = .clear
+        view.install()
+        return view
+    }
+
+    func updateUIView(_ view: HoldView, context: Context) {
+        view.onTap = onTap
+        view.isUserInteractionEnabled = isEnabled
+        view.onPressChange = { pressed in
+            if isPressed != pressed { isPressed = pressed }
+        }
+    }
+
+    final class HoldView: UIView {
+        var onTap: () -> Void = {}
+        var onPressChange: (Bool) -> Void = { _ in }
+
+        func install() {
+            let hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
+            hold.minimumPressDuration = GridTileMenuHold.duration
+            addGestureRecognizer(hold)
+
+            // Waiting on the hold costs a tap nothing: the hold fails the moment the finger lifts early.
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+            tap.require(toFail: hold)
+            addGestureRecognizer(tap)
+
+            let secondary = UITapGestureRecognizer(target: self, action: #selector(secondaryClicked))
+            secondary.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+            secondary.buttonMaskRequired = .secondary
+            addGestureRecognizer(secondary)
+        }
+
+        @objc private func tapped() { onTap() }
+
+        @objc private func secondaryClicked() { openMenu() }
+
+        @objc private func held(_ recognizer: UILongPressGestureRecognizer) {
+            if recognizer.state == .began { openMenu() }
+        }
+
+        private func openMenu() {
+            onPressChange(false)
+            guard #available(iOS 17.4, *), let button = anchorButton() else {
+                GridTileMenuHold.shared.markUnavailable()
+                return
+            }
+            // The system's hold buzzes as its menu opens; a programmatic open is silent without this.
+            Settings.shared.hapticFeedback()
+            button.performPrimaryAction()
+        }
+
+        /// The anchor `Menu`'s button: the menu-as-primary-action control sharing this tile's frame.
+        /// Searched from the window down on each hold (a few hundred views, once per press) rather
+        /// than cached, because a lazy grid recycles both this view and the button.
+        private func anchorButton() -> UIControl? {
+            guard let window else { return nil }
+            let mine = convert(bounds, to: nil)
+            var best: (control: UIControl, distance: CGFloat)?
+            func walk(_ view: UIView) {
+                if let control = view as? UIControl, control.showsMenuAsPrimaryAction,
+                   control.contextMenuInteraction != nil {
+                    let theirs = control.convert(control.bounds, to: nil)
+                    let distance = abs(theirs.midX - mine.midX) + abs(theirs.midY - mine.midY)
+                        + abs(theirs.width - mine.width) + abs(theirs.height - mine.height)
+                    if distance < 4, distance < (best?.distance ?? .greatestFiniteMagnitude) {
+                        best = (control, distance)
+                    }
+                }
+                for child in view.subviews where !child.isHidden { walk(child) }
+            }
+            walk(window)
+            return best?.control
+        }
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesBegan(touches, with: event)
+            onPressChange(true)
+        }
+
+        override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesEnded(touches, with: event)
+            onPressChange(false)
+        }
+
+        override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+            super.touchesCancelled(touches, with: event)
+            onPressChange(false)
+        }
     }
 }
 #endif

@@ -307,6 +307,10 @@ final class QuranPlayer: ObservableObject {
 
         loadHistoryFromDefaults()
         isReadyForUI = true
+        storageObserver = StoredContentObserver(
+            flush: { QuranPlayer.shared.flushPendingLastListenedAyah() },
+            reload: { QuranPlayer.shared.reloadHistoryFromStorage() }
+        )
 
         // The audio session observers, the path monitor and the remote-command centre are installed
         // AFTER the launch cover lifts (or on the first play, whichever is first): `AVAudioSession
@@ -2263,10 +2267,44 @@ final class QuranPlayer: ObservableObject {
         }
         let work = DispatchWorkItem { [weak self] in self?.commitLastListenedAyah(record, publish: false) }
         pendingLastListenedAyahWork = work
+        pendingLastListenedAyahRecord = record
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
     }
 
     private var pendingLastListenedAyahWork: DispatchWorkItem?
+    /// The position `pendingLastListenedAyahWork` is about to commit, kept so a flush can commit it
+    /// early (a work item cannot be asked what it holds).
+    private var pendingLastListenedAyahRecord: LastListenedAyah?
+    private var storageObserver: StoredContentObserver?
+
+    /// Commits the position a debounce is still holding (`Settings.flushPendingWritesNotification`).
+    /// Playback carries on: this is the write, 0.8 s early, and nothing else.
+    private func flushPendingLastListenedAyah() {
+        guard let record = pendingLastListenedAyahRecord else { return }
+        pendingLastListenedAyahWork?.cancel()
+        commitLastListenedAyah(record, publish: false)
+    }
+
+    /// The three histories on disk changed underneath this object (a restore, an erase). Read
+    /// FIRST, assign after: each list persists itself on assignment, so emptying one before
+    /// reading it would write the empty list over the restored one.
+    private func reloadHistoryFromStorage() {
+        let defaults = UserDefaults.standard
+        let listening = defaults.data(forKey: Self.listeningHistoryKey)
+            .flatMap { try? Settings.decoder.decode([ListeningHistoryItem].self, from: $0) } ?? []
+        let reading = defaults.data(forKey: Self.readingHistoryKey)
+            .flatMap { try? Settings.decoder.decode([ReadingHistoryItem].self, from: $0) } ?? []
+        let ayahListening = defaults.data(forKey: Self.ayahListeningHistoryKey)
+            .flatMap { try? Settings.decoder.decode([AyahListeningHistoryItem].self, from: $0) } ?? []
+
+        listeningHistory = normalizeListeningHistory(listening)
+        lastSavedListeningSurahNumber = listeningHistory.first?.surahNumber
+        readingHistory = normalizeReadingHistory(reading.map {
+            ReadingHistoryItem(surahNumber: $0.surahNumber, surahName: $0.surahName, ayahNumber: max(1, $0.ayahNumber))
+        })
+        lastSavedReadingPosition = readingHistory.first.map { ($0.surahNumber, $0.ayahNumber) }
+        ayahListeningHistory = normalizeAyahListeningHistory(ayahListening)
+    }
 
     /// `publish: false` is the mid-playback path: the position lands in the defaults silently (the
     /// reader follows the player's own publishes, and the badge on the pill reads the value on its
@@ -2275,6 +2313,7 @@ final class QuranPlayer: ObservableObject {
     /// which publishes Settings once and reloads the Last Listened widget.
     private func commitLastListenedAyah(_ record: LastListenedAyah, publish: Bool) {
         pendingLastListenedAyahWork = nil
+        pendingLastListenedAyahRecord = nil
         let previous = settings.lastListenedAyah
         let moved = previous?.surahNumber != record.surahNumber || previous?.ayahNumber != record.ayahNumber
         // When moving to a new ayah, push the previous one into the listening history below the row.

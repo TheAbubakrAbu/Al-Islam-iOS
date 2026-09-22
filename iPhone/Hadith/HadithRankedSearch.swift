@@ -64,6 +64,12 @@ enum HadithRankedSearch {
     /// top of `Hit.score`, when the relaxed rows are the ones shown.
     static func relaxedBonus(matched: Int) -> Int { matched * relaxedTokenWeight }
 
+    /// The names a search scores besides the narration: across the shelf both, inside one book only
+    /// the chapter names (the book's own is every row's), inside one chapter neither.
+    enum Titles {
+        case bookAndChapters, chapters, none
+    }
+
     struct BookOutcome {
         let hits: [Hit]
         let relaxed: Bool
@@ -210,8 +216,11 @@ enum HadithRankedSearch {
     /// (every word) and the relaxed one (the most words), where two passes used to scan the library
     /// twice for a multi-word query. Blocks in which no word of the query occurs at all, in any
     /// form, are skipped whole unless a chapter of theirs matched. Runs off the main thread; checks
-    /// cancellation per block through the pack scanner.
-    static func rank(book: HadithCatalogBook, data: HadithBookData, query: Query) -> [Hit] {
+    /// cancellation per block through the pack scanner. `within` narrows the pass to a run of the
+    /// book's rows (one chapter's, for the in-chapter search); nil is the whole book. `titles` says
+    /// which names count: a name shared by every row in reach matches all of them, which ranks nothing.
+    static func rank(book: HadithCatalogBook, data: HadithBookData, query: Query, within: Range<Int>? = nil,
+                     titles: Titles = .bookAndChapters) -> [Hit] {
         guard !query.isEmpty else { return [] }
         let pack = data.pack
         // The chapter and citation buckets are the same for every row of a chapter, so they are
@@ -219,12 +228,12 @@ enum HadithRankedSearch {
         struct Bucket { let score: Int; let matched: Set<Int> }
         let bookFold = query.isArabic ? HadithFold.arabic(book.arabicTitle) : HadithFold.english(book.englishTitle)
         var citationHits: [Int: Int] = [:]
-        for (index, token) in query.tokens.enumerated() {
+        for (index, token) in query.tokens.enumerated() where titles == .bookAndChapters {
             let hit = tokenHit(token, in: bookFold, weight: citationWeight)
             if hit > 0 { citationHits[index] = hit }
         }
         var buckets: [Int: Bucket] = [:]
-        for chapter in data.chapters {
+        for chapter in data.chapters where titles != .none {
             let fold = query.isArabic ? chapter.foldArabic : chapter.foldEnglish
             var score = 0
             var matched = Set<Int>()
@@ -244,7 +253,7 @@ enum HadithRankedSearch {
         let matchedChapters = Set(buckets.filter { !$0.value.matched.isEmpty }.map(\.key))
         let rows = data.hadiths
         var hits: [Hit] = []
-        pack.scanSearchFolds(in: 0..<rows.count, isArabic: query.isArabic, blockFilter: { blockRows, span in
+        pack.scanSearchFolds(in: within ?? 0..<rows.count, isArabic: query.isArabic, blockFilter: { blockRows, span in
             if !matchedChapters.isEmpty,
                blockRows.contains(where: { rows.indices.contains($0) && matchedChapters.contains(rows[$0].chapterId) }) {
                 return true
@@ -270,6 +279,62 @@ enum HadithRankedSearch {
             hits.append(Hit(row: row, score: score, matched: matched))
         }
         return hits
+    }
+
+    // MARK: - One book, as a finished list
+
+    /// The ranked lane of the in-book and in-chapter searches: what `HadithView.runGlobalSearch`
+    /// assembles across the shelf, for one book.
+    struct ScopedOutcome {
+        /// Rows of the book, best first.
+        var rows: [Int] = []
+        /// How many matched before the cap (and before nothing else: a grading shrinks it to `rows`).
+        var total = 0
+        /// No hadith carried every word, so these carry the most of them.
+        var relaxed = false
+        var corrections: [Correction] = []
+        /// What the rows should paint (see `Query.highlightQuery`).
+        var highlight = ""
+
+        var isEmpty: Bool { rows.isEmpty }
+    }
+
+    /// One pass over the book (or `within`), strict list first and the relaxed one only when nothing
+    /// is strict, the best `cap` kept. `accept` is the grading test: it reads text blocks, so it is
+    /// asked after the ranking, of a deeper list, the all-books lane's way. Runs on the caller's
+    /// thread (a detached task); nil when the query has nothing to rank or the task was cancelled.
+    static func rankedRows(query raw: String, book: HadithCatalogBook, data: HadithBookData,
+                           within: Range<Int>? = nil, cap: Int, accept: ((Int) -> Bool)?) -> ScopedOutcome? {
+        // The typo list: the shipped one, a file read. One book is never the whole shelf, so this
+        // never starts the walk; without a list the words are searched as typed.
+        HadithVocabulary.shared.buildIfNeeded(books: [data])
+        guard !Task.isCancelled, let parsed = parse(raw, vocabulary: HadithVocabulary.shared) else { return nil }
+        let kept = max(1, min(cap, data.hadiths.count))
+        let depth = accept == nil ? kept : max(1, min(kept * 5, data.hadiths.count))
+        let outranks: (Hit, Hit) -> Bool = { a, b in
+            a.score != b.score ? a.score > b.score : a.row < b.row
+        }
+        var strict = TopK<Hit>(capacity: depth, outranks: outranks)
+        var partial = TopK<Hit>(capacity: depth, outranks: outranks)
+        let tokenCount = parsed.tokens.count
+        for hit in rank(book: book, data: data, query: parsed, within: within, titles: within == nil ? .chapters : .none) {
+            if hit.matched == tokenCount {
+                strict.offer(hit)
+            } else if tokenCount > 1 {
+                partial.offer(Hit(row: hit.row, score: hit.score + relaxedBonus(matched: hit.matched), matched: hit.matched))
+            }
+        }
+        guard !Task.isCancelled else { return nil }
+        let relaxed = strict.offered == 0 && partial.offered > 0
+        let chosen = relaxed ? partial : strict
+        var rows = chosen.sorted().map(\.row)
+        var total = chosen.offered
+        if let accept {
+            rows = Array(rows.filter(accept).prefix(kept))
+            total = rows.count
+        }
+        return ScopedOutcome(rows: rows, total: total, relaxed: relaxed,
+                             corrections: parsed.corrections, highlight: parsed.highlightQuery)
     }
 
     /// Whether any form of the word (as typed, the other spelling, the stem, the correction) occurs

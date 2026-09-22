@@ -276,6 +276,7 @@ final class SunnahReminderStore: ObservableObject {
         #endif
         configs = loaded
         ObjectPublishCounter.attach(self, label: "SunnahReminderStore")
+        storageObserver = StoredContentObserver(reload: { SunnahReminderStore.shared.reloadFromStorage() })
         #if DEBUG
         // "-sunnahScrub": thirty time-wheel ticks on Surat al-Mulk over 1.5 s, after the reveal, to
         // prove the debounce below (one "REMINDER PASS sunnah ... (change)" line, not thirty).
@@ -347,6 +348,19 @@ final class SunnahReminderStore: ObservableObject {
         guard let data = defaults.data(forKey: defaultsKey),
               let decoded = try? JSONDecoder().decode([String: Config].self, from: data) else { return [:] }
         return decoded
+    }
+
+    private var storageObserver: StoredContentObserver?
+
+    /// The switches on disk changed underneath this object (a restore, a reset): take them, and
+    /// re-fit the pending queue to them. A reset used to wipe the key while this object kept every
+    /// reminder on, scheduled, and ready to write itself back with the next change.
+    private func reloadFromStorage() {
+        let stored = Self.loadConfigs(from: .standard)
+        guard stored != configs else { return }
+        configs = stored
+        Settings.SunnahReminderBudget.invalidateLiveCount()
+        scheduleReschedule()
     }
 
     // MARK: Scheduling

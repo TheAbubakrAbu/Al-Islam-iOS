@@ -34,6 +34,20 @@ final class HadithUserData: ObservableObject {
                 uniquingKeysWith: { first, _ in first }
             )
         }
+        storageObserver = StoredContentObserver(reload: { HadithUserData.shared.reloadFromStorage() })
+    }
+
+    private var storageObserver: StoredContentObserver?
+
+    /// The marks on disk changed underneath this object (a restore, an erase). Every write here is
+    /// eager, so nothing is pending; but each one writes the WHOLE set, so a stale copy kept past a
+    /// restore would overwrite it with the next star tapped. `bookmarks`' didSet rebuilds the index.
+    private func reloadFromStorage() {
+        let defaults = UserDefaults.standard
+        favoriteSlugs = Set(defaults.stringArray(forKey: Self.favoritesKey) ?? [])
+        favoriteChapterKeys = Set(defaults.stringArray(forKey: Self.chapterFavoritesKey) ?? [])
+        bookmarks = defaults.data(forKey: Self.bookmarksKey)
+            .flatMap { try? JSONDecoder().decode([HadithBookmark].self, from: $0) } ?? []
     }
 
     /// Favorited book slugs, pinned to the top of the catalog. Persisted in UserDefaults.
@@ -197,6 +211,23 @@ final class HadithStore: ObservableObject {
             }
         }
         #endif
+        storageObserver = StoredContentObserver(
+            flush: { HadithStore.shared.viewedLog.flushSynchronously() },
+            reload: { HadithStore.shared.reloadFromStorage() }
+        )
+    }
+
+    private var storageObserver: StoredContentObserver?
+
+    /// The reading positions, the History log, the daily-hadith history and the recorded book
+    /// shapes all load once; after a restore or an erase each is read again. `loadLastRead()`
+    /// returns early on a non-empty table, so the table is emptied first.
+    private func reloadFromStorage() {
+        Self.dailyHistoryCache = nil
+        recordedCounts = (UserDefaults.standard.dictionary(forKey: "hadithBookCounts") as? [String: [Int]]) ?? [:]
+        viewedLog.reloadFromStorage()
+        lastReadByBook = [:]
+        loadLastRead()
     }
 
     /// Drops every decompressed block and all but the most recently opened books. The packs themselves
@@ -363,6 +394,9 @@ final class HadithStore: ObservableObject {
         @Published private(set) var entries: [ViewedEntry] = []
         private var didLoad = false
         private var saveWork: DispatchWorkItem?
+        /// The log's writes, in order (see `ActivityLog.ioQueue`: a restore must be able to wait
+        /// for a write already on its way, which an unordered global queue cannot offer).
+        private static let ioQueue = DispatchQueue(label: "HadithViewedLog.io", qos: .utility)
 
         init() {
             ObjectPublishCounter.attach(self, label: "HadithViewedLog")
@@ -396,7 +430,7 @@ final class HadithStore: ObservableObject {
                 UserDefaults.standard.set(data, forKey: Self.key)
             }
             saveWork = work
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+            Self.ioQueue.asyncAfter(deadline: .now() + 1, execute: work)
         }
 
         /// Writes now (the app is leaving the foreground).
@@ -405,10 +439,28 @@ final class HadithStore: ObservableObject {
             saveWork = nil
             work.cancel()
             let snapshot = entries
-            DispatchQueue.global(qos: .utility).async {
+            Self.ioQueue.async {
                 guard let data = try? JSONEncoder().encode(snapshot) else { return }
                 UserDefaults.standard.set(data, forKey: Self.key)
             }
+        }
+
+        /// `flush()`, and the log is in the defaults when it returns.
+        func flushSynchronously() {
+            flush()
+            Self.ioQueue.sync {}
+        }
+
+        /// The stored log changed underneath this object: forget what was loaded and read it again.
+        /// Only when it HAD been loaded; an untouched log loads the new bytes on first use as it is.
+        func reloadFromStorage() {
+            saveWork?.cancel()
+            saveWork = nil
+            Self.ioQueue.sync {}
+            guard didLoad else { return }
+            didLoad = false
+            entries = []
+            loadIfNeeded()
         }
     }
 

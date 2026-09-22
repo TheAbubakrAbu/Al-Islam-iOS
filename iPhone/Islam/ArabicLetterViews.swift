@@ -777,8 +777,10 @@ struct ArabicLetterPage: View {
         if let zone = LetterTraits.makharij(of: letter).last.flatMap({ LetterTraits.family(id: $0.zoneID) }) {
             facts.append((zone.meaning, "mouth", nil))
         }
+        // Named in Arabic as well as English: "Ease" alone says nothing, "Leen (Ease)" is the term
+        // the reader will meet again further down the page and in every tajweed book.
         for family in LetterTraits.families(of: .special) where family.contains(letter) {
-            facts.append((family.meaning, family.systemImage, family.legendColor))
+            facts.append((family.title, family.systemImage, family.legendColor))
         }
         if let lam = LetterTraits.family(of: letter, on: .lamOfAl) {
             facts.append((lam.meaning.replacingOccurrences(of: "Letters", with: "Letter"), lam.systemImage, nil))

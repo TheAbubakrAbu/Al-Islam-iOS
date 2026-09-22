@@ -422,7 +422,9 @@ def main() -> None:
         # The headline last: it indexes the English the card shows, which the references decide.
         reference_headline(entry, references, saheeh)
         for key in ("short", "en", "source", "tr"):
-            if key in entry and (", " in entry[key] or " - " in entry[key]) and kind not in SCRIPTURE:
+            # The em dash is an escape here: the dash sweep once rewrote the literal into ", ",
+            # which made every ordinary comma a "dash left" and blocked the build.
+            if key in entry and ("\u2014" in entry[key] or " - " in entry[key]) and kind not in SCRIPTURE:
                 problems.append(f"{row['id']}: dash left in {key}: {entry[key][:60]}")
         if ("short" in entry) == ("shortWords" in entry):
             problems.append(f"{row['id']}: a card carries either a headline or a headline range")

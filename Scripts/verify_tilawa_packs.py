@@ -88,7 +88,7 @@ SUNNAH_PRESET_CITATIONS = [("tirmidhi", "2891"), ("bukhari", "5009"), ("muslim",
                            ("tirmidhi", "3575"), ("bukhari", "891"), ("muslim", "879a"), ("bukhari", "4569"),
                            ("muslim", "256")]
 
-EM_DASH = ", "
+EM_DASH = "\u2014"  # written as an escape so the dash sweep never rewrites the constant itself
 SPACED_HYPHEN = re.compile(r"[^\W\d_] - [^\W\d_]")
 
 errors: list[str] = []

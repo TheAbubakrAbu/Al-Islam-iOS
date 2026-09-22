@@ -181,9 +181,12 @@ final class ThemeHighlights: ObservableObject {
     /// a passage on the ayahs both name: the theme was chosen for that ayah, the passage for a span.
     private var sectionLookup: [Int: ThemeWashColor] = [:]
 
+    private var storageObserver: StoredContentObserver?
+
     private init() {
         ObjectPublishCounter.attach(self, label: "ThemeHighlights")
         load()
+        storageObserver = StoredContentObserver(reload: { ThemeHighlights.shared.reloadFromStorage() })
         #if DEBUG && os(iOS)
         // "-litTheme <topic id>": light a theme at launch (the readers' wash cannot be toggled
         // headlessly), e.g. "-litTheme patience". "-litAllSections" washes every passage;
@@ -375,6 +378,15 @@ final class ThemeHighlights: ObservableObject {
         allSectionsLit = UserDefaults.standard.bool(forKey: Self.allSectionsKey)
         litSectionIDs = Set(UserDefaults.standard.stringArray(forKey: Self.sectionsKey) ?? [])
         rebuildSections()
+    }
+
+    /// The lit themes on disk changed underneath this object (a restore, an erase). `load()` only
+    /// ever ADDS what it finds, so the themes and their lookup are emptied first: an erase leaves
+    /// no key at all, and the wash must go with it.
+    private func reloadFromStorage() {
+        lit = []
+        lookup = [:]
+        load()
     }
 }
 #endif

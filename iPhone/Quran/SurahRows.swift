@@ -999,6 +999,8 @@ struct AyahSearchRow: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject private var settings = Settings.shared
+    /// The search's Match rule: the cross-language spans follow it like the snippets do.
+    @Environment(\.searchWordRule) private var wordRule
 
     
     let surahName: String
@@ -1320,7 +1322,8 @@ struct AyahSearchRow: View, Equatable {
             // variants from every occurrence, which is what bridges to a translation that phrased it
             // differently ("confining"). The union is what "maximize" buys here.
             var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
-                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
+                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText,
+                wordRule: wordRule
             )
             for term in CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
             where !terms.contains(term) {
@@ -1329,7 +1332,7 @@ struct AyahSearchRow: View, Equatable {
             // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
             // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
             let arabicExtra = CrossLanguageWordHighlight.arabicSpansForArabicQuery(
-                query: trimmed, in: displayText
+                query: trimmed, in: displayText, wordRule: wordRule
             )
             guard !terms.isEmpty || !arabicExtra.isEmpty else { return ([], [], []) }
             return (arabicExtra,

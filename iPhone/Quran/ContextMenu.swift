@@ -491,6 +491,7 @@ struct AyahContextMenuModifier: ViewModifier {
     @State private var showQiraahComparisonSheet = false
     @State private var showEnglishComparisonSheet = false
     @State private var showSelectTextSheet = false
+    @State private var showSummarizeSheet = false
 
     private var isBookmarked: Bool {
         bookmarkedAyahs.contains("\(surah)-\(ayah)")
@@ -791,6 +792,19 @@ struct AyahContextMenuModifier: ViewModifier {
                     Label("Share Ayah", systemImage: "square.and.arrow.up")
                 }
 
+                // The reader rows' last item, here too (one action list for every ayah menu): the
+                // on-device summary of the ayah's tafsirs and translations.
+                if settings.isHafsDisplay, AyahSummarizeSheet.isOffered {
+                    Divider()
+
+                    Button {
+                        settings.hapticFeedback()
+                        showSummarizeSheet = true
+                    } label: {
+                        Label("Summarize with AI", systemImage: "text.append")
+                    }
+                }
+
                 Divider()
 
                 if let surah = surahObj {
@@ -877,6 +891,9 @@ struct AyahContextMenuModifier: ViewModifier {
                     SelectAyahTextSheet(surah: surahObj, ayah: ayahObj)
                         .smallMediumSheetPresentation()
                 }
+            }
+            .sheet(isPresented: $showSummarizeSheet) {
+                AyahSummarizeSheet(surahNumber: surah, ayahNumber: ayah)
             }
             .reciterPickerSheet(isPresented: $showReciterPickerSheet)
             .sheet(isPresented: $showCustomRangeSheet) {

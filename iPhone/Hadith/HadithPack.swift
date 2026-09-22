@@ -36,7 +36,7 @@ import Compression
 //       u32 id, u32 idInBook, i32 chapterId, u32 citation base, u8 citation suffix,
 //       u16 block index, u8 flags
 //     (citation = the standard sunnah.com number, "2950" or "8a"; base 0 = none exists,
-//      suffix 0 = none, 1...26 = "a"..."z")
+//      suffix 0 = none, 1...26 = "a"..."z", 27...52 = "aa"..."az")
 //
 //   per block: the display payload, then the search payload
 //     display: the block's strings back to back, length-prefixed, FOUR per hadith in row order
@@ -291,8 +291,15 @@ final class HadithPack: @unchecked Sendable {
         /// Malik, most of Bulugh al-Maram) - callers fall back to `idInBook` for display.
         var citation: String? {
             guard citationBase > 0 else { return nil }
-            guard citationSuffix >= 1, citationSuffix <= 26 else { return String(citationBase) }
-            return String(citationBase) + String(UnicodeScalar(96 + citationSuffix))
+            // 1...26 is "a"..."z"; 27...52 is "aa"..."az", sunnah.com's run past "z" on two Sahih
+            // Muslim numbers (1211aa...1211ah, 715aa...715ad). Anything else renders as the base.
+            if citationSuffix >= 1, citationSuffix <= 26 {
+                return String(citationBase) + String(UnicodeScalar(96 + citationSuffix))
+            }
+            if citationSuffix >= 27, citationSuffix <= 52 {
+                return String(citationBase) + "a" + String(UnicodeScalar(96 + citationSuffix - 26))
+            }
+            return String(citationBase)
         }
     }
 
@@ -609,6 +616,60 @@ final class HadithPack: @unchecked Sendable {
                         }
                         current += 1
                     }
+                }
+            }
+            if found.count >= limit { break }
+            row = max(scanEnd, row + 1)
+        }
+        return found
+    }
+
+    /// `matchingRows` for the search filters: several needles (All Words needs every one in the row,
+    /// Any Word one of them; they must share a script, which words of one query do) and a row test
+    /// run on TEXT matches only. The test is the grade filter, which inflates the row's display
+    /// block, so it is asked last and only of rows that already carry the words.
+    func matchingRows(in range: Range<Int>, queries: [HadithFold.Query], requireAll: Bool, limit: Int,
+                      accept: ((Int) -> Bool)?) -> [Int] {
+        let needles = queries.map(\.bytes).filter { !$0.isEmpty }
+        guard let first = queries.first, !needles.isEmpty, limit > 0, !rows.isEmpty else { return [] }
+        let lower = max(0, range.lowerBound)
+        let upper = min(rows.count, range.upperBound)
+        guard lower < upper else { return [] }
+        var found: [Int] = []
+        var row = lower
+        while row < upper {
+            if Task.isCancelled { break }
+            let blockIndex = Int(rows[row].block)
+            guard blockIndex < blocks.count else { break }
+            let block = blocks[blockIndex]
+            let blockEnd = blockIndex + 1 < blocks.count ? blocks[blockIndex + 1].firstRow : rows.count
+            let scanEnd = min(upper, blockEnd)
+            guard let search = searchBlock(blockIndex) else {
+                row = max(scanEnd, row + 1)
+                continue
+            }
+            let ranges = first.isArabic ? search.arabic : search.english
+            search.bytes.withUnsafeBufferPointer { haystack in
+                guard let base = haystack.baseAddress else { return }
+                var current = row
+                while current < scanEnd {
+                    let slot = current - block.firstRow
+                    if slot >= 0, slot < ranges.count {
+                        let span = ranges[slot]
+                        if span.lowerBound >= 0, span.upperBound <= haystack.count {
+                            func carries(_ needle: [UInt8]) -> Bool {
+                                span.count >= needle.count && needle.withUnsafeBufferPointer {
+                                    memmem(base + span.lowerBound, span.count, $0.baseAddress!, needle.count) != nil
+                                }
+                            }
+                            let matched = requireAll ? needles.allSatisfy(carries) : needles.contains(where: carries)
+                            if matched, accept?(current) ?? true {
+                                found.append(current)
+                                if found.count >= limit { return }
+                            }
+                        }
+                    }
+                    current += 1
                 }
             }
             if found.count >= limit { break }

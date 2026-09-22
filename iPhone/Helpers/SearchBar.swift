@@ -231,6 +231,8 @@ private struct SystemSearchField: UIViewRepresentable {
         context.coordinator.onSearchButtonClicked = onSearchButtonClicked
         context.coordinator.onFocusChanged = onFocusChanged
         applyBacking(to: field, coordinator: context.coordinator)
+        // The Quran search's Go To buttons reword the prompt ("Page number") while the field lives on.
+        if field.placeholder != placeholder { field.placeholder = placeholder }
 
         // Push SwiftUI's text into UIKit ONLY when it's a value the user didn't just type (a programmatic
         // set: the global-search handoff, a cleared query). While the field is being edited, UIKit is the
@@ -387,8 +389,11 @@ struct RecentSearchChips: View {
     @Environment(\.appearance) private var appearance
 
     let queries: [String]
+    /// "RECENT" for history; the example row under it says "TRY".
+    var title: String = "RECENT"
     let onPick: (String) -> Void
-    let onRemove: (String) -> Void
+    /// Nil for chips that are not the reader's to forget (the examples): no ✕ is drawn.
+    let onRemove: ((String) -> Void)?
     /// The host card's inner padding: the row scrolls edge to edge of the CARD, not of the padded
     /// content, so a chip slides under the card's edge instead of being chopped at the padding line.
     var bleed: CGFloat = 14
@@ -396,7 +401,7 @@ struct RecentSearchChips: View {
     var body: some View {
         if !queries.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                Text("RECENT")
+                Text(title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
@@ -427,15 +432,17 @@ struct RecentSearchChips: View {
                     .padding(.vertical, 6)
             }
 
-            Button {
-                Settings.shared.hapticFeedback()
-                withAnimation(.easeInOut) { onRemove(query) }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption2.bold())
-                    .padding(.trailing, 8)
+            if let onRemove {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    withAnimation(.easeInOut) { onRemove(query) }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption2.bold())
+                        .padding(.trailing, 8)
+                }
+                .accessibilityLabel("Forget \(query)")
             }
-            .accessibilityLabel("Forget \(query)")
         }
         .foregroundStyle(appearance.accent)
         .conditionalGlassEffect(useColor: 0.25, themeTint: false)

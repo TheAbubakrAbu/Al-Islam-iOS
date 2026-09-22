@@ -130,6 +130,12 @@ struct SettingsHadithView: View {
     private var readingViewDestination: some View {
         List {
             Group {
+                // The Quran tab's "Show Ayah of the Day", for the Hadith tab's tile (2026-09-21). This
+                // is also where the tile's "Delete Forever" sends you to bring it back.
+                Section(header: Text("HADITH TAB")) {
+                    Toggle("Show Hadith of the Day", isOn: $settings.showHadithOfTheDay.animation(.easeInOut))
+                        .onChange(of: settings.showHadithOfTheDay) { _ in settings.hapticFeedback() }
+                }
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
@@ -256,6 +262,7 @@ extension SettingsSearchEntry {
         .init(title: "Show Hadith English", path: "Hadith Settings → English Text", keywords: "hadith english translation narrator toggle display", destination: .hadithPage(.englishText)),
         .init(title: "Hadith English Font Size", path: "Hadith Settings → English Text", keywords: "hadith english font size slider system", destination: .hadithPage(.englishText)),
         .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithPage(.readingView)),
+        .init(title: "Show Hadith of the Day", path: "Hadith Settings → Reading View", keywords: "hadith of the day daily tile summary show hide", destination: .hadithPage(.readingView)),
     ]
 }
 

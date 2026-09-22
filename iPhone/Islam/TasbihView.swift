@@ -44,6 +44,7 @@ final class TasbihCounters: ObservableObject {
     private var dirty: Dirty = []
     private var persistTask: Task<Void, Never>?
     private var resignObserver: NSObjectProtocol?
+    private var storageObserver: StoredContentObserver?
 
     /// One publish per user action, then a debounced write of whatever changed.
     private func mutate(_ change: () -> Void) {
@@ -107,6 +108,34 @@ final class TasbihCounters: ObservableObject {
             MainActor.assumeIsolated { TasbihCounters.shared.persist() }
         }
         #endif
+        storageObserver = StoredContentObserver(
+            flush: { TasbihCounters.shared.persist() },
+            reload: { TasbihCounters.shared.reloadFromStorage() }
+        )
+    }
+
+    /// The counts on disk changed underneath this object (a restore, an erase): take them. Without
+    /// this the next tap added one to the OLD count and wrote that over the new one, and so did
+    /// merely backgrounding the app (the resign-active flush above) whenever a key was dirty.
+    private func reloadFromStorage() {
+        persistTask?.cancel()
+        persistTask = nil
+        let defaults = UserDefaults.standard
+        let stored = defaults.dictionary(forKey: "tasbihPresetCounts") as? [String: Int] ?? [:]
+        let presets = Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
+            Int(key).map { ($0, value) }
+        })
+        objectWillChange.send()
+        presetCounts = presets
+        freeCount = defaults.integer(forKey: "tasbihFreeCount")
+        countsByDay = defaults.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        // An erase leaves no total at all: what is on the counters is then the history, as on a
+        // first run, and that one key IS written.
+        let savedLifetime = defaults.object(forKey: "tasbihLifetimeCount") as? Int
+        lifetimeCount = savedLifetime ?? (freeCount + presets.values.reduce(0, +))
+        // The assignments above marked every key dirty; nothing here differs from the disk.
+        dirty = savedLifetime == nil ? [.lifetime] : []
+        if !dirty.isEmpty { persist() }
     }
 
     /// Everything currently ON the counters - the free counter plus every preset row. The badges and

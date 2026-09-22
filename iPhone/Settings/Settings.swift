@@ -78,6 +78,44 @@ final class ReadingState: ObservableObject {
     private init() { ObjectPublishCounter.attach(self, label: "ReadingState") }
 }
 
+/// A store's subscription to the two bulk-storage events (`Settings.flushPendingWritesNotification`
+/// and `Settings.storedContentReplacedNotification`): held as a property, created in the store's
+/// `init` once every stored property is set.
+///
+/// Both closures run INSIDE the poster's `post` call, on the main thread: a flush that returned
+/// before its write landed would let a restore write first and lose to the stale write after it,
+/// which is the whole bug this exists to close. Hence `queue: nil` (the posting thread) and not
+/// `queue: .main` (which may defer).
+final class StoredContentObserver {
+    private var tokens: [NSObjectProtocol] = []
+
+    init(flush: (@MainActor @Sendable () -> Void)? = nil, reload: (@MainActor @Sendable () -> Void)? = nil) {
+        let center = NotificationCenter.default
+        if let flush {
+            tokens.append(center.addObserver(forName: Settings.flushPendingWritesNotification, object: nil, queue: nil) { _ in
+                Self.runOnMain(flush)
+            })
+        }
+        if let reload {
+            tokens.append(center.addObserver(forName: Settings.storedContentReplacedNotification, object: nil, queue: nil) { _ in
+                Self.runOnMain(reload)
+            })
+        }
+    }
+
+    deinit {
+        for token in tokens { NotificationCenter.default.removeObserver(token) }
+    }
+
+    private static func runOnMain(_ work: @MainActor @Sendable () -> Void) {
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { work() }
+        } else {
+            DispatchQueue.main.sync { MainActor.assumeIsolated { work() } }
+        }
+    }
+}
+
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let shared = Settings()
     // Internal (not private): the per-domain extension files (SettingsQuran and friends) mirror their
@@ -374,6 +412,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("-showAboutYou") {
             UserDefaults.standard.set(0, forKey: "aboutYouVersionSeen")
         }
+        // "-showCloudOffer" - the iCloud Backup offer (the stage after About You), even in a
+        // scripted run and even if it was already answered.
+        if ProcessInfo.processInfo.arguments.contains("-showCloudOffer") {
+            UserDefaults.standard.set(0, forKey: "cloudBackup.offerVersionSeen")
+        }
         // "-seedString key=value[,key=value…]" - the string twin of -seedBool, for raw-string
         // @AppStorage settings (e.g. `-seedString islamArabicFontFace=kufi`). Values may not contain
         // commas or "=".
@@ -479,6 +522,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     // The sky card's two switches, for looking at the card without its skyline (or sky).
                     case "showSkyView": shared.showSkyView = kv[1] == "1"
                     case "showSkyScene": shared.showSkyScene = kv[1] == "1"
+                    // The skyline's structures (pyramidsMosque | pyramids | mosques), through the
+                    // setter so the app-group mirror and the widget reload fire; a first-render seed
+                    // is `-seedString skySceneStyle=pyramids`.
+                    case "skySceneStyle": shared.skySceneStyle = kv[1]
                     case "tab":
                         NotificationCenter.default.post(name: Notification.Name("AlIslamDebugSwitchTab"), object: kv[1])
                     default: break
@@ -696,46 +743,327 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// disk; this clears what's already loaded.
     static let contentErasedNotification = Notification.Name("alIslamContentErased")
 
+    /// Posted before the stored content is read whole (an iCloud backup being built) and before it is
+    /// replaced (a restore, an erase): every store holding a debounced or deferred write lands it NOW,
+    /// inside the `post` call, so nothing stale can arrive after the bytes underneath it change.
+    /// Observe it through `StoredContentObserver`. A notification and not a list of calls for the
+    /// reason `contentErasedNotification` is one: this file also compiles into the widget and
+    /// complication targets and into sibling apps that ship only some of the stores.
+    static let flushPendingWritesNotification = Notification.Name("alIslamFlushPendingWrites")
+
+    /// Posted after the stored content changed underneath the app (a restore, a reset, an erase):
+    /// every store that loaded once in its `init` reloads from disk, derived indexes included. A
+    /// store that has not been created yet observes nothing and needs nothing: it loads the new
+    /// bytes when it is first used.
+    static let storedContentReplacedNotification = Notification.Name("alIslamStoredContentReplaced")
+
+    /// Lands every pending write, this object's own included. Synchronous: when it returns, the
+    /// defaults and the Documents files are what the app would have written eventually.
+    @MainActor
+    static func flushAllPendingWrites() {
+        guard isAppProcess else { return }
+        shared.flushPendingLastRead()
+        shared.flushPendingKhatmProgress()
+        NotificationCenter.default.post(name: flushPendingWritesNotification, object: nil)
+    }
+
+    /// The other half of a bulk write: `UserDefaults` (and, for a restore, the app group and the
+    /// Documents files) were just written raw, underneath every `didSet`. `@AppStorage` reads the
+    /// new values by itself; what a raw write skips is each property's SIDE EFFECTS, and this
+    /// replays them once, together, then tells the stores outside this file to reload.
+    ///
+    /// `includingPreferences` re-reads the app-group-only preferences (accent, madhab, calculation,
+    /// Hijri offset...) and assigns them through their setters, so the explicit-key ledger, the
+    /// widgets and the prayer refetch all follow. A content-only change leaves them alone.
+    @MainActor
+    func storedContentWasReplaced(includingPreferences: Bool) {
+        guard Self.isAppProcess else { return }
+        if includingPreferences { rehydrateAppGroupPreferences() }
+        remirrorAppGroupPreferences()
+
+        // The presence-checked caches (the byte-keyed memos heal themselves).
+        loadKhatmProgressCacheFromStorage()
+        Self.invalidateTrackerCaches()
+        Self.invalidatePrayerComputationCache()
+        Self.invalidateAdhanSoundResourceCache()
+
+        NotificationCenter.default.post(name: Self.storedContentReplacedNotification, object: nil)
+
+        // The last-read position lives on its own object (`ReadingState`), and a raw write
+        // publishes nothing: the Quran tab's Last Read row would keep the old ayah.
+        ReadingState.shared.objectWillChange.send()
+        // The watch learns of every CHANGED key from this publish (the per-key sync diffs the next
+        // snapshot and stamps what moved). A key the write REMOVED stays as it was on the watch: the
+        // protocol reads an absent key as "no opinion", never as a delete (guide, section 6d).
+        objectWillChange.send()
+        updateDates()
+        // Recomputes the times, reschedules every notification and reloads the widgets (deferred).
+        fetchPrayerTimes(force: true)
+    }
+
+    /// One of the preferences that live ONLY in the app group (the widgets and the complication read
+    /// them there), with everything a bulk path needs to know about it: how to read it from the group
+    /// store (or, from no store, its default), the property's current value, and how to assign it
+    /// through its setter so the `didSet` persists it, marks it chosen and refetches. Values are
+    /// property-list values throughout (the accent as its raw string), so the same closures serve a
+    /// watch payload, a backup and the reset.
+    ///
+    /// One table, four readers: the reset assigns each default, a restore rehydrates through
+    /// `assign`, the watch sync sends `current` and applies with `assign`, and the backup manifest
+    /// takes the `backedUp` keys. Before 2026-09-21 these nine names were kept by hand in five places.
+    struct AppGroupPreference {
+        enum WatchDirection {
+            /// Either device may change it.
+            case both
+            /// The phone alone asserts it (`Settings.phoneAuthoritativeSyncKeys`): a verdict derived
+            /// from where the phone is, which the watch consumes and never sends back.
+            case phoneToWatch
+            /// Never crosses. The reading themes are phone-only looks: a themed flat row colour
+            /// erased the watch's rounded cards and painted its ground gray.
+            case never
+        }
+
+        let key: String
+        /// Whether an iCloud backup carries it. `travelingMode` is not: it is derived from where
+        /// THIS device is, and location never leaves the device.
+        let backedUp: Bool
+        let watch: WatchDirection
+        /// The stored value, or the default when the store (or the key) is missing.
+        let read: (UserDefaults?) -> Any
+        let current: (Settings) -> Any
+        /// Assigns through the setter when the value differs and is of the key's type; true when
+        /// it did.
+        let assign: (Settings, Any) -> Bool
+
+        var defaultValue: Any { read(nil) }
+    }
+
+    static let appGroupPreferences: [AppGroupPreference] = [
+        AppGroupPreference(
+            key: "accentColor", backedUp: true, watch: .both,
+            read: { $0?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString },
+            current: { $0.accentColor.rawValue },
+            assign: { settings, value in
+                guard let raw = value as? String, let accent = AccentColor(rawValue: raw), accent != settings.accentColor else { return false }
+                settings.accentColor = accent
+                return true
+            }),
+        AppGroupPreference(
+            key: "customAccentColorHex", backedUp: true, watch: .both,
+            read: { $0?.string(forKey: "customAccentColorHex") ?? "34C759" },
+            current: { $0.customAccentColorHex },
+            assign: { settings, value in
+                guard let hex = value as? String, hex != settings.customAccentColorHex else { return false }
+                settings.customAccentColorHex = hex
+                return true
+            }),
+        AppGroupPreference(
+            key: "customBackgroundColorHex", backedUp: true, watch: .never,
+            read: { $0?.string(forKey: "customBackgroundColorHex") ?? "1C1C1E" },
+            current: { $0.customBackgroundColorHex },
+            assign: { settings, value in
+                guard let hex = value as? String, hex != settings.customBackgroundColorHex else { return false }
+                settings.customBackgroundColorHex = hex
+                return true
+            }),
+        AppGroupPreference(
+            key: "travelingMode", backedUp: false, watch: .phoneToWatch,
+            read: { $0?.bool(forKey: "travelingMode") ?? false },
+            current: { $0.travelingMode },
+            assign: { settings, value in
+                guard let on = value as? Bool, on != settings.travelingMode else { return false }
+                settings.travelingMode = on
+                return true
+            }),
+        AppGroupPreference(
+            key: "hanafiMadhab", backedUp: true, watch: .both,
+            read: { $0?.bool(forKey: "hanafiMadhab") ?? false },
+            current: { $0.hanafiMadhab },
+            assign: { settings, value in
+                guard let on = value as? Bool, on != settings.hanafiMadhab else { return false }
+                settings.hanafiMadhab = on
+                return true
+            }),
+        AppGroupPreference(
+            key: "prayerCalculation", backedUp: true, watch: .phoneToWatch,
+            read: { $0?.string(forKey: "prayerCalculation") ?? "Muslim World League" },
+            current: { $0.prayerCalculation },
+            assign: { settings, value in
+                guard let method = value as? String, method != settings.prayerCalculation else { return false }
+                settings.prayerCalculation = method
+                return true
+            }),
+        AppGroupPreference(
+            key: "hijriOffset", backedUp: true, watch: .both,
+            read: { $0?.integer(forKey: "hijriOffset") ?? 0 },
+            current: { $0.hijriOffset },
+            assign: { settings, value in
+                guard let offset = value as? Int, offset != settings.hijriOffset else { return false }
+                settings.hijriOffset = offset
+                return true
+            }),
+        AppGroupPreference(
+            key: "highLatitudeRule", backedUp: true, watch: .both,
+            read: { $0?.string(forKey: "highLatitudeRule") ?? Settings.automaticHighLatitudeRule },
+            current: { $0.highLatitudeRule },
+            assign: { settings, value in
+                guard let rule = value as? String, rule != settings.highLatitudeRule else { return false }
+                settings.highLatitudeRule = rule
+                return true
+            }),
+        AppGroupPreference(
+            key: "customPrayerNames", backedUp: true, watch: .both,
+            read: { ($0?.dictionary(forKey: "customPrayerNames") as? [String: String]) ?? [:] },
+            current: { $0.customPrayerNames },
+            assign: { settings, value in
+                guard let names = value as? [String: String], names != settings.customPrayerNames else { return false }
+                settings.customPrayerNames = names
+                return true
+            }),
+    ]
+
+    /// Reads the app-group-only preferences back from the group store and assigns each through its
+    /// setter (the `init` hydration, replayed). Only what differs is assigned: every one of these
+    /// setters marks its key explicit and several refetch the prayer times.
+    @MainActor
+    private func rehydrateAppGroupPreferences() {
+        guard let group = appGroupUserDefaults else { return }
+        for preference in Self.appGroupPreferences {
+            _ = preference.assign(self, preference.read(group))
+        }
+    }
+
+    /// The `@AppStorage` keys that are ALSO mirrored into the app group, because the widget and the
+    /// complication compute in their own processes and read them there. Each property's `didSet`
+    /// keeps its mirror; a raw `UserDefaults` write (a watch sync apply, a restore) goes underneath
+    /// the `didSet`, so whoever writes raw calls `remirrorAppGroupPreferences()` afterwards.
+    static let appGroupMirroredStorageKeys: [String] = prayerOffsetKeys + [
+        "switchHijriDateAtMaghrib", "skyGradients", "showSkyScene", "skySceneStyle",
+        "customFajrAngle", "customIshaAngle",
+        "lastListenedAyahData", "lastListenedSurahData",
+    ]
+
+    /// Copies every mirrored key from standard defaults into the app group, in the form its own
+    /// `didSet` writes (typed for the scalars, so a key that was never set mirrors its default
+    /// rather than vanishing; the two last-listened blobs are removed when they are absent).
+    func remirrorAppGroupPreferences() {
+        guard Self.isAppProcess, let group = appGroupUserDefaults else { return }
+        let store = UserDefaults.standard
+        for key in Self.prayerOffsetKeys {
+            group.setValue(store.integer(forKey: key), forKey: key)
+        }
+        group.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+        group.setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
+        group.setValue(showSkyScene, forKey: "showSkyScene")
+        group.setValue(skySceneStyle, forKey: "skySceneStyle")
+        group.setValue(customFajrAngle, forKey: "customFajrAngle")
+        group.setValue(customIshaAngle, forKey: "customIshaAngle")
+        for key in ["lastListenedAyahData", "lastListenedSurahData"] {
+            if let data = store.data(forKey: key) {
+                group.set(data, forKey: key)
+            } else {
+                group.removeObject(forKey: key)
+            }
+        }
+    }
+
     /// Restores every *preference* (appearance, prayer, and Quran options) to its default while keeping the
     /// user's content. We wipe the app's standard-defaults domain - which clears all the `@AppStorage`
     /// preferences in one shot - but first snapshot the content keys and write them back afterward, then
     /// reset the app-group-backed `@Published` preferences (accent, calculation, madhab, traveling, Hijri
     /// offset) to their defaults via their setters so the shared store + widgets update too. Location and
     /// other app-group content are left untouched.
+    /// The standard-defaults keys that hold the user's CONTENT, as opposed to a preference: bookmarks,
+    /// favorites, khatm progress, saved reading/listening positions, histories, the prayer tracker,
+    /// counts, ladders and badges. One list with three readers: a keep-content reset preserves exactly
+    /// these across its domain wipe, the iCloud backup's manifest (`CloudManifest`) classifies them
+    /// as content (each with a merge rule), and `ContentCategory` gives each a name the user reads
+    /// in the Reset dialog and on the iCloud page. A new content key goes HERE, or a "Reset All
+    /// Settings" quietly deletes it; `Scripts/check_cloud_manifest.py` fails on a key in no list or
+    /// in no category.
+    static let contentStorageKeys: [String] = [
+        "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
+        "khatmCompletedAyahsData", "quranPlanData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
+        "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
+        "lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
+        "quranSearchHistoryData",
+        // The reading and listening histories under the Quran tab's rows.
+        "quranListeningHistoryData", "quranReadingHistoryData", "quranAyahListeningHistoryData",
+        // Lit themes and passages: chosen one by one, like bookmarks.
+        "themeHighlightsLit", "themeHighlightsAllSections", "themeHighlightsSections",
+        // The prayer tracker and menses-pause record: months of marks and exempt days - the most
+        // clearly "the user's, not a preference" data in the app.
+        "prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp",
+        // Hadith content: marks, favorites, reading positions, search history, daily-hadith history,
+        // the History screen's log.
+        "hadithFavoriteBooks", "hadithFavoriteChapters", "hadithBookmarks",
+        "hadithLastReadByBook", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts",
+        "hadithViewedLog",
+        // Tally counts (and the free counter's custom label, which is the user's own text). The
+        // lifetime total and the per-day tally are the dhikr streak: they were missing from this
+        // list until 2026-09-21, so a keep-content reset zeroed a streak it promised to keep.
+        "tasbihFreeCount", "tasbihPresetCounts", "tasbihFreeLabel", "tasbihLifetimeCount", "tasbihCountsByDay",
+        // The Reading Test's ladder: which tiers are passed, and where Find My Level placed the
+        // learner. Weeks of work, not a preference. The tajweed course's ticks and the letter
+        // quiz's best streak are the same kind of thing.
+        "readingTestProgress", "readingTestPlacement", "tajweedLessonsDone", "letterQuizBestStreak",
+        // Where each dua collection was left, the Islam tab's favorites, and the reminders the user
+        // wrote (the Sunnah presets' switches are preferences; a custom reminder is authored).
+        "duaSessionProgressData", "favoriteIslamResources", "customReminders",
+        // The achievement ledger. Kept alongside the content it was earned from: the badges are
+        // a record of what the user DID, and wiping them here would silently re-seed the whole
+        // cabinet (dates and all) off data that itself survived the reset.
+        "achievementUnlockedAt", "achievementsSeeded",
+        // Only wiped by a full erase: these are stats/history rather than saved items, but they're still
+        // the user's, not preferences.
+        "surahOpenCountsData", "surahPlayCountsData",
+        // The calculators' figures: the user's own numbers, typed in.
+        "zakahCash", "zakahGold", "zakahSilver", "zakahBusiness", "zakahTradeShares", "zakahLongShares",
+        "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahNisab", "zakahFitrPeople", "zakahFitrCost",
+        "faraidEstate", "faraidDebts", "faraidFuneral", "faraidBequest", "faraidCounts",
+    ]
+
+    /// Key families a keep-content reset spares along with the content, because they are neither a
+    /// preference nor content: `cloudBackup.` is this device's iCloud claim (which profile it writes,
+    /// its device id, the history, the offer's seen flag). A reset that wiped them turned the backup
+    /// off silently, and the next launch minted a new device id, so the device's own profile looked
+    /// like another device's. A full erase deletes them: it IS a fresh install, and
+    /// `CloudBackupManager` forgets its claim on `contentErasedNotification`.
+    static let resetSparedPrefixes: [String] = ["cloudBackup."]
+
+    /// The Documents files that are the user's content: the journal, the saved reflections, the
+    /// activity log and the watch's mirrored days. A full erase deletes them (until 2026-09-21 it
+    /// wiped only the defaults, and the activity streak survived "Erase Everything"), and the iCloud
+    /// backup carries them (`CloudManifest.files` is this list).
+    static let contentDocumentFiles: [String] = [
+        "journal.json", "reflections.json", "activity-log.json", "activity-log-watch.json",
+    ]
+
     @MainActor
     func resetAllSettings(keepingContent: Bool = true) {
-        // Bookmarks, favorites, khatm progress, saved reading/listening positions, and search history are
-        // content, not settings - preserved across the domain wipe unless the user asked to erase everything.
-        let contentKeys = [
-            "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
-            "khatmCompletedAyahsData", "quranPlanData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
-            "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
-            "lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
-            "quranSearchHistoryData",
-            // The prayer tracker and menses-pause record: months of marks and exempt days - the most
-            // clearly "the user's, not a preference" data in the app.
-            "prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp",
-            // Hadith content: marks, favorites, reading positions, search history, daily-hadith history.
-            "hadithFavoriteBooks", "hadithFavoriteChapters", "hadithBookmarks",
-            "hadithLastReadByBook", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts",
-            // Tally counts (and the free counter's custom label, which is the user's own text).
-            "tasbihFreeCount", "tasbihPresetCounts", "tasbihFreeLabel",
-            // The achievement ledger. Kept alongside the content it was earned from: the badges are
-            // a record of what the user DID, and wiping them here would silently re-seed the whole
-            // cabinet (dates and all) off data that itself survived the reset.
-            "achievementUnlockedAt", "achievementsSeeded",
-            // Only wiped by a full erase: these are stats/history rather than saved items, but they're still
-            // the user's, not preferences.
-            "surahOpenCountsData", "surahPlayCountsData",
-        ]
+        // Anything still held in memory lands first: a debounced write arriving AFTER the wipe
+        // would bring back what was just erased (the tasbih's 500 ms task did exactly that).
+        Self.flushAllPendingWrites()
 
         let standard = UserDefaults.standard
-        let preserved = keepingContent
-            ? contentKeys.reduce(into: [String: Any]()) { dict, key in
-                if let value = standard.object(forKey: key) { dict[key] = value }
-            }
-            : [:]
+        let domain = Bundle.main.bundleIdentifier.flatMap { standard.persistentDomain(forName: $0) } ?? [:]
 
+        // What the wipe spares: the content and the iCloud claim, unless the user asked to erase everything.
+        var preserved: [String: Any] = [:]
+        if keepingContent {
+            let content = Set(Self.contentStorageKeys)
+            for (key, value) in domain where content.contains(key) || Self.resetSparedPrefixes.contains(where: key.hasPrefix) {
+                preserved[key] = value
+            }
+        }
+
+        // Key by key, THEN the domain: a per-key removal fires KVO for that key, which is what the
+        // `@AppStorage` wrappers in this file observe; the domain removal alone posts none (measured
+        // 2026-09-21 with an observer on two keys). The domain removal still runs, as the sweep for
+        // anything the snapshot above did not see.
+        for key in domain.keys where preserved[key] == nil {
+            standard.removeObject(forKey: key)
+        }
         if let bundleID = Bundle.main.bundleIdentifier {
             standard.removePersistentDomain(forName: bundleID)
         }
@@ -749,11 +1077,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // deleting and reinstalling the app, rather than just to clearing this process's defaults.
         if !keepingContent {
             // The badges go with the content they were earned from, and the in-memory ledger has to
-            // be told: it holds a @Published dictionary the domain wipe alone would not touch.
+            // be told: it holds a @Published dictionary the domain wipe alone would not touch. The
+            // backup manager listens too, and forgets the claim the wipe just deleted from disk.
             // Announced rather than called, because this file also compiles into the widget and
             // complication targets, which don't ship the achievements module.
             NotificationCenter.default.post(name: Self.contentErasedNotification, object: nil)
             appGroupUserDefaults?.removePersistentDomain(forName: AppIdentifiers.appGroupSuiteName)
+            if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                for name in Self.contentDocumentFiles {
+                    try? FileManager.default.removeItem(at: documents.appendingPathComponent(name, isDirectory: false))
+                }
+            }
             explicitlySetKeys.removeAll()
             homeLocation = nil
             currentLocation = nil
@@ -761,30 +1095,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             prayers = nil
         }
 
-        // App-group preferences are mirrored by these @Published properties; reassigning to the defaults
-        // re-persists them through each didSet. (Mirrors the init defaults.)
-        accentColor = AppIdentifiers.mainColor
-        customAccentColorHex = "34C759"
-        customBackgroundColorHex = "1C1C1E"
-        travelingMode = false
-        hanafiMadhab = false
-        prayerCalculation = "Muslim World League"
-        hijriOffset = 0
-        customPrayerNames = [:]
-        highLatitudeRule = "Automatic"
+        // The app-group preferences back to their defaults, through their setters (one table; a
+        // restore rehydrates through the same `assign`).
+        for preference in Self.appGroupPreferences {
+            _ = preference.assign(self, preference.defaultValue)
+        }
 
-        // The domain wipe changed the data underneath every in-memory cache. The memo-style caches
-        // (favorites, bookmarks, sky palette) self-heal because they key on the stored bytes; these
-        // presence-checked ones kept serving the erased values until a cold launch.
-        loadKhatmProgressCacheFromStorage()
-        Self.invalidateTrackerCaches()
-        Self.invalidatePrayerComputationCache()
-
-        objectWillChange.send()
-        updateDates()
-        // The forced fetch reloads every widget itself (deferred, coalesced); an immediate reload here
-        // on top of it was a second full reload against WidgetKit's daily budget.
-        fetchPrayerTimes(force: true)
+        // The rest is what every bulk write needs, and the restore's tail already does it: the
+        // widgets' mirrors (the old reset skipped them, so the widget kept the old prayer offsets),
+        // the presence-checked caches, every store's reload (a tasbih tap after "Erase Everything"
+        // used to write the erased count straight back), one publish, one forced fetch.
+        storedContentWasReplaced(includingPreferences: false)
     }
 
     // MARK: - [Shared] App group - shared with widgets / extensions
@@ -1322,10 +1643,25 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(showSkyScene, forKey: "showSkyScene")
-            Self.reloadWidgetKinds(["SolarArcWidget", "SolarArcSkyWidget", "MoonWidget", "MoonSkyWidget",
-                                    "SolarMoonWidget", "SolarMoonSkyWidget"])
+            Self.reloadWidgetKinds(Self.skylineWidgetKinds)
         }
     }
+
+    /// Which structures the skyline draws: `SkySceneStyle`'s raw value ("pyramidsMosque" by default,
+    /// or "pyramids" / "mosques" for the same one on both sides; Abu, 2026-09-21). A raw String here
+    /// because the enum lives in SkyScene.swift, which the Watch does not compile; read it typed
+    /// through `skylineStyle`. Mirrored and reloaded exactly as `showSkyScene` is.
+    @AppStorage("skySceneStyle") var skySceneStyle: String = "pyramidsMosque" {
+        didSet {
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(skySceneStyle, forKey: "skySceneStyle")
+            Self.reloadWidgetKinds(Self.skylineWidgetKinds)
+        }
+    }
+
+    /// The six sky layouts that draw the skyline, reloaded when it changes.
+    static let skylineWidgetKinds = ["SolarArcWidget", "SolarArcSkyWidget", "MoonWidget", "MoonSkyWidget",
+                                     "SolarMoonWidget", "SolarMoonSkyWidget"]
 
     /// JSON map of prayer → `[topHex, bottomHex]` for the Adhan tab's sky card. Empty means "all defaults".
     /// Read and written through the helpers in `SkyPalette.swift`. Mirrored to the app group because the
@@ -1783,6 +2119,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// displayed riwayah's print breaks it (`MushafPrintLineTable`), at the largest size whose widest
     /// printed line fits the screen. Off, the page renders at the chosen font size and scrolls.
     @AppStorage("mushafFitPage") var mushafFitPage = true
+    /// iPad / Mac page mode: open the mushaf as a two-page spread when the reader is wide enough
+    /// for both pages at full size (`SurahPageReader.spreadActive` holds the rule). Read by the
+    /// reader only; the composed text does not depend on it, so it is in no render signature.
+    @AppStorage("mushafTwoPageSpread") var mushafTwoPageSpread = true
 
     /// What page mode draws as each page's BODY text. "arabic" (default) is the mushaf itself; the English
     /// options replace the page's text wholesale - same canonical page boundaries, same fit-to-page - with
@@ -1972,6 +2312,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("saveLastListenedAyah") var saveLastListenedAyah: Bool = true
     /// When on, the Quran tab shows the daily "Ayah of the Day" card.
     @AppStorage("showAyahOfTheDay") var showAyahOfTheDay: Bool = true
+    /// When on, the Hadith tab shows the daily "Hadith of the Day" tile (2026-09-21, the Ayah of the
+    /// Day card's "Delete Forever" and its settings toggle, for the hadith).
+    @AppStorage("showHadithOfTheDay") var showHadithOfTheDay: Bool = true
+    /// Day key for which the Hadith of the Day tile has been hidden via "Hide for Today".
+    @AppStorage("hadithOfTheDayHiddenDate") var hadithOfTheDayHiddenDate: String = ""
     @AppStorage("showWordOfTheDay") var showWordOfTheDay: Bool = true
     /// Every "of the day" feature turns over at Fajr (from the prayer calculation) rather than at
     /// midnight; see `DailyRollover`. Off, or with no location, the boundary is midnight.
@@ -2297,14 +2642,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     func addHadithSearchHistory(_ query: String) {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-
-        var history = hadithSearchHistory.filter {
-            $0.caseInsensitiveCompare(trimmed) != .orderedSame
-        }
-        history.insert(trimmed, at: 0)
-        hadithSearchHistory = Array(history.prefix(10))
+        hadithSearchHistory = Self.searchHistory(hadithSearchHistory, adding: query)
     }
 
     func removeHadithSearchHistory(_ query: String) {
@@ -2863,12 +3201,27 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // why "seen" is a version and not a Bool: bump `aboutYouCurrentVersion` and it is asked again.
     static let aboutYouCurrentVersion = 1
     @AppStorage("aboutYouVersionSeen") var aboutYouVersionSeen: Int = 0
+    /// The iCloud Backup offer (CloudOfferView), the stage after About You: shown once to everyone,
+    /// versioned the same way. Device-only: a restored device has not been offered anything. Under
+    /// the `cloudBackup.` prefix so a keep-content reset spares it with the claim (`resetSparedPrefixes`):
+    /// About You is asked again after a reset because its answer IS a preference; whether to back
+    /// up was answered, and a device already backing up must not be offered to start.
+    static let cloudOfferCurrentVersion = 1
+    @AppStorage("cloudBackup.offerVersionSeen") var cloudOfferVersionSeen: Int = 0
     /// Raw `UserBackground`; "" until answered, and again if the reader chooses not to say.
     @AppStorage("userBackground") var userBackgroundRaw: String = ""
     /// The Islam tab's Start Here guide, put away by the reader (About You brings it back).
     @AppStorage("startHereHidden") var startHereHidden: Bool = false
     /// The Start Here steps already opened, comma separated.
     @AppStorage("startHereVisited") var startHereVisitedRaw: String = ""
+
+    // The tab the app opens on (Abu, 2026-09-21: "would be cool to also be able to choose whether one
+    // wants adhan quran hadith or islam to be the start"). Raw `LaunchTab` (SettingsView.swift). It
+    // is Adhan, as it has always been, until someone chooses otherwise. `launchTabChosen` records
+    // that the picker in Settings was used, so the welcome only ever SUGGESTS the Islam tab to a
+    // learner who has not already picked a tab of their own.
+    @AppStorage("launchTab") var launchTabRaw: String = "adhan"
+    @AppStorage("launchTabChosen") var launchTabChosen: Bool = false
 
     @AppStorage("hapticOn") var hapticOn: Bool = true
 

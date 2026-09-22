@@ -17,6 +17,16 @@ fileprivate extension HadithBookData.Hadith {
 // MARK: - One collection: chapters + book search
 
 struct HadithBookView: View {
+    #if DEBUG
+    /// Hands a launch argument's value to `apply` once the screen is mounted (typing is not scriptable).
+    static func debugSeed(_ flag: String, apply: @escaping (String) -> Void) {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: flag), arguments.indices.contains(index + 1) else { return }
+        let value = arguments[index + 1]
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { apply(value) }
+    }
+    #endif
+
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var store = HadithStore.shared
     /// Chapter favorites render through the store's forwards; the data publishes from HadithUserData,
@@ -39,6 +49,17 @@ struct HadithBookView: View {
     /// The in-book keyword results, filled by `runInBookSearch` (debounced + off-main).
     @State private var inBookMatches: (shown: [HadithBookData.Hadith], hasMore: Bool) = ([], false)
     @State private var inBookSearchTask: Task<Void, Never>?
+    /// The tab root's button row (HadithSearchFilters.swift) minus the collection buttons: gradings,
+    /// word mode, order, sections. The session filters are this screen's own and never reset by
+    /// themselves; the order and the Show choices are the one remembered preference.
+    @State private var searchFilters = HadithSearchFilters.restored(scope: .oneBook)
+    @State private var showSearchFilterSheet = false
+    /// The ranked lane for this book (`HadithRankedSearch.rankedRows`): the hadith list under Best
+    /// Match, and what answers instead of an empty list when the exact scan finds nothing (a
+    /// misspelling, another word ending, words that do not touch), whatever the order.
+    @State private var inBookRanked = HadithRankedSearch.ScopedOutcome()
+    @State private var rankedMatchLimit = 5
+    private static let rankedHadithCap = 40
 
     // MARK: iPad/Mac two columns - chapters left, hadiths right
 
@@ -99,9 +120,15 @@ struct HadithBookView: View {
         return SemanticSearchEngine.isSupported
             && trimmed.count >= 3
             && !trimmed.containsArabicScript
-            // "1234" (or "8a") is a hadith citation, not a question - it gets an exact lookup, so
-            // there is nothing for the semantic engine (or the Ask row) to be asked about.
-            && HadithBookData.citationNumber(inQuery: trimmed) == nil
+            // "1234" (or "8a", or "1:4") is a hadith citation, not a question - it gets an exact
+            // lookup, so there is nothing for the semantic engine (or the Ask row) to be asked about.
+            && !HadithBookData.isNumberQuery(localQuery)
+    }
+
+    /// The query with this book's own name dropped: "bukhari 1:4" typed inside Sahih al-Bukhari is the
+    /// bare "1:4". Every NUMBER reading below goes through this; the keyword scan keeps the raw text.
+    private var localQuery: String {
+        HadithReferenceParser.localQuery(searchText, in: book)
     }
 
     /// Load-or-build the all-books corpus, on the first AI-eligible query - never on open.
@@ -134,14 +161,18 @@ struct HadithBookView: View {
     private func runAISearch(query: String, data: HadithBookData?) {
         aiSearchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard SemanticSearchEngine.isSupported, let data,
-              trimmed.count >= 3, !trimmed.containsArabicScript else {
+        let filters = searchFilters
+        guard SemanticSearchEngine.isSupported, let data, filters.shows(.ai, in: .oneBook),
+              trimmed.count >= 3, !trimmed.containsArabicScript,
+              // A number reading shows no AI section, so stale hits must not raise the AI/keyword switch.
+              !HadithBookData.isNumberQuery(HadithReferenceParser.localQuery(trimmed, in: book)) else {
             if !aiHits.isEmpty { aiHits = [] }
             return
         }
         prepareSemanticCorpus()
         let corpusID = semanticCorpusID
         let slugPrefix = "\(book.slug)|"
+        let accept = filters.gradeTest(for: book, data: data)
 
         aiSearchTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000)
@@ -151,17 +182,24 @@ struct HadithBookView: View {
             let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 60)
             guard !Task.isCancelled else { return }
             let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
+            let candidates = results.compactMap { result -> HadithBookData.Hadith? in
+                guard let keys, keys.indices.contains(result.index) else { return nil }
+                let key = keys[result.index]
+                guard key.hasPrefix(slugPrefix), let idInBook = Int(key.dropFirst(slugPrefix.count)) else { return nil }
+                return data.hadith(numbered: idInBook)
+            }
+            // A grading reads the rows' text blocks, so it is tested off the main thread.
+            var kept: Set<Int>? = nil
+            if let accept {
+                let rows = candidates.map(\.row)
+                kept = await Task.detached(priority: .userInitiated) { Set(rows.filter { $0 >= 0 && accept($0) }) }.value
+                guard !Task.isCancelled else { return }
+            }
             await MainActor.run {
-                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters else { return }
                 // Plain apply: an animated section insert racing the keyword scan's own apply is the
                 // collection-view assertion crash the Quran search hit.
-                aiHits = results.compactMap { result -> HadithBookData.Hadith? in
-                    guard let keys, keys.indices.contains(result.index) else { return nil }
-                    let key = keys[result.index]
-                    guard key.hasPrefix(slugPrefix), let idInBook = Int(key.dropFirst(slugPrefix.count)) else { return nil }
-                    return data.hadith(numbered: idInBook)
-                }
-                .prefix(10).map { $0 }
+                aiHits = candidates.filter { kept?.contains($0.row) ?? true }.prefix(10).map { $0 }
             }
         }
     }
@@ -252,8 +290,16 @@ struct HadithBookView: View {
         guard !query.isEmpty else { return data.chapters }
         // The chapter folds ride in the pack's eager section, so this is a plain compare against text
         // that was normalized at build time - no per-chapter Arabic fold on the main thread.
+        // (Skipped when the filter row hides chapter matches; a number below still answers.)
         let folded = HadithFold.query(query)
-        return data.chapters.filter { data.matches($0, folded) }
+        let byText = searchFilters.shows(.chapters, in: .oneBook) ? data.chapters.filter { data.matches($0, folded) } : []
+        // A number names a chapter by its position too: "15" lists chapter 15 above the hadith cited
+        // 15, and "1:4" lists chapter 1 above its fourth hadith (Abu, 2026-09-21).
+        let local = localQuery
+        let position = HadithBookData.chapterHadith(inQuery: local)?.chapter
+            ?? HadithBookData.citationNumber(inQuery: local).flatMap { $0.suffix == nil ? $0.base : nil }
+        guard let position, let numbered = data.chapter(atPosition: position) else { return byText }
+        return [numbered] + byText.filter { $0.id != numbered.id }
     }
 
     /// Book-wide hadith search (English text/narrator + diacritic-insensitive Arabic), the Quran
@@ -269,17 +315,30 @@ struct HadithBookView: View {
         // internal row number where no citations exist. Answered directly - no scan, and deliberately
         // BEFORE the three-character floor below, which is why typing a one- or two-digit number
         // used to show nothing at all.
-        if let citation = HadithBookData.citationNumber(inQuery: query) {
-            inBookMatches = (Self.citedMatches(citation, in: data), false)
+        // The filter row never reaches this: a number answers whatever is chosen there.
+        if let matches = numberMatches(in: data) {
+            inBookMatches = (matches, false)
+            if !inBookRanked.isEmpty { inBookRanked = HadithRankedSearch.ScopedOutcome() }
             return
         }
 
-        guard query.count >= 3 else {
+        let filters = searchFilters
+        guard query.count >= 3, filters.shows(.hadiths, in: .oneBook) else {
             if !inBookMatches.shown.isEmpty || inBookMatches.hasMore { inBookMatches = ([], false) }
+            if !inBookRanked.isEmpty { inBookRanked = HadithRankedSearch.ScopedOutcome() }
             return
         }
         let folded = HadithFold.query(query)
         let limit = hadithMatchLimit
+        // The filters in force for THIS scan: the words become needles and the grading a row test run
+        // on text matches only. With neither (the row untouched, or only its order changed) the scan
+        // is the one-needle sweep it has always been, so the pages come out the same.
+        let needles = filters.needles(for: query)
+        let accept = filters.gradeTest(for: book, data: data)
+        let isPlainScan = accept == nil && needles.queries.count == 1
+        let wantsRanked = filters.sort == .relevance
+        let book = book
+        let rankedCap = Self.rankedHadithCap
 
         inBookSearchTask = Task {
             // Debounce so typing pays once per settled query; the scan itself runs detached, with
@@ -288,9 +347,12 @@ struct HadithBookView: View {
             // result rows never decode on the main thread.
             try? await Task.sleep(nanoseconds: 200_000_000)
             guard !Task.isCancelled else { return }
-            let scan = Task.detached(priority: .userInitiated) { () -> (shown: [HadithBookData.Hadith], hasMore: Bool) in
-                let rows = data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: limit + 1)
-                if Task.isCancelled { return ([], false) }
+            let scan = Task.detached(priority: .userInitiated) { () -> (shown: [HadithBookData.Hadith], hasMore: Bool, ranked: HadithRankedSearch.ScopedOutcome) in
+                let rows = isPlainScan
+                    ? data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: limit + 1)
+                    : data.matchingRows(in: 0..<data.hadiths.count, queries: needles.queries,
+                                        requireAll: needles.requireAll, limit: limit + 1, accept: accept)
+                if Task.isCancelled { return ([], false, HadithRankedSearch.ScopedOutcome()) }
                 let shown = rows.prefix(limit).map { data.hadiths[$0] }
                 for hadith in shown {
                     if Task.isCancelled { break }
@@ -299,7 +361,21 @@ struct HadithBookView: View {
                     HighlightedSnippet.prewarmNormalization(of: [strings.arabic, strings.text, strings.narrator])
                     HadithRow.prewarmCrossLanguageSpans(query: query, text: strings)
                 }
-                return (shown, rows.count > limit)
+                // The ranked lane: asked for (Best Match), or the exact scan came back empty and a
+                // forgiving answer beats a blank screen. Never on a plain search that found something.
+                var ranked = HadithRankedSearch.ScopedOutcome()
+                if wantsRanked || rows.isEmpty {
+                    ranked = HadithRankedSearch.rankedRows(query: query, book: book, data: data,
+                                                           cap: rankedCap, accept: accept) ?? ranked
+                    for row in ranked.rows.prefix(12) where data.hadiths.indices.contains(row) {
+                        if Task.isCancelled { break }
+                        data.prewarmText(rows: row..<(row + 1))
+                        let strings = data.hadiths[row].allText
+                        HighlightedSnippet.prewarmNormalization(of: [strings.arabic, strings.text, strings.narrator])
+                        HadithRow.prewarmCrossLanguageSpans(query: ranked.highlight, text: strings)
+                    }
+                }
+                return (shown, rows.count > limit, ranked)
             }
             let result = await withTaskCancellationHandler {
                 await scan.value
@@ -308,9 +384,10 @@ struct HadithBookView: View {
             }
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters else { return }
                 // Plain apply - see the aiHits apply note (collection-view assertion).
-                inBookMatches = result
+                inBookMatches = (result.shown, result.hasMore)
+                inBookRanked = result.ranked
             }
         }
     }
@@ -328,13 +405,24 @@ struct HadithBookView: View {
         return cited
     }
 
+    /// Both number readings of the live query, nil when it is words: "1:4" is the fourth hadith of
+    /// chapter 1 (empty when the book has no such hadith), "15" / "8a" the citation lookup above.
+    private func numberMatches(in data: HadithBookData) -> [HadithBookData.Hadith]? {
+        let local = localQuery
+        if let reference = HadithBookData.chapterHadith(inQuery: local) {
+            return data.hadith(chapterPosition: reference.chapter, position: reference.hadith).map { [$0] } ?? []
+        }
+        if let citation = HadithBookData.citationNumber(inQuery: local) {
+            return Self.citedMatches(citation, in: data)
+        }
+        return nil
+    }
+
     /// Synchronous variant, kept ONLY for user-gesture paths (Ask's context gather, the focus-loss
     /// history check) - never called per keystroke or from body.
     private func matchingHadiths(_ data: HadithBookData) -> (shown: [HadithBookData.Hadith], hasMore: Bool) {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let citation = HadithBookData.citationNumber(inQuery: query) {
-            return (Self.citedMatches(citation, in: data), false)
-        }
+        if let matches = numberMatches(in: data) { return (matches, false) }
         guard query.count >= 3 else { return ([], false) }
         // Script-aware: an Arabic query can only live in the Arabic text, a Latin one only in the
         // English - so each query pays for exactly ONE field, matched against the fold the pack
@@ -432,6 +520,10 @@ struct HadithBookView: View {
                 AskAIChatSheet(initialQuestion: searchText)
             }
         }
+        .sheet(isPresented: $showSearchFilterSheet) {
+            HadithSearchFilterSheet(filters: $searchFilters, scope: .oneBook)
+                .smallMediumSheetPresentation(startLarge: true)
+        }
     }
 
     private func loadedBody(_ data: HadithBookData) -> some View {
@@ -473,9 +565,13 @@ struct HadithBookView: View {
 
                         // The fuller, authentic orientation to this collection - selectable,
                         // because it's the one paragraph on the screen a reader would quote.
-                        SelectableProse(text: book.longDescription,
-                                        textStyle: .footnote,
-                                        secondary: true)
+                        // Folded away during a search: the paragraph filled the screen and pushed
+                        // every result below the fold. The title and author lines stay.
+                        if !isSearchActive {
+                            SelectableProse(text: book.longDescription,
+                                            textStyle: .footnote,
+                                            secondary: true)
+                        }
                     }
                     .padding(.vertical, 2)
                 }
@@ -510,7 +606,9 @@ struct HadithBookView: View {
                     // The Ask AI row - ALWAYS present while searching, results or none - under the
                     // same accent ASK AI header as the Quran search: it opens the chat with this query
                     // as its first question.
-                    if OnDeviceAsk.isAvailable {
+                    // (Not for a number reading: "1:4" is a lookup, there is no question in it.)
+                    if OnDeviceAsk.isAvailable, !HadithBookData.isNumberQuery(localQuery),
+                       searchFilters.shows(.ai, in: .oneBook) {
                         Section(header: askAIHeader) {
                             Button {
                                 settings.hapticFeedback()
@@ -553,7 +651,10 @@ struct HadithBookView: View {
 
                     // Both HADITH result kinds landed: ONE segmented switch decides which list fills
                     // the page (the Quran search's rule). With only one kind present, no picker.
-                    let showResultsPicker = !aiHits.isEmpty && !matches.shown.isEmpty
+                    // The ranked list stands in for the exact one under Best Match, and whenever the
+                    // exact scan found nothing (see `inBookRanked`).
+                    let showsRanked = !inBookRanked.isEmpty && (searchFilters.sort == .relevance || matches.shown.isEmpty)
+                    let showResultsPicker = !aiHits.isEmpty && (!matches.shown.isEmpty || showsRanked)
                     if showResultsPicker {
                         Section {
                             Picker("Results", selection: $showBookKeywordResults) {
@@ -574,16 +675,24 @@ struct HadithBookView: View {
                     // Hadith matches, the Quran ayah-search way: compact rows grouped per chapter,
                     // each group with its own count pill; tapping one opens the chapter scrolled to it.
                     if keywordVisible {
-                        hadithMatchesSections(data, matches: matches)
+                        if showsRanked {
+                            rankedMatchesSection(data)
+                        } else {
+                            hadithMatchesSections(data, matches: matches)
+                        }
                     }
 
-                    if shownChapters.isEmpty && matches.shown.isEmpty {
+                    if shownChapters.isEmpty && matches.shown.isEmpty && !showsRanked {
                         Section {
                             Text(aiHits.isEmpty
-                                 ? "No matches found."
+                                 ? (searchFilters.hasSessionFilters ? "No matches with these filters." : "No matches found.")
                                  : "No keyword matches. See the AI results above.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                        } footer: {
+                            if searchFilters.hasSessionFilters, aiHits.isEmpty {
+                                Text("The filters above narrow this search. Reset them to search the whole book.")
+                            }
                         }
                     }
                 } else {
@@ -630,6 +739,15 @@ struct HadithBookView: View {
             // (No AI index build on open any more: the all-books corpus loads or builds on the first
             // AI-eligible query, from `runAISearch`.)
 
+            // The order and the Show choices are one preference shared with the tab root and the
+            // chapter screen; coming back from either picks up what was chosen there.
+            searchFilters.adoptStoredPreferences()
+
+            #if DEBUG
+            // `-hadithBookSearch <term>` (with `-launchHadithBook <slug>`): the in-book search, headless.
+            Self.debugSeed("-hadithBookSearch") { if searchText.isEmpty { searchText = $0 } }
+            #endif
+
             // Resolve and push the target chapter once, after this screen settles (an immediate
             // isActive flip on arrival is unreliable in the pre-NavigationStack containers).
             guard !didAutoOpen, let targetID = autoOpenHadithID else {
@@ -663,9 +781,23 @@ struct HadithBookView: View {
             // A new query starts back at the first page of matches, on the AI list.
             chapterMatchLimit = 5
             hadithMatchLimit = 5
-            showBookKeywordResults = false
+            rankedMatchLimit = 5
+            showBookKeywordResults = HadithView.opensOnKeywordResults
             runInBookSearch(data)
             runAISearch(query: text, data: data)
+        }
+        // A pressed filter button is a new search: back to page one, both lanes re-run.
+        .onChange(of: searchFilters) { filters in
+            filters.persistPreferences()
+            chapterMatchLimit = 5
+            rankedMatchLimit = 5
+            if hadithMatchLimit != 5 {
+                // The limit's own onChange below re-runs the scan.
+                hadithMatchLimit = 5
+            } else {
+                runInBookSearch(data)
+            }
+            runAISearch(query: searchText, data: data)
         }
         // Load-more bumps the limit; re-run the (debounced, off-main) scan for the bigger page.
         .onChange(of: hadithMatchLimit) { _ in
@@ -693,6 +825,18 @@ struct HadithBookView: View {
             bookSearchHelpOverlay
                 .animation(.easeInOut, value: isBookSearchFocused)
         }
+        // The tab root's filter buttons, mounted the same way: above the results while a search (or a
+        // filter) is live, applied after the recent-searches card so the card sits under the row.
+        .adaptiveSafeArea(edge: .top, spacing: 0) {
+            if isBookSearchFocused || isSearchActive || searchFilters.hasSessionFilters {
+                HadithSearchFilterBar(filters: $searchFilters, scope: .oneBook) { showSearchFilterSheet = true }
+                    .background {
+                        if #unavailable(iOS 26.0) {
+                            Rectangle().fill(.bar).ignoresSafeArea(edges: .top)
+                        }
+                    }
+            }
+        }
         // Apple Music-style: the bottom search bar minimizes while scrolling down. The whole bottom
         // bar is the tab root's exact grammar - just the field.
         .collapseBarsOnScroll($barsCollapsed)
@@ -707,7 +851,7 @@ struct HadithBookView: View {
                         // Leaving the field with a query that found something joins the shared
                         // recent-searches chips (the tab root's rule).
                         if !focused, isSearchActive,
-                           !filteredChapters.isEmpty || !matchingHadiths(data).shown.isEmpty {
+                           !filteredChapters.isEmpty || !inBookRanked.isEmpty || !matchingHadiths(data).shown.isEmpty {
                             persistSearchHistoryIfNeeded()
                         }
                     }
@@ -890,6 +1034,12 @@ struct HadithBookView: View {
         }
     }
 
+    /// What a match row paints: the typed words, or nothing for a number reading ("1:4", "bukhari
+    /// 15"), where the number is the row's identity and a forced closest-word span would be noise.
+    private var highlightTerm: String {
+        HadithBookData.isNumberQuery(localQuery) ? "" : searchText
+    }
+
     @ViewBuilder
     private func hadithMatchesSections(_ data: HadithBookData, matches: (shown: [HadithBookData.Hadith], hasMore: Bool)) -> some View {
         if !matches.shown.isEmpty {
@@ -912,7 +1062,7 @@ struct HadithBookView: View {
 
                     ForEach(group.shown) { hadith in
                         chapterLink(group.chapter, data: data, scrollToHadithId: hadith.idInBook) {
-                            HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
+                            HadithRow(book: book, hadith: hadith, searchText: highlightTerm, compact: true).equatable()
                         }
                     }
 
@@ -921,6 +1071,52 @@ struct HadithBookView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// The ranked list (see `inBookRanked`): best first, so it is NOT grouped by chapter the way the
+    /// book-ordered matches are. Each row lands in its chapter, scrolled to the hadith, like theirs.
+    @ViewBuilder
+    private func rankedMatchesSection(_ data: HadithBookData) -> some View {
+        let hadiths = inBookRanked.rows.compactMap { data.hadiths.indices.contains($0) ? data.hadiths[$0] : nil }
+        let bestMatch = searchFilters.sort == .relevance
+        Section(header: SectionPillHeader(title: bestMatch ? "HADITHS BY BEST MATCH" : "CLOSEST HADITHS",
+                                          count: hadiths.count, overflow: inBookRanked.total > hadiths.count)) {
+            rankedNotice(exactFoundNothing: inBookMatches.shown.isEmpty)
+
+            ForEach(hadiths.prefix(rankedMatchLimit)) { hadith in
+                if let chapter = data.chapter(of: hadith) {
+                    chapterLink(chapter, data: data, scrollToHadithId: hadith.idInBook) {
+                        // The ranked rows paint the words the engine matched (a corrected spelling,
+                        // say), or a corrected hit would show no highlight at all.
+                        HadithRow(book: book, hadith: hadith,
+                                  searchText: inBookRanked.highlight.isEmpty ? searchText : inBookRanked.highlight,
+                                  compact: true).equatable()
+                    }
+                }
+            }
+
+            HadithLoadMoreControls(label: "hadith matches", hasMore: hadiths.count > rankedMatchLimit, limit: $rankedMatchLimit)
+        }
+    }
+
+    /// One line above the ranked results saying what was searched for when it was not what was typed.
+    @ViewBuilder
+    private func rankedNotice(exactFoundNothing: Bool) -> some View {
+        if !inBookRanked.corrections.isEmpty {
+            let to = inBookRanked.corrections.map { "\u{201C}\($0.to)\u{201D}" }.joined(separator: ", ")
+            let from = inBookRanked.corrections.map { "\u{201C}\($0.from)\u{201D}" }.joined(separator: ", ")
+            Text("Showing results for \(to) instead of \(from).")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if inBookRanked.relaxed {
+            Text("No hadith carries every word. These carry the most of them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if exactFoundNothing {
+            Text("No hadith has these exact words. These are the closest: another word ending, or the words apart.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -1642,6 +1838,12 @@ struct HadithChapterView: View {
     }
 
     @State private var searchText = ""
+    /// The book screen's button row, for one chapter: gradings, word mode, order, and the two result
+    /// kinds a chapter has. The session filters are this screen's own and never reset by themselves
+    /// (a Previous/Next swap keeps them); the order and the Show choices are the shared preference.
+    @State private var searchFilters = HadithSearchFilters.restored(scope: .oneChapter)
+    @State private var showSearchFilterSheet = false
+    @State private var isChapterSearchFocused = false
 
     #if os(iOS)
     // Within-chapter AI search: the ONE all-books corpus (no per-book corpus any more - Performance
@@ -1653,11 +1855,14 @@ struct HadithChapterView: View {
     private func runChapterAISearch(query: String) {
         chapterAISearchTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
-              HadithBookData.hadithNumber(inQuery: trimmed) == nil else {
+        let filters = searchFilters
+        guard SemanticSearchEngine.isSupported, filters.shows(.ai, in: .oneChapter),
+              trimmed.count >= 3, !trimmed.containsArabicScript,
+              !HadithBookData.isNumberQuery(HadithReferenceParser.localQuery(trimmed, in: book)) else {
             if !chapterAIHits.isEmpty { chapterAIHits = [] }
             return
         }
+        let accept = filters.gradeTest(for: book, data: bookData)
         let corpusID = HadithSemanticCorpus.id
         if !semanticEngine.isReady(corpusID), !semanticEngine.isBuilding(corpusID), !HadithSemanticCorpus.isGathering {
             // Load-or-build on the first AI-eligible query; `readyCorpora` re-runs this search.
@@ -1675,16 +1880,24 @@ struct HadithChapterView: View {
             let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 120)
             guard !Task.isCancelled else { return }
             let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
+            let candidates = results.compactMap { result -> HadithBookData.Hadith? in
+                guard let keys, keys.indices.contains(result.index) else { return nil }
+                let key = keys[result.index]
+                guard key.hasPrefix(slugPrefix), let number = Int(key.dropFirst(slugPrefix.count)),
+                      let hadith = bookData.hadith(numbered: number), hadith.chapterId == chapterID else { return nil }
+                return hadith
+            }
+            // A grading reads the rows' text blocks, so it is tested off the main thread.
+            var kept: Set<Int>? = nil
+            if let accept {
+                let rows = candidates.map(\.row)
+                kept = await Task.detached(priority: .userInitiated) { Set(rows.filter { $0 >= 0 && accept($0) }) }.value
+                guard !Task.isCancelled else { return }
+            }
             await MainActor.run {
-                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                chapterAIHits = results.compactMap { result -> HadithBookData.Hadith? in
-                    guard let keys, keys.indices.contains(result.index) else { return nil }
-                    let key = keys[result.index]
-                    guard key.hasPrefix(slugPrefix), let number = Int(key.dropFirst(slugPrefix.count)),
-                          let hadith = bookData.hadith(numbered: number), hadith.chapterId == chapterID else { return nil }
-                    return hadith
-                }
-                .prefix(6).map { $0 }
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters,
+                      chapterID == chapter.id else { return }
+                chapterAIHits = candidates.filter { kept?.contains($0.row) ?? true }.prefix(6).map { $0 }
             }
         }
     }
@@ -1695,12 +1908,18 @@ struct HadithChapterView: View {
     /// scan the chapter inside `body` on every keystroke and on every corpus progress tick.
     @State private var chapterKeywordMatches: [HadithBookData.Hadith] = []
     @State private var chapterKeywordTask: Task<Void, Never>?
+    /// Non-empty when `chapterKeywordMatches` is the RANKED list (`HadithRankedSearch.rankedRows`
+    /// over this chapter's rows): Best Match was chosen, or the exact scan found nothing and the
+    /// forgiving answer (a misspelling, another word ending, words apart) stands in for it.
+    @State private var chapterRanked = HadithRankedSearch.ScopedOutcome()
 
     private func runChapterKeywordSearch(query: String) {
         chapterKeywordTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        let filters = searchFilters
+        guard !trimmed.isEmpty, filters.shows(.hadiths, in: .oneChapter) else {
             if !chapterKeywordMatches.isEmpty { chapterKeywordMatches = [] }
+            if !chapterRanked.isEmpty { chapterRanked = HadithRankedSearch.ScopedOutcome() }
             return
         }
         // Script-aware, same as the book search: one field per query, matched against the fold the
@@ -1711,32 +1930,57 @@ struct HadithChapterView: View {
         let numbered = Set(numberMatches().map(\.hadith.row))
         let data = bookData
         let range = Self.rowRange(of: chapter)
+        let chapterID = chapter.id
+        // The filters in force for THIS scan (the book screen's rule): words as needles, the grading
+        // as a row test on text matches only, and the one-needle sweep when neither is set. A number
+        // reading is answered above, outside all of this.
+        let needles = filters.needles(for: trimmed)
+        let accept = filters.gradeTest(for: book, data: data)
+        let isPlainScan = accept == nil && needles.queries.count == 1
+        let wantsRanked = filters.sort == .relevance
+        let isNumberReading = HadithBookData.isNumberQuery(HadithReferenceParser.localQuery(trimmed, in: book))
+        let book = book
 
         chapterKeywordTask = Task {
             try? await Task.sleep(nanoseconds: 150_000_000)
             guard !Task.isCancelled else { return }
-            let scan = Task.detached(priority: .userInitiated) { () -> [HadithBookData.Hadith] in
-                let rows = data.matchingRows(in: range, query: folded, limit: Int.max)
-                if Task.isCancelled { return [] }
-                let hits = rows.filter { !numbered.contains($0) }.map { data.hadiths[$0] }
+            let scan = Task.detached(priority: .userInitiated) { () -> (hits: [HadithBookData.Hadith], ranked: HadithRankedSearch.ScopedOutcome) in
+                let rows = isPlainScan
+                    ? data.matchingRows(in: range, query: folded, limit: Int.max)
+                    : data.matchingRows(in: range, queries: needles.queries, requireAll: needles.requireAll,
+                                        limit: Int.max, accept: accept)
+                if Task.isCancelled { return ([], HadithRankedSearch.ScopedOutcome()) }
+                var hits = rows.filter { !numbered.contains($0) }.map { data.hadiths[$0] }
+                // The ranked lane over this chapter's rows: asked for (Best Match), or the exact scan
+                // came back empty. Its rows REPLACE the list; a number reading has none (it is not words).
+                var ranked = HadithRankedSearch.ScopedOutcome()
+                if wantsRanked || rows.isEmpty, !isNumberReading {
+                    ranked = HadithRankedSearch.rankedRows(query: trimmed, book: book, data: data, within: range,
+                                                           cap: max(1, range.count), accept: accept) ?? ranked
+                    ranked.rows.removeAll { numbered.contains($0) || !data.hadiths.indices.contains($0) }
+                    if !ranked.isEmpty { hits = ranked.rows.map { data.hadiths[$0] } }
+                }
+                let highlight = ranked.isEmpty || ranked.highlight.isEmpty ? trimmed : ranked.highlight
                 // The first screenful's highlight folds and cross-language spans, warm before render.
                 for hadith in hits.prefix(12) {
                     if Task.isCancelled { break }
                     let strings = hadith.allText
                     HighlightedSnippet.prewarmNormalization(of: [strings.arabic, strings.text, strings.narrator])
-                    HadithRow.prewarmCrossLanguageSpans(query: trimmed, text: strings)
+                    HadithRow.prewarmCrossLanguageSpans(query: highlight, text: strings)
                 }
-                return hits
+                return (hits, ranked)
             }
-            let hits = await withTaskCancellationHandler {
+            let result = await withTaskCancellationHandler {
                 await scan.value
             } onCancel: {
                 scan.cancel()
             }
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                chapterKeywordMatches = hits
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters,
+                      chapterID == chapter.id else { return }
+                chapterKeywordMatches = result.hits
+                chapterRanked = result.ranked
             }
         }
     }
@@ -1772,6 +2016,30 @@ struct HadithChapterView: View {
         return chapterKeywordMatches
     }
 
+    private var chapterMatchesTitle: String {
+        if chapterRanked.isEmpty { return "MATCHING HADITHS" }
+        return searchFilters.sort == .relevance ? "HADITHS BY BEST MATCH" : "CLOSEST HADITHS"
+    }
+
+    /// One line under the ranked header saying what was searched for when it was not what was typed.
+    private var chapterRankedNotice: String? {
+        if !chapterRanked.corrections.isEmpty {
+            let to = chapterRanked.corrections.map { "\u{201C}\($0.to)\u{201D}" }.joined(separator: ", ")
+            let from = chapterRanked.corrections.map { "\u{201C}\($0.from)\u{201D}" }.joined(separator: ", ")
+            return "Showing results for \(to) instead of \(from)."
+        }
+        if chapterRanked.relaxed { return "No hadith carries every word. These carry the most of them." }
+        if searchFilters.sort != .relevance {
+            return "No hadith has these exact words. These are the closest: another word ending, or the words apart."
+        }
+        return nil
+    }
+
+    private var chapterEmptyMessage: String {
+        if !searchFilters.shows(.hadiths, in: .oneChapter) { return "Hadith matches are turned off in the filters above." }
+        return searchFilters.hasSessionFilters ? "No hadiths found with these filters." : "No hadiths found."
+    }
+
     /// One reading of a pure-number query, with the label that says WHICH reading it is.
     private struct NumberMatch: Identifiable {
         let hadith: HadithBookData.Hadith
@@ -1790,7 +2058,20 @@ struct HadithChapterView: View {
     /// single-chapter book (the forties) and different rows everywhere else; either may not exist, in
     /// which case only the other shows.
     private func numberMatches() -> [NumberMatch] {
-        guard let query = HadithBookData.citationNumber(inQuery: searchText) else { return [] }
+        // The book's own name is optional here: "bukhari 1:4" reads as "1:4".
+        let local = HadithReferenceParser.localQuery(searchText, in: book)
+
+        // "1:4": the fourth hadith of chapter 1, wherever the reader is now (Abu, 2026-09-21).
+        if let reference = HadithBookData.chapterHadith(inQuery: local) {
+            guard let hadith = bookData.hadith(chapterPosition: reference.chapter, position: reference.hadith) else { return [] }
+            var caption = "Chapter \(reference.chapter), Hadith \(reference.hadith)"
+            if let home = bookData.chapter(of: hadith), home.id != chapter.id {
+                caption += " · \(home.english)"
+            }
+            return [NumberMatch(hadith: hadith, caption: caption)]
+        }
+
+        guard let query = HadithBookData.citationNumber(inQuery: local) else { return [] }
         let number = query.base
         let ordinal = Self.ordinalFormatter.string(from: NSNumber(value: number)) ?? "\(number)"
 
@@ -1853,6 +2134,15 @@ struct HadithChapterView: View {
                 )
 
                 floatingChapterHeader
+
+                // The book screen's filter buttons, under the chapter header while a search (or a
+                // filter) is live. No bar background: the header above floats as glass too.
+                if !isSelectingHadiths, isChapterSearchFocused || isSearchActive || searchFilters.hasSessionFilters {
+                    HadithSearchFilterBar(filters: $searchFilters, scope: .oneChapter) { showSearchFilterSheet = true }
+                        // Before iOS 26 the row's horizontal scroller took spare height from this
+                        // stack and left an empty band under the buttons.
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -1881,12 +2171,32 @@ struct HadithChapterView: View {
             runChapterAISearch(query: text)
             #endif
         }
+        // A pressed filter button is a new search of the same words.
+        .onChange(of: searchFilters) { filters in
+            filters.persistPreferences()
+            runChapterKeywordSearch(query: searchText)
+            #if os(iOS)
+            runChapterAISearch(query: searchText)
+            #endif
+        }
+        // The order and the Show choices are one preference shared with the tab root and the book.
+        .onAppear {
+            searchFilters.adoptStoredPreferences()
+            #if DEBUG
+            // `-hadithChapterSearch <term>` (with `-launchHadithOpen <slug>:<id>`): the in-chapter search.
+            HadithBookView.debugSeed("-hadithChapterSearch") { if searchText.isEmpty { searchText = $0 } }
+            #endif
+        }
         #if os(iOS)
         .onChange(of: semanticEngine.readyCorpora) { ready in
             guard ready.contains(HadithSemanticCorpus.id), !searchText.isEmpty else { return }
             runChapterAISearch(query: searchText)
         }
         #endif
+        .sheet(isPresented: $showSearchFilterSheet) {
+            HadithSearchFilterSheet(filters: $searchFilters, scope: .oneChapter)
+                .smallMediumSheetPresentation(startLarge: true)
+        }
         .sheet(isPresented: $showChapterSettings) {
             SettingsHadithView()
                 .smallMediumSheetPresentation()
@@ -2119,20 +2429,30 @@ struct HadithChapterView: View {
 
                     // "No hadiths found" would contradict the rows just above it, so the text-match
                     // section stands down entirely once a number has answered.
+                    // The ranked list (see `chapterRanked`) says so in its header, and says why it is
+                    // not the exact one.
+                    let notice = chapterRanked.isEmpty ? nil : chapterRankedNotice
                     if !matches.isEmpty || numbered.isEmpty {
-                        Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: matches.count)) {
+                        Section(header: SectionPillHeader(title: chapterMatchesTitle, count: matches.count)) {
                             if matches.isEmpty {
-                                Text("No hadiths found.")
+                                Text(chapterEmptyMessage)
                                     .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else if let notice {
+                                Text(notice)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        .padding(.bottom, matches.isEmpty ? 0 : -12)
+                        .padding(.bottom, matches.isEmpty || notice != nil ? 0 : -12)
                     }
 
                     ForEach(matches) { hadith in
                         Section {
-                            HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
+                            // The ranked rows paint the words the engine matched (a corrected spelling, say).
+                            HadithRow(book: book, hadith: hadith,
+                                      searchText: chapterRanked.isEmpty || chapterRanked.highlight.isEmpty ? searchText : chapterRanked.highlight,
+                                      showsChapterPosition: true).equatable()
                                 .contentShape(Rectangle())
                                 .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
                         }
@@ -2231,7 +2551,10 @@ struct HadithChapterView: View {
                     .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
             } else {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut))
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+                          onFocusChanged: { focused in
+                              withAnimation { isChapterSearchFocused = focused }
+                          })
                     .padding(.horizontal, 24)
                     .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
@@ -2247,8 +2570,40 @@ struct HadithChapterView: View {
         allChapterHadiths.filter { selectedHadithIDs.contains($0.idInBook) }
     }
 
-    /// The bulk-action bar shown while selecting: count, Copy, Share, Bookmark, Done - one glass bar
-    /// where the search normally sits.
+    /// Every selected hadith is already bookmarked - the bar's bookmark button then removes instead
+    /// (the surah reader's `allSelectedBookmarked` rule).
+    private var allSelectedBookmarked: Bool {
+        !selectedHadithIDs.isEmpty && selectedHadiths.allSatisfy { store.isBookmarked(slug: book.slug, idInBook: $0.idInBook) }
+    }
+
+    /// Bookmarks every selected hadith that isn't, or - when all of them are - removes all the
+    /// bookmarks after ONE confirmation (every removal asks first; notes on them are lost with them).
+    private func bulkToggleHadithBookmarks() {
+        let targets = selectedHadiths
+        if allSelectedBookmarked {
+            let noted = targets.filter { store.note(slug: book.slug, idInBook: $0.idInBook) != nil }.count
+            RemovalConfirmation.present(
+                title: noted > 0 ? "Remove \(targets.count) bookmarks and delete \(noted) notes?" : "Remove \(targets.count) bookmarks?",
+                message: noted > 0
+                    ? "The selected hadiths will be removed from your bookmarks, and their notes will be deleted."
+                    : "The selected hadiths will be removed from your bookmarks.",
+                confirmTitle: "Remove Bookmarks"
+            ) {
+                withAnimation(.easeInOut) {
+                    for hadith in targets { store.toggleBookmark(book: book, hadith: hadith) }
+                }
+            }
+        } else {
+            withAnimation(.easeInOut) {
+                for hadith in targets where !store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) {
+                    store.toggleBookmark(book: book, hadith: hadith)
+                }
+            }
+        }
+    }
+
+    /// The bulk-action bar shown while selecting: count, Copy, Share, Bookmark, Select All, Done -
+    /// one glass bar where the search normally sits.
     private var selectionActionBar: some View {
         HStack(spacing: 16) {
             Text("\(selectedHadithIDs.count)")
@@ -2281,18 +2636,27 @@ struct HadithChapterView: View {
 
             Button {
                 settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    for hadith in selectedHadiths where !store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) {
-                        store.toggleBookmark(book: book, hadith: hadith)
-                    }
-                }
+                bulkToggleHadithBookmarks()
             } label: {
-                Image(systemName: "bookmark")
+                Image(systemName: allSelectedBookmarked ? "bookmark.fill" : "bookmark")
                     .font(.body.weight(.semibold))
             }
+            .accessibilityLabel(allSelectedBookmarked ? "Remove Bookmarks" : "Bookmark")
             .disabled(selectedHadithIDs.isEmpty)
 
             Spacer()
+
+            // The surah reader's Select All: the whole chapter on screen, or none of it.
+            let allSelected = !allChapterHadiths.isEmpty && selectedHadithIDs.count >= allChapterHadiths.count
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    selectedHadithIDs = allSelected ? [] : Set(allChapterHadiths.map(\.idInBook))
+                }
+            } label: {
+                Text(allSelected ? "Deselect All" : "Select All")
+                    .font(.caption.weight(.semibold))
+            }
 
             Button {
                 settings.hapticFeedback()

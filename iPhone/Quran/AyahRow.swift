@@ -34,6 +34,8 @@ struct AyahRow: View, Equatable {
     /// Only the highlighter's wash reads this: the same hue needs a heavier alpha on the dark page to
     /// register at all, so the tint is resolved per scheme rather than baked into the palette.
     @Environment(\.colorScheme) private var colorScheme
+    /// The in-surah search's Match rule, so the word renderers paint what the snippet paints.
+    @Environment(\.searchWordRule) private var wordRule
     /// NOT @ObservedObject: the player is used only inside action closures plus the one
     /// `isPlayingThis` input below. Observing it re-ran EVERY visible row's body once per ayah while
     /// a surah played (`currentAyahNumber` publishes each advance), bypassing `.equatable()` -
@@ -1120,7 +1122,8 @@ struct AyahRow: View, Equatable {
             // variants from every occurrence, which is what bridges to a translation that phrased it
             // differently ("confining"). The union is what "maximize" buys here.
             var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
-                query: trimmed, surah: surah.id, ayah: ayah.id, rawText: rawText, displayText: displayText
+                query: trimmed, surah: surah.id, ayah: ayah.id, rawText: rawText, displayText: displayText,
+                wordRule: wordRule
             )
             for term in CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
             where !terms.contains(term) {
@@ -1129,7 +1132,7 @@ struct AyahRow: View, Equatable {
             // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
             // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
             let arabicExtra = CrossLanguageWordHighlight.arabicSpansForArabicQuery(
-                query: trimmed, in: displayText
+                query: trimmed, in: displayText, wordRule: wordRule
             )
             guard !terms.isEmpty || !arabicExtra.isEmpty else { return ([], [], []) }
             return (arabicExtra,
@@ -1240,7 +1243,7 @@ struct AyahRow: View, Equatable {
                 let hasTerm = !highlightQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 let searchRanges: [NSRange] = {
                     var spans: [NSRange] = hasTerm
-                        ? HighlightedSnippet.matchRanges(of: highlightQuery, in: arabicSource, guaranteeMatch: matchedArabic)
+                        ? HighlightedSnippet.matchRanges(of: highlightQuery, in: arabicSource, guaranteeMatch: matchedArabic, wordRule: wordRule)
                             .map { NSRange($0, in: arabicSource) }
                         : []
                     for span in crossArabic
@@ -1767,6 +1770,19 @@ struct AyahRow: View, Equatable {
                 requestSheet(.secondary(.share))
             } label: {
                 Label("Share Ayah", systemImage: "square.and.arrow.up")
+            }
+
+            // The hadith rows' last item, on the ayah too (2026-09-21): the on-device summary of the
+            // ayah's tafsirs and translations. Hidden without Apple Intelligence, the OnDeviceAsk pattern.
+            if canShowTafsir, AyahSummarizeSheet.isOffered {
+                Divider()
+
+                Button {
+                    settings.hapticFeedback()
+                    requestSheet(.secondary(.summarize))
+                } label: {
+                    Label("Summarize with AI", systemImage: "text.append")
+                }
             }
         }
         .lineLimit(nil)

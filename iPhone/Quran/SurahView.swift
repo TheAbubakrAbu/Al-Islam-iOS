@@ -457,6 +457,9 @@ struct SurahView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var searchText = ""
+    /// The search bar's filter buttons (Match, Words, Without, Search In). This search only, never saved.
+    @State private var searchFilters = QuranSearchFilters.readerSession()
+    @State private var showSearchFilterSheet = false
     /// Scroll-visibility tracking, deliberately NOT observed by this view - see `AyahVisibilityModel`.
     @State private var visibility = AyahVisibilityModel()
     /// The ayah the app is drawing attention to, shared by BOTH readers so a highlight survives a switch
@@ -592,7 +595,10 @@ struct SurahView: View {
     /// changed, and from then on NOTHING would present - not a row's actions sheet, not Surah Info,
     /// not Revelation Info (user report). `onDismiss` runs after the animation has finished and the
     /// controller is gone, which is the only safe moment to touch the host.
-    @State private var pendingPickedSurah: Surah?
+    ///
+    /// An ayah rides along since 2026-09-21: the sheet is the Quran tab's whole list now
+    /// (`QuranView.picker`), so a pick can be a search hit, a juz row or a page row, not only a surah.
+    @State private var pendingPicked: (surah: Surah, ayah: Int?)?
     @State private var confirmConvertQiraahToHafs = false
     /// Consent dialog for switching a beta riwayah's page text from the (exact) facsimile
     /// to its beta transcription - the reader-menu twin of `BetaTextConsentCard`.
@@ -988,201 +994,17 @@ struct SurahView: View {
         return nil
     }
 
-    private func booleanAyahSearchGroups(from rawQuery: String) -> [[BooleanAyahTerm]]? {
-        let normalized = rawQuery
-            .replacingOccurrences(of: "&&", with: "&")
-            .replacingOccurrences(of: "||", with: "|")
-
-        guard normalized.contains("&") || normalized.contains("|") || normalized.contains("!") || normalized.contains("#") || normalized.contains("^") || normalized.contains("%") || normalized.contains("$") || normalized.contains("=") else {
-            return nil
-        }
-
-        return normalized
-            .split(separator: "|", omittingEmptySubsequences: false)
-            .map { part in
-                part
-                    .split(separator: "&", omittingEmptySubsequences: false)
-                    .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .compactMap(booleanAyahSearchTerm(from:))
+    /// The operator grammar lives in `QuranBooleanQuery` (one parser for the whole-Quran scan, this
+    /// search and page mode's find bar); this only hands it the ayah's letter-for-letter sources.
+    private func matchesBooleanAyahSearch(ayah: Ayah, haystack: String, query: QuranBooleanQuery) -> Bool {
+        query.matches(
+            haystack: haystack,
+            tokens: QuranBooleanQuery.tokens(of: haystack),
+            tashkeel: { QuranBooleanQuery.tashkeelBlob(ayah.textArabic(for: settings.displayQiraahForArabic, surahID: surah.id)) },
+            exactEnglish: {
+                QuranBooleanQuery.exactPhraseBlob([ayah.textTransliteration, ayah.textEnglishSaheeh, ayah.textEnglishMustafa].joined(separator: " "))
             }
-            .filter { !$0.isEmpty }
-    }
-
-    private struct BooleanAyahTerm {
-        enum MatchMode {
-            case contains
-            case startsWith
-            case endsWith
-            case exact
-            case wholeWord   // `=` - matches whole words / a series of whole words (not substrings)
-        }
-
-        let value: String
-        let isNegated: Bool
-        let matchMode: MatchMode
-        let requiresTashkeelMatch: Bool
-        let tashkeelPattern: String
-        let requiresExactEnglishMatch: Bool
-        let exactEnglishPhrase: String
-    }
-
-    private static let arabicTashkeelCharacterSet: CharacterSet = {
-        var set = CharacterSet()
-        set.insert(charactersIn: "\u{0610}"..."\u{061A}")
-        set.insert(charactersIn: "\u{064B}"..."\u{065F}")
-        set.insert(charactersIn: "\u{0670}"..."\u{0670}")
-        set.insert(charactersIn: "\u{06D6}"..."\u{06ED}")
-        return set
-    }()
-
-    private func arabicTashkeelBlob(_ text: String) -> String {
-        String(text.unicodeScalars.filter { Self.arabicTashkeelCharacterSet.contains($0) })
-    }
-
-    private func exactPhraseBlob(_ text: String) -> String {
-        text
-            .lowercased()
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-    }
-
-    private func booleanAyahSearchTerm(from rawTerm: String) -> BooleanAyahTerm? {
-        var term = rawTerm.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !term.isEmpty else { return nil }
-
-        var isNegated = false
-        while term.hasPrefix("!") {
-            isNegated.toggle()
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var requiresTashkeelMatch = false
-        while term.hasPrefix("#") {
-            requiresTashkeelMatch = true
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var wholeWordMatch = false
-        while term.hasPrefix("=") {
-            wholeWordMatch = true
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var startsWithMatch = false
-        if term.hasPrefix("^") {
-            startsWithMatch = true
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var endsWithMatch = false
-        if term.hasSuffix("%") || term.hasSuffix("$") {
-            endsWithMatch = true
-            term.removeLast()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        guard !term.isEmpty else { return nil }
-        let cleaned = settings.cleanSearch(term, whitespace: true)
-        guard !cleaned.isEmpty else { return nil }
-
-        let matchMode: BooleanAyahTerm.MatchMode
-        if wholeWordMatch {
-            matchMode = .wholeWord
-        } else if startsWithMatch && endsWithMatch {
-            matchMode = .exact
-        } else if startsWithMatch {
-            matchMode = .startsWith
-        } else if endsWithMatch {
-            matchMode = .endsWith
-        } else {
-            matchMode = .contains
-        }
-
-        return BooleanAyahTerm(
-            value: cleaned,
-            isNegated: isNegated,
-            matchMode: matchMode,
-            requiresTashkeelMatch: requiresTashkeelMatch && term.containsArabicLetters,
-            tashkeelPattern: arabicTashkeelBlob(term),
-            requiresExactEnglishMatch: requiresTashkeelMatch && !term.containsArabicLetters,
-            exactEnglishPhrase: exactPhraseBlob(term)
         )
-    }
-
-    private func searchTokens(from cleanedText: String) -> [String] {
-        cleanedText.split(separator: " ").map(String.init).filter { !$0.isEmpty }
-    }
-
-    private func ayahTermMatch(haystack: String, tokens: [String], term: String, mode: BooleanAyahTerm.MatchMode) -> Bool {
-        switch mode {
-        case .contains:
-            return haystack.contains(term)
-        case .startsWith:
-            return haystack.hasPrefix(term) || tokens.contains(where: { $0.hasPrefix(term) })
-        case .endsWith:
-            return haystack.hasSuffix(term) || tokens.contains(where: { $0.hasSuffix(term) })
-        case .exact:
-            return haystack == term || tokens.contains(term)
-        case .wholeWord:
-            // The query's words must appear as a consecutive run of whole words (a full word, or a full
-            // series of words) - e.g. "=رب" matches the word رب but not "ربهم".
-            return consecutiveTokenMatch(tokens, query: searchTokens(from: term), lastMustBeExact: true)
-        }
-    }
-
-    /// True if `query`'s tokens appear as a consecutive run of whole words in `haystack`.
-    private func consecutiveTokenMatch(_ haystack: [String], query: [String], lastMustBeExact: Bool) -> Bool {
-        guard !query.isEmpty, haystack.count >= query.count else { return false }
-        for start in 0...(haystack.count - query.count) {
-            var matched = true
-            for offset in query.indices {
-                let word = haystack[start + offset]
-                let term = query[offset]
-                if offset == query.count - 1 && !lastMustBeExact {
-                    if !word.hasPrefix(term) { matched = false; break }
-                } else if word != term {
-                    matched = false
-                    break
-                }
-            }
-            if matched { return true }
-        }
-        return false
-    }
-
-    private func matchesBooleanAyahSearch(ayah: Ayah, haystack: String, groups: [[BooleanAyahTerm]]) -> Bool {
-        let haystackTokens = searchTokens(from: haystack)
-        return groups.contains { andTerms in
-            andTerms.allSatisfy { term in
-                let containsTerm: Bool
-                if term.requiresTashkeelMatch {
-                    let lettersMatch = ayahTermMatch(haystack: haystack, tokens: haystackTokens, term: term.value, mode: term.matchMode)
-                    let tashkeelHaystack = arabicTashkeelBlob(ayah.textArabic(for: settings.displayQiraahForArabic, surahID: surah.id))
-                    let tashkeelMatch = term.tashkeelPattern.isEmpty || tashkeelHaystack.contains(term.tashkeelPattern)
-                    containsTerm = lettersMatch && tashkeelMatch
-                } else if term.requiresExactEnglishMatch {
-                    let englishExactHaystack = exactPhraseBlob([
-                        ayah.textTransliteration,
-                        ayah.textEnglishSaheeh,
-                        ayah.textEnglishMustafa
-                    ].joined(separator: " "))
-                    containsTerm = !term.exactEnglishPhrase.isEmpty && ayahTermMatch(
-                        haystack: englishExactHaystack,
-                        tokens: searchTokens(from: englishExactHaystack),
-                        term: term.exactEnglishPhrase,
-                        mode: term.matchMode
-                    )
-                } else {
-                    containsTerm = ayahTermMatch(haystack: haystack, tokens: haystackTokens, term: term.value, mode: term.matchMode)
-                }
-                return term.isNegated ? !containsTerm : containsTerm
-            }
-        }
     }
 
     static func prewarm(surah: Surah, settings: Settings, includeSearchBlobs: Bool = false) {
@@ -2178,7 +2000,7 @@ struct SurahView: View {
             Text("Please keep notes Islamic and respectful.")
         }
         // The pick is only RECORDED here; `onDismiss` performs it once the sheet is fully gone. See
-        // `pendingPickedSurah`. The picker closes itself (its `select` calls `dismiss()`), so this
+        // `pendingPicked`. The picker closes itself (`QuranView.selectQuranRoute` calls `dismiss()`), so this
         // callback must not also write the binding: two dismissals of one presentation is the other
         // half of the same hazard.
         .sheet(isPresented: $showSurahPickerSheet, onDismiss: navigateToPickedSurah) {
@@ -2186,9 +2008,13 @@ struct SurahView: View {
             // SCREEN (pageSurah) is the one the picker must treat as current - comparing against the
             // surah the reader was merely opened from made "Choose Surah" a silent no-op whenever the
             // pick matched it (most commonly: paging away and picking the starting surah to go back).
-            SurahPickerSheet(currentSurahID: displayedSurah.id) { selectedSurah in
-                pendingPickedSurah = selectedSurah.id == displayedSurah.id ? nil : selectedSurah
-            }
+            //
+            // The sheet is the Quran tab's own list in its Choose Surah mode, so search, sorting, the
+            // grid, context menus and swipe actions are the tab's, by construction.
+            QuranView(picker: QuranView.PickerMode(currentSurahID: displayedSurah.id) { picked, ayah in
+                // The surah already on screen with no ayah named is not a move.
+                pendingPicked = (ayah == nil && picked.id == displayedSurah.id) ? nil : (picked, ayah)
+            })
             .environmentObject(settings)
             .environmentObject(quranData)
             .smallMediumSheetPresentation()
@@ -2290,7 +2116,9 @@ struct SurahView: View {
         let joinedQuery: String?
         let joinedSilentQuery: String?
         let hamzaFilter: Settings.HamzaPrecisionFilter?
-        let booleanGroups: [[BooleanAyahTerm]]?
+        let booleanQuery: QuranBooleanQuery?
+        /// Search In: a Latin query reads this lane alone (nil = every text).
+        let lane: QuranSearchFilters.Lane?
         let pageJuzQuery: PageJuzQuery
         let ayahNumberQuery: Int?
         let dividerKeywordMode: DividerKeywordMode?
@@ -2305,18 +2133,23 @@ struct SurahView: View {
     @State private var parsedQueryMemo = ParsedQueryMemo()
 
     private func parsedQuery() -> ParsedSurahQuery {
-        if parsedQueryMemo.key == searchText, let value = parsedQueryMemo.value { return value }
-        let cleanQuery = settings.cleanSearch(searchText, whitespace: true)
+        // The filter buttons compile into the query (Whole Word, All Words, Without...), and typed
+        // operator symbols are dropped on the way: `typed` is the words alone.
+        let compiled = searchFilters.compile(searchText)
+        let memoKey = searchText + "\u{1F}" + compiled.exact + "\u{1F}" + searchFilters.lane.rawValue
+        if parsedQueryMemo.key == memoKey, let value = parsedQueryMemo.value { return value }
+        let typed = compiled.navigation
+        let cleanQuery = settings.cleanSearch(typed, whitespace: true)
         // Mirror QuranView: an Arabic query also matches the silent-letter stripped form (the matching
         // silent forms are folded into the search blob above). Always on - the fold is strictly additive.
-        let silentQuery: String? = searchText.containsArabicLetters
-            ? settings.cleanSearchIgnoringSilentArabicLetters(searchText, whitespace: true)
+        let silentQuery: String? = typed.containsArabicLetters
+            ? settings.cleanSearchIgnoringSilentArabicLetters(typed, whitespace: true)
             : nil
         // Vocative-joined twin ("يا نساء" → "يانساء") as an ADDITIONAL lane - the mushaf glues يا to the
         // word it calls, so the spaced typing can never substring-match without it. Nil when joining
         // changes nothing.
         let joinedQuery: String? = {
-            guard searchText.containsArabicLetters else { return nil }
+            guard typed.containsArabicLetters else { return nil }
             let joined = cleanQuery.joiningVocativeYaForSearch
             return joined == cleanQuery ? nil : joined
         }()
@@ -2324,7 +2157,7 @@ struct SurahView: View {
             let joined = $0.joiningVocativeYaForSearch
             return joined == $0 ? nil : joined
         }
-        let trimmedLowerSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let trimmedLowerSearch = typed.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let dividerKeywordMode: DividerKeywordMode? = {
             if trimmedLowerSearch == "page" || trimmedLowerSearch == "pages" { return .page }
             if trimmedLowerSearch == "juz" { return .juz }
@@ -2337,13 +2170,14 @@ struct SurahView: View {
             joinedSilentQuery: joinedSilentQuery,
             // A typed hamza means it: the main fold drops ء, so نساء and نسى collapse together and
             // searching يانساء pulled in يَنسَىٰ. Only ever removes results, and only when a bare ء was typed.
-            hamzaFilter: Settings.HamzaPrecisionFilter(query: searchText),
-            booleanGroups: booleanAyahSearchGroups(from: searchText),
-            pageJuzQuery: parsePageJuzQuery(from: searchText),
-            ayahNumberQuery: parseAyahNumberQuery(from: searchText),
+            hamzaFilter: Settings.HamzaPrecisionFilter(query: typed),
+            booleanQuery: QuranBooleanQuery(compiled.exact),
+            lane: searchFilters.lane == .all || typed.containsArabicLetters ? nil : searchFilters.lane,
+            pageJuzQuery: parsePageJuzQuery(from: typed),
+            ayahNumberQuery: parseAyahNumberQuery(from: typed),
             dividerKeywordMode: dividerKeywordMode
         )
-        parsedQueryMemo.key = searchText
+        parsedQueryMemo.key = memoKey
         parsedQueryMemo.value = value
         return value
     }
@@ -2359,7 +2193,8 @@ struct SurahView: View {
         let joinedQuery = parsed.joinedQuery
         let joinedSilentQuery = parsed.joinedSilentQuery
         let hamzaFilter = parsed.hamzaFilter
-        let booleanGroups = parsed.booleanGroups
+        let booleanQuery = parsed.booleanQuery
+        let lane = parsed.lane
         let pageJuzQuery = parsed.pageJuzQuery
         let ayahNumberQuery = parsed.ayahNumberQuery
         let dividerKeywordMode = parsed.dividerKeywordMode
@@ -2407,10 +2242,20 @@ struct SurahView: View {
                     return false
                 }
 
+                // Search In: one Latin lane, folded on demand (a surah is 286 ayahs at most).
+                if let lane {
+                    let laneBlob = lane == .translation
+                        ? settings.cleanSearch(a.textEnglishSaheeh) + " " + settings.cleanSearch(a.textEnglishMustafa)
+                        : settings.cleanSearch(a.textTransliteration) + " " + settings.foldedTransliterationForSearch(a.textTransliteration)
+                    if let booleanQuery {
+                        return matchesBooleanAyahSearch(ayah: a, haystack: laneBlob, query: booleanQuery)
+                    }
+                    return laneBlob.contains(cleanQuery)
+                }
+
                 if let blob = searchBlobByAyahID[a.id] {
-                    if let booleanGroups {
-                        if booleanGroups.isEmpty { return false }
-                        return matchesBooleanAyahSearch(ayah: a, haystack: blob, groups: booleanGroups)
+                    if let booleanQuery {
+                        return matchesBooleanAyahSearch(ayah: a, haystack: blob, query: booleanQuery)
                     }
                     if blob.contains(cleanQuery) { return true }
                     if let joinedQuery, blob.contains(joinedQuery) { return true }
@@ -2438,9 +2283,8 @@ struct SurahView: View {
                 }
                 let fallbackBlob = fallbackParts.joined(separator: " ")
 
-                if let booleanGroups {
-                    if booleanGroups.isEmpty { return false }
-                    return matchesBooleanAyahSearch(ayah: a, haystack: fallbackBlob, groups: booleanGroups)
+                if let booleanQuery {
+                    return matchesBooleanAyahSearch(ayah: a, haystack: fallbackBlob, query: booleanQuery)
                 }
 
                 if fallbackBlob.contains(cleanQuery) { return true }
@@ -2971,6 +2815,8 @@ struct SurahView: View {
                     // down; typing in it always restores full size.
                     .minimizedBarStyle(barsCollapsed && !isAyahSearchFocused)
             }
+            // The rows paint by the Match button's rule, not only filter by it.
+            .environment(\.searchWordRule, searchFilters.highlightWordRule)
             .confirmationDialog("Convert Qiraah to Hafs an Asim?", isPresented: $confirmConvertQiraahToHafs, titleVisibility: .visible) {
                 Button("Yes") {
                     settings.hapticFeedback()
@@ -3627,6 +3473,15 @@ struct SurahView: View {
 
     private func playbackAndSearchControls(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+            // The filter buttons ride right over the field while a search is in hand (the typed
+            // operator symbols they replace are gone), and stay while any of them is on.
+            if isAyahSearchFocused || !searchText.isEmpty || searchFilters.hasSessionFilters {
+                QuranSearchFilterBar(filters: $searchFilters, surahs: [], inReader: true) {
+                    showSearchFilterSheet = true
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             // The compact SwiftUI bar has no internal insets, so the old negative-padding compensation
             // is gone - an ordinary 8pt gap separates the field from the play button.
             HStack(spacing: 8) {
@@ -3651,10 +3506,14 @@ struct SurahView: View {
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            .padding(.horizontal, 24)
         }
-        .padding(.horizontal, 24)
         .padding(.bottom, BottomBarCushion.standard)
         .background(Color.white.opacity(0.00001))
+        .sheet(isPresented: $showSearchFilterSheet) {
+            QuranSearchFilterSheet(filters: $searchFilters, surahs: [], inReader: true)
+                .smallMediumSheetPresentation(startLarge: false)
+        }
         .animation(.easeInOut, value: quranPlayer.isPlaying)
         // Also animate the swap INTO the loading spinner: tapping play flips isLoading before isPlaying, so
         // without this the play icon jumped to the spinner with no transition.
@@ -3783,8 +3642,9 @@ struct SurahView: View {
                         surahName: surah.nameTransliteration
                     )
                 } label: {
-                    ReciterCaptionedMenuLabel(title: canResumeLast ? "Play from Beginning" : "Play Surah",
-                                                  systemImage: "memories")
+                    // No reciter caption here: this menu's Choose Reciter row already carries it, and
+                    // naming the reciter twice in one menu said nothing new (Abu, 2026-09-21).
+                    Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
                 }
             } label: {
                 playbackMenuControlLabel {
@@ -4237,6 +4097,13 @@ struct SurahView: View {
     /// navigation), so the jump works while the reader is sitting on a completely different surah.
     private func goToNowPlaying() {
         guard let target = nowPlayingTarget else { return }
+        goTo(surah: target.surah, ayah: target.ayah)
+    }
+
+    /// The landing itself, shared with a Choose Surah pick that names an ayah (a search hit, a juz
+    /// or page row).
+    private func goTo(surah targetSurah: Surah, ayah targetAyah: Int?) {
+        let target = (surah: targetSurah, ayah: targetAyah)
         settings.hapticFeedback()
 
         // Leaving for another position ends multi-select and clears a live query, exactly like a surah jump.
@@ -4257,18 +4124,25 @@ struct SurahView: View {
             visibility.resetScrollTracking()
             pageSurah = nil
             settings.recordSurahOpened(target.surah.id)
-            withAnimation(.easeInOut) { swappedSurah = target.surah }
         }
 
         visibility.setAnchor(target.ayah)
-        // `modeSwitchAyah` IS the reader's landing-ayah override (it wins over `initialAyah` in `ayah`);
-        // nil means "this surah from the top", which is what whole-surah playback wants.
-        modeSwitchAyah = target.ayah
         didScrollDown = false
-        // The token re-seeds the page reader even when neither `surah.id` nor the ayah changed value -
-        // tapping the bar twice, or tapping it after paging away from the ayah, must still jump back.
-        // The reader TURNS the page (like a swipe) for every jump.
-        pageJumpToken += 1
+        // The surah, the landing ayah and the token move in ONE transaction. The swap used to sit in
+        // its own `withAnimation` with the other two written bare after it, and SwiftUI delivered the
+        // two transactions as two passes: the page reader saw (new surah, no ayah) first and turned to
+        // the surah's FIRST page, then saw the ayah and turned again (logged 2026-09-21, a Choose
+        // Surah pick of 2:255 from al-Kahf: target 1, then target 41).
+        withAnimation(.easeInOut) {
+            if swapsSurah { swappedSurah = target.surah }
+            // `modeSwitchAyah` IS the reader's landing-ayah override (it wins over `initialAyah` in
+            // `ayah`); nil means "this surah from the top", which is what whole-surah playback wants.
+            modeSwitchAyah = target.ayah
+            // The token re-seeds the page reader even when neither `surah.id` nor the ayah changed
+            // value - tapping the bar twice, or tapping it after paging away from the ayah, must still
+            // jump back. The reader TURNS the page (like a swipe) for every jump.
+            pageJumpToken += 1
+        }
 
         if let ayahID = target.ayah {
             highlightedAyah = HighlightedAyahRef(surahID: target.surah.id, ayahID: ayahID)
@@ -4286,9 +4160,14 @@ struct SurahView: View {
     /// republishes happens with no presentation in flight. Nothing picked (the sheet was swiped away,
     /// or the pick was the surah already on screen) means nothing to do.
     private func navigateToPickedSurah() {
-        guard let picked = pendingPickedSurah else { return }
-        pendingPickedSurah = nil
-        navigateToSurah(picked)
+        guard let picked = pendingPicked else { return }
+        pendingPicked = nil
+        if let ayah = picked.ayah {
+            // An ayah pick lands on the ayah (its page, in page mode), in this surah or another.
+            goTo(surah: picked.surah, ayah: ayah)
+        } else {
+            navigateToSurah(picked.surah)
+        }
     }
 
     private func navigateToSurah(_ targetSurah: Surah) {
@@ -4411,203 +4290,6 @@ struct RotatingGearView: View {
             }
     }
 }
-
-#if os(iOS)
-private struct SurahPickerSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
-
-    @State private var searchText = ""
-    let currentSurahID: Int
-    let onSelect: (Surah) -> Void
-
-    /// The Quran tab's own surah query grammar (`QuranData.surahListResults(for:)`), so ٥٦, "2:255",
-    /// "surah -1", "> 100 ayahs" and "makki" all work here too; the old name-only filter found nothing
-    /// for Arabic-Indic digits (Abu, 2026-09-07: "when I type ٥٦ nothing shows up"). Always in mushaf
-    /// order: the unfiltered list is, and results that jumped to the tab's revelation-order sort would
-    /// read as a different list.
-    private var filteredSurahs: [Surah] {
-        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return quranData.quran }
-        return quranData.surahListResults(for: searchText).sorted { $0.id < $1.id }
-    }
-
-    private func adjacentSurah(before surahID: Int) -> Surah? {
-        guard let index = quranData.quran.firstIndex(where: { $0.id == surahID }), index > 0 else { return nil }
-        return quranData.quran[index - 1]
-    }
-
-    private func adjacentSurah(after surahID: Int) -> Surah? {
-        guard let index = quranData.quran.firstIndex(where: { $0.id == surahID }), index + 1 < quranData.quran.count else { return nil }
-        return quranData.quran[index + 1]
-    }
-
-    /// `dismiss()` is this sheet's ONE closing path: the host records the pick in `onSelect` and acts
-    /// on it in the sheet's `onDismiss`, so it must not close the sheet a second time by hand.
-    private func select(_ surah: Surah) {
-        onSelect(surah)
-        dismiss()
-    }
-
-    private func scrollToCurrentSurah(_ proxy: ScrollViewProxy, animated: Bool = true) {
-        guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard filteredSurahs.contains(where: { $0.id == currentSurahID }) else { return }
-
-        let requestScroll = {
-            if animated {
-                withAnimation(.easeInOut) {
-                    proxy.scrollTo(currentSurahID, anchor: .center)
-                }
-            } else {
-                proxy.scrollTo(currentSurahID, anchor: .center)
-            }
-        }
-
-        // The sheet's presentation (and its medium-detent resize) can swallow a scroll issued
-        // mid-transition, so the open-time jump fires again after the transition has settled.
-        DispatchQueue.main.async {
-            requestScroll()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                requestScroll()
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                requestScroll()
-            }
-        }
-    }
-
-    private var ayahHighlightBackgroundVerticalPadding: CGFloat {
-        if #available(iOS 26.0, watchOS 26.0, *) {
-            return -11
-        }
-        return -2
-    }
-
-    var body: some View {
-        NavigationView {
-            ScrollViewReader { proxy in
-                List {
-                    Group {
-                        // The same header the Quran tab's surah list wears: the 114 count pill plus the
-                        // shuffle (user rule) - here the shuffle CHOOSES a random surah instead of
-                        // navigating, since choosing is what this sheet is for.
-                        Section {
-                        } header: {
-                            HStack {
-                                Text("SURAHS")
-
-                                Spacer()
-
-                                CountPill(count: quranData.quran.count)
-
-                                Button {
-                                    settings.hapticFeedback()
-                                    if let random = quranData.quran.randomElement() {
-                                        withAnimation {
-                                            select(random)
-                                        }
-                                    }
-                                } label: {
-                                    Image(systemName: "shuffle.circle")
-                                        .padding(4)
-                                        .conditionalGlassEffect()
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
-                        ForEach(filteredSurahs, id: \.id) { surah in
-                            Section {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 24)
-                                        .fill(
-                                            surah.id == currentSurahID
-                                            ? settings.accentColor.color.opacity(0.15)
-                                            : .clear
-                                        )
-                                        .padding(.horizontal, -12)
-                                        .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
-
-                                    Button {
-                                        settings.hapticFeedback()
-                                        withAnimation {
-                                            select(surah)
-                                        }
-                                    } label: {
-                                        // `searchQuery` is what paints the match: SurahRow feeds it to the
-                                        // shared `HighlightedSnippet` for the transliteration, the English
-                                        // name and the Arabic name - the exact treatment the Quran tab's
-                                        // search rows get (QuranView.surahSearchRow). Pass the RAW text: the
-                                        // snippet does its own script-aware
-                                        // normalization, and `guaranteeMatch` stays off (the default) so a
-                                        // query that only matched the transliteration doesn't also tint the
-                                        // English and Arabic names.
-                                        SurahRow(
-                                            surah: surah,
-                                            hideInfo: settings.showSurahInformation,
-                                            searchQuery: searchText
-                                        )
-                                        .contentShape(Rectangle())
-                                    }
-                                }
-                                // The scroll target lives on the Section's row content, not the nested
-                                // Button - scrollTo could not reliably resolve the id when it sat on a
-                                // view buried inside the ZStack.
-                                .id(surah.id)
-                            }
-                        }
-                    }
-                    .themedListRowBackground()
-                }
-                .applyConditionalListStyle()
-                .compactListSectionSpacing()
-                // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
-                // (`SettingsQuranView.reciterSearchControlsInset`) and the Quran/Hadith readers use, so
-                // every search in the app sits in the same place. (`SearchBar`'s placeholder is the shared
-                // `searchText`.
-                .adaptiveSafeArea(edge: .bottom) {
-                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search surah")
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, BottomBarCushion.standard)
-                        .background(Color.white.opacity(0.00001))
-                }
-                .navigationTitle("Choose Surah")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            settings.hapticFeedback()
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.body.weight(.semibold))
-                        }
-                        .tint(settings.accentColor.color)
-                    }
-                }
-                .onAppear {
-                    // Open ALREADY positioned on the current surah - no visible scroll animation.
-                    scrollToCurrentSurah(proxy, animated: false)
-                    #if DEBUG
-                    // "-pickerSearch <text>" types into this search field a beat after the sheet opens, so
-                    // its results can be screenshotted headlessly (idb types ASCII only: no keycode for ٥).
-                    let args = ProcessInfo.processInfo.arguments
-                    if let i = args.firstIndex(of: "-pickerSearch"), i + 1 < args.count {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { searchText = args[i + 1] }
-                    }
-                    #endif
-                }
-                .onChange(of: searchText) { _ in
-                    guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-                    scrollToCurrentSurah(proxy)
-                }
-                .onChange(of: filteredSurahs.count) { _ in scrollToCurrentSurah(proxy) }
-            }
-        }
-        .navigationViewStyle(.stack)
-    }
-}
-#endif
 
 /// Picks the Arabic riwayah, organized the way the science is: one entry per QIRAAH
 /// (the reader - Nafi, Ibn Kathir, ...), opening to that reader's two riwayat. Hafs

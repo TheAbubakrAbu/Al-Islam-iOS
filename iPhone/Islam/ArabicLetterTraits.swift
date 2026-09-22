@@ -400,7 +400,9 @@ enum LetterTraits {
         id: "itbaq", name: "Itbaq", arabic: "الإِطبَاق", meaning: "Clamping",
         summary: "The tongue presses up against the roof of the mouth and traps the sound.",
         detail: [
-            "These four are the heaviest letters in the language. Take the clamp away and each collapses into its light twin: ص into س, ط into ت, ظ into ذ, ض into د.",
+            // The left-to-right marks keep each pair in its own run: without them the comma joins "س, ط"
+            // into one right-to-left run and the sentence DISPLAYS as "ص into ط ,س into ت".
+            "These four are the heaviest letters in the language. Take the clamp away and each collapses into its light twin: ص into س,\u{200E} ط into ت,\u{200E} ظ into ذ,\u{200E} ض into د.",
         ],
         letters: itbaqLetters,
         systemImage: "rectangle.compress.vertical", lessonID: "sifat-opposites",
@@ -471,7 +473,7 @@ enum LetterTraits {
     )
 
     static let leen = LetterFamily(
-        id: "leen", name: "Leen", arabic: "اللِّين", meaning: "Softness",
+        id: "leen", name: "Leen", arabic: "اللِّين", meaning: "Ease",
         summary: "Waaw and yaa with a sukoon after a fatha: they glide out with no effort.",
         detail: [
             "As in خَوۡف and بَيۡت. Reading on, a leen letter is not stretched at all. Stopping on the word lets it lengthen (madd leen): 2, 4 or 6 counts.",
@@ -522,7 +524,7 @@ enum LetterTraits {
         ],
         letters: ["ض"],
         systemImage: "arrow.right.to.line", lessonID: "sifat-standalone",
-        keywords: ["extension", "elongation", "istitaalah", "daad"]
+        keywords: ["extension", "elongation", "istitaalah"]
     )
 
     static let ghunnah = LetterFamily(
@@ -594,7 +596,7 @@ enum LetterTraits {
         ],
         letters: ["ض"],
         systemImage: "arrow.left.arrow.right.circle", lessonID: "tongue-regions",
-        keywords: ["side", "edge", "molars", "daad", "tongue"]
+        keywords: ["side", "edge", "molars", "tongue"]
     )
 
     static let tarafLisan = LetterFamily(
@@ -720,7 +722,7 @@ enum LetterTraits {
         ],
         letters: weightLetters(.conditional),
         systemImage: "circle.lefthalf.filled", lessonID: "ra-tafkheem-tarqeeq",
-        keywords: ["conditional", "raa", "laam", "depends"]
+        keywords: ["conditional", "depends"]
     )
 
     static let followsPrevious = LetterFamily(
@@ -731,7 +733,7 @@ enum LetterTraits {
         ],
         letters: weightLetters(.followsPrevious),
         systemImage: "arrow.uturn.backward.circle", lessonID: "heavy-light-letters",
-        keywords: ["follows", "previous", "alif"]
+        keywords: ["follows", "previous"]
     )
 
     // MARK: Noon sakinah and tanween
@@ -753,7 +755,7 @@ enum LetterTraits {
         id: "idghamGhunnah", name: "Idgham Bighunnah", arabic: "الإِدغَام بِغُنَّة", meaning: "Merge with Ghunnah",
         summary: "The noon merges into the next letter and the nasal hum is held two counts.",
         detail: [
-            "Only across two words. Inside one word the noon stays clear, which happens in four words of the Quran: ٱلدُّنۡيَا, بُنۡيَٰنٞ, قِنۡوَانٞ and صِنۡوَانٞ.",
+            "Only across two words. Inside one word the noon stays clear, which happens in four words of the Quran: ٱلدُّنۡيَا (dunyaa), بُنۡيَٰنٞ (bunyaan), قِنۡوَانٞ (qinwaan) and صِنۡوَانٞ (sinwaan).",
             "The mushaf leaves the noon bare, with no sukoon, as a sign that it is not read on its own.",
         ],
         letters: ["ي", "ن", "م", "و"],
@@ -782,7 +784,7 @@ enum LetterTraits {
         ],
         letters: ["ب"],
         systemImage: "arrow.2.squarepath", lessonID: "iqlab", legend: .iqlaab,
-        keywords: ["iqlab", "iqlaab", "conversion", "flip", "meem"]
+        keywords: ["iqlab", "iqlaab", "conversion", "flip"]
     )
 
     static let ikhfaa = LetterFamily(
@@ -808,7 +810,7 @@ enum LetterTraits {
         ],
         letters: ["ب"],
         systemImage: "eye.slash", lessonID: "mim-sakin-rules", legend: .ikhfaaLight,
-        keywords: ["shafawi", "meem", "mim", "lips", "ikhfa"]
+        keywords: ["shafawi", "lips", "ikhfa"]
     )
 
     static let idghamShafawi = LetterFamily(
@@ -819,7 +821,7 @@ enum LetterTraits {
         ],
         letters: ["م"],
         systemImage: "arrow.triangle.merge", lessonID: "mim-sakin-rules", legend: .idghamGhunnah,
-        keywords: ["shafawi", "meem", "mim", "lips", "mithlayn", "idgham"]
+        keywords: ["shafawi", "lips", "mithlayn", "idgham"]
     )
 
     static let idhaarShafawi = LetterFamily(
@@ -830,7 +832,7 @@ enum LetterTraits {
         ],
         letters: complement(of: ["ب", "م", "ا"]),
         systemImage: "speaker.wave.2", lessonID: "mim-sakin-rules",
-        keywords: ["shafawi", "meem", "mim", "lips", "clear", "idhar"]
+        keywords: ["shafawi", "lips", "clear", "idhar"]
     )
 
     // MARK: The laam of al-
@@ -845,7 +847,7 @@ enum LetterTraits {
         mnemonic: "طِبۡ ثُمَّ صِلۡ رَحِمًا تَفُزۡ ضِفۡ ذَا نِعَمۡ\nدَعۡ سُوءَ ظَنٍّ زُرۡ شَرِيفًا لِلۡكَرَمۡ",
         mnemonicNote: "A line of Tuhfat al-Atfal: the first letter of each word is a sun letter.",
         systemImage: "sun.max", lessonID: "lam-shamsiyyah-qamariyyah", legend: .lamShamsiyah,
-        keywords: ["sun", "solar", "shams", "shamsi", "shamsiyyah", "al-"]
+        keywords: ["sun", "solar", "shams", "shamsi", "shamsiyyah"]
     )
 
     static let moonLetters = LetterFamily(
@@ -858,7 +860,7 @@ enum LetterTraits {
         mnemonic: "ٱبۡغِ حَجَّكَ وَخَفۡ عَقِيمَهُ",
         mnemonicNote: "Every letter of the phrase is a moon letter.",
         systemImage: "moon", lessonID: "lam-shamsiyyah-qamariyyah",
-        keywords: ["moon", "lunar", "qamar", "qamari", "qamariyyah", "al-"]
+        keywords: ["moon", "lunar", "qamar", "qamari", "qamariyyah"]
     )
 
     // MARK: Madd letters
@@ -911,7 +913,7 @@ enum LetterTraits {
         summary: "Alif's name (أَلِف) has no madd letter in it, so it is read without any lengthening.",
         letters: ["ا"],
         systemImage: "0.circle", lessonID: "madd-lazim",
-        keywords: ["muqattaat", "opening", "alif"]
+        keywords: ["muqattaat", "opening"]
     )
 
     /// The fourteen distinct openings of the twenty-nine surahs, as the Hafs text writes them.
@@ -1016,21 +1018,39 @@ enum LetterTraits {
         }
     }
 
-    /// The words the alphabet's search matches a letter by: every family it belongs to, under the
+    /// The words the alphabet's search matches a letter by: the families it belongs to, under the
     /// Arabic term, its English meaning and the common alternate spellings.
+    ///
+    /// Only the families that PICK letters out. "Every other letter" families (jahr, istifal, idhaar
+    /// shafawi...) would make "idhaar" return twenty-six letters instead of the six throat letters,
+    /// and no keyword here may be a letter's own name: "noon" has to find the letter noon, not every
+    /// letter that follows one. The families themselves are still found by name, in the search's
+    /// LETTER FAMILIES section.
     static func searchTerms(for letter: String) -> [String] {
-        var terms: [String] = []
-        for family in families(containing: letter) {
-            terms.append(family.name.lowercased())
-            terms.append(family.meaning.lowercased())
-            terms.append(contentsOf: family.keywords)
-            if let axis = axis(of: family) {
-                terms.append(axis.title.lowercased())
-                terms.append(contentsOf: axis.keywords)
-            }
-        }
-        return terms
+        families(containing: letter)
+            .filter { $0.letters.count <= searchableFamilySize }
+            .flatMap { [$0.name.lowercased(), $0.meaning.lowercased()] + $0.keywords }
+            .compactMap(withoutLetterNames)
     }
+
+    /// A family's name can carry a LETTER's name ("Laam Shamsiyyah", "Noon into Meem"), and a search
+    /// for that letter must not come back with the whole family: "noon" returned baa, through iqlaab,
+    /// and "laam" all twenty-eight sun and moon letters. The letter names are dropped from the term,
+    /// and a term with nothing left to say is dropped with them.
+    private static func withoutLetterNames(_ term: String) -> String? {
+        let kept = term.split(separator: " ").filter { !letterNameWords.contains(String($0)) && $0 != "into" }
+        let joined = kept.joined(separator: " ")
+        return joined.count >= 3 ? joined : nil
+    }
+
+    private static let letterNameWords: Set<String> = [
+        "alif", "baa", "taa", "thaa", "jeem", "haa", "khaa", "daal", "dhaal", "raa", "zaay", "seen",
+        "sheen", "saad", "daad", "dhaa", "ayn", "'ayn", "ghayn", "faa", "qaaf", "kaaf", "laam", "meem",
+        "nuun", "noon", "waaw", "yaa", "hamza",
+    ]
+
+    /// The ikhfaa letters are the largest family that still picks letters out.
+    private static let searchableFamilySize = 15
 
     // MARK: Rule examples (verbatim from the Hafs text)
 

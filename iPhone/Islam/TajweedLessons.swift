@@ -391,9 +391,15 @@ final class TajweedLessonProgress: ObservableObject {
 
     @Published private(set) var done: Set<String>
 
+    private var storageObserver: StoredContentObserver?
+
     private init() {
         done = Set(UserDefaults.standard.stringArray(forKey: Self.key) ?? [])
         ObjectPublishCounter.attach(self, label: "TajweedLessonProgress")
+        storageObserver = StoredContentObserver(reload: {
+            let stored = Set(UserDefaults.standard.stringArray(forKey: TajweedLessonProgress.key) ?? [])
+            if stored != TajweedLessonProgress.shared.done { TajweedLessonProgress.shared.done = stored }
+        })
     }
 
     func isDone(_ id: String) -> Bool { done.contains(id) }

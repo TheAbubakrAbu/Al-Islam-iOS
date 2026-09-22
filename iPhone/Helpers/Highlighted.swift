@@ -1,6 +1,44 @@
 import SwiftUI
 
+/// Which part of a word a search term has to cover before it is painted. The Quran search's Match
+/// button decides which ayahs come back; this keeps the PAINT honest to the same rule, so Whole Word
+/// for رب lights the word رب and leaves أربعة and ربهم alone in the same ayah.
+enum SearchWordRule: String {
+    case anywhere, wholeWord, startsWith, endsWith
+
+    /// True when `match` sits in `text` the way this rule asks: a word edge at its start, its end, or both.
+    func accepts(_ match: Range<String.Index>, in text: String) -> Bool {
+        let startsWord = match.lowerBound == text.startIndex
+            || !Self.isWordCharacter(text[text.index(before: match.lowerBound)])
+        let endsWord = match.upperBound == text.endIndex || !Self.isWordCharacter(text[match.upperBound])
+        switch self {
+        case .anywhere: return true
+        case .wholeWord: return startsWord && endsWord
+        case .startsWith: return startsWord
+        case .endsWith: return endsWord
+        }
+    }
+
+    private static func isWordCharacter(_ character: Character) -> Bool {
+        character.isLetter || character.isNumber
+    }
+}
+
+private struct SearchWordRuleKey: EnvironmentKey {
+    static let defaultValue: SearchWordRule = .anywhere
+}
+
+extension EnvironmentValues {
+    /// Set by a search screen whose Match filter is on; read by every highlighter under it.
+    var searchWordRule: SearchWordRule {
+        get { self[SearchWordRuleKey.self] }
+        set { self[SearchWordRuleKey.self] = newValue }
+    }
+}
+
 struct HighlightedSnippet: View {
+    @Environment(\.searchWordRule) private var wordRule
+
     // Deliberately NOT observing Settings: every snippet on screen re-rendered on every Settings
     // publish for a helper (`normalizeForAllahHighlight`) nothing called. Every input is a value the
     // parent passes (Phase 5, section 13 of the performance plan).
@@ -62,7 +100,7 @@ struct HighlightedSnippet: View {
         let memoKey = Self.memoKey(
             source: source, term: term, font: font, accent: accent, fg: fg,
             preStyled: preStyledSource, beginner: beginnerMode, allah: highlightAllahNames,
-            guarantee: guaranteeMatch, extra: extraHighlightRanges
+            guarantee: guaranteeMatch, extra: extraHighlightRanges, wordRule: wordRule
         )
         if let hit = Self.memo.object(forKey: memoKey) { return hit.value }
         // When highlighting a search term, base the attributed text on the PLAIN `source` - never a
@@ -98,10 +136,10 @@ struct HighlightedSnippet: View {
     /// render digest (characters plus the colour runs), so a tajweed recolour is a different key.
     private static func memoKey(source: String, term: String, font: Font, accent: Color, fg: Color,
                                 preStyled: AttributedString?, beginner: Bool, allah: Bool,
-                                guarantee: Bool, extra: [NSRange]) -> NSString {
+                                guarantee: Bool, extra: [NSRange], wordRule: SearchWordRule) -> NSString {
         var parts: [String] = [
             source, term, "\(font)", "\(accent)", "\(fg)",
-            beginner ? "b" : "-", allah ? "a" : "-", guarantee ? "g" : "-",
+            beginner ? "b" : "-", allah ? "a" : "-", guarantee ? "g" : "-", wordRule.rawValue,
             extra.map { "\($0.location):\($0.length)" }.joined(separator: ","),
         ]
         parts.append(preStyled.map { "\($0.renderDigest)" } ?? "plain")
@@ -362,15 +400,34 @@ struct HighlightedSnippet: View {
         let normalizedTerm = normalizeForSearch(term, trimWhitespace: true)
         guard !normalizedTerm.isEmpty else { return attributed }
 
+        // --- Steps 1 and 2: the fold and the matched ranges, each through its cache ---
+        let matchedRanges = Self.matchedRanges(in: source, normalizedTerm: normalizedTerm,
+                                               guaranteeMatch: guaranteeMatch, wordRule: wordRule)
+
+        // --- Step 3: apply accent colour to each matched range ---
+        for range in matchedRanges {
+            if let start = AttributedString.Index(range.lowerBound, within: attributed),
+               let end = AttributedString.Index(range.upperBound, within: attributed) {
+                attributed[start..<end].foregroundColor = accent
+            }
+        }
+
+        return attributed
+    }
+
+    /// The ranges `highlight` paints for an already-folded term, in the original source: the ladder
+    /// below, behind the two content-keyed caches.
+    private static func matchedRanges(in source: String, normalizedTerm: String, guaranteeMatch: Bool,
+                                      wordRule: SearchWordRule = .anywhere) -> [Range<String.Index>] {
         // --- Step 1: normalizedSource + UTF-16 map, cached per source CONTENT ---
         let sourceKey = source as NSString
         let normEntry: SourceNormEntry
-        if let cached = Self.sourceNormCache.object(forKey: sourceKey) {
+        if let cached = sourceNormCache.object(forKey: sourceKey) {
             normEntry = cached
         } else {
-            let built = Self.normalizedSourceAndMap(for: source)
+            let built = normalizedSourceAndMap(for: source)
             normEntry = SourceNormEntry(built.normalized, built.mapUTF16)
-            Self.sourceNormCache.setObject(normEntry, forKey: sourceKey)
+            sourceNormCache.setObject(normEntry, forKey: sourceKey)
         }
 
         // --- Step 2: matched ranges in original source, cached per (source, normalizedTerm, guarantee) ---
@@ -379,48 +436,51 @@ struct HighlightedSnippet: View {
         // Cached as UTF-16 spans and materialized for THIS instance; a nil materialization (offsets that
         // don't land on this instance's character boundaries - impossible for equal content) falls through
         // to a fresh compute instead of being trusted.
-        let matchKey = "\(guaranteeMatch ? "1" : "0")\u{0000}\(source)\u{0000}\(normalizedTerm)" as NSString
+        let matchKey = "\(guaranteeMatch ? "1" : "0")\(wordRule.rawValue)\u{0000}\(source)\u{0000}\(normalizedTerm)" as NSString
         var matchedRanges: [Range<String.Index>]? = nil
-        if let cached = Self.matchRangeCache.object(forKey: matchKey) {
-            matchedRanges = Self.ranges(fromUTF16Spans: cached.spans, in: source)
+        if let cached = matchRangeCache.object(forKey: matchKey) {
+            matchedRanges = ranges(fromUTF16Spans: cached.spans, in: source)
         }
         if matchedRanges == nil {
             // Instance-true indices for the cached fold; if the entry somehow doesn't fit this instance,
             // rebuild the fold fresh - the fresh offsets fit by construction.
             let normalizedSource: String
             let indexMap: [String.Index]
-            if let materialized = Self.indices(atUTF16Offsets: normEntry.mapUTF16, in: source) {
+            if let materialized = indices(atUTF16Offsets: normEntry.mapUTF16, in: source) {
                 normalizedSource = normEntry.normalizedSource
                 indexMap = materialized
             } else {
-                let built = Self.normalizedSourceAndMap(for: source)
+                let built = normalizedSourceAndMap(for: source)
                 normalizedSource = built.normalized
-                indexMap = Self.indices(atUTF16Offsets: built.mapUTF16, in: source) ?? []
+                indexMap = indices(atUTF16Offsets: built.mapUTF16, in: source) ?? []
             }
 
-            let ranges = Self.matchRanges(
+            let computed = matchRanges(
                 in: source,
                 normalizedSource: normalizedSource,
                 indexMap: indexMap,
                 normalizedTerm: normalizedTerm,
-                guaranteeMatch: guaranteeMatch
+                guaranteeMatch: guaranteeMatch,
+                wordRule: wordRule
             )
-            Self.matchRangeCache.setObject(
-                RangeEntry(ranges.map { Self.utf16Span(of: $0, in: source) }),
+            matchRangeCache.setObject(
+                RangeEntry(computed.map { utf16Span(of: $0, in: source) }),
                 forKey: matchKey
             )
-            matchedRanges = ranges
+            matchedRanges = computed
         }
+        return matchedRanges ?? []
+    }
 
-        // --- Step 3: apply accent colour to each matched range ---
-        for range in matchedRanges ?? [] {
-            if let start = AttributedString.Index(range.lowerBound, within: attributed),
-               let end = AttributedString.Index(range.upperBound, within: attributed) {
-                attributed[start..<end].foregroundColor = accent
-            }
-        }
-
-        return attributed
+    /// Where a RAW term lands in `source`, as UTF-16 spans: exactly what a snippet of the whole source
+    /// would paint. For a row that shows only a WINDOW of a long text (the hadith search results) and
+    /// has to know where the match sits before it can choose the window; it hands the spans that
+    /// fall inside back as `extraHighlightRanges`.
+    static func matchSpans(in source: String, term: String, guaranteeMatch: Bool) -> [NSRange] {
+        let normalizedTerm = normalizeForSearchText(term, trimWhitespace: true)
+        guard !source.isEmpty, !normalizedTerm.isEmpty else { return [] }
+        return matchedRanges(in: source, normalizedTerm: normalizedTerm, guaranteeMatch: guaranteeMatch)
+            .map { NSRange($0, in: source) }
     }
 
     /// The canonical match-range ladder, shared by the list snippet (`highlight`, via its caches) and the
@@ -433,12 +493,19 @@ struct HighlightedSnippet: View {
         normalizedSource: String,
         indexMap: [String.Index],
         normalizedTerm: String,
-        guaranteeMatch: Bool
+        guaranteeMatch: Bool,
+        wordRule: SearchWordRule = .anywhere
     ) -> [Range<String.Index>] {
         var ranges: [Range<String.Index>] = []
         var searchStart = normalizedSource.startIndex
         while searchStart < normalizedSource.endIndex,
               let matchRange = normalizedSource.range(of: normalizedTerm, range: searchStart..<normalizedSource.endIndex) {
+            // A hit the Match rule turns down (رب inside أربعة under Whole Word) is stepped over by one
+            // character, not by its length, so a real hit overlapping it is still found.
+            guard wordRule.accepts(matchRange, in: normalizedSource) else {
+                searchStart = normalizedSource.index(after: matchRange.lowerBound)
+                continue
+            }
             if let orig = originalRange(
                 in: source,
                 normalizedSource: normalizedSource,
@@ -449,10 +516,49 @@ struct HighlightedSnippet: View {
             }
             searchStart = matchRange.upperBound
         }
+        // Words apart: a query whose words are all here but not side by side ("anger control" under All
+        // Words, `mercy & patience`, a ranked hit) painted at most a fallback's guess, because every
+        // other rung looks for the words as ONE run. When EVERY word is present, each is painted where
+        // it stands; short Latin words are skipped so "in" and "of" do not light up half the line.
+        // Ahead of the loose fallbacks on purpose: an English narration carrying ﷺ counts as Arabic
+        // there, and the partial-prefix matcher then painted one word and stopped.
+        if ranges.isEmpty {
+            let words = normalizedTerm.split(separator: " ").map(String.init)
+                .filter { $0.count >= ($0.containsArabicLetters ? 2 : 3) }
+            if words.count > 1 {
+                var apart: [Range<String.Index>] = []
+                var missing = false
+                for word in words {
+                    var from = normalizedSource.startIndex
+                    var foundWord = false
+                    while from < normalizedSource.endIndex,
+                          let found = normalizedSource.range(of: word, range: from..<normalizedSource.endIndex) {
+                        guard wordRule.accepts(found, in: normalizedSource) else {
+                            from = normalizedSource.index(after: found.lowerBound)
+                            continue
+                        }
+                        if let orig = originalRange(in: source, normalizedSource: normalizedSource,
+                                                    matchRange: found, indexMap: indexMap) {
+                            apart.append(orig)
+                            foundWord = true
+                        }
+                        from = found.upperBound
+                    }
+                    if !foundWord { missing = true; break }
+                }
+                if !missing {
+                    ranges = apart.sorted { $0.lowerBound < $1.lowerBound }
+                }
+            }
+        }
         // Arabic fallback: an alef-insensitive match (so الرحمن / الرحمان / الرحمٰن all match), with a
         // longest-prefix partial match so something is always highlighted even when the exact phrase
         // isn't present. This is why exact substring matching alone was missing most Arabic terms.
-        if ranges.isEmpty, source.containsArabicLetters {
+        // The loose rungs below know nothing of word edges, so under a Match rule they run only for a
+        // field known to hold the hit (`guaranteeMatch`): a matched row is never left unpainted, and a
+        // sibling field is never painted with a look-alike.
+        let allowsLooseRungs = wordRule == .anywhere || guaranteeMatch
+        if ranges.isEmpty, allowsLooseRungs, source.containsArabicLetters {
             ranges = arabicLooseRanges(
                 source: source,
                 normalizedSource: normalizedSource,
@@ -465,7 +571,7 @@ struct HighlightedSnippet: View {
         // match and the final word is a prefix (e.g. "those who believ" → "those who believe"). This is
         // the same "close match" rule the verse search itself uses, so English close matches - which
         // previously highlighted nothing - now get colored like the Arabic ones.
-        if ranges.isEmpty {
+        if ranges.isEmpty, allowsLooseRungs {
             ranges = phrasePrefixRanges(
                 in: source,
                 normalizedSource: normalizedSource,
@@ -480,7 +586,12 @@ struct HighlightedSnippet: View {
         // the paths above need - which can silently fail on heavily-marked Arabic and leave a real match
         // un-highlighted. Skipped by default so a query that matched a sibling field doesn't force a
         // spurious highlight here.
-        if ranges.isEmpty, guaranteeMatch {
+        // Never across scripts: a Latin query has no "closest word" in an Arabic line (or the other way
+        // round), and asking for one painted an arbitrary word, usually the longest in the ayah,
+        // beside the words the cross-language lookup had correctly lit ("mercy patience" lit
+        // وَيَسْتَخْرِجَا in 18:82). The cross-language spans are that line's highlight.
+        if ranges.isEmpty, guaranteeMatch,
+           normalizedTerm.containsArabicLetters == source.containsArabicLetters {
             ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
         }
         // A one-letter term would snap every word it touches; below two letters the exact ranges stand.
@@ -505,12 +616,18 @@ struct HighlightedSnippet: View {
         var snapped: [Range<String.Index>] = []
         for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
             var start = range.lowerBound
+            var end = range.upperBound
+            // A range that ENDS on a space ("patience " as the longest prefix of "patience hardship")
+            // would grow across that space into the next word and paint "patience and". The edge
+            // whitespace is shed first, so only words the range really touches can grow.
+            while start < end, isWordBoundary(source[start]) { start = source.index(after: start) }
+            while end > start, isWordBoundary(source[source.index(before: end)]) { end = source.index(before: end) }
+            guard start < end else { continue }
             while start > source.startIndex {
                 let previous = source.index(before: start)
                 if isWordBoundary(source[previous]) { break }
                 start = previous
             }
-            var end = range.upperBound
             while end < source.endIndex, !isWordBoundary(source[end]) {
                 end = source.index(after: end)
             }
@@ -550,7 +667,8 @@ struct HighlightedSnippet: View {
     nonisolated static func matchRanges(
         of term: String,
         in source: String,
-        guaranteeMatch: Bool = false
+        guaranteeMatch: Bool = false,
+        wordRule: SearchWordRule = .anywhere
     ) -> [Range<String.Index>] {
         let normalizedTerm = normalizeForSearchText(term, trimWhitespace: true)
         guard !normalizedTerm.isEmpty else { return [] }
@@ -561,7 +679,8 @@ struct HighlightedSnippet: View {
             normalizedSource: built.normalized,
             indexMap: indexMap,
             normalizedTerm: normalizedTerm,
-            guaranteeMatch: guaranteeMatch
+            guaranteeMatch: guaranteeMatch,
+            wordRule: wordRule
         )
     }
 
@@ -707,6 +826,13 @@ struct HighlightedSnippet: View {
         var prefixLen = termSkeleton.count - 1
         while prefixLen >= 2 {
             let prefix = String(termSkeleton.prefix(prefixLen))
+            // A prefix ending on the space between two query words says nothing more than the word
+            // before it, and the fold maps that space onto the NEXT word's first letter: "patience "
+            // of "patience hardship" came back as "patience a" and painted "patience and".
+            if prefix.last?.isWhitespace == true {
+                prefixLen -= 1
+                continue
+            }
             if let m = skeleton.range(of: prefix), let mapped = mapRange(m) {
                 return [mapped]
             }

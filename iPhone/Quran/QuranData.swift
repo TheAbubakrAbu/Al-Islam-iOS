@@ -3353,46 +3353,48 @@ final class QuranData: ObservableObject {
         /// The tashkeel skeleton of the entry's raw Arabic, computed per candidate for `#` queries.
         private func tashkeelBlob(of entry: VerseIndexEntry) -> String {
             guard let hit = ayah(of: entry) else { return "" }
-            return arabicTashkeelBlob(hit.ayah.textArabic(for: displayQiraah, surahID: hit.surahID))
+            return QuranBooleanQuery.tashkeelBlob(hit.ayah.textArabic(for: displayQiraah, surahID: hit.surahID))
         }
 
         /// The lowercased, whitespace-normalised English (Saheeh, Mustafa, transliteration), per candidate.
         private func exactEnglishBlob(of entry: VerseIndexEntry) -> String {
             guard let hit = ayah(of: entry) else { return "" }
-            return exactPhraseBlob([hit.ayah.textEnglishSaheeh, hit.ayah.textEnglishMustafa, hit.ayah.textTransliteration].joined(separator: " "))
+            return QuranBooleanQuery.exactPhraseBlob([hit.ayah.textEnglishSaheeh, hit.ayah.textEnglishMustafa, hit.ayah.textTransliteration].joined(separator: " "))
         }
 
-        private struct BooleanAyahTerm {
-            enum MatchMode {
-                case contains
-                case startsWith
-                case endsWith
-                case exact
-                case wholeWord   // `=` - matches whole words / a series of whole words (not substrings)
+        /// The cleaned text of ONE lane of an entry (the translations, or the transliteration), built
+        /// on demand from the raw ayah: the index keeps all three in one `englishBlob`, which is
+        /// what a Search In filter has to see past. Nil for `.all`, where the blob itself is the answer.
+        private func laneHaystack(of entry: VerseIndexEntry, lane: QuranSearchFilters.Lane) -> String? {
+            guard lane != .all, let hit = ayah(of: entry) else { return nil }
+            let settings = Settings.shared
+            switch lane {
+            case .all:
+                return nil
+            case .translation:
+                return settings.cleanSearch(hit.ayah.textEnglishSaheeh) + " " + settings.cleanSearch(hit.ayah.textEnglishMustafa)
+            case .transliteration:
+                return settings.cleanSearch(hit.ayah.textTransliteration) + " "
+                    + settings.foldedTransliterationForSearch(hit.ayah.textTransliteration)
             }
-
-            let value: String
-            let isNegated: Bool
-            let matchMode: MatchMode
-            let requiresTashkeelMatch: Bool
-            let tashkeelPattern: String
-            let requiresExactEnglishMatch: Bool
-            let exactEnglishPhrase: String
         }
 
-        func search(term raw: String, limit: Int = 10, offset: Int = 0) -> [VerseIndexEntry] {
+        /// `scope` narrows WHERE the scan looks (chosen surahs or juz, Makkan / Madinan, one Latin lane);
+        /// it is tested before the text, so a narrow scope also makes the scan cheaper. Offsets count
+        /// matches inside the scope, which keeps Load More honest as long as the scope is unchanged.
+        func search(term raw: String, limit: Int = 10, offset: Int = 0, scope: QuranSearchScope? = nil) -> [VerseIndexEntry] {
             guard !verseIndex.isEmpty else { return [] }
 
             let q = Settings.shared.cleanSearch(raw, whitespace: true)
             guard !q.isEmpty else { return [] }
             if q.rangeOfCharacter(from: .decimalDigits) != nil { return [] }
 
-            let booleanGroups = booleanAyahSearchGroups(from: raw)
-            if let booleanGroups, booleanGroups.isEmpty { return [] }
+            let booleanQuery = QuranBooleanQuery(raw)
+            if let booleanQuery, booleanQuery.groups.isEmpty { return [] }
 
             let useArabic = raw.containsArabicLetters
 
-            if let booleanGroups {
+            if let booleanQuery {
                 var filtered: [VerseIndexEntry] = []
                 filtered.reserveCapacity(limit == .max ? 64 : min(limit, 64))
 
@@ -3404,7 +3406,9 @@ final class QuranData: ObservableObject {
                     // they were the slowest AND the only uninterruptible scan.
                     scanned += 1
                     if scanned & 0x1FF == 0, Task.isCancelled { break }
-                    guard matchesBooleanAyahSearch(entry: entry, useArabic: useArabic, groups: booleanGroups) else { continue }
+                    if let scope, !scope.contains(surah: entry.surah, ayah: entry.ayah) { continue }
+                    guard matchesBooleanAyahSearch(entry: entry, useArabic: useArabic, query: booleanQuery,
+                                                   lane: scope?.lane ?? .all) else { continue }
                     if skipped < offset { skipped += 1; continue }
                     filtered.append(entry)
                     if limit != .max, filtered.count >= limit { break }
@@ -3421,7 +3425,8 @@ final class QuranData: ObservableObject {
                 silentQuery: silentQuery,
                 useArabic: useArabic,
                 limit: limit,
-                offset: offset
+                offset: offset,
+                scope: scope
             )
         }
 
@@ -3439,7 +3444,8 @@ final class QuranData: ObservableObject {
             silentQuery: String?,
             useArabic: Bool,
             limit: Int,
-            offset: Int
+            offset: Int,
+            scope: QuranSearchScope? = nil
         ) -> [VerseIndexEntry] {
             // Plain substring search, returned in mushaf order. Word and sentence boundaries don't matter - a
             // query matches anywhere it appears (e.g. "رب" inside "ربهم"). Use the `=` operator for whole-word
@@ -3466,6 +3472,7 @@ final class QuranData: ObservableObject {
                 if scanned & 0x1FF == 0, Task.isCancelled { break }
                 guard verseIndex.indices.contains(index) else { continue }
                 let entry = verseIndex[index]
+                if let scope, !scope.contains(surah: entry.surah, ayah: entry.ayah) { continue }
                 guard regularSearchEntryMatches(
                     entry,
                     cleanedQuery: cleanedQuery,
@@ -3475,6 +3482,11 @@ final class QuranData: ObservableObject {
                     hamzaFilter: hamzaFilter,
                     useArabic: useArabic
                 ) else { continue }
+                // One Latin lane only: the blob matched somewhere in translation + transliteration, so
+                // ask the chosen lane alone. Only blob matches pay for the on-demand fold.
+                if !useArabic, let scope, scope.lane != .all,
+                   let haystack = laneHaystack(of: entry, lane: scope.lane),
+                   !haystack.contains(cleanedQuery) { continue }
                 if skipped < offset {
                     skipped += 1
                     continue
@@ -3512,163 +3524,16 @@ final class QuranData: ObservableObject {
             return entry.englishBlob.contains(cleanedQuery)
         }
 
-        /// True if `query`'s tokens appear as a consecutive run in `haystack`. The leading tokens must match
-        /// exactly; the final token must match exactly when `lastMustBeExact` is true, otherwise it only has
-        /// to be a prefix (e.g. query "when" hits "...whenever..." when `lastMustBeExact` is false).
-        private func consecutiveTokenMatch(_ haystack: [String], query: [String], lastMustBeExact: Bool) -> Bool {
-            guard !query.isEmpty, haystack.count >= query.count else { return false }
-
-            for start in 0...(haystack.count - query.count) {
-                var matched = true
-                for offset in query.indices {
-                    let word = haystack[start + offset]
-                    let term = query[offset]
-                    if offset == query.count - 1 && !lastMustBeExact {
-                        if !word.hasPrefix(term) { matched = false; break }
-                    } else if word != term {
-                        matched = false
-                        break
-                    }
-                }
-                if matched { return true }
-            }
-
-            return false
-        }
-
-        private func booleanAyahSearchGroups(from rawQuery: String) -> [[BooleanAyahTerm]]? {
-            let normalized = rawQuery
-                .replacingOccurrences(of: "&&", with: "&")
-                .replacingOccurrences(of: "||", with: "|")
-
-            guard normalized.contains("&") || normalized.contains("|") || normalized.contains("!") || normalized.contains("#") || normalized.contains("^") || normalized.contains("%") || normalized.contains("$") || normalized.contains("=") else {
-                return nil
-            }
-
-            return normalized
-                .split(separator: "|", omittingEmptySubsequences: false)
-                .map { part in
-                    part
-                        .split(separator: "&", omittingEmptySubsequences: false)
-                        .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                        .compactMap(booleanAyahSearchTerm(from:))
-                }
-                .filter { !$0.isEmpty }
-        }
-
-        private func booleanAyahSearchTerm(from rawTerm: String) -> BooleanAyahTerm? {
-            var term = rawTerm.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !term.isEmpty else { return nil }
-
-            var isNegated = false
-            while term.hasPrefix("!") {
-                isNegated.toggle()
-                term.removeFirst()
-                term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            var requiresTashkeelMatch = false
-            while term.hasPrefix("#") {
-                requiresTashkeelMatch = true
-                term.removeFirst()
-                term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            var wholeWordMatch = false
-            while term.hasPrefix("=") {
-                wholeWordMatch = true
-                term.removeFirst()
-                term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            var startsWithMatch = false
-            if term.hasPrefix("^") {
-                startsWithMatch = true
-                term.removeFirst()
-                term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            var endsWithMatch = false
-            if term.hasSuffix("%") || term.hasSuffix("$") {
-                endsWithMatch = true
-                term.removeLast()
-                term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-
-            guard !term.isEmpty else { return nil }
-            let cleaned = Settings.shared.cleanSearch(term, whitespace: true)
-            guard !cleaned.isEmpty else { return nil }
-
-            let matchMode: BooleanAyahTerm.MatchMode
-            if wholeWordMatch {
-                matchMode = .wholeWord
-            } else if startsWithMatch && endsWithMatch {
-                matchMode = .exact
-            } else if startsWithMatch {
-                matchMode = .startsWith
-            } else if endsWithMatch {
-                matchMode = .endsWith
-            } else {
-                matchMode = .contains
-            }
-
-            return BooleanAyahTerm(
-                value: cleaned,
-                isNegated: isNegated,
-                matchMode: matchMode,
-                requiresTashkeelMatch: requiresTashkeelMatch && term.containsArabicLetters,
-                tashkeelPattern: arabicTashkeelBlob(term),
-                requiresExactEnglishMatch: requiresTashkeelMatch && !term.containsArabicLetters,
-                exactEnglishPhrase: exactPhraseBlob(term)
+        private func matchesBooleanAyahSearch(entry: VerseIndexEntry, useArabic: Bool, query: QuranBooleanQuery,
+                                              lane: QuranSearchFilters.Lane = .all) -> Bool {
+            // A Search In lane swaps the Latin haystack for that lane's own text (built once per entry).
+            let laneText = useArabic ? nil : laneHaystack(of: entry, lane: lane)
+            return query.matches(
+                haystack: useArabic ? entry.arabicBlob : (laneText ?? entry.englishBlob),
+                tokens: useArabic ? entry.arabicTokens : (laneText.map(searchTokens(from:)) ?? entry.englishTokens),
+                tashkeel: { tashkeelBlob(of: entry) },
+                exactEnglish: { exactEnglishBlob(of: entry) }
             )
-        }
-
-        private func ayahTermMatch(haystack: String, tokens: [String], term: String, mode: BooleanAyahTerm.MatchMode) -> Bool {
-            switch mode {
-            case .contains:
-                return haystack.contains(term)
-            case .startsWith:
-                return haystack.hasPrefix(term) || tokens.contains(where: { $0.hasPrefix(term) })
-            case .endsWith:
-                return haystack.hasSuffix(term) || tokens.contains(where: { $0.hasSuffix(term) })
-            case .exact:
-                return haystack == term || tokens.contains(term)
-            case .wholeWord:
-                // The query's words must appear as a consecutive run of whole words (a full word, or a
-                // full series of words) - e.g. "=رب" matches the word رب but not "ربهم".
-                return consecutiveTokenMatch(tokens, query: searchTokens(from: term), lastMustBeExact: true)
-            }
-        }
-
-        private func matchesBooleanAyahSearch(entry: VerseIndexEntry, useArabic: Bool, groups: [[BooleanAyahTerm]]) -> Bool {
-            groups.contains { andTerms in
-                andTerms.allSatisfy { term in
-                    let containsTerm: Bool
-                    if useArabic, term.requiresTashkeelMatch {
-                        let lettersMatch = ayahTermMatch(
-                            haystack: entry.arabicBlob,
-                            tokens: entry.arabicTokens,
-                            term: term.value,
-                            mode: term.matchMode
-                        )
-                        let tashkeelMatch = term.tashkeelPattern.isEmpty || tashkeelBlob(of: entry).contains(term.tashkeelPattern)
-                        containsTerm = lettersMatch && tashkeelMatch
-                    } else if !useArabic, term.requiresExactEnglishMatch {
-                        let exactTokens = searchTokens(from: term.exactEnglishPhrase)
-                        containsTerm = !term.exactEnglishPhrase.isEmpty && ayahTermMatch(
-                            haystack: exactEnglishBlob(of: entry),
-                            tokens: exactTokens,
-                            term: term.exactEnglishPhrase,
-                            mode: term.matchMode
-                        )
-                    } else {
-                        let haystack = useArabic ? entry.arabicBlob : entry.englishBlob
-                        let tokens = useArabic ? entry.arabicTokens : entry.englishTokens
-                        containsTerm = ayahTermMatch(haystack: haystack, tokens: tokens, term: term.value, mode: term.matchMode)
-                    }
-                    return term.isNegated ? !containsTerm : containsTerm
-                }
-            }
         }
 
         private func searchTokens(from cleanedText: String) -> [String] {
@@ -3677,27 +3542,6 @@ final class QuranData: ObservableObject {
                 .map(String.init)
                 .filter { !$0.isEmpty }
         }
-
-        private func exactPhraseBlob(_ text: String) -> String {
-            text
-                .lowercased()
-                .components(separatedBy: .whitespacesAndNewlines)
-                .filter { !$0.isEmpty }
-                .joined(separator: " ")
-        }
-
-        private func arabicTashkeelBlob(_ text: String) -> String {
-            String(text.unicodeScalars.filter { Self.arabicTashkeelCharacterSet.contains($0) })
-        }
-
-        private static let arabicTashkeelCharacterSet: CharacterSet = {
-            var set = CharacterSet()
-            set.insert(charactersIn: "\u{0610}"..."\u{061A}")
-            set.insert(charactersIn: "\u{064B}"..."\u{065F}")
-            set.insert(charactersIn: "\u{0670}"..."\u{0670}")
-            set.insert(charactersIn: "\u{06D6}"..."\u{06ED}")
-            return set
-        }()
     }
 
     /// Internal, not private: the surah-list query grammar (`QuranData.surahListResults`, in
@@ -4562,6 +4406,70 @@ final class QuranData: ObservableObject {
         return folded.count == 1 ? folded.first : nil
     }
 
+    /// True when `raw` plainly names `surah`: one of its names or known spellings in full, or the
+    /// start of a word in one of its three OWN names ("baq", "بقر"). `resolveSurahIdentifier` is far
+    /// looser (any run of letters inside any alias), which suits "baq:255" but not a caller that
+    /// turns a bare word into an offer: "رب" sits inside ربما, another name of al-Hijr, and the page
+    /// find bar offered "Go to Surah Al-Hijr" to someone searching for a word.
+    func plainlyNames(_ raw: String, surah: Surah) -> Bool {
+        let cleaned = settings.cleanSearch(raw, whitespace: true)
+        guard !cleaned.isEmpty else { return false }
+        if Int(cleaned) != nil || arabicToEnglishNumber(cleaned) != nil { return true }
+        let compact = cleaned.replacingOccurrences(of: " ", with: "")
+
+        let ownNames = [surah.nameArabic, surah.nameTransliteration, surah.nameEnglish]
+            .map { settings.cleanSearch($0, whitespace: true) }
+        let allNames = ownNames + surah.normalizedSearchNames.map { settings.cleanSearch($0, whitespace: true) }
+        if allNames.contains(where: { $0 == cleaned || $0.replacingOccurrences(of: " ", with: "") == compact }) {
+            return true
+        }
+        guard compact.count >= 3 else { return false }
+        return ownNames.contains { name in
+            var starts = name.split(whereSeparator: { $0 == " " || $0 == "-" }).map(String.init)
+            starts.append(name.replacingOccurrences(of: " ", with: ""))
+            // The Arabic article is written onto its word: البقرة also starts at بقرة.
+            starts += starts.filter { $0.hasPrefix("ال") && $0.count > 3 }.map { String($0.dropFirst(2)) }
+            return starts.contains { $0.hasPrefix(compact) }
+        }
+    }
+
+    /// The surah list under the search's Match button. The list's own matching is "anywhere", down to
+    /// a run of letters inside an alternate name, so Whole Word for رب still listed al-Hijr (ربما),
+    /// al-Anbya (اقترب) and al-Falaq (برب). Under a rule a surah stays only when one of its names
+    /// holds the query the way the rule asks. Numbers, references and makki / madani are not name
+    /// searches and pass through untouched.
+    func surahs(_ surahs: [Surah], namedBy query: String, rule: SearchWordRule) -> [Surah] {
+        guard rule != .anywhere else { return surahs }
+        var text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.lowercased().hasPrefix("surah ") { text = String(text.dropFirst(6)) }
+        let cleaned = settings.cleanSearch(text, whitespace: true)
+        guard !cleaned.isEmpty, !cleaned.contains(where: { $0.isNumber }) else { return surahs }
+        let compact = cleaned.replacingOccurrences(of: " ", with: "")
+        let revelationWords = Self.makkanAliases.union(Self.madinanAliases)
+        if revelationWords.contains(where: { compact.hasPrefix($0) || (compact.count >= 4 && $0.hasPrefix(compact)) }) {
+            return surahs
+        }
+
+        return surahs.filter { surah in
+            var names = ([surah.nameArabic, surah.nameTransliteration, surah.nameEnglish] + surah.normalizedSearchNames)
+                .map { settings.cleanSearch($0, whitespace: true) }
+            // The article is written onto its word, and نور is rightly a whole-word hit on النور.
+            names += names.filter { $0.contains("ال") }.map { name in
+                name.split(separator: " ")
+                    .map { $0.hasPrefix("ال") && $0.count > 3 ? String($0.dropFirst(2)) : String($0) }
+                    .joined(separator: " ")
+            }
+            return names.contains { name in
+                var from = name.startIndex
+                while from < name.endIndex, let found = name.range(of: cleaned, range: from..<name.endIndex) {
+                    if rule.accepts(found, in: name) { return true }
+                    from = name.index(after: found.lowerBound)
+                }
+                return false
+            }
+        }
+    }
+
     func resolveJuzIdentifier(_ raw: String) -> Int? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -4769,6 +4677,28 @@ final class QuranData: ObservableObject {
         return results
     }
 
+    private static let translationVocabularyLock = NSLock()
+    private static var translationVocabulary: Set<String> = []
+
+    /// The ranked search hands its translation vocabulary over when it builds it (that file is not in
+    /// every target this one is, so the words travel this way). Empty until the lanes are built (the
+    /// post-reveal slot or the search field's focus), and always empty on the Watch, which has no ayah
+    /// search: there a surah name is the only answer on offer, so its fallback stays forgiving.
+    static func adoptTranslationVocabulary(_ words: Set<String>) {
+        translationVocabularyLock.lock()
+        translationVocabulary = words
+        translationVocabularyLock.unlock()
+    }
+
+    /// True for one plain Latin word that the shown translation uses.
+    static func isTranslationWord(_ text: String) -> Bool {
+        let word = text.lowercased()
+        guard !word.isEmpty, word.unicodeScalars.allSatisfy({ (97...122).contains($0.value) }) else { return false }
+        translationVocabularyLock.lock()
+        defer { translationVocabularyLock.unlock() }
+        return translationVocabulary.contains(word)
+    }
+
     func filteredSurahs(query rawQuery: String) -> [Surah] {
         let trimmed = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return quran }
@@ -4834,8 +4764,11 @@ final class QuranData: ObservableObject {
         // Nothing spelled that way: fold the spelling and ask again ("yaseen", "bakara", "rehman").
         // A fallback only, so a query that already finds a surah returns exactly what it did, and
         // never for a number or a Makkan/Madinan filter, which are not names at all.
+        // A word the translation itself uses ("mercy") is a search for ayahs, not a misspelt name: its
+        // fold merely STARTS like Marjam and Mursalat, and those two led the page over 300 ayahs of
+        // mercy. Such a word must BE a name once folded ("yaseen" still is) to bring a surah back.
         let matches = (direct.isEmpty && numericQuery == nil && revelationSearchMode == nil)
-            ? SurahSpelling.matches(trimmed, in: quran)
+            ? SurahSpelling.matches(trimmed, in: quran, wholeKeyOnly: Self.isTranslationWord(trimmed))
             : direct
 
         guard settings.quranSortMode == .revelation else {

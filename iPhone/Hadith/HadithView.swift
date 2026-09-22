@@ -139,6 +139,9 @@ struct HadithView: View {
     /// It used to restart from book 1 and re-scan everything already shown.
     @State private var globalHadithCursor: (book: Int, row: Int)? = nil
     @State private var isGlobalSearching = false
+    /// The button row's filters (HadithSearchFilters.swift): books, gradings, word mode, order, sections.
+    @State private var searchFilters = HadithSearchFilters.restored()
+    @State private var showSearchFilterSheet = false
     @State private var globalSearchRanFor = ""
     @State private var globalSearchTask: Task<Void, Never>?
 
@@ -156,12 +159,17 @@ struct HadithView: View {
     @AppStorage("hadithSearchHelpCollapsed") private var hadithSearchHelpCollapsed = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
-    #if DEBUG
-    /// "-hadithKeywordResults": open the switch on Keyword Results (screenshots can't tap it).
-    @State private var showHadithKeywordResults = ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults")
-    #else
-    @State private var showHadithKeywordResults = false
-    #endif
+    @State private var showHadithKeywordResults = HadithView.opensOnKeywordResults
+    /// "-hadithKeywordResults" (DEBUG): every query opens the switch on Keyword Results, because a
+    /// screenshot cannot tap it. It has to be re-read on each typed query: "-hadithSearch" seeds the
+    /// text a beat after launch, and that seeding is itself a new query.
+    static let opensOnKeywordResults: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults")
+        #else
+        return false
+        #endif
+    }()
     @State private var globalAITask: Task<Void, Never>?
     /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
     @State private var isGatheringAllBooks = false
@@ -193,18 +201,21 @@ struct HadithView: View {
     private func runGlobalAISearch(query: String) {
         globalAITask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
+        let filters = searchFilters
+        guard SemanticSearchEngine.isSupported, filters.shows(.ai), trimmed.count >= 3, !trimmed.containsArabicScript,
               HadithReferenceParser.parse(trimmed) == nil else {
             if !globalAIResults.isEmpty { globalAIResults = [] }
             return
         }
         prepareAllBooksCorpus()
+        // The engine ranks the whole shelf; books and gradings cut what comes back, so ask for more.
+        let narrowed = !filters.books.isEmpty || !filters.grades.isEmpty
 
         globalAITask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
 
-            let results = await semanticEngine.search(corpusID: allBooksCorpusID, query: trimmed, limit: 10)
+            let results = await semanticEngine.search(corpusID: allBooksCorpusID, query: trimmed, limit: narrowed ? 120 : 10)
             guard !Task.isCancelled else { return }
             guard let keys = semanticEngine.corpus(allBooksCorpusID)?.itemKeys else {
                 if !globalAIResults.isEmpty {
@@ -218,14 +229,20 @@ struct HadithView: View {
                 guard keys.indices.contains(result.index) else { continue }
                 let parts = keys[result.index].split(separator: "|")
                 guard parts.count >= 2, let idInBook = Int(parts[1]),
-                      let book = HadithCatalogBook.bySlug[String(parts[0])],
+                      let book = HadithCatalogBook.bySlug[String(parts[0])], filters.includes(book),
                       let data = store.book(book),
                       let hadith = data.hadiths.first(where: { $0.idInBook == idInBook }) else { continue }
                 hits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
                 if Task.isCancelled { return }
             }
 
-            let top = hits
+            // The grading reads each row's text block, so it is asked off the main actor.
+            let candidates = hits
+            let top: [GlobalHadithHit] = filters.grades.isEmpty ? Array(candidates.prefix(10)) : await Task.detached(priority: .userInitiated) {
+                Array(candidates.filter { hit in
+                    hit.hadith.row < 0 || (filters.gradeTest(for: hit.book, data: hit.data)?(hit.hadith.row) ?? true)
+                }.prefix(10))
+            }.value
             // The rows' text blocks, inflated off the main actor before they show (the ranked and
             // sweep rows are warmed the same way; these decoded theirs in their bodies on main).
             await withTaskGroup(of: Void.self) { group in
@@ -237,7 +254,7 @@ struct HadithView: View {
             }
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters else { return }
                 // Plain apply: an animated section insert racing the keyword sweep's own apply is the
                 // collection-view assertion crash the Quran search hit.
                 globalAIResults = top
@@ -246,8 +263,14 @@ struct HadithView: View {
     }
 
     /// Today's hadith lives in the STORE, resolved at app launch - the tab
-    /// renders it instantly.
-    private var dailyHadith: HadithStore.DailyPick? { store.daily }
+    /// renders it instantly. Nil while the tile is hidden for today or turned off (the Ayah of the
+    /// Day card's "Hide for Today" / "Delete Forever", 2026-09-21).
+    private var dailyHadith: HadithStore.DailyPick? {
+        guard settings.showHadithOfTheDay, !settings.isHadithOfTheDayHiddenToday else { return nil }
+        return store.daily
+    }
+    /// "Delete Forever" on the Hadith of the Day asks first, like the ayah card's.
+    @State private var confirmDeleteDailyForever = false
     /// Whether the daily section's history (last 5 days) is unfolded - the shuffle only shows here.
     @State private var showDailyHistory = false
     /// A hidden push target (shuffled bookmark, summary tiles) - HadithReferenceView by slug+number.
@@ -349,9 +372,10 @@ struct HadithView: View {
                 if !hadithSearchHelpCollapsed {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("• Books, chapters & hadith text (English or Arabic)")
-                        Text("• Reference: 'bukhari 5103' or 'muslim 3:12'")
+                        Text("• Reference: 'bukhari 5103' or 'muslim 3:12' (just '3:12' inside a book)")
                         Text("• AI: meaning search, 'controlling anger'")
                         Text("• Ask: questions get an on-device AI answer")
+                        Text("• The buttons above narrow it: books, Sahih / Hasan / Da'if, All Words, Best Match")
                         Text("• Text and AI search cover all 17 collections")
                     }
                     .font(.caption)
@@ -589,7 +613,11 @@ struct HadithView: View {
                         let results = HadithCatalogBook.all.filter(matches)
                         if !results.isEmpty {
                             boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
-                        } else if referenceResult == nil, numberQuery == nil {
+                        } else if referenceResult == nil, numberQuery == nil,
+                                  globalChapterResults.isEmpty, globalHadithResults.isEmpty,
+                                  globalRankedHits.isEmpty, globalAIResults.isEmpty {
+                            // Said only while NOTHING else answered: over a page of matching hadiths
+                            // the empty block was the first thing on screen and pushed them down.
                             // A bare number never matches a book title - the numbered chapter/hadith
                             // sections below are the answer, so skip the "no books" noise for it.
                             boxed(
@@ -715,6 +743,22 @@ struct HadithView: View {
                 searchHelpOverlay
                     .animation(.easeInOut, value: isHadithSearchFocused)
             }
+            // The filter buttons ride above the results while a search (or a filter) is live; applied
+            // after the help card, so the card sits under the row.
+            .adaptiveSafeArea(edge: .top, spacing: 0) {
+                if isHadithSearchFocused || !searchText.isEmpty || searchFilters.hasSessionFilters {
+                    HadithSearchFilterBar(filters: $searchFilters) { showSearchFilterSheet = true }
+                        .background {
+                            if #unavailable(iOS 26.0) {
+                                Rectangle().fill(.bar).ignoresSafeArea(edges: .top)
+                            }
+                        }
+                }
+            }
+            .sheet(isPresented: $showSearchFilterSheet) {
+                HadithSearchFilterSheet(filters: $searchFilters)
+                    .smallMediumSheetPresentation(startLarge: true)
+            }
             // Apple Music-style: the bottom search bar minimizes while scrolling down.
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
@@ -767,6 +811,9 @@ struct HadithView: View {
             }
             .onAppear {
                 store.loadLastRead()
+                // An order or a Show choice changed inside a book or a chapter (their filter rows
+                // share the preference) reaches this row when the tab comes back.
+                searchFilters.adoptStoredPreferences()
                 #if DEBUG
                 // Headless visual verification (no tap access on the dev machine): land directly on a
                 // given hadith, e.g. `-launchHadithOpen muslim:6846`. DEBUG builds only.
@@ -845,46 +892,16 @@ struct HadithView: View {
                 // view too, and both used to start here, inside the launch window, un-gated.
             }
             .onChange(of: searchText) { text in
-                // A new query invalidates the last all-books sweep and starts back at page one -
-                // then the sweep runs itself (debounced inside), the Quran search's way.
-                globalSearchTask?.cancel()
-                isGlobalSearching = false
-                globalChapterResults = []
-                globalHadithResults = []
-                globalRankedHits = []
-                globalRankedTotal = 0
-                globalRankedRelaxed = false
-                globalRankedCorrections = []
-                globalRankedHighlight = ""
-                globalRankedLimit = 6
-                globalHasMoreChapters = false
-                globalHasMoreHadiths = false
-                globalChapterLimit = 5
-                globalHadithLimit = 5
-                globalAllChapterHits = []
-                globalHadithCursor = nil
-                globalSearchRanFor = ""
-                // Every new query starts back on the AI list.
-                showHadithKeywordResults = false
-                // Reset the bare-number sweep too.
-                globalNumberTask?.cancel()
-                isNumberSearching = false
-                globalNumberChapters = []
-                globalNumberHadiths = []
-                numberSearchRanFor = nil
-                let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let citation = citationQuery {
-                    // A bare number: only the numbered chapter/hadith sweep - the text sweep, AI, and Ask
-                    // are all meaningless for "10".
-                    runGlobalNumberSearch(citation.base, suffix: citation.suffix)
-                } else {
-                    if query.count >= 3, HadithReferenceParser.parse(text) == nil {
-                        runGlobalSearch(query: query)
-                    }
-                    // AI matches ride along automatically (already-built corpora only) - the Quran
-                    // search's rule: AI adds understanding on top, keyword stays exhaustive below.
-                    runGlobalAISearch(query: text)
-                }
+                // Newly TYPED text starts back on the AI list. Here and not inside `restartSearch`:
+                // a filter change re-runs the SAME words, and resetting there threw the reader off
+                // Keyword Results every time they flipped Sahih or All Words.
+                showHadithKeywordResults = Self.opensOnKeywordResults
+                restartSearch(text)
+            }
+            // A filter is a new question about the same words: the whole fan-out runs again.
+            .onChange(of: searchFilters) { filters in
+                filters.persistPreferences()
+                restartSearch(searchText)
             }
             // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
             .onChange(of: semanticEngine.readyCorpora) { _ in
@@ -964,6 +981,12 @@ struct HadithView: View {
             }
         }
         .padding(.vertical, 2)
+        // Today's row carries the tile's menu (the Ayah of the Day history row does the same).
+        .contextMenu {
+            if isToday, let pick = store.daily {
+                dailyMenuItems(pick)
+            }
+        }
     }
 
     // MARK: Summary tiles + last read
@@ -1003,18 +1026,34 @@ struct HadithView: View {
             if showSummaryTiles {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     if let dailyHadith {
-                        summaryTile(
-                            title: "Hadith of the Day",
-                            icon: "sparkles",
-                            reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
-                            // The previews were captured when the pick was made - the tile never touches a pack.
-                            arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
-                            english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
-                        ) {
+                        // The Ayah of the Day tile's long-press menu (Hide for Today, Delete Forever,
+                        // then the hadith's own actions) - a GridTileMenu, like every other grid tile.
+                        GridTileMenu(primaryAction: {
+                            settings.hapticFeedback()
                             pushedReference = HadithBookmark(
                                 slug: dailyHadith.book.slug, idInBook: dailyHadith.hadith.idInBook,
                                 reference: "", preview: ""
                             )
+                        }) {
+                            dailyMenuItems(dailyHadith)
+                        } label: {
+                            summaryTileLabel(
+                                title: "Hadith of the Day",
+                                icon: "sparkles",
+                                reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
+                                // The previews were captured when the pick was made - the tile never touches a pack.
+                                arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
+                                english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
+                            )
+                        }
+                        .confirmationDialog("Are you sure?", isPresented: $confirmDeleteDailyForever, titleVisibility: .visible) {
+                            Button("Remove Permanently", role: .destructive) {
+                                settings.hapticFeedback()
+                                withAnimation { settings.showHadithOfTheDay = false }
+                            }
+                            Button("Cancel") {}
+                        } message: {
+                            Text("You can re-enable Hadith of the Day later in Hadith Settings.")
                         }
                     }
 
@@ -1058,6 +1097,47 @@ struct HadithView: View {
             settings.hapticFeedback()
             onTap()
         } label: {
+            summaryTileLabel(title: title, icon: icon, reference: reference, arabic: arabic, english: english)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The Ayah of the Day card's own items, for the hadith: Hide for Today and Delete Forever lead
+    /// (destructive, then a divider), then the shuffle the today row already offers, and the bookmark.
+    @ViewBuilder
+    private func dailyMenuItems(_ pick: HadithStore.DailyPick) -> some View {
+        Text("\(pick.book.englishTitle) \(pick.hadith.displayNumber)")
+            .foregroundStyle(.secondary)
+
+        Button(role: .destructive) {
+            settings.hapticFeedback()
+            withAnimation { settings.hadithOfTheDayHiddenDate = settings.dailyDayKey() }
+        } label: { Label("Hide for Today", systemImage: "eye.slash") }
+
+        Button(role: .destructive) {
+            settings.hapticFeedback()
+            confirmDeleteDailyForever = true
+        } label: { Label("Delete Forever", systemImage: "trash") }
+
+        Divider()
+
+        let bookmarked = HadithUserData.shared.isBookmarked(slug: pick.book.slug, idInBook: pick.hadith.idInBook)
+        Button(role: bookmarked ? .destructive : nil) {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                HadithUserData.shared.toggleBookmarkOrConfirm(book: pick.book, hadith: pick.hadith)
+            }
+        } label: {
+            Label(bookmarked ? "Remove Bookmark" : "Bookmark Hadith", systemImage: bookmarked ? "bookmark.fill" : "bookmark")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            Task { await store.shuffleDailyHadith() }
+        } label: { Label("Pick a Random Hadith", systemImage: "shuffle") }
+    }
+
+    private func summaryTileLabel(title: String, icon: String, reference: String, arabic: String, english: String) -> some View {
             // Tight on purpose (Abu, 2026-09-16), the Quran tab's tiles' exact grammar: 4 pt between
             // lines, 10 pt of padding, one line of each script, a small chip for the icon.
             VStack(alignment: .leading, spacing: 4) {
@@ -1101,8 +1181,6 @@ struct HadithView: View {
             .padding(10)
             .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
 
@@ -1246,7 +1324,26 @@ struct HadithView: View {
 
     // MARK: Reference lookup
 
+    @ViewBuilder
     private func referenceSection(_ reference: HadithReferenceParser.Reference) -> some View {
+        referenceHadithSection(reference)
+
+        // "Bukhari 15" can also mean the book's fifteenth chapter, so offer that door under the
+        // hadith (Abu, 2026-09-21). "Bukhari 1:4" and "Muslim 8a" name one hadith and nothing else.
+        if reference.chapter == nil, reference.suffix == nil, !reference.introduction,
+           let data = HadithStore.shared.book(reference.book),
+           let chapter = data.chapter(atPosition: reference.hadith) {
+            Section(header: Text("CHAPTER \(reference.hadith)")) {
+                NavigationLink {
+                    HadithChapterView(book: reference.book, bookData: data, chapter: chapter)
+                } label: {
+                    globalChapterRow(GlobalChapterHit(book: reference.book, data: data, chapter: chapter))
+                }
+            }
+        }
+    }
+
+    private func referenceHadithSection(_ reference: HadithReferenceParser.Reference) -> some View {
         Section(header: Text("GO TO REFERENCE")) {
             // The reference names ONE hadith - show that hadith in full, exactly like a keyword
             // match, instead of a bare "go to" stub. Resolution mirrors HadithReferenceView; the
@@ -1259,7 +1356,7 @@ struct HadithView: View {
                     if let chapter = data.chapters.first(where: { $0.id == resolved.chapterId }) {
                         HadithChapterView(book: reference.book, bookData: data, chapter: chapter, scrollToHadithId: resolved.idInBook)
                     } else {
-                        HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix)
+                        HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
                     }
                 } label: {
                     HadithRow(book: reference.book, hadith: resolved, compact: true).equatable()
@@ -1267,7 +1364,7 @@ struct HadithView: View {
             } else {
                 // Unresolvable number: keep the plain jump row - HadithReferenceView explains.
                 NavigationLink {
-                    HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix)
+                    HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "number")
@@ -1276,7 +1373,7 @@ struct HadithView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text(reference.chapter.map { "\(reference.book.englishTitle) - Chapter \($0), Hadith \(reference.hadith)" }
-                                 ?? "\(reference.book.englishTitle) - Hadith \(reference.hadith)\(reference.suffix ?? "")")
+                                 ?? "\(reference.book.englishTitle) - \(reference.introduction ? "Introduction " : "Hadith ")\(reference.hadith)\(reference.suffix ?? "")")
                                 .font(.subheadline.weight(.semibold))
 
                             Text(reference.book.arabicTitle)
@@ -1296,13 +1393,9 @@ struct HadithView: View {
     /// hadith row for a reference query.
     private func resolvedReferenceHadith(_ reference: HadithReferenceParser.Reference, data: HadithBookData) -> HadithBookData.Hadith? {
         if let chapter = reference.chapter {
-            guard data.chapters.indices.contains(chapter - 1) else { return nil }
-            let inChapter = data.hadiths(in: data.chapters[chapter - 1])
-            let offset = inChapter.startIndex + (reference.hadith - 1)
-            guard reference.hadith >= 1, offset < inChapter.endIndex else { return nil }
-            return inChapter[offset]
+            return data.hadith(chapterPosition: chapter, position: reference.hadith)
         }
-        return data.hadith(referenced: reference.hadith, suffix: reference.suffix)
+        return data.hadith(referenced: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
     }
 
     // MARK: All-books search
@@ -1374,14 +1467,14 @@ struct HadithView: View {
         if query.count >= 3, referenceResult == nil, numberQuery == nil {
             // Ask AI first - ALWAYS present while searching, results or none: the ask is an
             // invitation, not a result. It opens the chat with this query as its first question.
-            if OnDeviceAsk.isAvailable {
+            if OnDeviceAsk.isAvailable, searchFilters.shows(.ai) {
                 Section(header: hadithAskAIHeader) {
                     hadithAskPromptRow
                 }
             }
 
             // While the one-time all-books index builds, the standard progress row shows in its place.
-            if SemanticSearchEngine.isSupported, !query.containsArabicScript,
+            if SemanticSearchEngine.isSupported, searchFilters.shows(.ai), !query.containsArabicScript,
                !semanticEngine.isReady(allBooksCorpusID),
                isGatheringAllBooks || HadithSemanticCorpus.isGathering || semanticEngine.isBuilding(allBooksCorpusID) {
                 Section { AISearchStatusRow(corpusID: allBooksCorpusID, failed: false) }
@@ -1466,9 +1559,15 @@ struct HadithView: View {
             // The ranked lane above the book-ordered list, when it adds something the list does not: an
             // order (more matches than the page shows), a correction, a partial match, or matches the
             // exact sweep could not reach at all (a stem, a typo, words that do not touch).
-            let rankedRows = rankedHadithSectionRows
+            // Best Match (the filter row's order): the ranked list IS the hadith list, always shown,
+            // and the book-ordered sweep under it stands down.
+            let bestMatch = searchFilters.sort == .relevance && !globalRankedHits.isEmpty
+            let rankedRows = bestMatch ? globalRankedHits.map { RankedHadithRow(hit: $0) } : rankedHadithSectionRows
             if keywordVisible, !rankedRows.isEmpty {
-                Section(header: SectionPillHeader(title: "TOP HADITH RESULTS", count: globalRankedTotal)) {
+                // The pill counts what can be reached (the engine keeps its best forty), with a + when
+                // more matched than that: it used to print the whole tally over forty rows.
+                Section(header: SectionPillHeader(title: bestMatch ? "HADITHS BY BEST MATCH" : "TOP HADITH RESULTS",
+                                                  count: rankedRows.count, overflow: globalRankedTotal > rankedRows.count)) {
                     rankedHadithNotice
                     ForEach(rankedRows.prefix(globalRankedLimit)) { row in
                         let hit = row.hit
@@ -1500,7 +1599,7 @@ struct HadithView: View {
                 }
             }
 
-            if keywordVisible, !globalHadithResults.isEmpty {
+            if keywordVisible, !bestMatch, !globalHadithResults.isEmpty {
                 // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
                 // own count - so results from different books never read as one undifferentiated list.
                 Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, overflow: globalHasMoreHadiths)) {
@@ -1538,8 +1637,11 @@ struct HadithView: View {
 
             if !isGlobalSearching, globalSearchRanFor == query,
                globalChapterResults.isEmpty, globalHadithResults.isEmpty, globalRankedHits.isEmpty {
-                Section(footer: Text("Searches every collection in the app.")) {
-                    Text("No chapter or hadith matches in any collection.")
+                Section(footer: Text(searchFilters.hasSessionFilters
+                                     ? "The filters above narrow this search. Reset them to search every collection."
+                                     : "Searches every collection in the app.")) {
+                    Text(searchFilters.hasSessionFilters ? "No chapter or hadith matches with these filters."
+                                                         : "No chapter or hadith matches in any collection.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1758,6 +1860,47 @@ struct HadithView: View {
         let complete: Bool
     }
 
+    /// A new query (or a changed filter) invalidates the last all-books sweep and starts back at page
+    /// one - then the sweep runs itself (debounced inside), the Quran search's way.
+    private func restartSearch(_ text: String) {
+        globalSearchTask?.cancel()
+        isGlobalSearching = false
+        globalChapterResults = []
+        globalHadithResults = []
+        globalRankedHits = []
+        globalRankedTotal = 0
+        globalRankedRelaxed = false
+        globalRankedCorrections = []
+        globalRankedHighlight = ""
+        globalRankedLimit = 6
+        globalHasMoreChapters = false
+        globalHasMoreHadiths = false
+        globalChapterLimit = 5
+        globalHadithLimit = 5
+        globalAllChapterHits = []
+        globalHadithCursor = nil
+        globalSearchRanFor = ""
+        // Reset the bare-number sweep too.
+        globalNumberTask?.cancel()
+        isNumberSearching = false
+        globalNumberChapters = []
+        globalNumberHadiths = []
+        numberSearchRanFor = nil
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let citation = citationQuery {
+            // A bare number: only the numbered chapter/hadith sweep - the text sweep, AI, and Ask
+            // are all meaningless for "10".
+            runGlobalNumberSearch(citation.base, suffix: citation.suffix)
+        } else {
+            if query.count >= 3, HadithReferenceParser.parse(text) == nil {
+                runGlobalSearch(query: query)
+            }
+            // AI matches ride along automatically (already-built corpora only) - the Quran
+            // search's rule: AI adds understanding on top, keyword stays exhaustive below.
+            runGlobalAISearch(query: text)
+        }
+    }
+
     /// The automatic all-books sweep: debounced, script-aware, and matched against the folds built
     /// into the packs - so a keystroke is a byte search, never a normalization pass over the
     /// library. Chapters are matched in full (their names ride in the eager sections). Hadiths are
@@ -1775,7 +1918,14 @@ struct HadithView: View {
         // Folded exactly as the packs' text was folded (punctuation stripped, script-aware), so
         // "aishah" finds "'A'ishah" - one fold of the query, then byte compares from here on.
         let folded = HadithFold.query(query)
-        let books = HadithCatalogBook.all
+        // The filters in force for THIS sweep: the chosen books are the whole library it sees (so the
+        // Load More cursor stays an index into the same list), the words become needles, and the
+        // grading is a row test run on text matches only.
+        let filters = searchFilters
+        let books = HadithCatalogBook.all.filter(filters.includes)
+        let needles = filters.needles(for: query)
+        let sweepChapters = filters.shows(.chapters)
+        let sweepHadiths = filters.shows(.hadiths)
         let existingHits = loadMore ? globalHadithResults : []
         let cursor = loadMore ? globalHadithCursor : nil
         let knownChapters = loadMore ? globalAllChapterHits : []
@@ -1803,7 +1953,7 @@ struct HadithView: View {
 
             // Chapters: the whole shelf, off-main, in one pass.
             var chapterHits = knownChapters
-            if !loadMore {
+            if !loadMore, sweepChapters {
                 let matched = await Task.detached(priority: .userInitiated) { () -> [(Int, [HadithBookData.Chapter])] in
                     var found: [(Int, [HadithBookData.Chapter])] = []
                     for (index, entry) in library.enumerated() {
@@ -1834,14 +1984,17 @@ struct HadithView: View {
                 var assembled = 0
 
                 func addNext() {
+                    guard sweepHadiths else { return }
                     while next < library.count {
                         let index = next
                         next += 1
                         guard let entry = library[index] else { continue }
                         let from = index == startBook ? startRow : 0
                         let data = entry.data
+                        let accept = filters.gradeTest(for: entry.book, data: data)
                         group.addTask {
-                            let rows = data.matchingRows(in: from..<data.hadiths.count, query: folded, limit: needed)
+                            let rows = data.matchingRows(in: from..<data.hadiths.count, queries: needles.queries,
+                                                         requireAll: needles.requireAll, limit: needed, accept: accept)
                             return BookScan(index: index, rows: rows, complete: rows.count < needed)
                         }
                         return
@@ -1916,7 +2069,7 @@ struct HadithView: View {
             }
 
             await MainActor.run {
-                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters else { return }
                 // Plain apply: the AI pipeline and this sweep land in separate passes, and an animated
                 // structural diff racing another is the collection-view assertion crash the Quran
                 // search hit (type/delete/type).
@@ -1946,18 +2099,22 @@ struct HadithView: View {
             // The ranked lane, after the exact page has landed so the list never waits on it: every
             // book scored word by word, strict pass then relaxed (see HadithRankedSearch). Skipped on
             // Load More, which only extends the exact list.
-            guard !loadMore else { return }
+            guard !loadMore, sweepHadiths else { return }
             let books = library.compactMap { $0 }
             struct Scored {
                 let bookIndex: Int
                 let row: Int
                 let score: Int
             }
-            let cap = Self.rankedHadithCap
+            // A grading is tested AFTER the ranking (it reads text blocks, and the ranking offers
+            // thousands of rows): keep a deeper list, then cut it to the graded forty.
+            let cap = filters.grades.isEmpty ? Self.rankedHadithCap : Self.rankedHadithCap * 5
+            // Read here, on the main actor: the detached ranking below cannot reach a view's static.
+            let keptAfterGrading = Self.rankedHadithCap
             let reduced = AppPerformance.shouldAvoidBroadPrewarm
             // The reduced tier runs the lane only where the exact list cannot answer alone: two or
             // more words, or a single word the sweep found nothing for (a likely typo).
-            if reduced, !finalHadiths.isEmpty || !finalChapters.isEmpty,
+            if reduced, filters.sort != .relevance, !finalHadiths.isEmpty || !finalChapters.isEmpty,
                query.split(whereSeparator: { $0.isWhitespace }).count < 2 { return }
             let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [Scored], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
                 #if DEBUG
@@ -2008,7 +2165,17 @@ struct HadithView: View {
                           strict.offered, partial.offered, relaxed ? 1 : 0, parseMs, vocabMs)
                 }
                 #endif
-                return (chosen.sorted(), chosen.offered, relaxed, parsed)
+                var top = chosen.sorted()
+                var total = chosen.offered
+                if !filters.grades.isEmpty {
+                    top = top.filter { item in
+                        let entry = books[item.bookIndex]
+                        return filters.gradeTest(for: entry.book, data: entry.data)?(item.row) ?? true
+                    }
+                    top = Array(top.prefix(keptAfterGrading))
+                    total = top.count
+                }
+                return (top, total, relaxed, parsed)
             }
             guard let ranked = await withTaskCancellationHandler(operation: { await scan.value },
                                                                  onCancel: { scan.cancel() }),
@@ -2041,7 +2208,7 @@ struct HadithView: View {
                 }
             }
             await MainActor.run {
-                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines), filters == searchFilters else { return }
                 globalRankedHits = rankedHits
                 globalRankedTotal = ranked.total
                 globalRankedRelaxed = ranked.relaxed

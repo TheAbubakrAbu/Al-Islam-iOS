@@ -938,33 +938,56 @@ private struct SurahInfoPlaybackCard: View {
     var body: some View {
         VStack(spacing: 8) {
             playButtons
-            reciterCaption
+            reciterRow
         }
         .reciterPickerSheet(isPresented: $showReciterPicker)
     }
 
-    /// Who Play Surah will play, and the way to change it (Abu, 2026-09-20): the button started a
-    /// recitation without ever saying whose, and the picker was a trip back out to a play menu.
-    private var reciterCaption: some View {
+    /// Who Play Surah will play, and the way to change it: a full row in the same glass as the buttons
+    /// above it, the reciter's name at body weight under a small RECITER caption, and a chevron. The
+    /// 09-20 version was one line of `.caption` grey text under the buttons - Abu, 2026-09-21: "ugly,
+    /// too small". Opens the reciter list as a sheet over this one.
+    private var reciterRow: some View {
         Button {
             settings.hapticFeedback()
             showReciterPicker = true
         } label: {
-            HStack(spacing: 5) {
+            HStack(spacing: 12) {
                 Image(systemName: "headphones")
-                Text(settings.currentReciterDisplayName)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .frame(width: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("RECITER")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(settings.currentReciterDisplayName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 8)
+
+                Text("Change")
+                    .font(.subheadline)
+                    .foregroundColor(settings.accentColor.color)
+
                 Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 14)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .conditionalGlassEffect(rectangle: true, useColor: 0.12)
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("Reciter: \(settings.currentReciterDisplayName)")
         .accessibilityHint("Opens the reciter list")
     }
