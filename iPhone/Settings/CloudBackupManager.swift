@@ -185,7 +185,13 @@ final class CloudBackupManager: ObservableObject {
     // MARK: Setup
 
     private let defaults = UserDefaults.standard
-    private var container: CKContainer { CKContainer.default() }
+    /// The registered container, named outright. `CKContainer.default()` derives its identifier
+    /// from the bundle id (`iCloud.com.Quran.Elmallah.Islamic-Pillars`), which is not a container
+    /// this app owns: the one in the entitlements and in every provisioning profile is
+    /// `iCloud.Elmallah.IslamicPillars`. On a real phone the default container failed every call
+    /// with "bad container" / "couldn't find container", which read as iCloud Backup not working.
+    static let containerIdentifier = "iCloud.Elmallah.IslamicPillars"
+    private let container = CKContainer(identifier: CloudBackupManager.containerIdentifier)
     private var database: CKDatabase { container.privateCloudDatabase }
     private var zoneID: CKRecordZone.ID { CKRecordZone.ID(zoneName: Self.zoneName, ownerName: CKCurrentUserDefaultName) }
     private var contentChangedSinceSave = false
@@ -748,6 +754,8 @@ final class CloudBackupManager: ObservableObject {
         case .networkUnavailable, .networkFailure, .serviceUnavailable, .requestRateLimited, .zoneBusy: return .offline
         case .quotaExceeded: return .quotaExceeded
         case .unknownItem: return .notFound
+        case .badContainer, .missingEntitlement:
+            return .other("This copy of the app cannot reach its iCloud container (\(containerIdentifier)). Update the app and try again.")
         case .zoneNotFound, .userDeletedZone:
             UserDefaults.standard.set(false, forKey: Key.zoneReady)
             return .offline

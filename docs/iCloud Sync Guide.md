@@ -62,7 +62,7 @@ Code cannot do these, and the feature does not work for real users without them.
 
 ## 4. Storage design
 
-- **Container:** `CKContainer.default()`. The code never names the container; the entitlement selects the registered `iCloud.Elmallah.IslamicPillars` container. Each sibling app must select its own registered container in its entitlements.
+- **Container:** `CKContainer(identifier: "iCloud.Elmallah.IslamicPillars")`, the constant `CloudBackupManager.containerIdentifier`. It must be named: `CKContainer.default()` derives its identifier from the bundle id (`iCloud.com.Quran.Elmallah.Islamic-Pillars`), a container this app does not own, and on a real phone every call failed with "bad container" (found 2026-09-22; the simulator never showed it). The entitlement and the App ID's provisioning profiles both carry `iCloud.Elmallah.IslamicPillars`, so the constant, the entitlement and the portal must all agree. Each sibling app needs its own registered container in its entitlements and its own constant.
 - **Database:** private. **Zone:** custom zone `Profiles` (a custom zone lists its records without a query index, so nothing has to be configured in the CloudKit Console beyond the schema deploy). **Record type:** `Profile`. **Record name:** a UUID string.
 - **Listing profiles** uses `recordZoneChanges(inZoneWith:since:nil, desiredKeys:)` with every field except `payload`, so the picker never downloads a backup it is only naming. No `CKQuery`, so no "field recordName is not marked queryable" failure.
 

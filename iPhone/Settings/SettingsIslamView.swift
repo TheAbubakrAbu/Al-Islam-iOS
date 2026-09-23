@@ -188,6 +188,7 @@ struct SettingsIslamView: View {
                         .padding(.vertical, 2)
                 }
 
+                if settings.advancedSettings {
                 Section(header: Text("PRACTICE")) {
                     VStack(alignment: .leading) {
                         Toggle("Hide English Readings", isOn: $settings.hideEnglishInArabicLetters.animation(.easeInOut))
@@ -211,6 +212,9 @@ struct SettingsIslamView: View {
                             .padding(.vertical, 2)
                     }
                 }
+                }
+
+                AdvancedSettingsSection(hides: "the practice options, hiding the English readings and the Quranic sukoon")
             }
             .themedListRowBackground()
         }
@@ -256,6 +260,7 @@ struct SettingsIslamView: View {
                             .padding(.vertical, 2)
                     }
 
+                    if settings.advancedSettings {
                     VStack(alignment: .leading) {
                         Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
                             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.hapticFeedback() }
@@ -266,7 +271,10 @@ struct SettingsIslamView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
+                    }
                 }
+
+                AdvancedSettingsSection(hides: "the daily features turning over at Fajr")
             }
             .themedListRowBackground()
         }
@@ -363,11 +371,11 @@ extension SettingsSearchEntry {
         .init(title: "Highlight Allah (Islam)", path: "Islam Settings → Arabic Text", keywords: "highlight allah name red color dua dhikr adhkar tasbih articles islam", destination: .islamPage(.arabicText)),
         .init(title: "Arabic Font (Islam)", path: "Islam Settings → Arabic Text", keywords: "arabic font face uthmani indopak hijazi kufi basic dua dhikr adhkar names alphabet islam", destination: .islamPage(.arabicText)),
         .init(title: "Arabic Size (Alphabet)", path: "Islam Settings → Arabic Alphabet", keywords: "arabic size slider letters alphabet bigger larger floor", destination: .islamPage(.alphabet)),
-        .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet)),
-        .init(title: "Use Quranic Sukoon", path: "Islam Settings → Arabic Alphabet", keywords: "quranic sukoon uthmani jazm letter practice mark", destination: .islamPage(.alphabet)),
+        .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet), advanced: true),
+        .init(title: "Use Quranic Sukoon", path: "Islam Settings → Arabic Alphabet", keywords: "quranic sukoon uthmani jazm letter practice mark", destination: .islamPage(.alphabet), advanced: true),
         .init(title: "Grid Mode (Al-Islam)", path: "Islam Settings → Libraries", keywords: "grid list tiles rows islam resources layout", destination: .islamPage(.libraries)),
         .init(title: "Word of the Day", path: "Islam Settings → Libraries", keywords: "word of the day arabic daily vocabulary root", destination: .islamPage(.libraries)),
-        .init(title: "Turn Over at Fajr", path: "Islam Settings → Libraries", keywords: "daily rollover fajr midnight day boundary of the day", destination: .islamPage(.libraries)),
+        .init(title: "Turn Over at Fajr", path: "Islam Settings → Libraries", keywords: "daily rollover fajr midnight day boundary of the day", destination: .islamPage(.libraries), advanced: true),
         .init(title: "Sunnah Reminders (Islam)", path: "Islam Settings → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat reminder notification dua", destination: .islamPage(.sunnahReminders)),
     ]
 }

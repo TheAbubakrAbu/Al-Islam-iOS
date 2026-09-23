@@ -15,6 +15,10 @@ struct SettingsSearchEntry: Identifiable {
     let path: String
     let keywords: String
     let destination: Destination
+    /// A control its screen shows only with Advanced Settings on. The result row says so, and
+    /// opening it turns the switch on (`revealsAdvancedSettings`), so a search never lands on a
+    /// screen that hides the very thing that was searched for.
+    var advanced: Bool = false
 
     var id: String { path + title }
 
@@ -277,7 +281,10 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
             .pushDestination(isPresented: $openSpotlight) {
-                if let destination = spotlightTarget?.destination { searchDestinationView(destination) }
+                if let tip = spotlightTarget, let destination = tip.destination {
+                    searchDestinationView(destination)
+                        .revealsAdvancedSettings(tip.advanced)
+                }
             }
             #if DEBUG
             // `-openCredit <CreditItem.id>`: what a credit row in the search results does, headlessly.
@@ -426,6 +433,10 @@ struct SettingsView: View {
             #endif
         }
 
+        // The one switch behind every settings screen's second half (Abu, 2026-09-22): the pages
+        // above keep to their essentials until this is on. Each of them ends with the same switch.
+        AdvancedSettingsSection()
+
         // Front and center (Abu, 2026-09-20): the app's unusual settings as cards, directly under the
         // hub, each opening the screen that owns it, with every Tips & Tricks list one row below.
         #if os(iOS)
@@ -512,7 +523,10 @@ struct SettingsView: View {
     }
 
     private func settingsSearchResultRow(_ entry: SettingsSearchEntry) -> some View {
-        NavigationLink(destination: LazyDestination { searchDestinationView(entry.destination) }) {
+        NavigationLink(destination: LazyDestination {
+            searchDestinationView(entry.destination)
+                .revealsAdvancedSettings(entry.advanced)
+        }) {
             SettingsSearchResultRow(entry: entry, query: settingsSearchText)
         }
     }
@@ -1334,6 +1348,70 @@ struct SettingsAppearanceView: View {
                 .onChange(of: settings.hapticOn) { _ in settings.hapticFeedback() }
         }
         #endif
+    }
+}
+
+// MARK: - Advanced Settings
+
+/// The switch every simplified settings screen ends with, and the Settings tab carries under its
+/// hub: ONE stored value (`Settings.advancedSettings`), so turning it on anywhere turns it on
+/// everywhere. Off, a screen keeps to its essentials and this section names what it is keeping
+/// out of sight (`hides`), so nobody wonders where an option went; the hidden options keep the
+/// values they hold. Compiles for the watch too (its Notifications and Nagging Mode pages use it).
+struct AdvancedSettingsSection: View {
+    @ObservedObject private var settings = Settings.shared
+
+    /// What THIS screen shows only with the switch on, as a plain list ("the repeat interval, the
+    /// last calls and a tone of their own"). Nil on the Settings tab, which hides nothing itself.
+    var hides: String? = nil
+
+    var body: some View {
+        Section(header: Text("ADVANCED")) {
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Show Advanced Settings", isOn: $settings.advancedSettings.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.advancedSettings) { _ in settings.hapticFeedback() }
+
+                #if os(iOS)
+                Text(caption)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+                #endif
+            }
+        }
+    }
+
+    private var caption: String {
+        if settings.advancedSettings {
+            return "Every option on every settings screen is shown. Turn this off to keep each screen to its essentials; what you set in the advanced options still applies."
+        }
+        if let hides {
+            return "Hidden on this screen: \(hides). Turn this on to see every option, here and on every other settings screen. Anything set there before still applies."
+        }
+        return "Every settings screen keeps to its essentials. Turn this on to see every option, on every screen. Each screen has this switch at its foot too."
+    }
+}
+
+/// Turns Advanced Settings on when a search result or a tip opens a control its screen would
+/// otherwise hide. The row said "Advanced" before it was tapped, so the switch flipping is the
+/// expected outcome, not a surprise; the screen's own ADVANCED section is there to turn it back off.
+struct AdvancedSettingsReveal: ViewModifier {
+    let active: Bool
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            guard active, !Settings.shared.advancedSettings else { return }
+            Settings.shared.advancedSettings = true
+        }
+    }
+}
+
+extension View {
+    func revealsAdvancedSettings(_ active: Bool) -> some View {
+        modifier(AdvancedSettingsReveal(active: active))
     }
 }
 

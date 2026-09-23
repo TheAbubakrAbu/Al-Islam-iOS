@@ -3271,6 +3271,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("hapticOn") var hapticOn: Bool = true
 
+    /// The one switch behind every settings screen's second half (Abu, 2026-09-22: "make nagging
+    /// mode much simpler ... only have an option to make it more customizable ... by default should
+    /// be simple, do the same with prayer notifications and all settings in the app"). Off, each
+    /// screen keeps to its essentials and ends with `AdvancedSettingsSection`, the same switch; on,
+    /// every option shows everywhere. The hidden options keep whatever value they hold: hiding a
+    /// control never changes what the app does, only what the screen shows.
+    @AppStorage("advancedSettings") var advancedSettings: Bool = false
+
     @AppStorage("defaultView") var defaultView: Bool = true
 
     /// Classic Look: the chrome from before iOS 26 (material pills, opaque bars) instead of Liquid

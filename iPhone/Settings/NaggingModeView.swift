@@ -13,6 +13,14 @@ import SwiftUI
 // function the scheduler calls, so the screen cannot describe a schedule the app will not build.
 //
 // Compiles for the watch too (its Notifications page links here), hence no iOS-only picker styles.
+//
+// Simple by default (Abu, 2026-09-22: "make nagging mode much simpler, only have an option to make
+// it more customizable"): the switch, the pause, one start time, which prayers, and the things to
+// know. Everything else (the spacing, the last calls, a lead per prayer, the check-in, the tones,
+// the verse) shows only with Show Advanced Settings on, the app-wide switch at the foot of every
+// settings screen. The hidden options keep their values; the schedule line and the deadline
+// captions are still built from whatever they hold, so the screen never describes a schedule the
+// scheduler will not build.
 
 /// One nagging row: the time whose arrival closes a prayer's window, and the prayer it therefore
 /// asks about. This is the SAME mapping `Settings.prayerQuestion(for:)` computes at
@@ -141,12 +149,16 @@ struct NaggingModeView: View {
                     if settings.naggingPauseEnd != nil { pausedSection }
                     scheduleSection
                     deadlinesSection
-                    followUpSection
-                    soundSection
-                    wordingSection
+                    if settings.advancedSettings {
+                        followUpSection
+                        soundSection
+                        wordingSection
+                    }
                 }
 
                 goodToKnowSection
+
+                AdvancedSettingsSection(hides: "how often the reminders repeat, the last calls, a different start for each prayer, a check-in after the adhan, a tone of their own, a louder last call and a verse in it")
             }
             .themedListRowBackground()
         }
@@ -283,6 +295,9 @@ struct NaggingModeView: View {
 
     // MARK: Schedule
 
+    /// Simple: one start time and the schedule it makes. Advanced adds the spacing, the last calls
+    /// and a start per prayer. A per-prayer start set while advanced is on stays in force when it
+    /// is turned off; the screen then says so instead of showing a Start picker nothing reads.
     private var scheduleSection: some View {
         Section(header: Text("SCHEDULE")) {
             if !settings.naggingPerDeadlineStart {
@@ -295,21 +310,25 @@ struct NaggingModeView: View {
                     settings.hapticFeedback()
                     fitIntervalToLeads()
                 }
+            } else if !settings.advancedSettings {
+                caption("Each prayer has its own start time, shown under Which Prayers. Change them with Show Advanced Settings on.")
             }
 
-            Picker("Repeat Every", selection: $settings.naggingInterval) {
-                ForEach(intervalChoices, id: \.self) { minutes in
-                    Text("\(minutes) min").tag(minutes)
+            if settings.advancedSettings {
+                Picker("Repeat Every", selection: $settings.naggingInterval) {
+                    ForEach(intervalChoices, id: \.self) { minutes in
+                        Text("\(minutes) min").tag(minutes)
+                    }
                 }
-            }
-            .onChange(of: settings.naggingInterval) { _ in settings.hapticFeedback() }
+                .onChange(of: settings.naggingInterval) { _ in settings.hapticFeedback() }
 
-            Picker("Last Calls", selection: $settings.naggingLastCallsRaw) {
-                ForEach(NaggingLastCalls.allCases) { option in
-                    Text(option.title).tag(option.rawValue)
+                Picker("Last Calls", selection: $settings.naggingLastCallsRaw) {
+                    ForEach(NaggingLastCalls.allCases) { option in
+                        Text(option.title).tag(option.rawValue)
+                    }
                 }
+                .onChange(of: settings.naggingLastCallsRaw) { _ in settings.hapticFeedback() }
             }
-            .onChange(of: settings.naggingLastCallsRaw) { _ in settings.hapticFeedback() }
 
             if !settings.naggingPerDeadlineStart {
                 Label(scheduleLine(forLead: settings.naggingStartOffset), systemImage: "bell.badge")
@@ -318,19 +337,21 @@ struct NaggingModeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Different Start for Each Prayer", isOn: $settings.naggingPerDeadlineStart.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.naggingPerDeadlineStart) { _ in
-                        settings.hapticFeedback()
-                        fitIntervalToLeads()
-                    }
+            if settings.advancedSettings {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Different Start for Each Prayer", isOn: $settings.naggingPerDeadlineStart.animation(.easeInOut))
+                        .font(.subheadline)
+                        .tint(settings.accentColor.color)
+                        .onChange(of: settings.naggingPerDeadlineStart) { _ in
+                            settings.hapticFeedback()
+                            fitIntervalToLeads()
+                        }
 
-                caption("Fajr's window is short and Dhuhr's is long. Turn this on to give each prayer its own lead below, say 20 minutes before Shurooq and an hour before Maghrib.")
+                    caption("Fajr's window is short and Dhuhr's is long. Turn this on to give each prayer its own lead below, say 20 minutes before Shurooq and an hour before Maghrib.")
+                }
+
+                caption(budgetLine)
             }
-
-            caption(budgetLine)
         }
     }
 
@@ -374,7 +395,16 @@ struct NaggingModeView: View {
                 .tint(settings.accentColor.color)
                 .onChange(of: settings[keyPath: deadline.key]) { _ in settings.hapticFeedback() }
 
-                if settings.naggingPerDeadlineStart, settings[keyPath: deadline.key] {
+                if settings.naggingPerDeadlineStart, settings[keyPath: deadline.key], !settings.advancedSettings {
+                    // The lead this deadline keeps while the picker that set it is out of sight.
+                    Text(scheduleLine(forLead: settings.naggingStart(forDeadline: deadline.id)))
+                        .font(.caption)
+                        .foregroundColor(settings.accentColor.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .settingsDependent()
+                }
+
+                if settings.naggingPerDeadlineStart, settings[keyPath: deadline.key], settings.advancedSettings {
                     VStack(alignment: .leading, spacing: 2) {
                         Picker("Start", selection: Binding(
                             get: { settings.naggingStart(forDeadline: deadline.id) },

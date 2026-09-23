@@ -474,7 +474,7 @@ extension Settings {
     // domains it doesn't ship ([Shared] stays).
     static let watchSyncedAppStorageKeys: [String] = prayerOffsetKeys + [
         // [Shared] Appearance & general
-        "colorSchemeString", "defaultView", "hapticOn",
+        "colorSchemeString", "defaultView", "hapticOn", "advancedSettings",
         // [Al-Adhan] Prayer / notifications
         // The custom-method angles travel WITH the method label (`prayerCalculation` syncs above):
         // without them a watch receiving "Custom Angles" computed with the 18/17 defaults forever.

@@ -301,7 +301,9 @@ struct SettingsAdhanView: View {
             adhanPageLink(.travelingMode) { travelingModeDestination }
             adhanPageLink(.optionalPrayers) { optionalTimesDestination }
             adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
-            adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
+            if settings.advancedSettings {
+                adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
+            }
         }
 
         #if os(iOS)
@@ -315,6 +317,8 @@ struct SettingsAdhanView: View {
         // itself, beneath the marks it governs (Abu, 2026-09-18). See
         // `PrayerTrackerView.settingsSection`.
         #endif
+
+        AdvancedSettingsSection(hides: "custom prayer names, plus the custom angles and high latitude rule under Prayer Calculation")
     }
 
     /// The Skyline row's one value: "off" while the skyline is hidden, else the style's raw value.
@@ -898,7 +902,7 @@ struct NotificationView: View {
                         .font(.subheadline)
                         .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
 
-                    if settings.dateNotifications {
+                    if settings.dateNotifications, settings.advancedSettings {
                         VStack(alignment: .leading, spacing: 4) {
                             Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
                                 .font(.subheadline)
@@ -972,13 +976,14 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone below.")
+                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone\(settings.advancedSettings ? " below" : ", an advanced setting").")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
 
+                if settings.advancedSettings {
                 Section(header: Text("ALERT TONE")) {
                     Picker("Alert Tone", selection: $settings.alertToneSound) {
                         Section {
@@ -1025,6 +1030,7 @@ struct NotificationView: View {
                         .font(.subheadline)
                         .onChange(of: settings.adhanOverridesSilentMode) { _ in settings.hapticFeedback() }
                 }
+                }
                 #endif
 
                 Section(header: Text("PRAYER REMINDERS")) {
@@ -1045,6 +1051,12 @@ struct NotificationView: View {
                     }
                     .tint(settings.accentColor.color)
                 }
+
+                #if os(iOS)
+                AdvancedSettingsSection(hides: "the alert tone, the in-app adhan in silent mode and the day-before reminder for Islamic dates")
+                #else
+                AdvancedSettingsSection(hides: "the day-before reminder for Islamic dates")
+                #endif
     }
 
     #if os(iOS)
@@ -1360,8 +1372,11 @@ struct MoreNotificationView: View {
                 #endif
             }
 
-            if !settings.naggingMode {
-                Section(header: Text("ALL PRAYER NOTIFICATIONS")) {
+            // Always shown now, nagging mode or not (2026-09-22): with the per-prayer sections behind
+            // Advanced Settings, this is the one place the simple screen turns the adhans on and
+            // sets the prenotification lead. Nagging mode turns the six on when it starts; turning
+            // them off here afterwards keeps the "Did you pray?" reminders and drops the adhans.
+            Section(header: Text("ALL PRAYER NOTIFICATIONS")) {
                     Toggle("Turn On All Prayer Notifications", isOn: Binding(
                         get: {
                             settings.notificationFajr &&
@@ -1406,8 +1421,9 @@ struct MoreNotificationView: View {
                             .foregroundColor(settings.accentColor.color)
                     }
                 }
-            }
 
+            // Nothing per prayer on the simple screen: the section above sets them all at once.
+            if settings.advancedSettings {
             if !settings.naggingMode {
                 NotificationSettingsSection(prayerName: "Fajr", preNotificationTime: $settings.preNotificationFajr, isNotificationOn: $settings.notificationFajr)
                 NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
@@ -1454,6 +1470,9 @@ struct MoreNotificationView: View {
                     NotificationSettingsSection(prayerName: "Last Third", preNotificationTime: $settings.preNotificationLastThird, isNotificationOn: $settings.notificationLastThird)
                 }
             }
+            }
+
+            AdvancedSettingsSection(hides: "each prayer's own notification switch, prenotification time, adhan and short adhan, including the optional times")
             }
             .themedListRowBackground()
         }
@@ -1616,18 +1635,20 @@ extension SettingsSearchEntry {
     static let notificationEntries: [SettingsSearchEntry] = [
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
         .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
-        .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah silent mode ringer", destination: .notifications),
-        .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications),
+        .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
+        .init(title: "Play In-App Adhan in Silent Mode", path: "Notifications", keywords: "silent mode ringer switch mute in-app adhan sound", destination: .notifications, advanced: true),
+        .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications, advanced: true),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
-        .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
+        .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications, advanced: true),
         .init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders)),
-        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert all prayers prenotification", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Per-Prayer Notifications & Adhan", path: "Notifications → Prayer Reminders", keywords: "per prayer each fajr dhuhr asr maghrib isha own sound short adhan play adhan prenotification duhaa midnight last third", destination: .notificationsPage(.prayerReminders), advanced: true),
         .init(title: "Nagging Mode", path: "Notifications → Nagging Mode", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq struggle lazy miss prayers accountability", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Nagging Start Time & Repeat Interval", path: "Notifications → Nagging Mode", keywords: "nag lead start minutes before hour repeat every interval spacing how often frequency last calls final reminders 10 5", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Different Nagging Start for Each Prayer", path: "Notifications → Nagging Mode", keywords: "nag per prayer custom lead fajr shurooq asr maghrib isha midnight individual", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Check In After the Adhan", path: "Notifications → Nagging Mode", keywords: "nag follow up after adhan have you prayed yet early start of time beginning reminder later", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Nag Tone & Louder Last Call", path: "Notifications → Nagging Mode", keywords: "nag sound tone alarm loud louder final last call escalate chime ring echo takbir", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Add a Verse to the Last Call", path: "Notifications → Nagging Mode", keywords: "nag ayah verse quran wording reminder motivation last call", destination: .notificationsPage(.naggingMode)),
+        .init(title: "Nagging Start Time & Repeat Interval", path: "Notifications → Nagging Mode", keywords: "nag lead start minutes before hour repeat every interval spacing how often frequency last calls final reminders 10 5", destination: .notificationsPage(.naggingMode), advanced: true),
+        .init(title: "Different Nagging Start for Each Prayer", path: "Notifications → Nagging Mode", keywords: "nag per prayer custom lead fajr shurooq asr maghrib isha midnight individual", destination: .notificationsPage(.naggingMode), advanced: true),
+        .init(title: "Check In After the Adhan", path: "Notifications → Nagging Mode", keywords: "nag follow up after adhan have you prayed yet early start of time beginning reminder later", destination: .notificationsPage(.naggingMode), advanced: true),
+        .init(title: "Nag Tone & Louder Last Call", path: "Notifications → Nagging Mode", keywords: "nag sound tone alarm loud louder final last call escalate chime ring echo takbir", destination: .notificationsPage(.naggingMode), advanced: true),
+        .init(title: "Add a Verse to the Last Call", path: "Notifications → Nagging Mode", keywords: "nag ayah verse quran wording reminder motivation last call", destination: .notificationsPage(.naggingMode), advanced: true),
         .init(title: "Pause Nagging", path: "Notifications → Nagging Mode", keywords: "pause snooze silence hold sick travel flight day week resume nag", destination: .notificationsPage(.naggingMode)),
         .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
@@ -1639,7 +1660,7 @@ extension SettingsSearchEntry {
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
         .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
-        .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames)),
+        .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames), advanced: true),
         .init(title: "Mark Only After the Time Begins", path: "Al-Adhan → Prayer Tracker", keywords: "prayer tracker mark time begins lock gate future prayers order only after adhan", destination: .prayerTracker),
         .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings → Sky", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerPage(.sky)),
         .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings → Sky", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerPage(.sky)),
@@ -1716,9 +1737,16 @@ struct PrayerCalculationListView: View {
                         ForEach(PrayerCalculationCatalog.methods) { methodRow($0) }
                     }
 
-                    customSection
+                    // Custom angles stay on screen while they are the method in use, whatever the
+                    // switch says: a method the screen cannot show is a method nobody can change.
+                    if settings.advancedSettings || selectedID == PrayerCalculationCatalog.customID {
+                        customSection
+                    }
                     madhabAndHighLatitudeSection
-                    explanationSection
+                    if settings.advancedSettings {
+                        explanationSection
+                    }
+                    AdvancedSettingsSection(hides: "the custom method with its own Fajr and Isha angles, the high latitude rule and the notes on angles")
                 }
             }
             .themedListRowBackground()
@@ -1864,7 +1892,7 @@ struct PrayerCalculationListView: View {
     /// orphaned in refactors); they belong here with the rest of the calculation choices - and the
     /// settings-search index deep-links "hanafi"/"high latitude" to this screen.
     private var madhabAndHighLatitudeSection: some View {
-        Section(header: Text("MADHAB & HIGH LATITUDE")) {
+        Section(header: Text(settings.advancedSettings ? "MADHAB & HIGH LATITUDE" : "MADHAB")) {
             VStack(alignment: .leading) {
                 Toggle("Hanafi Calculation for Asr", isOn: $settings.hanafiMadhab.animation(.easeInOut))
                     .font(.subheadline)
@@ -1878,6 +1906,7 @@ struct PrayerCalculationListView: View {
                     .padding(.vertical, 2)
             }
 
+            if settings.advancedSettings {
             VStack(alignment: .leading) {
                 Picker("High Latitude Rule", selection: $settings.highLatitudeRule) {
                     Section {
@@ -1898,6 +1927,7 @@ struct PrayerCalculationListView: View {
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
+            }
             }
         }
     }
@@ -1943,8 +1973,8 @@ struct PrayerCalculationListView: View {
 extension SettingsSearchEntry {
     static let prayerCalculationEntries: [SettingsSearchEntry] = [
         .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerPage(.prayerCalculation)),
-        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerPage(.prayerCalculation)),
-        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerPage(.prayerCalculation)),
+        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerPage(.prayerCalculation), advanced: true),
+        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerPage(.prayerCalculation), advanced: true),
         .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerPage(.prayerCalculation)),
     ]
 }

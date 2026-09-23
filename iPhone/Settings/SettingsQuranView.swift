@@ -281,6 +281,7 @@ struct SettingsQuranView: View {
     private var recitationDestination: some View {
         quranSettingsSubList(title: "Recitation") {
             recitationSection
+            AdvancedSettingsSection(hides: "what happens after a surah's recitation ends")
         }
     }
 
@@ -291,6 +292,7 @@ struct SettingsQuranView: View {
             quranTabViewSection
             #endif
             surahReadingSection
+            AdvancedSettingsSection(hides: "the full surah details, the daily cards turning over at Fajr, the last listened and last read cards, the page and juz dividers and Keep Sheet Open")
         }
     }
 
@@ -306,10 +308,15 @@ struct SettingsQuranView: View {
             Group {
                 arabicTextSection
                 // Qiraah/Riwayah details + comparison mode affect on-screen Arabic and ayah playback the
-                // watch doesn't offer; hide them on watchOS.
+                // watch doesn't offer; hide them on watchOS. On the simple screen the section shows
+                // only while a riwayah is already open: a reading the screen cannot show is a reading
+                // nobody can leave.
                 #if os(iOS)
-                qiraahSection
+                if settings.advancedSettings || settings.showQiraahDetails {
+                    qiraahSection
+                }
                 #endif
+                AdvancedSettingsSection(hides: arabicTextHides)
             }
             .themedListRowBackground()
         }
@@ -333,10 +340,21 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// What the Arabic Text screen keeps out of sight on the simple screen, for its ADVANCED footer.
+    private var arabicTextHides: String {
+        var parts = ["the Hijazi mark and Uthmani script styles", "hiding tashkeel and dots"]
+        #if os(iOS)
+        if !settings.showQiraahDetails { parts.append("the riwayah and qiraah picker") }
+        #endif
+        return parts.dropLast().joined(separator: ", ") + " and " + parts.last!
+    }
+
     private var recitationSection: some View {
         Section(header: Text("RECITATION")) {
             reciterSelection
-            recitationEndingPicker
+            if settings.advancedSettings {
+                recitationEndingPicker
+            }
             recitationCaption
         }
     }
@@ -384,16 +402,18 @@ struct SettingsQuranView: View {
     // Options that affect the main Quran tab / surah list screen.
     private var quranTabViewSection: some View {
         Section(header: Text("QURAN TAB")) {
-            VStack(alignment: .leading) {
-                Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
+            if settings.advancedSettings {
+                VStack(alignment: .leading) {
+                    Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
 
-                Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
+                    Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
             }
 
             lastReadAndListenedGroup
@@ -403,11 +423,13 @@ struct SettingsQuranView: View {
     // Options that affect the in-surah reading screen.
     private var surahReadingSection: some View {
         Section(header: Text("READING")) {
-            pageAndJuzDividersGroup
-
             highlightAllahGroup
 
-            keepAyahSheetOpenGroup
+            if settings.advancedSettings {
+                pageAndJuzDividersGroup
+
+                keepAyahSheetOpenGroup
+            }
         }
     }
 
@@ -455,6 +477,7 @@ struct SettingsQuranView: View {
                 }
             }
 
+            if settings.advancedSettings {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Daily Cards Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
                     .font(.subheadline)
@@ -470,8 +493,10 @@ struct SettingsQuranView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
+            }
             #endif
 
+            if settings.advancedSettings {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Show Last Listened Surah", isOn: $settings.saveLastListenedSurah.animation(.easeInOut))
                     .font(.subheadline)
@@ -506,6 +531,7 @@ struct SettingsQuranView: View {
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
+            }
             }
         }
     }
@@ -741,13 +767,18 @@ struct SettingsQuranView: View {
     private var arabicDisplayControls: some View {
         if settings.showArabicText {
             arabicFontPicker
-            hijaziMarkStylePicker
-            arabicScriptStylePicker
+            if settings.advancedSettings {
+                hijaziMarkStylePicker
+                arabicScriptStylePicker
+            }
             arabicFontSizeControls
             beginnerModeGroup
             // Last on purpose (user rule): Hide Tashkeel is the section's most drastic, least
             // recommended option, so it sits at the bottom of the list rather than leading it.
-            cleanArabicTextGroup
+            // Advanced only: the least recommended options are the ones the simple screen omits.
+            if settings.advancedSettings {
+                cleanArabicTextGroup
+            }
         }
     }
 
@@ -1393,25 +1424,26 @@ struct FavoritesView: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     static let quranEntries: [SettingsSearchEntry] = [
-        .init(title: "Keep Sheet Open", path: "Quran Settings", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranSettings),
+        .init(title: "Keep Sheet Open", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranPage(.readingView), advanced: true),
         .init(title: "Ayah Card Size", path: "Ayah actions sheet", keywords: "preview card arabic bigger smaller plus minus percent remember size", destination: .quranSettings),
         .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
         .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
         .init(title: "Recitation Type & Random Reciter", path: "Quran Settings → Recitation", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranPage(.recitation)),
-        .init(title: "After Surah Recitation Ends", path: "Quran Settings → Recitation", keywords: "next surah previous end stop continue autoplay recitation end", destination: .quranPage(.recitation)),
+        .init(title: "After Surah Recitation Ends", path: "Quran Settings → Recitation", keywords: "next surah previous end stop continue autoplay recitation end", destination: .quranPage(.recitation), advanced: true),
         .init(title: "Reading View (List / Pages)", path: "Quran Settings → Reading View", keywords: "page mode mushaf list mode grid last read", destination: .quranPage(.readingView)),
-        .init(title: "Show Full Surah Details", path: "Quran Settings → Reading View", keywords: "revelation type ayah count page count surah list details", destination: .quranPage(.readingView)),
+        .init(title: "Show Full Surah Details", path: "Quran Settings → Reading View", keywords: "revelation type ayah count page count surah list details", destination: .quranPage(.readingView), advanced: true),
         .init(title: "Ayah of the Day & Word of the Day", path: "Quran Settings → Reading View", keywords: "daily ayah word vocabulary quran tab summary tiles", destination: .quranPage(.readingView)),
-        .init(title: "Daily Cards Turn Over at Fajr", path: "Quran Settings → Reading View", keywords: "midnight fajr rollover day change hadith dua reminder name", destination: .quranPage(.readingView)),
-        .init(title: "Last Read & Last Listened", path: "Quran Settings → Reading View", keywords: "remember position history last read ayah listened surah summary", destination: .quranPage(.readingView)),
-        .init(title: "Page and Juz Dividers", path: "Quran Settings → Reading View", keywords: "divider juz page label floating reading", destination: .quranPage(.readingView)),
+        .init(title: "Daily Cards Turn Over at Fajr", path: "Quran Settings → Reading View", keywords: "midnight fajr rollover day change hadith dua reminder name", destination: .quranPage(.readingView), advanced: true),
+        .init(title: "Last Read & Last Listened", path: "Quran Settings → Reading View", keywords: "remember position history last read ayah listened surah summary", destination: .quranPage(.readingView), advanced: true),
+        .init(title: "Page and Juz Dividers", path: "Quran Settings → Reading View", keywords: "divider juz page label floating reading", destination: .quranPage(.readingView), advanced: true),
         .init(title: "Arabic Text (Quran)", path: "Quran Settings → Arabic Text", keywords: "font size uthmani indopak script clean dots beginner mode spacing", destination: .quranPage(.arabicText)),
         .init(title: "Arabic Font & Size", path: "Quran Settings → Arabic Text", keywords: "uthmani indopak kufi hijazi face font size slider system", destination: .quranPage(.arabicText)),
+        .init(title: "Hijazi Marks & Uthmani Script Style", path: "Quran Settings → Arabic Text", keywords: "hijazi marks style uthmani script madani maghribi warsh typeface variant", destination: .quranPage(.arabicText), advanced: true),
         .init(title: "Tajweed Colors", path: "Quran Settings → Arabic Text", keywords: "tajwid rules colors ghunnah qalqalah madd legend", destination: .quranPage(.arabicText)),
         .init(title: "Tap a Word & Word by Word", path: "Quran Settings → Arabic Text", keywords: "word by word gloss meaning pronunciation transliteration inline tap", destination: .quranPage(.arabicText)),
-        .init(title: "Hide Tashkeel & Dots", path: "Quran Settings → Arabic Text", keywords: "clean arabic tashkeel harakat diacritics dots beginner spacing", destination: .quranPage(.arabicText)),
+        .init(title: "Hide Tashkeel & Dots", path: "Quran Settings → Arabic Text", keywords: "clean arabic tashkeel harakat diacritics dots beginner spacing", destination: .quranPage(.arabicText), advanced: true),
         .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranPage(.arabicText)),
-        .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranPage(.arabicText)),
+        .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranPage(.arabicText), advanced: true),
         .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranPage(.englishText)),
         .init(title: "English Font Size", path: "Quran Settings → English Text", keywords: "english font size translation slider system", destination: .quranPage(.englishText)),
         .init(title: "Highlight Themes (Color-Coded Passages)", path: "Quran Settings → Highlight Themes", keywords: "thematic highlighting colors legend passages sections topics wash lit themes browse by theme tilawa", destination: .quranPage(.highlightThemes)),

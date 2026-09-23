@@ -479,10 +479,13 @@ struct SettingsSearchResultRow: View {
 
     private var breadcrumb: String {
         let path = entry.path.replacingOccurrences(of: " → ", with: " › ")
-        guard let dropPrefix else { return "Settings › \(path)" }
-        if path == dropPrefix { return "This page" }
-        if path.hasPrefix(dropPrefix + " › ") { return String(path.dropFirst(dropPrefix.count + 3)) }
-        return path
+        // "› Advanced" on a control the screen shows only with Advanced Settings on: the tap
+        // turns the switch on, and the trail says so before it happens.
+        let suffix = entry.advanced && !settings.advancedSettings ? " › Advanced" : ""
+        guard let dropPrefix else { return "Settings › \(path)\(suffix)" }
+        if path == dropPrefix { return "This page" + suffix }
+        if path.hasPrefix(dropPrefix + " › ") { return String(path.dropFirst(dropPrefix.count + 3)) + suffix }
+        return path + suffix
     }
 
     var body: some View {
@@ -591,11 +594,14 @@ struct SettingsScopedSearch<Content: View>: View {
                     SettingsSearchResultRow(entry: entry, query: trimmedQuery, dropPrefix: scope.pathPrefix)
                 } else {
                     NavigationLink(destination: LazyDestination {
-                        if let own = resolve(entry.destination) {
-                            own
-                        } else {
-                            AnyView(SettingsSearchDestinationView.view(for: entry.destination))
+                        Group {
+                            if let own = resolve(entry.destination) {
+                                own
+                            } else {
+                                AnyView(SettingsSearchDestinationView.view(for: entry.destination))
+                            }
                         }
+                        .revealsAdvancedSettings(entry.advanced)
                     }) {
                         SettingsSearchResultRow(entry: entry, query: trimmedQuery, dropPrefix: scope.pathPrefix)
                     }

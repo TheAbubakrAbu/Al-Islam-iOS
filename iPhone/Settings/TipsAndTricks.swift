@@ -106,6 +106,9 @@ struct AppTip: Identifiable {
     let place: String
     /// The setting the tip is about, when it is about one: the row then opens it.
     var destination: SettingsSearchEntry.Destination? = nil
+    /// The setting is one its screen shows only with Advanced Settings on: the row says so, and
+    /// opening it turns the switch on (`revealsAdvancedSettings`).
+    var advanced = false
     /// One of the cards of the area's tour.
     var tour = false
     /// A setting worth a card on the Settings tab itself: the card's own short title and pitch (the
@@ -290,11 +293,11 @@ enum TipCatalog {
         AppTip(id: "adhan.angles", area: .adhan, group: "TRAVEL AND CALCULATION", systemImage: "angle",
                title: "Match your mosque's angles",
                detail: "Under the Custom method, the Fajr and Isha angles can each be set from 8 to 25 degrees, for a mosque that publishes its own.",
-               place: "Prayer Settings, Prayer Calculation", destination: .prayerPage(.prayerCalculation)),
+               place: "Prayer Settings, Prayer Calculation", destination: .prayerPage(.prayerCalculation), advanced: true),
         AppTip(id: "adhan.names", area: .adhan, group: "TRAVEL AND CALCULATION", systemImage: "character.cursor.ibeam",
                title: "Call the prayers what you call them",
                detail: "Custom Prayer Names renames any prayer everywhere at once: the app, its notifications, the widgets, and the Apple Watch.",
-               place: "Prayer Settings, Custom Prayer Names", destination: .prayerPage(.customPrayerNames), card: ("Custom Prayer Names", "Call the prayers what you call them, everywhere at once.")),
+               place: "Prayer Settings, Custom Prayer Names", destination: .prayerPage(.customPrayerNames), advanced: true, card: ("Custom Prayer Names", "Call the prayers what you call them, everywhere at once.")),
         AppTip(id: "adhan.offsets", area: .adhan, group: "TRAVEL AND CALCULATION", systemImage: "slider.horizontal.3",
                title: "Follow your mosque's clock",
                detail: "Manual Offsets move any prayer by up to 190 minutes either way, and the Hijri date by up to three days.",
@@ -345,7 +348,7 @@ enum TipCatalog {
         AppTip(id: "notif.silent", area: .notifications, group: "THE ADHAN", systemImage: "bell.slash.fill",
                title: "Through silent mode",
                detail: "Play In-App Adhan in Silent Mode lets the adhan that plays inside the app sound even with the ringer switched off. Notifications outside the app still follow the iPhone's own sound settings.",
-               place: "Notifications", destination: .notifications),
+               place: "Notifications", destination: .notifications, advanced: true),
         AppTip(id: "notif.preview", area: .notifications, group: "THE ADHAN", systemImage: "play.circle.fill",
                title: "Preview plays the full recording",
                detail: "Preview Sound plays the chosen adhan from beginning to end, not the 30 seconds a notification carries.",
@@ -353,11 +356,11 @@ enum TipCatalog {
         AppTip(id: "notif.perprayer", area: .notifications, group: "THE ADHAN", systemImage: "slider.horizontal.below.rectangle",
                title: "A different sound for each prayer",
                detail: "Every prayer chooses for itself between the adhan, a short excerpt of it, and an ordinary sound: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house.",
-               place: "Notifications, Prayer Notifications", destination: .notificationsPage(.prayerReminders)),
+               place: "Notifications, Prayer Notifications", destination: .notificationsPage(.prayerReminders), advanced: true),
         AppTip(id: "notif.alerttone", area: .notifications, group: "THE ADHAN", systemImage: "waveform",
                title: "A tone for being told, not called",
                detail: "The Alert Tone plays for everything that is not a call to prayer: prenotifications, Shurooq, the optional times, and prayers whose adhan is off. Echo and Takbir are soft; Chime, Ring, and Alarm are made to carry through noise.",
-               place: "Notifications", destination: .notifications),
+               place: "Notifications", destination: .notifications, advanced: true),
 
         AppTip(id: "notif.meanings", area: .notifications, group: "WORDING AND DATES", systemImage: "textformat",
                title: "Say what the names mean",
@@ -366,7 +369,7 @@ enum TipCatalog {
         AppTip(id: "notif.daybefore", area: .notifications, group: "WORDING AND DATES", systemImage: "calendar.badge.exclamationmark",
                title: "Never surprised by Ramadan",
                detail: "Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced.",
-               place: "Notifications", destination: .notifications),
+               place: "Notifications", destination: .notifications, advanced: true),
         AppTip(id: "notif.sunnah", area: .notifications, group: "WORDING AND DATES", systemImage: "bell.badge",
                title: "Sunnah Reminders",
                detail: "Al-Kahf on Friday, al-Mulk before sleep, and more, each at a time you choose and each with the hadith it comes from. Tapping one opens the surah.",
@@ -432,7 +435,7 @@ enum TipCatalog {
         AppTip(id: "quran.keepopen", area: .quran, group: "AYAHS AND WORDS", systemImage: "rectangle.stack",
                title: "Keep the actions open",
                detail: "With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were.",
-               place: "Quran Settings, Reading View", destination: .quranPage(.readingView)),
+               place: "Quran Settings, Reading View", destination: .quranPage(.readingView), advanced: true),
         AppTip(id: "quran.similar", area: .quran, group: "AYAHS AND WORDS", systemImage: "arrow.triangle.branch",
                title: "Ayahs that resemble each other",
                detail: "Similar Ayahs and Mutashabihat, in an ayah's actions, list the ayahs that resemble it and the phrases it shares with others: a help in memorizing.",
@@ -457,11 +460,11 @@ enum TipCatalog {
         AppTip(id: "quran.compare", area: .quran, group: "TAJWEED AND QIRAAT", systemImage: "rectangle.split.2x1",
                title: "Compare the riwayat",
                detail: "With Comparison mode on, a riwayah picker sits above the reader's search bar, and an ayah's Compare Ayah sets the readings side by side. The Qiraat Explorer steps through every place the riwayat differ.",
-               place: "Quran Settings, Arabic Text", destination: .quranPage(.arabicText), card: ("Compare Riwayat", "Read the riwayat side by side and step through where they differ.")),
+               place: "Quran Settings, Arabic Text", destination: .quranPage(.arabicText), advanced: true, card: ("Compare Riwayat", "Read the riwayat side by side and step through where they differ.")),
         AppTip(id: "quran.bare", area: .quran, group: "TAJWEED AND QIRAAT", systemImage: "textformat.abc.dottedunderline",
                title: "The text without its marks",
                detail: "Hide Arabic Tashkeel and Hide Arabic Dots show the words the way the earliest mushafs were written, across every riwayah.",
-               place: "Quran Settings, Arabic Text", destination: .quranPage(.arabicText)),
+               place: "Quran Settings, Arabic Text", destination: .quranPage(.arabicText), advanced: true),
 
         AppTip(id: "quran.refs", area: .quran, group: "SEARCH", systemImage: "magnifyingglass",
                title: "Search understands references",
@@ -511,7 +514,7 @@ enum TipCatalog {
         AppTip(id: "quran.afterend", area: .quran, group: "LISTENING", systemImage: "forward.end.fill",
                title: "When a surah ends",
                detail: "After Surah Recitation Ends chooses between going on to the next surah, going back to the previous one, and stopping.",
-               place: "Quran Settings, Recitation", destination: .quranPage(.recitation)),
+               place: "Quran Settings, Recitation", destination: .quranPage(.recitation), advanced: true),
 
         AppTip(id: "quran.swipe", area: .quran, group: "THE QURAN TAB", systemImage: "hand.draw.fill",
                title: "Swipe a surah",
@@ -707,7 +710,7 @@ enum TipCatalog {
         AppTip(id: "islam.fajr", area: .islam, group: "THE ISLAM TAB", systemImage: "sunrise.fill",
                title: "Days that begin at Fajr",
                detail: "Turn Over at Fajr changes every daily feature at Fajr rather than at midnight, so the day begins with the prayer.",
-               place: "Islam Settings, Libraries", destination: .islamPage(.libraries), card: ("Days Begin at Fajr", "Every daily feature turns over with the prayer, not at midnight.")),
+               place: "Islam Settings, Libraries", destination: .islamPage(.libraries), advanced: true, card: ("Days Begin at Fajr", "Every daily feature turns over with the prayer, not at midnight.")),
         AppTip(id: "islam.font", area: .islam, group: "THE ISLAM TAB", systemImage: "textformat.ar",
                title: "One Arabic font for everything else",
                detail: "The duas, the dhikr, the 99 Names, and the alphabet share one Arabic font, chosen here. The Quran and the hadith books keep their own.",
@@ -738,6 +741,11 @@ enum TipCatalog {
     // MARK: The app
 
     private static let general: [AppTip] = [
+        AppTip(id: "app.advanced", area: .app, group: "FINDING THINGS", systemImage: "slider.horizontal.3",
+               title: "Simple until you ask for more",
+               detail: "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of any settings screen or under the Settings tab's hub, shows every option everywhere. A search result or a tip marked Advanced turns it on for you.",
+               place: "Settings tab"),
+
         AppTip(id: "app.search", area: .app, group: "FINDING THINGS", systemImage: "magnifyingglass",
                title: "Search every setting",
                detail: "The search bar at the foot of Settings finds any setting, and matches by meaning too: try \u{201C}make text bigger\u{201D}. Every settings page has a search bar of its own as well.",
@@ -928,11 +936,14 @@ struct TipsView: View {
     private func row(for tip: AppTip) -> some View {
         if let destination = tip.destination {
             NavigationLink(destination: LazyDestination {
-                if let own = resolve(destination) {
-                    own
-                } else {
-                    AnyView(SettingsSearchDestinationView.view(for: destination))
+                Group {
+                    if let own = resolve(destination) {
+                        own
+                    } else {
+                        AnyView(SettingsSearchDestinationView.view(for: destination))
+                    }
                 }
+                .revealsAdvancedSettings(tip.advanced)
             }) {
                 TipRow(tip: tip)
             }
@@ -970,7 +981,8 @@ struct TipRow: View {
                     .padding(.top, 1)
 
                 if tip.destination != nil {
-                    caption("Opens the setting", systemImage: "gearshape.fill", color: appearance.accent)
+                    caption(tip.advanced ? "Opens the setting (Advanced Settings)" : "Opens the setting",
+                            systemImage: "gearshape.fill", color: appearance.accent)
                 }
             }
         }
@@ -1152,7 +1164,10 @@ struct SettingsSpotlightSection: View {
             if rows {
                 ForEach(tips) { tip in
                     if let destination = tip.destination {
-                        NavigationLink(destination: LazyDestination { SettingsSearchDestinationView.view(for: destination) }) {
+                        NavigationLink(destination: LazyDestination {
+                            SettingsSearchDestinationView.view(for: destination)
+                                .revealsAdvancedSettings(tip.advanced)
+                        }) {
                             // The card's short title: the tip's own is written for a list row with
                             // room to wrap, and truncated in the iPad sidebar ("Traveling mode turns its...").
                             SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
