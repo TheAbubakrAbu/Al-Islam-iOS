@@ -808,9 +808,11 @@ struct ArabicView: View {
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
 
-            // The reading topics (Tashkeel, the stacked ٮحـ, laam alif, Basic Grammar) used to be a
-            // section of link rows here, between the letters and the numbers. They are Explore tiles
-            // at the top now (Abu, 2026-09-22), so everything there is to study is in one place.
+            letterShapesSection
+
+            // Tashkeel, Default Tashkeel and Basic Grammar used to be link rows here too. They are
+            // Explore tiles at the top now (Abu, 2026-09-22), so everything there is to STUDY is in
+            // one place; the two shape pages stayed behind, next to the letters they are made of.
             Section(header: SectionPillHeader(title: "ARABIC NUMBERS", count: numbers.count)) {
                 numberCollection
             }
@@ -818,6 +820,34 @@ struct ArabicView: View {
             tajweedSection
 
             countedLetterSection("NON-ARABIC LETTERS", nonArabicArabicScriptLetters, footer: Self.nonArabicLettersFooter)
+        }
+    }
+
+    /// The two shape pages, under the letters they are made of (Abu, 2026-09-22: "take baa on haa
+    /// and laam alif and put it after special letters"). They were Explore tiles for a few hours,
+    /// which put them among the study TOOLS; they are not tools, they are two particular shapes the
+    /// script makes, so they belong beside Special Arabic Letters, not above the alphabet.
+    ///
+    /// One NavigationLink per List ROW here - two links in ONE row would both fire on any tap (see
+    /// `one-link-per-list-row`) - so these are ordinary links, not `door` buttons like the tiles.
+    private var letterShapesSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination { BaaHaaShapesView() }) {
+                ArabicTopicLinkLabel(specimen: BaaHaaShapesView.skeleton,
+                                     title: "Baa on Haa",
+                                     caption: "One shape, fifteen pairs",
+                                     face: .uthmani)
+            }
+            .tint(settings.accentColor.color)
+
+            NavigationLink(destination: LazyDestination { LaamAlifShapesView() }) {
+                ArabicTopicLinkLabel(specimen: LaamAlifShapesView.skeleton,
+                                     title: "Laam Alif",
+                                     caption: "The compulsory ligature")
+            }
+            .tint(settings.accentColor.color)
+        } header: {
+            Text("LETTER SHAPES")
         }
     }
 
@@ -859,14 +889,16 @@ struct ArabicView: View {
         tiles.append(ExploreTile(id: "readingTest", title: "Reading Test", caption: readingTestCaption,
                                  systemImage: "text.book.closed.fill", door: .readingTest))
         #endif
+        // Tashkeel, then Default Tashkeel, then Basic Grammar (Abu, 2026-09-22): the two tashkeel
+        // screens read as a pair, and grammar stays last. Baa on Haa and Laam Alif left the shelf
+        // the same day - they are letter SHAPES, so they sit under the letters, after Special
+        // Arabic Letters (see `letterShapesSection`).
         tiles += [
             ExploreTile(id: "tashkeel", title: "Tashkeel", caption: "Every mark on every letter",
                         specimen: "\u{0628}\u{064E}", door: .tashkeel),
-            ExploreTile(id: "baaHaa", title: "Baa on Haa", caption: "One shape, fifteen pairs",
-                        specimen: BaaHaaShapesView.skeleton, face: .uthmani, door: .baaHaa),
-            ExploreTile(id: "laamAlif", title: "Laam Alif", caption: "The compulsory ligature",
-                        specimen: LaamAlifShapesView.skeleton, door: .laamAlif),
-            ExploreTile(id: "basics", title: "Basic Grammar", caption: "Gender, duals, plurals, and the three case endings",
+            ExploreTile(id: "defaultTashkeel", title: "Default Tashkeel", caption: "Which mark a letter carries",
+                        specimen: "\u{0628}\u{064F}", door: .defaultTashkeel),
+            ExploreTile(id: "basics", title: "Basic Grammar", caption: "Gender, duals, plurals, and case endings",
                         specimen: "ال", door: .basics),
         ]
         return tiles
@@ -1252,8 +1284,9 @@ struct ArabicView: View {
     /// groupings this screen has always had, alphabetical, similar shapes and heavy or light, then
     /// one button per tajweed shelf. A shelf button lands on the shelf's remembered axis, and the
     /// banner above the letters carries a chip for each axis on that shelf, so the choice inside a
-    /// shelf is made on the page, not in a submenu. Every tajweed grouping is named in English AND
-    /// Arabic (Abu, 2026-09-20): the Arabic term is the one a teacher will use.
+    /// shelf is made on the page, not in a submenu. Each SHELF is named in English AND Arabic
+    /// (Abu, 2026-09-20): the Arabic term is the one a teacher will use. The three groupings above
+    /// the divider are English only - see `groupingButton`.
     @ViewBuilder
     private var groupingMenuItems: some View {
         Text("Group the Alphabet")
@@ -1287,12 +1320,17 @@ struct ArabicView: View {
         }
     }
 
+    /// The three groupings above the divider read in ENGLISH ALONE (Abu, 2026-09-22: "for arabic
+    /// heavy versus light dont include arabic for just the menu there, keep it everywhere else"):
+    /// they sit beside Alphabetical Order and Similar Shapes, which have no Arabic term, and the one
+    /// Arabic name in the group read as a fourth kind of entry. The Arabic is still on the banner,
+    /// the axis page and every shelf button below the divider.
     private func groupingButton(_ option: Grouping) -> some View {
         Button {
             setGrouping(option)
         } label: {
             Label(
-                option.axis.map { "\($0.title) \u{00B7} \($0.arabic)" } ?? option.title,
+                option.axis?.title ?? option.title,
                 systemImage: option == grouping ? "checkmark" : option.icon
             )
         }

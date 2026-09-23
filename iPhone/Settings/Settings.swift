@@ -192,6 +192,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }()
 
     private override init() {
+        // Before any screen reads its own key: carries the legacy single Advanced switch over.
+        Settings.migrateAdvancedSettings()
+
         let storedAccent = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         self.accentColor = storedAccent
         self.customAccentColorHex = appGroupUserDefaults?.string(forKey: "customAccentColorHex") ?? "34C759"
@@ -437,11 +440,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("-showAboutYou") {
             UserDefaults.standard.set(0, forKey: "aboutYouVersionSeen")
         }
+        #if HAS_ICLOUD_BACKUP
         // "-showCloudOffer" - the iCloud Backup offer (the stage after About You), even in a
         // scripted run and even if it was already answered.
         if ProcessInfo.processInfo.arguments.contains("-showCloudOffer") {
             UserDefaults.standard.set(0, forKey: "cloudBackup.offerVersionSeen")
         }
+        #endif
         // "-seedString key=value[,key=value…]" - the string twin of -seedBool, for raw-string
         // @AppStorage settings (e.g. `-seedString islamArabicFontFace=kufi`). Values may not contain
         // commas or "=".
@@ -3247,6 +3252,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // why "seen" is a version and not a Bool: bump `aboutYouCurrentVersion` and it is asked again.
     static let aboutYouCurrentVersion = 1
     @AppStorage("aboutYouVersionSeen") var aboutYouVersionSeen: Int = 0
+    #if HAS_ICLOUD_BACKUP
     /// The iCloud Backup offer (CloudOfferView), the stage after About You: shown once to everyone,
     /// versioned the same way. Device-only: a restored device has not been offered anything. Under
     /// the `cloudBackup.` prefix so a keep-content reset spares it with the claim (`resetSparedPrefixes`):
@@ -3254,6 +3260,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// up was answered, and a device already backing up must not be offered to start.
     static let cloudOfferCurrentVersion = 1
     @AppStorage("cloudBackup.offerVersionSeen") var cloudOfferVersionSeen: Int = 0
+    #endif
     /// Raw `UserBackground`; "" until answered, and again if the reader chooses not to say.
     @AppStorage("userBackground") var userBackgroundRaw: String = ""
     /// The Islam tab's Start Here guide, put away by the reader (About You brings it back).
@@ -3271,13 +3278,97 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("hapticOn") var hapticOn: Bool = true
 
-    /// The one switch behind every settings screen's second half (Abu, 2026-09-22: "make nagging
-    /// mode much simpler ... only have an option to make it more customizable ... by default should
-    /// be simple, do the same with prayer notifications and all settings in the app"). Off, each
-    /// screen keeps to its essentials and ends with `AdvancedSettingsSection`, the same switch; on,
-    /// every option shows everywhere. The hidden options keep whatever value they hold: hiding a
+    /// The switch behind a settings screen's second half (Abu, 2026-09-22: "make nagging mode much
+    /// simpler ... only have an option to make it more customizable ... by default should be simple,
+    /// do the same with prayer notifications and all settings in the app"), now ONE PER SCREEN
+    /// (Abu, 2026-09-22: "dont do one general advanced settings there, do that for each one - if it
+    /// needs advanced mode then show it there"). Off, that screen keeps to its essentials and ends
+    /// with `AdvancedSettingsSection(screen:)`, its own switch; on, that screen shows every option
+    /// and no other screen changes. The hidden options keep whatever value they hold: hiding a
     /// control never changes what the app does, only what the screen shows.
+    ///
+    /// `advancedSettings` is the legacy single key. It is read ONCE, as the starting value every
+    /// screen's own key inherits (see `AdvancedScreen.storageKey` / `migrateAdvancedSettings`), so
+    /// anyone who had the old switch on still sees every option on first launch after the update.
     @AppStorage("advancedSettings") var advancedSettings: Bool = false
+
+    /// A settings screen that keeps a second half behind its own Advanced switch. Every screen that
+    /// hides nothing is simply absent from this list and carries no ADVANCED section.
+    enum AdvancedScreen: String, CaseIterable, Identifiable {
+        /// Al-Adhan Settings, the prayer-times root (custom prayer names).
+        case prayerSettings
+        /// Prayer Calculation (custom angles, the high latitude rule, the notes).
+        case prayerCalculation
+        /// Notification Settings, the notifications root (alert tone, silent-mode adhan, date reminder).
+        case notifications
+        /// Prayer Notifications (each prayer's own switch and prenotification time).
+        case prayerNotifications
+        /// Nagging Mode (repeat interval, last calls, per-prayer starts, its own tone and wording).
+        case naggingMode
+        /// Al-Quran → Recitation (what happens after a surah ends).
+        case quranRecitation
+        /// Al-Quran → Reading View (surah details, daily rollover, the last cards, dividers, Keep Sheet Open).
+        case quranReadingView
+        /// Al-Quran → Arabic Text (the mark styles, the script style, Clean Arabic, the qiraah details).
+        case quranArabicText
+        /// Islam → Arabic Alphabet (the two practice switches).
+        case islamAlphabet
+        /// Islam → Libraries (the daily features' Fajr rollover).
+        case islamLibraries
+
+        var id: String { rawValue }
+
+        /// Its own `UserDefaults` key. Namespaced so nothing collides with the legacy single key.
+        var storageKey: String { "advancedSettings_\(rawValue)" }
+    }
+
+    /// True while `screen` is showing its second half.
+    func advanced(_ screen: AdvancedScreen) -> Bool {
+        UserDefaults.standard.bool(forKey: screen.storageKey)
+    }
+
+    func setAdvanced(_ screen: AdvancedScreen, _ on: Bool) {
+        guard advanced(screen) != on else { return }
+        objectWillChange.send()
+        UserDefaults.standard.set(on, forKey: screen.storageKey)
+    }
+
+    /// A binding a Toggle can drive, so the switch publishes this object and every `advanced(_:)`
+    /// reader on the screen re-renders (a bare `UserDefaults` write publishes nothing).
+    func advancedBinding(_ screen: AdvancedScreen) -> Binding<Bool> {
+        Binding(
+            get: { self.advanced(screen) },
+            set: { self.setAdvanced(screen, $0) }
+        )
+    }
+
+    /// Turns every screen's switch on. Used by `revealsAdvancedSettings`, where a search result or a
+    /// tip opens a control whose screen would otherwise hide it and the entry does not name which
+    /// screen owns it.
+    func revealAllAdvancedSettings() {
+        for screen in AdvancedScreen.allCases where !advanced(screen) {
+            setAdvanced(screen, true)
+        }
+    }
+
+    /// True while at least one screen is showing its second half - what a breadcrumb reads to decide
+    /// whether to warn that a result is behind an Advanced switch.
+    var anyAdvancedSettings: Bool {
+        AdvancedScreen.allCases.contains { advanced($0) }
+    }
+
+    /// One-time carry-over of the legacy single switch: someone who had Advanced Settings on before
+    /// this update keeps seeing every option, on every screen, without hunting for eleven switches.
+    static func migrateAdvancedSettings() {
+        let defaults = UserDefaults.standard
+        let doneKey = "advancedSettingsPerScreenMigrated"
+        guard !defaults.bool(forKey: doneKey) else { return }
+        defaults.set(true, forKey: doneKey)
+        guard defaults.bool(forKey: "advancedSettings") else { return }
+        for screen in AdvancedScreen.allCases {
+            defaults.set(true, forKey: screen.storageKey)
+        }
+    }
 
     @AppStorage("defaultView") var defaultView: Bool = true
 

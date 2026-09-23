@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gate for the shipped TajweedLessons.json.xz.
 
-Checks the pack ON DISK: it decodes as xz and is version 4; every lesson carries
+Checks the pack ON DISK: it decodes as xz and is version 5; every lesson carries
 an id, English title, and body; lesson ids are unique; every example references
 a real ayah, its `wordSpan` sits inside that ayah's tokens, and no example
 carries a copy of the words (`word`); every drill, rule-card fragment and quiz
@@ -10,8 +10,11 @@ whose span sits inside that ayah's tokens, with no `text`/`arabic` beside it;
 no drill `text`, fragment `text` or quiz `arabic` still shipped as text is a
 copy of an ayah or of a run of two or more words found in exactly one ayah
 (the builder's `quran_reference`, re-run here, so a rebuild cannot bring a copy
-back); and (when Tilawa is reachable) a fresh build reproduces the pack byte
-for byte.
+back); the Tajweed Foundations fields (version 5, Scripts/tajweed_foundations.py)
+hold what the app can render: every word-list item is an ayah reference or text
+that is not a copy (the same rule as the drills), every family, door, extra,
+legend and image is one the app knows, and every video is a youtube.com link;
+and (when Tilawa is reachable) a fresh build reproduces the pack byte for byte.
 
 Run:  python3 Scripts/verify_tajweed_lessons.py [tilawa-root]
 """
@@ -51,8 +54,10 @@ def main() -> None:
     index = _builder.quran_index(tokens)
 
     problems: list[str] = []
-    if pack.get("version") != 4:
-        problems.append(f"pack version {pack.get('version')!r}, expected 4 (drill, fragment and quiz ayahs as references)")
+    if pack.get("version") != _builder.PACK_VERSION:
+        problems.append(f"pack version {pack.get('version')!r}, expected {_builder.PACK_VERSION} "
+                        f"(the course merged with Tajweed Foundations)")
+    family_ids, legend_ids = _builder.known_family_ids(), _builder.known_legends()
     seen: set[str] = set()
     lessons = examples = spans = 0
     # Per Arabic field: rows seen, rows carrying an ayah reference (whole ayahs / slices), rows kept as text.
@@ -122,6 +127,14 @@ def main() -> None:
                 check_arabic(fragment, "fragments", f"lesson {lid} fragment {at}")
             for at, question in enumerate(lesson.get("quiz") or []):
                 check_arabic(question, "quiz", f"lesson {lid} quiz {at}")
+            for g, group in enumerate(lesson.get("words") or []):
+                if not group.get("label") or not group.get("items"):
+                    problems.append(f"lesson {lid} words {g}: a group needs a label and items")
+                for at, item in enumerate(group.get("items") or []):
+                    if not item.get("translit"):
+                        problems.append(f"lesson {lid} words {g}.{at}: no reading")
+                    check_arabic(item, "words", f"lesson {lid} words {g}.{at}")
+            _builder.check_foundations_fields(lesson, problems, family_ids, legend_ids)
 
     tilawa = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else _builder.DEFAULT_TILAWA
     if (tilawa / "src" / "data" / "tajweedLessons.ts").exists():

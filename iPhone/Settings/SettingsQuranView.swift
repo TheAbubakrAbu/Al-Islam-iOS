@@ -281,7 +281,7 @@ struct SettingsQuranView: View {
     private var recitationDestination: some View {
         quranSettingsSubList(title: "Recitation") {
             recitationSection
-            AdvancedSettingsSection(hides: "what happens after a surah's recitation ends")
+            AdvancedSettingsSection(screen: .quranRecitation, hides: "what happens after a surah's recitation ends")
         }
     }
 
@@ -292,7 +292,13 @@ struct SettingsQuranView: View {
             quranTabViewSection
             #endif
             surahReadingSection
-            AdvancedSettingsSection(hides: "the full surah details, the daily cards turning over at Fajr, the last listened and last read cards, the page and juz dividers and Keep Sheet Open")
+            // The first four are in `quranTabViewSection`, which is iOS-only: naming them on the
+            // watch would promise options that screen never had.
+            #if os(iOS)
+            AdvancedSettingsSection(screen: .quranReadingView, hides: "the full surah details, the daily cards turning over at Fajr, the last listened and last read cards, the page and juz dividers and Keep Sheet Open")
+            #else
+            AdvancedSettingsSection(screen: .quranReadingView, hides: "the page and juz dividers and Keep Sheet Open")
+            #endif
         }
     }
 
@@ -312,11 +318,14 @@ struct SettingsQuranView: View {
                 // only while a riwayah is already open: a reading the screen cannot show is a reading
                 // nobody can leave.
                 #if os(iOS)
-                if settings.advancedSettings || settings.showQiraahDetails {
+                if settings.advanced(.quranArabicText) || settings.showQiraahDetails {
                     qiraahSection
                 }
                 #endif
-                AdvancedSettingsSection(hides: arabicTextHides)
+                // `arabicDisplayControls` renders nothing at all with Arabic hidden, and the qiraah
+                // section is iOS-only, so on the watch the switch has nothing left to reveal there.
+                AdvancedSettingsSection(screen: .quranArabicText, hides: arabicTextHides,
+                                        applies: arabicTextHasAdvanced)
             }
             .themedListRowBackground()
         }
@@ -340,6 +349,18 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// Whether this screen's advanced half can show anything. The mark/script styles and Clean
+    /// Arabic all sit inside `arabicDisplayControls`, which draws nothing while Arabic is hidden;
+    /// the qiraah section is the only other advanced content, and it is iOS-only.
+    private var arabicTextHasAdvanced: Bool {
+        if settings.showArabicText { return true }
+        #if os(iOS)
+        return !settings.showQiraahDetails
+        #else
+        return false
+        #endif
+    }
+
     /// What the Arabic Text screen keeps out of sight on the simple screen, for its ADVANCED footer.
     private var arabicTextHides: String {
         var parts = ["the Hijazi mark and Uthmani script styles", "hiding tashkeel and dots"]
@@ -352,7 +373,7 @@ struct SettingsQuranView: View {
     private var recitationSection: some View {
         Section(header: Text("RECITATION")) {
             reciterSelection
-            if settings.advancedSettings {
+            if settings.advanced(.quranRecitation) {
                 recitationEndingPicker
             }
             recitationCaption
@@ -402,7 +423,7 @@ struct SettingsQuranView: View {
     // Options that affect the main Quran tab / surah list screen.
     private var quranTabViewSection: some View {
         Section(header: Text("QURAN TAB")) {
-            if settings.advancedSettings {
+            if settings.advanced(.quranReadingView) {
                 VStack(alignment: .leading) {
                     Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
                         .font(.subheadline)
@@ -425,7 +446,7 @@ struct SettingsQuranView: View {
         Section(header: Text("READING")) {
             highlightAllahGroup
 
-            if settings.advancedSettings {
+            if settings.advanced(.quranReadingView) {
                 pageAndJuzDividersGroup
 
                 keepAyahSheetOpenGroup
@@ -477,7 +498,7 @@ struct SettingsQuranView: View {
                 }
             }
 
-            if settings.advancedSettings {
+            if settings.advanced(.quranReadingView) {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Daily Cards Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
                     .font(.subheadline)
@@ -496,7 +517,7 @@ struct SettingsQuranView: View {
             }
             #endif
 
-            if settings.advancedSettings {
+            if settings.advanced(.quranReadingView) {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Show Last Listened Surah", isOn: $settings.saveLastListenedSurah.animation(.easeInOut))
                     .font(.subheadline)
@@ -767,7 +788,7 @@ struct SettingsQuranView: View {
     private var arabicDisplayControls: some View {
         if settings.showArabicText {
             arabicFontPicker
-            if settings.advancedSettings {
+            if settings.advanced(.quranArabicText) {
                 hijaziMarkStylePicker
                 arabicScriptStylePicker
             }
@@ -776,7 +797,7 @@ struct SettingsQuranView: View {
             // Last on purpose (user rule): Hide Tashkeel is the section's most drastic, least
             // recommended option, so it sits at the bottom of the list rather than leading it.
             // Advanced only: the least recommended options are the ones the simple screen omits.
-            if settings.advancedSettings {
+            if settings.advanced(.quranArabicText) {
                 cleanArabicTextGroup
             }
         }

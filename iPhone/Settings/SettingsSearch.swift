@@ -360,7 +360,10 @@ extension SettingsSearchEntry.Destination {
         case .hadithSettings, .hadithPage: return .hadith
         case .islamSettings, .islamPage: return .islam
         case .appearance, .appearancePage: return .appearance
-        case .aboutYou, .cloudBackup: return .general
+        case .aboutYou: return .general
+        #if HAS_ICLOUD_BACKUP
+        case .cloudBackup: return .general
+        #endif
         // A page's own tips belong to that page's search; the door to all of them, to the root's.
         case .tips(let area):
             switch area {
@@ -387,9 +390,19 @@ extension SettingsSearchEntry {
         + islamEntries
         + appearanceEntries
         + aboutYouEntries
-        + cloudBackupEntries
+        + backupEntries
         + tipsEntries
         + creditEntries
+
+    /// iCloud Backup's entries, which only Al-Islam has (`HAS_ICLOUD_BACKUP`): the companion apps never
+    /// receive CloudBackupViews.swift, where `cloudBackupEntries` lives.
+    private static var backupEntries: [SettingsSearchEntry] {
+        #if HAS_ICLOUD_BACKUP
+        return cloudBackupEntries
+        #else
+        return []
+        #endif
+    }
 
     static func entries(in scope: SettingsSearchScope) -> [SettingsSearchEntry] {
         all.filter { $0.destination.scope == scope }
@@ -458,7 +471,9 @@ enum SettingsSearchDestinationView {
         case .appearance: AppearanceSettingsScreen()
         case .appearancePage(let page): AppearancePageView(page: page)
         case .aboutYou: AboutYouSettingsView()
+        #if HAS_ICLOUD_BACKUP
         case .cloudBackup: CloudBackupSettingsView()
+        #endif
         case .tips(let area):
             if let area { TipsView(area: area) } else { TipsHubView() }
         case .credits: CreditsView(presentedAsSheet: false)
@@ -481,7 +496,7 @@ struct SettingsSearchResultRow: View {
         let path = entry.path.replacingOccurrences(of: " → ", with: " › ")
         // "› Advanced" on a control the screen shows only with Advanced Settings on: the tap
         // turns the switch on, and the trail says so before it happens.
-        let suffix = entry.advanced && !settings.advancedSettings ? " › Advanced" : ""
+        let suffix = entry.advanced && !settings.anyAdvancedSettings ? " › Advanced" : ""
         guard let dropPrefix else { return "Settings › \(path)\(suffix)" }
         if path == dropPrefix { return "This page" + suffix }
         if path.hasPrefix(dropPrefix + " › ") { return String(path.dropFirst(dropPrefix.count + 3)) + suffix }

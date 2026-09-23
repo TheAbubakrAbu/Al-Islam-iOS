@@ -41,8 +41,11 @@ struct SettingsSearchEntry: Identifiable {
         case appearance
         /// About You: who the reader says they are, and the Start Here guide it switches on.
         case aboutYou
-        /// iCloud Backup: this device's profile, the others in the account, restore.
+        #if HAS_ICLOUD_BACKUP
+        /// iCloud Backup: this device's profile, the others in the account, restore. Al-Islam's
+        /// alone: the companion apps define no `HAS_ICLOUD_BACKUP` (sync-manifests, FLAG_SKIP).
         case cloudBackup
+        #endif
         /// Tips & Tricks: one area's list, or all six behind one door when nil.
         case tips(TipArea?)
         case credits
@@ -72,7 +75,9 @@ struct SettingsSearchEntry: Identifiable {
             case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
             case .aboutYou: return "person.crop.circle.fill"
+            #if HAS_ICLOUD_BACKUP
             case .cloudBackup: return "icloud.fill"
+            #endif
             case .tips: return "lightbulb.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
@@ -106,6 +111,10 @@ struct SettingsView: View {
     /// links inside one List row all fire on any tap (see `SettingsSpotlightSection`).
     @State private var spotlightTarget: AppTip?
     @State private var openSpotlight = false
+
+    /// The tile tapped on the three-up Your Progress / About You / iCloud Backup row, and its push.
+    @State private var profileDoor: ProfileTilesSection.Door?
+    @State private var openProfileDoor = false
 
     /// `pushDestination` is `navigationDestination(isPresented:)`, which needs iOS 16.
     private static var canPushProgrammatically: Bool {
@@ -280,6 +289,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
+            .pushDestination(isPresented: $openProfileDoor) {
+                if let profileDoor { profileDoor.destination }
+            }
             .pushDestination(isPresented: $openSpotlight) {
                 if let tip = spotlightTarget, let destination = tip.destination {
                     searchDestinationView(destination)
@@ -342,7 +354,9 @@ struct SettingsView: View {
         case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "nagging": return .notificationsPage(.naggingMode)
         case "aboutYou": return .aboutYou
+        #if HAS_ICLOUD_BACKUP
         case "cloudBackup": return .cloudBackup
+        #endif
         case "tips": return .tips(nil)
         case "tipsAdhan": return .tips(.adhan)
         case "tipsNotifications": return .tips(.notifications)
@@ -412,12 +426,13 @@ struct SettingsView: View {
         // you what you have done rather than asking what you want. iPhone/iPad only - the watch has
         // neither the room for the rings nor the stores (hadith, tasbih) the profile reads.
         #if os(iOS)
-        Section {
-            ProfileSettingsRow()
-            // Who the reader says they are (the welcome's one question), changeable here.
-            AboutYouSettingsRow()
-            // The optional iCloud save: profiles, restore, back up now.
-            CloudBackupSettingsRow()
+        // Three tiles across one row (Abu, 2026-09-22: "about you and icloud backup should be on the
+        // same row as your progress as 3 grids"). Three NavigationLinks in one List row would all
+        // fire on any tap (see `one-link-per-list-row`), so the tiles are Buttons writing ONE door
+        // and the list owns the push; the iPad sidebar and iOS 15 fall back to three rows.
+        ProfileTilesSection(rows: split || !Self.canPushProgrammatically) { door in
+            profileDoor = door
+            openProfileDoor = true
         }
         #endif
 
@@ -433,9 +448,9 @@ struct SettingsView: View {
             #endif
         }
 
-        // The one switch behind every settings screen's second half (Abu, 2026-09-22): the pages
-        // above keep to their essentials until this is on. Each of them ends with the same switch.
-        AdvancedSettingsSection()
+        // No ADVANCED section here (Abu, 2026-09-22: "dont do one general advanced settings there,
+        // do that for each one"): the hub hides nothing of its own, and each page below owns the
+        // switch for its own second half.
 
         // Front and center (Abu, 2026-09-20): the app's unusual settings as cards, directly under the
         // hub, each opening the screen that owns it, with every Tips & Tricks list one row below.
@@ -693,9 +708,15 @@ struct SettingsView: View {
 
                 Button("Cancel", role: .cancel) {}
             } message: {
+                #if HAS_ICLOUD_BACKUP
                 // Generated from the same table the iCloud page's What's Included reads, so a new
                 // kind of content is named here without a second edit.
                 Text("Reset puts every setting back to its default (appearance, prayer, notification, Quran, hadith and Islam options) and keeps everything you made: \(ContentCategory.listSentence). It also keeps your saved location and this \(CloudDevice.kind)'s iCloud Backup.\n\nErase removes all of that too.")
+                #else
+                // A companion app has no iCloud Backup and no content table (ContentCategories measures
+                // a backup, so it is Al-Islam's too): the sentence is written out.
+                Text("Reset puts every setting back to its default and keeps everything you made, like bookmarks, favorites, progress and counters, and your saved location.\n\nErase removes all of that too.")
+                #endif
             }
             // A second confirmation, because this one cannot be undone.
             .confirmationDialog(
@@ -711,7 +732,11 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
+                #if HAS_ICLOUD_BACKUP
                 Text("This deletes everything you made on this \(CloudDevice.kind): \(ContentCategory.listSentence), plus your search history and saved locations. The app is left as it was on a fresh install, and this \(CloudDevice.kind) forgets its iCloud Backup profile (the backup already in iCloud stays until you delete it there). This cannot be undone.")
+                #else
+                Text("This deletes everything you made on this device, like bookmarks, favorites, progress and counters, plus your search history and saved locations. The app is left as it was on a fresh install. This cannot be undone.")
+                #endif
             }
         }
         #endif
@@ -1351,27 +1376,212 @@ struct SettingsAppearanceView: View {
     }
 }
 
+#if os(iOS)
+// MARK: - Your Progress / About You / iCloud Backup
+
+/// The three personal screens, as tiles across ONE row (Abu, 2026-09-22: "about you and icloud
+/// backup should either be on the same row as your progress as 3 grids"). They were three stacked
+/// settings rows before, which read as three unrelated settings rather than as one place the app
+/// tells you who you are and how you are doing.
+///
+/// Buttons, not links: three NavigationLinks inside a single List row all fire on any tap (see
+/// `one-link-per-list-row`), so each tile writes one `Door` and `SettingsView`'s list owns the push.
+/// `rows: true` is the fallback where that push is unavailable (iOS 15) or wrong (the iPad sidebar,
+/// where it would push inside the narrow column): the same three screens as ordinary rows.
+struct ProfileTilesSection: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    /// Observed for the same reason `ProfileSettingsRow` observes them: the deferred last-read load
+    /// and a badge unlocked elsewhere must both re-render this row's caption.
+    @ObservedObject private var hadithStore = HadithStore.shared
+    @ObservedObject private var achievements = AchievementsStore.shared
+    #if HAS_ICLOUD_BACKUP
+    @ObservedObject private var cloud = CloudBackupManager.shared
+    #endif
+
+    /// True for the fallback shape: one settings row per screen.
+    let rows: Bool
+    /// The iPhone stack's programmatic push (`SettingsView.profileDoor`).
+    var open: (Door) -> Void = { _ in }
+
+    enum Door: String, Identifiable {
+        case progress
+        case aboutYou
+        #if HAS_ICLOUD_BACKUP
+        case cloudBackup
+        #endif
+
+        var id: String { rawValue }
+
+        @ViewBuilder
+        var destination: some View {
+            switch self {
+            case .progress: ProfileView()
+            case .aboutYou: AboutYouSettingsView()
+            #if HAS_ICLOUD_BACKUP
+            case .cloudBackup: CloudBackupSettingsView()
+            #endif
+            }
+        }
+    }
+
+    private struct Tile {
+        let door: Door
+        let title: String
+        let systemImage: String
+        /// The live read-out under the title - a streak, an answer, On/Off.
+        let value: String
+        let tint: Color?
+        var secondaryTint: Color? = nil
+        /// The longer caption the fallback ROW shows beside the title; the tile has no room for it.
+        let rowSubtitle: String
+    }
+
+    /// Your Progress' one live number, short enough for a third of a screen: the streak first, then
+    /// the khatm, then badges, and the invitation when there is nothing recorded yet.
+    private var progressValue: String {
+        let stats = ProfileStats.current(settings: settings, quranData: quranData)
+        if stats.prayer.currentStreak > 0 {
+            return "\(stats.prayer.currentStreak)-day streak"
+        }
+        if stats.khatmCompleted > 0 {
+            return "\(Int((stats.khatmFraction * 100).rounded()))% read"
+        }
+        let earned = achievements.unlockedCount(stats)
+        if earned > 0 {
+            return "\(earned) badge\(earned == 1 ? "" : "s")"
+        }
+        return "Nothing yet"
+    }
+
+    private var tiles: [Tile] {
+        var list = [
+            Tile(door: .progress, title: "Your Progress", systemImage: "person.crop.circle.fill",
+                 value: progressValue, tint: nil,
+                 rowSubtitle: "Your prayers, reading, and badges"),
+            Tile(door: .aboutYou, title: "About You", systemImage: "sparkles",
+                 value: settings.userBackground?.title ?? "Not set",
+                 tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
+                 rowSubtitle: "Start Here, welcome tutorial"),
+        ]
+        // iCloud Backup is Al-Islam's alone: a companion app shows the first two tiles.
+        #if HAS_ICLOUD_BACKUP
+        list.append(Tile(door: .cloudBackup, title: "iCloud Backup", systemImage: "icloud.fill",
+                         value: cloud.isEnabled ? "On" : "Off", tint: SettingsTint.hadith,
+                         rowSubtitle: "Profiles, restore, what's included, backup file"))
+        #endif
+        return list
+    }
+
+    var body: some View {
+        Section {
+            if rows {
+                ForEach(tiles, id: \.door.id) { tile in
+                    NavigationLink(destination: LazyDestination { tile.door.destination }) {
+                        SettingsRowLabel(title: tile.title, systemImage: tile.systemImage,
+                                         subtitle: tile.rowSubtitle,
+                                         tint: tile.tint, secondaryTint: tile.secondaryTint,
+                                         value: tile.value)
+                    }
+                    .tint(settings.accentColor.color)
+                }
+            } else {
+                // `.center`, not `.top`, so each tile's `maxHeight: .infinity` stretches it to the
+                // tallest: "Learning about Islam" wraps to two lines and "Off" does not, and three
+                // cards of three different heights read as a layout bug.
+                HStack(alignment: .center, spacing: 8) {
+                    ForEach(tiles, id: \.door.id) { tile in
+                        profileTile(tile)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+            }
+        }
+    }
+
+    private func profileTile(_ tile: Tile) -> some View {
+        Button {
+            settings.hapticFeedback()
+            open(tile.door)
+        } label: {
+            VStack(spacing: 5) {
+                AccentIconChip(systemImage: tile.systemImage, tint: tile.tint,
+                               secondaryTint: tile.secondaryTint, size: 34)
+
+                Text(tile.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                // Two lines, unlike the Explore tiles' one: "Just getting started" is an answer the
+                // reader gave, and shrinking it to a single scaled-down line made it unreadable.
+                Text(tile.value)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(settings.accentColor.color.opacity(0.09))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(tile.title). \(tile.value)")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+#endif
+
 // MARK: - Advanced Settings
 
-/// The switch every simplified settings screen ends with, and the Settings tab carries under its
-/// hub: ONE stored value (`Settings.advancedSettings`), so turning it on anywhere turns it on
-/// everywhere. Off, a screen keeps to its essentials and this section names what it is keeping
-/// out of sight (`hides`), so nobody wonders where an option went; the hidden options keep the
-/// values they hold. Compiles for the watch too (its Notifications and Nagging Mode pages use it).
+/// The switch a simplified settings screen ends with. ONE PER SCREEN (Abu, 2026-09-22: "dont do one
+/// general advanced settings there, do that for each one - if it needs advanced mode then show it
+/// there"): the toggle writes `screen`'s own key, so turning the second half on under Nagging Mode
+/// leaves Arabic Text simple. Off, a screen keeps to its essentials and this section names what it is
+/// keeping out of sight (`hides`), so nobody wonders where an option went; the hidden options keep
+/// the values they hold. A screen that hides nothing carries no ADVANCED section at all - which is
+/// why the Settings tab's own hub no longer has one. Compiles for the watch too (its Notifications
+/// and Nagging Mode pages use it).
 struct AdvancedSettingsSection: View {
     @ObservedObject private var settings = Settings.shared
 
+    /// Which screen's switch this is.
+    let screen: Settings.AdvancedScreen
+
     /// What THIS screen shows only with the switch on, as a plain list ("the repeat interval, the
-    /// last calls and a tone of their own"). Nil on the Settings tab, which hides nothing itself.
+    /// last calls and a tone of their own").
     var hides: String? = nil
 
+    /// False while this screen's advanced half would be empty ANYWAY, whatever the switch says
+    /// (Abu, 2026-09-22: "only show advanced setting if it applies"). Three screens gate their own
+    /// advanced content on something else first - Nagging Mode on the mode being on, Arabic Text on
+    /// Arabic being shown, the watch's Notifications on the Islamic-calendar switch - and on those a
+    /// switch promising hidden options that do not exist is worse than no switch at all.
+    ///
+    /// The stored value is untouched when the section is away: flipping the gate back on brings the
+    /// switch back exactly as it was left.
+    var applies: Bool = true
+
     var body: some View {
+        if applies { section }
+    }
+
+    private var section: some View {
         Section(header: Text("ADVANCED")) {
             VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Advanced Settings", isOn: $settings.advancedSettings.animation(.easeInOut))
+                Toggle("Show Advanced Settings", isOn: settings.advancedBinding(screen).animation(.easeInOut))
                     .font(.subheadline)
                     .tint(settings.accentColor.color)
-                    .onChange(of: settings.advancedSettings) { _ in settings.hapticFeedback() }
+                    .onChange(of: settings.advanced(screen)) { _ in settings.hapticFeedback() }
 
                 #if os(iOS)
                 Text(caption)
@@ -1385,26 +1595,30 @@ struct AdvancedSettingsSection: View {
     }
 
     private var caption: String {
-        if settings.advancedSettings {
-            return "Every option on every settings screen is shown. Turn this off to keep each screen to its essentials; what you set in the advanced options still applies."
+        if settings.advanced(screen) {
+            return "Every option on this screen is shown. Turn this off to keep it to its essentials; what you set in the advanced options still applies. Each screen has its own switch."
         }
         if let hides {
-            return "Hidden on this screen: \(hides). Turn this on to see every option, here and on every other settings screen. Anything set there before still applies."
+            return "Hidden on this screen: \(hides). Turn this on to see every option here. It changes this screen only, and anything set here before still applies."
         }
-        return "Every settings screen keeps to its essentials. Turn this on to see every option, on every screen. Each screen has this switch at its foot too."
+        return "This screen keeps to its essentials. Turn this on to see every option it has."
     }
 }
 
 /// Turns Advanced Settings on when a search result or a tip opens a control its screen would
 /// otherwise hide. The row said "Advanced" before it was tapped, so the switch flipping is the
 /// expected outcome, not a surprise; the screen's own ADVANCED section is there to turn it back off.
+///
+/// Every screen's switch, not one: a search entry records only THAT the control is advanced, never
+/// which of the eleven screens owns it, and landing on a screen still hiding the very thing that was
+/// searched for is the failure this exists to prevent.
 struct AdvancedSettingsReveal: ViewModifier {
     let active: Bool
 
     func body(content: Content) -> some View {
         content.onAppear {
-            guard active, !Settings.shared.advancedSettings else { return }
-            Settings.shared.advancedSettings = true
+            guard active else { return }
+            Settings.shared.revealAllAdvancedSettings()
         }
     }
 }

@@ -80,8 +80,9 @@ struct IslamView: View {
     private enum IslamDestination: String, Hashable, CaseIterable {
         /// The on-device chat. Listed only where Apple Intelligence can run it (`available`).
         case arabicAlphabet
-        // The Tajweed Course was merged INTO Foundations (Abu, 2026-09-19): one subject, one door.
-        // The course is now that screen's lead section, so there is no `tajweedCourse` case.
+        // The Tajweed Course was merged INTO Foundations (Abu, 2026-09-19): one subject, one door. Since
+        // 2026-09-23 the two are one course, merged lesson by lesson, and Foundations IS its index, so
+        // there is no `tajweedCourse` case.
         case tajweedFoundations
         case namesOfAllah
         case commonAdhkar
@@ -92,13 +93,16 @@ struct IslamView: View {
         case hijriCalendarConverter
         case masjidLocator
         case halalFoodLocator
+        // The journal sits with the two locators (Abu, 2026-09-23): those three are the tab's
+        // "things you do", as against the reference screens under them.
+        case journal
         case pillarsAndBasics
         case howToGuides
+        case islamicWallpapers
+        // The three miracle / prophecy screens are one subject, so they are one grid row.
         case miraclesOfQuran
         case propheciesOfProphet
         case miraclesOfProphets
-        case islamicWallpapers
-        case journal
         case askAI
 
         /// Screens the door leaves alone. The alphabet, the 99 Names, the inheritance calculator and
@@ -166,7 +170,7 @@ struct IslamView: View {
             switch self {
             case .askAI: return "Ask anything about Islam, on device"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
-            case .tajweedFoundations: return "A guided course, and the rules in full"
+            case .tajweedFoundations: return "A full course, from the letters to the mushaf"
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
             case .commonDuas: return "Authenticated supplications with sources"
             case .tasbihCounter: return "Count dhikr with a tap"
@@ -1026,15 +1030,10 @@ struct IslamView: View {
                 ArabicView()
             }
 
+            // The tajweed course IS Tajweed Foundations (merged 2026-09-23), so it has one row.
             resourceLink(title: "Tajweed Foundations", systemImage: "waveform") {
                 TajweedFoundationsView()
             }
-
-            #if os(iOS)
-            resourceLink(title: "Tajweed Course", systemImage: "graduationcap") {
-                TajweedLessonsView()
-            }
-            #endif
 
             resourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed") {
                 AdhkarView()

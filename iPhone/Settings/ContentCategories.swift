@@ -1,3 +1,6 @@
+// iCloud Backup is Al-Islam's alone: this file compiles only where `HAS_ICLOUD_BACKUP` is defined
+// (Al-Islam's project settings). The companion apps never receive it (sync-manifests).
+#if HAS_ICLOUD_BACKUP
 import Foundation
 
 /// The user's things, grouped the way a person would name them, over the manifest's content keys
@@ -252,3 +255,4 @@ extension CloudJSON {
         }
     }
 }
+#endif

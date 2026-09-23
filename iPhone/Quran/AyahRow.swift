@@ -700,6 +700,25 @@ struct AyahRow: View, Equatable {
         return -2
     }
 
+    /// The gutter the reading column keeps on each side, ON TOP of the List row's own inset (Abu,
+    /// 2026-09-22: "why is there no natural horizontal padding for list mode for ayahs"). Measured
+    /// before this existed: the row inset is 24pt, every wash below expands 12pt OUTWARD to read as
+    /// a band rather than a strip, and justified Arabic then filled the full 24pt-inset width - so
+    /// the visible margin was the wash's 12pt and glyph ink came within about 20pt of the screen.
+    ///
+    /// 12pt here puts the text at 36pt and the wash at 24pt, which is the inset-grouped gutter the
+    /// rest of the app reads at. The watch keeps its own margins: 12pt of a 40mm screen is a line
+    /// of text.
+    #if os(iOS)
+    private static let readingGutter: CGFloat = 12
+    #else
+    private static let readingGutter: CGFloat = 0
+    #endif
+
+    /// How far each wash expands past the text. It stays 12pt WIDER than the text column - that is
+    /// what makes a highlighted ayah read as a band - but it is no longer wider than the row.
+    private static let washOutset: CGFloat = 12
+
     var body: some View {
         let _ = RenderCounter.hit("AyahRow")
         let isBookmarked = isBookmarkedHere
@@ -785,17 +804,17 @@ struct AyahRow: View, Equatable {
                         ? settings.accentColor.color.opacity(settings.defaultView ? 0.15 : 0.25)
                         : Color.secondary.opacity(0.18)
                     )
-                    .padding(.horizontal, -12)
+                    .padding(.horizontal, -Self.washOutset)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             } else if let highlightWash {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(highlightWash.tint(colorScheme))
-                    .padding(.horizontal, -12)
+                    .padding(.horizontal, -Self.washOutset)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             } else if let themeWash {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(themeWash.tint(colorScheme))
-                    .padding(.horizontal, -12)
+                    .padding(.horizontal, -Self.washOutset)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             }
 
@@ -962,6 +981,10 @@ struct AyahRow: View, Equatable {
             }
         }
         .animation(.easeInOut(duration: 0.15), value: isSelecting)
+        // The reading gutter, OUTERMOST: the washes inside the ZStack still measure from the text
+        // column and keep their outset, and the select-mode checkmark stays inside the margin
+        // instead of sitting flush against the screen edge. The whole row moves in by this much.
+        .padding(.horizontal, Self.readingGutter)
         #if os(iOS)
         // Report this row's sheet state to the shared tracker so the reader's follow-the-recitation
         // scroll holds still while one of this row's sheets is up (see `AyahSheetPresence`).

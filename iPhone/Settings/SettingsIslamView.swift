@@ -188,7 +188,7 @@ struct SettingsIslamView: View {
                         .padding(.vertical, 2)
                 }
 
-                if settings.advancedSettings {
+                if settings.advanced(.islamAlphabet) {
                 Section(header: Text("PRACTICE")) {
                     VStack(alignment: .leading) {
                         Toggle("Hide English Readings", isOn: $settings.hideEnglishInArabicLetters.animation(.easeInOut))
@@ -214,7 +214,7 @@ struct SettingsIslamView: View {
                 }
                 }
 
-                AdvancedSettingsSection(hides: "the practice options, hiding the English readings and the Quranic sukoon")
+                AdvancedSettingsSection(screen: .islamAlphabet, hides: "the practice options, hiding the English readings and the Quranic sukoon")
             }
             .themedListRowBackground()
         }
@@ -260,7 +260,7 @@ struct SettingsIslamView: View {
                             .padding(.vertical, 2)
                     }
 
-                    if settings.advancedSettings {
+                    if settings.advanced(.islamLibraries) {
                     VStack(alignment: .leading) {
                         Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
                             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.hapticFeedback() }
@@ -274,7 +274,7 @@ struct SettingsIslamView: View {
                     }
                 }
 
-                AdvancedSettingsSection(hides: "the daily features turning over at Fajr")
+                AdvancedSettingsSection(screen: .islamLibraries, hides: "the daily features turning over at Fajr")
             }
             .themedListRowBackground()
         }

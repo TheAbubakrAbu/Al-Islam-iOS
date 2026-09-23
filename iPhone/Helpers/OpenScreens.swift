@@ -60,9 +60,10 @@ enum OpenScreen: String, Hashable, CaseIterable {
     case letterFamily
     case letterFamilies
     case soundAlikes
-    /// A Tajweed Foundations topic page (by id: "qalqalah", "madd"...). The topic shows its letters as
-    /// tiles, and a letter's page links back to the topic that explains its rule.
-    case tajweedTopic
+    /// A lesson of the tajweed course (by lesson id: "qalqalah", "mudood-chart"...). A lesson shows its
+    /// letters as tiles and its letter families as rows, and a letter's or a family's page links back
+    /// to the lesson that explains its rule.
+    case tajweedLesson
 
     /// What a disabled row says in place of its caption, when the row itself does not supply one.
     var alreadyHereCaption: String {
@@ -84,7 +85,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .letterFamily:        return "You are on this family's page"
         case .letterFamilies:      return "You are in Letter Families"
         case .soundAlikes:         return "You are in Sound-Alike Letters"
-        case .tajweedTopic:        return "You came here from this page"
+        case .tajweedLesson:       return "You came here from this lesson"
         }
     }
 }

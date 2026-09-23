@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) && HAS_ICLOUD_BACKUP
 import SwiftUI
 import UniformTypeIdentifiers
 

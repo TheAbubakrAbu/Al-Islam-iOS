@@ -1049,9 +1049,7 @@ struct ArabicLetterPage: View {
                                 .foregroundColor(TajweedLegendCategory.qalqalah.color)
                         }
 
-                        GuardedScreenLink(screen: .tajweedTopic, id: "qalqalah") {
-                            TajweedQalqalahView()
-                        } label: {
+                        TajweedLessonLink(lessonID: "qalqalah") {
                             Label("Learn the Qalqalah Rule", systemImage: "book")
                                 .font(.body)
                                 .foregroundColor(settings.accentColor.color)
@@ -1146,9 +1144,8 @@ struct ArabicLetterPage: View {
                     Text("When the madd is longer than 2 counts, the mushaf tells you so: a squiggly line (ٓ) is written above the letter. That mark is the sign of one of the special mudood (مُدُود), such as Madd Muttassil, Madd Munfasil, or Madd Lazim, held for 4, 5, or 6 counts instead of 2. Without the squiggle, the madd stays at its natural 2 counts.")
                         .font(.body)
 
-                    GuardedScreenLink(screen: .tajweedTopic, id: "madd") {
-                        TajweedMaddView()
-                    } label: {
+                    // The chapter's map of every madd, which leads on to each one.
+                    TajweedLessonLink(lessonID: "mudood-chart") {
                         Label("Learn the Madd Rules", systemImage: "book")
                             .font(.body)
                             .foregroundColor(settings.accentColor.color)

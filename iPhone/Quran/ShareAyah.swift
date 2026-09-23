@@ -1264,16 +1264,20 @@ extension ShareAyahSheet {
 
     private static let shareIncludeRiwayahKey = "shareIncludeRiwayah"
 
-    /// - Parameter mode: what to put on the pasteboard. Nil follows the share sheet's remembered
-    ///   choice, which is what a single "Copy" action wants. The mushaf's actions sheet offers Copy
-    ///   Text and Copy Image as separate tiles and passes the mode outright, so what you tap is what
-    ///   you get rather than whatever you last shared as.
-    /// What "Copy Ayah" copies right now ("as image" / "as text"), for the actions sheet's row caption.
+    /// What "Copy Ayah" copies right now ("as image" / "as text"). The actions sheet showed it as a
+    /// caption under a half-width row until 2026-09-22; that row is a grid tile now, and the tile
+    /// keeps the canonical title ("Copy Ayah", see `ayah-menu-parity-and-search-paint`) with no room
+    /// for a caption, so nothing reads this at the moment. Kept because the mode itself still exists
+    /// and the share sheet's own copy of this label is the only other place that says which it is.
     static var copyModeLabel: String {
         let raw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
         return (ActionMode(rawValue: raw) ?? .image) == .image ? "as image" : "as text"
     }
 
+    /// - Parameter mode: what to put on the pasteboard. Nil follows the share sheet's remembered
+    ///   choice, which is what a single "Copy" action wants. The mushaf's actions sheet offers Copy
+    ///   Text and Copy Image as separate tiles and passes the mode outright, so what you tap is what
+    ///   you get rather than whatever you last shared as.
     static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings,
                                      quranData: QuranData, mode: ActionMode? = nil) {
         guard let surah = quranData.surah(surahNumber),

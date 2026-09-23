@@ -947,7 +947,10 @@ enum LetterTraits {
         .closure: [itbaq, infitah],
         .fluency: [idhlaq, ismat],
         .special: [safeer, qalqalah, leen, inhiraf, takreer, tafashshi, istitalah, ghunnah],
-        .weight: [heavy, light, conditionalWeight, followsPrevious],
+        // The two that need a rule come first (Abu, 2026-09-22: "put heavy or light and follows the
+        // letter before at the top then do heavy then do light"): the conditional families are what
+        // the axis is actually FOR, and the two fixed lists read as the reference behind them.
+        .weight: [conditionalWeight, followsPrevious, heavy, light],
         .noonSakinah: [idhaar, idghamGhunnah, idghamBilaGhunnah, iqlaab, ikhfaa],
         .meemSakinah: [ikhfaaShafawi, idghamShafawi, idhaarShafawi],
         .lamOfAl: [sunLetters, moonLetters],

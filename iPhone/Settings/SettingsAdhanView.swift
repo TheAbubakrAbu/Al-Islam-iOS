@@ -301,7 +301,7 @@ struct SettingsAdhanView: View {
             adhanPageLink(.travelingMode) { travelingModeDestination }
             adhanPageLink(.optionalPrayers) { optionalTimesDestination }
             adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
-            if settings.advancedSettings {
+            if settings.advanced(.prayerSettings) {
                 adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
             }
         }
@@ -318,7 +318,7 @@ struct SettingsAdhanView: View {
         // `PrayerTrackerView.settingsSection`.
         #endif
 
-        AdvancedSettingsSection(hides: "custom prayer names, plus the custom angles and high latitude rule under Prayer Calculation")
+        AdvancedSettingsSection(screen: .prayerSettings, hides: "custom prayer names")
     }
 
     /// The Skyline row's one value: "off" while the skyline is hidden, else the style's raw value.
@@ -902,7 +902,7 @@ struct NotificationView: View {
                         .font(.subheadline)
                         .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
 
-                    if settings.dateNotifications, settings.advancedSettings {
+                    if settings.dateNotifications, settings.advanced(.notifications) {
                         VStack(alignment: .leading, spacing: 4) {
                             Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
                                 .font(.subheadline)
@@ -976,14 +976,14 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone\(settings.advancedSettings ? " below" : ", an advanced setting").")
+                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone\(settings.advanced(.notifications) ? " below" : ", an advanced setting").")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
 
-                if settings.advancedSettings {
+                if settings.advanced(.notifications) {
                 Section(header: Text("ALERT TONE")) {
                     Picker("Alert Tone", selection: $settings.alertToneSound) {
                         Section {
@@ -1053,9 +1053,12 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
-                AdvancedSettingsSection(hides: "the alert tone, the in-app adhan in silent mode and the day-before reminder for Islamic dates")
+                AdvancedSettingsSection(screen: .notifications, hides: "the alert tone, the in-app adhan in silent mode and the day-before reminder for Islamic dates")
                 #else
-                AdvancedSettingsSection(hides: "the day-before reminder for Islamic dates")
+                // The watch's only advanced control here is Remind a Day Before, itself shown only
+                // while Islamic Calendar Notifications is on - so with that off, nothing is hidden.
+                AdvancedSettingsSection(screen: .notifications, hides: "the day-before reminder for Islamic dates",
+                                        applies: settings.dateNotifications)
                 #endif
     }
 
@@ -1423,7 +1426,7 @@ struct MoreNotificationView: View {
                 }
 
             // Nothing per prayer on the simple screen: the section above sets them all at once.
-            if settings.advancedSettings {
+            if settings.advanced(.prayerNotifications) {
             if !settings.naggingMode {
                 NotificationSettingsSection(prayerName: "Fajr", preNotificationTime: $settings.preNotificationFajr, isNotificationOn: $settings.notificationFajr)
                 NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
@@ -1472,7 +1475,7 @@ struct MoreNotificationView: View {
             }
             }
 
-            AdvancedSettingsSection(hides: "each prayer's own notification switch, prenotification time, adhan and short adhan, including the optional times")
+            AdvancedSettingsSection(screen: .prayerNotifications, hides: "each prayer's own notification switch, prenotification time, adhan and short adhan, including the optional times")
             }
             .themedListRowBackground()
         }
@@ -1739,14 +1742,20 @@ struct PrayerCalculationListView: View {
 
                     // Custom angles stay on screen while they are the method in use, whatever the
                     // switch says: a method the screen cannot show is a method nobody can change.
-                    if settings.advancedSettings || selectedID == PrayerCalculationCatalog.customID {
+                    if settings.advanced(.prayerCalculation) || selectedID == PrayerCalculationCatalog.customID {
                         customSection
                     }
                     madhabAndHighLatitudeSection
-                    if settings.advancedSettings {
+                    if settings.advanced(.prayerCalculation) {
                         explanationSection
                     }
-                    AdvancedSettingsSection(hides: "the custom method with its own Fajr and Isha angles, the high latitude rule and the notes on angles")
+                    // The custom angles drop out of the caption while custom IS the method in use:
+                    // they are on screen already, so naming them as hidden reads as a lie.
+                    AdvancedSettingsSection(
+                        screen: .prayerCalculation,
+                        hides: selectedID == PrayerCalculationCatalog.customID
+                            ? "the high latitude rule and the notes on angles"
+                            : "the custom method with its own Fajr and Isha angles, the high latitude rule and the notes on angles")
                 }
             }
             .themedListRowBackground()
@@ -1892,7 +1901,7 @@ struct PrayerCalculationListView: View {
     /// orphaned in refactors); they belong here with the rest of the calculation choices - and the
     /// settings-search index deep-links "hanafi"/"high latitude" to this screen.
     private var madhabAndHighLatitudeSection: some View {
-        Section(header: Text(settings.advancedSettings ? "MADHAB & HIGH LATITUDE" : "MADHAB")) {
+        Section(header: Text(settings.advanced(.prayerCalculation) ? "MADHAB & HIGH LATITUDE" : "MADHAB")) {
             VStack(alignment: .leading) {
                 Toggle("Hanafi Calculation for Asr", isOn: $settings.hanafiMadhab.animation(.easeInOut))
                     .font(.subheadline)
@@ -1906,7 +1915,7 @@ struct PrayerCalculationListView: View {
                     .padding(.vertical, 2)
             }
 
-            if settings.advancedSettings {
+            if settings.advanced(.prayerCalculation) {
             VStack(alignment: .leading) {
                 Picker("High Latitude Rule", selection: $settings.highLatitudeRule) {
                     Section {

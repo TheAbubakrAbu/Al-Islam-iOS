@@ -171,12 +171,14 @@ struct AlIslamApp: App {
 
             // The iCloud offer sits under About You (1.7 < 1.8): About You fades out onto it the way
             // the splash fades onto About You, and it fades only on its own way out.
+            #if HAS_ICLOUD_BACKUP
             if cloudOfferPresented {
                 CloudOfferView()
                     .opacity(rootStage == .main ? 0 : 1)
                     .allowsHitTesting(rootStage == .cloudOffer)
                     .zIndex(1.7)
             }
+            #endif
         }
         .animation(rootTransitionAnimation, value: rootStage)
         // The tabs are mounted (and side-effecting views like AdhanView build) before the cover lifts; let them
@@ -324,9 +326,11 @@ private struct MainTabView: View {
             }
             // "-cloudKeyAudit", "-cloudDumpSnapshot", "-cloudRestoreFile", "-cloudStoreProbe",
             // "-cloudDiffSnapshots": the iCloud backup's local half, headless (see CloudBackupDebug).
+            #if HAS_ICLOUD_BACKUP
             .task {
                 await CloudBackupDebug.runLaunchArguments(storeProbe: CloudBackupStoreProbe.report)
             }
+            #endif
             #endif
             #if DEBUG
             // "-auditQiraahAlignment" - print the whole-Quran riwayah alignment audit once the

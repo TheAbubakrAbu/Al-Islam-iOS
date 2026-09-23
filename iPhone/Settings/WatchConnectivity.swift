@@ -474,7 +474,11 @@ extension Settings {
     // domains it doesn't ship ([Shared] stays).
     static let watchSyncedAppStorageKeys: [String] = prayerOffsetKeys + [
         // [Shared] Appearance & general
-        "colorSchemeString", "defaultView", "hapticOn", "advancedSettings",
+        "colorSchemeString", "defaultView", "hapticOn",
+        // The Advanced switches are per screen now (2026-09-22). Only the pages the watch ALSO
+        // carries sync: Notifications and Nagging Mode. The legacy single key still travels so an
+        // older build on either side keeps working.
+        "advancedSettings", "advancedSettings_notifications", "advancedSettings_naggingMode",
         // [Al-Adhan] Prayer / notifications
         // The custom-method angles travel WITH the method label (`prayerCalculation` syncs above):
         // without them a watch receiving "Custom Angles" computed with the 18/17 defaults forever.

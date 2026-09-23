@@ -56,7 +56,19 @@ from the mushaf text.
   search over every string still shipped as text, so a rebuild cannot bring a
   copy back.
 
-OUTPUT: xz over {"version": 4, "stages": [...], "ruleCounts": {...},
+MERGED WITH TAJWEED FOUNDATIONS (version 5): Al-Islam's own tajweed pages are
+folded into these lessons (Scripts/tajweed_foundations.py: its docstring maps
+every Foundations topic to the lessons it went into). After the chapters are
+evaluated and before anything is validated, `apply_foundations` renames the
+chapters it names, inserts the lessons that exist only on the Al-Islam side,
+and applies each lesson's merge, where every Tilawa list item must be placed
+exactly once. The merge adds six fields to a lesson, each validated here:
+`words` (groups of Arabic words with their reading; the Arabic goes through
+`quran_reference` like the drills), `videos`, `images`, `families` (LetterTraits
+family ids, checked against ArabicLetterTraits.swift), `doors`, `extras` and
+`legend` (a TajweedLegendCategory raw value, checked against TajweedRules.swift).
+
+OUTPUT: xz over {"version": 5, "stages": [...], "ruleCounts": {...},
         "chapters": [...]} in the source's own order (narrationUrl dropped:
         no recordings exist).
 
@@ -66,19 +78,30 @@ RUN:  python3 Scripts/build_tajweed_lessons.py [tilawa-root]
 from __future__ import annotations
 
 import collections
+import copy
 import json
 import pathlib
 import re
 import sys
+import unicodedata
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from quran_spans import fold, locate_slice  # noqa: E402
 from tilawa_ts import eval_modules, load_softener, xz_compress  # noqa: E402
+import tajweed_foundations as foundations  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
+PACK_VERSION = 5
+LETTER_TRAITS_SWIFT = ROOT / "iPhone" / "Islam" / "ArabicLetterTraits.swift"
+TAJWEED_RULES_SWIFT = ROOT / "iPhone" / "Quran" / "TajweedRules.swift"
+ASSETS = ROOT / "Resources" / "Images.xcassets"
+
+# The list fields a Foundations merge may reorder or extend (see tajweed_foundations.py).
+MERGE_LIST_FIELDS = ("body", "keyPoints", "letterSets", "mistakes", "examples", "drills", "quiz")
+_REF = re.compile(r"@(\d+)")
 
 PROSE_KEYS = ("summary", "focus", "caption", "literal", "technical", "trigger", "action", "hold",
               "gloss", "note", "wrong", "right", "why", "prompt", "explain", "label", "title",
@@ -86,7 +109,8 @@ PROSE_KEYS = ("summary", "focus", "caption", "literal", "technical", "trigger", 
 PROSE_LIST_KEYS = ("body", "keyPoints", "choices")
 
 # The Arabic fields that may hold Quran words with no citation: (row list, field), see quran_reference.
-ARABIC_FIELDS = {"drills": "text", "fragments": "text", "quiz": "arabic"}
+# `words` is the Foundations merge's word lists (each group's items).
+ARABIC_FIELDS = {"drills": "text", "fragments": "text", "quiz": "arabic", "words": "text"}
 
 # A folded token with no Arabic letter in it (/ -> + = ...) separates snippets; such a string is a
 # list of pieces, not one run of Quran words.
@@ -214,6 +238,174 @@ def chapter_files(tilawa: pathlib.Path) -> tuple[list[pathlib.Path], list[str]]:
     return [by_name[n] for n in names], names
 
 
+# ---------------------------------------------------------------------------------------------
+# The Tajweed Foundations merge (Scripts/tajweed_foundations.py).
+
+def known_family_ids() -> set[str]:
+    """The LetterTraits family ids the app can open, read from its Swift source."""
+    return set(re.findall(r'\bid: "(\w+)"', LETTER_TRAITS_SWIFT.read_text(encoding="utf-8")))
+
+
+def known_legends() -> set[str]:
+    """The TajweedLegendCategory cases, read from its Swift source."""
+    text = TAJWEED_RULES_SWIFT.read_text(encoding="utf-8")
+    start = text.index("enum TajweedLegendCategory")
+    end = text.index("enum Section", start)
+    return set(re.findall(r"^\s*case (\w+)\s*$", text[start:end], re.M))
+
+
+def asset_exists(name: str) -> bool:
+    return any(ASSETS.rglob(f"{name}.imageset"))
+
+
+def resolve_merged_list(upstream: list, spec: list, where: str, problems: list[str]) -> list:
+    """A merged list in order: "@i" is Tilawa's item i, {"@": i, ...} is item i with those fields
+    replaced, anything else is a new item. Every Tilawa item must be placed exactly once."""
+    out, used = [], collections.Counter()
+    for item in spec:
+        ref = None
+        if isinstance(item, str):
+            match = _REF.fullmatch(item)
+            if match:
+                ref = int(match.group(1))
+        elif isinstance(item, dict) and "@" in item:
+            ref = item["@"]
+        if ref is None:
+            out.append(copy.deepcopy(item))
+            continue
+        if not isinstance(ref, int) or not 0 <= ref < len(upstream):
+            problems.append(f"{where}: @{ref} is not one of the {len(upstream)} Tilawa items")
+            continue
+        used[ref] += 1
+        base = copy.deepcopy(upstream[ref])
+        if isinstance(item, dict):
+            if isinstance(base, dict):
+                base.update({key: copy.deepcopy(value) for key, value in item.items() if key != "@"})
+            else:
+                problems.append(f"{where}: @{ref} replaces fields on an item that has none")
+        out.append(base)
+    missing = [i for i in range(len(upstream)) if used[i] == 0]
+    twice = sorted(i for i, n in used.items() if n > 1)
+    if missing:
+        problems.append(f"{where}: Tilawa items {missing} are not placed (every one must be)")
+    if twice:
+        problems.append(f"{where}: Tilawa items {twice} are placed more than once")
+    return out
+
+
+def normalise_words(groups, where: str, problems: list[str]) -> list[dict]:
+    """The merge's (arabic, reading[, note]) tuples as pack rows."""
+    out = []
+    for g, group in enumerate(groups or []):
+        label, items = group.get("label"), group.get("items") or []
+        if not isinstance(label, str) or not label or not items:
+            problems.append(f"{where}.words[{g}]: a group needs a label and items")
+            continue
+        rows = []
+        for i, item in enumerate(items):
+            if isinstance(item, dict) and ("text" in item or "ayah" in item):
+                rows.append(item)
+            elif isinstance(item, (list, tuple)) and 2 <= len(item) <= 3 and all(isinstance(v, str) and v for v in item):
+                row = {"text": item[0], "translit": item[1]}
+                if len(item) == 3:
+                    row["note"] = item[2]
+                rows.append(row)
+            else:
+                problems.append(f"{where}.words[{g}].items[{i}]: expected (arabic, reading[, note])")
+        entry = {"label": label, "items": rows}
+        if group.get("note"):
+            entry["note"] = group["note"]
+        out.append(entry)
+    return out
+
+
+def apply_foundations(chapters: list[dict], problems: list[str]) -> dict:
+    """Fold tajweed_foundations.py into the evaluated chapters, in place."""
+    by_id = {chapter["id"]: chapter for chapter in chapters}
+    for cid, edit in foundations.CHAPTERS.items():
+        if cid in by_id:
+            by_id[cid].update(edit)
+        else:
+            problems.append(f"foundations: chapter {cid} does not exist")
+
+    for entry in foundations.NEW_LESSONS:
+        chapter = by_id.get(entry["chapter"])
+        ids = [lesson["id"] for lesson in chapter["lessons"]] if chapter else []
+        if entry["after"] not in ids:
+            problems.append(f"foundations: new lesson {entry['lesson'].get('id')} goes after "
+                            f"{entry['after']}, which is not in chapter {entry['chapter']}")
+            continue
+        chapter["lessons"].insert(ids.index(entry["after"]) + 1, copy.deepcopy(entry["lesson"]))
+
+    lessons = {lesson["id"]: lesson for chapter in chapters for lesson in chapter["lessons"]}
+    for lid, spec in foundations.MERGES.items():
+        lesson = lessons.get(lid)
+        if lesson is None:
+            problems.append(f"foundations: merge target {lid} does not exist")
+            continue
+        where = f"foundations[{lid}]"
+        for key, value in spec.items():
+            if key.endswith("+"):
+                field = key[:-1]
+                current = lesson.get(field) or []
+                if not isinstance(current, list) or not isinstance(value, list):
+                    problems.append(f"{where}: {key} appends to a list")
+                    continue
+                lesson[field] = current + copy.deepcopy(value)
+            elif key in MERGE_LIST_FIELDS:
+                lesson[key] = resolve_merged_list(lesson.get(key) or [], value, f"{where}.{key}", problems)
+            elif key == "related":
+                # A whole list of lesson ids: it may add and reorder, never drop one of Tilawa's.
+                dropped = [r for r in lesson.get("related") or [] if r not in value]
+                if dropped:
+                    problems.append(f"{where}.related drops Tilawa's {dropped}")
+                lesson["related"] = list(value)
+            elif key == "table":
+                table = lesson.get("table")
+                if table is None:
+                    if any(isinstance(row, str) for row in value.get("rows", [])):
+                        problems.append(f"{where}.table: @ rows on a lesson with no Tilawa table")
+                    lesson["table"] = copy.deepcopy(value)
+                else:
+                    table = copy.deepcopy(table)
+                    for tkey, tvalue in value.items():
+                        table[tkey] = (resolve_merged_list(table.get("rows") or [], tvalue, f"{where}.table.rows", problems)
+                                       if tkey == "rows" else copy.deepcopy(tvalue))
+                    lesson["table"] = table
+            else:
+                lesson[key] = copy.deepcopy(value)
+    for lesson in lessons.values():
+        if "words" in lesson:
+            lesson["words"] = normalise_words(lesson["words"], f"foundations[{lesson['id']}]", problems)
+    return {"merged": len(foundations.MERGES), "new": len(foundations.NEW_LESSONS)}
+
+
+def check_foundations_fields(lesson: dict, problems: list[str], families: set[str], legends: set[str]) -> None:
+    """The Al-Islam fields of one lesson, against what the app can render."""
+    lid = lesson.get("id")
+    for video in lesson.get("videos") or []:
+        if not video.get("title") or not str(video.get("url", "")).startswith("https://www.youtube.com/"):
+            problems.append(f"lesson {lid}: video {video!r} needs a title and a youtube.com url")
+    for image in lesson.get("images") or []:
+        name = image.get("name")
+        if name not in foundations.IMAGES or not asset_exists(name):
+            problems.append(f"lesson {lid}: image {name!r} is not in the asset catalog")
+    for family in lesson.get("families") or []:
+        if family not in families:
+            problems.append(f"lesson {lid}: family {family!r} is not a LetterTraits family id")
+    for door in lesson.get("doors") or []:
+        if door not in foundations.DOORS:
+            problems.append(f"lesson {lid}: door {door!r} is not one the app opens")
+    for extra in lesson.get("extras") or []:
+        if extra not in foundations.EXTRAS:
+            problems.append(f"lesson {lid}: extra {extra!r} is not one the app draws")
+    legend = lesson.get("legend")
+    if legend is not None and legend not in legends:
+        problems.append(f"lesson {lid}: legend {legend!r} is not a TajweedLegendCategory case")
+    if not isinstance(lesson.get("minutes"), int) or lesson["minutes"] <= 0:
+        problems.append(f"lesson {lid}: minutes must be a positive whole number")
+
+
 def soften_tree(node, soften):
     """Re-punctuate every Tilawa-authored prose field, leaving Arabic and ayah text alone."""
     if isinstance(node, dict):
@@ -235,6 +427,48 @@ def soften_tree(node, soften):
     return node
 
 
+_ASCII_LETTER = re.compile(r"[A-Za-z]")
+
+
+def carry_marks(node):
+    """An Arabic mark written on its own inside English prose ("a sukoon (ۡ) printed on a letter",
+    "the slanted forms ٗ ٞ ٖ") has no letter to sit on and floats over whatever precedes it; a
+    tatweel gives it one (ـۡ). Only strings with English in them are touched: Arabic-only text, such
+    as a sakta sign standing between two words the way the mushaf writes it, is left as written."""
+    if isinstance(node, dict):
+        return {key: carry_marks(value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [carry_marks(value) for value in node]
+    if isinstance(node, str) and _ASCII_LETTER.search(node):
+        out = []
+        for index, char in enumerate(node):
+            if unicodedata.category(char) == "Mn":
+                before = node[index - 1] if index else " "
+                if before.isspace() or (before.isascii() and not before.isalnum()):
+                    out.append("\u0640")
+            out.append(char)
+        return "".join(out)
+    return node
+
+
+def ltr_prose(node):
+    """English that opens with an Arabic word ("تام and كافٍ: stop, then start from the next word")
+    takes its paragraph direction from that first letter and is laid out right to left, full stop
+    first. A left-to-right mark at the front sets the direction back to the English one (Tilawa's
+    app does the same with a writing-direction style). Arabic-only strings are left alone."""
+    if isinstance(node, dict):
+        return {key: ltr_prose(value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [ltr_prose(value) for value in node]
+    if isinstance(node, str) and _ASCII_LETTER.search(node) and not node.startswith("\u200e"):
+        for char in node:
+            if char.isascii() and char.isalpha():
+                return node
+            if unicodedata.bidirectional(char) in ("R", "AL"):
+                return "\u200e" + node
+    return node
+
+
 def dashes_left(node, path="") -> list[str]:
     found = []
     if isinstance(node, dict):
@@ -243,10 +477,34 @@ def dashes_left(node, path="") -> list[str]:
     elif isinstance(node, list):
         for i, value in enumerate(node):
             found += dashes_left(value, f"{path}[{i}]")
-    elif isinstance(node, str) and not re.search(r"[؀-ۿ]", node):
-        if ", " in node or re.search(r"[A-Za-z)] - [A-Za-z(]", node):
+    elif isinstance(node, str):
+        # Every string, Arabic ones included, and a digit either side too ("18:1 - the denial" got
+        # through when only letters were checked). The house rule: no em dash, and no spaced hyphen
+        # standing in for one.
+        if "\u2014" in node or _SPACED_HYPHEN.search(node):
             found.append(f"{path}: {node[:70]}")
     return found
+
+
+# A hyphen with a space either side, between words, numbers or brackets: an em dash in disguise.
+_SPACED_HYPHEN = re.compile(r"(?<=[A-Za-z0-9)\u0600-\u06FF]) - (?=[A-Za-z0-9(\u0600-\u06FF])")
+
+# A table cell that leads with an ayah reference and a spaced hyphen ("18:1 - the denial of
+# crookedness runs into the word straight") reads as the explanation with the reference after it.
+_REF_LEAD = re.compile(r"^(\d+:\d+) - (.+)$", re.S)
+
+
+def ref_last(node):
+    """Tilawa's "18:1 - text" table cells as "text (18:1)" (the house rule has no spaced hyphens)."""
+    if isinstance(node, dict):
+        out = {key: ref_last(value) for key, value in node.items()}
+        if isinstance(out.get("rows"), list):
+            out["rows"] = [[_REF_LEAD.sub(r"\2 (\1)", cell) if isinstance(cell, str) else cell for cell in row]
+                           if isinstance(row, list) else row for row in out["rows"]]
+        return out
+    if isinstance(node, list):
+        return [ref_last(value) for value in node]
+    return node
 
 
 def main() -> None:
@@ -270,8 +528,12 @@ def main() -> None:
 
     problems: list[str] = []
     notes: list[str] = []
+    # Al-Islam's Tajweed Foundations, folded in before anything is checked, so its additions pass
+    # through exactly the validation, span location and Quran-reference pass Tilawa's content does.
+    merge = apply_foundations(chapters, problems)
+    family_ids, legend_ids = known_family_ids(), known_legends()
     seen_ids: set[str] = set()
-    lessons = examples = drills = fragments = quizzes = 0
+    lessons = examples = drills = fragments = quizzes = words = 0
     # Per Arabic field, how quran_reference read each string ("whole", "slice", or why it stays text).
     tally = {name: collections.Counter() for name in ARABIC_FIELDS}
     all_ids = {l["id"] for c in chapters for l in c.get("lessons", [])}
@@ -323,8 +585,16 @@ def main() -> None:
             for related in lesson.get("related") or []:
                 if related not in all_ids:
                     problems.append(f"lesson {lid}: related {related} does not exist")
+            # The Foundations fields: word lists go through the same Quran-reference pass as the
+            # drills; the rest are checked against what the app can render.
+            for group in lesson.get("words") or []:
+                for item in group.get("items") or []:
+                    words += 1
+                    if note := reference_arabic(item, "text", index, tally["words"]):
+                        notes.append(f"lesson {lid} words: {note}")
+            check_foundations_fields(lesson, problems, family_ids, legend_ids)
 
-    softened = soften_tree(chapters, soften)
+    softened = ltr_prose(ref_last(carry_marks(soften_tree(chapters, soften))))
     stages = [{"id": s, "titleEn": soften(stage_meta[s]["titleEn"]), "titleAr": stage_meta[s]["titleAr"],
                "blurb": soften(stage_meta[s]["blurbEn"])} for s in stage_order]
     problems += dashes_left(softened, "chapters") + dashes_left(stages, "stages")
@@ -335,13 +605,14 @@ def main() -> None:
             print(f"  {line}", file=sys.stderr)
         raise SystemExit(1)
 
-    pack = {"version": 4, "stages": stages, "ruleCounts": rule_counts, "chapters": softened}
+    pack = {"version": PACK_VERSION, "stages": stages, "ruleCounts": rule_counts, "chapters": softened}
     body = json.dumps(pack, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
     blob = xz_compress(body)
     OUT.write_bytes(blob)
 
     print(f"{len(chapters)} chapters, {lessons} lessons, {examples} examples, {drills} drills, "
-          f"{fragments} fragments, {quizzes} quiz questions")
+          f"{fragments} fragments, {quizzes} quiz questions, {words} words")
+    print(f"  Tajweed Foundations: {merge['merged']} lessons merged, {merge['new']} added")
     for name, counter in tally.items():
         refs = counter["whole"] + counter["slice"]
         kept = sum(count for kind, count in counter.items() if kind not in ("whole", "slice"))

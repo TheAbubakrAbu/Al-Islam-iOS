@@ -1,0 +1,26 @@
+DEFINE SCHEMA
+
+    RECORD TYPE Profile (
+        "___createTime" TIMESTAMP,
+        "___createdBy"  REFERENCE,
+        "___etag"       STRING,
+        "___modTime"    TIMESTAMP,
+        "___modifiedBy" REFERENCE,
+        "___recordID"   REFERENCE QUERYABLE,
+        // One named backup profile (docs/iCloud Sync Guide.md, section 4). Keep in step with
+        // CloudBackupManager.Field, then Scripts/cloudkit_schema.sh import + deploy. A deployed
+        // field can never be removed or renamed, so every name here is for good.
+        appVersion      STRING,
+        deviceKind      STRING,
+        nickname        STRING,
+        ownerDeviceID   STRING,
+        payload         ASSET,
+        payloadBytes    INT64,
+        payloadDigest   STRING,
+        schemaVersion   INT64,
+        summary         STRING,
+        updatedAt       TIMESTAMP,
+        GRANT WRITE TO "_creator",
+        GRANT CREATE TO "_icloud",
+        GRANT READ TO "_world"
+    );

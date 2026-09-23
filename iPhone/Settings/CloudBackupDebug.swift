@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG && HAS_ICLOUD_BACKUP
 import Foundation
 
 /// Headless checks for the iCloud backup's local half (docs/iCloud Sync Guide.md, section 10). None

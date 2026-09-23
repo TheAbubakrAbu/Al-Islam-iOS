@@ -871,6 +871,25 @@ struct QuranPlannerView: View {
             Toggle("Daily Reminder", isOn: reminderToggleBinding.animation(.easeInOut))
                 .font(.subheadline)
                 .listRowSeparator(.hidden)
+                // On the toggle, not the Section: a modifier on a Section inside a List is applied to
+                // each of its rows, so one `.alert` became two presentation bridges bound to one Bool,
+                // and UIKit's refusal of the second dismissed the first (2026-09-22, the sheet-closes-
+                // itself bug; see `AskAISearchSection`).
+                // A dialog, not an alert (Abu, 2026-09-23: "I don't like alerts, let's stick to
+                // confirmation dialogs everywhere"). The two text-entry alerts left in the app -
+                // Rename Profile and Go to Page - must stay alerts: a confirmationDialog silently
+                // DROPS a TextField placed in it.
+                .confirmationDialog("Notifications Off", isPresented: $showingReminderDeniedAlert, titleVisibility: .visible) {
+                    Button("Open Settings") {
+                        settings.hapticFeedback()
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("Notifications are turned off for this app. Allow them in Settings to get a daily reading reminder.")
+                }
 
             if reminderEnabled {
                 DatePicker(
@@ -888,17 +907,6 @@ struct QuranPlannerView: View {
                 .font(.caption)
         }
         .themedListRowBackground()
-        .alert("Notifications Off", isPresented: $showingReminderDeniedAlert) {
-            Button("Open Settings") {
-                settings.hapticFeedback()
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Notifications are turned off for this app. Allow them in Settings to get a daily reading reminder.")
-        }
     }
 
     /// Enabling routes through notification authorization first: the toggle only lands in the ON

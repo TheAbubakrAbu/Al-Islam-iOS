@@ -6,6 +6,7 @@ struct SplashScreen: View {
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// True when the Islam tab's "Learn More" presents this as a sheet over a running app. The button then
     /// reads "Done" and dismisses the sheet; on first launch (the default) it clears `firstLaunch` and the
@@ -28,6 +29,20 @@ struct SplashScreen: View {
         currentColorScheme == .dark
     }
 
+    private var accent: Color {
+        settings.accentColor.color
+    }
+
+    /// The app family below the card, at this fraction of the launch screen's size. The feature card
+    /// needs the room: four rows in Al-Islam, where iCloud Backup joins them.
+    private static let heroFraction: CGFloat = 0.8
+
+    /// At the accessibility text sizes the family row and its labels would take half the screen and
+    /// leave the promises a sliver, so they scroll with the text instead of standing below it.
+    private var heroScrolls: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
+
     private var heroSpring: Animation {
         .spring(response: 0.52, dampingFraction: 0.62, blendDuration: 0)
     }
@@ -36,61 +51,39 @@ struct SplashScreen: View {
         NavigationView {
             GeometryReader { geo in
                 let s = LaunchScreenLayout.scale(for: geo.size)
+                // One reading column: 20 pt gutters on a phone, a comfortable measure on an iPad.
+                let column = min(geo.size.width - 40, 520 * min(s, 1.3))
                 ZStack {
                     splashBackdrop(scale: s)
 
                     VStack(spacing: 0) {
+                        // The greeting and the promises scroll only when they must (a small phone, a
+                        // large text size, the sheet); the family row and the button stay put.
                         ScrollView(showsIndicators: false) {
-                            VStack(spacing: 20 * s) {
-                                VStack(spacing: 6 * s) {
-                                    Text("ٱلسَّلَامُ عَلَيكُم")
-                                        .font(Font.arabic(settings.nonQuranArabicFontName, size: 38 * s))
-                                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                                        .foregroundColor(settings.accentColor.color)
-
-                                    Text("Assalamu Alaikum")
-                                        .font(.title.bold())
-                                        .foregroundColor(.primary)
-
-                                    Text("Peace be upon you, and welcome to \(AppIdentifiers.appName).")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                            VStack(spacing: 18 * s) {
+                                greeting(scale: s)
+                                featureCard
+                                if heroScrolls {
+                                    appHeroStack(layoutScale: s)
                                 }
-                                .frame(maxWidth: .infinity)
-                                .multilineTextAlignment(.center)
-                                .padding(.top, 18 * s)
-
-                                VStack(alignment: .leading, spacing: 12 * s) {
-                                    splashFeatureRow(
-                                        icon: "lock.shield.fill",
-                                        title: "Private by design",
-                                        text: "Everything stays on your device: no accounts, no tracking, works offline."
-                                    )
-                                    splashFeatureRow(
-                                        icon: "heart.fill",
-                                        title: "Free forever",
-                                        text: "No ads, no fees, no subscriptions. Offered as sadaqah jariyah."
-                                    )
-                                    splashFeatureRow(
-                                        icon: "square.grid.2x2.fill",
-                                        title: "One family of apps",
-                                        text: "Al-Islam does everything Al-Quran and Al-Adhan do combined. Tap any app below to see it on the App Store."
-                                    )
-                                }
-                                .padding(.horizontal, 22)
                             }
+                            .frame(width: column)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 10 * s)
+                            .padding(.bottom, 12)
                         }
 
-                        Spacer()
-
-                        appHeroStack(layoutScale: s)
-                            .padding(.bottom, 8)
-
-                        Spacer()
+                        // Under the card, not over it: the aura spreads past its own frame, and on
+                        // top it washed the last row's text.
+                        if !heroScrolls {
+                            appHeroStack(layoutScale: s)
+                                .zIndex(-1)
+                        }
 
                         actionButtons
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 28)
+                            .frame(width: column)
+                            .padding(.top, 4)
+                            .padding(.bottom, 16)
                     }
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -132,16 +125,17 @@ struct SplashScreen: View {
         }
     }
 
-    private func appHeroStack(layoutScale s: CGFloat) -> some View {
+    private func appHeroStack(layoutScale screenScale: CGFloat) -> some View {
+        let s = screenScale * Self.heroFraction
         let card = 120 * s
         let cr = 32 * s
         let inset = 10 * s
-        let titleFont: Font = s > 1.15 ? .callout.weight(.semibold) : .caption.weight(.semibold)
+        let titleFont: Font = screenScale > 1.15 ? .callout.weight(.semibold) : .caption.weight(.semibold)
         let jump: CGFloat = 88 * s
         let oxLeft: CGFloat = -132 * s
         let oxRight: CGFloat = 136 * s
         let oy: CGFloat = -2 * s
-        let stackHeight = (275 * s) + (s > 1 ? 24 * s : 0)
+        let stackHeight = (275 * s) + (screenScale > 1 ? 24 * s : 0)
 
         return ZStack {
             // Borrow the launch-style glow language for the splash hero only.
@@ -260,26 +254,143 @@ struct SplashScreen: View {
         .accessibilityHidden(true)
     }
 
-    private func splashFeatureRow(icon: String, title: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(settings.accentColor.color)
-                .frame(width: 42, height: 42)
-                .conditionalGlassEffect()
+    private func greeting(scale s: CGFloat) -> some View {
+        VStack(spacing: 4 * s) {
+            Text("ٱلسَّلَامُ عَلَيكُم")
+                .font(Font.arabic(settings.nonQuranArabicFontName, size: 34 * s))
+                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                .foregroundColor(accent)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+            Text("Assalamu Alaikum")
+                .font(.title.bold())
+                .foregroundColor(.primary)
 
-                Text(text)
+            Text("Peace be upon you, and welcome to \(AppIdentifiers.appName).")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
+    }
+
+    private struct Feature: Identifiable {
+        let icon: String
+        let title: String
+        let text: String
+        /// A small capsule beside the title, for what only this app has.
+        var tag: String? = nil
+        var id: String { title }
+    }
+
+    /// What every app in the family promises, and what only Al-Islam has. iCloud Backup is Al-Islam's
+    /// alone (`HAS_ICLOUD_BACKUP`, which the companion apps do not define), so they show three rows
+    /// and name it in the family row instead.
+    private var features: [Feature] {
+        #if HAS_ICLOUD_BACKUP
+        return [
+            Feature(icon: "lock.shield.fill", title: "Private by design",
+                    text: "No accounts and no tracking, and it works offline. What you save is yours alone."),
+            Feature(icon: "heart.fill", title: "Free forever",
+                    text: "No ads, fees or subscriptions. Offered as sadaqah jariyah."),
+            Feature(icon: "icloud.fill", title: "iCloud Backup",
+                    text: "Optional: your bookmarks, prayer tracker, khatm and journal, in your own private iCloud.",
+                    tag: "Only in Al-Islam"),
+            Feature(icon: "square.grid.2x2.fill", title: "One family of apps",
+                    text: "Everything Al-Quran and Al-Adhan do, in one app. Tap an app below to see it on the App Store."),
+        ]
+        #else
+        return [
+            Feature(icon: "lock.shield.fill", title: "Private by design",
+                    text: "Everything stays on your device: no accounts, no tracking, and it works offline."),
+            Feature(icon: "heart.fill", title: "Free forever",
+                    text: "No ads, fees or subscriptions. Offered as sadaqah jariyah."),
+            Feature(icon: "square.grid.2x2.fill", title: "One family of apps",
+                    text: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup. Tap an app below to see it on the App Store."),
+        ]
+        #endif
+    }
+
+    /// The promises as one card, in the grammar of the About You and iCloud offer cards that follow
+    /// this screen: a filled surface with a hairline edge, not glass (on this plain ground clear glass
+    /// draws no surface in the light themes).
+    private var featureCard: some View {
+        let items = features
+        return VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, feature in
+                featureRow(feature)
+                if index < items.count - 1 {
+                    Divider()
+                        .padding(.leading, 61)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(UIColor.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                )
+        )
+    }
+
+    private func featureRow(_ feature: Feature) -> some View {
+        HStack(alignment: .top, spacing: 13) {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 34, height: 34)
+                .overlay(
+                    Image(systemName: feature.icon)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 3) {
+                // The tag drops under the title at the accessibility sizes rather than squeezing it.
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 4) {
+                        featureTitle(feature)
+                        featureTag(feature)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        featureTitle(feature)
+                        featureTag(feature)
+                    }
+                }
+
+                Text(feature.text)
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func featureTitle(_ feature: Feature) -> some View {
+        Text(feature.title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.primary)
+    }
+
+    @ViewBuilder
+    private func featureTag(_ feature: Feature) -> some View {
+        if let tag = feature.tag {
+            Text(tag)
+                .font(.caption2.weight(.bold))
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(accent.opacity(isDarkMode ? 0.24 : 0.14)))
         }
     }
 

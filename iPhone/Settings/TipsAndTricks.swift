@@ -680,7 +680,7 @@ enum TipCatalog {
                place: "Islam tab, Arabic Alphabet"),
         AppTip(id: "islam.course", area: .islam, group: "LEARNING", systemImage: "graduationcap.fill",
                title: "A tajweed course with quizzes",
-               detail: "Tajweed Foundations opens with a guided course: lessons you mark as done, example ayahs played in your own reciter, and a Check Yourself quiz at the end of each.",
+               detail: "Tajweed Foundations is one course, from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off.",
                place: "Islam tab, Tajweed Foundations"),
         AppTip(id: "islam.names", area: .islam, group: "LEARNING", systemImage: "signature",
                title: "A Name, full screen",
@@ -740,11 +740,13 @@ enum TipCatalog {
 
     // MARK: The app
 
-    private static let general: [AppTip] = [
+    private static let general: [AppTip] = generalLead + backupTips + generalTrail
+
+    private static let generalLead: [AppTip] = [
         AppTip(id: "app.advanced", area: .app, group: "FINDING THINGS", systemImage: "slider.horizontal.3",
                title: "Simple until you ask for more",
-               detail: "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of any settings screen or under the Settings tab's hub, shows every option everywhere. A search result or a tip marked Advanced turns it on for you.",
-               place: "Settings tab"),
+               detail: "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so turning Nagging Mode's on leaves Arabic Text simple. A search result or a tip marked Advanced turns them on for you.",
+               place: "The foot of a settings screen"),
 
         AppTip(id: "app.search", area: .app, group: "FINDING THINGS", systemImage: "magnifyingglass",
                title: "Search every setting",
@@ -771,6 +773,12 @@ enum TipCatalog {
                title: "Tell the app who you are",
                detail: "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone.",
                place: "Settings tab, About You", destination: .aboutYou),
+    ]
+
+    // iCloud Backup's tips, Al-Islam's alone (`HAS_ICLOUD_BACKUP`; the companion apps never receive the
+    // backup). Their own list, between About You and Reset, where they always stood.
+    #if HAS_ICLOUD_BACKUP
+    private static let backupTips: [AppTip] = [
         AppTip(id: "app.icloud", area: .app, group: "YOU", systemImage: "icloud.fill",
                title: "Back up to your own iCloud",
                detail: "iCloud Backup keeps your bookmarks, prayer tracker, khatm, tasbih counts, journal and settings in your private iCloud. Up to six people or devices on one account each get a profile of their own, and a new iPhone can restore any of them, replacing what is there or merging with it. Your location is never included.",
@@ -783,9 +791,24 @@ enum TipCatalog {
                title: "Keep a backup as a file",
                detail: "Export a Backup File writes the same backup to a file you keep yourself: AirDrop it to a family member's iPhone or save it in Files. Restore from a File reads one back. No iCloud needed on either side.",
                place: "Settings tab, iCloud Backup, Backup File", destination: .cloudBackup),
+    ]
+    #else
+    private static let backupTips: [AppTip] = []
+    #endif
+
+    /// Reset's tip names the iCloud claim a keep-content reset spares only where there is one.
+    private static var resetTipDetail: String {
+        #if HAS_ICLOUD_BACKUP
+        return "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites, progress and this iPhone's iCloud Backup, or erase everything. Both say exactly what they keep and what they remove."
+        #else
+        return "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites and progress, or erase everything. Both say exactly what they keep and what they remove."
+        #endif
+    }
+
+    private static let generalTrail: [AppTip] = [
         AppTip(id: "app.reset", area: .app, group: "YOU", systemImage: "arrow.counterclockwise",
                title: "Reset without losing anything",
-               detail: "Reset All Settings offers two choices: put every option back and keep your bookmarks, favorites, progress and this iPhone's iCloud Backup, or erase everything. Both say exactly what they keep and what they remove.",
+               detail: resetTipDetail,
                place: "Settings tab"),
 
         AppTip(id: "app.themes", area: .app, group: "HOW IT LOOKS", systemImage: "paintpalette.fill",

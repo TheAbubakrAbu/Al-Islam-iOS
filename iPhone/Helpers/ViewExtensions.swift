@@ -256,10 +256,11 @@ final class RootAppearance: ObservableObject {
         return settings.aboutYouVersionSeen < Settings.aboutYouCurrentVersion
     }
 
-    /// The iCloud offer follows the same rule (`-showCloudOffer` forces it). iPhone and iPad only:
-    /// the watch has no CloudKit here.
+    /// The iCloud offer follows the same rule (`-showCloudOffer` forces it). iPhone and iPad only,
+    /// and Al-Islam only (`HAS_ICLOUD_BACKUP`): the watch has no CloudKit here, and the companion
+    /// apps have no iCloud Backup, so for them this is always false.
     private static func needsCloudOffer(_ settings: Settings) -> Bool {
-        #if os(iOS)
+        #if os(iOS) && HAS_ICLOUD_BACKUP
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if !arguments.contains("-showCloudOffer"), arguments.contains("-skipNotificationPrompt") { return false }

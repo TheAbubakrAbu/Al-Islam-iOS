@@ -1,4 +1,4 @@
-#if os(iOS)
+#if os(iOS) && HAS_ICLOUD_BACKUP
 import Foundation
 import CloudKit
 import Combine
@@ -36,6 +36,12 @@ final class CloudBackupManager: ObservableObject {
     static let backgroundInterval: TimeInterval = 5 * 60
     static let staleInterval: TimeInterval = 6 * 60 * 60
 
+    /// The columns of the `Profile` record type. Every key here is also in
+    /// `Resources/CloudKit/Profile.ckdb`, the schema that has to be deployed to CloudKit's
+    /// production environment before a TestFlight or App Store build can save (guide, section 2):
+    /// production never creates a type or a field on the fly, so a NEW key needs the .ckdb
+    /// updated, imported and deployed (`Scripts/cloudkit_schema.sh`) before it ships, or every
+    /// save from a shipped build fails with code 12, "in production schema".
     enum Field {
         static let nickname = "nickname"
         static let deviceKind = "deviceKind"
@@ -166,6 +172,10 @@ final class CloudBackupManager: ObservableObject {
         case profileLimit
         case notEnabled
         case notFound
+        /// The build talks to CloudKit's production environment and the `Profile` schema is not
+        /// deployed there (a TestFlight or App Store build before the deploy, or a new field
+        /// before its deploy). The string is the server's own line, kept for the History page.
+        case schemaNotDeployed(String)
         case other(String)
 
         var errorDescription: String? {
@@ -177,6 +187,7 @@ final class CloudBackupManager: ObservableObject {
             case .profileLimit: return "You already have \(CloudBackupManager.maxProfiles) profiles. Delete one to add another."
             case .notEnabled: return "iCloud Backup is off on this device."
             case .notFound: return "That profile is no longer in iCloud."
+            case .schemaNotDeployed: return "iCloud is not ready for this version of the app yet: its backup format has not been published. Nothing is lost, and everything stays on this device. Try again later."
             case .other(let message): return message
             }
         }
@@ -591,6 +602,7 @@ final class CloudBackupManager: ObservableObject {
         case .profileLimit: return "too many profiles"
         case .notEnabled: return "backup is off"
         case .notFound: return "the profile is no longer in iCloud"
+        case .schemaNotDeployed(let serverLine): return "iCloud is not ready for this version yet, its backup format is not published (\(serverLine))"
         case .other(let message): return message
         }
     }
@@ -749,6 +761,7 @@ final class CloudBackupManager: ObservableObject {
         if let failure = error as? Failure { return failure }
         if let failure = error as? CloudSnapshot.Failure { return .other(failure.localizedDescription) }
         guard let ck = error as? CKError else { return .other(error.localizedDescription) }
+        if let serverLine = undeployedSchemaLine(in: ck) { return .schemaNotDeployed(serverLine) }
         switch ck.code {
         case .notAuthenticated, .accountTemporarilyUnavailable: return .noAccount
         case .networkUnavailable, .networkFailure, .serviceUnavailable, .requestRateLimited, .zoneBusy: return .offline
@@ -763,13 +776,37 @@ final class CloudBackupManager: ObservableObject {
         }
     }
 
+    /// A TestFlight or App Store build talks to CloudKit's production environment, which never
+    /// creates a record type or a field on the fly: they exist there only once the development
+    /// schema is deployed (`Resources/CloudKit/Profile.ckdb`, `Scripts/cloudkit_schema.sh`, guide
+    /// section 2). Until then every save fails with code 12 (invalid arguments) and a server line
+    /// ending "in production schema", also seen inside the items of a partial failure. Matched on
+    /// the line rather than the code, which is shared with other argument errors. Returns the
+    /// server's sentence without the record id in front of it.
+    private static func undeployedSchemaLine(in error: CKError) -> String? {
+        var candidates = [error]
+        if let partial = error.partialErrorsByItemID {
+            candidates += partial.values.compactMap { $0 as? CKError }
+        }
+        for candidate in candidates {
+            let server = candidate.errorUserInfo["ServerErrorDescription"] as? String
+            let lines = [server, candidate.localizedDescription].compactMap { $0 }
+            guard let line = lines.first(where: { $0.localizedCaseInsensitiveContains("in production schema") }) else { continue }
+            // "Error saving record <CKRecordID: ...> to server: Cannot create new type Profile in
+            // production schema": keep the sentence, drop the record id.
+            if let range = line.range(of: "to server: ") { return String(line[range.upperBound...]) }
+            return line
+        }
+        return nil
+    }
+
     private static func status(for failure: Failure) -> Status {
         switch failure {
         case .noAccount: return .noAccount
         case .offline: return .offline
         case .quotaExceeded: return .quotaExceeded
         case .takenOver: return .takenOver
-        case .profileLimit, .notEnabled, .notFound, .other: return .failed(failure.localizedDescription)
+        case .profileLimit, .notEnabled, .notFound, .schemaNotDeployed, .other: return .failed(failure.localizedDescription)
         }
     }
 }

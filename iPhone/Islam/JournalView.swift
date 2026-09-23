@@ -316,10 +316,15 @@ final class JournalStore: ObservableObject {
 /// user's iCloud Backup profile as well (docs/iCloud Sync Guide.md, decision 7).
 @MainActor
 private var journalKeepingLine: String {
+    #if HAS_ICLOUD_BACKUP
     if CloudBackupManager.shared.isEnabled {
         return "Your journal is kept on this device and in your iCloud Backup profile (Settings, iCloud Backup). Export it as text any time from the menu."
     }
     return "Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it, and iCloud Backup in Settings can keep it too). Export it as text any time from the menu."
+    #else
+    // A companion app has no iCloud Backup of its own (HAS_ICLOUD_BACKUP is Al-Islam's).
+    return "Your journal stays on this device (it is in the app's Documents, so an iCloud or iTunes backup carries it). Export it as text any time from the menu."
+    #endif
 }
 
 // MARK: - Prompts

@@ -23,6 +23,11 @@ struct FocusItem: Identifiable, Equatable {
     /// An asset name. When set, the hero is that image - pinch/double-tap to zoom - instead of Arabic text,
     /// and the caption sits under it. This is what makes every diagram in the app openable full screen.
     let imageName: String?
+    /// One of the 99 Names, when the overlay was opened from a grid tile: the overlay then shows what
+    /// the LIST row shows when it expands - Other Names, the description, and the two doors under it
+    /// (Abu, 2026-09-23: "when I click on a name I want it to do the same thing that list mode does").
+    /// Nil for every other kind of focus item, which has no such second half.
+    let nameDetail: NameOfAllah?
 
     init(
         id: String,
@@ -34,7 +39,8 @@ struct FocusItem: Identifiable, Equatable {
         shareLabel: String,
         shareText: String,
         allowsQuranicFont: Bool = true,
-        imageName: String? = nil
+        imageName: String? = nil,
+        nameDetail: NameOfAllah? = nil
     ) {
         self.id = id
         self.arabic = arabic
@@ -46,6 +52,7 @@ struct FocusItem: Identifiable, Equatable {
         self.shareText = shareText
         self.allowsQuranicFont = allowsQuranicFont
         self.imageName = imageName
+        self.nameDetail = nameDetail
     }
 }
 
@@ -69,6 +76,93 @@ final class FocusOverlayPresenter: ObservableObject {
         withAnimation(.easeInOut(duration: 0.2)) {
             item = nil
         }
+    }
+}
+
+/// What a 99 Names grid tile's tap shows under the hero: everything the LIST row reveals when it
+/// expands (Abu, 2026-09-23: "when I click on a name I want it to do the same thing that list mode
+/// does ... but can't open it at the end").
+///
+/// The "can't open it at the end" is the constraint that shapes this. The overlay is a plain
+/// `ZStack` layer at the app root, NOT inside a `NavigationStack`, so a `NavigationLink` here fires
+/// into nothing. So the two doors the expanded row offers are re-routed rather than dropped:
+/// - "More about this name" presents `NameDetailView` as a SHEET, which is what the row's own
+///   `NameDetailLink` already does - so that one is unchanged in behavior.
+/// - "View First Found" hands the ayah to `AppNavigation.pendingQuran` and closes the overlay, the
+///   cross-tab route a Sunnah reminder's notification already uses. The Quran tab opens it.
+struct FocusNameDetails: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let name: NameOfAllah
+
+    @State private var showsDetail = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !name.otherNames.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("Other Names:")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text(name.otherNames.joined(separator: ", "))
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Text.islamText(name.desc, highlightAllah: settings.highlightAllahNamesIslam)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if NamesDetailsStore.isBundled {
+                Button {
+                    settings.hapticFeedback()
+                    showsDetail = true
+                } label: {
+                    detailLabel("More about this name", systemImage: "text.book.closed")
+                }
+                .buttonStyle(.plain)
+            }
+
+            #if HAS_QURAN
+            if let surah = name.firstFoundSurah, let ayah = name.firstFoundAyah {
+                Button {
+                    settings.hapticFeedback()
+                    // Close the overlay FIRST: the tab switch happens under it, and a layer left up
+                    // over the arriving surah would read as the app ignoring the tap.
+                    FocusOverlayPresenter.shared.dismiss()
+                    AppNavigation.shared.pendingQuran = .ayah(surah, ayah)
+                } label: {
+                    detailLabel("View First Found", systemImage: "book")
+                }
+                .buttonStyle(.plain)
+            }
+            #endif
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .sheet(isPresented: $showsDetail) {
+            SheetNavigationContainer {
+                NameDetailView(name: name, isSheet: true)
+            }
+        }
+    }
+
+    private func detailLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.semibold))
+            Text(title)
+                .font(.caption.weight(.semibold))
+            Spacer(minLength: 0)
+        }
+        .foregroundColor(settings.accentColor.color)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+        .conditionalGlassEffect(useColor: 0.2)
     }
 }
 
@@ -107,6 +201,16 @@ struct FocusOverlayHost: View {
                     Spacer(minLength: 0)
 
                     caption(item)
+
+                    // A Name's second half, when it has one. In its own scroller so a long
+                    // description can never push the Copy/Share buttons off the screen.
+                    if let name = item.nameDetail {
+                        ScrollView {
+                            FocusNameDetails(name: name)
+                        }
+                        .frame(maxHeight: 220)
+                        .padding(.bottom, 16)
+                    }
 
                     actions(item)
                 }
@@ -401,7 +505,11 @@ extension FocusItem {
         )
     }
 
-    static func name(_ name: NameOfAllah) -> FocusItem {
+    /// `withDetails` adds the second half the LIST row expands to (Other Names, the description,
+    /// and the two doors) - see `FocusNameDetails`. The grid tile passes true, because a tap there
+    /// is the tile's ONLY way to that content; the context menu's "View Fullscreen" passes false,
+    /// since it is offered from the list row too, where the row itself already expands.
+    static func name(_ name: NameOfAllah, withDetails: Bool = false) -> FocusItem {
         FocusItem(
             id: "name-\(name.number)",
             arabic: name.displayArabicName,
@@ -411,7 +519,8 @@ extension FocusItem {
             secondaryArabic: name.numberArabic,
             shareLabel: "Share Name",
             // Always share as "English - Arabic", e.g. "Ar-Rahman - الرحمن".
-            shareText: "\(name.transliteration) - \(name.name.removeDiacriticsFromLastLetter())"
+            shareText: "\(name.transliteration) - \(name.name.removeDiacriticsFromLastLetter())",
+            nameDetail: withDetails ? name : nil
         )
     }
 }

@@ -1,6 +1,67 @@
 # Page mode: the page that "randomly shrinks and appears"
 
-**Status: FIXED on 2026-09-21/22.** Six scripted scenarios on the iPhone 17 Pro simulator (bar fold,
+**Status: the 09-21/22 mechanism below (chrome twins, known bands, the destination render, the
+crossfade) was REPLACED on 2026-09-23 by Al-Quran's approach. Read the next section first; everything
+after it is the history of the version that was replaced.**
+
+## 2026-09-23: back to Al-Quran's page management
+
+> "I like Al Quran's page management it's less laggy and less weird like where it has to keep
+> resizing. That's such an annoying part right now of Al Islam needs to be fixed. Just focus on
+> resizing." (Abu)
+
+Al-Quran's reader is Al-Islam's as of the 09-16 sync (`60cd3c0`), so it predates everything in the
+sections below. Both apps were built and recorded side by side on the iPhone 17 Pro simulator with the
+same scripted taps (`drive2.py --app quran|islam`, `verify2.sh`, `both.sh` in the session scratchpad;
+same recipe as below). What differed:
+
+1. **The fold never animated in Al-Islam.** `bottomBarsCollapsed` had become `@AppStorage` on 09-19
+   (the persisted-collapse request). Toggled inside `withAnimation`, it still landed with no animation:
+   the bars popped in one frame and the page's band jumped 529 -> 665 pt. Al-Quran's `@State` fold sweeps
+   the band through about fifteen heights in 0.25 s (the page's `GeometryReader` logs each one) and the
+   page rides it.
+2. **The twins made the page change size before the chrome moved.** With the destination render
+   already cached, every page swapped to it on the first frame of a chrome change, and the snapshot
+   crossfade faded two typesettings of different sizes over each other for 0.15 s: a blurred double
+   page. Plus the twin fits themselves, up to nine per rest, each with a main-thread compose.
+3. **Opening the reader wasted two rings of fits.** The pager reports 749 and then 728 pt before the bars
+   mount and settle it at 529. `noteVisibleGeometry` took each at once, and the reader's own opening
+   prewarms swept eight pages at each passing height, on every open, landing while the push animated.
+
+What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+
+- The fold is `@State`, seeded from the stored preference (`mushafBottomBarsCollapsed`, still persisted
+  and still in the iCloud manifest) and written back by `setBarsCollapsed` 0.35 s after the fold, so the
+  `Settings` republish a defaults write causes never lands inside the fold's frames.
+- Removed: the chrome state key, known bands (`Caches/mushaf-known-bands.plist` is no longer read or
+  written), twin warming, `expectedGeometry`, the five-budget and sticky fallbacks, the header and bars
+  height readers, and the snapshot crossfade. `latestByPage` holds one render per page again and
+  `nearestRendered` is Al-Quran's, so during any chrome animation a page keeps the render it was showing
+  (scaled into a shorter band, centred in a taller one) and makes ONE clean cut to the exact fit once the
+  band settles.
+- `renderedPageBody` draws a fitted and a scaled render in ONE branch, so the text view keeps its identity
+  while the band sweeps across the render's own height (two branches swapped the view mid-animation).
+- The reader keeps no per-frame band state: `spreadRuleMet` changes only when the spread rule flips, and
+  the band itself sits in a box.
+- `noteVisibleGeometry` commits a band only after 0.2 s of stillness, and seeds from the persisted
+  geometry when the reader reports before `prewarmAtLaunch` has run. Opening the reader now warms at 525
+  only (zero passing-height fits, measured).
+- Kept from 09-21/22: the Now Playing transport row fix (the reader stays 402 pt wide), one text view per
+  page across fallback and exact renders (no blank frames on a swap), the 220 ms settle debounce, the
+  pager band as the single geometry source and the persisted geometry written at the settled beat (the
+  "Go to 20:6" loop fixes).
+
+Result, frame scans of the same scenarios: fold, the page slides with the bars and cuts once to the new
+fit (0.24 s after the tap when that fit is cached, about 0.5 s the first time); unfold, the page scales
+down smoothly with the bars, then one cut; find bar and mini player, the same smooth follow and one cut;
+swipes, picker jumps, the long-press sheet and re-entering the reader unchanged; zero blank frames in all.
+Every one of those now matches Al-Quran's recording.
+
+---
+
+## History: the 09-21/22 version (replaced)
+
+**Status then: FIXED on 2026-09-21/22.** Six scripted scenarios on the iPhone 17 Pro simulator (bar fold,
 mini player mount / expand / stop, a swipe run, page-picker jumps, the find bar, the long-press sheet,
 plus leaving and re-entering the reader) show zero blank frames and no page sitting at the wrong size.
 Every chrome change is now a cache hit at its final band, and the animation between two bands is one

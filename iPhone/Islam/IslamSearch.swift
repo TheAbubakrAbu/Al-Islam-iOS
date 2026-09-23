@@ -1112,10 +1112,16 @@ struct AskAISearchSection: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-            }
-            .sheet(isPresented: $showAskAI) {
-                if #available(iOS 16.0, *) {
-                    AskAIChatSheet(initialQuestion: query)
+                // On the ROW, never on the Section. A modifier on a Section inside a List is applied
+                // to each of the Section's children (the header and every row), so one `.sheet` here
+                // became two presentation bridges bound to one Bool: both presented when it flipped,
+                // UIKit refused the second ("Attempt to present ... which is already presenting"),
+                // and SwiftUI answered by resetting the binding, which dismissed the first. The
+                // sheet closed itself the first time it was opened (Abu, 2026-09-22).
+                .sheet(isPresented: $showAskAI) {
+                    if #available(iOS 16.0, *) {
+                        AskAIChatSheet(initialQuestion: query)
+                    }
                 }
             }
         }

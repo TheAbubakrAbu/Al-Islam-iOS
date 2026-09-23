@@ -92,16 +92,22 @@ enum ThemeWashColor: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    /// The row wash, deliberately FAINTER than the bookmark highlighter's
-    /// (`AyahHighlightColor.tintOpacity`, 0.10 / 0.14): a bookmark wash marks one ayah the reader chose,
-    /// a theme wash can cover every line of every page, and at the highlighter's strength a whole page
-    /// of it read as a colored slab (Abu, 2026-09-20: "the opacity is too strong"). The pale yellow and
-    /// the brown stay a step above the rest, because they vanish on a white page sooner than the others.
+    /// The row wash. It still sits at or just under the bookmark highlighter's
+    /// (`AyahHighlightColor.tintOpacity`, 0.10 / 0.14) rather than above it: a bookmark wash marks one
+    /// ayah the reader chose, a theme wash can cover every line of every page, and well past the
+    /// highlighter a whole page of it reads as a colored slab (Abu, 2026-09-20: "the opacity is too
+    /// strong"). That first cut went too far the other way, though - 0.065 on a white page is barely
+    /// there - so 2026-09-22 raised every value about half a step back (Abu: "theme opacity is too
+    /// light for quran, make it a little stronger"). The pale yellow and the brown stay a step above
+    /// the rest, because they vanish on a white page sooner than the others.
+    ///
+    /// The trip so far, light / dark: 0.10 / 0.14 (the highlighter's, where this started)
+    /// -> 0.065 / 0.09 -> 0.095 / 0.125.
     func tintOpacity(_ scheme: ColorScheme) -> Double {
         switch self {
-        case .stories: return scheme == .dark ? 0.15 : 0.17
-        case .law: return scheme == .dark ? 0.12 : 0.10
-        default: return scheme == .dark ? 0.09 : 0.065
+        case .stories: return scheme == .dark ? 0.19 : 0.22
+        case .law: return scheme == .dark ? 0.16 : 0.14
+        default: return scheme == .dark ? 0.125 : 0.095
         }
     }
 

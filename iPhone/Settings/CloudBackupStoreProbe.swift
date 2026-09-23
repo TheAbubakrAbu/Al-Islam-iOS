@@ -1,4 +1,4 @@
-#if DEBUG && os(iOS)
+#if DEBUG && os(iOS) && HAS_ICLOUD_BACKUP
 import Foundation
 
 /// What every content store holds IN MEMORY, one line each, for `-cloudStoreProbe` (see

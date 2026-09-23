@@ -898,60 +898,62 @@ struct AyahActionsSheet: View {
             }))
         }
 
-        // Select Text, Copy Ayah and Share Ayah are not tiles: they are the rows under the grid (Abu,
-        // 2026-09-07: "make the share ayah button a full row below it") - select and copy side by
-        // side, then share as the one filled button, where the things you most often came for are
-        // the biggest targets on the sheet.
+        // Select Text and Copy Ayah ARE tiles (Abu, 2026-09-22: "select text and copy ayah in the
+        // long hold sheet make them normal grid buttons so only share ayah takes up the whole row").
+        // They were a half-width pair of their own under the grid from 2026-09-07, which gave the
+        // sheet three different button widths; now only Share Ayah is a row, the one filled button,
+        // and the thing you most often came for is still the biggest target on the sheet.
+        //
+        // Last in the grid, in the ellipsis menu's own order (Select Text, Copy Ayah, then Share):
+        // see `ayah-menu-parity-and-search-paint` - one action list, one order, every menu.
+        // `selection.pin.in.out`, not the menus' `highlighter`: the Highlight tile is RIGHT THERE in
+        // the same grid wearing that symbol, and two identical icons side by side say nothing. The
+        // menus never had the clash because a text list names every row. Titles still match exactly.
+        list.append(AyahAction(id: "selectText", title: "Select Text", systemImage: "selection.pin.in.out", action: {
+            settings.hapticFeedback()
+            onRequestSheet?(.selectText)
+        }))
+
+        list.append(AyahAction(id: "copy", title: "Copy Ayah", systemImage: "doc.on.doc", action: {
+            settings.hapticFeedback()
+            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
+                                                settings: settings, quranData: quranData)
+            dismiss()
+        }))
+
         return list
     }
 
-    /// The text rows under the grid: Select Text (page mode's route to the list rows' select-and-copy
-    /// sheet - the page's text view is deliberately non-selectable) beside Copy Ayah (in the
-    /// remembered mode, the same "Copy Ayah" the list rows offer), then Share Ayah as the one filled,
-    /// accent-colored button on the sheet.
-    private var copyShareRows: some View {
-        VStack(spacing: 10) {
+    /// The ONE full-width row under the grid (Abu, 2026-09-22: "only share ayah takes up the whole
+    /// row"): the filled, accent-colored button the sheet is built around. Select Text and Copy Ayah
+    /// used to flank it as a half-width pair; they are grid tiles now, see `actions`.
+    private var shareRow: some View {
+        Button {
+            settings.hapticFeedback()
+            onRequestSheet?(.share)
+        } label: {
             HStack(spacing: 10) {
-                textRow(title: "Select Text", systemImage: "highlighter", caption: nil) {
-                    settings.hapticFeedback()
-                    onRequestSheet?(.selectText)
-                }
-
-                textRow(title: "Copy Ayah", systemImage: "doc.on.doc", caption: ShareAyahSheet.copyModeLabel) {
-                    settings.hapticFeedback()
-                    ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                        settings: settings, quranData: quranData)
-                    dismiss()
-                }
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 17, weight: .semibold))
+                Text("Share Ayah")
+                    .font(.headline)
             }
-
-            Button {
-                settings.hapticFeedback()
-                onRequestSheet?(.share)
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 17, weight: .semibold))
-                    Text("Share Ayah")
-                        .font(.headline)
-                }
-                .foregroundStyle(Color.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [settings.accentColor.accent1, settings.accentColor.accent1.opacity(0.78)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing
-                            )
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [settings.accentColor.accent1, settings.accentColor.accent1.opacity(0.78)],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
                         )
-                )
-                .shadow(color: settings.accentColor.accent1.opacity(0.28), radius: 8, x: 0, y: 4)
-            }
-            .buttonStyle(.plain)
+                    )
+            )
+            .shadow(color: settings.accentColor.accent1.opacity(0.28), radius: 8, x: 0, y: 4)
         }
+        .buttonStyle(.plain)
     }
 
     /// "Keep Sheet Open", IN the sheet it is about (Abu, 2026-09-20; the switch already lived under
@@ -983,38 +985,6 @@ struct AyahActionsSheet: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(settings.accentColor.accent1.opacity(0.10))
         )
-    }
-
-    /// One tinted row of the pair above the share button.
-    private func textRow(title: String, systemImage: String, caption: String?, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 15, weight: .semibold))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    if let caption {
-                        Text(caption)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(settings.accentColor.accent1)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(settings.accentColor.accent1.opacity(0.10))
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private var actionGrid: some View {
@@ -1103,7 +1073,7 @@ struct AyahActionsSheet: View {
 
                     actionGrid
 
-                    copyShareRows
+                    shareRow
 
                     keepSheetOpenRow
 

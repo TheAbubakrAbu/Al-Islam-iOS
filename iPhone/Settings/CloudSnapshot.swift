@@ -1,3 +1,6 @@
+// iCloud Backup is Al-Islam's alone: this file compiles only where `HAS_ICLOUD_BACKUP` is defined
+// (Al-Islam's project settings). The companion apps never receive it (sync-manifests).
+#if HAS_ICLOUD_BACKUP
 import Foundation
 import CryptoKit
 #if os(iOS)
@@ -289,3 +292,4 @@ enum CloudJSON {
         return try? JSONSerialization.data(withJSONObject: object, options: [.withoutEscapingSlashes])
     }
 }
+#endif

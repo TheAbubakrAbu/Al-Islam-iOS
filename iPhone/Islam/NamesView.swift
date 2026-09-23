@@ -725,6 +725,9 @@ struct NamesView: View {
         .compactListSectionSpacing()
         #if os(iOS)
         .aboutSignsDestination($aboutDoor)
+        // On the LIST, not on a row: a lazy row's own sheet does not exist until it scrolls on
+        // screen, and the grid puts many tiles in one row (see `NameSharePresenter`).
+        .nameShareHost()
         #endif
         .navigationTitle("99 Names of Allah")
         // A load that failed at launch gets another go the moment the page is actually opened.
@@ -1509,9 +1512,12 @@ func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> 
         Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
     }
 
+    // ONE entry where six Copy items used to sit (Abu, 2026-09-23). The sheet asks which parts you
+    // want, previews them, and its own Copy button is what replaced "Copy All" and the rest - so
+    // this is both the share AND the copy door. See `NameShareSheet`.
     Button {
         Settings.shared.hapticFeedback()
-        presentSystemShareSheet(items: [FocusItem.name(name).shareText])
+        NameSharePresenter.shared.present(name)
     } label: {
         Label("Share Name", systemImage: "square.and.arrow.up")
     }
@@ -1527,10 +1533,6 @@ func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> 
         Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
     }
 
-    Divider()
-
-    nameCopyItems(name)
-
     // Only while searching: the row's own tap already does this, and the grid tile has no other way.
     if let onScrollTo {
         Divider()
@@ -1544,43 +1546,12 @@ func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> 
     }
 }
 
-@ViewBuilder
-private func nameCopyItems(_ name: NameOfAllah) -> some View {
-    // The First Found entries are Quran references; apps without the Quran have none.
-    #if HAS_QURAN
-    let firstFoundLine = "First Found: \(name.firstFoundShort)\n"
-    #else
-    let firstFoundLine = ""
-    #endif
-    Group {
-        nameCopyItem("Copy All", text: """
-        Arabic: \(name.name.removeDiacriticsFromLastLetter())
-        Transliteration: \(name.transliteration)
-        Translation: \(name.meaning)
-        \(firstFoundLine)Description: \(name.desc)
-        """)
-        nameCopyItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
-        nameCopyItem("Copy Transliteration", text: name.transliteration)
-        nameCopyItem("Copy Translation", text: name.meaning)
-        #if HAS_QURAN
-        nameCopyItem("Copy First Found", text: name.firstFoundShort)
-        #endif
-        nameCopyItem("Copy Description", text: name.desc)
-    }
-}
-
-private func nameCopyItem(_ label: String, text: String) -> some View {
-    Button {
-        Settings.shared.hapticFeedback()
-        UIPasteboard.general.string = text
-    } label: {
-        Label(label, systemImage: "doc.on.doc")
-    }
-}
 #endif
 
 /// Press-and-hold opens the same menu the row carries (`GridTileMenu`); a tap opens the name
-/// fullscreen, which is the only "open" a tile has - expanding in place is a list-row idea.
+/// fullscreen WITH the second half the list row expands to (Other Names, the description, and the
+/// two doors under it) - see `FocusNameDetails`. Expanding in place is a list-row idea, so the
+/// overlay is where a tile shows it.
 private struct NameGridTile: View, Equatable {
 
     let name: NameOfAllah
@@ -1609,7 +1580,9 @@ private struct NameGridTile: View, Equatable {
         #if os(iOS)
         GridTileMenu {
             Settings.shared.hapticFeedback()
-            FocusOverlayPresenter.shared.present(.name(name))
+            // `withDetails`: a tile has no way to expand in place, so its tap opens the name with
+            // everything the list row shows expanded (Abu, 2026-09-23).
+            FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
         } menu: {
             nameContextItems(name, isFavorite: isFavorite)
         } label: {

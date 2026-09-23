@@ -18,7 +18,14 @@ enum ArabicDoor {
     case quiz
     case readingTest
     /// The reading topics: Explore tiles since 2026-09-22, link rows of their own before that.
+    /// Baa on Haa and Laam Alif left the shelf again the same day (Abu: "take baa on haa and laam
+    /// alif and put it after special letters") - they are shapes, not a study tool, so they are rows
+    /// under the letters they are made of.
     case tashkeel
+    /// The table of which mark a letter carries when nothing else says: its own tile since
+    /// 2026-09-22 ("then have it be tashkeel then put default tashkeel then basic grammar"), still
+    /// reachable from the Tashkeel table's own page.
+    case defaultTashkeel
     case baaHaa
     case laamAlif
     case basics
@@ -84,6 +91,7 @@ private struct ArabicDoorDestination: ViewModifier {
         case .quiz: quizDestination
         case .readingTest: readingTestDestination
         case .tashkeel: TashkeelLettersView()
+        case .defaultTashkeel: DefaultTashkeelView()
         case .baaHaa: BaaHaaShapesView()
         case .laamAlif: LaamAlifShapesView()
         case .basics: ArabicBasicsView()
@@ -739,53 +747,21 @@ struct LetterFamilyView: View {
         }
     }
 
+    /// The lesson that teaches this family in full. Guarded: a lesson lists its families, so the
+    /// family you came through from a lesson points back at that lesson, greyed.
     @ViewBuilder
     private var lessonSection: some View {
-        #if os(iOS)
         if let lessonID = family.lessonID, TajweedLessonsStore.isBundled {
-            Section(header: Text("IN THE TAJWEED COURSE")) {
-                NavigationLink(destination: LazyDestination { LetterFamilyLessonView(lessonID: lessonID) }) {
+            Section(header: Text("IN TAJWEED FOUNDATIONS")) {
+                TajweedLessonLink(lessonID: lessonID) {
                     Label("Study the Full Lesson", systemImage: "graduationcap")
                         .font(.body)
                         .foregroundColor(appearance.accent)
                 }
             }
         }
-        #endif
     }
 }
-
-#if os(iOS)
-/// The course lesson behind a family. The pack is parsed off the main thread (it is 467 KB), so the
-/// page shows a spinner for the moment that takes on a cold open.
-private struct LetterFamilyLessonView: View {
-    let lessonID: String
-    @State private var lesson: TajweedLesson?
-    @State private var missing = false
-
-    var body: some View {
-        Group {
-            if let lesson {
-                TajweedLessonDetailView(lesson: lesson)
-            } else if missing {
-                Text("This lesson could not be loaded.")
-                    .foregroundColor(.secondary)
-            } else {
-                ProgressView()
-            }
-        }
-        .task {
-            guard lesson == nil else { return }
-            let id = lessonID
-            let found = await Task.detached(priority: .userInitiated) {
-                TajweedLessonsStore.shared.lesson(id: id)
-            }.value
-            lesson = found
-            missing = found == nil
-        }
-    }
-}
-#endif
 
 // MARK: - A letter's tajweed profile
 

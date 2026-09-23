@@ -1,3 +1,6 @@
+// iCloud Backup is Al-Islam's alone: this file compiles only where `HAS_ICLOUD_BACKUP` is defined
+// (Al-Islam's project settings). The companion apps never receive it (sync-manifests).
+#if HAS_ICLOUD_BACKUP
 import Foundation
 
 /// How a Merge restore combines a backup's content with what this device already holds
@@ -354,3 +357,4 @@ enum CloudMergeRules {
         }.joined(separator: "\u{1F}")
     }
 }
+#endif

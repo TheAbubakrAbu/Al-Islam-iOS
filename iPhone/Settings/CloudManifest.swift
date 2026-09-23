@@ -1,3 +1,6 @@
+// iCloud Backup is Al-Islam's alone: this file compiles only where `HAS_ICLOUD_BACKUP` is defined
+// (Al-Islam's project settings). The companion apps never receive it (sync-manifests).
+#if HAS_ICLOUD_BACKUP
 import Foundation
 
 /// What an iCloud backup carries, key by key (docs/iCloud Sync Guide.md, section 5a).
@@ -166,3 +169,4 @@ enum CloudManifest {
             .contains(where: key.hasPrefix)
     }
 }
+#endif

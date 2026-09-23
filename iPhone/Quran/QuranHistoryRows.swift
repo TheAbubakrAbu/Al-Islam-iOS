@@ -186,6 +186,26 @@ struct LastListenedSurahRow: View {
                 }
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
+                // On this ONE row, not on the Section: a modifier on a Section inside a List is applied
+                // to each of its rows (this one and every history row), so one dialog became several
+                // presentation bridges bound to one Bool, UIKit refused every presentation after the
+                // first, and SwiftUI answered by resetting the Bool, which closed the dialog the first
+                // time it opened (2026-09-22; see `AskAISearchSection`). The context menu that raises
+                // it stays on the Section, so any row's "Delete Forever" still lands here.
+                #if os(iOS)
+                .confirmationDialog("Are you sure?", isPresented: $confirmDeleteForever, titleVisibility: .visible) {
+                    Button("Remove Permanently", role: .destructive) {
+                        settings.hapticFeedback()
+                        withAnimation {
+                            settings.lastListenedSurah = nil
+                            settings.saveLastListenedSurah = false
+                        }
+                    }
+                    Button("Cancel") {}
+                } message: {
+                    Text("You can re-enable Last Listened Surah later in Quran Settings.")
+                }
+                #endif
 
                 if showListeningHistory && !playbackHistory.listeningHistory.isEmpty {
                     ForEach(playbackHistory.listeningHistory) { item in
@@ -275,18 +295,6 @@ struct LastListenedSurahRow: View {
                     scrollToSurahID: $scrollToSurahID,
                     lastListened: true
                 )
-            }
-            .confirmationDialog("Are you sure?", isPresented: $confirmDeleteForever, titleVisibility: .visible) {
-                Button("Remove Permanently", role: .destructive) {
-                    settings.hapticFeedback()
-                    withAnimation {
-                        settings.lastListenedSurah = nil
-                        settings.saveLastListenedSurah = false
-                    }
-                }
-                Button("Cancel") {}
-            } message: {
-                Text("You can re-enable Last Listened Surah later in Quran Settings.")
             }
             #endif
             .animation(.easeInOut, value: playbackPhase.isPlaying || playbackPhase.isPaused)

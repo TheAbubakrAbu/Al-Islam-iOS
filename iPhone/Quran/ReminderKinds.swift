@@ -581,6 +581,17 @@ struct ExtraReminderSections: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(accent)
             }
+            // Both editors hang off this ONE row. They used to sit on the NUDGES Section below, and a
+            // modifier on a Section inside a List is applied to each of its rows: one `.sheet` became
+            // several presentation bridges bound to one value, UIKit refused every presentation after
+            // the first, and SwiftUI answered by resetting the value, which closed the sheet the first
+            // time it opened (2026-09-22; see `AskAISearchSection`).
+            .sheet(isPresented: $adding) {
+                CustomReminderEditor(reminder: CustomReminder()) { store.add($0) }
+            }
+            .sheet(item: $editing) { reminder in
+                CustomReminderEditor(reminder: reminder) { store.update($0) }
+            }
         }
 
         Section(header: Text("DUAS THROUGH THE DAY"), footer:
@@ -629,12 +640,6 @@ struct ExtraReminderSections: View {
                      enabled: store.config.streakEnabled, minutes: store.config.streakMinutes,
                      setEnabled: { on in store.updateConfig { $0.streakEnabled = on } },
                      setMinutes: { m in store.updateConfig { $0.streakMinutes = m } })
-        }
-        .sheet(isPresented: $adding) {
-            CustomReminderEditor(reminder: CustomReminder()) { store.add($0) }
-        }
-        .sheet(item: $editing) { reminder in
-            CustomReminderEditor(reminder: reminder) { store.update($0) }
         }
     }
 

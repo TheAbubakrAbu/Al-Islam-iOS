@@ -3203,9 +3203,28 @@ final class QuranData: ObservableObject {
         let nameEnglishUpper: String
         let nameTransliterationUpper: String
         let searchableBlob: String
-        let compactSearchableBlob: String
+        /// EACH name with its own spaces removed, NOT the whole blob glued into one string.
+        ///
+        /// The compacted form exists so a multi-word name survives being typed without its spaces
+        /// ("albaqarah", "aliimran", "thecow") - 107 of the 114 surahs have at least one such name,
+        /// so it is load-bearing. Compacting the whole BLOB, as this did until 2026-09-22, also
+        /// deleted the spaces BETWEEN names and let a query match across the join: Maryam's
+        /// "maryam" + "mary" became "maryammary", which contains "amma", so searching amma returned
+        /// Maryam (Abu noticed). Per name, "amma" starts neither "maryam" nor "mary", and it still
+        /// matches Muhammad, where it really is inside the word.
+        ///
+        /// Measured over all 114 surahs before the change: 0 real queries stop working - every name
+        /// as written, every name compacted, and every single word of a name still resolves to its
+        /// own surah.
+        let compactSearchableNames: [String]
 
         var id: Int { surahID }
+
+        /// True when `query` (already cleaned and space-stripped) appears in any ONE name.
+        func matchesCompact(_ query: String) -> Bool {
+            guard !query.isEmpty else { return false }
+            return compactSearchableNames.contains { $0.contains(query) }
+        }
     }
 
     struct JuzSearchIndexEntry: Identifiable, Codable, Equatable {
@@ -4183,22 +4202,28 @@ final class QuranData: ObservableObject {
 
     private func buildSurahSearchIndex(for surahs: [Surah]) -> [SurahSearchIndexEntry] {
         surahs.map { surah in
-            let searchableBlob = [
+            // Each name kept SEPARATE here, so the compacted form can be built per name rather than
+            // across the whole blob - see `SurahSearchIndexEntry.compactSearchableNames`.
+            let names: [String] = [
                 settings.cleanSearch(surah.nameArabic),
                 settings.cleanSearch(surah.nameTransliteration),
                 settings.cleanSearch(surah.nameEnglish),
-                surah.normalizedSearchNames.map { settings.cleanSearch($0) }.joined(separator: " "),
                 settings.cleanSearch(String(surah.id)),
                 settings.cleanSearch(surah.idArabic)
-            ].joined(separator: " ")
-            let compactSearchableBlob = searchableBlob.replacingOccurrences(of: " ", with: "")
+            ] + surah.normalizedSearchNames.map { settings.cleanSearch($0) }
+
+            // The space-joined blob is UNCHANGED: it is what the ordinary substring search reads,
+            // and its spaces are exactly what keep one name from running into the next.
+            let searchableBlob = names.joined(separator: " ")
 
             return SurahSearchIndexEntry(
                 surahID: surah.id,
                 nameEnglishUpper: surah.nameEnglish.uppercased(),
                 nameTransliterationUpper: surah.nameTransliteration.uppercased(),
                 searchableBlob: searchableBlob,
-                compactSearchableBlob: compactSearchableBlob
+                compactSearchableNames: names
+                    .map { $0.replacingOccurrences(of: " ", with: "") }
+                    .filter { !$0.isEmpty }
             )
         }
     }
@@ -4396,7 +4421,7 @@ final class QuranData: ObservableObject {
         }
 
         if let loose = surahSearchIndex.first(where: {
-            $0.searchableBlob.contains(cleaned) || $0.compactSearchableBlob.contains(compactCleaned)
+            $0.searchableBlob.contains(cleaned) || $0.matchesCompact(compactCleaned)
         }).flatMap({ surah($0.surahID) }) {
             return loose
         }
@@ -4755,7 +4780,7 @@ final class QuranData: ObservableObject {
             if upperQuery.contains(entry.nameEnglishUpper)
                 || upperQuery.contains(entry.nameTransliterationUpper)
                 || entry.searchableBlob.contains(cleanedQuery)
-                || entry.compactSearchableBlob.contains(normalizedQuery) {
+                || entry.matchesCompact(normalizedQuery) {
                 return surah(entry.surahID)
             }
             return nil
