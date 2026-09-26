@@ -12,8 +12,9 @@ import SwiftUI
 /// into one pill, and plain on earlier OSes (which never merged them).
 private struct QuranTrailingToolbar: ViewModifier {
     @ObservedObject var settings = Settings.shared
-    /// The Choose Surah sheet (`QuranView.picker`): no grid/list toggle and no gear. It shows whatever
-    /// layout the tab is set to and nothing else (Abu, 2026-09-21: "keep it simple").
+    /// The Choose Surah sheet (`QuranView.picker`): no grid/list toggle and no gear (Abu, 2026-09-21:
+    /// "keep it simple"). It is always rows since 2026-09-25 (`QuranView.usesGrid`), so a toggle there
+    /// would have nothing to switch.
     var isPicker: Bool = false
     @Binding var khatmEditMode: Bool
     @Binding var showingSettingsSheet: Bool
@@ -235,6 +236,13 @@ struct QuranView: View {
     }
     var picker: PickerMode? = nil
     private var isPicker: Bool { picker != nil }
+
+    /// Tiles or rows. The Choose Surah sheet is ALWAYS rows, whatever the tab is set to (Abu, 2026-09-25:
+    /// "Don't support grid mode for choose surah only make it list so it scrolls down properly"): it
+    /// opens scrolled to the surah being read, and a lazy grid cannot scroll to a tile it has not built,
+    /// so in grid mode the sheet opened at Al-Fatihah. The stored preference is only ever read here, so the
+    /// sheet never writes it either (`scrollToSurahID` flips it only when the tab itself is in grid mode).
+    private var usesGrid: Bool { settings.gridMode && !isPicker }
 
     @State private var searchText = ""
     @State private var isQuranSearchFocused = false
@@ -575,6 +583,14 @@ struct QuranView: View {
         let filteredSurahs: [Surah]
         let canShowMoreAyahHits: Bool
         let ayahCountDisplayText: String
+        /// What the iPad/Mac detail column is reading, so the sidebar's grid tiles can ring the one that
+        /// is open (`gridSelectionRing`); nil in the iPhone stack and the Choose Surah sheet, which have
+        /// no detail column. The SELECTION, not the page: a mushaf page can hold three surahs, and the
+        /// page reader names only its top one (tapping An-Nas would ring Al-Ikhlas).
+        let columnDetailRoute: QuranRoute?
+        /// The juz that route lands in, for the juz grouping, where one surah is a tile in every juz it
+        /// runs through and only the juz being read should ring.
+        let columnDetailJuz: Int?
     }
 
     /// The surah-list query grammar (size filters, "surah -1", "2:255", Arabic-Indic digits, ...) lives on
@@ -1742,7 +1758,7 @@ struct QuranView: View {
             // get there, which opening a sheet must never do to a stored preference. Unanimated, and
             // repeated, because the sheet's presentation swallows a scroll issued mid-transition.
             .onChange(of: scrollPickerToCurrent) { id in
-                guard id > 0, !settings.gridMode, searchText.isEmpty else { return }
+                guard id > 0, !usesGrid, searchText.isEmpty else { return }
                 for delay in [0.0, 0.15, 0.45] {
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                         scrollProxy.scrollTo("surah_\(id)", anchor: .center)
@@ -1755,7 +1771,7 @@ struct QuranView: View {
                 // Grid mode (a LazyVGrid added after 4.4.4) can't scroll to off-screen tiles, so flip to list
                 // first. Otherwise this is exactly the Version 4.4.4 scroll, which felt right: one delayed,
                 // animated scrollTo - no retry loop, no settle attempts.
-                if settings.gridMode { settings.gridMode = false }
+                if usesGrid { settings.gridMode = false }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation {
                         scrollProxy.scrollTo("surah_\(id)", anchor: .top)
@@ -2726,7 +2742,7 @@ struct QuranView: View {
             let sortedBookmarks = settings.bookmarkedAyahsInMushafOrder
             Section(header: bookmarkHeader(count: sortedBookmarks.count)) {
                 if settings.showBookmarks {
-                    if settings.gridMode {
+                    if usesGrid {
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                             alignment: .leading,
@@ -2777,6 +2793,9 @@ struct QuranView: View {
             // lift every tile in the section at once as its preview.
             SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow, grid: true)
                 .equatable()
+                // This ayah is where the detail column was opened. Applied after `.equatable()`, and
+                // before the modifier that makes this the menu's label.
+                .gridSelectionRing(context.columnDetailRoute == .ayahs(surahID: surah.id, ayah: ayah.id))
                 .ayahContextMenuModifier(
                     surah: surah.id,
                     ayah: ayah.id,
@@ -2866,7 +2885,7 @@ struct QuranView: View {
             let sortedFavorites = settings.favoriteSurahs.sorted()
             Section(header: favoriteHeader(count: sortedFavorites.count)) {
                 if settings.showFavorites {
-                    if settings.gridMode {
+                    if usesGrid {
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                             alignment: .leading,
@@ -2922,6 +2941,7 @@ struct QuranView: View {
                 #endif
             } label: {
                 SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), grid: true)
+                    .gridSelectionRing(context.columnDetailRoute?.surahID == surah.id)
             }
             // The single tappable corner star, matching the main surah grid (SurahRow no longer draws its
             // own inline star).
@@ -3211,7 +3231,7 @@ struct QuranView: View {
     @ViewBuilder
     private func specialAyahCollection(_ rows: [(surah: Surah, ayah: Ayah)], context: SearchDisplayContext) -> some View {
         #if os(iOS)
-        if settings.gridMode {
+        if usesGrid {
             LazyVGrid(
                 columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                 alignment: .leading,
@@ -3240,6 +3260,7 @@ struct QuranView: View {
     private func specialAyahGridTile(item: (surah: Surah, ayah: Ayah), context: SearchDisplayContext) -> some View {
         SurahAyahRow(surah: item.surah, ayah: item.ayah, grid: true)
             .equatable()
+            .gridSelectionRing(context.columnDetailRoute == .ayahs(surahID: item.surah.id, ayah: item.ayah.id))
             .ayahContextMenuModifier(
                 surah: item.surah.id,
                 ayah: item.ayah.id,
@@ -3538,7 +3559,7 @@ struct QuranView: View {
         Section(header: surahBrowseHeader(showsRevelationOrder: showsRevelationOrder)) { }
             .padding(.bottom, -12)
 
-        if settings.gridMode {
+        if usesGrid {
             Section {
                 surahGrid(browsedSurahs, context: context)
             }
@@ -3598,6 +3619,9 @@ struct QuranView: View {
                 searchQuery: searchText,
                 grid: true
             )
+            // The surah filling the iPad/Mac detail column. Outside the Equatable SurahRow, so the ring
+            // moves with the selection whatever the row's `==` says.
+            .gridSelectionRing(context.columnDetailRoute?.surahID == surah.id)
         }
         // The same corner star every grid tile carries, OUTSIDE the menu so its tap target does not
         // fight the long press (see `GridTileMenu`).
@@ -3645,7 +3669,7 @@ struct QuranView: View {
             // Surah-NAME results honor grid mode, the same as browsing. Ayah-TEXT results (searchResultSections)
             // always stay a list - grid tiles can't show the matched ayah text.
             #if os(iOS)
-            if settings.gridMode {
+            if usesGrid {
                 if !filteredSurahs.isEmpty {
                     Section {
                         surahGrid(filteredSurahs, context: context)
@@ -3775,10 +3799,11 @@ struct QuranView: View {
             let juz = sectionData.juz
             Section(header: JuzHeader(juz: juz)) {
                 #if os(iOS)
-                if settings.gridMode {
+                if usesGrid {
+                    let openRowID = openJuzRowID(in: sectionData, context: context)
                     LazyVGrid(columns: surahGridColumns, alignment: .leading, spacing: 10) {
                         ForEach(sectionData.rows) { row in
-                            juzGridTile(row: row, context: context)
+                            juzGridTile(row: row, isOpen: row.id == openRowID, context: context)
                         }
                     }
                     .padding(.vertical, 4)
@@ -3807,7 +3832,7 @@ struct QuranView: View {
             let surahs = quranData.quran.filter { ($0.firstJuz ?? $0.ayahs.first?.juz) == juz.id }
             Section(header: JuzHeader(juz: juz)) {
                 #if os(iOS)
-                if settings.gridMode {
+                if usesGrid {
                     surahGrid(surahs, context: context)
                 } else {
                     ForEach(surahs, id: \.id) { surah in
@@ -3826,7 +3851,7 @@ struct QuranView: View {
 
     #if os(iOS)
     @ViewBuilder
-    private func juzGridTile(row: QuranData.JuzSectionData.Row, context: SearchDisplayContext) -> some View {
+    private func juzGridTile(row: QuranData.JuzSectionData.Row, isOpen: Bool, context: SearchDisplayContext) -> some View {
         if let surah = quranData.surah(row.surahID) {
             let route = preprocessedJuzRoute(row: row, surah: surah)
             let ayahID: Int? = { if case let .ayahs(_, ayah) = route { return ayah } else { return nil } }()
@@ -3845,6 +3870,7 @@ struct QuranView: View {
                 #endif
             } label: {
                 juzGridLabel(row: row, surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id))
+                    .gridSelectionRing(isOpen)
             }
             // The single tappable corner star, matching the main surah grid.
             .gridFavoriteStar(
@@ -3855,6 +3881,24 @@ struct QuranView: View {
                 settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
         }
+    }
+
+    /// The juz grouping's one tile to ring in a juz (`gridSelectionRing`). A surah is a tile in every juz
+    /// it runs through, and twice in a juz it spans (juz 2 is Al-Baqarah 2:142 to 2:252), so "the
+    /// detail's surah" alone would light several: it is the tile whose own route the detail opened,
+    /// else the detail's surah in the juz its ayah lies in, by its start rather than its end.
+    private func openJuzRowID(in section: QuranData.JuzSectionData, context: SearchDisplayContext) -> String? {
+        guard let detail = context.columnDetailRoute, let surah = quranData.surah(detail.surahID) else { return nil }
+        let rows = section.rows.filter { $0.surahID == surah.id }
+        if let exact = rows.first(where: { preprocessedJuzRoute(row: $0, surah: surah) == detail }) {
+            return exact.id
+        }
+        guard context.columnDetailJuz == section.juz.id else { return nil }
+        let start = rows.first { row in
+            if case .end = row.kind { return false }
+            return true
+        }
+        return (start ?? rows.first)?.id
     }
 
     @ViewBuilder
@@ -5059,6 +5103,14 @@ struct QuranView: View {
         if let scope = searchScope {
             filteredSurahs = filteredSurahs.filter { scope.contains(surah: $0.id, ayahCount: $0.numberOfAyahs) }
         }
+        // The route the detail column is keyed on (`quranSelectedDetail`), so a ring can never point at
+        // anything but what is on the right.
+        let columnDetailRoute = columnLayoutActive ? (selectedRoute ?? defaultDetailRoute) : nil
+        let columnDetailJuz = columnDetailRoute.flatMap { route -> Int? in
+            switch route {
+            case let .ayahs(surahID, ayah): return quranData.ayah(surah: surahID, ayah: ayah ?? 1)?.juz
+            }
+        }
 
         return SearchDisplayContext(
             // Makki, a juz or a surah pick lists its surahs with nothing typed.
@@ -5079,7 +5131,9 @@ struct QuranView: View {
                 let exactMatchBump = (exactMatch.surah != nil && exactMatch.ayah != nil) ? 1 : 0
                 let ayahCount = verseHits.count + exactMatchBump
                 return "\(ayahCount)\((hasMoreHits && !verseHits.isEmpty) ? "+" : "")"
-            }()
+            }(),
+            columnDetailRoute: columnDetailRoute,
+            columnDetailJuz: columnDetailJuz
         )
     }
 }

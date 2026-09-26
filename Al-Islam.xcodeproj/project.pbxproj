@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F23DE98D15164099B98F4C2E /* MoonColor.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 14D4A44207C24619B6F16532 /* MoonColor.jpg */; };
+		C705FD9FA5FA41CCBD067C6E /* MoonNormal.jpg in Resources */ = {isa = PBXBuildFile; fileRef = AA390D9223364C16990360F8 /* MoonNormal.jpg */; };
 		0054DFED9DF645C9B41FED4A /* JournalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E773490699CB43948ABA4A5A /* JournalView.swift */; };
 		088155563FBD4FF980EF3C0D /* ActivityLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1501D088F0EB4B50A25383D8 /* ActivityLog.swift */; };
 		0AC10EEE080046E08E43363C /* SunnahReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB947DE3A1743BF85A01EE6 /* SunnahReminders.swift */; };
@@ -255,6 +257,7 @@
 		72D47A0000000000000000C1 /* WidgetChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D47A0000000000000000A1 /* WidgetChrome.swift */; };
 		72D47A0000000000000000C2 /* DateLockWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D47A0000000000000000A2 /* DateLockWidgets.swift */; };
 		72D47A0000000000000000C3 /* WidgetGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D47A0000000000000000A3 /* WidgetGalleryView.swift */; };
+		1E99905E61CC41DFA38D148A /* MoonViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503EAC123A51494BBFE8504A /* MoonViewer.swift */; };
 		72D47A0000000000000000D0 /* PrayersProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725B42172AA00639009C8C91 /* PrayersProvider.swift */; };
 		72D47A0000000000000000D1 /* CountdownSimpleWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72C7DD752D79A59B00FC6058 /* CountdownSimpleWidget.swift */; };
 		72D47A0000000000000000D2 /* SolarMoonWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000F0 /* SolarMoonWidgets.swift */; };
@@ -620,6 +623,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		14D4A44207C24619B6F16532 /* MoonColor.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = MoonColor.jpg; sourceTree = "<group>"; };
+		AA390D9223364C16990360F8 /* MoonNormal.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = MoonNormal.jpg; sourceTree = "<group>"; };
 		00A42A0FACAD4FF286DC55D0 /* QuranQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranQuoteSource.swift; sourceTree = "<group>"; };
 		03C405470E084BB397E971F7 /* QuranSearchFilters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranSearchFilters.swift; sourceTree = "<group>"; };
 		0885783C9E3B44AF837AA57E /* QuranSearchFilterModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranSearchFilterModel.swift; sourceTree = "<group>"; };
@@ -781,6 +786,7 @@
 		72D47A0000000000000000A1 /* WidgetChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetChrome.swift; sourceTree = "<group>"; };
 		72D47A0000000000000000A2 /* DateLockWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateLockWidgets.swift; sourceTree = "<group>"; };
 		72D47A0000000000000000A3 /* WidgetGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetGalleryView.swift; sourceTree = "<group>"; };
+		503EAC123A51494BBFE8504A /* MoonViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoonViewer.swift; sourceTree = "<group>"; };
 		72D492873028643E00BEBF8E /* Mushaf PDFs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Mushaf PDFs"; sourceTree = "<group>"; };
 		72D4B0012FC2000000AA2001 /* QuranPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranPlannerView.swift; sourceTree = "<group>"; };
 		72DC16A92D7B0819000760BC /* Entitlements-Widget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Entitlements-Widget.entitlements"; sourceTree = "<group>"; };
@@ -990,6 +996,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		30FABF2C6AD34231997C48C2 /* Moon */ = {
+			isa = PBXGroup;
+			children = (
+				14D4A44207C24619B6F16532 /* MoonColor.jpg */,
+				AA390D9223364C16990360F8 /* MoonNormal.jpg */,
+			);
+			path = Moon;
+			sourceTree = "<group>";
+		};
 		2CD080F4DC014A60A55A9304 /* Islam */ = {
 			isa = PBXGroup;
 			children = (
@@ -1191,6 +1206,7 @@
 				72AC00A02F7E000000AAFC00 /* ForegroundAdhanPlayer.swift */,
 				726100012F81000000AAFF00 /* GlanceCard.swift */,
 				72D47A0000000000000000A3 /* WidgetGalleryView.swift */,
+				503EAC123A51494BBFE8504A /* MoonViewer.swift */,
 				72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */,
 				72CB00022F7F000000AAFD00 /* SkyColorsView.swift */,
 				72F000022F7A000000AAF800 /* MoonPhase.swift */,
@@ -1266,6 +1282,7 @@
 			children = (
 				72C3FE542F6A039400136976 /* namesofallah.qpk */,
 				72A15E00000000000000E000 /* Semantic */,
+				30FABF2C6AD34231997C48C2 /* Moon */,
 				7DAD00000000000000000027 /* Hadith */,
 				7DAF0000000000000000000D /* Tafsir */,
 				7A9A000000000000000000A0 /* Quran */,
@@ -1711,6 +1728,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F23DE98D15164099B98F4C2E /* MoonColor.jpg in Resources */,
+				C705FD9FA5FA41CCBD067C6E /* MoonNormal.jpg in Resources */,
 				7E5A00000000000000000009 /* Images.xcassets in Resources */,
 				724B8BD22FADD98500804C3D /* Uthmani.ttf in Resources */,
 				72FB30020000000000000009 /* Warsh.ttf in Resources */,
@@ -1945,6 +1964,7 @@
 				72D47A0000000000000000C1 /* WidgetChrome.swift in Sources */,
 				72D47A0000000000000000C2 /* DateLockWidgets.swift in Sources */,
 				72D47A0000000000000000C3 /* WidgetGalleryView.swift in Sources */,
+				1E99905E61CC41DFA38D148A /* MoonViewer.swift in Sources */,
 				72D47A0000000000000000D0 /* PrayersProvider.swift in Sources */,
 				72D47A0000000000000000D1 /* CountdownSimpleWidget.swift in Sources */,
 				72D47A0000000000000000D2 /* SolarMoonWidgets.swift in Sources */,

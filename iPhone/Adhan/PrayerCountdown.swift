@@ -255,12 +255,12 @@ struct PrayerCountdown: View {
     /// `caption2`, and 26 pt digits (36, then 30): Abu found them "a little too big" on 2026-09-05 and
     /// "still a little too big" on 2026-09-07.
     private func bigTimeLeft(next: Prayer) -> some View {
-        VStack(spacing: 2) {
+        VStack(spacing: Self.bigTimeLeftSpacing) {
             HStack(spacing: 4) {
                 Image(systemName: "hourglass")
                 Text("TIME LEFT")
             }
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: Self.captionSize, weight: .semibold))
             .foregroundStyle(.secondary)
 
             CountdownDigits(target: next.time)
@@ -271,7 +271,7 @@ struct PrayerCountdown: View {
                 // graph"; it stood on the progress bar for a day and came back on 2026-09-22
                 // ("bring back the ground between time left and the countdown"). Only the drawn
                 // ground: the solar graph keeps the whole block's top, below.
-                .reportingSkyGroundLine()
+                .reportingSkyGroundLine(offset: Self.groundLineOffset)
         }
         .frame(maxWidth: .infinity)
         // The solar GRAPH's horizon crossing sits just ABOVE this whole block - the sun rises and
@@ -279,6 +279,32 @@ struct PrayerCountdown: View {
         // cut through "TIME LEFT"). See `SkyCard.arcTopInset`.
         .reportingSkyDigitsTop()
     }
+
+    /// The caption's size and the gap under it. The digits are 26 pt bold rounded (`CountdownDigits`).
+    private static let captionSize: CGFloat = 10
+    private static let bigTimeLeftSpacing: CGFloat = 2
+
+    #if os(iOS)
+    /// Where the skyline's ground runs, from the top of the digits' frame: halfway between the INK of
+    /// "TIME LEFT" and the ink of the digits (Abu, 2026-09-25: "the ground for time left and the
+    /// countdown needs to be in between more in the middle"). It sat at the middle of the 2 pt between
+    /// the two FRAMES, but a frame is not its ink: the caption's runs a descender below its capitals, and
+    /// the digits' starts an ascender's worth above figures only cap-height tall. Measured on the 17 Pro
+    /// that put the line 2.7 pt under the caption and 7 pt above the digits. Worked out from the two
+    /// fonts' own metrics, so it stays in the middle if either size changes.
+    fileprivate static let groundLineOffset: CGFloat = {
+        let caption = UIFont.systemFont(ofSize: captionSize, weight: .semibold)
+        let plainDigits = UIFont.systemFont(ofSize: 26, weight: .bold)
+        let digits = plainDigits.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 26) } ?? plainDigits
+        // "TIME LEFT" is capitals: its ink ends at the baseline, a descender above its frame's bottom.
+        let captionInkGap = -caption.descender
+        // The digits' frame starts at the ascender, their ink at the cap height (lining figures).
+        let digitsInkGap = digits.ascender - digits.capHeight
+        return (digitsInkGap - bigTimeLeftSpacing - captionInkGap) / 2
+    }()
+    #else
+    fileprivate static let groundLineOffset: CGFloat = 0
+    #endif
 
     /// "until Fajr": the footer's right side, shared with the sky card.
     static func untilLabel(for prayer: Prayer) -> String {
@@ -757,11 +783,11 @@ struct SkyDigitsTopKey: PreferenceKey {
     }
 }
 
-/// The top of the countdown DIGITS (under the "TIME LEFT" caption), in `SkyCard.groundSpace`: where
-/// the skyline's drawn ground runs, between the caption and the digits. Separate from
-/// `SkyDigitsTopKey` because the two pin different things: the block's top pins the solar graph's
-/// horizon crossing, the digits' top pins the ground the pyramids and the mosque stand on. Nil until
-/// the first layout.
+/// Where the skyline's drawn ground runs, in `SkyCard.groundSpace`: between the "TIME LEFT" caption
+/// and the countdown DIGITS under it, halfway between their ink (`PrayerCountdown.groundLineOffset`).
+/// Separate from `SkyDigitsTopKey` because the two pin different things: the block's top pins the
+/// solar graph's horizon crossing, this point pins the ground the pyramids and the mosque stand on.
+/// Nil until the first layout.
 struct SkyGroundLineKey: PreferenceKey {
     static let defaultValue: CGFloat? = nil
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
@@ -784,13 +810,13 @@ private extension View {
         #endif
     }
 
-    /// Reports the view's top edge as the skyline's ground line (see `SkyGroundLineKey`).
+    /// Reports the skyline's ground line: this view's top edge moved by `offset` (see `SkyGroundLineKey`).
     @ViewBuilder
-    func reportingSkyGroundLine() -> some View {
+    func reportingSkyGroundLine(offset: CGFloat) -> some View {
         #if os(iOS)
         background(GeometryReader { geo in
             Color.clear.preference(key: SkyGroundLineKey.self,
-                                   value: geo.frame(in: .named(SkyCard.groundSpace)).minY)
+                                   value: geo.frame(in: .named(SkyCard.groundSpace)).minY + offset)
         })
         #else
         self

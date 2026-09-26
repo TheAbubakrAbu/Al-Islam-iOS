@@ -93,6 +93,59 @@ struct MoonPhase: Equatable {
 
         return MoonPhase(illumination: (1 + cos(inc)) / 2, isWaxing: limbAngle < 0)
     }
+
+    /// The Sun-Moon-Earth angle, 0 at full moon and pi at new: the 3D moon (`MoonViewer`) is lit from
+    /// this angle, and `illumination` is `(1 + cos i) / 2`, so it is recovered exactly.
+    var phaseAngle: Double { acos(min(max(2 * illumination - 1, -1), 1)) }
+
+    /// The moon's cycle around `date`: the new moon that began it, and the next new and full moons.
+    /// Found where `isWaxing` flips (it turns at full moon and at new), stepping six hours at a time
+    /// and then halving the step down to under a second; the low-precision theory above puts the
+    /// instant itself within an hour or two, which is more than a date needs. Nil only if the search
+    /// finds no flip, which the 29.5-day month rules out.
+    struct Cycle {
+        let previousNewMoon: Date
+        let nextNewMoon: Date
+        let nextFullMoon: Date
+
+        /// Days since the new moon, the moon's "age".
+        func age(at date: Date) -> Double { date.timeIntervalSince(previousNewMoon) / 86_400 }
+    }
+
+    static func cycle(around date: Date) -> Cycle? {
+        let waxing = compute(date).isWaxing
+        // Forward: while waxing the next flip is the full moon, while waning the new moon.
+        guard let first = nextFlip(from: date, step: 6 * 3600),
+              let second = nextFlip(from: first.addingTimeInterval(3600), step: 6 * 3600) else { return nil }
+        let nextFull = waxing ? first : second
+        let nextNew = waxing ? second : first
+        // Backward: while waxing the last flip was the new moon; while waning it was the full moon,
+        // and the new moon came before that.
+        guard let back = nextFlip(from: date, step: -6 * 3600) else { return nil }
+        let previousNew = waxing ? back : nextFlip(from: back.addingTimeInterval(-3600), step: -6 * 3600)
+        guard let previousNew else { return nil }
+        return Cycle(previousNewMoon: previousNew, nextNewMoon: nextNew, nextFullMoon: nextFull)
+    }
+
+    /// The first instant after (or, with a negative `step`, before) `start` at which `isWaxing` is
+    /// no longer what it is at `start`.
+    private static func nextFlip(from start: Date, step: TimeInterval) -> Date? {
+        let state = compute(start).isWaxing
+        var near = start
+        for _ in 0..<(32 * 86_400 / Int(abs(step))) {
+            let far = near.addingTimeInterval(step)
+            if compute(far).isWaxing != state {
+                var inside = near, outside = far
+                for _ in 0..<16 {
+                    let mid = Date(timeIntervalSinceReferenceDate: (inside.timeIntervalSinceReferenceDate + outside.timeIntervalSinceReferenceDate) / 2)
+                    if compute(mid).isWaxing == state { inside = mid } else { outside = mid }
+                }
+                return outside
+            }
+            near = far
+        }
+        return nil
+    }
 }
 
 // MARK: - Drawing

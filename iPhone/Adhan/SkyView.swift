@@ -148,6 +148,15 @@ private struct SolarArcShape: Shape {
     }
 }
 
+/// The sky card's two time lines ("Started at", "Starts at"), in `SkyCard.groundSpace`, reported by
+/// `SkyPrayerColumn` so the skyline can span them.
+struct SkyTimeLineFramesKey: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
 // MARK: - Stars
 
 /// A field of faint, slowly twinkling stars, faded in over the night prayers.
@@ -322,12 +331,12 @@ struct SkyCard: View {
     ///   all the way down and up"; 2026-09-18: the arc went above the text and the countdown
     ///   entirely, so no text is struck through by the graph).
     /// - The GROUND the pyramids and the mosque stand on - the horizon line, the silhouette and the
-    ///   ground band - runs BETWEEN "TIME LEFT" and the digits (`groundLineTop`, the digits' top,
-    ///   measured through `SkyGroundLineKey`): the caption sits in the sky between the pyramids and
-    ///   the mosque, and the digits and the bar stand under the ground. Abu, 2026-09-21: first
-    ///   "between Time Left and the countdown, just the ground, not the graph", then "put the ground
-    ///   level where the countdown progress view is"; 2026-09-22: "bring back the ground between
-    ///   time left and the countdown".
+    ///   ground band - runs BETWEEN "TIME LEFT" and the digits (`groundLineTop`, halfway between
+    ///   their ink, measured through `SkyGroundLineKey`): the caption sits in the sky between the
+    ///   pyramids and the mosque, and the digits and the bar stand under the ground. Abu, 2026-09-21:
+    ///   first "between Time Left and the countdown, just the ground, not the graph", then "put the
+    ///   ground level where the countdown progress view is"; 2026-09-22: "bring back the ground
+    ///   between time left and the countdown"; 2026-09-25: "in between more in the middle".
     private let arcTopInset: CGFloat = 68
     private let arcBottomInset: CGFloat = 88
 
@@ -340,15 +349,27 @@ struct SkyCard: View {
     /// The graph's horizon crossing sits this far above the countdown block, in the air over "TIME LEFT".
     private static let groundAir: CGFloat = 4
 
-    /// The top of the countdown DIGITS (under the "TIME LEFT" caption), as `PrayerCountdown` reports
-    /// it through `SkyGroundLineKey`; nil until the first layout. The estimate is the block's top
-    /// (`estimatedDigitsTop`) plus the caption's line and the 2 pt under it, so the first frame's
-    /// ground does not jump either.
+    /// Where the drawn ground runs: halfway between the ink of the "TIME LEFT" caption and the ink of
+    /// the digits under it, as `PrayerCountdown` reports it through `SkyGroundLineKey`; nil until the
+    /// first layout. The estimate is the block's top (`estimatedDigitsTop`) plus the caption's line,
+    /// the 2 pt under it and the step down to the ink midpoint, so the first frame's ground does not
+    /// jump either.
     @State private var groundLineTop: CGFloat?
-    private static let estimatedGroundLineTop: CGFloat = 122
-    /// The ground line sits this far above the digits' frame: the middle of the 2 pt between the
-    /// caption and the digits, so it touches neither.
-    private static let groundLineAir: CGFloat = 1
+    private static let estimatedGroundLineTop: CGFloat = 123
+
+    /// The two prayer columns' time lines ("Started at 8:15 PM", "Starts at 5:48 AM") in the card's
+    /// coordinate space, as `SkyPrayerColumn` reports them through `SkyTimeLineFramesKey`: the skyline
+    /// under each column spans exactly its line (see `SkylineSpans`). Empty until the first layout,
+    /// which draws that one frame with the skyline's fractional layout.
+    @State private var timeLineFrames: [CGRect] = []
+
+    /// The moon viewer while it is open (`MoonViewer`), and the namespace the moon it opened from is
+    /// matched in, so on iOS 18 the viewer grows out of that moon and shrinks back into it.
+    @State private var moonViewer: MoonViewerRequest?
+    @Namespace private var moonZoom
+    /// When the touch now on the card began: a TAP on the night's moon opens the viewer, while a hold
+    /// or a drag that starts on it scrubs as it always has.
+    @State private var touchBegan: Date?
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -469,6 +490,9 @@ struct SkyCard: View {
         .onPreferenceChange(SkyGroundLineKey.self) { top in
             if top != groundLineTop { groundLineTop = top }
         }
+        .onPreferenceChange(SkyTimeLineFramesKey.self) { frames in
+            if frames != timeLineFrames { timeLineFrames = frames }
+        }
         .overlay(alignment: .top) { scrubReadout }
         .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
         .frame(height: height)
@@ -479,6 +503,34 @@ struct SkyCard: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
         )
+        // Full screen, the "whole space" (Abu, 2026-09-25). On iOS 18 it zooms out of the moon that
+        // was touched; before that it rises like any full-screen cover.
+        .fullScreenCover(item: $moonViewer) { request in
+            MoonViewer(date: request.date, isLive: request.isLive)
+                .moonZoomTransition(request.source, in: moonZoom)
+        }
+        #if DEBUG
+        // `-openMoonViewer [footer|arc]`: opens the viewer once, 1.5 s after the card first shows, for
+        // screenshot runs (a tap cannot be scripted into a launch).
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard !Self.debugMoonViewerOpened, let index = arguments.firstIndex(of: "-openMoonViewer") else { return }
+            Self.debugMoonViewerOpened = true
+            let source = arguments.indices.contains(index + 1) && !arguments[index + 1].hasPrefix("-") ? arguments[index + 1] : "footer"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { openMoonViewer(from: source) }
+        }
+        #endif
+    }
+
+    #if DEBUG
+    private static var debugMoonViewerOpened = false
+    #endif
+
+    /// Opens the moon viewer for the moment the footer's moon shows when nothing is being dragged:
+    /// the browsed day, or now.
+    private func openMoonViewer(from source: String) {
+        settings.hapticFeedback()
+        moonViewer = MoonViewerRequest(date: selectedDay.date ?? now, isLive: selectedDay.date == nil, source: source)
     }
 
     /// Everything drawn over the sky: the two prayer columns, the moon and clock, and the countdown.
@@ -503,6 +555,7 @@ struct SkyCard: View {
                 )
                 .equatable()
             }
+            .allowsHitTesting(false)
 
             Spacer(minLength: 0)
 
@@ -512,6 +565,7 @@ struct SkyCard: View {
                 // Big and centred over the bar (Abu, 2026-09-04): the card's centrepiece.
                 PrayerCountdown(presentation: .skyFooter)
                     .equatable()
+                    .allowsHitTesting(false)
             }
 
             // The moon on the left, the prayer the countdown runs to on the right; the adhan's stop
@@ -524,8 +578,9 @@ struct SkyCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        // Only the stop button is interactive; the rest is decoration over the drag area.
-        .allowsHitTesting(adhanPlayer.isPlaying)
+        // Only the footer's moon and the adhan's stop button take touches; the columns and the
+        // countdown are decoration over the drag area (each opts out above), and so is the rest of
+        // the footer line, so a drag can still start almost anywhere on the card.
     }
 
     /// One side of the header: the label, the prayer's symbol and name, and when it started or starts.
@@ -564,6 +619,11 @@ struct SkyCard: View {
                         .foregroundStyle(.white.opacity(0.75))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        // The skyline under this column spans exactly this line (see `SkylineSpans`).
+                        .background(GeometryReader { geo in
+                            Color.clear.preference(key: SkyTimeLineFramesKey.self,
+                                                   value: [geo.frame(in: .named(SkyCard.groundSpace))])
+                        })
                 }
             }
         }
@@ -585,7 +645,16 @@ struct SkyCard: View {
                 .frame(maxWidth: .infinity)
         } else {
             HStack(spacing: 6) {
-                moonRow
+                // Tap the moon to see it up close, in 3D (Abu, 2026-09-25). A plain style, so only
+                // the moon and its caption take the tap, never the whole list row.
+                Button {
+                    openMoonViewer(from: "footer")
+                } label: {
+                    moonRow
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the moon in 3D")
 
                 Spacer(minLength: 8)
 
@@ -593,6 +662,7 @@ struct SkyCard: View {
                     Text(PrayerCountdown.untilLabel(for: next))
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.8))
+                        .allowsHitTesting(false)
                 }
             }
             .lineLimit(1)
@@ -618,6 +688,7 @@ struct SkyCard: View {
             let moonPhase = MoonPhase.on(moonDate)
             HStack(spacing: 6) {
                 MoonPhaseView(date: moonDate, diameter: 18)
+                    .moonZoomSource("footer", in: moonZoom)
 
                 // The name and, after a dot, how lit it actually is - the one thing the phase NAME
                 // can't tell you ("Waxing Crescent" spans a fingernail to nearly half). The glyph
@@ -687,7 +758,7 @@ struct SkyCard: View {
             // "TIME LEFT" and the digits, below the graph's crossing (see `arcTopInset`). The plain
             // card has no skyline, so its line stays on the graph.
             let groundLineY = showsScene
-                ? (groundLineTop ?? Self.estimatedGroundLineTop) - Self.groundLineAir
+                ? (groundLineTop ?? Self.estimatedGroundLineTop)
                 : horizonY
             let sunHeight = curve.height(at: displayedFraction)
             let sunPoint = CGPoint(
@@ -760,11 +831,19 @@ struct SkyCard: View {
                 if showsScene {
                     let location = groundLineY / max(rect.height, 1)
                     let sky = SkyScene.skyComponents(of: skyColors, at: location)
+                    // Each structure spans its column's time line: the left-hand line and the
+                    // right-hand one, whichever column that is (right to left swaps them). The
+                    // pyramids' faces are lit from the marker on the arc.
+                    let lines = timeLineFrames.sorted { $0.minX < $1.minX }
+                    let spans = lines.count == 2
+                        ? SkylineSpans(west: lines[0].minX...lines[0].maxX, east: lines[1].minX...lines[1].maxX)
+                        : nil
                     // Keyed on the sky itself, which is the only thing the silhouette is derived
                     // from now. One modifier: stacking three `.animation`s would let them fight over
                     // the same transaction.
                     Color.clear
-                        .skylineSilhouette(sky: sky, horizonY: groundLineY, style: sceneStyle)
+                        .skylineSilhouette(sky: sky, horizonY: groundLineY, style: sceneStyle, spans: spans,
+                                           light: SkylineLight(source: sunPoint, day: dayPresence))
                         // Matches the gradient's own duration, scrub included - the silhouette is mixed
                         // FROM the sky, so if the two turn at different speeds the mosque drifts out of
                         // step with the sky behind it.
@@ -808,13 +887,23 @@ struct SkyCard: View {
                     // as a sliver of a thing rather than as a position on the path. The footer's
                     // glyph is the one that shows the real phase, and it names it (Abu, 2026-09-16).
                     MoonPhaseView(date: moonDate, diameter: 20, alwaysFull: true)
+                        .moonZoomSource("arc", in: moonZoom)
                         .opacity(1 - dayPresence)
                         .position(sunPoint)
                 }
             }
             .contentShape(Rectangle())
-            .gesture(dragGesture(in: rect, window: window))
+            .gesture(dragGesture(in: rect, window: window, liveMoon: liveMoonPoint(curve: curve, window: window, shape: shape, rect: rect)))
         }
+    }
+
+    /// Where the night's moon marker sits for the LIVE moment, or nil while the sun is the marker (or
+    /// the skyline, and with it the moon, is off). A tap there opens the moon viewer.
+    private func liveMoonPoint(curve: SolarCurve, window: SolarWindow, shape: SolarArcShape, rect: CGRect) -> CGPoint? {
+        let fraction = window.fraction(of: now)
+        guard settings.showSkyScene, curve.daylightPresence(at: fraction) < 0.5 else { return nil }
+        return CGPoint(x: xPosition(forFraction: fraction, in: rect),
+                       y: shape.yPosition(of: curve.height(at: fraction), in: rect))
     }
 
     /// Shown only while the adhan is actually sounding in-app. The full recording runs for minutes, so there
@@ -843,18 +932,30 @@ struct SkyCard: View {
 
     // MARK: Interaction
 
-    private func dragGesture(in rect: CGRect, window: SolarWindow) -> some Gesture {
+    private func dragGesture(in rect: CGRect, window: SolarWindow, liveMoon: CGPoint?) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if !scrubber.isScrubbing {
                     settings.hapticFeedback()
                     scrubber.begin(timeline: highlightTimeline)
+                    touchBegan = value.time
                 }
                 let fraction = fractionOf(x: value.location.x, in: rect)
                 scrubber.scrub(to: window.date(atFraction: fraction))
             }
-            .onEnded { _ in
+            .onEnded { value in
                 scrubber.end()
+                // A quick tap ON the night's moon opens it up close. The scrub it began was at the
+                // moon's own position, so the card barely stirs before the viewer covers it; a drag
+                // or a hold still only scrubs.
+                let began = touchBegan
+                touchBegan = nil
+                guard let liveMoon, let began, value.time.timeIntervalSince(began) < 0.4 else { return }
+                let moved = hypot(value.translation.width, value.translation.height)
+                let offMoon = hypot(value.startLocation.x - liveMoon.x, value.startLocation.y - liveMoon.y)
+                if moved < 10, offMoon < 26 {
+                    openMoonViewer(from: "arc")
+                }
             }
     }
 

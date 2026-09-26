@@ -189,6 +189,10 @@ enum TipCatalog {
                title: "The moon is tonight's moon",
                detail: "The moon at the foot of the sky card shows the true phase and how much of it is lit. Pick another day under the prayer list and it shows that night's moon instead.",
                place: "Adhan tab"),
+        AppTip(id: "adhan.moon3d", area: .adhan, group: "THE SKY", systemImage: "moon.circle.fill",
+               title: "Tap the moon to hold it",
+               detail: "Tap the moon at the foot of the sky card (or, with the skyline on, the one riding the arc at night) and it fills the screen as a globe, lit the way it is that night. Drag to turn it, pinch to zoom, double-tap to face Earth, and slide through the month to watch the phases move. Full Light shows the whole face at once.",
+               place: "Adhan tab, with Show Sky on"),
         AppTip(id: "adhan.skyline", area: .adhan, group: "THE SKY", systemImage: "building.columns.fill",
                title: "Give the horizon a skyline",
                detail: "Skyline draws pyramids and a mosque along the horizon, in the app and on the Solar Arc and Day & Night widgets. Choose the pair, only pyramids, or only mosques.",
@@ -1169,16 +1173,20 @@ struct TipsHubView: View {
 /// owns it. These were the hardest things in the app to find: Nagging Mode sat three pushes deep, the
 /// tracker's pause lives on a history page, Highlight Themes behind a row named MORE.
 ///
-/// The cards are Buttons feeding ONE `pushDestination` on the list, never a link apiece: several
-/// NavigationLinks inside one List row all fire on any tap (see `one-link-per-list-row`). Where that
-/// push is unavailable (iOS 15) or wrong (the iPad sidebar, where it would push inside the narrow
-/// column), `rows: true` renders the same tips as ordinary rows, whose links open in the detail.
+/// The cards are Buttons feeding ONE destination, never a link apiece: several NavigationLinks inside
+/// one List row all fire on any tap (see `one-link-per-list-row`). On iPhone that is a `pushDestination`
+/// on the list; in the iPad/Mac sidebar, where a push would land inside the narrow column, it is the
+/// split's detail column (`SettingsDestination.spotlight`). Only iOS 15, which has neither, takes
+/// `rows: true`: the same tips as ordinary rows.
 struct SettingsSpotlightSection: View {
     @ObservedObject private var settings = Settings.shared
 
     /// True for the fallback shape: one settings row per tip.
     let rows: Bool
-    /// The iPhone stack's programmatic push (`SettingsView.spotlightTarget`).
+    /// The card whose screen fills the iPad/Mac detail column. It wears the ring every sidebar grid
+    /// marks its open tile with (`gridSelectionRing`), since the hub rows drop their highlight then.
+    var selectedTipID: String? = nil
+    /// Opens a card: the iPhone push (`SettingsView.spotlightTarget`) or the split's detail column.
     var open: (AppTip) -> Void = { _ in }
 
     var body: some View {
@@ -1192,7 +1200,8 @@ struct SettingsSpotlightSection: View {
                                 .revealsAdvancedSettings(tip.advanced)
                         }) {
                             // The card's short title: the tip's own is written for a list row with
-                            // room to wrap, and truncated in the iPad sidebar ("Traveling mode turns its...").
+                            // room to wrap, and truncated in these rows when the iPad sidebar still
+                            // used them ("Traveling mode turns its...").
                             SettingsRowLabel(title: tip.card?.title ?? tip.title, systemImage: tip.systemImage,
                                              subtitle: tip.place,
                                              tint: tip.area.tint, secondaryTint: tip.area.secondaryTint)
@@ -1209,6 +1218,7 @@ struct SettingsSpotlightSection: View {
                                 open(tip)
                             } label: {
                                 SpotlightCard(tip: tip)
+                                    .gridSelectionRing(tip.id == selectedTipID, cornerRadius: SpotlightCard.cornerRadius)
                             }
                             .buttonStyle(.plain)
                         }
@@ -1246,6 +1256,9 @@ extension SettingsSearchEntry {
 }
 
 private struct SpotlightCard: View {
+    /// The card's own curve, which a selection ring drawn on it must follow.
+    static let cornerRadius: CGFloat = 18
+
     let tip: AppTip
 
     var body: some View {
@@ -1282,15 +1295,15 @@ private struct SpotlightCard: View {
         // The area's own colour as a wash, not glass: the cards sit on a list row, where clear glass
         // has nothing behind it to bend and showed no surface at all in the light themes.
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                 .fill(LinearGradient(colors: [tint.opacity(0.16), (tip.area.secondaryTint ?? tint).opacity(0.07)],
                                      startPoint: .topLeading, endPoint: .bottomTrailing))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
                 .strokeBorder(tint.opacity(0.28), lineWidth: 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }
 }
 #endif

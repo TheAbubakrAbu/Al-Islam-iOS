@@ -134,6 +134,8 @@ enum CloudManifest {
         "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
         "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
         "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
+        // The page reader's learned fold and find-bar band pairs: this screen's geometry, like the one above.
+        "mushaf.foldTwins", "mushaf.findTwins",
         // More of the same, found by `-cloudKeyAudit` in a live domain (2026-09-21): the source scan
         // cannot see a key declared as `let flag = "..."` or passed as an argument. The locator
         // caches are LOCATION (the masjids and halal places around the home city).

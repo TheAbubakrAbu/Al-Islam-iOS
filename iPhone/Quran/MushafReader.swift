@@ -285,6 +285,40 @@ private let mushafBarsCollapsedKey = "mushafBottomBarsCollapsed"
 /// state change: nothing in the reader's body reads the band itself.
 private final class MushafPagerBandBox {
     var size: CGSize = .zero
+    /// The band the pager had just before a chrome change it takes in ONE step (the fold, the find bar),
+    /// and which of the two it was, until the pager reports the band it lands on (`updatePagerSize`).
+    /// Nil otherwise.
+    var bandBeforeJump: (size: CGSize, kind: MushafChromeJump)?
+    /// The last such change, for a moment after it lands: a change can settle a point further on its
+    /// next report, and that second report is where the page actually rests, so it is the twin that has
+    /// to be learned. The find field did exactly this (401 then 400 on the 17 Pro, focusing made it a
+    /// point taller) until its height was fixed (`findFieldHeight`); this keeps any other such settle
+    /// from teaching a twin the page never rests at.
+    var recentJump: (from: CGSize, kind: MushafChromeJump, at: CFTimeInterval)?
+    /// Bumped by every fold and every find-bar open or close: a change's delayed second half (the room
+    /// going once the chrome has faded) checks it, so a quicker tap that overtook it wins.
+    var foldGeneration = 0
+    var findGeneration = 0
+}
+
+/// The two chrome changes the pager takes in one step, each with its own learned twin geometry
+/// (`MushafPageRenderCache.noteTwins`).
+enum MushafChromeJump {
+    case fold, find
+}
+
+/// Page-mode chrome that LEAVES fades out where it stands before its room goes; chrome that ARRIVES
+/// fades into a room the page has already left (`SurahPageReader.applyBarsCollapsed`, `showFindBar`).
+/// File scope: the reader is generic and cannot hold static stored constants.
+private let mushafChromeFadeOut: Double = 0.14
+private let mushafChromeFadeIn: Double = 0.2
+
+/// No animation at all, for the one-step half of a chrome change: the pager and every page in it take
+/// the new band at once, whatever transaction the tap that caused it was in.
+private var mushafStillTransaction: Transaction {
+    var transaction = Transaction(animation: nil)
+    transaction.disablesAnimations = true
+    return transaction
 }
 
 struct SurahPageReader<Controls: View>: View {
@@ -424,13 +458,17 @@ struct SurahPageReader<Controls: View>: View {
     ///
     /// Plain state that SEEDS from the stored preference, not the `@AppStorage` value itself
     /// (2026-09-23). Folded straight off `@AppStorage`, the fold never animated: the bars popped in one
-    /// frame and the page's band jumped 529 -> 665 pt with nothing in between, so the page changed
-    /// size in one cut, while the same fold on state (Al-Quran's reader) sweeps the band through every
-    /// height and the page rides it. Both measured on the 17 Pro simulator; Abu's "keeps resizing".
+    /// frame. On state the header and bars animate; the pager itself deliberately does not (it takes
+    /// the new band in one step, see `applyBarsCollapsed`).
     ///
     /// `-mushafCollapseBars` (DEBUG) forces it collapsed for headless screenshots, in `.onAppear` and on
     /// the state alone, so a screenshot run never writes the user's real preference.
     @State private var bottomBarsCollapsed = UserDefaults.standard.bool(forKey: mushafBarsCollapsedKey)
+    /// The header and bars' OPACITY, held apart from their room (`bottomBarsCollapsed` is the room): a
+    /// fold fades the chrome out first and only then takes its room away, an unfold gives the room back
+    /// first and then fades the chrome into it (`applyBarsCollapsed`). It flips at the tap, so it is
+    /// also the fold's intent, which the chevron shows.
+    @State private var barsFaded = UserDefaults.standard.bool(forKey: mushafBarsCollapsedKey)
     /// The typed-number fast path: an alert with a number pad, for jumping without scrolling the wheel.
     /// An alert (not an inline field) because the whole reader ignores the keyboard inset by design - the
     /// page must never resize - so an inline field at the bottom would be covered by the keyboard it raises.
@@ -450,6 +488,13 @@ struct SurahPageReader<Controls: View>: View {
     @State private var showFindFilterSheet = false
     @State private var currentMatchIndex = 0
     @FocusState private var pageSearchFocused: Bool
+    /// The find field's height, fixed (see `pageFindBar`), and scaled with the body text it holds.
+    @ScaledMetric(relativeTo: .body) private var findFieldHeight: CGFloat = 22
+    /// The find bar's room at the top (layout) and its opacity, split like the fold's (`barsFaded`):
+    /// opening gives the page its band in one step and then fades the bar in, closing fades the bar out
+    /// and then takes its room away (`showFindBar`, `hideFindBar`). `searchActive` is the intent.
+    @State private var findBarRoom = false
+    @State private var findBarVisible = false
     /// Non-nil when the find has been widened from THIS PAGE to a whole surah - it holds which surah, captured
     /// when the reader asked for it. Captured rather than re-read from the visible page, because widening then
     /// stepping through the matches turns pages, which would otherwise keep moving the target underfoot.
@@ -815,18 +860,43 @@ struct SurahPageReader<Controls: View>: View {
     private func updatePagerSize(_ size: CGSize) {
         let rounded = CGSize(width: size.width.rounded(), height: size.height.rounded())
         guard rounded != pagerBand.size else { return }
+        let beforeJump = pagerBand.bandBeforeJump
+        pagerBand.bandBeforeJump = nil
         pagerBand.size = rounded
         // The rule on the NEW size: `spreadActive` still reads the old state in this call.
         let ruleMet = Self.spreadRule(rounded)
         if ruleMet != spreadRuleMet { spreadRuleMet = ruleMet }
         // The render cache's "current geometry" is the band ONE page gets: half of it across a spread.
-        let opens = settings.mushafTwoPageSpread && UIDevice.current.userInterfaceIdiom != .phone && ruleMet
-        MushafPageRenderCache.noteVisibleGeometry(band: opens ? CGSize(width: rounded.width / 2, height: rounded.height) : rounded)
+        let pageBand = onePageBand(in: rounded, ruleMet: ruleMet)
+        MushafPageRenderCache.noteVisibleGeometry(band: pageBand)
+        // The band a fold (or the find bar) lands on. The pager takes either change in one step (see
+        // its `.animation(nil, value:)` pair), so this one report is the whole change, and the page band
+        // it came from is its twin across that change.
+        var jump = beforeJump
+        if let beforeJump {
+            pagerBand.recentJump = (beforeJump.size, beforeJump.kind, CACurrentMediaTime())
+        } else if let recent = pagerBand.recentJump, CACurrentMediaTime() - recent.at < 0.15 {
+            // The same change settling a point further (`recentJump`): it lands HERE.
+            jump = (recent.from, recent.kind)
+        }
+        if let jump, jump.size.width == rounded.width {
+            MushafPageRenderCache.noteTwins(
+                jump.kind,
+                from: onePageBand(in: jump.size, ruleMet: Self.spreadRule(jump.size)),
+                to: pageBand
+            )
+        }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-pageFitLog") {
             NSLog("PAGEFIT pager band %.0fx%.0f spreadRule=%d", rounded.width, rounded.height, ruleMet ? 1 : 0)
         }
         #endif
+    }
+
+    /// The band ONE page gets from a pager band: half of it across an open spread.
+    private func onePageBand(in band: CGSize, ruleMet: Bool) -> CGSize {
+        let opens = settings.mushafTwoPageSpread && UIDevice.current.userInterfaceIdiom != .phone && ruleMet
+        return opens ? CGSize(width: band.width / 2, height: band.height) : band
     }
 
     /// Folds the bottom chrome (and the pinned header) away, or brings it back, and records the choice
@@ -835,15 +905,103 @@ struct SurahPageReader<Controls: View>: View {
     /// re-evaluates for it, work that has no place inside the fold's frames. Each write carries its own
     /// value, so two quick taps land in order.
     private func setBarsCollapsed(_ collapsed: Bool) {
-        withAnimation(.easeInOut(duration: 0.25)) {
-            bottomBarsCollapsed = collapsed
-            // The wheel hangs off the footer being folded away; it goes with it.
-            activePicker = nil
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        applyBarsCollapsed(collapsed)
+        DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut + 0.35) {
             if UserDefaults.standard.bool(forKey: mushafBarsCollapsedKey) != collapsed {
                 UserDefaults.standard.set(collapsed, forKey: mushafBarsCollapsedKey)
             }
+        }
+    }
+
+    /// The fold itself, without the stored preference (the DEBUG `-pageTurnScript` "collapse" step
+    /// uses it too, and must never write the user's real setting).
+    ///
+    /// Only the CHROME animates, and never over the text. The page takes its new band in ONE step, so it
+    /// switches layout once and never rides a sweep: the fold used to sweep the pager through every height
+    /// between the two bands, and the page, kept at its old layout, sat small over an empty strip for half a
+    /// second on a fold and shrank into a narrow column on an unfold before jumping. The two layouts have
+    /// different line breaks, so no scale of one ever matches the other (Abu, 2026-09-23: "collapsing and
+    /// uncollapsing the animation is horrible").
+    ///
+    /// Since 2026-09-25 the room and the chrome move in ORDER (Abu: "When I collapse and uncollapse it's
+    /// okay but it can be better"). Recorded at 60 fps, the one-step fold switched the page on its first
+    /// frame while the bars were still fading, so for five frames the bars' glass faded over the new
+    /// layout's last lines. Now a fold fades the header and bars out where they stand, over a page that
+    /// has not moved (`mushafChromeFadeOut`), and only then takes their room, the page switching once into
+    /// the whole band; an unfold gives the room back first (the page switches to its smaller layout at the
+    /// tap) and the chrome then fades into the room the page has left (`mushafChromeFadeIn`). Nothing
+    /// ever draws over the text, and nothing ever squeezes it.
+    ///
+    /// The layout for the new band is normally fitted already: `MushafPageRenderCache` learns each fold's
+    /// band pair (`noteTwins`) and fits the visible page for its twin while the reader rests.
+    private func applyBarsCollapsed(_ collapsed: Bool) {
+        guard collapsed != barsFaded else { return }
+        pagerBand.foldGeneration &+= 1
+        let generation = pagerBand.foldGeneration
+        if collapsed {
+            withAnimation(.easeIn(duration: mushafChromeFadeOut)) {
+                barsFaded = true
+                // The wheel hangs off the footer being folded away; it goes with it.
+                activePicker = nil
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+                // A quicker unfold overtook this fold before its room went: nothing to take away.
+                guard pagerBand.foldGeneration == generation else { return }
+                pagerBand.bandBeforeJump = (pagerBand.size, .fold)
+                withTransaction(mushafStillTransaction) { bottomBarsCollapsed = true }
+            }
+        } else {
+            // Still folded (not an unfold that overtook a fold mid-fade): the room comes back first.
+            if bottomBarsCollapsed {
+                pagerBand.bandBeforeJump = (pagerBand.size, .fold)
+                withTransaction(mushafStillTransaction) { bottomBarsCollapsed = false }
+            }
+            withAnimation(.easeOut(duration: mushafChromeFadeIn)) { barsFaded = false }
+        }
+    }
+
+    /// Opens the find bar the way an unfold brings the bars back: its room first, in one step (the page
+    /// takes its layout for the shorter band at the tap, normally fitted already, see `noteTwins`), then
+    /// the bar fades into it. It used to slide in with the page riding the sweep, and the page, kept at its
+    /// old layout, shrank into a column three quarters wide for a third of a second before cutting to its
+    /// new fit (Abu, 2026-09-25: "When I click on search please fix that looks awful").
+    private func showFindBar() {
+        pagerBand.findGeneration &+= 1
+        if !findBarRoom {
+            pagerBand.bandBeforeJump = (pagerBand.size, .find)
+            withTransaction(mushafStillTransaction) { findBarRoom = true }
+        }
+        withAnimation(.easeOut(duration: mushafChromeFadeIn)) { findBarVisible = true }
+    }
+
+    /// Closes the find bar the way a fold clears the bars: the bar fades out where it stands, then its
+    /// room goes and the page switches once to the full band. `immediately` skips the fade, for a close
+    /// that turns the page at the same moment (`jumpToReference`): the band must be settled before the
+    /// turn's slide starts, never change underneath it.
+    private func hideFindBar(immediately: Bool = false) {
+        pagerBand.findGeneration &+= 1
+        let generation = pagerBand.findGeneration
+        func removeRoom() {
+            guard findBarRoom else { return }
+            pagerBand.bandBeforeJump = (pagerBand.size, .find)
+            withTransaction(mushafStillTransaction) {
+                findBarVisible = false
+                findBarRoom = false
+                pageSearchText = ""
+                // The find always REOPENS scoped to the page you are on - widening to the surah is a
+                // deliberate per-search choice, not a mode that quietly persists into the next one.
+                findSurahID = nil
+            }
+        }
+        if immediately {
+            removeRoom()
+            return
+        }
+        withAnimation(.easeIn(duration: mushafChromeFadeOut)) { findBarVisible = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+            // Reopened before the fade finished: the room stays.
+            guard pagerBand.findGeneration == generation else { return }
+            removeRoom()
         }
     }
 
@@ -854,9 +1012,14 @@ struct SurahPageReader<Controls: View>: View {
         // The live find state, computed ONCE per evaluation and shared by the find bar and the pages:
         // every matching ayah on the page gets its matched substrings in accent, and the whole page drops
         // its tajweed colors while the query is live (see `MushafPageTextView.searchHighlight`).
-        let findMatches: [MushafFindMatch] = searchActive ? matchesOnPage(pages) : []
+        // Live while the bar is on screen, its fade-out included (`findBarRoom` outlasts `searchActive`
+        // by the fade): the bar keeps exactly what it showed until its room goes. Keyed on the intent
+        // alone, the close's first pass had the query but no matches, and "No matches on this page."
+        // grew the fading bar by 21 pt for a frame, the page's band dipping with it.
+        let findShown = searchActive || findBarRoom
+        let findMatches: [MushafFindMatch] = findShown ? matchesOnPage(pages) : []
         let liveSearch: (matches: [HighlightedAyahRef], term: String, rule: SearchWordRule)? = {
-            guard searchActive else { return nil }
+            guard findShown else { return nil }
             // Plain words: a typed symbol is inert in the search, so it must not reach the paint either.
             let term = QuranSearchFilters.plainWords(pageSearchText)
             guard !term.isEmpty else { return nil }
@@ -924,6 +1087,11 @@ struct SurahPageReader<Controls: View>: View {
                             .onChange(of: proxy.size) { updatePagerSize($0) }
                     }
                 )
+                // A fold moves the chrome, never the page: the pager (and every page in it) takes the
+                // new band in one step while the header and bars animate. See `applyBarsCollapsed`. The
+                // find bar's room the same way (`showFindBar`).
+                .animation(nil, value: bottomBarsCollapsed)
+                .animation(nil, value: findBarRoom)
             }
         }
         // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
@@ -936,20 +1104,19 @@ struct SurahPageReader<Controls: View>: View {
             topSurahHeader
                 .frame(height: bottomBarsCollapsed ? 0 : nil)
                 .clipped()
-                .opacity(bottomBarsCollapsed ? 0 : 1)
-                .allowsHitTesting(!bottomBarsCollapsed)
+                .opacity(barsFaded ? 0 : 1)
+                .allowsHitTesting(!barsFaded)
         }
         // Collapse folds the bars via height+opacity with the views still MOUNTED - an `if` removal
         // snapshots the glass background as a hard black box on the way out (the artifact SurahView's
-        // list bars hit), because Liquid Glass can't participate in a removal transition. The page rides
-        // the fold with the render it already shows (`MushafPageContent`) and re-fits to the band it
-        // lands on once the fold has settled.
+        // list bars hit), because Liquid Glass can't participate in a removal transition. The page does
+        // not ride the fold: it is already at its new band, underneath (`applyBarsCollapsed`).
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomBars(pages: pages)
                 .frame(height: bottomBarsCollapsed ? 0 : nil)
                 .clipped()
-                .opacity(bottomBarsCollapsed ? 0 : 1)
-                .allowsHitTesting(!bottomBarsCollapsed)
+                .opacity(barsFaded ? 0 : 1)
+                .allowsHitTesting(!barsFaded)
                 // The page / juz wheel floats up from the footer instead of sitting in this inset,
                 // so the page is never re-fit around it. Outside the clip above on purpose.
                 .overlay(alignment: wideBottomBars ? .bottomTrailing : .bottom) {
@@ -970,9 +1137,12 @@ struct SurahPageReader<Controls: View>: View {
         // so the control never moves - only its chevron flips direction.
         .safeAreaInset(edge: .bottom, spacing: 0) { bottomBarsToggleStrip }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if searchActive {
+            // Mounted with its room and faded on its own (`showFindBar`, `hideFindBar`): no insertion
+            // transition, which would slide it in over a page already sitting in its new band.
+            if findBarRoom {
                 pageFindBar(pages: pages, matches: findMatches)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .opacity(findBarVisible ? 1 : 0)
+                    .allowsHitTesting(findBarVisible)
             }
         }
         // The keyboard OVERLAYS the page - it must never resize it. A mushaf page is typeset to the height it
@@ -1009,6 +1179,7 @@ struct SurahPageReader<Controls: View>: View {
             // preference the way a default-value read would.
             if ProcessInfo.processInfo.arguments.contains("-mushafCollapseBars"), !bottomBarsCollapsed {
                 bottomBarsCollapsed = true
+                barsFaded = true
             }
             // "-pageTurns <n>": n animated forward turns 0.25 s apart, starting 3 s in - faster than
             // the 0.35 s slide, so turns overlap the way quick swipes do. The screenshot afterwards
@@ -1047,7 +1218,7 @@ struct SurahPageReader<Controls: View>: View {
                                      suppressClear: false)
                             withAnimation(.easeInOut) { activePicker = nil }
                         } else if action == "collapse" {
-                            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed.toggle() }
+                            applyBarsCollapsed(!barsFaded)
                         } else if action.hasPrefix("="), let i = Int(action.dropFirst()) {
                             turnPage(to: i, in: pages, suppressClear: false)
                         } else if let n = Int(action) {
@@ -1062,6 +1233,7 @@ struct SurahPageReader<Controls: View>: View {
                ProcessInfo.processInfo.arguments.indices.contains(flag + 1),
                !searchActive {
                 searchActive = true
+                showFindBar()
                 pageSearchText = ProcessInfo.processInfo.arguments[flag + 1]
                 // "-mushafFindJump": tap the find bar's first "Go to" row (a typed reference such as
                 // "20:6") two seconds later, the way a finger would.
@@ -1210,13 +1382,15 @@ struct SurahPageReader<Controls: View>: View {
         }
         .onChange(of: searchActive) { active in
             if active {
+                showFindBar()
                 pageSearchFocused = true
             } else {
-                pageSearchText = ""
-                pageSearchFocused = false
-                // The find always REOPENS scoped to the page you are on - widening to the surah is a
-                // deliberate per-search choice, not a mode that quietly persists into the next one.
-                findSurahID = nil
+                // Outside whatever animation closed the find: a keyboard dropped inside one drags the
+                // chips' scroll view along with it (the X and the whole-Quran button drop it first).
+                withTransaction(mushafStillTransaction) { pageSearchFocused = false }
+                // The query and the scope are cleared when the bar's room goes, not here: the bar
+                // fades out showing what it showed (`hideFindBar`).
+                hideFindBar()
             }
         }
         // Folding (or restoring) the bottom bars changes every page's height budget. No handling here:
@@ -1483,6 +1657,9 @@ struct SurahPageReader<Controls: View>: View {
         settings.hapticFeedback()
         // The keyboard goes first, on its own: the field resigns before the bar that holds it leaves.
         pageSearchFocused = false
+        // The bar's room goes NOW, without the usual fade: the band must be settled before the turn's
+        // slide starts, never change underneath it.
+        hideFindBar(immediately: true)
         withAnimation(.easeInOut) { searchActive = false }
         if let ayahID = target.ayahID {
             withAnimation(.easeInOut(duration: 0.15)) {
@@ -1515,6 +1692,10 @@ struct SurahPageReader<Controls: View>: View {
                     .autocorrectionDisabled()
                     .focused($pageSearchFocused)
                     .submitLabel(.search)
+                    // One height, focused or not: an editing field is a point taller (125.67 against
+                    // 126.67 for the bar, measured), and the page's band followed it, so every time the
+                    // keyboard came or went the page refitted by a point.
+                    .frame(height: findFieldHeight)
 
                 if hasQuery {
                     Text(matches.isEmpty ? "0/0" : "\(currentMatchIndex + 1)/\(matches.count)")
@@ -1535,6 +1716,10 @@ struct SurahPageReader<Controls: View>: View {
 
                 Button {
                     settings.hapticFeedback()
+                    // The keyboard goes first, outside the close's animation (see `searchActive`'s
+                    // onChange): dropped inside it, the chips below slid out of their row and over
+                    // the page as the keyboard went.
+                    pageSearchFocused = false
                     withAnimation(.easeInOut) { searchActive = false }
                 } label: {
                     Image(systemName: "xmark").font(.body.weight(.semibold))
@@ -1553,23 +1738,6 @@ struct SurahPageReader<Controls: View>: View {
             }
             .padding(.horizontal, -(settings.defaultView ? 20 : 16))
             .padding(.vertical, -4)
-
-            // The typed-reference row: "2:255" / "Baqarah 255" / a bare surah name offers a direct jump,
-            // the way the list search's SURAH / AYAH result sections answer the same queries. Above the
-            // scope row because when it appears it is almost always what was meant.
-            ForEach(Array(refTargets.enumerated()), id: \.offset) { _, target in
-                Button {
-                    jumpToReference(target, pages: pages)
-                } label: {
-                    scopeButtonLabel(
-                        target.ayahID.map { "Go to \(target.surah.nameTransliteration) \(target.surah.id):\($0)" }
-                            ?? "Go to Surah \(target.surah.nameTransliteration)",
-                        systemImage: "arrow.turn.down.right",
-                        color: settings.accentColor.color
-                    )
-                }
-                .buttonStyle(.plain)
-            }
 
             // The scope row. The first button is a TOGGLE that always names where it will take you - "Search
             // this Surah" while the find is on this page, "Search this Page" once it has been widened - so
@@ -1596,6 +1764,7 @@ struct SurahPageReader<Controls: View>: View {
                 Button {
                     settings.hapticFeedback()
                     let query = pageSearchText
+                    pageSearchFocused = false
                     withAnimation(.easeInOut) { searchActive = false }
                     QuranSearchHandoff.shared.request(query)
                 } label: {
@@ -1605,14 +1774,6 @@ struct SurahPageReader<Controls: View>: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            // The dead-end note, once the reader has actually come up empty on whatever they scoped to.
-            // Not when a reference jump is on offer - "Go to 2:255" plus "no matches" reads as a shrug.
-            if hasQuery, matches.isEmpty, refTargets.isEmpty {
-                Text(searchingSurah ? "No matches in this surah." : "No matches on this page.")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
         }
         .padding(.horizontal, settings.defaultView ? 20 : 16)
         // SYMMETRIC air (user rule, after a round each way: 2pt read as glued to the title, 10pt
@@ -1620,9 +1781,58 @@ struct SurahPageReader<Controls: View>: View {
         // block, so the find bar floats evenly between the title and the surah strip.
         .padding(.top, 5)
         .padding(.bottom, 5)
+        // What comes and goes as you type (the "Go to" rows, the no-matches note) HANGS below the bar,
+        // over the page, instead of growing it: grown, each keystroke that added or removed a row moved
+        // the page's band and refitted the page under the keyboard (402, 331, 366 pt typing "2:255",
+        // 2026-09-25). The bar's own room is one fixed height, the page-mode rule for anything
+        // transient (`jumpPickerOverlay` is the other).
+        .overlay(alignment: .bottom) {
+            findResultRows(pages: pages, targets: refTargets,
+                           showsNoMatches: hasQuery && matches.isEmpty && refTargets.isEmpty,
+                           searchingSurah: searchingSurah)
+                .alignmentGuide(.bottom) { $0[.top] }
+        }
         .sheet(isPresented: $showFindFilterSheet) {
             QuranSearchFilterSheet(filters: $findFilters, surahs: [], inReader: true)
                 .smallMediumSheetPresentation()
+        }
+    }
+
+    /// The find bar's transient rows, hung below it (`pageFindBar`). The typed-reference rows: "2:255" /
+    /// "Baqarah 255" / a bare surah name offers a direct jump, the way the list search's SURAH / AYAH
+    /// result sections answer the same queries, first because when one appears it is almost always what
+    /// was meant. Then the dead-end note, once the reader has actually come up empty on whatever they
+    /// scoped to; not beside a reference jump ("Go to 2:255" plus "no matches" reads as a shrug). On glass,
+    /// since they sit over the page's text.
+    @ViewBuilder
+    private func findResultRows(pages: [MushafPage], targets: [(surah: Surah, ayahID: Int?)],
+                                showsNoMatches: Bool, searchingSurah: Bool) -> some View {
+        if !targets.isEmpty || showsNoMatches {
+            VStack(spacing: 5) {
+                ForEach(Array(targets.enumerated()), id: \.offset) { _, target in
+                    Button {
+                        jumpToReference(target, pages: pages)
+                    } label: {
+                        scopeButtonLabel(
+                            target.ayahID.map { "Go to \(target.surah.nameTransliteration) \(target.surah.id):\($0)" }
+                                ?? "Go to Surah \(target.surah.nameTransliteration)",
+                            systemImage: "arrow.turn.down.right",
+                            color: settings.accentColor.color
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if showsNoMatches {
+                    Text(searchingSurah ? "No matches in this surah." : "No matches on this page.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .conditionalGlassEffect()
+                }
+            }
+            .padding(.horizontal, settings.defaultView ? 20 : 16)
         }
     }
 
@@ -1703,9 +1913,10 @@ struct SurahPageReader<Controls: View>: View {
 
         return Button {
             settings.hapticFeedback()
-            setBarsCollapsed(!bottomBarsCollapsed)
+            setBarsCollapsed(!barsFaded)
         } label: {
-            Image(systemName: bottomBarsCollapsed ? "chevron.up" : "chevron.down")
+            // The intent, from the tap on: the room follows a beat later on a fold.
+            Image(systemName: barsFaded ? "chevron.up" : "chevron.down")
                 .font(.caption.weight(.bold))
                 .foregroundColor(settings.accentColor.color)
                 // Asymmetric on purpose: the tap target keeps its height, but almost all of it hangs BELOW
@@ -1723,7 +1934,7 @@ struct SurahPageReader<Controls: View>: View {
         // is there. Collapsed, the base -2 keeps the drawn strip where it was and the extra `hitExtension`
         // cancels the invisible tap-target growth above.
         .padding(.top, (bottomBarsCollapsed ? -2 : -8) - hitExtension)
-        .accessibilityLabel(bottomBarsCollapsed ? "Show the reader controls and surah header"
+        .accessibilityLabel(barsFaded ? "Show the reader controls and surah header"
                                                 : "Hide the reader controls and surah header")
     }
 
@@ -5108,16 +5319,33 @@ enum MushafPageRenderCache {
             .filter { pages.indices.contains($0) && (includeCenter || $0 != index) }
         fitTrace("RING gen=\(generation) at \(Int(geometry.width.rounded()))x\(Int(geometry.height.rounded())) around=\(traceLabel(pages[min(max(index, 0), pages.count - 1)])) dir=\(direction) r=\(radius) sig=\(signature.hashValue % 10000) pages=\(ordered.map { pages[$0].page })")
 
-        for i in ordered {
-            let page = pages[i]
-            let key = cacheKey(page: page, width: geometry.width, height: geometry.height, signature: signature)
+        var jobs: [(index: Int, width: CGFloat, height: CGFloat, twin: MushafChromeJump?)] =
+            ordered.map { ($0, geometry.width, geometry.height, nil) }
+        // The page on screen fitted for the other side of the bottom-chrome fold and of the find bar
+        // (`foldTwins`, `findTwins`), so either change shows its new layout on its first frame. After the
+        // two nearest neighbours, which a swipe needs sooner, the fold's before the find bar's (the more
+        // frequent tap). The regular ring only (a predictive warm at an override geometry has no twin),
+        // and not in Low Power Mode, where a fold may simply show its fit a beat late.
+        if geometryOverride == nil, !AppPerformance.isLowPowerMode, pages.indices.contains(index) {
+            var slot = min(jobs.count, (includeCenter ? 1 : 0) + 2)
+            for kind in [MushafChromeJump.fold, .find] {
+                guard let twin = twin(kind, of: geometry) else { continue }
+                jobs.insert((index, twin.width, twin.height, kind), at: slot)
+                slot += 1
+            }
+        }
+
+        for job in jobs {
+            let page = pages[job.index]
+            let key = cacheKey(page: page, width: job.width, height: job.height, signature: signature)
             // One fit per key, EVER in flight: overlapping rings used to re-enqueue duplicate fits for the
             // same pages because this check couldn't see queued work - the `pendingRenders` claim can.
             guard cache.object(forKey: key) == nil, pendingRenders[key] == nil else { continue }
-            fitTrace("RING queue \(traceLabel(page)) gen=\(generation)")
+            let twinNote = job.twin.map { " \($0 == .fold ? "fold" : "find") twin \(Int(job.width.rounded()))x\(Int(job.height.rounded()))" } ?? ""
+            fitTrace("RING queue \(traceLabel(page))\(twinNote) gen=\(generation)")
             pendingRenders[key] = []
-            enqueueFit(page: page, width: geometry.width, height: geometry.height,
-                       key: key, config: config, generation: generation)
+            enqueueFit(page: page, width: job.width, height: job.height,
+                       key: key, config: config, generation: generation, notesLatest: job.twin == nil)
         }
     }
 
@@ -5131,13 +5359,18 @@ enum MushafPageRenderCache {
     ///    forever.
     /// 2. Staleness only skips fits that HAVEN'T STARTED (and only when no visible page is waiting on them):
     ///    a cheap early-exit, not thrown-away work.
+    ///
+    /// `notesLatest` false (a fold twin): the render is cached but never becomes the page's fallback in
+    /// `latestByPage`. It belongs to the other side of the fold, and a sweep on THIS side (the find bar,
+    /// the mini player) must keep falling back to this side's layout.
     private static func enqueueFit(
         page: MushafPage,
         width: CGFloat,
         height: CGFloat,
         key: NSString,
         config: MushafComposeConfig,
-        generation: Int?
+        generation: Int?,
+        notesLatest: Bool = true
     ) {
         // NSString isn't Sendable; the String bridge is - it crosses the queue hops and is re-wrapped
         // into an NSString cache key on the other side.
@@ -5179,7 +5412,7 @@ enum MushafPageRenderCache {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width,
                                             justification: justification)
                     cache.setObject(rendered, forKey: key)
-                    noteLatest(page: page, width: width, budget: height, rendered: rendered)
+                    if notesLatest { noteLatest(page: page, width: width, budget: height, rendered: rendered) }
                 }
                 settledGeometries.insert(geometryToken(width: width, height: height))
                 upgradedClaims.remove(key)
@@ -5364,7 +5597,8 @@ enum MushafPageRenderCache {
     /// swapped every page to its destination render the moment a chrome change began, crossfading two
     /// typesettings of different sizes over each other: the page changed size before the bars had moved,
     /// through a double image, plus the extra fits' CPU. Abu, comparing with Al-Quran's reader (this
-    /// logic): "less laggy and less weird like where it has to keep resizing".
+    /// logic): "less laggy and less weird like where it has to keep resizing". The exceptions since are
+    /// the FOLD and FIND BAR twins (`foldTwins`, `findTwins`): cache only, never recorded here.
     private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, span: String, rendered: MushafRenderedPage)] = [:]
     /// Insertion order for eviction, oldest first.
     private static var latestOrder: [Int] = []
@@ -5425,6 +5659,72 @@ enum MushafPageRenderCache {
 
     private static func geometryToken(width: CGFloat, height: CGFloat) -> String {
         "\(Int(width.rounded()))x\(Int(height.rounded()))"
+    }
+
+    /// Each page geometry the reader rests at, mapped to the one the bottom-chrome fold takes it to (and
+    /// back), as `[width, height]` keyed like `geometryToken`. Learned from real folds (`noteTwins`)
+    /// and persisted, so `prewarm` can fit the visible page for the other side of the fold while the user
+    /// reads, and a fold shows the page's new layout on its first frame.
+    ///
+    /// Not the 2026-09-21 "chrome twins": one extra fit, for the page on screen and the fold only, kept
+    /// in the cache and never in `latestByPage`, and shown only once the fold has actually happened (the
+    /// pager takes its new band in one step, so there is no sweep for it to stand in during).
+    private static var foldTwins: [String: [Double]] = storedTwins(forKey: foldTwinsKey)
+    private static let foldTwinsKey = "mushaf.foldTwins"
+    /// The same for the find bar, which the pager also takes in one step since 2026-09-25
+    /// (`SurahPageReader.showFindBar`): the band with the bar's room and the band without it. Its own
+    /// store, because one geometry has a fold twin AND a find twin.
+    private static var findTwins: [String: [Double]] = storedTwins(forKey: findTwinsKey)
+    private static let findTwinsKey = "mushaf.findTwins"
+
+    private static func storedTwins(forKey key: String) -> [String: [Double]] {
+        #if DEBUG
+        // `-resetChromeTwins`: start with nothing learned, for recording a first-ever fold or find.
+        if ProcessInfo.processInfo.arguments.contains("-resetChromeTwins") { return [:] }
+        #endif
+        return (UserDefaults.standard.dictionary(forKey: key) as? [String: [Double]]) ?? [:]
+    }
+    /// Twelve pairs: one per chrome configuration (mini player, comparison row, window size) is plenty.
+    private static let twinsLimit = 24
+    private static var twinsSaveWork: DispatchWorkItem?
+
+    /// A fold (or the find bar) took the page band `from` to `to` (`SurahPageReader.updatePagerSize`).
+    static func noteTwins(_ kind: MushafChromeJump, from: CGSize, to: CGSize) {
+        let a = MushafPageContent.textGeometry(in: from)
+        let b = MushafPageContent.textGeometry(in: to)
+        let keyA = geometryToken(width: a.width, height: a.height)
+        let keyB = geometryToken(width: b.width, height: b.height)
+        guard !isDegenerate(width: a.width, height: a.height), !isDegenerate(width: b.width, height: b.height),
+              keyA != keyB else { return }
+        // The landing band is final the moment it is reported (the pager does not sweep through either
+        // change), so the landing page's own fit skips the settle debounce that exists for sweeping chrome.
+        settledGeometries.insert(keyB)
+        let valueA = [Double(a.width.rounded()), Double(a.height.rounded())]
+        let valueB = [Double(b.width.rounded()), Double(b.height.rounded())]
+        var twins = kind == .fold ? foldTwins : findTwins
+        guard twins[keyA] != valueB || twins[keyB] != valueA else { return }
+        if twins.count >= twinsLimit { twins.removeAll() }
+        twins[keyA] = valueB
+        twins[keyB] = valueA
+        if kind == .fold { foldTwins = twins } else { findTwins = twins }
+        fitTrace("\(kind == .fold ? "FOLDTWIN" : "FINDTWIN") \(keyA) <-> \(keyB)")
+        // Written well after the change's frames: a defaults write republishes `Settings`, and every
+        // mounted page re-evaluates for it.
+        twinsSaveWork?.cancel()
+        let work = DispatchWorkItem {
+            UserDefaults.standard.set(foldTwins, forKey: foldTwinsKey)
+            UserDefaults.standard.set(findTwins, forKey: findTwinsKey)
+        }
+        twinsSaveWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
+    }
+
+    /// The learned twin of a text geometry across a fold or the find bar, if any.
+    private static func twin(_ kind: MushafChromeJump, of geometry: (width: CGFloat, height: CGFloat)) -> (width: CGFloat, height: CGFloat)? {
+        let twins = kind == .fold ? foldTwins : findTwins
+        guard let value = twins[geometryToken(width: geometry.width, height: geometry.height)],
+              value.count == 2 else { return nil }
+        return (CGFloat(value[0]), CGFloat(value[1]))
     }
 
     /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -
@@ -5568,6 +5868,7 @@ final class MushafPagerProbe {
         while let root = ancestor {
             if let found = Self.pagingScrollView(under: root, depth: 0) {
                 pager = found
+                Self.attachKeyboardDismissal(to: found)
                 #if DEBUG
                 Self.trace("pager=\(NSStringFromClass(type(of: found))) under=\(NSStringFromClass(type(of: root)))")
                 #endif
@@ -5575,6 +5876,17 @@ final class MushafPagerProbe {
             }
             ancestor = root.superview
         }
+    }
+
+    /// The find bar's keyboard goes the moment a finger drags the page, whichever way (Abu, 2026-09-25:
+    /// "support dismiss keyboard on scroll for page mode"). The pager's own `keyboardDismissMode` covers
+    /// a page turn; a horizontal pager's pan never begins on a VERTICAL drag, so a second pan, recognizing
+    /// alongside every other gesture and cancelling no touches, covers the rest. Only the keyboard goes:
+    /// the find stays open, with its matches lit on whatever page the drag lands on.
+    private static func attachKeyboardDismissal(to pager: UIScrollView) {
+        pager.keyboardDismissMode = .onDrag
+        guard !(pager.gestureRecognizers ?? []).contains(where: { $0 is MushafKeyboardDismissPan }) else { return }
+        pager.addGestureRecognizer(MushafKeyboardDismissPan())
     }
 
     private static func pagingScrollView(under view: UIView, depth: Int) -> UIScrollView? {
@@ -5629,6 +5941,26 @@ final class MushafPagerProbe {
 }
 
 /// An empty view that hands its UIKit ancestry to `MushafPagerProbe` once it is in a window.
+/// See `MushafPagerProbe.attachKeyboardDismissal`.
+private final class MushafKeyboardDismissPan: UIPanGestureRecognizer, UIGestureRecognizerDelegate {
+    init() {
+        super.init(target: nil, action: nil)
+        addTarget(self, action: #selector(dismissKeyboard))
+        delegate = self
+        cancelsTouchesInView = false
+    }
+
+    @objc private func dismissKeyboard() {
+        guard state == .began else { return }
+        view?.window?.endEditing(true)
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
+    }
+}
+
 struct MushafPagerProbeView: UIViewRepresentable {
     final class ProbeView: UIView {
         override func didMoveToWindow() {

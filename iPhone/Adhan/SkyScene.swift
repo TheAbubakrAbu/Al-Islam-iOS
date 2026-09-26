@@ -68,6 +68,21 @@ enum SkyScene {
     /// card's width; pinning the edge in points holds it at every width and every `heightFactor`.
     static let edgeInset: CGFloat = 16
 
+    /// With `SkylineSpans`, how far short of the card's middle either structure must stop, in points:
+    /// the "TIME LEFT" caption stands in the sky between them at the ground line, so a long time line
+    /// (a larger text size) cannot walk a structure into it.
+    private static let middleClearance: CGFloat = 60
+
+    /// The pyramids' height over half-base, the SAME for all three: a real group is built to one
+    /// angle (Giza's faces are within two degrees of each other), and three different slopes are what
+    /// a mountain range has (Abu, 2026-09-25: "less like a mountain and more like pyramids").
+    private static let pyramidSlope: CGFloat = 1.3
+
+    /// Where the light falls from when none is given (the widgets' standing sun, and the night): high
+    /// and to the right and a little in front, the side the one "sunward face" used to be painted on.
+    /// x right, y up, z toward the viewer.
+    fileprivate static let defaultLight = SIMD3<Double>(0.45, 0.8, 0.4)
+
 
     /// Draws the scene into `context`. `rect` is the graph's rect, `horizonY` the ground line, `color`
     /// one flat silhouette (see `tint(overSky:at:)` for the colours that suit a sky). Every length scales
@@ -78,8 +93,12 @@ enum SkyScene {
         draw(in: &context, rect: rect, horizonY: horizonY, tint: .flat(color), style: style)
     }
 
+    /// `spans` pins each structure to an exact stretch of the ground (the card's time lines); without
+    /// it they take the fractional layout below, which is what the widgets draw. `light` is where the
+    /// sun or the moon is on the card, so the pyramids' faces are lit from it; without it they are lit
+    /// from `defaultLight`.
     static func draw(in context: inout GraphicsContext, rect: CGRect, horizonY: CGFloat, tint: SkylineTint,
-                     style: SkySceneStyle = .defaultStyle) {
+                     style: SkySceneStyle = .defaultStyle, spans: SkylineSpans? = nil, light: SkylineLight? = nil) {
         let width = rect.width
         let room = horizonY - rect.minY
         guard width > 40, room > 12 else { return }
@@ -108,29 +127,49 @@ enum SkyScene {
             ))
         }
 
-        // The inset as a fraction of THIS width: the west structure starts at it, the east one ends
-        // at it, and each is centred half a span in from there. Which structure stands where is the
-        // style's call (Abu, 2026-09-21: "both pyramids, or both mosques, but by default it's this").
+        // Each structure's stretch of ground, as fractions of THIS width. Without spans, the inset
+        // as a fraction: the west structure starts at it, the east one ends at it, each `clusterSpan`
+        // wide. With them, each spans its own prayer column's time line (Abu, 2026-09-25: "the pyramid
+        // needs to start where the text 'Starts at' begins and same thing with masjid but where it
+        // ends"): the outer ends already met the lines' outer ends at 16 pt, and it was the inner ends
+        // that fell short of "8:15 PM" and started right of "Starts at". Which structure stands
+        // where is the style's call (Abu, 2026-09-21: "both pyramids, or both mosques, but by default
+        // it's this").
         let inset = edgeInset / width
-        let west = inset + clusterSpan / 2
-        let east = 1 - inset - clusterSpan / 2
-        func pyramids(at centre: CGFloat) {
-            drawPyramids(in: &context, point: point, clusterCentre: centre, color: color, lit: lit)
+        var west = inset...(inset + clusterSpan)
+        var east = (1 - inset - clusterSpan)...(1 - inset)
+        if let spans {
+            let innerLimit = 0.5 - middleClearance / width
+            let w0 = (spans.west.lowerBound - rect.minX) / width
+            let w1 = min((spans.west.upperBound - rect.minX) / width, innerLimit)
+            let e0 = max((spans.east.lowerBound - rect.minX) / width, 1 - innerLimit)
+            let e1 = (spans.east.upperBound - rect.minX) / width
+            // A span too narrow to hold a structure is a measurement that has not settled yet.
+            if w1 - w0 > 0.08 { west = w0...w1 }
+            if e1 - e0 > 0.08 { east = e0...e1 }
         }
-        func mosque(at centre: CGFloat) {
-            drawMosque(in: &context, point: point, centre: centre,
-                       width: width, scale: scale, color: color, lit: lit, glow: tint.glow)
+        let lightFrom = light?.direction(fromCanvas: rect) ?? { _ in defaultLight }
+        func pyramids(on ground: ClosedRange<CGFloat>) {
+            // The viewer stands at the card's middle, so a cluster left of it is seen from its right.
+            let viewerSide: CGFloat = (ground.lowerBound + ground.upperBound) / 2 < 0.5 ? 1 : -1
+            drawPyramids(in: &context, point: point, ground: ground, width: width, scale: scale,
+                         viewerSide: viewerSide, color: color, tint: tint, light: lightFrom)
+        }
+        func mosque(on ground: ClosedRange<CGFloat>) {
+            let centre = (ground.lowerBound + ground.upperBound) / 2
+            drawMosque(in: &context, point: point, centre: centre, span: ground.upperBound - ground.lowerBound,
+                       width: width, scale: scale, color: color, lit: lit, glow: tint.glow, light: lightFrom)
         }
         switch style {
         case .pyramidsMosque:
-            pyramids(at: west)
-            mosque(at: east)
+            pyramids(on: west)
+            mosque(on: east)
         case .pyramids:
-            pyramids(at: west)
-            pyramids(at: east)
+            pyramids(on: west)
+            pyramids(on: east)
         case .mosques:
-            mosque(at: west)
-            mosque(at: east)
+            mosque(on: west)
+            mosque(on: east)
         }
     }
 
@@ -206,7 +245,8 @@ enum SkyScene {
             .opacity(0.10 + 0.72 * night)
         // The ground band thins at night: at the day's 0.55 a pale fill reads as a lit strip of fog.
         let ground = fill(bottomMix).opacity(0.55 - 0.30 * night)
-        return SkylineTint(top: fill(topMix), bottom: fill(bottomMix), ground: ground, glow: glow)
+        return SkylineTint(top: fill(topMix), bottom: fill(bottomMix), ground: ground, glow: glow,
+                           haze: Color(red: sky.red, green: sky.green, blue: sky.blue), night: night)
     }
 
     private static let nightBelow = 0.185
@@ -324,62 +364,107 @@ enum SkyScene {
     // MARK: Pyramids
 
     private static func drawPyramids(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
-                                     clusterCentre: CGFloat, color: GraphicsContext.Shading, lit: Color) {
-        // (left, apex x, right, height). The cluster MIRRORS the mosque's skeleton rather than merely
-        // matching its bounding box (Abu, 2026-09-16, looking at the card: "look at that tiny pyramid
-        // its nothing like the minaret"). The mosque is a tall centre between two smaller outer
-        // masses, so this is too: a great pyramid on the cluster's centre, `naturalHeight` like the
-        // crescent, with one smaller pyramid at each end where the minarets stand.
+                                     ground: ClosedRange<CGFloat>, width: CGFloat, scale: CGFloat,
+                                     viewerSide: CGFloat, color: GraphicsContext.Shading, tint: SkylineTint,
+                                     light: (CGPoint) -> SIMD3<Double>) {
+        // The cluster MIRRORS the mosque's skeleton rather than merely matching its bounding box (Abu,
+        // 2026-09-16, looking at the card: "look at that tiny pyramid its nothing like the minaret").
+        // The mosque is a tall centre between two smaller outer masses, so this is too: a great
+        // pyramid on the cluster's centre, `naturalHeight` like the crescent, with one smaller pyramid
+        // at each end where the minarets stand, 30 high like them.
         //
-        // What was wrong before: three pyramids staggered 0.02/0.11/0.26 at heights 24/43/15. The
+        // What was wrong before that: three pyramids staggered 0.02/0.11/0.26 at heights 24/43/15. The
         // bounding box measured 0.30 wide and 43 tall and so passed every check, but the third was a
         // 15-high stub with nothing opposite it, and the cluster's mass sat left of its own centre
         // while the mosque's sat on its. Equal boxes, visibly unequal skylines.
         //
-        // The cluster spans `clusterSpan` centred on `clusterCentre`, which is the mosque's centre
-        // reflected about the card (both half a span in from `edgeInset`), so the two sit at
-        // mirrored offsets from the middle. Widths are NOT mirrored from the minarets: a minaret is a 5 pt shaft, and a pyramid
-        // that narrow at 38 high would be a needle. Each keeps the proportions its own shape needs
-        // (a slope near 1.5, which reads as a pyramid) while the skeleton, the span and the heights
-        // are what mirror.
-        // Half-bases chosen for a slope (height over half-base) of about 1.4, near Giza's 1.27, so
-        // these read as pyramids and not as spikes. The bases overlap, which is what a cluster does.
-        // Written against the original 0.30 span, so they narrow with it and the slopes hold.
-        let greatHalf = 0.0775 * (clusterSpan / 0.30)
-        let smallHalf = 0.060 * (clusterSpan / 0.30)
+        // And what read as a MOUNTAIN until 2026-09-25 (Abu: "make the pyramids look less like a
+        // mountain and more like pyramids maybe make them 3d"): three flat triangles at three different
+        // slopes (1.35 to 1.5), bases buried a third deep in one another so the valleys between them
+        // ran high, and one flat colour. So now:
+        //  - one slope for all three (`pyramidSlope`), their half-bases derived from their heights, so
+        //    the small ones are the great one scaled down, as built things are;
+        //  - they stand side by side across the span with their bases barely overlapping, the valleys
+        //    between them near the ground; only a span too narrow for that steepens them;
+        //  - each is a SOLID: two faces meeting at the corner edge nearest the viewer, the face that
+        //    turns toward the light lighter and the other darker, lit from wherever the sun (or, at
+        //    night, the moon's soft light) actually is on the card;
+        //  - the small two stand BEHIND the great one, drawn first and hazed a little toward the sky,
+        //    which is what distance does, so the group has depth instead of one merged outline.
         let smallHeight: CGFloat = 30
-        let clusterLeft = clusterCentre - clusterSpan / 2
-        let clusterRight = clusterCentre + clusterSpan / 2
-        let pyramids: [(CGFloat, CGFloat, CGFloat, CGFloat)] = [
-            (clusterLeft, clusterLeft + smallHalf, clusterLeft + smallHalf * 2, smallHeight),
-            (clusterCentre - greatHalf, clusterCentre, clusterCentre + greatHalf, naturalHeight),
-            (clusterRight - smallHalf * 2, clusterRight - smallHalf, clusterRight, smallHeight),
+        var greatHalf = naturalHeight * scale / pyramidSlope / width
+        var smallHalf = smallHeight * scale / pyramidSlope / width
+        let span = ground.upperBound - ground.lowerBound
+        let needed = 2 * greatHalf + 4 * smallHalf
+        if needed > span * 1.3 {
+            let fit = span * 1.3 / needed
+            greatHalf *= fit
+            smallHalf *= fit
+        }
+        let middle = (ground.lowerBound + ground.upperBound) / 2
+        let pyramids: [(apex: CGFloat, half: CGFloat, height: CGFloat, far: Bool)] = [
+            (ground.lowerBound + smallHalf, smallHalf, smallHeight, true),
+            (ground.upperBound - smallHalf, smallHalf, smallHeight, true),
+            (middle, greatHalf, naturalHeight, false),
         ]
-        for (left, apex, right, height) in pyramids {
+        let litMax = 0.22 * (1 - 0.3 * tint.night)
+        let shadeMax = 0.30 * (1 - 0.5 * tint.night)
+        for pyramid in pyramids {
+            let left = pyramid.apex - pyramid.half
+            let right = pyramid.apex + pyramid.half
+            // The corner edge nearest the viewer. Seen from its right, a square pyramid shows its
+            // front-left and front-right faces, and the edge between them lands LEFT of its apex, so
+            // the face turned toward the viewer is the wider one (0.36 is tan 20 degrees).
+            let arris = pyramid.apex - viewerSide * pyramid.half * 0.36
+            let top = point(pyramid.apex, pyramid.height)
+
             var body = Path()
             body.move(to: point(left, 0))
-            body.addLine(to: point(apex, height))
+            body.addLine(to: top)
             body.addLine(to: point(right, 0))
             body.closeSubpath()
             context.fill(body, with: color)
 
-            // The sunward face, a shade lighter, so the shape reads as a solid and not a triangle.
-            var face = Path()
-            face.move(to: point(apex, height))
-            face.addLine(to: point(right, 0))
-            face.addLine(to: point((apex + right) / 2 + 0.01, 0))
-            face.closeSubpath()
-            context.fill(face, with: .color(lit))
+            // Each face's outward normal (x right, y up, z toward the viewer): leaning out to its
+            // side, up, and more toward the viewer on the face that is turned to them.
+            let toward = viewerSide > 0 ? (left: 0.4, right: 0.7) : (left: 0.7, right: 0.4)
+            let faces: [(from: CGFloat, to: CGFloat, normal: SIMD3<Double>)] = [
+                (left, arris, SIMD3(-0.62, 0.5, toward.left)),
+                (arris, right, SIMD3(0.62, 0.5, toward.right)),
+            ]
+            let direction = light(top)
+            for face in faces {
+                let normal = face.normal / (face.normal * face.normal).sum().squareRoot()
+                let lambert = max(0, (normal * direction).sum())
+                // 0.3 of ambient, the rest from the light; the body's own colour stands for 0.6.
+                let value = 0.3 + 0.7 * lambert
+                var path = Path()
+                path.move(to: point(face.from, 0))
+                path.addLine(to: top)
+                path.addLine(to: point(face.to, 0))
+                path.closeSubpath()
+                if value > 0.6 {
+                    context.fill(path, with: .color(.white.opacity((value - 0.6) / 0.4 * litMax)))
+                } else {
+                    context.fill(path, with: .color(.black.opacity((0.6 - value) / 0.3 * shadeMax)))
+                }
+            }
+
+            if pyramid.far, let haze = tint.haze {
+                context.fill(body, with: .color(haze.opacity(0.18)))
+            }
         }
     }
 
     // MARK: Mosque
 
     private static func drawMosque(in context: inout GraphicsContext, point: (CGFloat, CGFloat) -> CGPoint,
-                                   centre: CGFloat, width: CGFloat, scale: CGFloat,
-                                   color: GraphicsContext.Shading, lit: Color, glow: Color) {
-        // The mosque spans exactly `span` of the card ending `edgeInset` points from the right edge,
-        // the mirror of the pyramid cluster starting `edgeInset` from the left, and its crescent
+                                   centre: CGFloat, span: CGFloat, width: CGFloat, scale: CGFloat,
+                                   color: GraphicsContext.Shading, lit: Color, glow: Color,
+                                   light: (CGPoint) -> SIMD3<Double>) {
+        // The mosque spans exactly `span` of the card ending `edgeInset` points from the right edge
+        // (or exactly the UPCOMING column's time line, see `SkylineSpans`), the mirror of the pyramid
+        // cluster starting `edgeInset` from the left, and its crescent
         // reaches `naturalHeight` as the great pyramid's apex does. The two stand either side of the
         // middle, which the arc's peak and the countdown digits need clear. The inset also keeps the
         // minaret clear of the rounded corner (0.98 clipped it; only a screenshot caught it).
@@ -396,7 +481,6 @@ enum SkyScene {
         // Both are derived here rather than written as literals, so a change of scale, shaft or dome
         // radius carries through instead of quietly unmatching the two again. Check a change against
         // a screenshot, not the build: the last mismatch compiled perfectly for weeks.
-        let span = clusterSpan
         let baseHeight: CGFloat = 9
         let domeRadius = 15 * scale
         let sideRadius = 6.5 * scale
@@ -424,8 +508,10 @@ enum SkyScene {
             context.stroke(finial, with: color, lineWidth: 1.2)
         }
 
-        // The two side domes, then the great dome, all standing on the body's roof line.
-        for x in [centre - 0.095, centre + 0.095] {
+        // The two side domes, then the great dome, all standing on the body's roof line. The side
+        // domes and the windows sit at fixed shares of the span (0.095 and 0.06 of the card when the
+        // span was always 0.225 of it), so a mosque stretched to its time line keeps its rhythm.
+        for x in [centre - span * 0.422, centre + span * 0.422] {
             let domeCentre = point(x, baseHeight)
             let rect = CGRect(x: domeCentre.x - sideRadius, y: domeCentre.y - sideRadius, width: sideRadius * 2, height: sideRadius * 2)
             context.fill(Path(ellipseIn: rect), with: color)
@@ -442,9 +528,13 @@ enum SkyScene {
         dome.addArc(center: domeCentre, radius: domeRadius, startAngle: .degrees(300), endAngle: .degrees(360), clockwise: false)
         dome.closeSubpath()
         context.fill(dome, with: color)
-        // A highlight on the dome's sunward curve.
+        // A highlight on the dome's sunward curve: centred on the light's direction (the same light
+        // the pyramids' faces turn to), kept on the dome's upper half.
+        let toLight = light(domeCentre)
+        let lightAngle = min(max(atan2(-toLight.y, toLight.x) * 180 / .pi, -160), -20)
         var domeLit = Path()
-        domeLit.addArc(center: domeCentre, radius: domeRadius * 0.82, startAngle: .degrees(300), endAngle: .degrees(350), clockwise: false)
+        domeLit.addArc(center: domeCentre, radius: domeRadius * 0.82, startAngle: .degrees(lightAngle - 25),
+                       endAngle: .degrees(lightAngle + 25), clockwise: false)
         context.stroke(domeLit, with: .color(lit), lineWidth: 2 * scale)
 
         // The finial and its crescent.
@@ -475,7 +565,7 @@ enum SkyScene {
         arch.addLine(to: CGPoint(x: door.maxX, y: door.maxY))
         arch.closeSubpath()
         context.fill(arch, with: .color(glow))
-        for x in [centre - 0.06, centre + 0.06] {
+        for x in [centre - span * 0.267, centre + span * 0.267] {
             let window = CGRect(x: point(x, 0).x - 1.5 * scale, y: point(x, 6).y, width: 3 * scale, height: 4 * scale)
             context.fill(Path(roundedRect: window, cornerRadius: 1.5 * scale), with: .color(glow))
         }
@@ -490,21 +580,31 @@ struct SkySceneView: View {
     /// Defaults to the saved choice, read the way this process can (`Settings.skylineStyle`), so the
     /// widgets need no plumbing; the card passes its observed value so a change redraws at once.
     let style: SkySceneStyle
+    /// The card's time lines, which the structures span; nil takes the fractional layout.
+    let spans: SkylineSpans?
+    /// Where the sun or the moon is, which lights the pyramids' faces; nil lights them from the
+    /// standing default.
+    let light: SkylineLight?
 
-    init(horizonY: CGFloat, tint: SkylineTint, style: SkySceneStyle = Settings.shared.skylineStyle) {
+    init(horizonY: CGFloat, tint: SkylineTint, style: SkySceneStyle = Settings.shared.skylineStyle,
+         spans: SkylineSpans? = nil, light: SkylineLight? = nil) {
         self.horizonY = horizonY
         self.tint = tint
         self.style = style
+        self.spans = spans
+        self.light = light
     }
 
     /// One flat colour, for a skyline that stands on no sky (the widgets' standard background).
-    init(horizonY: CGFloat, color: Color, style: SkySceneStyle = Settings.shared.skylineStyle) {
-        self.init(horizonY: horizonY, tint: .flat(color), style: style)
+    init(horizonY: CGFloat, color: Color, style: SkySceneStyle = Settings.shared.skylineStyle,
+         light: SkylineLight? = nil) {
+        self.init(horizonY: horizonY, tint: .flat(color), style: style, light: light)
     }
 
     var body: some View {
         Canvas { context, size in
-            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, tint: tint, style: style)
+            SkyScene.draw(in: &context, rect: CGRect(origin: .zero, size: size), horizonY: horizonY, tint: tint,
+                          style: style, spans: spans, light: light)
         }
         .allowsHitTesting(false)
     }
@@ -518,9 +618,48 @@ struct SkylineTint {
     var bottom: Color
     var ground: Color
     var glow: Color
+    /// The sky itself where the ground runs: the far pyramids are hazed toward it, which is what
+    /// distance does. Nil on a flat tint, which stands on no sky.
+    var haze: Color? = nil
+    /// How far into its night look the skyline is (`SkyScene.nightFactor`): moonlight is softer, so
+    /// the pyramids' faces differ less.
+    var night: Double = 0
 
     static func flat(_ color: Color) -> SkylineTint {
         SkylineTint(top: color, bottom: color, ground: color.opacity(0.55), glow: Color.white.opacity(0.10))
+    }
+}
+
+/// Where each structure stands, in the canvas's own points: the pyramids across the CURRENT
+/// column's "Started at" line and the mosque across the UPCOMING column's "Starts at" line, so the
+/// skyline begins and ends exactly where the text does (Abu, 2026-09-25). `SkyScene.draw` keeps both
+/// clear of the middle (`middleClearance`).
+struct SkylineSpans: Equatable {
+    var west: ClosedRange<CGFloat>
+    var east: ClosedRange<CGFloat>
+}
+
+/// The light the pyramids' faces turn to: the marker on the card's arc, the sun by day. At night the
+/// marker is the moon riding the path BELOW the ground, which cannot light anything standing on it, so
+/// `day` hands the light over to the soft standing moonlight (`SkyScene.defaultLight`) as the sun
+/// goes down, on the same ramp that swaps the two markers (`SolarCurve.daylightPresence`).
+struct SkylineLight: Equatable {
+    /// The marker's centre, in the canvas's points.
+    var source: CGPoint
+    /// 1 while the sun is up, 0 through the night, eased between.
+    var day: Double
+
+    /// The unit vector from a point on the canvas toward the light (x right, y up, z toward the viewer).
+    func direction(fromCanvas rect: CGRect) -> (CGPoint) -> SIMD3<Double> {
+        let source = source
+        let day = min(max(day, 0), 1)
+        return { point in
+            let dx = Double(source.x - point.x), dy = Double(point.y - source.y)
+            let length = max((dx * dx + dy * dy).squareRoot(), 0.0001)
+            let sun = SIMD3(dx / length, dy / length, 0.45)
+            let mixed = SkyScene.defaultLight * (1 - day) + sun * day
+            return mixed / max((mixed * mixed).sum().squareRoot(), 0.0001)
+        }
     }
 }
 
@@ -560,6 +699,10 @@ struct SkylineSilhouette: ViewModifier, Animatable {
     var night: Double
     var horizonY: CGFloat
     var style: SkySceneStyle
+    /// Neither travels: the spans move only when a time line's text changes, and the light follows
+    /// the marker, which is already exactly where it should be on every frame.
+    var spans: SkylineSpans?
+    var light: SkylineLight?
 
     /// FOUR numbers travel: the sky's three components, and how far into the night look the
     /// skyline is. It is NOT the silhouette's own colour that is interpolated: that is what made the
@@ -575,7 +718,8 @@ struct SkylineSilhouette: ViewModifier, Animatable {
     }
 
     func body(content: Content) -> some View {
-        SkySceneView(horizonY: horizonY, tint: SkyScene.tint(overSky: sky, night: night), style: style)
+        SkySceneView(horizonY: horizonY, tint: SkyScene.tint(overSky: sky, night: night), style: style,
+                     spans: spans, light: light)
     }
 }
 
@@ -583,8 +727,10 @@ extension View {
     /// Replaces this view with the skyline, drawn for `sky` (its day or night look decided by that
     /// sky's own luminance), animating the turn from whatever it was drawn for before.
     func skylineSilhouette(sky: (red: Double, green: Double, blue: Double),
-                           horizonY: CGFloat, style: SkySceneStyle) -> some View {
-        modifier(SkylineSilhouette(sky: sky, night: SkyScene.nightFactor(overSky: sky), horizonY: horizonY, style: style))
+                           horizonY: CGFloat, style: SkySceneStyle,
+                           spans: SkylineSpans? = nil, light: SkylineLight? = nil) -> some View {
+        modifier(SkylineSilhouette(sky: sky, night: SkyScene.nightFactor(overSky: sky), horizonY: horizonY, style: style,
+                                   spans: spans, light: light))
     }
 }
 

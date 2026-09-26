@@ -1493,6 +1493,9 @@ struct HadithBookmarkGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let bookmark: HadithBookmark
+    /// iPad/Mac catalog: ring the tile while the detail column reads this bookmark (`HadithReadingRing`,
+    /// which observes the selection itself, so only the layout flip has to pass `==`).
+    var ringsReading = false
     let onTap: () -> Void
     /// See `Settings.hadithRenderSettingsSignature` - compared so appearance changes re-render the tile.
     var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
@@ -1500,7 +1503,8 @@ struct HadithBookmarkGridTile: View, Equatable {
     /// `onTap` is excluded from `==`: the call site only assigns the bookmark into parent state through
     /// a binding, which stays valid however stale the captured closure is.
     static func == (l: Self, r: Self) -> Bool {
-        l.bookmark == r.bookmark && l.renderSettingsSignature == r.renderSettingsSignature
+        l.bookmark == r.bookmark && l.ringsReading == r.ringsReading
+            && l.renderSettingsSignature == r.renderSettingsSignature
     }
 
     /// Removal only needs the identity fields; the store matches on slug + idInBook.
@@ -1601,6 +1605,9 @@ struct HadithBookmarkGridTile: View, Equatable {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
             .conditionalGlassEffect(clear: true, rectangle: true)
+            .overlay {
+                if ringsReading { HadithReadingRing(slug: bookmark.slug, hadithID: bookmark.idInBook) }
+            }
             .contentShape(Rectangle())
     }
 }

@@ -131,10 +131,13 @@ struct SolarArcGraph: View {
             // mid-grey on the standard background.
             if showsScene {
                 let horizonY = yPosition(of: day.horizon, in: rect)
+                // Lit from the sun where the entry draws it, as on the app's card; a widget never
+                // animates, so the sun is simply up or down.
                 SkySceneView(horizonY: horizonY,
                              tint: skyStyle
                                 ? SkyScene.tint(overSky: entry.skyColors, at: horizonY / max(rect.height, 1))
-                                : .flat(Color.secondary.opacity(0.45)))
+                                : .flat(Color.secondary.opacity(0.45)),
+                             light: SkylineLight(source: point(at: sunFraction, day: day, in: rect), day: isUp ? 1 : 0))
             }
 
             ForEach(dots) { prayer in

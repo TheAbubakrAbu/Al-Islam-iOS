@@ -1780,6 +1780,41 @@ extension View {
                 .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
         }
     }
+
+    /// The ring a grid tile wears while its screen fills the iPad/Mac detail column. A grid is ONE
+    /// `List` row, so `List(selection:)` has no row of its own to highlight and the tile has to draw
+    /// the selection itself. The Islam sidebar's look, shared by every grid beside a detail column
+    /// (Quran, Hadith, Islam, the Settings cards) so it cannot drift again: the chapter tiles marked
+    /// the open chapter with a lighter accent tint, which "just highlights the back as if its
+    /// favorited", and the Quran tiles marked nothing at all (Abu, 2026-09-25).
+    ///
+    /// Apply it to the tile's LABEL, inside `GridTileMenu`, so it dims with the press like the rest of
+    /// the tile. `cornerRadius` is the tile's own shape, `GlassCorner.rectangle` for a glass tile: at
+    /// 12 against the glass's 24 the ring cut visible corners inside the tile it was meant to trace
+    /// (Abu, 2026-09-19).
+    func gridSelectionRing(_ isSelected: Bool, cornerRadius: CGFloat = GlassCorner.rectangle) -> some View {
+        modifier(GridSelectionRing(isSelected: isSelected, cornerRadius: cornerRadius))
+    }
+}
+
+/// See `gridSelectionRing`. The accent comes from the appearance snapshot, the one every tile's own
+/// tint is drawn from.
+private struct GridSelectionRing: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let isSelected: Bool
+    let cornerRadius: CGFloat
+
+    func body(content: Content) -> some View {
+        content.overlay(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(appearance.accent, lineWidth: 2)
+                // Faded out rather than stroked at 0: a zero-width stroke is no promise of nothing drawn.
+                .opacity(isSelected ? 1 : 0)
+                // Decoration only: it must never sit between a finger and the tile, its star or its menu.
+                .allowsHitTesting(false)
+        )
+    }
 }
 
 #if os(iOS)

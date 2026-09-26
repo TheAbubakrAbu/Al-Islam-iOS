@@ -1112,28 +1112,46 @@ struct IslamView: View {
     }
 
     /// The sidebar's rows or tiles for one section. Rows keep `List(selection:)`'s own highlight;
-    /// tiles are inside a single list row, so the selection has to be drawn on the tile itself.
+    /// tiles are inside a single list row, so the selection is drawn on the tile itself, with the
+    /// ring every sidebar grid shares (`gridSelectionRing`).
     @available(iOS 16.0, *)
     @ViewBuilder
     private func splitResourceItems(_ items: [IslamDestination]) -> some View {
         if settings.islamGridMode {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-                ForEach(items, id: \.self) { item in
-                    resourceGridStar(item, on: GridTileMenu {
-                        selectSplitResource(item)
+            // Ask AI spans the full width BELOW the tiles, exactly as in the iPhone grid
+            // (`resourceItems`): as half a sidebar row it was one tile among the references, with
+            // no room for the caption that says what it does (Abu, 2026-09-23: "it should be the full
+            // row similar to how it is on iphone"). Pulled out of `items` so it never draws twice.
+            let askAI = items.first { $0 == .askAI }
+            let tiles = items.filter { $0 != .askAI }
+
+            // One row for the grid and the banner, 8 pt apart like the tiles, for the iPhone grid's
+            // reasons: no gap between two rows' insets, and no empty grid above the banner when Ask AI
+            // is a section's only item (Favorites).
+            VStack(spacing: 8) {
+                if !tiles.isEmpty {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                        ForEach(tiles, id: \.self) { item in
+                            resourceGridStar(item, on: GridTileMenu {
+                                selectSplitResource(item)
+                            } menu: {
+                                favoriteToggleButton(item)
+                            } label: {
+                                resourceGridTile(item)
+                                    .gridSelectionRing(selectedResource == item)
+                            })
+                        }
+                    }
+                }
+
+                if let askAI {
+                    resourceGridStar(askAI, on: GridTileMenu {
+                        selectSplitResource(askAI)
                     } menu: {
-                        favoriteToggleButton(item)
+                        favoriteToggleButton(askAI)
                     } label: {
-                        resourceGridTile(item)
-                            // `GlassCorner.rectangle`, NOT a hardcoded number: this border outlines
-                            // the tile's own glass shape, and at 12 against the glass's 24 it cut
-                            // visible corners inside the tile it was meant to trace
-                            // (Abu, 2026-09-19, with a screenshot of the iPad sidebar).
-                            .overlay(
-                                RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous)
-                                    .strokeBorder(settings.accentColor.color,
-                                                  lineWidth: selectedResource == item ? 2 : 0)
-                            )
+                        askAIBanner(askAI)
+                            .gridSelectionRing(selectedResource == askAI)
                     })
                 }
             }

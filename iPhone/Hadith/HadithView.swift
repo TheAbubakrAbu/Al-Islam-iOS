@@ -2261,7 +2261,7 @@ struct HadithView: View {
                 if hadithGridMode {
                     LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
                         ForEach(store.bookmarks) { bookmark in
-                            HadithBookmarkGridTile(bookmark: bookmark) {
+                            HadithBookmarkGridTile(bookmark: bookmark, ringsReading: usesColumnNavigation) {
                                 pushedReference = bookmark
                             }
                             .equatable()
@@ -2582,6 +2582,10 @@ struct HadithView: View {
             .padding(.vertical, 4)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())
+            // iPad/Mac: the book the detail column is reading wears the sidebar's ring.
+            .overlay {
+                if usesColumnNavigation { HadithReadingRing(slug: book.slug) }
+            }
         }
         .conditionalGlassEffect(
             clear: !store.isFavorite(book.slug),

@@ -3271,8 +3271,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // The tab the app opens on (Abu, 2026-09-21: "would be cool to also be able to choose whether one
     // wants adhan quran hadith or islam to be the start"). Raw `LaunchTab` (SettingsView.swift). It
     // is Adhan, as it has always been, until someone chooses otherwise. `launchTabChosen` records
-    // that the picker in Settings was used, so the welcome only ever SUGGESTS the Islam tab to a
-    // learner who has not already picked a tab of their own.
+    // that the picker in Settings was used. The welcome's "Open the app on the Islam tab" switch read
+    // it; that switch is gone (2026-09-25), so nothing reads it now, but the stored flag is kept.
     @AppStorage("launchTab") var launchTabRaw: String = "adhan"
     @AppStorage("launchTabChosen") var launchTabChosen: Bool = false
 

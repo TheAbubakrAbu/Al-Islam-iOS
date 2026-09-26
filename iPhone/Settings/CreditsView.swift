@@ -59,6 +59,9 @@ struct CreditItem: Identifiable, Hashable {
         CreditItem(id: "moon-phase", title: "Moon phase algorithm: SunCalc",
                    detail: "Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms",
                    url: "https://github.com/mourner/suncalc", group: .adhan, keywords: "lunar hijri widget sky"),
+        CreditItem(id: "moon-globe", title: "3D moon maps: NASA's Scientific Visualization Studio",
+                   detail: "The 3D moon opened from the sky card is drawn with the CGI Moon Kit by NASA's Scientific Visualization Studio (Ernie Wright, with Noah Petro): its color map from the Lunar Reconnaissance Orbiter Camera and its elevation map from the Lunar Orbiter Laser Altimeter",
+                   url: "https://svs.gsfc.nasa.gov/4720", group: .adhan, keywords: "nasa lro lroc lola lunar globe texture 3d moon"),
 
         // Quran
         CreditItem(id: "kfgqpc-text", title: "Arabic text and qiraat data: KFGQPC",

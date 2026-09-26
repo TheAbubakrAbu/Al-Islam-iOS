@@ -184,8 +184,10 @@ struct SettingsView: View {
     /// Apple Music-style: true while scrolling down, minimizing the floating search bar.
     @State private var barsCollapsed = false
 
-    /// The destination shown when nothing is explicitly selected (single source of truth).
-    private static let defaultDestination: SettingsDestination = .quranSettings
+    /// The destination shown when nothing is explicitly selected (single source of truth). Only the
+    /// iPad/Mac split view opens on a pre-selected section, and it opens on Islam Settings, the one
+    /// area that covers the whole app rather than one tab (Abu, 2026-09-25).
+    private static let defaultDestination: SettingsDestination = .islamSettings
 
     private enum SettingsDestination: Hashable {
         case notification
@@ -193,6 +195,13 @@ struct SettingsView: View {
         case quranSettings
         case hadithSettings
         case islamSettings
+        /// A spotlight card's screen in the iPad/Mac detail column, by tip id. A SELECTION like the
+        /// rows, deliberately: no row is tagged with it, so the hub rows show no highlight while a
+        /// card fills the detail (the card wears the ring instead), and every card-to-card switch is
+        /// a selection change, the one thing that resets the detail column's stack. Held as separate
+        /// state, only the detail's `.id` moved, and the previous card's pushed page (Nagging Mode,
+        /// opened a beat after its root) stayed on screen over the new card's.
+        case spotlight(String)
     }
 
     /// What re-identifies the iPad detail stack: the selected destination, or a re-tap of the same
@@ -208,6 +217,26 @@ struct SettingsView: View {
             token: settingsDetailRefreshToken
         )
     }
+
+    /// Selecting a split destination, shared by the hub rows and the spotlight cards: re-tapping what
+    /// is already selected bumps the token instead of doing nothing.
+    private func selectSplitDestination(_ value: SettingsDestination) {
+        withAnimation(.easeInOut) {
+            if selectedDestination == value {
+                settingsDetailRefreshToken &+= 1
+            } else {
+                selectedDestination = value
+            }
+        }
+    }
+
+    #if os(iOS)
+    /// The spotlight card filling the split detail, if one is (see `SettingsDestination.spotlight`).
+    private var splitSpotlightID: String? {
+        if case let .spotlight(id) = selectedDestination { return id }
+        return nil
+    }
+    #endif
 
     var body: some View {
         navigationContainer
@@ -454,10 +483,21 @@ struct SettingsView: View {
 
         // Front and center (Abu, 2026-09-20): the app's unusual settings as cards, directly under the
         // hub, each opening the screen that owns it, with every Tips & Tricks list one row below.
+        // The iPad/Mac sidebar keeps the card strip too, opening each card in the DETAIL column: its
+        // fallback of one row per card was a tall column of twelve rows (Abu, 2026-09-25: "this looks
+        // awful on mac/ipad while it looks great on phone"). Only iOS 15, with no programmatic push
+        // and no split, still gets rows.
         #if os(iOS)
-        SettingsSpotlightSection(rows: split || !Self.canPushProgrammatically) { tip in
-            spotlightTarget = tip
-            openSpotlight = true
+        SettingsSpotlightSection(
+            rows: !Self.canPushProgrammatically,
+            selectedTipID: split ? splitSpotlightID : nil
+        ) { tip in
+            if split {
+                selectSplitDestination(.spotlight(tip.id))
+            } else {
+                spotlightTarget = tip
+                openSpotlight = true
+            }
         }
         #endif
 
@@ -483,6 +523,12 @@ struct SettingsView: View {
                 SettingsHadithView(presentedAsSheet: false)
             case .islamSettings:
                 SettingsIslamView()
+            case .spotlight(let id):
+                // Exactly what the card pushes on iPhone (`openSpotlight`), as the detail's root.
+                if let tip = TipCatalog.spotlight.first(where: { $0.id == id }), let destination = tip.destination {
+                    searchDestinationView(destination)
+                        .revealsAdvancedSettings(tip.advanced)
+                }
             }
         }
     }
@@ -608,13 +654,7 @@ struct SettingsView: View {
         // the sidebar highlight driven by `List(selection:)`, the Islam sidebar's exact pattern.
         Button {
             settings.hapticFeedback()
-            withAnimation(.easeInOut) {
-                if selectedDestination == value {
-                    settingsDetailRefreshToken &+= 1
-                } else {
-                    selectedDestination = value
-                }
-            }
+            selectSplitDestination(value)
         } label: {
             toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint, chipSecondaryTint: secondaryTint)
         }
@@ -1002,8 +1042,9 @@ extension Settings {
     }
 }
 
-/// "Open the App On": one control, shown on Appearance's Look and Feel page and on About You (which
-/// is where Abu went looking for it, under a toggle whose name read as if it did this).
+/// "Open the App On": one control, on Appearance's Look and Feel page only. About You carried a
+/// second copy (where Abu first went looking for it, under a toggle whose name read as if it did
+/// this) until he asked for it to live on Look and Feel alone (2026-09-25).
 struct LaunchTabPicker: View {
     @ObservedObject private var settings = Settings.shared
 

@@ -1176,7 +1176,7 @@ struct HadithBookView: View {
     /// One chapter row with its full grammar - the link, context menu, swipes, and scroll id - shared by
     /// the browsing list and the search results.
     private func chapterRowLink(_ chapter: HadithBookData.Chapter, data: HadithBookData) -> some View {
-        let isCurrent = usesColumnNavigation && columnSelection.currentChapterID == chapter.id
+        let isCurrent = isReaderChapter(chapter)
         return chapterLink(chapter, data: data) {
             chapterRow(chapter, data: data)
                 // Column mode only: the left list stays truthful about what fills the right, including
@@ -1210,6 +1210,15 @@ struct HadithBookView: View {
             .tint(.secondary)
         }
         .id("hadith-chapter-\(chapter.id)")
+    }
+
+    /// Column mode: the chapter the detail column is reading, followed through the reader's own
+    /// Previous/Next. Shared by the row's tint and the tile's ring so the two can never disagree; the
+    /// book check is a backstop, because chapter ids repeat from book to book.
+    private func isReaderChapter(_ chapter: HadithBookData.Chapter) -> Bool {
+        usesColumnNavigation
+            && columnSelection.bookSlug == book.slug
+            && columnSelection.currentChapterID == chapter.id
     }
 
     /// The chapter's place in the book, 1-based - what the badge and "CHAPTER N" header show.
@@ -1345,7 +1354,7 @@ struct HadithBookView: View {
     /// span below, favorites tinted with the corner star.
     private func chapterGridTile(_ chapter: HadithBookData.Chapter, data: HadithBookData) -> some View {
         let favorite = store.isChapterFavorite(slug: book.slug, chapterId: chapter.id)
-        let isCurrent = usesColumnNavigation && columnSelection.currentChapterID == chapter.id
+        let isCurrent = isReaderChapter(chapter)
         return GridTileMenu {
             settings.hapticFeedback()
             // Column mode swaps the detail; iOS 16 stack appends to the path; iOS 15 uses the hidden link.
@@ -1433,14 +1442,16 @@ struct HadithBookView: View {
             .padding(.vertical, 6)
             .frame(height: 76)
             .contentShape(Rectangle())
+            // The chapter filling the detail column wears the sidebar's ring. It used to get a lighter
+            // accent TINT, the favorite's own grammar, so the open chapter "just highlights the back as
+            // if its favorited" (Abu, 2026-09-25). The tint is the favorite's alone now; both can show.
+            .gridSelectionRing(isCurrent)
         }
-        // Favorite keeps its full tint; the chapter currently filling the detail column gets a lighter
-        // one, so the grid says which tile is open the same way the list rows do.
         .conditionalGlassEffect(
-            clear: !favorite && !isCurrent,
+            clear: !favorite,
             rectangle: true,
-            useColor: favorite ? 0.25 : (isCurrent ? 0.15 : nil),
-            customTint: favorite || isCurrent ? settings.accentColor.color : nil
+            useColor: favorite ? 0.25 : nil,
+            customTint: favorite ? settings.accentColor.color : nil
         )
         .gridFavoriteStar(
             isFavorite: favorite,
@@ -1566,6 +1577,30 @@ final class HadithColumnSelection: ObservableObject {
 
     func noteChapterChanged(_ chapter: HadithBookData.Chapter) {
         currentChapterID = chapter.id
+    }
+}
+
+/// The sidebar ring (`gridSelectionRing`) for a CATALOG tile: the book the detail column is reading,
+/// or, given a hadith, the bookmark it was opened at. Its own view observing the selection, because
+/// nothing above the detail column may (see `HadithDetailColumn`): a chapter pick re-renders these
+/// few rings, never the catalog they sit in.
+struct HadithReadingRing: View {
+    @ObservedObject private var selection = HadithColumnSelection.shared
+
+    let slug: String
+    var hadithID: Int? = nil
+
+    private var isReading: Bool {
+        guard let target = selection.target, target.book.slug == slug else { return false }
+        guard let hadithID else { return true }
+        // Until the reader leaves the bookmark's chapter by its own Previous/Next.
+        return target.scrollToHadithId == hadithID && selection.currentChapterID == target.chapter.id
+    }
+
+    var body: some View {
+        Color.clear
+            .gridSelectionRing(isReading)
+            .allowsHitTesting(false)
     }
 }
 

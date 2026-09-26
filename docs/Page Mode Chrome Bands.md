@@ -1,8 +1,126 @@
 # Page mode: the page that "randomly shrinks and appears"
 
-**Status: the 09-21/22 mechanism below (chrome twins, known bands, the destination render, the
-crossfade) was REPLACED on 2026-09-23 by Al-Quran's approach. Read the next section first; everything
-after it is the history of the version that was replaced.**
+**Status: 2026-09-25 (next section): the FOLD and the FIND BAR are both one-step changes, and the room
+and the chrome now move in order, so nothing ever draws over the text or squeezes it. The mini player
+and the picker still follow the Al-Quran approach (two sections down). The 09-21/22 mechanism at the
+bottom (chrome twins, known bands, the destination render, the crossfade) is history.**
+
+## 2026-09-25: the room and the chrome move in order; the find bar joins the fold
+
+> "we have to fix page mode Quran resizing. It's so broken. When I collapse and uncollapse it's okay
+> but it can be better. When I click on search please fix that looks awful. Also support dismiss
+> keyboard on scroll for page mode" (Abu)
+
+**What the recordings showed** (60 fps, `drive2.py`, iPhone 17 Pro simulator, page 6):
+
+- Fold: the page switched to its big layout on the tap's first frame (good), but the bars were still
+  fading, so for five frames their glass faded over the new layout's last lines.
+- Unfold: the page switched to its small layout at once and left an empty strip for a few frames
+  before the bars faded into it.
+- Find bar (Search): it slid in as a top inset with the page riding the sweep (527 to 400 pt over a
+  third of a second). Kept at its old layout, the page was scaled down into a column three quarters
+  wide with big side margins for the whole sweep, then cut to its new fit, smaller text with new line
+  breaks. That is the "awful". The keyboard was never the cause: the reader already ignores it.
+
+What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+
+- **Room and opacity are separate state.** `bottomBarsCollapsed` is the fold's ROOM, `barsFaded` its
+  opacity (and the intent, which the chevron shows); `findBarRoom` / `findBarVisible` do the same for the
+  find bar, with `searchActive` as the intent. The room always changes in one step
+  (`mushafStillTransaction`, plus `.animation(nil, value:)` on the pager for both), the opacity animates.
+- **Chrome that leaves fades out first, then its room goes** (`mushafChromeFadeOut`, 0.14 s): a fold
+  fades the header and bars over a page that has not moved, then the page switches once into the whole
+  band; closing Search does the same. **Chrome that arrives gets its room first, then fades in**
+  (`mushafChromeFadeIn`, 0.2 s): the page switches at the tap and the bars or the find bar fade into the
+  room it has left. A generation counter per change lets a quick second tap overtake the delayed half.
+- **The find bar has a learned twin, like the fold.** `MushafPageRenderCache.noteTwins(.find, ...)` keeps
+  a second store (`mushaf.findTwins`, device-only in `CloudManifest`), and `prewarm` fits the visible
+  page at its find twin after the fold twin. So opening Search normally shows the page's new layout on
+  the first frame, and closing it the full-band layout. The very first search on a geometry falls back
+  for a few frames while its fit lands (marked settled at once, so no debounce).
+- **The find field has one height** (`findFieldHeight`, scaled with body text). Focused, it was a point
+  taller, so the band followed the keyboard (401 then 400) and every keyboard show or hide refitted the
+  page by a point, and the learned twin missed by that point. `recentJump` still ties any one-frame
+  settle after a jump back to it.
+- **The keyboard is dropped before the close, outside its animation.** Dropped inside the X button's
+  `withAnimation` (via the `searchActive` onChange), the chip row's scroll view jumped about 115 pt down,
+  over the page's first line, and climbed back while the bar faded (its frame never moved: it was the
+  scroll view's content). The X and "Search the whole Quran" now drop focus first, and the onChange drops
+  it in `mushafStillTransaction`. Ignoring the keyboard safe area on the chips did NOT help (tried, removed).
+  The old slide-away transition had simply hidden this.
+- **Keyboard dismiss on scroll.** `MushafPagerProbe` sets the pager's `keyboardDismissMode = .onDrag`
+  (a page turn) and adds `MushafKeyboardDismissPan`, which recognizes alongside everything and cancels
+  no touches, for a vertical drag (a horizontal pager's own pan never begins on one). Only the keyboard
+  goes; the find stays open with its matches lit.
+- `jumpToReference` ("Go to 20:6") closes the bar without the fade (`hideFindBar(immediately:)`), so the
+  band is settled before the turn's slide starts.
+- **The bar's room is one fixed height while you type.** The "Go to ..." rows and the no-matches note
+  used to grow the bar, so every keystroke that added or removed one moved the band (402, 331, 366 pt
+  typing "2:255") and refitted the page under the keyboard. They now hang below the bar over the page
+  (`findResultRows`, on glass). And the bar keeps what it showed through its fade-out (`findShown`,
+  the query cleared only when the room goes): keyed on the intent, the close's first pass had the query
+  but no matches and the note grew the fading bar by 21 pt for a frame.
+
+DEBUG: `-resetChromeTwins` starts with no fold or find twins learned, for recording a first-ever change.
+
+Verified at 60 fps on the iPhone 17 Pro simulators (iOS 26.5, then iOS 27.0 once the 26.5 one was busy):
+a warm Search open switches the page on its first frame and the bar fades in over nothing; the close fades
+the bar out in place (chips included) and switches once to the full band; typing a query or a reference
+never moves the band; "Go to 2:255" tapped from its hanging row lands on page 42 with the ayah lit; a
+vertical drag and a page swipe each dismiss the keyboard with the find still open, and tapping the field
+brings it back; a fold fades the bars and then switches, an unfold switches and then fades the bars in; a
+first-ever fold or find (`-resetChromeTwins`) shows its fallback for a few frames while its fit lands.
+
+Not verified: a device, an iPad spread, Mac windows, Low Power Mode (no twin prefetch there).
+
+## 2026-09-23 (evening): a fold moves the chrome, never the page
+
+> "collapsing and uncollapsing the animation is horrible for quran page" (Abu)
+
+**What the Al-Quran approach did to a fold** (recorded at 60 fps on the iPhone 17 Pro simulator, page 42,
+`-pageFitLog`): the two bands are 527 and 664 pt, and the page's two layouts are genuinely different,
+21.9 pt in 15 lines and 24.5 pt in 18 lines, with different line breaks (print-matched lines were
+withdrawn on 2026-08-31, so a page always reflows to its band). While the band swept between them:
+
+- Fold: the old layout stayed at its size in the growing band, sliding down with it, over an empty strip
+  where the bars had been, for about half a second (220 ms settle debounce plus the fit), then cut to the
+  bigger layout with new line breaks.
+- Unfold: the old layout was scaled down with the shrinking band into a column about 80% wide, with
+  wide side margins, then cut to the full-width layout at the end.
+
+No scale of one layout ever matches the other, so the sweep could only show a wrong-size page and then a
+jump. The clean version is ONE switch, at the tap, with only the chrome moving.
+
+What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+
+- **The pager does not animate through a fold**: `.animation(nil, value: bottomBarsCollapsed)` on the
+  TabView. The header and bars still animate (now ease-out 0.25 s, so they arrive or clear at once), but
+  the pager and every page in it take the new band in one step. The page switches to its layout for the
+  new band on the first frame; on a fold the bars fade off a page that is already full size underneath
+  them, on an unfold they fade into the room the page has already left. `applyBarsCollapsed` is the
+  fold (the DEBUG `-pageTurnScript` "collapse" step uses it too); `setBarsCollapsed` adds the stored
+  preference as before.
+- **Fold twins**: `updatePagerSize` sees each fold as one band change (`MushafPagerBandBox.bandBeforeFold`)
+  and hands the pair to `MushafPageRenderCache.noteFoldTwins`, which remembers both directions per text
+  geometry (persisted under `mushaf.foldTwins`, device-only in `CloudManifest`) and marks the landing
+  geometry settled, so a cold landing fits at once instead of waiting out the 220 ms debounce. `prewarm`
+  then queues ONE extra fit per ring: the visible page at its twin geometry, after the two nearest
+  neighbours, never in Low Power Mode. It is cache-only (`enqueueFit(notesLatest: false)`), so the find
+  bar and the mini player keep falling back to this side's layout.
+
+This is not the 09-21/22 twins: one fit for the page on screen, for the fold only, no known bands per
+chrome state, no destination render served early, no crossfade.
+
+Result, same recordings: every fold and unfold is one switch on the first frame after the tap, then about
+14 frames of chrome and a page that does not move. The first fold ever (no pair learned yet) still switched
+on its first frame (the fit landed in 47 ms with no debounce). Relaunched on page 109 with the pair
+persisted, the launch ring queued "fold twin 378x660" (landed in 137 ms) and the fold switched on its
+first frame. A regression run (fold, unfold, find bar open and close, swipes in both states, a fold and an
+unfold on pages reached by swiping) had zero blank frames, and fallbacks appeared only during the find
+bar's sweep, always this side's layout.
+
+Not verified: a device, an iPad spread, Mac windows, Low Power Mode (no prefetch there, so a fold right
+after a page turn can show the old layout for one fit).
 
 ## 2026-09-23: back to Al-Quran's page management
 

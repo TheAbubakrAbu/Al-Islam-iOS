@@ -77,7 +77,7 @@ struct QiblaView: View {
     }
 
     /// A fix the Qibla maths can actually use: present, and not the app's (1000, 1000) "none yet"
-    /// sentinel. `LocalQiblaCompass.qiblaDirection()` applies the same test.
+    /// sentinel. `LocalQiblaCompass.usableLocation()` applies the same test.
     private var hasUsableLocation: Bool {
         guard let currentLocation = live.currentLocation else { return false }
         return abs(currentLocation.latitude) <= 90 && abs(currentLocation.longitude) <= 180
@@ -168,7 +168,7 @@ struct QiblaView: View {
     /// back again on the way down. The magnetometer is not what costs battery here; the GPS burst is,
     /// and that is still expanded-only.
     private func configureCompass() {
-        compass.start(needleRadius: size / 2)
+        compass.start()
         if isExpanded {
             if !startedRefinement, settings.beginLocationRefinementForCompass() {
                 startedRefinement = true
@@ -415,39 +415,68 @@ struct QiblaArrow: View {
     }
 }
 
+/// Turns heading samples into the needle angle.
+///
+/// Every sample is smoothed and published, as the compass did before the 2026-09-04 performance pass.
+/// That pass and its two follow-ups added a heading filter, a sample-rate gate, a publish gate and the
+/// system calibration prompt. Each one made the needle worse: it froze short of the Qibla, stepped
+/// instead of turning, or a figure-eight sheet covered the Adhan tab. All four are gone on purpose (Abu,
+/// 2026-09-23: "worked perfectly before"); do not bring them back to save body evaluations. A sample
+/// costs one `QiblaView` body, and the ring is diffed out by the quantized alignment score, so only the
+/// pointer redraws.
 final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var direction: Double = 0
 
     /// True once a usable heading has actually landed. `direction` starts at 0 and 0 means "aligned",
-    /// so without this flag a compass that has never received a sample - no magnetometer, an
-    /// uncalibrated one, or no location to compute a bearing from - draws as a perfect alignment.
+    /// so without this flag a compass that has never received a sample (no magnetometer, an
+    /// uncalibrated one, or no location to compute a bearing from) draws as a perfect alignment.
+    /// It stays true through `stop()`: a compass that scrolls or tabs away and comes back keeps its
+    /// last reading until the next sample, instead of flashing "Waiting for the compass" every time.
     @Published private(set) var hasHeading = false
 
     private let locationManager = CLLocationManager()
     private let locationProvider: () -> Location?
     private var started = false
-    private var cachedLocationKey: String?
-    private var cachedQiblaDirection: Double?
+    /// The Qibla bearing for the last coordinate it was computed for.
+    private var cachedBearing: (latitude: Double, longitude: Double, degrees: Double)?
     /// Continuous (unwrapped) low-pass accumulator of the heading→qibla delta. Published `direction`
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
 
-    #if os(iOS)
-    /// Live only while the compass is running - see `beginObservingOrientation`.
-    private var orientationObserver: NSObjectProtocol?
-    #endif
+    /// True minus magnetic heading, read off the last sample that carried a true heading, and the
+    /// place it was read at. Shared by every compass for the life of the process.
+    private struct Declination {
+        let degrees: Double
+        let latitude: Double
+        let longitude: Double
 
-    /// Publish only when the needle would visibly move, set from the needle's radius by `start`.
-    /// This was a flat 0.5° at every size, which is a different thing at each of them: half a degree
-    /// moves a 50 pt needle's tip by a fifth of a point and a 220 pt one's by a full point, so the
-    /// big compass published in visible steps - a stuttering needle rather than a turning one, since
-    /// the rotation is deliberately unanimated.
-    private var minPublishedDelta: Double = 0.5
+        /// Declination changes by about a degree every 100 to 200 km, so one reading serves a region.
+        func covers(latitude: Double, longitude: Double) -> Bool {
+            abs(self.latitude - latitude) <= 1 && abs(self.longitude - longitude) <= 1
+        }
+    }
+    private static var learnedDeclination: Declination?
+
+    /// Ends this compass's own coarse location lookup (see `geographicHeading`) if it runs out of
+    /// time. Non-nil exactly while that lookup is running.
+    private var declinationLookupTimeout: DispatchWorkItem?
+    /// Set when a lookup ran out of time without a true heading, so it is not retried on every
+    /// sample. `stop()` clears it.
+    private var declinationLookupGaveUp = false
+    private static let declinationLookupLimit: TimeInterval = 30
+
+    #if os(iOS)
+    /// Uptime of the last interface-orientation read (see `refreshHeadingOrientationIfDue`).
+    private var lastOrientationCheck: TimeInterval = 0
+    #endif
 
     init(locationProvider: @escaping () -> Location?) {
         self.locationProvider = locationProvider
         super.init()
         locationManager.delegate = self
+        // Take every heading sample and do our own smoothing: a steadier, sharper needle than letting
+        // Core Location drop sub-degree changes.
+        locationManager.headingFilter = kCLHeadingFilterNone
         #if os(iOS)
         applyHeadingOrientation()
         #else
@@ -455,12 +484,29 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         #endif
     }
 
+    func start() {
+        guard !started, CLLocationManager.headingAvailable() else { return }
+        started = true
+        #if os(iOS)
+        // Re-read here, not only in `init`: at init time the window scene is often not yet
+        // foregroundActive, and the orientation may have changed while the compass was stopped.
+        applyHeadingOrientation()
+        #endif
+        locationManager.startUpdatingHeading()
+    }
+
+    func stop() {
+        guard started else { return }
+        started = false
+        endDeclinationLookup()
+        declinationLookupGaveUp = false
+        locationManager.stopUpdatingHeading()
+    }
+
     #if os(iOS)
     /// CoreLocation reports a heading relative to the TOP OF THE DEVICE, so `headingOrientation` has
-    /// to say which edge that is. It was pinned to `.portrait`, and this app ships landscape on
-    /// iPhone and every orientation on iPad: rotate the window and the needle was a flat 90 degrees
-    /// wrong, pointing confidently at the wrong wall. Nothing else in the view could catch that -
-    /// `direction` is still a plausible number, the ring still turns green when you reach it.
+    /// to say which edge that is. Pinned to `.portrait`, a landscape window (iPhone landscape, any iPad
+    /// orientation) put the needle a flat 90 degrees off while every number still looked plausible.
     ///
     /// Mapped from the INTERFACE orientation (what the user is actually looking at) rather than the
     /// device one, and the two are inverted for the landscapes: `UIInterfaceOrientation.landscapeLeft`
@@ -474,123 +520,135 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         }
     }
 
-    private func applyHeadingOrientation() {
-        let interface = UIApplication.shared.connectedScenes
+    /// The frontmost scene's interface orientation, or nil when no scene is frontmost (Control Center,
+    /// the app switcher) or it reports unknown. Nil keeps the current frame instead of guessing portrait.
+    private static func activeInterfaceOrientation() -> UIInterfaceOrientation? {
+        let orientation = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .first { $0.activationState == .foregroundActive }?
-            .interfaceOrientation ?? .portrait
+            .interfaceOrientation
+        guard let orientation, orientation != .unknown else { return nil }
+        return orientation
+    }
+
+    /// Points `headingOrientation` at the edge that is currently the top of the screen. Returns true
+    /// when the frame changed, so the caller can drop the sample in hand.
+    @discardableResult
+    private func applyHeadingOrientation() -> Bool {
+        lastOrientationCheck = ProcessInfo.processInfo.systemUptime
+        guard let interface = Self.activeInterfaceOrientation() else { return false }
         let wanted = Self.headingOrientation(for: interface)
-        guard locationManager.headingOrientation != wanted else { return }
+        guard locationManager.headingOrientation != wanted else { return false }
         locationManager.headingOrientation = wanted
-        // The low-pass accumulator holds a delta measured in the OLD frame. Kept, it would WALK the
+        // The low-pass accumulator holds a delta measured in the OLD frame. Kept, it would walk the
         // needle across the 90 degrees instead of the frame simply changing under it; dropped, the
         // next sample re-seeds it (see the `smoothedDelta == nil` branch below).
         smoothedDelta = nil
+        return true
+    }
+
+    /// Re-reads the orientation from the heading callback, at most twice a second. This replaced a
+    /// device-orientation observer: that notification can arrive before the window scene reports its
+    /// new interface orientation, so the observer read the OLD one and could leave the needle 90
+    /// degrees off in portrait after a turn through landscape, until something else rotated.
+    private func refreshHeadingOrientationIfDue() -> Bool {
+        guard ProcessInfo.processInfo.systemUptime - lastOrientationCheck >= 0.5 else { return false }
+        return applyHeadingOrientation()
     }
     #endif
 
-    /// Start (or keep) heading updates for a needle of `needleRadius` points. The heading filter
-    /// stays `kCLHeadingFilterNone` on purpose: the low-pass below only converges while samples keep
-    /// coming, and a 1° filter went silent the moment the phone stopped turning, which froze the
-    /// needle short of the Qibla ("mad laggy"). Cost is controlled downstream instead, by the publish
-    /// gate that swallows sub-pixel jitter before it ever reaches SwiftUI.
+    /// The app-wide "no fix yet" sentinel is (1000, 1000). `Qibla(coordinates:)` happily returns a
+    /// bearing for it, which drew a needle that moved and looked alive while pointing at nothing.
+    private func usableLocation() -> Location? {
+        guard let location = locationProvider(),
+              abs(location.latitude) <= 90,
+              abs(location.longitude) <= 180 else { return nil }
+        return location
+    }
+
+    private func qiblaBearing(latitude: Double, longitude: Double) -> Double {
+        if let cachedBearing, cachedBearing.latitude == latitude, cachedBearing.longitude == longitude {
+            return cachedBearing.degrees
+        }
+        let degrees = Qibla(coordinates: Coordinates(latitude: latitude, longitude: longitude)).direction
+        cachedBearing = (latitude, longitude, degrees)
+        return degrees
+    }
+
+    /// The heading from true north, which is what the Qibla bearing is measured from.
     ///
-    /// There is no sample-rate gate any more. Dropping to 10 Hz on the reduced tier starved the
-    /// low-pass and, with the rotation unanimated, showed as a needle that jumped in chunks.
-    func start(needleRadius: CGFloat) {
-        guard CLLocationManager.headingAvailable() else { return }
-        minPublishedDelta = Self.publishThreshold(needleRadius: needleRadius)
-        locationManager.headingFilter = kCLHeadingFilterNone
-        guard !started else { return }
-        started = true
-        #if os(iOS)
-        // Re-read it here, not only in `init`: at init time the window scene is often not yet
-        // foregroundActive, so the initializer's read falls back to portrait.
-        applyHeadingOrientation()
-        beginObservingOrientation()
-        #endif
-        locationManager.startUpdatingHeading()
-    }
-
-    #if os(iOS)
-    /// Device-orientation notifications only fire while someone is generating them, and the generator
-    /// is reference counted - so this begins one for as long as the compass is up and ends it with
-    /// the compass, leaving anyone else's untouched. The notification is only the TRIGGER; the value
-    /// read is the window's interface orientation, which never reports faceUp/faceDown.
-    private func beginObservingOrientation() {
-        guard orientationObserver == nil else { return }
-        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
-        orientationObserver = NotificationCenter.default.addObserver(
-            forName: UIDevice.orientationDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.applyHeadingOrientation()
+    /// Apple documents `trueHeading` as valid only while the same location manager is also delivering
+    /// location updates; otherwise it is -1 and the magnetic heading is off by the local declination
+    /// (more than 10 degrees across much of North America). This manager never turned location on,
+    /// so the needle could depend on unrelated location activity: true north while the old 25 s GPS
+    /// burst ran, magnetic after it, and a swing of the full declination at each switch. Fewer bursts
+    /// since 2026-09-04 made the magnetic side the common one.
+    ///
+    /// Now a true heading is used and its declination remembered. Without one, the magnetic heading
+    /// plus that declination. With neither, a short coarse location lookup on this manager (cell and
+    /// Wi-Fi accuracy, not the GPS) until a true heading lands, and the raw magnetic heading meanwhile.
+    private func geographicHeading(_ heading: CLHeading, latitude: Double, longitude: Double) -> Double {
+        if heading.trueHeading >= 0 {
+            Self.learnedDeclination = Declination(
+                degrees: Self.signedDegrees(heading.trueHeading - heading.magneticHeading),
+                latitude: latitude,
+                longitude: longitude
+            )
+            endDeclinationLookup()
+            return heading.trueHeading
         }
-    }
-
-    private func endObservingOrientation() {
-        guard let orientationObserver else { return }
-        NotificationCenter.default.removeObserver(orientationObserver)
-        self.orientationObserver = nil
-        UIDevice.current.endGeneratingDeviceOrientationNotifications()
-    }
-    #endif
-
-    /// The rotation, in degrees, that moves the needle's tip half a point: below that a publish
-    /// costs a body evaluation and buys nothing. Clamped so the smallest compass still can't publish
-    /// more than once per degree and the largest still tracks finely.
-    private static func publishThreshold(needleRadius: CGFloat) -> Double {
-        let radius = max(1, Double(needleRadius))
-        return min(1.0, max(0.1, (0.5 / radius) * 180 / .pi))
-    }
-
-    func stop() {
-        guard started else { return }
-        started = false
-        #if os(iOS)
-        endObservingOrientation()
-        #endif
-        locationManager.stopUpdatingHeading()
-        smoothedDelta = nil
-        if hasHeading { hasHeading = false }
-    }
-
-    /// Offers the system's figure-eight calibration sheet while the compass is on screen. The
-    /// default for this delegate method is `false`, so it was never offered: a phone whose
-    /// magnetometer needed calibrating delivered nothing but `headingAccuracy < 0` samples, every
-    /// one of which is dropped below, and the needle simply never moved.
-    func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
-        started
-    }
-
-    private func qiblaDirection() -> Double? {
-        // The app-wide "no fix yet" sentinel is (1000, 1000) and every other consumer screens for it.
-        // This one did not: `Qibla(coordinates:)` happily returns a bearing for it, so a phone with no
-        // location drew a needle that MOVED and looked alive while pointing at nothing - the same
-        // failure-looks-like-success trap `hasHeading` exists to close.
-        guard let currentLocation = locationProvider(),
-              abs(currentLocation.latitude) <= 90,
-              abs(currentLocation.longitude) <= 180 else { return nil }
-        let locationKey = "\(currentLocation.latitude),\(currentLocation.longitude)"
-        if cachedLocationKey == locationKey, let cachedQiblaDirection {
-            return cachedQiblaDirection
+        if let learned = Self.learnedDeclination, learned.covers(latitude: latitude, longitude: longitude) {
+            return Self.normalizedDegrees(heading.magneticHeading + learned.degrees)
         }
-        let qiblaDirection = Qibla(
-            coordinates: Coordinates(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
-        ).direction
-        cachedLocationKey = locationKey
-        cachedQiblaDirection = qiblaDirection
-        return qiblaDirection
+        beginDeclinationLookupIfNeeded()
+        return heading.magneticHeading
+    }
+
+    private func beginDeclinationLookupIfNeeded() {
+        guard started, declinationLookupTimeout == nil, !declinationLookupGaveUp else { return }
+        let status = locationManager.authorizationStatus
+        guard status == .authorizedWhenInUse || status == .authorizedAlways else { return }
+        locationManager.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+        locationManager.startUpdatingLocation()
+        // Bounded: a device that never reports a true heading must not keep location running.
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.endDeclinationLookup()
+            self.declinationLookupGaveUp = true
+        }
+        declinationLookupTimeout = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.declinationLookupLimit, execute: timeout)
+    }
+
+    private func endDeclinationLookup() {
+        guard let timeout = declinationLookupTimeout else { return }
+        timeout.cancel()
+        declinationLookupTimeout = nil
+        locationManager.stopUpdatingLocation()
+    }
+
+    private static func normalizedDegrees(_ value: Double) -> Double {
+        var degrees = value.truncatingRemainder(dividingBy: 360)
+        if degrees < 0 { degrees += 360 }
+        return degrees
+    }
+
+    private static func signedDegrees(_ value: Double) -> Double {
+        var degrees = value.truncatingRemainder(dividingBy: 360)
+        if degrees > 180 { degrees -= 360 } else if degrees < -180 { degrees += 360 }
+        return degrees
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        guard newHeading.headingAccuracy >= 0, let qiblaDirection = qiblaDirection() else { return }
+        guard newHeading.headingAccuracy >= 0, let location = usableLocation() else { return }
+        #if os(iOS)
+        // A new frame makes this sample meaningless (it was measured against the old top edge); the
+        // next one re-seeds the low-pass.
+        if refreshHeadingOrientationIfDue() { return }
+        #endif
 
-        // Prefer the true (geographic) heading; magnetic is the fallback when declination is unknown.
-        let heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
-
-        var target = qiblaDirection - heading
+        let heading = geographicHeading(newHeading, latitude: location.latitude, longitude: location.longitude)
+        var target = qiblaBearing(latitude: location.latitude, longitude: location.longitude) - heading
         target.formTruncatingRemainder(dividingBy: 360)
         if target < 0 { target += 360 }
 
@@ -615,25 +673,17 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
 
         var normalized = updated.truncatingRemainder(dividingBy: 360)
         if normalized < 0 { normalized += 360 }
-
-        var published = normalized - direction
-        published.formTruncatingRemainder(dividingBy: 360)
-        if published > 180 { published -= 360 } else if published < -180 { published += 360 }
-        guard abs(published) >= minPublishedDelta else { return }
         direction = normalized
     }
 
+    /// The declination lookup's fixes. They exist only so Core Location can fill `trueHeading`; the
+    /// app's location still comes from `Settings`, which owns the commits, the city and prayer times.
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {}
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {}
+
     deinit {
-        // Not `stop()`: that publishes `hasHeading`, and an object being deallocated must not send
-        // `objectWillChange`.
-        #if os(iOS)
-        if let orientationObserver {
-            NotificationCenter.default.removeObserver(orientationObserver)
-            UIDevice.current.endGeneratingDeviceOrientationNotifications()
-        }
-        #endif
-        guard started else { return }
-        locationManager.stopUpdatingHeading()
+        stop()
     }
 }
 
