@@ -4,6 +4,8 @@ struct TashkeelLettersView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @ObservedObject private var settings = Settings.shared
+    /// Two mark chips across at the accessibility text sizes (three is the family-aligned default).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private static let shaddahMark = arabicShaddahMark
 
@@ -283,7 +285,8 @@ struct TashkeelLettersView: View {
 
                         // Three fixed columns, not an adaptive grid: every family lines up under the
                         // one above it, and a name gets a third of the row instead of a quarter.
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                                 count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
                             ForEach(group.marks, id: \.english) { mark in
                                 markChip(mark)
                             }
@@ -779,6 +782,34 @@ struct ArabicLetterPage: View {
     /// The six letters that never join the letter after them.
     private static let nonConnectors: Set<String> = ["ا", "د", "ذ", "ر", "ز", "و"]
 
+    /// The special letters that never join forward either: a hamza on an alif or a waaw seat, the
+    /// alif madd, the waaw madd, and the raa-shaped zhe.
+    private static let nonConnectingSpecials: Set<String> = ["أ", "إ", "ؤ", "آ", "وٓ", "ژ"]
+
+    /// What the three tiles cannot say on their own: which letters never join forward, which only
+    /// ever begin or end a word, and the one that joins nothing at all. Nil for a letter that joins
+    /// on both sides, where the tiles say it all.
+    private var formsFooter: String? {
+        let name = letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst()
+        switch letterData.letter {
+        case "\u{0621}":
+            return "Hamza on its own sits on the line and joins nothing: neither the letter before it nor the one after. On a seat (\u{0623} \u{0625} \u{0626} \u{0624}) it joins the way that seat does."
+        case "\u{0629}":
+            return "Taa marbuuTah only ever ends a word: joined to the letter before it (\u{0640}\u{0629}), or standing alone after a letter that does not join (\u{0629}). It never joins a letter after it."
+        case "\u{0649}":
+            return "Alif maqSoorah only ever ends a word: joined to the letter before it (\u{0640}\u{0649}), or standing alone after a letter that does not join (\u{0649}). It never joins a letter after it."
+        case "\u{0671}":
+            return "Hamzatul waSl only ever begins a word, and like every alif it never joins the letter after it."
+        case "\u{0644} \u{0627} - \u{0644}\u{0627}":
+            return "The laam joins from before and the alif closes the shape, so nothing joins after a laam alif."
+        default:
+            if Self.nonConnectors.contains(letterData.letter) || Self.nonConnectingSpecials.contains(letterData.letter) {
+                return "\(name) never joins the letter after it, so the letter that follows always starts fresh."
+            }
+            return nil
+        }
+    }
+
     /// Whether the English that ANSWERS the glyph (its name, its sound) is showing. It goes with the
     /// rest of the English when the reader is practising from the Arabic alone, on the pages that have
     /// readings to hide at all.
@@ -1094,10 +1125,14 @@ struct ArabicLetterPage: View {
             } header: {
                 Text("DIFFERENT FORMS")
             } footer: {
-                if Self.nonConnectors.contains(letterData.letter) {
-                    Text("\(letterData.transliteration.capitalized) never joins the letter after it, so the letter that follows always starts fresh.")
+                if let formsFooter {
+                    Text(formsFooter)
                 }
             }
+
+            #if os(iOS)
+            quranWordsSection
+            #endif
 
             if isTaaMarbuta {
                 taaMarbutaPracticeSections
@@ -1329,6 +1364,47 @@ struct ArabicLetterPage: View {
         }
         #endif
     }
+
+    #if os(iOS)
+    /// The letter inside real words, straight after its three forms: one word with it at the start,
+    /// one in the middle and one at the end, each cut from the Reading Test's verified bank
+    /// (`LetterWordExamples`), with the letter tinted where it sits. The rows follow the sukoon
+    /// choice and the Hide English flag like every other practice row.
+    @ViewBuilder
+    private var quranWordsSection: some View {
+        let examples = LetterWordExamples.examples(for: letterData.letter)
+        if !examples.isEmpty {
+            let name = letterData.transliteration.prefix(1).uppercased() + letterData.transliteration.dropFirst()
+            Section {
+                ForEach(examples, id: \.position) { example in
+                    ArabicExampleRow(
+                        arabic: ReadingTestText.display(example.item.arabic, mushafMarks: settings.quranicSukoonInLetterPractice),
+                        transliteration: example.item.reading,
+                        note: Self.wordNote(example),
+                        highlightLetter: letterData.letter
+                    )
+                }
+            } header: {
+                Text("SEE IT IN WORDS")
+            } footer: {
+                Text(examples.count == 3
+                     ? "\(name) in three words from the Quran: at the start, in the middle and at the end of a word, tinted where it sits. Tap a word to select it, then press play to hear it."
+                     : "\(name) in words from the Quran, tinted where it sits. Tap a word to select it, then press play to hear it.")
+            }
+        }
+    }
+
+    private static func wordNote(_ example: LetterWordExamples.Example) -> String {
+        var note = example.position.title
+        if let gloss = example.item.gloss, !gloss.isEmpty {
+            note += ": \u{201C}\(gloss)\u{201D}"
+        }
+        if let reference = example.item.reference, !reference.isEmpty {
+            note += " (Quran \(reference))"
+        }
+        return note
+    }
+    #endif
 
     /// The taa marbuuTah page's worked examples, in the same section grammar as WITH HAMZA above: real words,
     /// practised three ways. First stopping on the ة (it closes to a soft "h"), then continuing through it
@@ -1573,6 +1649,65 @@ struct ArabicLetterPage: View {
                 }
             }
         }
+    }
+}
+
+/// Finds one of the alphabet's letters inside a marked word: the base letter together with the marks
+/// it carries. The key is a `LetterData.letter`: a single letter, a madd letter with its sign
+/// (\u{064A}\u{0653}), the precomposed alif madd, or the laam alif composite ("\u{0644} \u{0627} - \u{0644}\u{0627}").
+enum ArabicLetterMatch {
+    /// The key as the mushaf text spells it: the alif madd as an alif carrying the madd sign, the
+    /// laam alif as the two letters.
+    private static func scalars(of letter: String) -> [Unicode.Scalar] {
+        switch letter {
+        case "\u{0622}": return ["\u{0627}", "\u{0653}"]
+        case "\u{0644} \u{0627} - \u{0644}\u{0627}", "\u{0644}\u{0627}": return ["\u{0644}", "\u{0627}"]
+        default: return Array(letter.unicodeScalars)
+        }
+    }
+
+    /// True when the joining group `character` (a letter with its marks) is `letter`.
+    private static func matches(_ key: [Unicode.Scalar], _ character: Substring.UnicodeScalarView) -> Bool {
+        let scalars = Array(character)
+        guard let base = key.first, scalars.first == base else { return false }
+        // A madd letter's sign must be among the marks; a plain key matches the bare letter and any
+        // marks on it.
+        return key.dropFirst().allSatisfy { scalars.contains($0) }
+    }
+
+    private static let laamAlif: [Unicode.Scalar] = ["\u{0644}", "\u{0627}"]
+
+    /// Whether the letters (as `ReadingTestText.letters` splits them) at `index` spell the key.
+    private static func matches(_ key: [Unicode.Scalar], in letters: [String], at index: Int) -> Bool {
+        guard letters.indices.contains(index) else { return false }
+        let isLaamAlif = key == laamAlif
+        guard matches(isLaamAlif ? [key[0]] : key, letters[index][...].unicodeScalars) else { return false }
+        // The laam alif: the alif must follow the laam.
+        guard isLaamAlif else { return true }
+        return letters.indices.contains(index + 1) && letters[index + 1].unicodeScalars.first == "\u{0627}"
+    }
+
+    /// The position of the letter in `letters` (a word split into its letters with their marks).
+    static func firstIndex(of letter: String, in letters: [String]) -> Int? {
+        let key = scalars(of: letter)
+        return letters.indices.first { matches(key, in: letters, at: $0) }
+    }
+
+    /// Where the letter first occurs in `word`, with the marks it carries (and, for the laam alif,
+    /// the alif). Nil when the word does not contain it.
+    static func range(of letter: String, in word: String) -> Range<String.Index>? {
+        let key = scalars(of: letter)
+        var groups: [(range: Range<String.Index>, text: String)] = []
+        var index = word.startIndex
+        while index < word.endIndex {
+            let next = word.index(after: index)
+            groups.append((index..<next, String(word[index])))
+            index = next
+        }
+        let letters = groups.map(\.text)
+        guard let at = letters.indices.first(where: { matches(key, in: letters, at: $0) }) else { return nil }
+        let end = key == laamAlif && groups.indices.contains(at + 1) ? groups[at + 1].range.upperBound : groups[at].range.upperBound
+        return groups[at].range.lowerBound..<end
     }
 }
 
@@ -1901,10 +2036,6 @@ struct VowelCombinationRow: View {
     var quranicSukoon: Bool = Settings.shared.quranicSukoonInLetterPractice
     @ObservedObject private var selection = ArabicPracticeSelection.shared
 
-    /// The row's measured width, so the Alif row can hand its one cell exactly the column the rows
-    /// beneath it use and give the rest to the rule.
-    @State private var rowWidth: CGFloat = 0
-
     private static let columnSpacing: CGFloat = 20
 
     /// One cell: the mark on the BASE letter, the vowel letter after it, whether that letter carries a
@@ -1942,8 +2073,8 @@ struct VowelCombinationRow: View {
             }
         }
 
-        /// The rule printed beside (Alif) or beneath (unmarked) the cells. It is an explanation, not a
-        /// reading, so like the section footers it stays when the English readings are hidden.
+        /// The rule printed beneath the cells. It is an explanation, not a reading, so like the
+        /// section footers it stays when the English readings are hidden.
         var note: String? {
             switch self {
             case .alif:
@@ -1995,12 +2126,6 @@ struct VowelCombinationRow: View {
     /// mushaf prints. The same setting the Hamza rows and the shaddah expansions answer to.
     private var sukoon: String { quranicSukoon ? "\u{06E1}" : "\u{0652}" }
 
-    /// The width of one of the three columns, once the row has been measured.
-    private var columnWidth: CGFloat? {
-        guard rowWidth > 0 else { return nil }
-        return max((rowWidth - Self.columnSpacing * 2) / 3, 0)
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(partner.title)
@@ -2013,32 +2138,24 @@ struct VowelCombinationRow: View {
                 let combinations = partner.combinations
 
                 ForEach(combinations, id: \.suffix) { combo in
-                    if combinations.count == 1, let columnWidth {
-                        cell(combo).frame(width: columnWidth)
-                    } else {
-                        cell(combo)
-                    }
+                    cell(combo)
                 }
 
-                // A lone cell keeps the column the rows beneath it start in, and the rule takes the
-                // two columns they fill with the other readings.
-                if combinations.count == 1, let note = partner.note {
-                    noteText(note)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .environment(\.layoutDirection, .leftToRight)
+                // The Alif row has ONE reading. Two empty columns keep its cell in the column the
+                // rows beneath start in; they are plain views, never a measurement. The row used to
+                // measure itself with a GeometryReader and hand the cell a fixed third of that width,
+                // and on iOS 26 the measurement and the frame it set fed each other: the page hung in
+                // a layout loop the moment this section scrolled into view (2026-09-27).
+                if combinations.count == 1 {
+                    ForEach(0..<2, id: \.self) { _ in
+                        Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                    }
                 }
             }
             .environment(\.layoutDirection, .rightToLeft)
             .frame(maxWidth: .infinity)
-            .background(
-                GeometryReader { geo in
-                    Color.clear
-                        .onAppear { rowWidth = geo.size.width }
-                        .onChange(of: geo.size.width) { rowWidth = $0 }
-                }
-            )
 
-            if partner.combinations.count > 1, let note = partner.note {
+            if let note = partner.note {
                 noteText(note)
             }
         }
@@ -2546,8 +2663,24 @@ struct ArabicExampleRow: View {
     /// Quran words the mushaf's own Uthmani face, because the stack is what they demonstrate and
     /// the app's faces write the pair side by side (2026-09-22).
     var fontName: String? = nil
+    /// One of the alphabet's letters to tint in the accent where it first occurs in `arabic`, so a
+    /// letter page's SEE IT IN WORDS rows show WHERE the letter sits in the word. The tint is a
+    /// colour run inside one attributed string, so the joining is untouched.
+    var highlightLetter: String? = nil
 
     private var useQuranicFont: Bool { useFontArabic }
+
+    private var arabicText: Text {
+        if let highlightLetter, let range = ArabicLetterMatch.range(of: highlightLetter, in: arabic) {
+            var attributed = AttributedString(arabic)
+            if let start = AttributedString.Index(range.lowerBound, within: attributed),
+               let end = AttributedString.Index(range.upperBound, within: attributed) {
+                attributed[start..<end].foregroundColor = appearance.accent
+                return Text(attributed)
+            }
+        }
+        return Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
+    }
 
     var body: some View {
         let id = "example:" + arabic
@@ -2574,7 +2707,7 @@ struct ArabicExampleRow: View {
 
             Spacer(minLength: 8)
 
-            Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
+            arabicText
                 .font(fontName.map { Font.arabic($0, size: 24, relativeTo: .title2) }
                       ?? (useQuranicFont ? appearance.islamArabicFont(base: 24, relativeTo: .title2) : .title2))
                 .arabicFontDesign(custom: fontName != nil || (useQuranicFont && appearance.islamUsesCustomArabicFace))
@@ -2802,6 +2935,11 @@ struct ArabicNumberRow: View {
     var useFontArabic: Bool = Settings.shared.useFontArabic
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
+    /// The Hafs face draws Arabic-Indic digits as the mushaf's ornamental ayah medallions, a numeral
+    /// the size of a dot inside a ring, so under that face the numeral alone is set in the system
+    /// face; the name beside it keeps the reader's hand (2026-09-27).
+    private var numeralUsesArabicFace: Bool { useFontArabic && !appearance.islamArabicFontName.hasPrefix(Settings.hafsFontNamePrefix) }
+
     var body: some View {
         HStack(spacing: 12) {
             Text(numberData.englishNumber)
@@ -2836,11 +2974,11 @@ struct ArabicNumberRow: View {
 
             Text(numberData.number)
                 .font(
-                    useFontArabic
+                    numeralUsesArabicFace
                         ? appearance.islamArabicFont(base: 26, relativeTo: .title2)
                         : .title2
                 )
-                .arabicFontDesign(custom: useFontArabic && appearance.islamUsesCustomArabicFace)
+                .arabicFontDesign(custom: numeralUsesArabicFace && appearance.islamUsesCustomArabicFace)
                 .arabicLetterTypeFloor(steps: letterSizeSteps)
                 .foregroundColor(appearance.accent)
         }
@@ -2874,6 +3012,9 @@ struct ArabicNumberGridTile: View {
     var useFontArabic: Bool = Settings.shared.useFontArabic
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
+    /// See `ArabicNumberRow.numeralUsesArabicFace`: no ayah medallions for a numeral.
+    private var numeralUsesArabicFace: Bool { useFontArabic && !appearance.islamArabicFontName.hasPrefix(Settings.hafsFontNamePrefix) }
+
     var body: some View {
         GridTileMenu {
             Settings.shared.hapticFeedback()
@@ -2886,11 +3027,11 @@ struct ArabicNumberGridTile: View {
                 // than the glyph, and the difference is dead space.
                 Text(numberData.number)
                     .font(
-                        useFontArabic
+                        numeralUsesArabicFace
                             ? appearance.islamArabicFont(base: 30, relativeTo: .title)
                             : .title
                     )
-                    .arabicFontDesign(custom: useFontArabic && appearance.islamUsesCustomArabicFace)
+                    .arabicFontDesign(custom: numeralUsesArabicFace && appearance.islamUsesCustomArabicFace)
                     .arabicLetterTypeFloor(steps: letterSizeSteps)
                     .foregroundColor(appearance.accent)
                     .lineLimit(1)
@@ -2906,7 +3047,7 @@ struct ArabicNumberGridTile: View {
                 // The letter tiles' floor, for the same reason: "thamaaniyah" at a large text size.
                 Text(numberData.transliteration)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.3)
             }
@@ -3244,7 +3385,7 @@ struct ArabicLetterGridTile: View, Equatable {
 
                 Text(letterData.transliteration)
                     .font(.caption2.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.3)
 
@@ -3259,7 +3400,7 @@ struct ArabicLetterGridTile: View, Equatable {
                           : .caption2)
                     .arabicFontDesign(custom: usesCustomArabicFace)
                     .arabicLetterTypeFloor(steps: sizeIndex)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.2)
                     .frame(height: formsBoxHeight)

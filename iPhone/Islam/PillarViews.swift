@@ -406,7 +406,7 @@ struct AllahPillarView: View {
 
                     Text(articleMarkdown: "**Ayat al-Kursi (آيَة الكُرسِي)**, the Throne Verse, emphasizes Allah's supreme power, unmatched knowledge, and sovereignty over the universe. It is the greatest verse in the Quran, as the Prophet (peace and blessings be upon him) told Ubayy ibn Ka'b (Sahih Muslim 810), and the Prophet (peace and blessings be upon him) confirmed the words of the one who told Abu Hurayrah (may Allah be pleased with him):")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:2311", cite: "Sahih al-Bukhari 2311", arabic: 206...234, english: 328...371)
+                    ScriptureQuote(hadith: "bukhari:2311", cite: "Sahih al-Bukhari 2311", arabic: 206...234, english: 327...370)
                 }
 
 
@@ -868,7 +868,7 @@ struct SunnahPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 99...105)
+                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
 
                     Text(verbatim: "The Sunnah also serves as an example for personal conduct and social interactions. Allah says in the Quran:").font(.body)
                     ScriptureQuote(quran: "33:21")
@@ -949,7 +949,7 @@ struct HadithPillarView: View {
                     ScriptureQuote(quran: "3:7", words: 0...12)
 
                     Text(articleMarkdown: "While the Quran provides general principles, the Hadith clarifies how to implement these teachings. For example, the Quran commands Muslims to pray, and the Hadith describes how the Prophet (peace and blessings be upon him) performed **Salah (صَلَاة)**. He said:").font(.body)
-                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 99...105)
+                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
                 }
 
                 Section(header: ArticleHeader("TYPES OF HADITHS")) {
@@ -996,7 +996,7 @@ struct HadithPillarView: View {
                     Text(articleMarkdown: "3. **Strengthening Faith:** They contain spiritual guidance and wisdom that deepen a Muslim’s connection to Allah (Glorified and Exalted be He).").font(.body)
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1471...1491)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1470...1490)
 
                     Text(verbatim: "And he commanded holding to his Sunnah:").font(.body)
                     ScriptureQuote(hadith: "abudawud:4607", cite: "Sunan Abi Dawud 4607; graded sahih by al-Albani", arabic: 112...132, english: 159...192)
@@ -1155,7 +1155,7 @@ struct SalahView: View {
 
                 Section(header: ArticleHeader("HOW TO PRAY")) {
                     Text(verbatim: "The Prophet (peace and blessings be upon him) instructed:").font(.body)
-                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 99...105)
+                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
                     Text(articleMarkdown: "Facing the Qibla, with the **Niyyah (نِيَّة)**, the intention, settled in the heart, the prayer proceeds as follows (the opening takbir with the hands raised and the opening supplication belong to the first rak'ah only; every later rak'ah begins from the recitation):").font(.body)
                     Text(articleMarkdown: "1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar” (Allah is the Greatest), then place the right hand over the left upon the chest.").font(.body)
                     Text(articleMarkdown: "2. **Recitation**: in the first rak'ah recite the opening supplication (Sahih al-Bukhari 744), then Surah **Al-Fatiha (الفَاتِحَة)**, obligatory in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)

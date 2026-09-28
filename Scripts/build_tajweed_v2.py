@@ -43,19 +43,28 @@ def load_qiraat_qpk():
         nonlocal pos
         v = struct.unpack_from("<H", eager, pos)[0]; pos += 2; return v
     out = {}
+    # Scripts/reblock_packs.py put all seven readings in ONE solid block, back to back in
+    # eager order (QiraatPack.allAyahs in QuranPack.swift walks it the same way). Each
+    # reading therefore starts where the previous one in its block ended, not at 0: reading
+    # every key from the block's start handed all seven the first reading's (Warsh's) text,
+    # and Shu'bah's Kufi ayah counts over Warsh's bytes came out a surah out of step.
+    blobs, cursor = {}, defaultdict(int)
     for _ in range(u32()):
         klen = u32()
         key = eager[pos:pos + klen].decode(); pos += klen
         surahs = [(u32(), u32()) for _ in range(u32())]
         bidx = u16()
-        first, offset, clen, rlen = table[bidx]
-        blob = _decompress(bcodec, d[offset:offset + clen], rlen)
-        p2 = 0
+        if bidx not in blobs:
+            first, offset, clen, rlen = table[bidx]
+            blobs[bidx] = _decompress(bcodec, d[offset:offset + clen], rlen)
+        blob = blobs[bidx]
+        p2 = cursor[bidx]
         texts = defaultdict(dict)
         for sid, acount in surahs:
             for _ in range(acount):
                 aid, tlen = struct.unpack_from("<II", blob, p2); p2 += 8
                 texts[str(sid)][str(aid)] = blob[p2:p2 + tlen].decode(); p2 += tlen
+        cursor[bidx] = p2
         out[key] = dict(texts)
     return out
 
@@ -1422,6 +1431,62 @@ def print_legend(key):
             for r in RULE_ORDER if r in seen]
 
 
+# The readings whose text writes full imalah with the filled dot below (U+065C) and uses that dot
+# for nothing else, so a dotted letter IS an inclined vowel whether or not the print's colour layer
+# reached it. The Basri texts (ad-Duri, as-Susi) also put it under an eased hamzah and a shortened
+# vowel (أَىٜمَّةَ, نِعٜمَّا, أَرٜنَا), so there only the opening letters trust it.
+IMALAH_DOT_READINGS = {"shubah", "khalaf", "khallad", "abuharith", "durikisai", "ishaq", "idris",
+                       "hisham", "ibndhakwan"}
+IMALAH_DOT_OPENING_LETTERS_ONLY = {"duri", "susi"}
+
+
+def text_imalah_fallback(key, rules, legend):
+    """Paint a word red where the TEXT marks imalah and the print extraction left it unpainted.
+
+    The print is the authority for what is coloured, but its colour layer is an extraction, and it
+    missed a handful of words the text itself dots: طٜهٜ (20:1) and يٜسٓ (36:1) in all five of
+    Shu'bah, Khalaf, Khallad, Abu al-Harith and ad-Duri 'an al-Kisa'i, and طهٜ in the two Abu 'Amr
+    readings, while Ishaq and Idris (whose prints the extraction did reach) carried the same words
+    red (Abu, 2026-09-25: "taha should be imaalah red"). The extent is the dotted letter plus the
+    bare inclined vowel after it, the same one `inclined_extent` gives, merged into contiguous runs.
+    """
+    letter = next((e["c"] for e in legend if e["k"] in ("imalah", "imalah_taqlil")), None)
+    if letter is None:
+        return 0
+    if key in IMALAH_DOT_READINGS:
+        opening_only = False
+    elif key in IMALAH_DOT_OPENING_LETTERS_ONLY:
+        opening_only = True
+    else:
+        return 0
+    n = 0
+    for s, ayat in CLS[key].items():
+        for a, toks in ayat.items():
+            for wi, cl in enumerate(toks):
+                dotted = [ci for ci, c in enumerate(cl) if IMALAH in c[1]]
+                if not dotted:
+                    continue
+                if opening_only and not (wi == 0 and a <= 2 and skel(TOKS[key][s][a][wi]) in MUQATTAAT):
+                    continue
+                existing = rules.get(s, {}).get(a, {}).get(wi, [])
+                if any(e[0] == letter for e in existing):
+                    continue
+                covered = set()
+                for ci in dotted:
+                    lo, hi = inclined_extent(cl, ci)
+                    covered.update(range(lo, hi + 1))
+                run = []
+                for x in sorted(covered):
+                    if run and x == run[-1][1] + 1:
+                        run[-1][1] = x
+                    else:
+                        run.append([x, x])
+                for lo, hi in run:
+                    add(rules, s, a, wi, letter, lo, hi)
+                n += 1
+    return n
+
+
 REPORT = []
 
 def build(key, name):
@@ -1433,6 +1498,7 @@ def build(key, name):
     # each a reconstruction of a rule the page already states in colour.
     legend = print_legend(key)
     rep["print"] = dict(print_rules(key, rules))
+    rep["text-imalah-fallback"] = text_imalah_fallback(key, rules, legend)
 
     # order entries per word: whole-word first, then letter extents
     out_rules = {}

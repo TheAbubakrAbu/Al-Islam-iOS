@@ -4,6 +4,8 @@
 # Xcode
 xcuserdata/
 DerivedData/
+# Generated compiler index records
+/Al-Islam.xcodeproj/-Xcc/
 Resources/Packages/adhan-swift-main/build/
 # Xcode's own output when the project builds to the LEGACY location (in-project ./build)
 # rather than DerivedData: five .app/.appex products plus every intermediate - ~510 files,

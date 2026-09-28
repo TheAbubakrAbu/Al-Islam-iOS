@@ -448,6 +448,10 @@ private struct ReaderPinnedHeader<Content: View>: View {
 struct SurahView: View {
     /// For the title pill's Dynamic Type ceiling (see `NavigationTitlePill`).
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #if os(iOS)
+    /// Compact height (a phone in landscape): the title pill drops to one line (`surahTitleLabel`).
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
@@ -2776,7 +2780,10 @@ struct SurahView: View {
                 // while fading out via `retainedContext`, and "Stop Playing" defers `stop()`, so closing works.
                 // Scroll-collapse is OFF: the legend/global/riwayah row stays put while scrolling.
                 // (Was: `!barsCollapsed || isAyahSearchFocused` - restore to fold it away again.)
-                let controlsVisible = true
+                // A compact height (a phone in landscape) folds this row away and the same controls
+                // ride in the search row instead (`playbackAndSearchControls`): stacked, the two rows
+                // and the tab bar covered most of a 402 pt screen (2026-09-27).
+                let controlsVisible = verticalSizeClass != .compact
                 VStack(spacing: 0) {
                     // Now Playing rides on TOP of the whole bottom stack - above the legend/search/riwayah
                     // row, matching the Quran tab, so the bar sits in the same place no matter which screen
@@ -3419,8 +3426,14 @@ struct SurahView: View {
         }
     }
 
-    @ViewBuilder
     private var qiraatAndTajweedControls: some View {
+        qiraatAndTajweedControls(inline: false)
+    }
+
+    /// `inline`: beside the search field in a compact height instead of in a row of its own, so it
+    /// takes the width its buttons need (capped) rather than the whole reader.
+    @ViewBuilder
+    private func qiraatAndTajweedControls(inline: Bool) -> some View {
         let tajweedCanRenderNow = settings.showTajweedColors
             && settings.showArabicText
             && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
@@ -3466,8 +3479,8 @@ struct SurahView: View {
                         .layoutPriority(1)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 24)
+            .frame(maxWidth: inline ? 340 : .infinity, alignment: .center)
+            .padding(.horizontal, inline ? 0 : 24)
         }
     }
 
@@ -3485,6 +3498,12 @@ struct SurahView: View {
             // The compact SwiftUI bar has no internal insets, so the old negative-padding compensation
             // is gone - an ordinary 8pt gap separates the field from the play button.
             HStack(spacing: 8) {
+                // A compact height: the legend / global / riwayah controls sit here, ahead of the field,
+                // instead of in their own row above (see the bottom inset).
+                if verticalSizeClass == .compact {
+                    qiraatAndTajweedControls(inline: true)
+                }
+
                 SearchBar(
                     // Animated again - results sliding in/out is part of the reader's feel. Low Power
                     // Mode keeps the plain binding (under its CPU throttle the whole-list animated diff
@@ -3591,6 +3610,17 @@ struct SurahView: View {
                     Menu {
                         Text("Repeat Count")
                             .foregroundStyle(.secondary)
+
+                        Button {
+                            settings.hapticFeedback()
+                            quranPlayer.playSurah(
+                                surahNumber: surah.id,
+                                surahName: surah.nameTransliteration,
+                                repeatCount: QuranPlayer.infiniteRepeat
+                            )
+                        } label: {
+                            Label("Repeat Forever", systemImage: "infinity")
+                        }
 
                         ForEach(repeatCounts, id: \.self) { n in
                             Button {
@@ -3910,10 +3940,14 @@ struct SurahView: View {
                     }
                 }
 
-                Text(surah.nameEnglish)
-                    .font(.caption2)
-                    .lineLimit(1)
-                    .padding(.top, -8)
+                // Not in a compact height (a phone in landscape): the bar is the page's dearest chrome
+                // there, and the two-line pill held it some 20 pt taller than the one-line one does.
+                if verticalSizeClass != .compact {
+                    Text(surah.nameEnglish)
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .padding(.top, -8)
+                }
             }
             // Bar chrome: the pill stops scaling at the extra-large text size (see `NavigationTitlePill`).
             .dynamicTypeSize(...NavigationTitlePill.typeSizeCeiling)
@@ -3992,9 +4026,7 @@ struct SurahView: View {
             return
         }
 
-        settings.lastReadSurah = surah.id
-        settings.lastReadAyah = targetAyah
-        settings.stampLastRead()
+        settings.recordLastRead(surah: surah.id, ayah: targetAyah)
         settings.refreshQuranWidgets(.lastRead)
     }
 

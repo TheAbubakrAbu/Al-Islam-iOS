@@ -250,7 +250,32 @@ enum AccentColor: String, CaseIterable, Identifiable {
         rawValue.capitalized
     }
 
+    /// The accent as the app paints it: text, icons, controls and tints alike, ~1,000 call sites.
+    ///
+    /// On iOS it reads at 4.5:1 or better wherever it lands (2026-09-26). The system colors are tuned for
+    /// fills, not text: in light mode only indigo reached the 4.5:1 that text under 18 pt needs (green
+    /// 2.2:1, yellow 1.5:1, blue 4.0:1 on white). So each appearance takes the system color moved only as
+    /// far as it has to go (`AccentContrast.legibleColor`): light starts from the system's own Increase
+    /// Contrast shade, dark keeps the system color (only indigo moves). The watch keeps the plain colors.
     var color: Color {
+        #if os(iOS)
+        if self == .custom { return Self.cachedCustomColor(hex: Self.customHexForThisProcess) }
+        return Self.legiblePresets[self] ?? systemColor
+        #else
+        return systemColor
+        #endif
+    }
+
+    /// The color FAMILY, for a swatch that names the choice: the plain system color, or the picked hex.
+    /// `color` is what the app paints with, and in light mode that is a deeper shade; drawn as swatches
+    /// those shades read Yellow as brown and Cyan and Teal as one color (2026-09-26 screenshot).
+    var swatchColor: Color {
+        if self == .custom { return Color(hex: Self.customHexForThisProcess) ?? .green }
+        return systemColor
+    }
+
+    /// The plain system color, as every accent was painted before 2026-09-26.
+    private var systemColor: Color {
         switch self {
         case .red: return .red
         case .orange: return .orange
@@ -271,6 +296,35 @@ enum AccentColor: String, CaseIterable, Identifiable {
         }
     }
 
+    #if os(iOS)
+    /// The UIKit system color behind each preset (the same colors SwiftUI's `.green` and friends are).
+    private var systemUIColor: UIColor? {
+        switch self {
+        case .red: return .systemRed
+        case .orange: return .systemOrange
+        case .yellow: return .systemYellow
+        case .green: return .systemGreen
+        case .blue: return .systemBlue
+        case .indigo: return .systemIndigo
+        case .cyan: return .systemCyan
+        case .teal: return .systemTeal
+        case .mint: return .systemMint
+        case .purple: return .systemPurple
+        case .pink: return .systemPink
+        case .brown: return .systemBrown
+        case .custom: return nil
+        }
+    }
+
+    /// Built once: `color` is read by nearly every row, and a fresh `Color` per read would also defeat
+    /// every Equatable row that compares its accent (a dynamic color is equal only to itself).
+    private static let legiblePresets: [AccentColor: Color] = Dictionary(
+        uniqueKeysWithValues: allCases.compactMap { accent in
+            accent.systemUIColor.map { (accent, AccentContrast.legibleColor($0)) }
+        }
+    )
+    #endif
+
     /// The custom-accent hex as THIS process can see it. The app reads the live property; a widget or
     /// complication reads the App Group mirror the app writes on every change, so painting `.custom`
     /// no longer costs the extension the whole `Settings.init` (three location decodes, ~240 stored
@@ -290,8 +344,15 @@ enum AccentColor: String, CaseIterable, Identifiable {
         defer { customColorLock.unlock() }
         if let cached = customColorCache, cached.hex == hex { return cached.color }
         let parsed = Color(hex: hex) ?? .green
-        customColorCache = (hex, parsed)
-        return parsed
+        // A picked color gets the same legibility as the presets (see `color`). The PICKER reads the
+        // stored hex itself, never this, so the swatch shows exactly what was picked and never drifts.
+        #if os(iOS)
+        let painted = AccentContrast.legibleColor(UIColor(parsed))
+        #else
+        let painted = parsed
+        #endif
+        customColorCache = (hex, painted)
+        return painted
     }
 
     /// Kept so the (many) gradient/second-accent call sites still compile - it is simply the accent itself, so
@@ -326,6 +387,112 @@ enum AccentColor: String, CaseIterable, Identifiable {
 
 /// Preset swatches shown in Appearance. `.custom` is excluded - it's driven by the color picker instead.
 let accentColors: [AccentColor] = AccentColor.allCases.filter { $0 != .custom }
+
+#if os(iOS)
+/// WCAG 2 contrast arithmetic for the accent, in sRGB (the way Accessibility Inspector measures it).
+enum AccentContrast {
+    struct RGB: Equatable {
+        var r: Double, g: Double, b: Double
+    }
+
+    /// The light ground accent text is held to: the grouped background (242, 242, 247), the darkest of
+    /// the light grounds it sits on (rows are white), so 4.5:1 here is 4.5:1 or better on all of them.
+    static let lightGround = RGB(r: 242 / 255, g: 242 / 255, b: 247 / 255)
+    /// The dark ground: an inset-grouped row (28, 28, 30), where most accent text sits.
+    static let darkGround = RGB(r: 28 / 255, g: 28 / 255, b: 30 / 255)
+
+    /// Text under 18 pt (WCAG AA, the table Apple's accessibility page uses); Increase Contrast gets AAA.
+    static let textRatio = 4.5
+    static let increasedRatio = 7.0
+
+    static func rgb(_ color: UIColor) -> RGB {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func clamp(_ v: CGFloat) -> Double { Double(max(0, min(1, v))) }
+        return RGB(r: clamp(r), g: clamp(g), b: clamp(b))
+    }
+
+    static func luminance(_ c: RGB) -> Double {
+        func channel(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+        return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b)
+    }
+
+    static func ratio(_ a: RGB, _ b: RGB) -> Double {
+        let (la, lb) = (luminance(a), luminance(b))
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    /// `top` laid over `bottom` at `opacity`.
+    static func blend(_ top: RGB, over bottom: RGB, opacity: Double) -> RGB {
+        RGB(r: bottom.r + (top.r - bottom.r) * opacity,
+            g: bottom.g + (top.g - bottom.g) * opacity,
+            b: bottom.b + (top.b - bottom.b) * opacity)
+    }
+
+    /// `color` moved just far enough to read at `target` against `ground`, keeping its hue: scaled toward
+    /// black on a light ground, mixed toward white on a dark one. Unchanged when it already reads.
+    static func legible(_ color: RGB, against ground: RGB, target: Double) -> RGB {
+        guard ratio(color, ground) < target else { return color }
+        // 0.18 is where black and white text tie, i.e. which way "more contrast" lies.
+        let towardBlack = luminance(ground) > 0.18
+        func moved(_ t: Double) -> RGB {
+            towardBlack
+                ? RGB(r: color.r * (1 - t), g: color.g * (1 - t), b: color.b * (1 - t))
+                : blend(RGB(r: 1, g: 1, b: 1), over: color, opacity: t)
+        }
+        var low = 0.0, high = 1.0
+        for _ in 0..<20 {
+            let mid = (low + high) / 2
+            if ratio(moved(mid), ground) >= target { high = mid } else { low = mid }
+        }
+        return moved(high)
+    }
+
+    static func uiColor(_ c: RGB) -> UIColor {
+        UIColor(red: CGFloat(c.r), green: CGFloat(c.g), blue: CGFloat(c.b), alpha: 1)
+    }
+
+    /// `color` as it resolves in one appearance.
+    static func resolved(_ color: UIColor, dark: Bool, increased: Bool = false) -> RGB {
+        let style: UIUserInterfaceStyle = dark ? .dark : .light
+        let contrast: UIAccessibilityContrast = increased ? .high : .normal
+        let traits: UITraitCollection
+        if #available(iOS 17.0, *) {
+            traits = UITraitCollection { mutable in
+                mutable.userInterfaceStyle = style
+                mutable.accessibilityContrast = contrast
+            }
+        } else {
+            traits = UITraitCollection(traitsFrom: [
+                UITraitCollection(userInterfaceStyle: style),
+                UITraitCollection(accessibilityContrast: contrast)
+            ])
+        }
+        return rgb(color.resolvedColor(with: traits))
+    }
+
+    /// An accent that reads as text in every appearance, as ONE dynamic color with its four shades
+    /// worked out once. Light: the system color if it already reads, otherwise the system's own
+    /// Increase Contrast shade (a tuned darker hue, not a muddy one), then `legible` for whatever is
+    /// still missing. Dark: the system color, lifted only if it falls short (of the presets, indigo).
+    /// Increase Contrast holds both to 7:1.
+    static func legibleColor(_ base: UIColor) -> Color {
+        let lightPlain = resolved(base, dark: false)
+        let lightHigh = resolved(base, dark: false, increased: true)
+        let lightStart = ratio(lightPlain, lightGround) >= textRatio ? lightPlain : lightHigh
+        let light = uiColor(legible(lightStart, against: lightGround, target: textRatio))
+        let lightIncreased = uiColor(legible(lightHigh, against: lightGround, target: increasedRatio))
+        let dark = uiColor(legible(resolved(base, dark: true), against: darkGround, target: textRatio))
+        let darkIncreased = uiColor(legible(resolved(base, dark: true, increased: true),
+                                            against: darkGround, target: increasedRatio))
+        return Color(UIColor { traits in
+            let increased = traits.accessibilityContrast == .high
+            if traits.userInterfaceStyle == .dark { return increased ? darkIncreased : dark }
+            return increased ? lightIncreased : light
+        })
+    }
+}
+#endif
 
 // MARK: - Rounded design, app-wide
 //

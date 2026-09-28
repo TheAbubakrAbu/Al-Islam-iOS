@@ -71,6 +71,7 @@ struct ActivityDashboardCard: View {
                 AccentIconChip(systemImage: "chart.bar.fill", size: 24)
                 Text("Activity")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 NavigationLink(destination: LazyDestination { ActivityAnalyticsView() }) {
                     HStack(spacing: 3) {
@@ -106,12 +107,16 @@ struct ActivityDashboardCard: View {
                             Spacer(minLength: 4)
                             Text("\(ring.done) / \(ring.goal)")
                                 .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.secondaryOnGlass)
                         }
+                        // "Read, 3 of 10 ayahs": the dot, the name and "3 / 10" were three stops.
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(ring.kind.title)
+                        .accessibilityValue("\(ring.done) of \(ring.kind.amount(ring.goal))")
                     }
                     Text(Self.todayLine(summary.today))
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundColor(.secondaryOnGlass)
                         .padding(.top, 2)
                 }
             }
@@ -122,9 +127,12 @@ struct ActivityDashboardCard: View {
 
             // The streak.
             HStack(spacing: 10) {
-                streakStat("\(streak.current)", "Streak", systemImage: "flame.fill")
-                streakStat("\(streak.longest)", "Longest", systemImage: "trophy.fill")
-                streakStat(streak.freezeUsed ? "Used" : "1", "Freeze", systemImage: "snowflake")
+                streakStat("\(streak.current)", "Streak", systemImage: "flame.fill",
+                           spoken: ("Activity streak", Self.days(streak.current)))
+                streakStat("\(streak.longest)", "Longest", systemImage: "trophy.fill",
+                           spoken: ("Longest activity streak", Self.days(streak.longest)))
+                streakStat(streak.freezeUsed ? "Used" : "1", "Freeze", systemImage: "snowflake",
+                           spoken: ("Streak freeze", streak.freezeUsed ? "Used this month" : "1 left this month"))
             }
 
             WeekBars(week: summary.week, accent: accent)
@@ -150,7 +158,12 @@ struct ActivityDashboardCard: View {
         return parts.isEmpty ? "Nothing logged yet today." : "Today: " + parts.joined(separator: ", ") + "."
     }
 
-    private func streakStat(_ value: String, _ label: String, systemImage: String) -> some View {
+    private static func days(_ n: Int) -> String { "\(n) day\(n == 1 ? "" : "s")" }
+
+    /// `spoken` is the stat's name and value for VoiceOver, which read the icon ("Snow Flurry") and
+    /// every value in the row before any of the labels.
+    private func streakStat(_ value: String, _ label: String, systemImage: String,
+                            spoken: (label: String, value: String)) -> some View {
         VStack(spacing: 3) {
             HStack(spacing: 4) {
                 Image(systemName: systemImage)
@@ -161,11 +174,14 @@ struct ActivityDashboardCard: View {
             .foregroundColor(accent)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondaryOnGlass)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(accent.opacity(0.08)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken.label)
+        .accessibilityValue(spoken.value)
     }
 }
 
@@ -201,7 +217,7 @@ private struct WeekBars: View, Equatable {
         VStack(alignment: .leading, spacing: 6) {
             Text("THIS WEEK")
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondaryOnGlass)
             HStack(alignment: .bottom, spacing: 6) {
                 ForEach(week, id: \.key) { day in
                     VStack(spacing: 4) {
@@ -222,11 +238,32 @@ private struct WeekBars: View, Equatable {
                         .clipShape(RoundedRectangle(cornerRadius: 4))
                         Text(day.weekdayLetter)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                     }
                 }
             }
         }
+        // Spoken, the bars were nothing and their letters "M, T, W".
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("This week")
+        .accessibilityValue(spokenWeek)
+    }
+
+    /// "Monday: 12 ayahs, 33 counts; Tuesday: nothing; ..." Weekday names from the calendar, no
+    /// formatter, and only when the week itself changes (`.equatable()`).
+    private var spokenWeek: String {
+        let calendar = Calendar.current
+        return week.map { day in
+            let name = ActivityLog.date(fromKey: day.key).map { date in
+                calendar.weekdaySymbols[calendar.component(.weekday, from: date) - 1]
+            } ?? day.weekdayLetter
+            let parts = ActivityKind.allCases.compactMap { kind -> String? in
+                let n = day.counts[kind] ?? 0
+                return n > 0 ? kind.amount(n) : nil
+            }
+            return "\(name): " + (parts.isEmpty ? "nothing" : parts.joined(separator: ", "))
+        }
+        .joined(separator: "; ")
     }
 }
 
@@ -249,7 +286,7 @@ private struct HeatmapGrid: View, Equatable {
         VStack(alignment: .leading, spacing: 6) {
             Text(weeks == 6 ? "LAST SIX WEEKS" : "LAST TWELVE WEEKS")
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondaryOnGlass)
             HStack(alignment: .top, spacing: 3) {
                 ForEach(Array(columns.enumerated()), id: \.offset) { _, column in
                     VStack(spacing: 3) {
@@ -264,6 +301,9 @@ private struct HeatmapGrid: View, Equatable {
                 }
             }
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(weeks == 6 ? "Last six weeks" : "Last twelve weeks")
+        .accessibilityValue("Active on \(shown.filter { $0 > 0 }.count) of \(shown.count) days")
     }
 }
 
@@ -280,12 +320,12 @@ private struct MilestoneLadder: View, Equatable {
             HStack {
                 Text("MILESTONES")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                 Spacer()
                 if let next {
                     Text("\(next - current) day\(next - current == 1 ? "" : "s") to \(next)")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                 }
             }
             HStack(spacing: 6) {
@@ -294,7 +334,7 @@ private struct MilestoneLadder: View, Equatable {
                     let isNext = step == next
                     Text("\(step)")
                         .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundColor(reached ? .white : (isNext ? accent : .secondary))
+                        .foregroundColor(reached ? .white : (isNext ? accent : .secondaryOnGlass))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                         .background(
@@ -308,6 +348,19 @@ private struct MilestoneLadder: View, Equatable {
                 }
             }
         }
+        // Spoken, the ladder was six bare numbers with no word on which were reached.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Streak milestones")
+        .accessibilityValue(spokenValue(next: next))
+    }
+
+    private func spokenValue(next: Int?) -> String {
+        let reached = Self.steps.filter { current >= $0 }
+        let done = reached.isEmpty ? "None reached yet"
+            : "Reached \(reached.map(String.init).joined(separator: ", ")) days"
+        guard let next else { return done + "; every milestone reached" }
+        let left = next - current
+        return done + "; next \(next) days, \(left) day\(left == 1 ? "" : "s") to go"
     }
 }
 

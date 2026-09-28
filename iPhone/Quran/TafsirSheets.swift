@@ -1027,6 +1027,14 @@ private struct SurahInfoPlaybackCard: View {
                         Label("Play \(n)×", systemImage: "\(n).circle")
                     }
                 }
+
+                Button {
+                    settings.hapticFeedback()
+                    quranPlayer.playSurah(surahNumber: surahNumber, surahName: surahName, repeatCount: QuranPlayer.infiniteRepeat)
+                    onStartedPlaying()
+                } label: {
+                    Label("Play Forever", systemImage: "infinity")
+                }
             } label: {
                 Label("Repeat", systemImage: "repeat")
                     .font(.subheadline.weight(.semibold))

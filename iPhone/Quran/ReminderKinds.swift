@@ -612,7 +612,7 @@ struct ExtraReminderSections: View {
                     }
                 }
             )) {
-                Label("Random duas", systemImage: "hands.sparkles.fill")
+                ExtraReminderLabel(title: "Random duas", systemImage: "hands.sparkles.fill")
             }
             if store.config.duaEnabled {
                 Picker("Each day", selection: Binding(
@@ -660,7 +660,7 @@ struct ExtraReminderSections: View {
                     }
                 }
             )) {
-                Label(title, systemImage: symbol)
+                ExtraReminderLabel(title: title, systemImage: symbol)
             }
             if enabled {
                 HStack {
@@ -689,6 +689,21 @@ struct ExtraReminderSections: View {
     static func minutes(of date: Date) -> Int {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         return (components.hour ?? 0) * 60 + (components.minute ?? 0)
+    }
+}
+
+/// A switch row's label in the preset rows' grammar (`SunnahReminderRow`): the icon on a 30 pt chip and
+/// a semibold title. A plain `Label` drew a bare symbol under rows that all wear a chip.
+private struct ExtraReminderLabel: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 30)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+        }
     }
 }
 

@@ -831,6 +831,10 @@ enum TipCatalog {
                title: "Choose the tab the app opens on",
                detail: "Open the App On picks where the app lands: Adhan, Quran, Hadith, or Islam. A notification or a reminder you tap still opens where it points.",
                place: "Settings tab, Appearance, Look and Feel", destination: .appearancePage(.lookAndFeel)),
+        AppTip(id: "app.helpdoors", area: .app, group: "HOW IT LOOKS", systemImage: "questionmark.circle.fill",
+               title: "A question on every tab",
+               detail: "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it. Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran opens Arabic Beginner Mode, and Reading in One Language? on the hadith hides the Arabic or the English. Show Help Shortcuts, in Look and Feel, puts the rows away or brings them back.",
+               place: "Adhan, Quran, Hadith and Islam tabs", destination: .appearancePage(.lookAndFeel)),
     ]
 }
 
@@ -1223,6 +1227,9 @@ struct SettingsSpotlightSection: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    // Every card the tallest card's height: they are all 176 pt at the default sizes,
+                    // and grow with the text at the accessibility sizes (`SpotlightCard.grows`).
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 2)
                 }
@@ -1261,6 +1268,14 @@ private struct SpotlightCard: View {
 
     let tip: AppTip
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .subheadline) private var scaledWidth: CGFloat = 164
+
+    /// At the accessibility sizes the fixed 164 x 176 card cut every title and pitch ("Auto
+    /// Travelin...", "Asks "Did..."), so the card widens with the text (short of the screen, so the
+    /// next one still peeks in) and grows to fit it; the strip evens the heights out.
+    private var grows: Bool { dynamicTypeSize.isAccessibilitySize }
+
     var body: some View {
         let tint = tip.area.tint
         VStack(alignment: .leading, spacing: 8) {
@@ -1270,15 +1285,16 @@ private struct SpotlightCard: View {
             Text(tip.card?.title ?? tip.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(.primary)
-                .lineLimit(2)
+                .lineLimit(grows ? nil : 2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(tip.card?.pitch ?? tip.detail)
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .lineLimit(4)
+                .lineLimit(grows ? nil : 4)
                 .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: grows)
 
             Spacer(minLength: 0)
 
@@ -1291,7 +1307,8 @@ private struct SpotlightCard: View {
             .foregroundColor(.secondary)
         }
         .padding(12)
-        .frame(width: 164, height: 176, alignment: .topLeading)
+        .frame(width: grows ? min(scaledWidth, 280) : 164, height: grows ? nil : 176, alignment: .topLeading)
+        .frame(maxHeight: grows ? .infinity : nil, alignment: .top)
         // The area's own colour as a wash, not glass: the cards sit on a list row, where clear glass
         // has nothing behind it to bend and showed no surface at all in the light themes.
         .background(

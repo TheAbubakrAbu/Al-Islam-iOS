@@ -31,6 +31,24 @@ struct IsnadLayer: Identifiable {
     var id: String { title }
 }
 
+/// One riwayah's road below its imam: the links between them (where there are any), the narrator,
+/// and the students who carried his narration on, top to bottom.
+struct IsnadBranch: Identifiable {
+    /// The narrator's riwayah tag.
+    let id: String
+    /// The narrator whose page this is (or both, on the imam's page): drawn filled.
+    let highlighted: Bool
+    let layers: [IsnadLayer]
+}
+
+/// A reading's whole chain: the Prophet ﷺ down to the imam, shared, then the imam's two narrators
+/// side by side, each with his own road (Abu, 2026-09-26: "show two different chains for each
+/// riwayah and how it got to both, and if I see it for one riwayah show the other one too").
+struct IsnadChain {
+    let top: [IsnadLayer]
+    let branches: [IsnadBranch]
+}
+
 enum QiraatIsnad {
     // MARK: - The people
 
@@ -301,32 +319,62 @@ enum QiraatIsnad {
         return layers
     }
 
-    /// The whole chain of a narrator: the Prophet ﷺ at the top, his students at the foot.
-    static func chain(narrator tag: String) -> [IsnadLayer] {
+    /// The chain as a narrator's page shows it: the whole reading, with his branch highlighted and
+    /// his fellow narrator's beside it.
+    static func chain(narrator tag: String) -> IsnadChain {
         let canonical = Settings.Riwayah.canonicalTag(tag)
-        guard let narrator = QiraatProfiles.narrator(tag: canonical),
-              let master = QiraatProfiles.master(id: narrator.masterID) else { return [] }
-        var layers = topLayers(master: master)
-        let chain = narratorChains[canonical] ?? NarratorChain(links: [], students: [])
-        if !chain.links.isEmpty {
-            layers.append(IsnadLayer(title: chain.links.count == 1 ? "THE LINK BETWEEN" : "THE LINKS BETWEEN", nodes: chain.links))
-        }
-        layers.append(IsnadLayer(title: "THE NARRATOR", nodes: [narratorNode(narrator, highlighted: true)]))
-        if !chain.students.isEmpty {
-            layers.append(IsnadLayer(title: "HIS STUDENTS", nodes: chain.students))
-        }
-        return layers
+        guard let narrator = QiraatProfiles.narrator(tag: canonical) else { return IsnadChain(top: [], branches: []) }
+        return chain(master: narrator.masterID, highlighting: canonical)
     }
 
-    /// The chain of a reading: the Prophet ﷺ down to the imam, then his two narrators.
-    static func chain(master id: String) -> [IsnadLayer] {
-        guard let master = QiraatProfiles.master(id: id) else { return [] }
-        var layers = topLayers(master: master)
-        let narrators = QiraatProfiles.narrators(ofMaster: id).map { narratorNode($0, highlighted: true) }
-        if !narrators.isEmpty {
-            layers.append(IsnadLayer(title: "HIS TWO NARRATORS", nodes: narrators))
+    /// The chain of a reading: the Prophet ﷺ down to the imam, then his two narrators, each with the
+    /// road the reading took to him. `highlighting` fills one narrator's branch; nil fills both.
+    static func chain(master id: String, highlighting tag: String? = nil) -> IsnadChain {
+        guard let master = QiraatProfiles.master(id: id) else { return IsnadChain(top: [], branches: []) }
+        let branches = QiraatProfiles.narrators(ofMaster: id).map { narrator -> IsnadBranch in
+            let canonical = Settings.Riwayah.canonicalTag(narrator.id)
+            let highlighted = tag == nil || tag == canonical
+            let road = narratorChains[canonical] ?? NarratorChain(links: [], students: [])
+            var layers: [IsnadLayer] = []
+            if !road.links.isEmpty {
+                // Stored narrator-side first ("through A and then B"); a column reads top-down, from
+                // the imam, so it runs the other way.
+                layers.append(IsnadLayer(title: road.links.count == 1 ? "THE LINK" : "THE LINKS",
+                                         nodes: road.links.reversed()))
+            }
+            layers.append(IsnadLayer(title: "THE NARRATOR", nodes: [narratorNode(narrator, highlighted: highlighted)]))
+            if !road.students.isEmpty {
+                layers.append(IsnadLayer(title: "HIS STUDENTS", nodes: road.students))
+            }
+            return IsnadBranch(id: canonical, highlighted: highlighted, layers: layers)
         }
-        return layers
+        return IsnadChain(top: topLayers(master: master), branches: branches)
+    }
+
+    /// How the reading reached both narrators, in one paragraph: the page's own narrator first.
+    static func sentence(master id: String, highlighting tag: String? = nil) -> String {
+        guard let master = QiraatProfiles.master(id: id) else { return "" }
+        var narrators = QiraatProfiles.narrators(ofMaster: id)
+        if let tag, let index = narrators.firstIndex(where: { Settings.Riwayah.canonicalTag($0.id) == Settings.Riwayah.canonicalTag(tag) }) {
+            narrators.insert(narrators.remove(at: index), at: 0)
+        }
+        let links = narrators.map { (narratorChains[Settings.Riwayah.canonicalTag($0.id)]?.links ?? []).map(\.name) }
+        func path(_ names: [String]) -> String {
+            names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and then " + names.last!
+        }
+        let above = " Above \(master.id) the chain is one, running through his teachers to the Companions and to the Prophet ﷺ."
+        let names = narrators.map(\.name).joined(separator: " and ")
+        // The same road twice reads as a stutter: Ibn Amir's two narrators both received it through
+        // Ayyub ibn Tamim and Yahya adh-Dhimari, so say it once.
+        if narrators.count == 2, links[0] == links[1] {
+            if links[0].isEmpty { return "Both of its narrators, \(names), read on \(master.id) himself." + above }
+            return "Neither of its narrators met \(master.id): \(names) both received the reading through \(path(links[0]))." + above
+        }
+        let roads = zip(narrators, links).map { narrator, names -> String in
+            names.isEmpty ? "\(narrator.name) read on \(master.id) himself"
+                : "\(narrator.name) did not meet him, and received it through \(path(names))"
+        }
+        return "The reading of \(master.id) reached its two narrators by two roads: " + roads.joined(separator: "; ") + "." + above
     }
 
     /// Whether a narrator read on the imam himself (no link between them).
@@ -334,19 +382,6 @@ enum QiraatIsnad {
         (narratorChains[Settings.Riwayah.canonicalTag(tag)]?.links ?? []).isEmpty
     }
 
-    /// One sentence for the narrator's page: how he reaches the imam.
-    static func sentence(narrator tag: String) -> String {
-        let canonical = Settings.Riwayah.canonicalTag(tag)
-        guard let narrator = QiraatProfiles.narrator(tag: canonical),
-              let master = QiraatProfiles.master(id: narrator.masterID) else { return "" }
-        let chain = narratorChains[canonical] ?? NarratorChain(links: [], students: [])
-        if chain.links.isEmpty {
-            return "\(narrator.name) read on \(master.id) himself, and \(master.id)'s chain runs through his teachers to the Companions and to the Prophet ﷺ."
-        }
-        let names = chain.links.map(\.name)
-        let path = names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and then " + names.last!
-        return "\(narrator.name) did not meet \(master.id): the reading reached him through \(path), and from \(master.id) it runs through his teachers to the Companions and to the Prophet ﷺ."
-    }
 }
 
 // MARK: - The diagram
@@ -357,22 +392,75 @@ enum QiraatIsnad {
 struct QiraatIsnadDiagram: View {
     @Environment(\.appearance) private var appearance
 
-    let layers: [IsnadLayer]
+    let chain: IsnadChain
     /// The rendered image's fixed light look (the page follows the app's theme).
     var forImage = false
 
     private var accent: Color { appearance.accent }
 
+    /// The gap between the two branch columns; `IsnadBranchSplit` aims its legs at their centres.
+    private static let columnSpacing: CGFloat = 10
+
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(Array(layers.enumerated()), id: \.element.id) { index, layer in
+            ForEach(Array(chain.top.enumerated()), id: \.element.id) { index, layer in
                 layerBlock(layer)
-                if index < layers.count - 1 {
+                if index < chain.top.count - 1 {
                     connector
+                }
+            }
+
+            if chain.branches.count == 1, let branch = chain.branches.first {
+                connector
+                branchColumn(branch)
+            } else if chain.branches.count > 1 {
+                // The imam's two narrators, side by side, each with his own road: the split below the
+                // imam is where the one chain becomes two.
+                IsnadBranchSplit(columns: chain.branches.count, spacing: Self.columnSpacing)
+                    .stroke(accent.opacity(0.45), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .frame(height: 26)
+                    .padding(.top, 2)
+
+                HStack(alignment: .top, spacing: Self.columnSpacing) {
+                    ForEach(chain.branches) { branch in
+                        branchColumn(branch)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
             }
         }
         .padding(.vertical, 6)
+    }
+
+    /// One narrator's road, top-down: a chevron from the split, then each layer stacked (a column is
+    /// too narrow to set two people side by side).
+    private func branchColumn(_ branch: IsnadBranch) -> some View {
+        VStack(spacing: 0) {
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(accent.opacity(0.7))
+                .padding(.bottom, 4)
+
+            ForEach(Array(branch.layers.enumerated()), id: \.element.id) { index, layer in
+                VStack(spacing: 6) {
+                    Text(layer.title)
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.6)
+                        .foregroundStyle(forImage ? Color.black.opacity(0.55) : Color.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    ForEach(layer.nodes) { node in
+                        nodeChip(node)
+                    }
+                }
+                if index < branch.layers.count - 1 {
+                    connector
+                }
+            }
+        }
+        // The fellow narrator's road on a narrator's page: present, but a step back.
+        .opacity(branch.highlighted ? 1 : 0.8)
     }
 
     private var connector: some View {
@@ -400,6 +488,17 @@ struct QiraatIsnadDiagram: View {
             if layer.nodes.count == 1, let node = layer.nodes.first {
                 nodeChip(node)
                     .frame(maxWidth: 300)
+            } else if #available(iOS 16.0, *) {
+                // Centered rows (Abu, 2026-09-25: "some arent centered"). The adaptive grid this
+                // replaced made as many columns as the width allowed and filled them from the
+                // leading edge, so on an iPad or Mac a pair of narrators sat at the left of a
+                // wide row while every single-person layer sat in the middle.
+                IsnadCenteredRows(spacing: 8) {
+                    ForEach(layer.nodes) { node in
+                        nodeChip(node)
+                            .frame(maxHeight: .infinity)
+                    }
+                }
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 132, maximum: 200), spacing: 8)], spacing: 8) {
                     ForEach(layer.nodes) { node in
@@ -457,11 +556,89 @@ struct QiraatIsnadDiagram: View {
     }
 }
 
+/// The fork below the imam: one stem down from the centre, a bar across, and a leg down to the centre
+/// of each branch column (columns equal width, `spacing` apart).
+struct IsnadBranchSplit: Shape {
+    let columns: Int
+    let spacing: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard columns > 0 else { return path }
+        let columnWidth = (rect.width - spacing * CGFloat(columns - 1)) / CGFloat(columns)
+        let centres = (0..<columns).map { rect.minX + columnWidth / 2 + CGFloat($0) * (columnWidth + spacing) }
+        let bar = rect.minY + rect.height * 0.45
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.midX, y: bar))
+        if let first = centres.first, let last = centres.last {
+            path.move(to: CGPoint(x: first, y: bar))
+            path.addLine(to: CGPoint(x: last, y: bar))
+        }
+        for x in centres {
+            path.move(to: CGPoint(x: x, y: bar))
+            path.addLine(to: CGPoint(x: x, y: rect.maxY))
+        }
+        return path
+    }
+}
+
+/// One generation of the chain with more than one person in it: equal-width cards in as many columns
+/// as fit (never more than there are people), each ROW centered, and the cards of a row stretched to
+/// the row's tallest so a two-line name does not leave its neighbour short.
+@available(iOS 16.0, *)
+private struct IsnadCenteredRows: Layout {
+    var spacing: CGFloat = 8
+    var minItemWidth: CGFloat = 132
+    var maxItemWidth: CGFloat = 200
+
+    private func metrics(width: CGFloat, count: Int) -> (columns: Int, itemWidth: CGFloat) {
+        guard count > 0 else { return (1, 0) }
+        let fit = max(1, Int((width + spacing) / (minItemWidth + spacing)))
+        let columns = min(count, fit)
+        let itemWidth = min(maxItemWidth, (width - spacing * CGFloat(columns - 1)) / CGFloat(columns))
+        return (columns, max(0, itemWidth))
+    }
+
+    private func rows(_ subviews: Subviews, columns: Int, itemWidth: CGFloat) -> [(range: Range<Int>, height: CGFloat)] {
+        stride(from: 0, to: subviews.count, by: columns).map { start in
+            let range = start..<min(start + columns, subviews.count)
+            let height = range.map {
+                subviews[$0].sizeThatFits(ProposedViewSize(width: itemWidth, height: nil)).height
+            }.max() ?? 0
+            return (range, height)
+        }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width
+            ?? (maxItemWidth * CGFloat(subviews.count) + spacing * CGFloat(max(0, subviews.count - 1)))
+        let (columns, itemWidth) = metrics(width: width, count: subviews.count)
+        let heights = rows(subviews, columns: columns, itemWidth: itemWidth).map(\.height)
+        let height = heights.reduce(0, +) + spacing * CGFloat(max(0, heights.count - 1))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let (columns, itemWidth) = metrics(width: bounds.width, count: subviews.count)
+        var y = bounds.minY
+        for row in rows(subviews, columns: columns, itemWidth: itemWidth) {
+            let rowWidth = itemWidth * CGFloat(row.range.count) + spacing * CGFloat(row.range.count - 1)
+            var x = bounds.midX - rowWidth / 2
+            for index in row.range {
+                subviews[index].place(at: CGPoint(x: x, y: y),
+                                      proposal: ProposedViewSize(width: itemWidth, height: row.height))
+                x += itemWidth + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+}
+
 /// The diagram framed for sharing: a title, the chain, and the app's name at the foot, on paper.
 struct QiraatIsnadShareCard: View {
     let title: String
     let subtitle: String
-    let layers: [IsnadLayer]
+    let chain: IsnadChain
 
     var body: some View {
         VStack(spacing: 14) {
@@ -475,7 +652,7 @@ struct QiraatIsnadShareCard: View {
             }
             .multilineTextAlignment(.center)
 
-            QiraatIsnadDiagram(layers: layers, forImage: true)
+            QiraatIsnadDiagram(chain: chain, forImage: true)
 
             Text("Al-Islam · The Ten Qiraat")
                 .font(.caption2.weight(.semibold))
@@ -495,7 +672,7 @@ struct QiraatIsnadSection: View {
     let title: String
     let subtitle: String
     let sentence: String?
-    let layers: [IsnadLayer]
+    let chain: IsnadChain
 
     @State private var rendered: UIImage?
     @State private var rendering = false
@@ -509,16 +686,18 @@ struct QiraatIsnadSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            QiraatIsnadDiagram(layers: layers)
+            QiraatIsnadDiagram(chain: chain)
                 .padding(.vertical, 4)
 
             if #available(iOS 16.0, *) {
                 shareRow
+                    // The chain's last row: `-scrollToChainEnd` lands here, where the chain forks.
+                    .id("isnad-chain-end")
             }
         } header: {
             Text("THE CHAIN TO THE PROPHET ﷺ")
         } footer: {
-            Text("From the Prophet ﷺ down through the Companions, the Successors who taught the imam, the imam, and the narrator, to the students who carried the narration on: the isnad as the classical record gives it (al-Nashr, Ghayat al-Nihayah, and the turuq of al-Shatibiyyah and al-Durrah).")
+            Text("From the Prophet ﷺ down through the Companions and the Successors who taught the imam to the imam himself, where the chain divides: his two narrators side by side, each with the link between them where there is one, and the students who carried each narration on. The isnad as the classical record gives it (al-Nashr, Ghayat al-Nihayah, and the turuq of al-Shatibiyyah and al-Durrah).")
         }
     }
 
@@ -554,7 +733,7 @@ struct QiraatIsnadSection: View {
     @MainActor
     private func render() {
         rendering = true
-        let card = QiraatIsnadShareCard(title: title, subtitle: subtitle, layers: layers)
+        let card = QiraatIsnadShareCard(title: title, subtitle: subtitle, chain: chain)
             .environment(\.appearance, appearance)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
@@ -630,16 +809,24 @@ struct QiraatIsnadPage: View {
         return ""
     }
 
-    private var layers: [IsnadLayer] {
+    private var chain: IsnadChain {
         if let narratorTag { return QiraatIsnad.chain(narrator: narratorTag) }
         if let masterID { return QiraatIsnad.chain(master: masterID) }
-        return []
+        return IsnadChain(top: [], branches: [])
+    }
+
+    /// How the reading reached both narrators, the page's own first.
+    private var sentence: String? {
+        if let narratorTag, let narrator = QiraatProfiles.narrator(tag: narratorTag) {
+            return QiraatIsnad.sentence(master: narrator.masterID, highlighting: narratorTag)
+        }
+        if let masterID { return QiraatIsnad.sentence(master: masterID) }
+        return nil
     }
 
     var body: some View {
         List {
-            QiraatIsnadSection(title: title, subtitle: subtitle,
-                               sentence: narratorTag.map { QiraatIsnad.sentence(narrator: $0) }, layers: layers)
+            QiraatIsnadSection(title: title, subtitle: subtitle, sentence: sentence, chain: chain)
                 .themedListRowBackground()
         }
         .applyConditionalListStyle()

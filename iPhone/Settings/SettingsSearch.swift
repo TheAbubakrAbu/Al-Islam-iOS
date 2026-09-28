@@ -152,11 +152,12 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
 /// A sub-screen of Islam Settings - the fourth area, for everything that is not the Quran, the prayer
 /// times or the hadith books.
 enum SettingsIslamPage: String, CaseIterable, Hashable {
-    case arabicText, alphabet, libraries, sunnahReminders
+    case arabicText, textSize, alphabet, libraries, sunnahReminders
 
     var title: String {
         switch self {
         case .arabicText: return "Arabic Text"
+        case .textSize: return "Text Size"
         case .alphabet: return "Arabic Alphabet"
         case .libraries: return "Libraries"
         case .sunnahReminders: return "Sunnah Reminders"
@@ -166,6 +167,7 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
     var systemImage: String {
         switch self {
         case .arabicText: return "textformat.ar"
+        case .textSize: return "textformat.size"
         case .alphabet: return "abc"
         case .libraries: return "square.grid.2x2"
         case .sunnahReminders: return "bell.badge"
@@ -175,6 +177,7 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
     var caption: String {
         switch self {
         case .arabicText: return "The face for duas, dhikr, names, letters; Highlight Allah"
+        case .textSize: return "How large the Islam tab's text reads"
         case .alphabet: return "Arabic size, English readings, sukoon"
         case .libraries: return "Grid or rows, Word of the Day, Fajr"
         // The same words the Quran and Notifications rows carry: it is the same screen, reached
@@ -253,16 +256,31 @@ struct SettingsRowLabel: View {
     /// A short state read-out ("On", "3 passages") at the trailing edge.
     var value: String? = nil
 
+    #if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #endif
+
+    /// At the accessibility sizes one line cut every title ("Sunnah Remind...", "Favorites and Bo...")
+    /// and squeezed the trailing value to a sliver (Nagging Mode's "Off" drew as "("), so the row
+    /// wraps its text and puts the value under the caption, the way iOS Settings stacks a row there.
+    private var stacks: Bool {
+        #if os(iOS)
+        return dynamicTypeSize.isAccessibilitySize
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         HStack(spacing: 12) {
             AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint)
 
             // The title never wraps: a long value ("All passages · 2 themes") shrinks and then
-            // truncates before the title gives up a line.
+            // truncates before the title gives up a line. Accessibility sizes aside (`stacks`).
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .lineLimit(stacks ? nil : 1)
 
                 // The caption column is an iPhone luxury - the 40mm screen has no room for it.
                 #if os(iOS)
@@ -270,14 +288,20 @@ struct SettingsRowLabel: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(stacks ? nil : 1)
+                        .minimumScaleFactor(stacks ? 1 : 0.8)
                 }
                 #endif
+
+                if stacks, let value {
+                    Text(value)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .layoutPriority(1)
 
-            if let value {
+            if !stacks, let value {
                 Spacer(minLength: 8)
 
                 Text(value)

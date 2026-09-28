@@ -1111,6 +1111,11 @@ struct AyahRow: View, Equatable {
                 settings.hapticFeedback()
                 quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: 20)
             }
+
+            Button("Repeat Ayah Forever") {
+                settings.hapticFeedback()
+                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
+            }
         } message: {
             Text("Choose how you want to start playback for this ayah.")
         }
@@ -1531,6 +1536,13 @@ struct AyahRow: View, Equatable {
 
                 Button {
                     settings.hapticFeedback()
+                    quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
+                } label: {
+                    Label("Repeat Forever", systemImage: "infinity")
+                }
+
+                Button {
+                    settings.hapticFeedback()
                     requestSheet(.secondary(.customRange))
                 } label: {
                     Label("Play Custom Range", systemImage: "slider.horizontal.3")
@@ -1574,6 +1586,13 @@ struct AyahRow: View, Equatable {
                 } label: {
                     Label("Repeat \(count)×", systemImage: "\(count).circle")
                 }
+            }
+
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
+            } label: {
+                Label("Repeat Forever", systemImage: "infinity")
             }
 
             Button {

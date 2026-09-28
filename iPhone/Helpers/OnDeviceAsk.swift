@@ -1,14 +1,14 @@
 import Foundation
 import SwiftUI
 
-// "Ask" - the on-device model behind the app's Ask AI chat and its summarize sheets: Apple's
-// ON-DEVICE foundation model (the ~3B-parameter LLM behind Apple Intelligence). Private, offline, free.
+// "Ask" - Apple's ON-DEVICE foundation model (the ~3B-parameter LLM behind Apple Intelligence) as
+// the app's summarize sheets use it, plus the availability and error helpers every AI surface shares.
+// Private, offline, free.
 //
-// The chat (`AskAIChatView`, Helpers/AskAIChat.swift) runs the app's own retrieval for every question
-// and hands the passages here as SUPPORT: the model answers from what it knows AND the passages,
-// citing each one it actually uses, and never writes out verse or hadith text from memory - the app
-// shows every cited passage as a real row beneath the answer. The summarize sessions are the strict
-// opposite: the given source text is their whole world.
+// The Ask AI chat has its own engine layer now (Helpers/AskAIEngine.swift): it builds a numbered,
+// provenance-marked source list and can run on the device or on Private Cloud Compute. The
+// summarize sessions here are the strict opposite of a chat: the given source text is their whole
+// world.
 //
 // Availability: iOS 26+ on an Apple Intelligence device with it enabled. Everywhere else,
 // `OnDeviceAsk.isAvailable` is false and the feature simply does not exist in the UI - the word-vector
@@ -18,18 +18,6 @@ import SwiftUI
 import FoundationModels
 
 enum OnDeviceAsk {
-    /// One retrieved passage the answer may draw from - reference exactly as the app displays it
-    /// ("2:153", "Sahih al-Bukhari 6114") plus its English text.
-    struct Source {
-        let reference: String
-        let text: String
-        /// How much of `text` a chat turn carries. Retrieved ayahs and hadiths keep the default;
-        /// a tafsir passage or a surah's background prose is allowed more, because it IS the answer.
-        var maxCharacters: Int = OnDeviceAsk.chatPassageCharacterLimit
-        /// The verse or surah the question named: labelled SUBJECT in the prompt.
-        var isSubject: Bool = false
-    }
-
     /// Whether the on-device model can run right now (device eligible + Apple Intelligence enabled +
     /// model assets ready). Checked at render time so enabling Apple Intelligence lights this up
     /// without an app restart.
@@ -54,90 +42,6 @@ enum OnDeviceAsk {
 
     nonisolated(unsafe) private static var availabilityCache: (available: Bool, at: CFAbsoluteTime)?
     private static let availabilityTTL: CFAbsoluteTime = 5
-
-    /// The rules a CHAT session is created with: answer like a knowledgeable assistant, use the
-    /// retrieved passages as support and cite the ones used, never recreate scripture from memory,
-    /// no rulings, keep the conversation's thread.
-    private static let chatInstructions = """
-    You are a knowledgeable, warm assistant inside a Quran and Hadith reading app. People ask you \
-    about the Quran, the hadith, Islamic history and practice, and you answer the way a well-read \
-    friend would: directly, completely, and in plain language.
-
-    You may be given PASSAGES the app retrieved for the question (ayahs, hadiths, tafsir excerpts, \
-    a surah's background, a section of one of the app's own articles, or today's prayer times for \
-    the user's own location, each with its reference) and the CONVERSATION so far. Rules, in order:
-    1. Answer the question fully, from your general knowledge of Islam AND the passages. When the \
-    question names a verse or a surah and a passage carries that exact reference, that passage IS \
-    the subject: explain it, and do not describe some other verse instead. Other passages are \
-    support, not a fence: build on the relevant ones and ignore the rest silently.
-    2. Cite a passage you use inline in parentheses exactly as its reference is written, for \
-    example (2:153) or (Sahih al-Bukhari 6114). Cite ONLY references that appear in PASSAGES. \
-    Never add a reference, a verse number, or a hadith number from memory: if you draw on general \
-    knowledge, say so in words ("the Quran teaches", "it is reported that") with no number.
-    3. Never write out the wording of a verse or a hadith, and never put anything in quotation \
-    marks as if it were scripture. Describe and paraphrase in your own words. The app shows every \
-    passage you cite right beneath your answer. This does NOT apply to a "Prayer times today" \
-    passage: those times, and the rakah counts beside them, are the user's own schedule, so give \
-    them exactly as written rather than paraphrasing them away. Use that passage ONLY when the \
-    question actually asks about when to pray; otherwise ignore it completely and never mention \
-    prayer times in an answer that was not about them.
-    4. Be honest about uncertainty and scholarly disagreement: say when something is debated, and \
-    when you are not sure.
-    5. Never issue a religious ruling, verdict, or fatwa. For "is X halal/haram/allowed" questions, \
-    explain the considerations and the views that exist, then note that a qualified scholar should \
-    be consulted for a personal ruling.
-    6. Keep the conversation's thread: a follow-up refers to what was discussed before.
-    7. Write in English even when the question is in another language, keeping key Arabic terms. \
-    PLAIN TEXT ONLY: no asterisks, underscores, pound signs, or other markdown; short paragraphs; \
-    a numbered list only when it genuinely helps.
-    8. Begin directly with the answer: no preamble ("Sure!", "Great question"), no labels such as \
-    "Q:" or "A:", and never repeat the question back. Do not add a "References" list at the end.
-    """
-
-    /// How many retrieved passages a chat turn carries, and how much of each: 8 passages of 500
-    /// characters is ~1k tokens against the on-device model's ~4k window, leaving room for the
-    /// instructions, the recent conversation, the question, and a full answer.
-    static let chatPassageLimit = 8
-    static let chatPassageCharacterLimit = 500
-
-    /// Stream a chat answer: the question, the retrieved passages (support, cited when used), and the
-    /// recent conversation (the last few completed turns, clipped). Snapshots, like `streamSummary`:
-    /// each yielded value is the full text so far. Throws when the model declines or errors.
-    @available(iOS 26.0, *)
-    static func streamChatAnswer(question: String, sources: [Source],
-                                 transcript: [SummarizeTurn]) -> AsyncThrowingStream<String, Error> {
-        let passages = sources.prefix(chatPassageLimit).map { source in
-            "\(source.isSubject ? "SUBJECT OF THE QUESTION " : "")[\(source.reference)] \(String(source.text.prefix(source.maxCharacters)))"
-        }.joined(separator: "\n")
-        let recent = transcript.suffix(3).map { turn in
-            "Earlier question: \(String(turn.question.prefix(300)))\nEarlier answer: \(String(turn.answer.prefix(500)))"
-        }.joined(separator: "\n")
-
-        var prompt = ""
-        if !passages.isEmpty {
-            prompt += "PASSAGES the app retrieved for this question (a passage marked SUBJECT OF THE QUESTION is the verse or surah the question is about: base the answer on it; cite the passages you use, ignore the rest):\n\(passages)\n\n"
-        }
-        if !recent.isEmpty {
-            prompt += "CONVERSATION SO FAR:\n\(recent)\n\n"
-        }
-        prompt += "QUESTION: \(question)"
-        // Measured on the shipping model: 0.7 drifted from the passages, 0.3 fell into paragraph
-        // loops; 0.5 keeps citations put without looping. The token ceiling stops a runaway turn (an
-        // unbounded one once produced a 90-item list), and the caller cuts a loop the moment a
-        // paragraph repeats (`AskAIAnswerText.isLooping`).
-        let options = GenerationOptions(temperature: 0.5, maximumResponseTokens: 900)
-        return streamSummarizeTask(instructions: chatInstructions, prompt: prompt, options: options)
-    }
-
-    /// Loads the model ahead of the first question (the chat screen calls this on appear), so the
-    /// first answer does not also pay the model's cold start. Once per process.
-    nonisolated(unsafe) private static var didPrewarmChat = false
-    @available(iOS 26.0, *)
-    static func prewarmChatModel() {
-        guard !didPrewarmChat, isAvailable else { return }
-        didPrewarmChat = true
-        LanguageModelSession(instructions: chatInstructions).prewarm()
-    }
 
     /// Whether a failed generation was Apple's safety guardrail - the one failure worth one retry with
     /// the question framed as the educational request it is.
@@ -338,7 +242,7 @@ enum OnDeviceAsk {
     }
 
     /// Stream a faithful summary of `source` (pass it pre-clipped via `clippedSource`, or
-    /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like `streamChatAnswer`:
+    /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like the chat engine:
     /// each yielded value is the full text so far.
     /// `focus`: a multi-source summary of ONE section only (its "=== label ==="); the other sections
     /// are context the model may read but must not summarize. How an Arabic tafsir edition gets an
@@ -493,20 +397,12 @@ enum OnDeviceAsk {
 /// surfaces that reference this (the Islam tab's resource list, `AskAIChat.swift` on an SDK without
 /// FoundationModels) compile and simply never show it.
 enum OnDeviceAsk {
-    struct Source {
-        let reference: String
-        let text: String
-        var maxCharacters: Int = 500
-        var isSubject: Bool = false
-    }
-
     struct SummarizeTurn: Sendable {
         let question: String
         let answer: String
     }
 
     static var isAvailable: Bool { false }
-    static let chatPassageLimit = 8
 }
 
 #endif

@@ -382,20 +382,14 @@ struct MiraclesView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    let strongest = library.strongest
-                    if !strongest.isEmpty {
-                        Section(
-                            header: SectionPillHeader(title: "STRONGEST", count: strongest.count,
-                                                      icon: "star.fill", accentTitle: true),
-                            footer: Text("Where the Quran's wording is most specific and the confirmation hardest to argue with - an excavated city, a mummy, a measured structure. The app's own pick, not the source's.")
-                        ) {
-                            ForEach(strongest) { article in
-                                NavigationLink(destination: LazyDestination {
-                                    MiracleArticleView(article: article)
-                                }) {
-                                    MiracleArticleRow(article: article, showCategory: true, query: "").equatable()
-                                }
-                            }
+                    StrongestSection(
+                        items: library.strongest,
+                        footer: "Where the Quran's wording is most specific and the confirmation hardest to argue with: an excavated city, a mummy, a measured structure. The app's own pick, not the source's."
+                    ) { article in
+                        NavigationLink(destination: LazyDestination {
+                            MiracleArticleView(article: article)
+                        }) {
+                            MiracleArticleRow(article: article, showCategory: true, query: "").equatable()
                         }
                     }
 

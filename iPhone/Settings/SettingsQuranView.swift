@@ -1007,18 +1007,15 @@ struct SettingsQuranView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
-            // An iPad or a Mac only: a phone is never wide enough to open the book.
-            if UIDevice.current.userInterfaceIdiom != .phone {
-                Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
+            Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
 
-                Text("In reading mode, shows two facing pages like an open mushaf whenever the window is wide enough for both at full size, such as an iPad in landscape or a wide Mac window. A narrow or portrait window shows one page.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            Text("In reading mode, shows two facing pages like an open mushaf whenever the page area is wider than it is tall, such as a phone or iPad in landscape or a wide Mac window. A portrait or narrow window shows one page.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
         }
     }
     #endif
@@ -1196,7 +1193,14 @@ struct SettingsQuranView: View {
             }
         )) {
             VStack(alignment: .leading, spacing: 2) {
-                Label("Beta Text (12 Riwayat)", systemImage: "flask")
+                // An explicit HStack, not a `Label`: inside a Toggle's stacked label, iOS 26 drew the
+                // Label's symbol on a line of its own above the title (Abu, 2026-09-26: "put the sf
+                // symbol on the same line").
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: "flask")
+                        .foregroundColor(settings.accentColor.color)
+                    Text("Beta Text (12 Riwayat, 6 Qiraat)")
+                }
                 Text("Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -1253,6 +1257,16 @@ struct SettingsQuranView: View {
             }
             .font(.caption)
             .padding(.vertical, 2)
+
+            // The explorer beside the two articles it grew out of (Abu, 2026-09-26: "show qiraat
+            // explorer in qiraat settings"): every place the riwayat differ, ayah by ayah.
+            #if os(iOS)
+            NavigationLink(destination: LazyDestination { QiraatExplorerView() }) {
+                Text("Qiraat Explorer")
+            }
+            .font(.caption)
+            .padding(.vertical, 2)
+            #endif
         }
     }
 

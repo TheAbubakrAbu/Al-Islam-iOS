@@ -98,54 +98,108 @@ struct FocusNameDetails: View {
     @State private var showsDetail = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // Centered under the centered hero and caption (Abu, 2026-09-25: "make other names and the
+        // description look prettier and centered"): the old block was the LIST row's layout,
+        // leading-aligned, which read as a different page pasted under the name.
+        VStack(spacing: 14) {
             if !name.otherNames.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("Other Names:")
-                        .font(.subheadline.weight(.semibold))
+                VStack(spacing: 8) {
+                    Text("ALSO CALLED")
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text(name.otherNames.joined(separator: ", "))
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    otherNames
                 }
             }
 
             Text.islamText(name.desc, highlightAllah: settings.highlightAllahNamesIslam)
-                .font(.footnote)
-                .foregroundColor(.secondary)
+                .font(.callout)
+                .foregroundColor(.primary.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(settings.accentColor.color.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(settings.accentColor.color.opacity(0.18), lineWidth: 1)
+                )
 
-            if NamesDetailsStore.isBundled {
-                Button {
-                    settings.hapticFeedback()
-                    showsDetail = true
-                } label: {
-                    detailLabel("More about this name", systemImage: "text.book.closed")
-                }
-                .buttonStyle(.plain)
-            }
-
-            #if HAS_QURAN
-            if let surah = name.firstFoundSurah, let ayah = name.firstFoundAyah {
-                Button {
-                    settings.hapticFeedback()
-                    // Close the overlay FIRST: the tab switch happens under it, and a layer left up
-                    // over the arriving surah would read as the app ignoring the tap.
-                    FocusOverlayPresenter.shared.dismiss()
-                    AppNavigation.shared.pendingQuran = .ayah(surah, ayah)
-                } label: {
-                    detailLabel("View First Found", systemImage: "book")
-                }
-                .buttonStyle(.plain)
-            }
-            #endif
+            doors
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .sheet(isPresented: $showsDetail) {
             SheetNavigationContainer {
                 NameDetailView(name: name, isSheet: true)
+            }
+        }
+    }
+
+    /// The other names as chips, wrapped and centered row by row.
+    @ViewBuilder
+    private var otherNames: some View {
+        if #available(iOS 16.0, *) {
+            CenteredChipFlow(spacing: 6) {
+                ForEach(name.otherNames, id: \.self) { other in
+                    Text(other)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
+                }
+            }
+        } else {
+            Text(name.otherNames.joined(separator: " \u{00B7} "))
+                .font(.subheadline.weight(.medium))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// "More about this name" and "View First Found", side by side and the same width.
+    @ViewBuilder
+    private var doors: some View {
+        let hasDetail = NamesDetailsStore.isBundled
+        #if HAS_QURAN
+        let firstFound: (surah: Int, ayah: Int)? = name.firstFoundSurah.flatMap { surah in
+            name.firstFoundAyah.map { (surah, $0) }
+        }
+        #else
+        let firstFound: (surah: Int, ayah: Int)? = nil
+        #endif
+        if hasDetail || firstFound != nil {
+            HStack(spacing: 10) {
+                if hasDetail {
+                    Button {
+                        settings.hapticFeedback()
+                        showsDetail = true
+                    } label: {
+                        detailLabel("More about this name", systemImage: "text.book.closed")
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                #if HAS_QURAN
+                if let firstFound {
+                    Button {
+                        settings.hapticFeedback()
+                        // Close the overlay FIRST: the tab switch happens under it, and a layer left up
+                        // over the arriving surah would read as the app ignoring the tap.
+                        FocusOverlayPresenter.shared.dismiss()
+                        AppNavigation.shared.pendingQuran = .ayah(firstFound.surah, firstFound.ayah)
+                    } label: {
+                        detailLabel("View First Found", systemImage: "book")
+                    }
+                    .buttonStyle(.plain)
+                }
+                #endif
             }
         }
     }
@@ -156,13 +210,63 @@ struct FocusNameDetails: View {
                 .font(.caption.weight(.semibold))
             Text(title)
                 .font(.caption.weight(.semibold))
-            Spacer(minLength: 0)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .foregroundColor(settings.accentColor.color)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .contentShape(Rectangle())
+        .contentShape(Capsule())
         .conditionalGlassEffect(useColor: 0.2)
+    }
+}
+
+/// Chips of any width, wrapped onto as many rows as they need, each row centered: the name overlay's
+/// "Also called" line, where the chips sit under a centered hero.
+@available(iOS 16.0, *)
+struct CenteredChipFlow: Layout {
+    var spacing: CGFloat = 6
+
+    private func rows(_ subviews: Subviews, width: CGFloat) -> [[(index: Int, size: CGSize)]] {
+        var rows: [[(index: Int, size: CGSize)]] = [[]]
+        var x: CGFloat = 0
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].isEmpty, x + size.width > width {
+                rows.append([])
+                x = 0
+            }
+            rows[rows.count - 1].append((index, size))
+            x += size.width + spacing
+        }
+        return rows
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        let rows = rows(subviews, width: width)
+        let height = rows.map { $0.map(\.size.height).max() ?? 0 }.reduce(0, +)
+            + spacing * CGFloat(max(0, rows.count - 1))
+        let widest = rows.map { row in
+            row.map(\.size.width).reduce(0, +) + spacing * CGFloat(max(0, row.count - 1))
+        }.max() ?? 0
+        return CGSize(width: width == .infinity ? widest : width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(subviews, width: bounds.width) {
+            let rowWidth = row.map(\.size.width).reduce(0, +) + spacing * CGFloat(max(0, row.count - 1))
+            let rowHeight = row.map(\.size.height).max() ?? 0
+            var x = bounds.midX - rowWidth / 2
+            for item in row {
+                subviews[item.index].place(at: CGPoint(x: x, y: y + (rowHeight - item.size.height) / 2),
+                                           proposal: ProposedViewSize(item.size))
+                x += item.size.width + spacing
+            }
+            y += rowHeight + spacing
+        }
     }
 }
 
@@ -208,7 +312,7 @@ struct FocusOverlayHost: View {
                         ScrollView {
                             FocusNameDetails(name: name)
                         }
-                        .frame(maxHeight: 220)
+                        .frame(maxHeight: 260)
                         .padding(.bottom, 16)
                     }
 
@@ -501,14 +605,17 @@ extension FocusItem {
             footnote: "Number \(data.englishNumber)",
             secondaryArabic: data.englishNumber,
             shareLabel: "Share Number",
-            shareText: "\(data.transliteration) - \(data.number)"
+            shareText: "\(data.transliteration) - \(data.number)",
+            // The Hafs face draws Arabic-Indic digits as ayah medallions (a dot in a ring), so a
+            // numeral is always set in the system face.
+            allowsQuranicFont: false
         )
     }
 
-    /// `withDetails` adds the second half the LIST row expands to (Other Names, the description,
-    /// and the two doors) - see `FocusNameDetails`. The grid tile passes true, because a tap there
-    /// is the tile's ONLY way to that content; the context menu's "View Fullscreen" passes false,
-    /// since it is offered from the list row too, where the row itself already expands.
+    /// `withDetails` adds the name's second half (Other Names, the description, and the two doors);
+    /// see `FocusNameDetails`. A TAP passes true, in the grid and (since 2026-09-25) the list
+    /// alike: it is the one way to that content in both. The context menu's "View Fullscreen"
+    /// passes false, the name alone at full size.
     static func name(_ name: NameOfAllah, withDetails: Bool = false) -> FocusItem {
         FocusItem(
             id: "name-\(name.number)",

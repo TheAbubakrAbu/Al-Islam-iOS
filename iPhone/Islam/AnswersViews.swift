@@ -362,11 +362,11 @@ struct ShiaAnswerView: View {
                 Section(header: ArticleHeader("2. ALI HIMSELF ON ABU BAKR AND UMAR")) {
                     Text(verbatim: "The Prophet (peace be upon him) ordered Abu Bakr, and no one else, to lead the prayer in his final illness, repeating the order three times (Sahih al-Bukhari 664, Sahih Muslim 418), and said from the pulpit:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:3654", cite: "Sahih al-Bukhari 3654, Sahih Muslim 2382", arabic: 93...111, english: 92...138)
+                    ScriptureQuote(hadith: "bukhari:3654", cite: "Sahih al-Bukhari 3654, Sahih Muslim 2382", arabic: 93...111, english: 91...137)
 
                     Text(verbatim: "Ali’s own son, Muhammad ibn al-Hanafiyyah, asked him who the best of people was after the Messenger of Allah. Ali said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:3671", cite: "Sahih al-Bukhari 3671", arabic: 31...53, english: 20...50)
+                    ScriptureQuote(hadith: "bukhari:3671", cite: "Sahih al-Bukhari 3671", arabic: 31...53, english: 19...49)
 
                     Text(verbatim: "Ali gave his daughter Umm Kulthum, the granddaughter of the Prophet (peace be upon him), in marriage to Umar (Sahih al-Bukhari 2881; Sunan al-Nasa’i 1978), and named three of his own sons Abu Bakr, Umar, and Uthman, as the Shia biographers themselves record (al-Mufid, al-Irshad). A man does not marry his daughter to the one who “usurped“ his right and name his children after his enemies.")
                         .font(.body)
@@ -458,7 +458,7 @@ struct ShiaAnswerView: View {
 
                     Text(verbatim: "Of al-Hasan the Prophet (peace be upon him) said from the pulpit:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:3746", cite: "Sahih al-Bukhari 3746", arabic: 33...44, english: 34...58)
+                    ScriptureQuote(hadith: "bukhari:3746", cite: "Sahih al-Bukhari 3746", arabic: 33...44, english: 33...57)
                     ScriptureQuote(hadith: "tirmidhi:3768", cite: "Sunan al-Tirmidhi 3768; graded sahih by al-Albani", arabic: 37...42, english: 7...17)
 
                     Text(verbatim: "Ahl as-Sunnah send blessings on the family of Muhammad in every prayer, and their books of creed name love of the household among the marks of the Sunnah.")
@@ -477,7 +477,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text(verbatim: "Because he believed them to be the rightful caliphs and the best of the ummah after the Prophet (peace be upon him). Aisha relates that after Fatimah’s death Ali sought reconciliation with Abu Bakr, and in the mosque, after the Zuhr prayer:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:4240", cite: "Sahih al-Bukhari 4240", arabic: 332...371, english: 550...646)
+                    ScriptureQuote(hadith: "bukhari:4240", cite: "Sahih al-Bukhari 4240", arabic: 332...371, english: 549...645)
 
                     Text(verbatim: "His own ranking, “Abu Bakr, then Umar,“ was quoted in section 2 (Sahih al-Bukhari 3671). A man of Ali’s courage, who feared no one, did not conceal his belief for twenty-five years and then serve as a counsellor and judge under those he thought had usurped him. The claim requires that Ali was either a coward or a hypocrite, and he was neither.")
                         .font(.body)
@@ -491,7 +491,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text(verbatim: "No. He applied the Prophet’s own words, “We are not inherited from; what we leave is charity“ (Sahih al-Bukhari 6725, Sahih Muslim 1759, quoted in section 6), and he maintained the Prophet’s household from that property exactly as the Prophet had done. When Ali met him about it, Abu Bakr wept and said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:4240", cite: "Sahih al-Bukhari 4240", arabic: 261...276, english: 405...436)
+                    ScriptureQuote(hadith: "bukhari:4240", cite: "Sahih al-Bukhari 4240", arabic: 261...276, english: 404...435)
 
                     Text(verbatim: "Ali and al-Abbas later acknowledged the same hadith before Umar (Sahih al-Bukhari 3094, Sahih Muslim 1757), and when Ali became caliph he left Fadak as charity and did not distribute it as inheritance. Fatimah (may Allah be pleased with her) was hurt, and she is honoured for her station; but a hadith of the Prophet is not overturned by anyone’s hurt.")
                         .font(.body)
@@ -1131,7 +1131,7 @@ struct JudaismAnswerView: View {
                         .font(.body)
                     Text(verbatim: "Yes (Quran 7:157, quoted above). Abdullah ibn Amr (may Allah be pleased with them), who had read the earlier scriptures, was asked about the Prophet’s description in the Torah and answered:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:2125", cite: "Sahih al-Bukhari 2125", arabic: 48...70, english: 50...113)
+                    ScriptureQuote(hadith: "bukhari:2125", cite: "Sahih al-Bukhari 2125", arabic: 48...70, english: 50...112)
                     Text(verbatim: "In the Torah as it stands, Musa is promised a prophet “like unto“ himself from the “brethren“ of Israel (Deuteronomy 18:18), which Ibn Taymiyyah and Ibn al-Qayyim read as the children of Isma‘il, of whom Allah had promised Ibrahim twelve princes and a great nation (Genesis 17:20). The blessing of Musa says the Lord “came from Sinai, and rose up from Seir unto them; he shined forth from mount Paran“ (Deuteronomy 33:2): Sinai is the revelation to Musa, Seir the land of Isa, and Paran the wilderness where Isma‘il settled (Genesis 21:21), that is, the Hijaz. Isaiah 42 foretells a servant who brings law to the nations and calls on Kedar, the son of Isma‘il (Genesis 25:13), to sing a new song. Ibn al-Qayyim gathered these in Hidayat al-Hayara, and Ibn Taymiyyah in al-Jawab as-Sahih.")
                         .font(.body)
 
@@ -1756,7 +1756,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(hadith: "bukhari:1622", cite: "Sahih al-Bukhari 1622", arabic: 53...62, english: 43...64)
                     Text(verbatim: "And in the Farewell Hajj itself, standing at Arafat, the Prophet (peace be upon him) declared:")
                         .font(.body)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 797...808, english: 1306...1329)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 797...808, english: 1305...1328)
                     Text(verbatim: "A rite is pagan by what it is offered to, not by its age. Prostration, fasting, and pilgrimage existed among idolaters too; offered to Allah alone, on His command, they are worship.")
                         .font(.body)
 
@@ -2288,7 +2288,7 @@ struct AtheismAnswerView: View {
             .text("Because the creature cannot bear it in this life. When Musa (peace be upon him) asked to see Him, Allah revealed Himself to the mountain and it crumbled, and Musa fell unconscious (Quran 7:143):"),
             .ayah("6:103"),
             .text("The Prophet (peace be upon him) said:"),
-            .hadith("muslim:179a", cite: "Sahih Muslim 179", english: [69...110], arabicText: "حِجَابُهُ النُّورُ لَو كَشَفَهُ لأَحرَقَت سُبُحَاتُ وَجهِهِ مَا انتَهَى إِلَيهِ بَصَرُهُ مِن خَلقِهِ"),
+            .hadith("muslim:179a", cite: "Sahih Muslim 179", english: [69...109], arabicText: "حِجَابُهُ النُّورُ لَو كَشَفَهُ لأَحرَقَت سُبُحَاتُ وَجهِهِ مَا انتَهَى إِلَيهِ بَصَرُهُ مِن خَلقِهِ"),
             .text("Seeing is promised, in the Hereafter, to those who believed without it:"),
             .ayah("75:22-23"),
             .hadith("bukhari:7434", cite: "Sahih al-Bukhari 7434", arabic: 31...41, english: [21...41]),
@@ -2341,7 +2341,7 @@ struct AtheismAnswerView: View {
             .text("A passing doubt is not disbelief, and hating it is faith. The Companions came to the Prophet (peace be upon him) troubled by thoughts they were ashamed to speak:"),
             .hadith("muslim:132a", cite: "Sahih Muslim 132", arabic: 24...48, english: [0...39]),
             .text("Ibrahim (peace be upon him) asked to be shown how the dead are raised, “only that my heart may be satisfied” (Quran 2:260), and the Prophet (peace be upon him) said:"),
-            .hadith("bukhari:3372", cite: "Sahih al-Bukhari 3372", arabic: 40...58, english: [4...51]),
+            .hadith("bukhari:3372", cite: "Sahih al-Bukhari 3372", arabic: 40...58, english: [4...50]),
             .text("Allah addressed His Prophet (peace be upon him) with a condition he never fell into, so that those after him would learn where to take a doubt:"),
             .ayah("10:94"),
             .text("Doubts are cured by knowledge, by asking those who know, by looking at the signs (Quran 41:53), and by supplication; the Prophet (peace be upon him) taught that when the whisper reaches “who created your Lord?” one seeks refuge in Allah and stops (Sahih al-Bukhari 3276, above). A doubt examined honestly leads to certainty; a doubt fed in secret leads to the dark."),

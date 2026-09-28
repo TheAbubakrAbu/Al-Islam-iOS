@@ -9,6 +9,9 @@ struct IslamView: View {
     // window compact - the sidebar/detail layout must collapse to the iPhone shape there (see
     // `usesColumnNavigation`), or the split collapses onto a pre-selected detail with no way back.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// Two resource tiles across at the accessibility text sizes, where three cut the titles to
+    /// "Tajweed Foundati..." and "Prophecies of..." (2026-09-27).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// iPad: the split view's sidebar selection. Seeded from `-islamDestination` too, so the DEBUG
     /// hook lands on the resource in the detail column as it does on the iPhone stack (2026-09-06).
     @State private var selectedResource: IslamDestination? = Self.launchDestination ?? .arabicAlphabet
@@ -300,6 +303,9 @@ struct IslamView: View {
     var body: some View {
         navigationContainer
             #if os(iOS)
+            // Islam Settings' Text Size, for the whole tab: every resource and article opens inside
+            // this container, so this one modifier sizes them all (see `islamTextSize()`).
+            .islamTextSize()
             // A Reminder of the Day card's "Open": the resource pushed onto this tab's stack (or
             // selected in the iPad sidebar), then the request cleared so it never replays.
             .onReceive(AppNavigation.shared.$pendingIslam) { target in
@@ -411,6 +417,11 @@ struct IslamView: View {
             // (2026-09-18) - the tab opens on what it is for, and the card is the first thing past
             // it. It renders only once the corpus has parsed, so the resource grid never waits on it.
             #if os(iOS)
+            // Need a Hand?: getting started (while the Start Here guide is not on the tab), the
+            // tab's own text size, and when its day turns over. Under the resources, like the
+            // Reminder: the tab opens on what it is for (see HelpDoors.swift).
+            HelpDoorsSection(area: .islam)
+
             ReminderOfTheDaySection()
                 .id("reminder")
             #endif
@@ -673,7 +684,8 @@ struct IslamView: View {
             // "weird top padding for ask ai").
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                             count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 settings.hapticFeedback()
@@ -779,7 +791,8 @@ struct IslamView: View {
                 .font(.caption2.weight(.medium))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
+                // A third line at the accessibility sizes, where even half a row wraps the longer names.
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2, reservesSpace: true)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)

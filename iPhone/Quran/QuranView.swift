@@ -253,7 +253,7 @@ struct QuranView: View {
     /// Which summary door was tapped. One piece of state driving one destination: two hidden links in
     /// the same List row both fired on any tap (Abu, 2026-09-19).
     enum SummaryDoor: String, Identifiable, Hashable {
-        case themes, history
+        case themes, history, qiraat
         var id: String { rawValue }
     }
 
@@ -289,6 +289,18 @@ struct QuranView: View {
     @State private var showReciterPickerSheet = false
     @State private var showReadingHistory = false
 
+    /// Every grid on this tab (the summary tiles, bookmarks, favorites, the special ayahs, the surahs):
+    /// two across, or one at the accessibility text sizes, where two cut the surah tiles' Arabic names
+    /// to "...الفَ" and the summary tiles' titles to "Ayah of th..." (2026-09-27). The watch keeps two.
+    private var quranGridColumns: [GridItem] {
+        #if os(iOS)
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        #else
+        let count = 2
+        #endif
+        return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
+    }
+
     #if os(iOS)
     /// Which summary tile's recents are unfolded BELOW the tile grid. The rows can't unfold inside a
     /// half-width grid cell, so they open as ordinary list rows under the summary - and because this is one
@@ -299,6 +311,7 @@ struct QuranView: View {
     /// The summary tiles skip the height equalization at the accessibility text sizes (one long ayah
     /// would drag every tile to its height there).
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
 
     enum SummaryHistoryKind: String, Identifiable {
         case ayahOfTheDay, reading, listenedAyah, listenedSurah
@@ -1450,6 +1463,7 @@ struct QuranView: View {
         switch openSummaryDoor {
         case .themes:  themesBrowseDestination
         case .history: quranHistoryDestination
+        case .qiraat:  LazyDestination { QiraatExplorerView() }
         case .none:    EmptyView()
         }
     }
@@ -1658,6 +1672,11 @@ struct QuranView: View {
                     // Choose Surah: no summary, bookmarks or favorites; the list and its search only.
                     if !isPicker {
                         boxed(primaryHistorySections(context: context))
+                        #if os(iOS)
+                        // Need a Hand?: reading the script, transliteration, al-Kahf on Friday, right
+                        // under the summary and gone while a search is typed (see HelpDoors.swift).
+                        boxed(helpDoorsSection(context: context))
+                        #endif
                         boxed(bookmarkSection(context: context))
                         boxed(favoriteSection(context: context))
                     }
@@ -2376,6 +2395,15 @@ struct QuranView: View {
         #endif
     }
 
+    #if os(iOS)
+    @ViewBuilder
+    private func helpDoorsSection(context: SearchDisplayContext) -> some View {
+        if context.isSearching == false {
+            HelpDoorsSection(area: .quran)
+        }
+    }
+    #endif
+
     @ViewBuilder
     private func primaryHistorySections(context: SearchDisplayContext) -> some View {
         #if os(iOS)
@@ -2569,29 +2597,14 @@ struct QuranView: View {
         let word = settings.showWordOfTheDay ? wordOfTheDay : nil
         let wordSurah = word.flatMap { quranData.surah($0.surah) }
         let wordFillsGrid = historyTileCount % 2 == 1
-        Section(header:
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(settings.accentColor.color)
-                Text("YOUR SUMMARY")
-                    .foregroundStyle(settings.accentColor.color)
-
-                Spacer()
-
-                // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-                NavigationLink(destination: dailyHubDestination) {
-                    DailyHubDoorLabel()
-                }
-                .buttonStyle(.plain)
-            }
-        ) {
+        Section(header: summaryHeader) {
             LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                columns: quranGridColumns,
                 alignment: .leading,
                 spacing: 10
             ) {
                 if hasLastRead, let lastReadSurah, let lastReadAyah {
-                    SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color,
+                    SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .reading,
                                     onExpand: playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
@@ -2600,7 +2613,7 @@ struct QuranView: View {
                     .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
                 }
                 if let pair = ayahOfTheDay {
-                    SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                    SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
                                     onExpand: { toggleSummaryExpansion(.ayahOfTheDay) }) {
@@ -2609,7 +2622,7 @@ struct QuranView: View {
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                 }
                 if let pair = lastListenedAyah {
-                    SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                    SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .listenedAyah,
                                     onExpand: playbackHistory.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
@@ -2618,7 +2631,7 @@ struct QuranView: View {
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                 }
                 if let last = lastListened, let surah = lastListenedSurah {
-                    SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color,
+                    SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: .secondaryOnGlass,
                                      rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .listenedSurah,
                                      onExpand: playbackHistory.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
@@ -2650,50 +2663,102 @@ struct QuranView: View {
                     .transition(.opacity)
             }
 
-            // The doors, side by side on one row (2026-09-16: two full rows were most of the summary's
-            // height). Each chip is its own chevron-less link inside the row (a plain NavigationLink
-            // per chip drew a disclosure chevron after each); the screens introduce themselves in
-            // their own first section, so no caption. (The "-openThemes" launch hook pushes the theme screen from
-            // `pathNavigation`, never from a hidden link row here: a zero-height row is still a List
-            // row that draws its band, and an isActive link inside the path stack crashed against the
-            // mushaf auto-open.) A real push, not a sheet: on iPhone it takes the whole screen, and in
-            // the iPad/Mac split it pushes in the LEFT column, leaving the reader on the right.
-            HStack(spacing: 10) {
-                // The Word of the Day joins the doors as a third chip when the grid above is already
-                // even (Abu, 2026-09-16; it was a full row above them). A Button, not a link, so it
-                // carries no chevron; the same push as the tile.
-                if !wordFillsGrid, word != nil {
-                    Button {
-                        settings.hapticFeedback()
-                        openWordOfDay = true
-                    } label: {
-                        summaryDoorChip(title: SummaryWordTile.title, systemImage: "character.book.closed.fill")
+            // The doors (2026-09-16: two full rows were most of the summary's height, so they share
+            // one): up to three on a row, and four (the Qiraat Explorer joins while qiraah is on) go two
+            // by two (Abu, 2026-09-26: "make it 2 lines if there's 4 or 1 line if it's 3"). The screens
+            // introduce themselves in their own first section, so no caption. (The "-openThemes" launch
+            // hook pushes the theme screen from `pathNavigation`, never from a hidden link row here: a
+            // zero-height row is still a List row that draws its band, and an isActive link inside the
+            // path stack crashed against the mushaf auto-open.) A real push, not a sheet: on iPhone it
+            // takes the whole screen, and in the iPad/Mac split it pushes in the LEFT column.
+            let doors = summaryDoors(showWordChip: !wordFillsGrid && word != nil)
+            // One per row at the accessibility text sizes, where two cut "Word of the Day" mid-name.
+            let perRow = dynamicTypeSize.isAccessibilitySize ? 1 : (doors.count == 4 ? 2 : max(1, doors.count))
+            VStack(spacing: 10) {
+                ForEach(Array(stride(from: 0, to: doors.count, by: perRow)), id: \.self) { start in
+                    HStack(spacing: 10) {
+                        ForEach(doors[start..<min(start + perRow, doors.count)]) { door in
+                            Button {
+                                settings.hapticFeedback()
+                                openDoor(door)
+                            } label: {
+                                summaryDoorChip(title: door.title, systemImage: door.systemImage)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
-
-                // BUTTONS, not `chevronlessLink`s: a NavigationLink activates with every OTHER link
-                // in the same List row, so tapping either of these pushed both (Abu, 2026-09-19).
-                // One `@State` + one destination on the List instead - see `summaryDoorDestination`.
-                if ThematicTopicsStore.isBundled {
-                    Button {
-                        settings.hapticFeedback()
-                        openSummaryDoor = .themes
-                    } label: {
-                        summaryDoorChip(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    openSummaryDoor = .history
-                } label: {
-                    summaryDoorChip(title: "History", systemImage: "clock.arrow.circlepath")
-                }
-                .buttonStyle(.plain)
             }
             .padding(.vertical, 2)
+        }
+    }
+
+    /// "YOUR SUMMARY" and the Today pill. One heading for VoiceOver: the sparkle used to be announced
+    /// as its own heading, "Sparkle". At the accessibility text sizes the pill drops under the title,
+    /// which beside it had room only for "YOUR / SUM- / MARY".
+    @ViewBuilder
+    private var summaryHeader: some View {
+        let title = HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(settings.accentColor.color)
+                .accessibilityHidden(true)
+            Text("YOUR SUMMARY")
+                .foregroundStyle(settings.accentColor.color)
+                .accessibilityAddTraits(.isHeader)
+        }
+        // Everything of the day on one screen (2026-09-16): the door every daily card carries.
+        let todayDoor = NavigationLink(destination: dailyHubDestination) {
+            DailyHubDoorLabel()
+        }
+        .buttonStyle(.plain)
+
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 8) {
+                title
+                todayDoor
+            }
+        } else {
+            HStack(spacing: 8) {
+                title
+                Spacer()
+                todayDoor
+            }
+        }
+    }
+
+    /// One chip under the summary tiles. BUTTONS, not `chevronlessLink`s: a NavigationLink activates
+    /// with every OTHER link in the same List row, so tapping one pushed them all (Abu, 2026-09-19).
+    /// One `@State` + one destination on the List instead; see `summaryDoorDestination`.
+    private struct SummaryDoorChip: Identifiable {
+        enum Kind { case word, door(SummaryDoor) }
+        let kind: Kind
+        let title: String
+        let systemImage: String
+        var id: String { title }
+    }
+
+    /// The chips in their order: the Word of the Day (when it is not a tile), Browse by Theme,
+    /// History, and the Qiraat Explorer while "Show Riwayah / Qiraah" is on: the switch that says
+    /// someone reads the riwayat at all, broader than comparison mode.
+    private func summaryDoors(showWordChip: Bool) -> [SummaryDoorChip] {
+        var doors: [SummaryDoorChip] = []
+        if showWordChip {
+            doors.append(.init(kind: .word, title: SummaryWordTile.title, systemImage: "character.book.closed.fill"))
+        }
+        if ThematicTopicsStore.isBundled {
+            doors.append(.init(kind: .door(.themes), title: "Browse by Theme", systemImage: "square.grid.2x2.fill"))
+        }
+        doors.append(.init(kind: .door(.history), title: "History", systemImage: "clock.arrow.circlepath"))
+        if settings.showQiraahDetails {
+            doors.append(.init(kind: .door(.qiraat), title: "Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical"))
+        }
+        return doors
+    }
+
+    private func openDoor(_ door: SummaryDoorChip) {
+        switch door.kind {
+        case .word: openWordOfDay = true
+        case .door(let target): openSummaryDoor = target
         }
     }
 
@@ -2744,7 +2809,7 @@ struct QuranView: View {
                 if settings.showBookmarks {
                     if usesGrid {
                         LazyVGrid(
-                            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                            columns: quranGridColumns,
                             alignment: .leading,
                             spacing: 10
                         ) {
@@ -2887,7 +2952,7 @@ struct QuranView: View {
                 if settings.showFavorites {
                     if usesGrid {
                         LazyVGrid(
-                            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                            columns: quranGridColumns,
                             alignment: .leading,
                             spacing: 10
                         ) {
@@ -3233,7 +3298,7 @@ struct QuranView: View {
         #if os(iOS)
         if usesGrid {
             LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                columns: quranGridColumns,
                 alignment: .leading,
                 spacing: 10
             ) {
@@ -3582,9 +3647,8 @@ struct QuranView: View {
     }
 
     #if os(iOS)
-    private var surahGridColumns: [GridItem] {
-        [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
-    }
+    private var surahGridColumns: [GridItem] { quranGridColumns }
+
 
     @ViewBuilder
     private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext) -> some View {

@@ -727,6 +727,13 @@ struct AyahContextMenuModifier: ViewModifier {
 
                         Button {
                             settings.hapticFeedback()
+                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: QuranPlayer.infiniteRepeat)
+                        } label: {
+                            Label("Repeat Forever", systemImage: "infinity")
+                        }
+
+                        Button {
+                            settings.hapticFeedback()
                             showCustomRangeSheet = true
                         } label: {
                             Label("Play Custom Range", systemImage: "slider.horizontal.3")

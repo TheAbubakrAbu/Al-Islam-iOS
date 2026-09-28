@@ -602,6 +602,9 @@ struct HadithView: View {
                         // the way Browse by Theme hangs off the Quran tab's summary. So it renders even
                         // before there is a Last Read: the doors are always worth showing.
                         boxed(summaryTilesSection)
+                        // Need a Hand?: one language or both, and the name of Allah in red, right
+                        // under the summary (see HelpDoors.swift).
+                        boxed(HelpDoorsSection(area: .hadith))
                     }
 
                     if let reference = referenceResult {
@@ -1143,9 +1146,11 @@ struct HadithView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     AccentIconChip(systemImage: icon, size: 18)
+                    // The label in the quiet glass tone, the reference in the accent, as on the Quran
+                    // tab's tiles (2026-09-27): all accent read as one block with no hierarchy.
                     Text(title)
                         .font(.caption2.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
+                        .foregroundColor(.secondaryOnGlass)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .layoutPriority(1)
@@ -1171,7 +1176,7 @@ struct HadithView: View {
                 if settings.showHadithEnglish {
                     Text(english)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                         .reservedLineLimit(1)
                 }
             }

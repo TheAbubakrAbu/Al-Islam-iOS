@@ -1778,6 +1778,9 @@ extension View {
                 .padding(.top, 1)
                 .padding(.trailing, 2)
                 .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
+                // A tap-gesture image: VoiceOver announced it as an image, not something to press.
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
         }
     }
 
@@ -1844,6 +1847,14 @@ struct IslamArabicFontPicker: View {
 }
 #endif
 
+extension Color {
+    /// Secondary text on the app's glass tiles and cards (2026-09-27). The system `.secondary` renders
+    /// at 3.1:1 there (measured on the Adhan and Quran tiles, #878789 on #3B3B3D), under the 4.5:1
+    /// small text needs; a plain primary at 65% keeps the step down from the headline and reads at 5:1
+    /// or better in both appearances.
+    static let secondaryOnGlass = Color.primary.opacity(0.65)
+}
+
 // MARK: - Section header accessories (count pill / collapse / shuffle)
 
 /// The small numeric badge the Quran tab's section headers wear - caption-semibold, monospaced digits,
@@ -1905,6 +1916,9 @@ struct AccentIconChip: View {
                         )
                     )
             )
+            // Decoration beside a title in every one of its ~60 uses: VoiceOver read the symbol's own
+            // name ("Hands With Sparkles, Filled") before the title it illustrates.
+            .accessibilityHidden(true)
     }
 }
 
@@ -1962,6 +1976,9 @@ struct SectionPillHeader: View {
                         onShuffle()
                     }
                     .accessibilityLabel("Random \(title.lowercased())")
+                    // Tap-gesture images: without these VoiceOver said "image" and offered no action.
+                    .accessibilityRemoveTraits(.isImage)
+                    .accessibilityAddTraits(.isButton)
             }
 
             if let isExpanded {
@@ -1974,6 +1991,8 @@ struct SectionPillHeader: View {
                         withAnimation { isExpanded.wrappedValue.toggle() }
                     }
                     .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")
+                    .accessibilityRemoveTraits(.isImage)
+                    .accessibilityAddTraits(.isButton)
             }
         }
     }

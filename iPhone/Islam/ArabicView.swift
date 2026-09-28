@@ -2,6 +2,12 @@ import SwiftUI
 
 struct ArabicView: View {
     @ObservedObject private var settings = Settings.shared
+    /// Two tiles across at the accessibility text sizes: four kept every line FITTING (the tile rule)
+    /// by shrinking the names to about 6 pt, e.g. "yaa madd" (2026-09-27).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var letterGridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 6), count: dynamicTypeSize.isAccessibilitySize ? 2 : 4)
+    }
     #if DEBUG
     /// `-arabicSearch <text>`: start with the search field filled, the only headless way to reach a
     /// section below the fold (the simulator cannot be scrolled from a script).
@@ -455,6 +461,9 @@ struct ArabicView: View {
         .background(debugTopicLink)
         .onAppear {
             let arguments = ProcessInfo.processInfo.arguments
+            // "-arabicSearch" seeds the field before the first render, so the onChange that starts
+            // the AI search never fires for it: start it here, as typing would have.
+            if !searchText.isEmpty { runAISearch(query: searchText) }
             if let idx = arguments.firstIndex(of: "-arabicGrouping"), arguments.indices.contains(idx + 1) {
                 filterModeRaw = arguments[idx + 1]
                 if let idx = arguments.firstIndex(of: "-arabicFamily"), arguments.indices.contains(idx + 1) {
@@ -732,7 +741,7 @@ struct ArabicView: View {
     private func letterCollection(_ letters: [LetterData]) -> some View {
         #if os(iOS)
         if isGridMode {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+            LazyVGrid(columns: letterGridColumns, spacing: 6) {
                 ForEach(letters) { letter in
                     ArabicLetterGridTile(
                         letterData: letter,
@@ -763,7 +772,7 @@ struct ArabicView: View {
     private var numberCollection: some View {
         #if os(iOS)
         if isGridMode {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+            LazyVGrid(columns: letterGridColumns, spacing: 6) {
                 ForEach(numbers, id: \.number) { ArabicNumberGridTile(numberData: $0) }
             }
             .padding(.horizontal, -8)
@@ -904,12 +913,14 @@ struct ArabicView: View {
         return tiles
     }
 
-    /// Three to a row on the phone, two on the watch. A row left with a single tile draws it wide.
+    /// Three to a row on the phone, two on the watch and at the accessibility text sizes (three
+    /// across truncated every title there: "Letter Fami...", "Default Tas...", 2026-09-27). A row
+    /// left with a single tile draws it wide.
     private var exploreRows: [[ExploreTile]] {
         #if os(watchOS)
         return exploreTiles.chunked(into: 2)
         #else
-        return exploreTiles.chunked(into: 3)
+        return exploreTiles.chunked(into: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
         #endif
     }
 
@@ -930,6 +941,8 @@ struct ArabicView: View {
                             exploreTile(tile)
                         }
                     }
+                    // Equal heights when one caption wraps and its neighbours do not.
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
                 }
             }
@@ -950,16 +963,25 @@ struct ArabicView: View {
                 Text(tile.title)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    // A second line at the accessibility sizes, where even two tiles across cannot
+                    // hold "Default Tashkeel" on one.
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
                     .minimumScaleFactor(0.6)
 
+                // Two lines at one size: on one line shrinking to fit, the captions of a row came
+                // out at three different sizes and "Gender, duals, plurals, and case endings" still
+                // cut off (2026-09-27).
                 Text(tile.caption)
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
+                    // Wrap first, then a light shrink, so the longest caption still fits its two lines.
+                    .minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity)
+            // The row fixes its height at the tallest tile; each tile fills it (top-aligned).
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
             .background(

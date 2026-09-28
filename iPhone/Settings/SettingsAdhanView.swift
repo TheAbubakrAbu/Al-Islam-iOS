@@ -788,6 +788,9 @@ struct PrayerOffsetsView: View {
 struct NotificationView: View {
     @ObservedObject var settings = Settings.shared
     @Environment(\.appearance) private var appearance
+    #if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #endif
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1082,23 +1085,28 @@ struct NotificationView: View {
     #endif
 
     #if os(iOS)
+    /// At the accessibility sizes the card stacks: side by side, the pill hyphenated the title
+    /// ("Per-mission") and the two buttons shrank their text to "Request A..." and "Open Sett...".
+    private var permissionCardStacks: Bool { dynamicTypeSize.isAccessibilitySize }
+
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Label("Permission", systemImage: "bell.badge")
-                    .font(.headline)
-                    .foregroundColor(settings.accentColor.color)
+            Group {
+                if permissionCardStacks {
+                    VStack(alignment: .leading, spacing: 8) {
+                        permissionTitle
+                        permissionPill
+                    }
+                } else {
+                    HStack {
+                        permissionTitle
 
-                Spacer()
+                        Spacer()
 
-                Text(permissionPillText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Capsule().fill(permissionPillColor))
-                    .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 1))
-                    .padding(.trailing, -6)
+                        permissionPill
+                            .padding(.trailing, -6)
+                    }
+                }
             }
             .animation(.easeInOut(duration: 0.25), value: permissionPillText)
 
@@ -1114,22 +1122,16 @@ struct NotificationView: View {
             .font(.footnote)
             .redacted(reason: notifSettings == nil ? .placeholder : [])
 
-            HStack(spacing: 10) {
-                smallButton("Request Access", systemImage: "checkmark.seal")
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        settings.hapticFeedback()
-                        Task { @MainActor in
-                            await onRequestAccessTapped()
-                        }
-                    }
-
-                smallButton("Open Settings", systemImage: "gear")
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        settings.hapticFeedback()
-                        openSystemSettings()
-                    }
+            if permissionCardStacks {
+                VStack(spacing: 10) {
+                    requestAccessButton
+                    openSettingsButton
+                }
+            } else {
+                HStack(spacing: 10) {
+                    requestAccessButton
+                    openSettingsButton
+                }
             }
         }
         .padding()
@@ -1143,6 +1145,47 @@ struct NotificationView: View {
                 )
         )
         .animation(.easeInOut(duration: 0.25), value: notifSettings?.authorizationStatus.rawValue)
+    }
+
+    private var permissionTitle: some View {
+        Label("Permission", systemImage: "bell.badge")
+            .font(.headline)
+            .foregroundColor(settings.accentColor.color)
+    }
+
+    private var permissionPill: some View {
+        Text(permissionPillText)
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.white)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Capsule().fill(permissionPillColor))
+            .overlay(Capsule().stroke(Color.primary.opacity(0.12), lineWidth: 1))
+    }
+
+    // Plain-style Buttons, which a List row lets each answer its own taps (default-style ones in one
+    // row all fire together). They were tap gestures, which VoiceOver read as the symbol's name
+    // ("Verified") and a caption rather than as a button.
+    private var requestAccessButton: some View {
+        Button {
+            settings.hapticFeedback()
+            Task { @MainActor in
+                await onRequestAccessTapped()
+            }
+        } label: {
+            smallButton("Request Access", systemImage: "checkmark.seal")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var openSettingsButton: some View {
+        Button {
+            settings.hapticFeedback()
+            openSystemSettings()
+        } label: {
+            smallButton("Open Settings", systemImage: "gear")
+        }
+        .buttonStyle(.plain)
     }
     #endif
 
@@ -1174,6 +1217,8 @@ struct NotificationView: View {
             Text(right)
                 .foregroundColor(.primary)
         }
+        // "Status, Not asked": one stop, not the label and the value apart.
+        .accessibilityElement(children: .combine)
     }
 
     private func statusText(_ s: UNAuthorizationStatus) -> String {
@@ -1197,15 +1242,24 @@ struct NotificationView: View {
     }
 
     private func smallButton(_ title: String, systemImage: String) -> some View {
-        HStack(spacing: 6) {
+        #if os(iOS)
+        let stacks = permissionCardStacks
+        #else
+        let stacks = false
+        #endif
+        return HStack(spacing: 6) {
+            // Hidden: SF Symbols carry their own traits, and checkmark.seal made the button
+            // "Request Access, selected".
             Image(systemName: systemImage)
+                .accessibilityHidden(true)
 
             Text(title)
                 .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .lineLimit(stacks ? nil : 1)
+                .minimumScaleFactor(stacks ? 1 : 0.5)
         }
-        .frame(minHeight: 44)
+        // Full width once the buttons stack, so the pair reads as one column of equal targets.
+        .frame(maxWidth: stacks ? .infinity : nil, minHeight: 44, alignment: .leading)
         .padding(.horizontal, 10)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1215,6 +1269,7 @@ struct NotificationView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(settings.accentColor.color.opacity(0.35), lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func openSystemSettings() {

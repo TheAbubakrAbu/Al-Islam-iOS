@@ -291,7 +291,8 @@ struct TasbihStatsStrip: View {
 
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                // The system secondary read 4.2:1 on this glass (see `secondaryOnGlass`).
+                .foregroundColor(.secondaryOnGlass)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }

@@ -650,7 +650,7 @@ struct QuranSunnahView: View {
 
                     Text(verbatim: "And in practice it cannot be done. The Quran commands prayer but does not give the number of its units, the words of its bowing and prostration, or its times in detail; it commands zakah but not the amounts and thresholds; it commands Hajj but not its rites station by station. All of that is in the Sunnah, and the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 99...105)
+                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
                     ScriptureQuote(hadith: "muslim:1297", cite: "Sahih Muslim 1297", arabic: 43...53, english: 20...43)
 
                     Text(verbatim: "A “Quran-only” prayer does not exist.")
@@ -660,7 +660,7 @@ struct QuranSunnahView: View {
                         .font(.body)
                     Text(verbatim: "By the isnad, the chain of narrators, examined man by man for honesty and precision, and by comparing the text with what the other reliable narrators transmitted. The Salaf treated this as part of the religion itself. Muhammad ibn Sirin (may Allah have mercy on him), the student of the Companions, said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "muslim:26", cite: "Muqaddimah of Sahih Muslim 26", arabic: 29...36, english: 64...77)
+                    ScriptureQuote(hadith: "muslim:26", cite: "Muqaddimah of Sahih Muslim 26", arabic: 29...36, english: 62...75)
 
                     Text(verbatim: "And Abdullah ibn al-Mubarak (may Allah have mercy on him) said:")
                         .font(.body)
@@ -895,7 +895,7 @@ struct ShirkView: View {
             .text("So the door is open to whoever repents before death, whatever his shirk was; many of the Companions had worshipped idols before Islam."),
             .markdown("**Will shirk appear in this ummah?**"),
             .text("Yes. It is not enough to say “we are Muslims, so shirk does not concern us.” The Prophet (peace be upon him) foretold it plainly:"),
-            .hadith("abudawud:4252", cite: "Sunan Abi Dawud 4252; graded sahih by al-Albani", arabic: 141...155, english: [208...231]),
+            .hadith("abudawud:4252", cite: "Sunan Abi Dawud 4252; graded sahih by al-Albani", arabic: 141...155, english: [206...229]),
             .hadith("bukhari:7116", cite: "Sahih al-Bukhari 7116", arabic: 30...40, english: [4...25]),
             .text("Dhul-Khalasah was the idol of Daws in the jahiliyyah (جَاهِلِيَّة, from ج-ه-ل, ignorance: the age before Islam), and Daws had become Muslim. He also said:"),
             .hadith("muslim:2907a", cite: "Sahih Muslim 2907", arabic: 44...51, english: [7...27]),
@@ -940,7 +940,7 @@ struct ShirkView: View {
             .text("Second, by one’s own righteous deeds, as the three men trapped in the cave did. They said to one another:"),
             .hadith("bukhari:2272", cite: "Sahih al-Bukhari 2272", arabic: 52...63, english: [42...72]),
             .text("Third, by the du‘a of a living righteous person. When drought struck, Umar (may Allah be pleased with him) did not go to the Prophet’s grave but asked his uncle al-Abbas to pray:"),
-            .hadith("bukhari:1010", cite: "Sahih al-Bukhari 1010", arabic: 45...59, english: [23...65]),
+            .hadith("bukhari:1010", cite: "Sahih al-Bukhari 1010", arabic: 45...59, english: [23...64]),
             .text("Ibn Taymiyyah set out these kinds in Qa‘idah Jalilah fi at-Tawassul wal-Wasilah, and al-Albani in at-Tawassul: Anwa‘uhu wa Ahkamuhu. Tawassul by the person, status, or “right” of someone dead is not found in the practice of the Companions, and calling on the dead themselves is shirk."),
             .markdown("**Istighathah (اِستِغَاثَة)**: seeking rescue (**ghawth**) from hardship. From Allah it is worship:"),
             .ayah("8:9", words: 0...4),
@@ -1669,7 +1669,7 @@ struct MawlidView: View {
                         .font(.body)
                     Text(verbatim: "No. Both are good at any time of the year, and both were done in his presence. Hassan ibn Thabit recited poetry in the Prophet’s mosque, and when Umar looked at him with disapproval, Hassan said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:3212", cite: "Sahih al-Bukhari 3212, Sahih Muslim 2485", arabic: 21...55, english: 19...84)
+                    ScriptureQuote(hadith: "bukhari:3212", cite: "Sahih al-Bukhari 3212, Sahih Muslim 2485", arabic: 21...55, english: 19...83)
                     Text(verbatim: "The bid‘ah is not the sirah and not the poetry; it is the yearly festival, its fixed date, and its rites, and the exaggeration in the poems that turns praise into invocation.")
                         .font(.body)
 
@@ -1677,7 +1677,7 @@ struct MawlidView: View {
                         .font(.body)
                     Text(verbatim: "Two, given by Allah in place of the festivals of the days of ignorance, as the hadith of Sunan Abi Dawud 1134 above says. When Abu Bakr objected to two girls singing in the Prophet’s house on the day of Eid, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:952", cite: "Sahih al-Bukhari 952", arabic: 65...73, english: 57...71)
+                    ScriptureQuote(hadith: "bukhari:952", cite: "Sahih al-Bukhari 952", arabic: 65...73, english: 56...70)
                     Text(verbatim: "A festival is a mark of a people’s religion, and ours were fixed by revelation. Adding a third, whatever it is named after, is adding to the religion.")
                         .font(.body)
 

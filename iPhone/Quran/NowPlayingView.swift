@@ -297,10 +297,16 @@ struct NowPlayingView: View {
         return String(format: "%02d:%02d", m, s)
     }
 
+    /// A range set to repeat forever (`QuranPlayer.infiniteRepeat`): its counts are per pass.
+    private var customRangeLoops: Bool {
+        nowPlaying.customRangeRepeatSection == QuranPlayer.infiniteRepeat
+    }
+
     private func customRangeLineOne(start: Int, end: Int) -> String {
         let current = nowPlaying.customRangeCurrentIndex ?? 1
+        let section = customRangeLoops ? 1 : nowPlaying.customRangeRepeatSection
         let total = nowPlaying.customRangeTotalItems
-            ?? max(1, (end - start + 1) * nowPlaying.customRangeRepeatPerAyah * nowPlaying.customRangeRepeatSection)
+            ?? max(1, (end - start + 1) * nowPlaying.customRangeRepeatPerAyah * section)
         return "Ayahs \(start)-\(end) (\(current)/\(total))"
     }
 
@@ -308,7 +314,7 @@ struct NowPlayingView: View {
         let ayahProgress = nowPlaying.customRangeCurrentRepeatWithinAyah ?? 1
         let ayahTotal = max(1, nowPlaying.customRangeRepeatPerAyah)
         let sectionProgress = nowPlaying.customRangeRepeatSectionIndex ?? 1
-        let sectionTotal = max(1, nowPlaying.customRangeRepeatSection)
+        let sectionTotal = customRangeLoops ? "\u{221E}" : "\(max(1, nowPlaying.customRangeRepeatSection))"
         return "Ayah \(ayahProgress)/\(ayahTotal) · Section \(sectionProgress)/\(sectionTotal)"
     }
 

@@ -249,9 +249,11 @@ struct SummaryWordTile: View, Equatable {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     AccentIconChip(systemImage: "character.book.closed.fill", tint: accent, size: 18)
+                    // The label in the tiles' quiet tone, the reference in the accent (2026-09-27): all
+                    // green read as one block with no hierarchy.
                     Text(Self.title)
                         .font(.caption2.weight(.semibold))
-                        .foregroundColor(accent)
+                        .foregroundColor(.secondaryOnGlass)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(1)
@@ -276,7 +278,7 @@ struct SummaryWordTile: View, Equatable {
 
                 Text(word.meaning)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }

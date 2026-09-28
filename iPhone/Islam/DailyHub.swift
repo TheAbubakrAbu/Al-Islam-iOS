@@ -408,7 +408,11 @@ struct DailyHubDoorLabel: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(Capsule().fill(appearance.accent.opacity(0.12)))
-        .accessibilityLabel("Everything of the day")
+        // One element named by what it says: the label used to land on the symbol AND the word, so
+        // VoiceOver read "Everything of the day, Everything of the day". What it opens is the hint.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today")
+        .accessibilityHint("Everything of the day on one screen")
     }
 }
 #endif

@@ -49,6 +49,8 @@ struct SurahsHeader: View {
                 .padding(4)
                 .conditionalGlassEffect()
         }
+        // VoiceOver read the symbol's own name, "Shuffle In A Circle".
+        .accessibilityLabel("Random Surah")
     }
     
     private var goToSurah: some View {
@@ -182,6 +184,8 @@ struct JuzHeader: View {
                 .padding(4)
                 .conditionalGlassEffect()
         }
+        // VoiceOver read the symbol's own name, "Shuffle In A Circle".
+        .accessibilityLabel("Random Surah")
     }
     #endif
 }

@@ -117,6 +117,20 @@ struct SurahRow: View, Equatable {
         surah.type == "makkan" ? "Makkan" : "Madinan"
     }
 
+    /// The row in words for VoiceOver: "Surah 1, Al-Fatihah, The Opener, Makkan, 7 ayahs", then whatever
+    /// the row is showing about it (where a result starts, khatm progress, favorite, last read).
+    private var spokenLabel: String {
+        var parts = ["Surah \(surah.id)", surah.nameTransliteration, surah.nameEnglish, revelationName,
+                     "\(surah.numberOfAyahs) ayahs"]
+        if let context = positionContextLine { parts.append(context) }
+        if let khatmCompletedAyahs, let khatmTotalAyahs {
+            parts.append("\(khatmCompletedAyahs) of \(khatmTotalAyahs) ayahs read")
+        }
+        if favoriteState { parts.append("favorite") }
+        if isLastRead { parts.append("last read") } else if isLastListened { parts.append("last listened") }
+        return parts.joined(separator: ", ")
+    }
+
     private var pageCountLabel: String {
         let count = max(surah.pageCount, 1)
         if count == 1, surah.isLessThanOnePage == true {
@@ -187,7 +201,7 @@ struct SurahRow: View, Equatable {
                 .foregroundStyle(
                     isKhatmComplete ? accentColor.color :
                     isKhatmPartiallyComplete ? accentColor.color.opacity(0.72) :
-                    .secondary
+                    .secondaryOnGlass
                 )
 
                 // Per-surah progress bar (shown in both Surah and Juz khatm grouping).
@@ -254,7 +268,17 @@ struct SurahRow: View, Equatable {
     
     var body: some View {
         #if os(iOS)
-        if grid { gridBody } else { listBody }
+        Group {
+            if grid { gridBody } else { listBody }
+        }
+        // One sentence per surah. Read child by child it was "١, الفَاتِحَة, 1:, Al-Fatihah, The Opener
+        // 🕋": an Arabic digit, a bare colon, and "Kaaba" where the tile means Makkan.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spokenLabel)
+        // The number pill's tap (list rows) favorites the surah; VoiceOver reaches it here.
+        .accessibilityAction(named: favoriteState ? "Unfavorite" : "Favorite") {
+            settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
+        }
         #else
         VStack {
             if WatchScreen.isNarrow {
@@ -310,7 +334,7 @@ struct SurahRow: View, Equatable {
                 if let context = positionContextLine {
                     Text(context)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                         .lineLimit(1)
                 }
 
@@ -331,7 +355,7 @@ struct SurahRow: View, Equatable {
                     term: searchQuery,
                     font: .caption,
                     accent: accentColor.color,
-                    fg: showInfo ? .primary : .secondary,
+                    fg: showInfo ? .primary : .secondaryOnGlass,
                     trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
                     lineLimit: 1
                 )
@@ -339,22 +363,22 @@ struct SurahRow: View, Equatable {
                 if showInfo {
                     Text(pageLine)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
 
                     Text(ayahAndRevelationLine)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
 
                     if let sortedMetricLine,
                        settings.quranSortMode == .words || settings.quranSortMode == .letters {
                         Text(sortedMetricLine)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                     }
                 } else if let sortedMetricLine {
                     Text(sortedMetricLine)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                 }
 
                 khatmProgressLine
@@ -424,7 +448,7 @@ struct SurahRow: View, Equatable {
             if let context = positionContextLine {
                 Text(context)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
             }
 
             HStack(spacing: 4) {
@@ -450,7 +474,7 @@ struct SurahRow: View, Equatable {
                 term: searchQuery,
                 font: .caption,
                 accent: accentColor.color,
-                fg: showInfo ? .primary : .secondary,
+                fg: showInfo ? .primary : .secondaryOnGlass,
                 trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
                 lineLimit: 1
             )
@@ -459,13 +483,13 @@ struct SurahRow: View, Equatable {
             if showInfo {
                 Text(pageLine)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
                 Text(ayahAndRevelationLine)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
@@ -473,14 +497,14 @@ struct SurahRow: View, Equatable {
                    settings.quranSortMode == .words || settings.quranSortMode == .letters {
                     Text(sortedMetricLine)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 }
             } else if let sortedMetricLine {
                 Text(sortedMetricLine)
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.secondaryOnGlass)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }

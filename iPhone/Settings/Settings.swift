@@ -66,14 +66,48 @@ final class LiveState: ObservableObject {
 /// The last-read position, split out for the same reason: a reading pause writes it every 0.8 s, and
 /// the whole Adhan tab used to re-render for each write. Observed by the Quran tab root and the readers;
 /// everything else goes through the forwarding properties on `Settings`.
+///
+/// Plain defaults reads and writes, not `@AppStorage` (2026-09-26). Every wrapper write published twice,
+/// its set and then the defaults observer's echo, so one settle of the three keys was FIVE publishes
+/// (`-renderCounter`), each re-running the Quran tab root and, through it, the pushed reader and every page
+/// it has mounted. Flipping pages at about a second a page, that settle landed in the middle of the next
+/// swipe and stalled it (the iPad page-turn lag, 2026-09-26). `record` writes a whole position with one
+/// publish. A bulk write underneath these (restore, erase, iCloud merge) publishes through
+/// `Settings.storedContentWasReplaced`.
 final class ReadingState: ObservableObject {
     static let shared = ReadingState()
 
-    @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
-    @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
-    /// When the last-read position was recorded (`Settings.stampLastRead`). 0 = saved by a build
-    /// without stamps.
-    @AppStorage("lastReadTimestamp") var lastReadTimestampRaw: Double = 0
+    private static let surahKey = "lastReadSurah"
+    private static let ayahKey = "lastReadAyah"
+    private static let timestampKey = "lastReadTimestamp"
+
+    var lastReadSurah: Int {
+        get { UserDefaults.standard.integer(forKey: Self.surahKey) }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: Self.surahKey)
+        }
+    }
+    var lastReadAyah: Int {
+        get { UserDefaults.standard.integer(forKey: Self.ayahKey) }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: Self.ayahKey)
+        }
+    }
+    /// When the last-read position was recorded (`record`). 0 = saved by a build without stamps.
+    var lastReadTimestampRaw: Double {
+        UserDefaults.standard.double(forKey: Self.timestampKey)
+    }
+
+    /// A reading position and when it was read, with one publish.
+    func record(surah: Int, ayah: Int, at timestamp: Double) {
+        objectWillChange.send()
+        let defaults = UserDefaults.standard
+        defaults.set(surah, forKey: Self.surahKey)
+        defaults.set(ayah, forKey: Self.ayahKey)
+        defaults.set(timestamp, forKey: Self.timestampKey)
+    }
 
     private init() { ObjectPublishCounter.attach(self, label: "ReadingState") }
 }
@@ -2149,8 +2183,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// displayed riwayah's print breaks it (`MushafPrintLineTable`), at the largest size whose widest
     /// printed line fits the screen. Off, the page renders at the chosen font size and scrolls.
     @AppStorage("mushafFitPage") var mushafFitPage = true
-    /// iPad / Mac page mode: open the mushaf as a two-page spread when the reader is wide enough
-    /// for both pages at full size (`SurahPageReader.spreadActive` holds the rule). Read by the
+    /// Page mode: open the mushaf as a two-page spread when the page area is wider than it is tall,
+    /// on any device (`SurahPageReader.spreadActive` holds the rule). Read by the
     /// reader only; the composed text does not depend on it, so it is in no render signature.
     @AppStorage("mushafTwoPageSpread") var mushafTwoPageSpread = true
 
@@ -2209,19 +2243,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set { ReadingState.shared.lastReadAyah = newValue }
     }
     /// When the last-read position was recorded, for the summary tile's "Today 5:30 PM" caption.
-    /// Stamped via `stampLastRead()` at both real save paths (list reader, mushaf pager flush) -
+    /// Stamped by `recordLastRead` at both real save paths (list reader, mushaf pager flush) -
     /// clearing the position deliberately does not stamp.
-    private var lastReadTimestampRaw: Double {
-        get { ReadingState.shared.lastReadTimestampRaw }
-        set { ReadingState.shared.lastReadTimestampRaw = newValue }
-    }
-
     var lastReadDate: Date? {
-        lastReadTimestampRaw > 0 ? Date(timeIntervalSince1970: lastReadTimestampRaw) : nil
+        let raw = ReadingState.shared.lastReadTimestampRaw
+        return raw > 0 ? Date(timeIntervalSince1970: raw) : nil
     }
 
-    func stampLastRead() {
-        lastReadTimestampRaw = Date().timeIntervalSince1970
+    /// Saves a reading position, stamped now, with one publish (see `ReadingState`).
+    func recordLastRead(surah: Int, ayah: Int) {
+        ReadingState.shared.record(surah: surah, ayah: ayah, at: Date().timeIntervalSince1970)
     }
 
     /// Debounced last-read bookkeeping for the mushaf pager.
@@ -2253,9 +2284,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         pendingLastRead = nil
 
         let surahChanged = lastReadSurah != pending.surah
-        lastReadSurah = pending.surah
-        lastReadAyah = pending.ayah
-        stampLastRead()
+        recordLastRead(surah: pending.surah, ayah: pending.ayah)
         // The Last Read widget names the surah; the ayah within it reaches the widget on the next
         // backgrounding flush (AppLifecycle), which is when the widget is next visible. Rebuilding the
         // snapshot and reloading four timelines on every 0.8 s reading pause burned the WidgetKit
@@ -2708,6 +2737,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// reason the hadith one exists, each area of the app decides for itself; ON by default like the
     /// other two. Set in Islam Settings, Arabic Text.
     @AppStorage("highlightAllahNamesIslam") var highlightAllahNamesIslam: Bool = true
+    /// Islam Settings -> Text Size (Abu, 2026-09-25: "for settings in Islam have a text size"): the
+    /// Dynamic Type size the whole Islam tab renders at, as an index into `IslamTextSize.steps`.
+    /// -1 (the default) follows the device's own text size. See `islamTextSize()`.
+    @AppStorage("islamTextSize") var islamTextSize: Int = -1
     /// Hadith text sizes, independent of the Quran's own sliders.
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4) * Settings.readerDefaultScale).rounded()
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize) * Settings.readerDefaultScale).rounded()
@@ -2732,6 +2765,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("gridModeArabicRaw") var gridModeArabicRaw: Int = -1
     @AppStorage("gridModeNamesRaw") var gridModeNamesRaw: Int = -1
     @AppStorage("gridModeIslamRaw") var gridModeIslamRaw: Int = -1
+    /// The Settings tab's own grid button (2026-09-26), the same -1 fallback as its siblings.
+    @AppStorage("gridModeSettingsRaw") var gridModeSettingsRaw: Int = -1
 
     var arabicGridMode: Bool {
         get { gridModeArabicRaw == -1 ? gridMode : gridModeArabicRaw == 1 }
@@ -2746,6 +2781,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var islamGridMode: Bool {
         get { gridModeIslamRaw == -1 ? gridMode : gridModeIslamRaw == 1 }
         set { gridModeIslamRaw = newValue ? 1 : 0 }
+    }
+
+    var settingsGridMode: Bool {
+        get { gridModeSettingsRaw == -1 ? gridMode : gridModeSettingsRaw == 1 }
+        set { gridModeSettingsRaw = newValue ? 1 : 0 }
     }
     
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
@@ -2851,6 +2891,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// NON-Quran Arabic screens read in it (`IslamArabicFace.uthmani`); the Quran reader keeps
     /// `hafsUthmaniFontName`, the mushaf's own stacking hand.
     static let hafsUthmaniNoStackFontName = "KFGQPCHAFSUthmanicScript-Regula-NoStack"
+    /// What both Hafs faces' PostScript names start with: the test for "is this the mushaf's own
+    /// hand", whose Arabic-Indic digits are ayah medallions rather than plain numerals.
+    static let hafsFontNamePrefix = "KFGQPCHAFS"
     /// Migration sentinel only. The app once bundled the KFGQPC Qunbul face (as `Qiraat.ttf`)
     /// for non-Hafs qiraat and for all non-Quran Arabic; it is no longer shipped, and any stored
     /// `fontArabic` still holding this name is migrated to the Hafs face at launch.
@@ -3267,6 +3310,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("startHereHidden") var startHereHidden: Bool = false
     /// The Start Here steps already opened, comma separated.
     @AppStorage("startHereVisited") var startHereVisitedRaw: String = ""
+    /// The Need a Hand? rows on every tab (HelpDoors.swift): a question and the setting that answers
+    /// it. Appearance > Look and Feel puts them away.
+    @AppStorage("showHelpShortcuts") var showHelpShortcuts: Bool = true
 
     // The tab the app opens on (Abu, 2026-09-21: "would be cool to also be able to choose whether one
     // wants adhan quran hadith or islam to be the start"). Raw `LaunchTab` (SettingsView.swift). It

@@ -63,6 +63,10 @@ TEXT_ARG = r"(?:verbatim:\s*|articleMarkdown:\s*)?"
 SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEXT_ARG + r")|ArticleSection\()(" + STR + r")[),]", re.S)
 TEXT_RE = re.compile(r"(?:(?<![\w.])Text\(" + TEXT_ARG + r"|(?<!\w)\.(?:text|markdown)\()(" + STR + r")\)", re.S)
 QUOTE_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + STR + r")", re.S)
+# The 10 Qiraat article's "Companions behind each Qiraah" cards (2026-09-26): each reading is
+# `lineageRow("Nafi", companions: ["Umar ibn al-Khattab", ...], note: "...")`, drawn as chips, so
+# the prose the ten paragraphs used to carry is rebuilt here as one sentence per reading.
+LINEAGE_RE = re.compile(r"lineageRow\(\s*(" + STR + r")\s*,\s*companions:\s*\[(.*?)\](?:\s*,\s*note:\s*(" + STR + r"))?\s*\)", re.S)
 # A Quran quote by REFERENCE: `ScriptureQuote(quran: "2:255", words: 3...9)` / `.ayah("2:255")`.
 # The article carries no copy of the ayah; the app renders it from its own Quran text, and so
 # does this corpus (Saheeh International, the app's default translation), so a reference here is
@@ -245,6 +249,12 @@ def articles():
                 hits.append((m.start(1), "ayah", (m.group(1), words)))
             for m in HADITH_RE.finditer(body):
                 hits.append((m.start(1), "hadith", (m.group(1), parse_hadith(m.group(1), m.group(2), m.group(3)))))
+            for m in LINEAGE_RE.finditer(body):
+                names = [unquote(n) for n in re.findall(STR, m.group(2))]
+                sentence = f"{unquote(m.group(1))}: transmitted from {', '.join(names)}."
+                if m.group(3):
+                    sentence += f" {unquote(m.group(3))}."
+                hits.append((m.start(1), "computed", sentence))
             # A section header IS a Text(...), so it matches twice - keep the heading, drop the twin.
             headings = {pos for pos, kind, _ in hits if kind == "heading"}
             hits = [h for h in hits if not (h[1] == "text" and h[0] in headings)]
@@ -257,6 +267,8 @@ def articles():
                 elif kind == "hadith":
                     literal, args = literal
                     value = hadith_quote(args)
+                elif kind == "computed":
+                    value, literal = literal, ""
                 else:
                     value = unquote(literal)
                 if not value or "\\(" in literal:

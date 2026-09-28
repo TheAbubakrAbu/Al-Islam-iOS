@@ -405,6 +405,11 @@ final class NamesViewModel: ObservableObject {
 
 struct NamesView: View {
     @ObservedObject var settings = Settings.shared
+    /// Two names across at the accessibility text sizes, where three squeezed each name's line.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var nameGridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 8), count: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
+    }
     #if HAS_QURAN
     @ObservedObject var quranData = QuranData.shared
     #endif
@@ -602,7 +607,7 @@ struct NamesView: View {
                 if !aiHits.isEmpty {
                     Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
                         if settings.namesGridMode {
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                            LazyVGrid(columns: nameGridColumns, spacing: 8) {
                                 ForEach(aiHits, id: \.id) { name in
                                     NameGridTile(
                                         name: name,
@@ -733,13 +738,13 @@ struct NamesView: View {
         // A load that failed at launch gets another go the moment the page is actually opened.
         .onAppear { namesData.retryIfNeeded() }
         #if os(iOS)
-        // A card's door into one name: scroll to it and open its description once the names are up.
+        // A card's door into one name: open it the way a tap does, once the names are up.
         .onReceive(namesData.$pendingNameNumber) { number in
             guard let number, namesData.isReadyForUI else { return }
             namesData.pendingNameNumber = nil
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.easeInOut) {
-                    _ = expandedNameNumbers.insert(number)
+                if let name = namesData.namesOfAllah.first(where: { $0.number == number }) {
+                    FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
                 }
             }
         }
@@ -758,6 +763,13 @@ struct NamesView: View {
         .onAppear {
             if namesData.loadState == .ready, Self.debugNameNumber != nil {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenName = true }
+            }
+            // `-focusName <number>`: that name opened the way a row's tap opens it (the overlay
+            // with its details), through the same pending-name door a card uses.
+            if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-focusName"),
+               ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
+               let number = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { namesData.pendingNameNumber = number }
             }
         }
         #endif
@@ -975,13 +987,18 @@ struct NamesView: View {
         }
     }
 
-    /// Expands a random name and scrolls it to the top - the header's shuffle button.
+    /// Scrolls a random name to the top and opens it, the way a tap does (the header's shuffle button).
     private func shuffleToRandomName(proxy: ScrollViewProxy) {
         guard let name = namesData.namesOfAllah.randomElement() else { return }
         withAnimation {
-            expandedNameNumbers.insert(name.number)
             proxy.scrollTo("name_\(name.number)", anchor: .top)
+            #if !os(iOS)
+            expandedNameNumbers.insert(name.number)
+            #endif
         }
+        #if os(iOS)
+        FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+        #endif
     }
 
     @ViewBuilder
@@ -997,7 +1014,7 @@ struct NamesView: View {
                 if !showFavoriteNames {
                     EmptyView()
                 } else if settings.namesGridMode {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    LazyVGrid(columns: nameGridColumns, spacing: 8) {
                         ForEach(favorites, id: \.id) { name in
                             NameGridTile(
                                 name: name,
@@ -1037,7 +1054,7 @@ struct NamesView: View {
     private func namesSections(filteredNames: [NameOfAllah], favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if settings.namesGridMode {
             Section {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                LazyVGrid(columns: nameGridColumns, spacing: 8) {
                     ForEach(filteredNames, id: \.id) { name in
                         NameGridTile(
                             name: name,
@@ -1111,6 +1128,13 @@ struct NamesView: View {
                 }
             }
         } else {
+            #if os(iOS)
+            // The same thing a grid tile's tap does (Abu, 2026-09-25: "for list view instead of
+            // opening that below just do the same thing of opening the same way as grid mode"):
+            // the name full screen, with Other Names, the description and the two doors under it.
+            FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+            #else
+            // The watch has no overlay, so a row still opens in place there.
             withAnimation {
                 if expandedNameNumbers.contains(name.number) {
                     expandedNameNumbers.remove(name.number)
@@ -1118,6 +1142,7 @@ struct NamesView: View {
                     expandedNameNumbers.insert(name.number)
                 }
             }
+            #endif
         }
     }
 
@@ -1626,7 +1651,7 @@ private struct NameGridTile: View, Equatable {
 
             Text("\(name.number)")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(.secondaryOnGlass)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 5)

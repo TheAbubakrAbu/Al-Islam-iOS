@@ -1117,8 +1117,13 @@ struct SoundAlikeLettersView: View {
         }
     }
 
+    /// The pair's names with their glyphs: uppercased, "taa" and "Taa" (the heavy twin's capital) read
+    /// as the same word, and three of the pairs are exactly such twins (ت ط, ه ح, ذ ظ).
     private func pairTitle(_ pair: SoundAlikePair) -> String {
-        let names = [pair.first, pair.second].compactMap { LetterTraits.letterData(for: $0)?.transliteration.uppercased() }
+        let names = [pair.first, pair.second].map { glyph in
+            let name = LetterTraits.letterData(for: glyph)?.transliteration.uppercased() ?? ""
+            return "\(name) (\(glyph))"
+        }
         return names.joined(separator: "  AND  ")
     }
 

@@ -20,70 +20,98 @@ struct GlanceCard: View {
 
     private static let kaaba = CLLocation(latitude: 21.4225, longitude: 39.8262)
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 10, alignment: .top),
-        GridItem(.flexible(), spacing: 10, alignment: .top)
-    ]
+    /// Two columns, or one at the accessibility text sizes: half a row left "CURRENT..." over "San".
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top),
+              count: dynamicTypeSize.isAccessibilitySize ? 1 : 2)
+    }
 
     var body: some View {
         let _ = RenderCounter.hit("GlanceCard")
         let accent = settings.accentColor.color
         LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
-            ForEach(tiles) { tile in
-                GlanceTile(tile: tile, accent: accent, onSelect: onSelect)
-                    .equatable()
+            ForEach(groups) { group in
+                Section {
+                    ForEach(group.tiles) { tile in
+                        GlanceTile(tile: tile, accent: accent, onSelect: onSelect)
+                            .equatable()
+                    }
+                } header: {
+                    groupHeader(group)
+                }
             }
         }
         .padding(.vertical, 2)
     }
 
+    /// A group's name over its tiles: a step below the section's "AT A GLANCE", and a heading for
+    /// VoiceOver's rotor. Sentence case and primary weight, so it reads as a level of its own rather
+    /// than one more all-caps eyebrow among the tiles' own.
+    private func groupHeader(_ group: GlanceGroup) -> some View {
+        Text(group.title)
+            .font(.footnote.weight(.semibold))
+            .foregroundColor(.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 4)
+            // The second group sits a little apart from the first one's last row.
+            .padding(.top, group.id == GlanceGroup.here ? 0 : 6)
+            .accessibilityAddTraits(.isHeader)
+    }
+
     // MARK: - Tiles
 
-    private var tiles: [GlanceItem] {
-        var items: [GlanceItem] = []
-
-        items.append(.init(icon: "location.fill", title: "Current Location",
-                           value: live.currentLocation?.city ?? "Unavailable", action: .cityPrayerTimes))
-
-        items.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary,
-                           action: .prayerCalculation))
-
+    /// Twelve equal tiles in one wall had no order to them (the design review, 2026-09-26), so they
+    /// come in two groups of pairs: where you are (the city and its clock, the Qibla and its distance,
+    /// home and how far it is) and today (the sun and the fast, the night and the moon, the next date
+    /// and the method the day's times come from). A tile that cannot be computed is still dropped.
+    private var groups: [GlanceGroup] {
         let qibla = qiblaSummary
         let makkah = distanceToMakkah
+
+        var here: [GlanceItem] = []
+        here.append(.init(icon: "location.fill", title: "Current Location",
+                          value: live.currentLocation?.city ?? "Unavailable", action: .cityPrayerTimes))
+        here.append(.init(icon: "clock.fill", title: "Time Zone", value: timeZoneSummary, action: .cityPrayerTimes))
         if let qibla {
-            items.append(.init(icon: "location.north.line.fill", title: "Qibla", value: qibla,
-                               iconRotation: qiblaBearing, action: .qibla(bearing: qibla, distance: makkah)))
+            here.append(.init(icon: "location.north.line.fill", title: "Qibla", value: qibla,
+                              iconRotation: qiblaBearing, action: .qibla(bearing: qibla, distance: makkah)))
         }
         if let makkah {
-            items.append(.init(icon: "building.columns.fill", title: "Distance to Makkah", value: makkah,
-                               action: .qibla(bearing: qibla, distance: makkah)))
-        }
-        if let daylight = daylightSummary {
-            items.append(.init(icon: "sun.max.fill", title: "Daylight", value: daylight, action: .prayerCalendar))
-        }
-        if let fast = fastingWindow {
-            items.append(.init(icon: "fork.knife", title: "Fasting Window", value: fast, action: .prayerCalendar))
-        }
-        if let night = nightSummary {
-            items.append(.init(icon: "moon.zzz.fill", title: "Night", value: night, action: .prayerCalendar))
-        }
-
-        items.append(.init(icon: "moon.stars.fill", title: "Moon", value: moonSummary, showsMoonPhase: true,
-                           action: .hijriCalendar))
-
-        if let event = nextEventSummary {
-            items.append(.init(icon: "calendar", title: "Next Islamic Date", value: event, action: .hijriCalendar))
+            here.append(.init(icon: "building.columns.fill", title: "Distance to Makkah", value: makkah,
+                              action: .qibla(bearing: qibla, distance: makkah)))
         }
         if let home = settings.homeLocation {
-            items.append(.init(icon: "house.fill", title: "Home Location", value: home.city, action: .homeLocation))
+            here.append(.init(icon: "house.fill", title: "Home Location", value: home.city, action: .homeLocation))
             if let travel = travelSummary {
-                items.append(.init(icon: "airplane", title: "Distance From Home", value: travel,
-                                   action: .travelingMode))
+                here.append(.init(icon: "airplane", title: "Distance From Home", value: travel,
+                                  action: .travelingMode))
             }
         }
 
-        items.append(.init(icon: "clock.fill", title: "Time Zone", value: timeZoneSummary, action: .cityPrayerTimes))
-        return items
+        var today: [GlanceItem] = []
+        if let daylight = daylightSummary {
+            today.append(.init(icon: "sun.max.fill", title: "Daylight", value: daylight, action: .prayerCalendar))
+        }
+        if let fast = fastingWindow {
+            today.append(.init(icon: "fork.knife", title: "Fasting Window", value: fast, action: .prayerCalendar))
+        }
+        if let night = nightSummary {
+            today.append(.init(icon: "moon.zzz.fill", title: "Night", value: night, action: .prayerCalendar))
+        }
+        today.append(.init(icon: "moon.stars.fill", title: "Moon", value: moonSummary, showsMoonPhase: true,
+                           action: .hijriCalendar))
+        if let event = nextEventSummary {
+            today.append(.init(icon: "calendar", title: "Next Islamic Date", value: event, action: .hijriCalendar))
+        }
+        today.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary,
+                           action: .prayerCalculation))
+
+        return [
+            GlanceGroup(id: GlanceGroup.here, title: "Here", tiles: here),
+            GlanceGroup(id: GlanceGroup.today, title: "Today", tiles: today)
+        ]
     }
 
     // MARK: - Values
@@ -231,6 +259,9 @@ struct GlanceCard: View {
         let status = settings.travelingMode
             ? "Traveling mode on"
             : (meters >= Settings.travelThresholdM ? "Past 48 mi" : "Within 48 mi")
+        // Inside the home city the distance is GPS noise ("0.0 mi (0.0 km)"): say where you are, the
+        // way the Makkah tile says "At the Kaaba" inside the same radius.
+        guard meters > Self.atKaabaRadius else { return "At home\n\(status)" }
         return "\(Self.distanceText(meters))\n\(status)"
     }
 
@@ -317,6 +348,16 @@ enum GlanceAction: Hashable {
     case travelingMode
 }
 
+/// One titled run of tiles in the card (see `GlanceCard.groups`).
+struct GlanceGroup: Identifiable {
+    static let here = "here"
+    static let today = "today"
+
+    let id: String
+    let title: String
+    let tiles: [GlanceItem]
+}
+
 struct GlanceItem: Identifiable, Equatable {
     let icon: String
     let title: String
@@ -340,6 +381,9 @@ private struct GlanceTile: View, Equatable {
     let tile: GlanceItem
     let accent: Color
     let onSelect: (GlanceAction) -> Void
+    /// Read from the environment, so `==` need not fold it: a text-size change re-renders the tile
+    /// through its environment, not through its inputs.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     static func == (lhs: GlanceTile, rhs: GlanceTile) -> Bool {
         lhs.tile == rhs.tile && lhs.accent == rhs.accent
@@ -386,17 +430,21 @@ private struct GlanceTile: View, Equatable {
 
                 Text(tile.title.uppercased())
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .foregroundColor(Self.secondaryInk)
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
                     .minimumScaleFactor(0.8)
             }
 
             // ONE Text carrying both styles, with two lines RESERVED for every tile: a long
             // headline wraps into the second line, a detail renders as the second line, and a
             // short lone headline leaves it empty - but the tile is the same height in all three
-            // cases, so the grid never staggers.
+            // cases, so the grid never staggers. At the accessibility sizes the grid is one column
+            // (nothing to stagger against), so the value takes the lines it needs instead.
             Group {
-                if #available(iOS 16.0, *) {
+                if dynamicTypeSize.isAccessibilitySize {
+                    styledValue(headline: headline, detail: detail)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if #available(iOS 16.0, *) {
                     styledValue(headline: headline, detail: detail)
                         .lineLimit(2, reservesSpace: true)
                 } else {
@@ -423,7 +471,12 @@ private struct GlanceTile: View, Equatable {
         guard let detail else { return headlineText }
         return headlineText + Text("\n" + detail)
             .font(.caption)
-            .foregroundColor(.secondary)
+            .foregroundColor(Self.secondaryInk)
     }
+
+    /// The eyebrow and the detail line. The system `.secondary` turns vibrant on the tinted glass and
+    /// measured 3.0:1 (dark) and 3.1:1 (light) for the 12 pt detail; a plain primary at 70% keeps the
+    /// same step down from the headline and reads at about 5:1 in both.
+    private static let secondaryInk = Color.primary.opacity(0.7)
 }
 #endif

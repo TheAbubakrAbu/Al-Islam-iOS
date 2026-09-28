@@ -309,16 +309,17 @@ struct SkyCard: View {
     ///
     /// The horizon LINE is not at the trough - it is derived from the day's length (`SolarCurve.horizon`)
     /// and rides up and down the band with the season, which is what makes the air above "TIME LEFT"
-    /// vary. With the countdown block occupying about 91 pt of the card's bottom, the gap between the
-    /// line and the caption works out to `arcBottomInset + f * band - 91`, where f runs from 0.75 on an
+    /// vary. With the countdown block occupying about 92 pt of the card's bottom, the gap between the
+    /// line and the caption works out to `arcBottomInset + f * band - 92`, where f runs from 0.75 on an
     /// 8-hour winter day to 0.25 on a 16-hour summer one. So the two ways to close that gap are a
     /// shorter card (the block rises) and a shallower band (the line stops swinging so far), and both
     /// were used on 2026-09-07: 224 -> 200 and 62 -> 44 took a measured 31.5 pt gap down to about 16.
     /// A negative padding cannot do this: the flexible spacer above simply absorbs it.
     ///
-    /// `arcBottomInset` also sets the floor - the gap at f = 0 is `arcBottomInset - 91` - so it must not
-    /// drop much below 88 or the line grazes the caption at Arctic midsummer. Re-derive all three numbers
-    /// whenever the columns or the countdown block change height.
+    /// `arcBottomInset` also sets the floor - the gap at f = 0 is `arcBottomInset - 92` - so it must not
+    /// drop much below 89 or the line grazes the caption at Arctic midsummer. Re-derive all three numbers
+    /// whenever the columns or the countdown block change height (2026-09-26: "TIME LEFT" went 10 -> 11
+    /// pt, the block grew 1.2 pt, and `arcBottomInset` went 88 -> 89 to keep the same air).
     ///
     /// All of that is the PLAIN card's geometry (skyline off). With the skyline on, two different
     /// things are pinned to the countdown, and they are NOT the same line (Abu, 2026-09-21):
@@ -338,14 +339,14 @@ struct SkyCard: View {
     ///   ground level where the countdown progress view is"; 2026-09-22: "bring back the ground
     ///   between time left and the countdown"; 2026-09-25: "in between more in the middle".
     private let arcTopInset: CGFloat = 68
-    private let arcBottomInset: CGFloat = 88
+    private let arcBottomInset: CGFloat = 89
 
     /// The top of the countdown BLOCK ("TIME LEFT" and the digits under it) in the card's coordinate
     /// space, as `PrayerCountdown` reports it; nil until the first layout. The estimate stands in for
     /// that first frame so the graph does not jump: 200 less the bottom padding, the footer line, its
     /// top padding, the bar, the digits, and the caption above them.
     @State private var digitsTop: CGFloat?
-    private static let estimatedDigitsTop: CGFloat = 108
+    private static let estimatedDigitsTop: CGFloat = 107
     /// The graph's horizon crossing sits this far above the countdown block, in the air over "TIME LEFT".
     private static let groundAir: CGFloat = 4
 
@@ -370,6 +371,9 @@ struct SkyCard: View {
     /// When the touch now on the card began: a TAP on the night's moon opens the viewer, while a hold
     /// or a drag that starts on it scrubs as it always has.
     @State private var touchBegan: Date?
+    /// Whether VoiceOver is on the arc (see `stepDayPreview`): leaving it returns the sky to now, the
+    /// way lifting a finger does.
+    @AccessibilityFocusState private var dayPreviewFocused: Bool
     /// The night's trough never dips closer than this to the card's bottom edge.
     private static let troughInset: CGFloat = 8
 
@@ -468,11 +472,14 @@ struct SkyCard: View {
 
             // Legibility scrim, weighted to the two text bands. A soft gradient rather than a hard seam: it
             // reads as dusk gathering at the horizon, and it keeps white text readable over whichever two
-            // colors the user picked - a pale midday cyan included.
+            // colors the user picked - a pale midday cyan included. The top band now fades out at 40%
+            // rather than 26%: the columns' "Started at" lines sit at about 30%, just past where it used
+            // to end (2.4:1 on a midday blue). The sun's peak, at 34%, is dimmed by about 7%.
             LinearGradient(
                 stops: [
                     .init(color: .black.opacity(0.32), location: 0.00),
-                    .init(color: .black.opacity(0.00), location: 0.26),
+                    .init(color: .black.opacity(0.16), location: 0.26),
+                    .init(color: .black.opacity(0.00), location: 0.40),
                     .init(color: .black.opacity(0.00), location: 0.48),
                     .init(color: .black.opacity(0.66), location: 1.00),
                 ],
@@ -495,6 +502,13 @@ struct SkyCard: View {
         }
         .overlay(alignment: .top) { scrubReadout }
         .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
+        // The card is a fixed 200 pt drawing whose bands were measured at the default text size (see
+        // `arcTopInset`), and the skyline spans the columns' time lines. Above that size its text
+        // grew into the skyline (the pyramids widen with the "Started at" line and rose into it) and
+        // the fixed-height stack squeezed the countdown to about 5 pt at the accessibility sizes, so
+        // its text stays at the size it was drawn for, like a widget's. The prayer list right below
+        // carries the same times and grows all the way.
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .frame(height: height)
         // Everything inside draws light-on-dark, whatever the phone's appearance.
         .environment(\.colorScheme, .dark)
@@ -519,11 +533,23 @@ struct SkyCard: View {
             let source = arguments.indices.contains(index + 1) && !arguments[index + 1].hasPrefix("-") ? arguments[index + 1] : "footer"
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { openMoonViewer(from: source) }
         }
+        // `-dayPreviewSteps <n>`: the VoiceOver arc stepped n prayers forward (negative: back), 2 s after
+        // the card shows, for screenshot runs (VoiceOver swipes cannot be scripted).
+        .onAppear {
+            let arguments = ProcessInfo.processInfo.arguments
+            guard !Self.debugDayPreviewStepped, let index = arguments.firstIndex(of: "-dayPreviewSteps"),
+                  arguments.indices.contains(index + 1), let steps = Int(arguments[index + 1]) else { return }
+            Self.debugDayPreviewStepped = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                for _ in 0..<abs(steps) { stepDayPreview(steps > 0 ? .increment : .decrement) }
+            }
+        }
         #endif
     }
 
     #if DEBUG
     private static var debugMoonViewerOpened = false
+    private static var debugDayPreviewStepped = false
     #endif
 
     /// Opens the moon viewer for the moment the footer's moon shows when nothing is being dragged:
@@ -555,6 +581,7 @@ struct SkyCard: View {
                 )
                 .equatable()
             }
+            .skyLegibility()
             .allowsHitTesting(false)
 
             Spacer(minLength: 0)
@@ -600,9 +627,12 @@ struct SkyCard: View {
 
         var body: some View {
             VStack(alignment: trailing ? .trailing : .leading, spacing: 3) {
+                // The secondary lines sit on the open sky (see `skyLegibility`): 0.6 and 0.75 white
+                // measured 3.2:1 and 2.4:1 on a midday blue. The eyebrow keeps a step down; the time
+                // line is 12 pt and needs all the white it can get (its size already ranks it).
                 Text(title)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.white.opacity(0.8))
 
                 if let displayName, let image, let timeText {
                     HStack(spacing: 6) {
@@ -616,7 +646,7 @@ struct SkyCard: View {
 
                     Text("\(trailing ? "Starts at" : "Started at") \(timeText)")
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         // The skyline under this column spans exactly this line (see `SkylineSpans`).
@@ -626,6 +656,16 @@ struct SkyCard: View {
                         })
                 }
             }
+            // One element per column: "Current prayer, Dhuhr, started at 1:01 PM" (the symbol and
+            // the all-caps eyebrow were read as separate items).
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityText)
+        }
+
+        private var accessibilityText: String {
+            let role = trailing ? "Upcoming prayer" : "Current prayer"
+            guard let displayName, let timeText else { return role }
+            return "\(role), \(displayName), \(trailing ? "starts at" : "started at") \(timeText)"
         }
     }
 
@@ -654,6 +694,8 @@ struct SkyCard: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // The glyph and the caption each said the phase; one sentence instead.
+                .accessibilityLabel(moonAccessibilityLabel)
                 .accessibilityHint("Opens the moon in 3D")
 
                 Spacer(minLength: 8)
@@ -661,12 +703,15 @@ struct SkyCard: View {
                 if let next = live.nextPrayer {
                     Text(PrayerCountdown.untilLabel(for: next))
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.white.opacity(0.9))
                         .allowsHitTesting(false)
+                        // The countdown above already says "until Asr".
+                        .accessibilityHidden(true)
                 }
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
+            .skyLegibility()
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
@@ -695,8 +740,13 @@ struct SkyCard: View {
                 // beside it is drawn from this same number.
                 Text("\(moonPhase.name) · \(moonPhase.illuminationPercent)%")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(.white.opacity(0.85))
             }
+    }
+
+    private var moonAccessibilityLabel: String {
+        let phase = MoonPhase.on(moonDate)
+        return "Moon, \(phase.name), \(phase.illuminationPercent) percent illuminated"
     }
 
     /// The moment the moon is drawn for (the footer's glyph and, at night, the one on the arc): the
@@ -894,7 +944,50 @@ struct SkyCard: View {
             }
             .contentShape(Rectangle())
             .gesture(dragGesture(in: rect, window: window, liveMoon: liveMoonPoint(curve: curve, window: window, shape: shape, rect: rect)))
+            // VoiceOver cannot drag, so the arc is also an adjustable element: a swipe up or down moves
+            // the sun to the next or previous prayer, the same preview a drag gives (the sky, the moon
+            // and the list's highlight all follow). "Back to Now", or leaving the arc, returns to live.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Day Preview")
+            .accessibilityValue(dayPreviewValue)
+            .accessibilityHint("Swipe up or down to move the sun to each prayer time.")
+            .accessibilityAdjustableAction { direction in stepDayPreview(direction) }
+            .accessibilityAction(named: "Back to Now") { scrubber.end() }
+            .accessibilityFocused($dayPreviewFocused)
         }
+        .onChange(of: dayPreviewFocused) { focused in
+            if !focused, scrubber.isScrubbing { scrubber.end() }
+        }
+    }
+
+    /// The arc in words: the previewed prayer and its time, or now and the prayer in effect.
+    private var dayPreviewValue: String {
+        if let date = scrubber.scrubbedDate {
+            return [scrubber.previewPrayer?.displayName, settings.formatDate(date)]
+                .compactMap { $0 }.joined(separator: ", ")
+        }
+        return ["Now", settings.formatDate(now), live.currentPrayer?.displayName]
+            .compactMap { $0 }.joined(separator: ", ")
+    }
+
+    /// One VoiceOver swipe on the arc: the sun to the next (or previous) prayer time today. The stops are
+    /// the list's own prayers (`highlightTimeline`), so the row highlight moves exactly as for a drag.
+    private func stepDayPreview(_ direction: AccessibilityAdjustmentDirection) {
+        let calendar = Calendar.current
+        let stops = highlightTimeline.map(\.time)
+            .filter { calendar.isDate($0, inSameDayAs: now) }
+            .sorted()
+        let reference = scrubber.scrubbedDate ?? now
+        let target: Date?
+        switch direction {
+        case .increment: target = stops.first { $0 > reference }
+        case .decrement: target = stops.last { $0 < reference }
+        @unknown default: target = nil
+        }
+        guard let target else { return }
+        if !scrubber.isScrubbing { scrubber.begin(timeline: highlightTimeline) }
+        settings.hapticFeedback()
+        scrubber.scrub(to: target)
     }
 
     /// Where the night's moon marker sits for the LIVE moment, or nil while the sun is the marker (or

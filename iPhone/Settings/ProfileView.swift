@@ -313,6 +313,7 @@ struct ProfileView: View {
     /// See `ProfileSettingsRow` - the deferred last-read load must be able to re-render this screen.
     @ObservedObject private var hadithStore = HadithStore.shared
     @ObservedObject private var achievements = AchievementsStore.shared
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var selectedBadge: AlIslamBadge?
     @State private var badgeFilter: BadgeFilter = .all
@@ -361,9 +362,12 @@ struct ProfileView: View {
 
     private func streakStrip(_ stats: ProfileStats) -> some View {
         HStack(spacing: 10) {
-            miniStat("\(stats.prayer.currentStreak)", "Current", systemImage: "flame.fill")
-            miniStat("\(stats.prayer.bestStreak)", "Best", systemImage: "trophy.fill")
-            miniStat("\(stats.prayer.perfectDays)", "Perfect days", systemImage: "checkmark.seal.fill")
+            miniStat("\(stats.prayer.currentStreak)", "Current", systemImage: "flame.fill",
+                     spoken: "Current prayer streak")
+            miniStat("\(stats.prayer.bestStreak)", "Best", systemImage: "trophy.fill",
+                     spoken: "Best prayer streak")
+            miniStat("\(stats.prayer.perfectDays)", "Perfect days", systemImage: "checkmark.seal.fill",
+                     spoken: "Perfect days")
         }
     }
 
@@ -425,8 +429,11 @@ struct ProfileView: View {
                                     .frame(width: 9, height: 9)
                                 Text(formatted(count))
                                     .font(.caption2.monospacedDigit())
-                                    .foregroundStyle(.secondary)
+                                    .foregroundColor(.secondaryOnGlass)
                             }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(color.title) highlights")
+                            .accessibilityValue(formatted(count))
                         }
                     }
                     Spacer(minLength: 0)
@@ -444,7 +451,7 @@ struct ProfileView: View {
                         Spacer()
                         Text(formatted(SavedReflectionsStore.shared.items.count))
                             .font(.subheadline.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                     }
                 }
                 .buttonStyle(.plain)
@@ -481,6 +488,8 @@ struct ProfileView: View {
                 .progressViewStyle(.linear)
                 .tint(settings.accentColor.color)
                 .padding(.bottom, 2)
+                // The header already says "1 of 83"; spoken, the bar was a bare "1%".
+                .accessibilityHidden(true)
 
             Picker("Show", selection: $badgeFilter) {
                 ForEach(BadgeFilter.allCases) { filter in
@@ -508,18 +517,25 @@ struct ProfileView: View {
                         HStack(alignment: .firstTextBaseline) {
                             Text(family.rawValue.uppercased())
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundColor(.secondaryOnGlass)
 
                             Spacer()
 
                             Text("\(familyUnlocked)/\(badges.count)")
                                 .font(.caption2.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(familyUnlocked == badges.count ? AnyShapeStyle(settings.accentColor.color) : AnyShapeStyle(.secondary))
+                                .foregroundStyle(familyUnlocked == badges.count ? AnyShapeStyle(settings.accentColor.color) : AnyShapeStyle(Color.secondaryOnGlass))
                         }
                         .padding(.top, 4)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(family.rawValue)
+                        .accessibilityValue("\(familyUnlocked) of \(badges.count) earned")
+                        .accessibilityAddTraits(.isHeader)
 
+                        // Two across at the accessibility sizes, where a third of the card left a
+                        // name a few letters a line.
                         LazyVGrid(
-                            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                           count: dynamicTypeSize.isAccessibilitySize ? 2 : 3),
                             spacing: 8
                         ) {
                             ForEach(shown) { badge in
@@ -530,6 +546,8 @@ struct ProfileView: View {
                                     BadgeTile(badge: badge, stats: stats)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(badge.title)
+                                .accessibilityValue(badgeSpokenValue(badge, stats))
                             }
                         }
                     }
@@ -544,7 +562,7 @@ struct ProfileView: View {
         HStack {
             Text(title)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondaryOnGlass)
 
             Spacer(minLength: 8)
 
@@ -554,9 +572,19 @@ struct ProfileView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
+        .accessibilityElement(children: .combine)
     }
 
-    private func miniStat(_ value: String, _ label: String, systemImage: String) -> some View {
+    /// "Earned", or the receipt in the badge's own unit ("3 of 7") for one still in progress.
+    private func badgeSpokenValue(_ badge: AlIslamBadge, _ stats: ProfileStats) -> String {
+        if achievements.isUnlocked(badge, stats) { return "Earned" }
+        let (value, goal) = badge.progress(stats)
+        return "\(value.formatted(.number)) of \(goal.formatted(.number))"
+    }
+
+    /// `spoken` names the stat for VoiceOver, which read the icon ("Trophy Cup, Filled") and then every
+    /// value in the strip before any of the labels.
+    private func miniStat(_ value: String, _ label: String, systemImage: String, spoken: String) -> some View {
         VStack(spacing: 3) {
             Image(systemName: systemImage)
                 .font(.caption)
@@ -568,13 +596,16 @@ struct ProfileView: View {
 
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundColor(.secondaryOnGlass)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .conditionalGlassEffect(rectangle: true, interactive: false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+        .accessibilityValue(value)
     }
 
     private func formatted(_ value: Int) -> String {
@@ -631,6 +662,7 @@ private struct RingHero: View {
                 Image(systemName: "moon.stars.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(settings.accentColor.color.opacity(0.85))
+                    .accessibilityHidden(true)
             }
             .frame(width: 150, height: 150)
             .padding(.top, 4)
@@ -645,8 +677,12 @@ private struct RingHero: View {
                             .foregroundStyle(ring.color)
                         Text(ring.label)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                     }
+                    // "Today, 3 of 5", where the columns read every value before any label.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(ring.label)
+                    .accessibilityValue(ring.value.replacingOccurrences(of: "/", with: " of "))
                 }
             }
         }
@@ -708,10 +744,12 @@ private struct ProfileCard<Content: View>: View {
                 if let trailing {
                     Text(trailing)
                         .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(.secondaryOnGlass)
                 }
             }
             .padding(.bottom, 2)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
 
             content()
         }
@@ -726,6 +764,11 @@ private struct ProfileCard<Content: View>: View {
 private struct BadgeTile: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var achievements = AchievementsStore.shared
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Three lines of the title at the reader's text size, so every tile's bar sits on one line. Two
+    /// fixed 26 pt lines shrank the longest names ("A Hundred Thousand Remembrances") to about 8 pt,
+    /// and cut the second line off from xxxLarge up.
+    @ScaledMetric(relativeTo: .caption2) private var titleHeight: CGFloat = 40
     let badge: AlIslamBadge
     let stats: ProfileStats
 
@@ -749,14 +792,20 @@ private struct BadgeTile: View {
                 )
                 // The soft accent glow is what separates "earned" from "colored in" at a glance.
                 .shadow(color: earned ? tint.opacity(0.35) : .clear, radius: 5, y: 2)
+                // A locked tile dims its icon and bar, never its name: fading the whole tile took
+                // the grey title to 2.4:1 on the glass.
+                .opacity(earned ? 1 : 0.75)
+                // The button speaks the badge (`badgeSpokenValue`); its parts only lent it stray
+                // traits: the seal's "selected", the bar's "updates frequently".
+                .accessibilityHidden(true)
 
             Text(badge.title)
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(earned ? .primary : .secondary)
+                .foregroundColor(earned ? .primary : .secondaryOnGlass)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .frame(height: 26, alignment: .top)
+                .lineLimit(3)
+                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 0.7 : 0.9)
+                .frame(height: titleHeight, alignment: .top)
 
             // A locked tile earns its place by showing the distance left; an earned one has nothing
             // left to say, so the bar is dropped rather than pinned full.
@@ -765,6 +814,8 @@ private struct BadgeTile: View {
                     .progressViewStyle(.linear)
                     .tint(settings.accentColor.color.opacity(0.7))
                     .frame(height: 3)
+                    .opacity(0.75)
+                    .accessibilityHidden(true)
             }
         }
         .frame(maxWidth: .infinity)
@@ -786,10 +837,10 @@ private struct BadgeTile: View {
                     .font(.caption2)
                     .foregroundStyle(settings.accentColor.color)
                     .padding(5)
+                    .accessibilityHidden(true)
             }
         }
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .opacity(earned ? 1 : 0.75)
     }
 }
 
@@ -834,6 +885,7 @@ private struct BadgeDetailSheet: View {
                         .font(.system(size: 40, weight: .semibold))
                         .foregroundStyle(earned ? .white : Color.secondary)
                         .frame(width: 92, height: 92)
+                        .accessibilityHidden(true)
                         .background(
                             Circle().fill(
                                 earned
@@ -875,10 +927,14 @@ private struct BadgeDetailSheet: View {
                                   systemImage: "checkmark.seal.fill")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(settings.accentColor.color)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("Earned \(date.formatted(date: .abbreviated, time: .omitted))")
                         } else {
                             Label("Earned", systemImage: "checkmark.seal.fill")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(settings.accentColor.color)
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("Earned")
                         }
                     }
 

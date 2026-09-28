@@ -235,6 +235,12 @@ struct ProphetNuhView: View {
                         .font(.body)
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetNuhView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetNuhView")
             }
             .themedListRowBackground()
@@ -294,6 +300,12 @@ struct ProphetHudView: View {
                     Text(verbatim: "'Aad were the strongest people of their time and the Quran remembers them only as a warning: power without submission is nothing before Allah.")
                         .font(.body)
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetHudView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetHudView")
             }
@@ -515,6 +527,12 @@ struct ProphetLutView: View {
                         .font(.body)
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetLutView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetLutView")
             }
             .themedListRowBackground()
@@ -574,6 +592,12 @@ struct ProphetIsmailView: View {
                     Text(verbatim: "The boy who offered his own neck grew into the man who built the House, and the last of the prophets came from his line.")
                         .font(.body)
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetIsmailView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetIsmailView")
             }
@@ -689,6 +713,12 @@ struct ProphetYaqubView: View {
                         .font(.body)
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetYaqubView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetYaqubView")
             }
             .themedListRowBackground()
@@ -756,6 +786,12 @@ struct ProphetYusufView: View {
                         .font(.body)
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetYusufView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetYusufView")
             }
             .themedListRowBackground()
@@ -810,6 +846,12 @@ struct ProphetAyyubView: View {
                     Text(verbatim: "Ayyub lost everything a man can lose and Allah called him an excellent servant, one who constantly turned back: the whole definition of patience in one verse.")
                         .font(.body)
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetAyyubView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetAyyubView")
             }
@@ -1026,6 +1068,12 @@ struct ProphetHarunView: View {
                     Text(verbatim: "Harun was given to Musa as an answered prayer, stood beside him before Pharaoh, and held a people together while they turned to a calf.")
                         .font(.body)
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetHarunView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetHarunView")
             }
@@ -1461,6 +1509,12 @@ struct ProphetZakariyaView: View {
                         .font(.body)
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetZakariyaView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetZakariyaView")
             }
             .themedListRowBackground()
@@ -1514,6 +1568,12 @@ struct ProphetYahyaView: View {
                     Text(verbatim: "Named by Allah, given wisdom as a boy, dutiful to his parents, and greeted with peace at birth, at death, and at the resurrection.")
                         .font(.body)
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
+                // the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetYahyaView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetYahyaView")
             }

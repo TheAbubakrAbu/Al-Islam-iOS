@@ -1071,6 +1071,7 @@ struct ReadingQuestionFactory {
     /// An ayah's wrong spellings change one word each.
     private mutating func wrongAyat(for item: ReadingItem) -> [String] {
         let words = item.arabic.split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return [] }
         var out: [String] = []
         var guardrail = 0
         let firstWord = Int(next(upTo: 8))
@@ -1186,6 +1187,7 @@ enum LatinMoves {
         // A phrase is changed one word at a time, so the spaces never move.
         if reading.contains(" ") {
             var words = reading.split(separator: " ").map(String.init)
+            guard !words.isEmpty else { return nil }
             let index = word.map { $0 % words.count } ?? Int(UInt.random(in: 0..<UInt(words.count), using: &generator))
             guard let changed = apply(move, to: words[index], using: &generator) else { return nil }
             words[index] = changed
@@ -1522,6 +1524,70 @@ enum ArabicMoves {
             letters[at] = rebuilt(base, marks(of: letters[at]).map { $0 == ReadingTestText.mushafSukoon || $0 == ReadingTestText.circle ? vowel : $0 })
         }
         return letters
+    }
+}
+
+// MARK: - Words for the letter pages
+
+/// Up to three Quranic words per letter, one with the letter at the start of a word, one in the
+/// middle and one at the end: the letter page's SEE IT IN WORDS section. Every word comes from the
+/// Reading Test's verified bank (never typed here), the simplest tiers first, so a beginner meets
+/// the letter in words the ladder has already taught.
+enum LetterWordExamples {
+    enum Position: CaseIterable {
+        case start, middle, end
+
+        var title: String {
+            switch self {
+            case .start: return "At the start"
+            case .middle: return "In the middle"
+            case .end: return "At the end"
+            }
+        }
+    }
+
+    struct Example: Hashable {
+        let position: Position
+        let item: ReadingItem
+    }
+
+    /// The tiers in the order a learner meets them. Every word in these carries its full marks; the
+    /// unmarked tiers and the phrases are left out.
+    private static let tierOrder = [
+        "spaced", "vowels", "long", "tanween", "leen", "sukoon", "shaddah", "small", "mixed",
+        "article", "wasl", "silent", "waqf",
+    ]
+
+    nonisolated(unsafe) private static var cache: [String: [Example]] = [:]
+
+    /// Where a letter may be shown: taa marbuuTah and alif maqSoorah only ever END a word (a pronoun
+    /// suffix can follow them in the mushaf, which the page's own footer would then contradict).
+    private static func positions(for letter: String) -> [Position] {
+        switch letter {
+        case "\u{0629}", "\u{0649}": return [.end]
+        default: return Position.allCases
+        }
+    }
+
+    /// The examples for one of the alphabet's letters (`LetterData.letter`), in start-middle-end order.
+    static func examples(for letter: String) -> [Example] {
+        if let cached = cache[letter] { return cached }
+        let wanted = positions(for: letter)
+        var found: [Position: ReadingItem] = [:]
+        search: for tier in tierOrder {
+            for item in ReadingTestBank.words[tier] ?? [] where !item.arabic.contains(" ") {
+                let letters = ReadingTestText.letters(item.arabic)
+                guard (2...7).contains(letters.count),
+                      let index = ArabicLetterMatch.firstIndex(of: letter, in: letters) else { continue }
+                let position: Position = index == 0 ? .start : index >= letters.count - 1 ? .end : .middle
+                guard wanted.contains(position) else { continue }
+                if found[position] == nil { found[position] = item }
+                if found.count == wanted.count { break search }
+            }
+        }
+        let out = Position.allCases.compactMap { position in found[position].map { Example(position: position, item: $0) } }
+        cache[letter] = out
+        return out
     }
 }
 

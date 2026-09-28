@@ -157,6 +157,100 @@ catches a two-frame blank reliably. Do not trust a clean trace; trust the flagge
 
 ---
 
+## 2026-09-26: the gate was off on every iPad and Mac
+
+Abu: "Page scrolling on mac/ipad is laggy and not the greatest and sometimes it jumps back."
+
+**Cause.** `MushafPagerProbe.locate` took the first paging scroll view it found walking up from the probe.
+On iPadOS and the Mac (Designed for iPad) the probe can land before the pager's subtree exists, the walk
+climbs to the floating tab bar, and its `_UIFloatingTabBarCollectionView` is a paging scroll view:
+`-windowTrace` printed `pager=_UIFloatingTabBarCollectionView`. That tab bar never turns, so `isTurning`
+was always false and every re-centre ran mid-slide, the exact glitch this document fixed on the iPhone.
+Measured on the iPad Pro 13 simulator (8 swipes, 0.7 s apart), with the gate forced off to reproduce it:
+seven frames of 140-152 ms, and the reload re-based the offset mid-deceleration so the pager landed a
+page off (8 swipes moved 15 pages). **Fix:** only a scroll view laid over the probe's own rect counts
+(`MushafPagerProbe.covers`), and the probe retries from its `layoutSubviews`. After: the trace names
+SwiftUI's `PagingCollectionView`, re-centres wait 0.35-0.5 s, 8 swipes move 8 pages.
+
+**Two more costs, found with Time Profiler** (`xcrun xctrace record --template 'Time Profiler' --device
+<udid> --attach <pid>` works on the simulator once `--device` is given):
+
+- Every freshly mounted page was typeset twice. `updateUIView` set the text into an endless container,
+  then `PageZoomScrollView.layoutSubviews` gave the text view its frame, UIKit cut the container to the
+  frame's height, and the whole layout (OpenType shaping included) ran again: 241 + 213 ms over 8 swipes.
+  `MushafPageTextView` now takes `height` and gives the text view its final box before its text. After:
+  one pass, 243 ms total for the same run.
+- The last-read settle (0.8 s after a turn) published `ReadingState` five times (three `@AppStorage`
+  writes plus echoes), each re-running the Quran tab root, the pushed reader and every mounted page. At a
+  one-second flipping pace it landed mid-drag: a 137 ms frame, during which the finger's remaining travel
+  applied at once and UIKit paged TWO spreads. `ReadingState` is plain defaults now, `record` publishes once.
+
+Spread run after all three (8 swipes, 0.8 s apart): 8 spreads, zero frames over 50 ms (was 9, worst 137).
+
+`-pagerMotion` (DEBUG) logs one `PAGERMOTION` line per display frame while the pager moves: offset in
+pages, delta, the frame's real duration, finger and deceleration flags. A hitch reads as a long `dt`; a
+mid-slide reload as a jump in `off` with `dec=1`. A jump of exactly +2.000 with `trk=0 dec=0` is a
+re-centre at rest re-basing the offset, which is invisible.
+
+---
+
+## 2026-09-27: the mid-slide reload, measured with the book open
+
+Abu: "there was a pretty annoying bug with scrolling on 2 pages make sure that is fixed."
+
+**What a mid-slide reload does to SwiftUI's paging collection view.** Recorded on the iPhone 17 Pro
+simulator in landscape (two-page spread, band 750x111), eight idb swipes 0.6 s apart, `-windowTrace
+-pagerMotion` and a 30 fps frame scan:
+
+- The no-slack fallback (drift = radius) reloaded the window with the pager at offset 0.518 of a cell,
+  decelerating. The collection view kept its content offset over the NEW cells and re-laid them out half a
+  cell off: the pager came to rest showing the right page of one spread beside the left page of the next -
+  page 19 on the left, page 18 on the right. Reading order looks plausible, the pairing is wrong, and the
+  spine hairline sat at the screen's edge. The next swipe dropped the far cell and blanked the right half
+  of the screen for the whole slide (frames 176-178 of the recording).
+- A second recording at the same cadence, with a 0.5 s near-edge timeout added: the timeout expired with
+  the finger down (offset 0.686, `trk=1`), the reload re-based the offset by +0.27 of a cell, and the
+  collection view reported the cell under the old offset as the selection - `select leading=20` from
+  `idx=12`, four spreads ahead of the swipe. In portrait the same reload jumped three pages (8 -> 11).
+  This is Abu's "sometimes it jumps back" from 2026-09-26 in its other direction.
+- Why the rest never came: a landing deceleration creeps up on its boundary (4.6 pt out 34 ms before the
+  next touch), and the probe counted "rest" only inside 0.5 pt. Each swipe at that cadence lands on the
+  previous one's tail.
+
+**Fix (in `SurahPageReader.recentreWindow` / `whenPagerRests` / `MushafPagerProbe`).**
+
+- The window moves ONLY while the pager rests. The 0.6 s settle path (a reload after every single swipe,
+  each rebuilding the visible cell) and the no-slack fallback are gone; a drift of `recentreLead` or more
+  re-centres at the next rest, a smaller drift is left alone.
+- The 2 s timeout in `whenPagerRests` covers a probe misread only (content off a boundary with nothing
+  moving it): it never overrides `isTracking`/`isDragging`/`isDecelerating` (`MushafPagerProbe.isMoving`),
+  up to a 20 s hard cap that only a stuck flag could reach.
+- Rest tolerance 2 pt instead of 0.5 (`isTurning`): a page 2 pt from its boundary is in place to the eye.
+- Rings: 14 pages (seven spreads) to either side with the book open, 6 pages on a phone. In a run of
+  swipes that never rests the ring is all the reach there is: past its last mounted cell the swipe
+  bounces, the pager rests, the window catches up, the next swipe turns. Measured at a 0.6 s cadence
+  (each swipe landing on the previous deceleration) the five-spread ring ran out on the sixth swipe; the
+  seven-spread ring covers a longer run, and a real thumb pauses at the bounce.
+
+**After (same harness, rest-only build):** 0.6 s landscape 222 frames, 0.5 s landscape 202 frames,
+0.6 s portrait 222 frames, 0.45 s portrait 190 frames: zero blank frames in all four, every selection one
+spread (one page) from the last, no jumps. Rotation round trip (`-rotateScript "l@5,p@12,l@19"`) with a
+swipe in each state: whole spreads and whole pages every time.
+
+**Cell rebuilds are real, and reuse is not available.** On every window change the collection view rebuilds
+the visible cell and the one in the direction of travel (`makeUIView` twice per page in a spread, about
+15-20 ms each on the simulator in Debug), and the NEW cell's `makeUIView` runs before the OLD cell's
+`dismantleUIView`, so a pool of retired text views cannot hand the typeset view across. Fewer reloads
+(no settle path) is the lever that was taken.
+
+**Landscape layout, same session.** The phone's landscape band was 111 pt (two-line title pill, stacked
+bars); the title is one line in a compact height, the legend / search row sits beside the footer on any
+reader 640 pt or wider (`wideBottomBars`, footer at least 392 pt so its meters never truncate), the find bar
+is one row there (and padded 40 pt down while the keyboard holds the navigation bar at its compact height),
+and the spread draws a fold shadow down its gutter. Band after: 160 pt with the bars up, 250 folded.
+
+---
+
 ## Related
 
 - `Docs/Page Mode Sheet Ownership.md`: the same window churn killed any sheet a PAGE presented; fixed the

@@ -146,7 +146,7 @@ struct HowToPrayView: View {
 
                 Section(header: ArticleHeader("STEP BY STEP")) {
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 99...105)
+                    ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
                     Text(articleMarkdown: "1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar,” then place the right hand over the left upon the chest.").font(.body)
                     Text(articleMarkdown: "2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)**, required in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text(articleMarkdown: "3. **Ruku (رُكُوع)**: bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” three times.").font(.body)
@@ -355,7 +355,7 @@ struct HowToHajjView: View {
                 Section(header: ArticleHeader("1. ENTER IHRAM")) {
                     Text(articleMarkdown: "At the appointed boundary (**Miqat, مِيقَات**), bathe, wear the Ihram garments (two unstitched cloths for men; ordinary modest dress for women), make the intention for Hajj, and begin the **Talbiyah (تَلبِيَة)**. Ibn Umar (may Allah be pleased with him) reported the Talbiyah of the Messenger of Allah (peace and blessings be upon him):")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:1549", cite: "Sahih al-Bukhari 1549", arabic: 27...42, english: 8...22)
+                    ScriptureQuote(hadith: "bukhari:1549", cite: "Sahih al-Bukhari 1549", arabic: 27...42, english: 7...21)
                 }
 
                 Section(header: ArticleHeader("2. DAY 8: MINA")) {
@@ -410,7 +410,7 @@ struct HowToUmrahView: View {
                 Section(header: ArticleHeader("1. ENTER IHRAM")) {
                     Text(articleMarkdown: "At the **Miqat (مِيقَات)**, bathe, wear the Ihram (two unstitched cloths for men; modest dress for women), make the intention for Umrah with the words “Labbayk Allahumma umratan” (here I am, O Allah, for Umrah), then recite the **Talbiyah (تَلبِيَة)** of the Prophet (peace and blessings be upon him):")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:1549", cite: "Sahih al-Bukhari 1549", arabic: 27...42, english: 8...22)
+                    ScriptureQuote(hadith: "bukhari:1549", cite: "Sahih al-Bukhari 1549", arabic: 27...42, english: 7...21)
                     Text(verbatim: "In Ihram, avoid perfume, cutting hair or nails, and marital relations.")
                         .font(.body)
                 }
@@ -706,7 +706,7 @@ struct TahajjudView: View {
                     Text(articleMarkdown: "6. **Close with Witr**: one rak'ah, or three, with the qunut.").font(.body)
                     Text(verbatim: "The Prophet (peace and blessings be upon him) would open his night prayer with this supplication:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:1120", cite: "Sahih al-Bukhari 1120", arabic: 38...120, english: 99...310)
+                    ScriptureQuote(hadith: "bukhari:1120", cite: "Sahih al-Bukhari 1120", arabic: 38...120, english: 99...309)
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
@@ -1484,7 +1484,7 @@ struct UdhiyahView: View {
                 Section(header: ArticleHeader("THE MEAT")) {
                     Text(verbatim: "Eat from it, give some as gifts, and give some to the poor; a third each is a fine division, not a fixed rule. Nothing of it is sold, not even the skin, and the butcher is not paid from it. Storing beyond three days was once forbidden and then permitted:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:5569", cite: "Sahih al-Bukhari 5569", arabic: 47...59, english: 43...74)
+                    ScriptureQuote(hadith: "bukhari:5569", cite: "Sahih al-Bukhari 5569", arabic: 47...59, english: 42...73)
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
@@ -1708,7 +1708,7 @@ struct MakeDuaView: View {
                     Text(articleMarkdown: "• **After the tashahhud before the taslim**, and after the obligatory prayers.").font(.body)
                     Text(articleMarkdown: "• **An hour on Friday**, which the scholars place at the end of the day before Maghrib or between the khutbah and the prayer (Sahih al-Bukhari 935).").font(.body)
                     Text(articleMarkdown: "• **When rain falls, when traveling, and when oppressed**:").font(.body)
-                    ScriptureQuote(hadith: "tirmidhi:1905", cite: "Sunan al-Tirmidhi 1905; graded hasan by al-Albani", arabic: 32...45, english: 0...33)
+                    ScriptureQuote(hadith: "tirmidhi:1905", cite: "Sunan al-Tirmidhi 1905; graded hasan by al-Albani", arabic: 32...45, english: 0...32)
                     Text(articleMarkdown: "• **On the day of Arafah, in Ramadan, and in Laylat al-Qadr**, and at Zamzam for the pilgrim.").font(.body)
                 }
 

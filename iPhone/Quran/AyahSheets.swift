@@ -1008,6 +1008,14 @@ struct AyahActionsSheet: View {
                             }
                         }
 
+                        Button {
+                            settings.hapticFeedback()
+                            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, repeatCount: QuranPlayer.infiniteRepeat)
+                            dismiss()
+                        } label: {
+                            Label("Repeat Forever", systemImage: "infinity")
+                        }
+
                         // The ellipsis menu's Repeat Ayah submenu ends with the custom range too.
                         Button {
                             settings.hapticFeedback()

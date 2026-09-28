@@ -813,6 +813,17 @@ enum DebugSelfShot {
             // a Mac window being resized after a page has rendered.
             Task { await rotateToLandscape(after: secs) }
         }
+        if let i = args.firstIndex(of: "-rotateScript"), i + 1 < args.count {
+            // "-rotateScript l@4,p@9,l@14": a whole rotation sequence, each step "<l|p>@<secs>" (landscape
+            // right or portrait, seconds after launch), so a portrait -> landscape -> portrait round trip
+            // of the page reader can be driven headlessly and screenshotted between the turns.
+            for step in args[i + 1].split(separator: ",") {
+                let parts = step.split(separator: "@", maxSplits: 1)
+                guard parts.count == 2, let secs = Double(parts[1]) else { continue }
+                let mask: UIInterfaceOrientationMask = parts[0] == "p" ? .portrait : .landscapeRight
+                Task { await rotate(to: mask, after: secs) }
+            }
+        }
         if let i = args.firstIndex(of: "-windowSize"), i + 1 < args.count {
             let parts = args[i + 1].lowercased().split(separator: "x")
             if parts.count == 2, let w = Double(parts[0]), let h = Double(parts[1]) {
@@ -832,6 +843,10 @@ enum DebugSelfShot {
     /// Waits for a foreground window scene (a cold launch may not have one yet when the root task
     /// starts, which left the earlier fixed 300 ms sleep rotating nothing), then asks for landscape.
     private static func rotateToLandscape(after seconds: Double) async {
+        await rotate(to: .landscapeRight, after: seconds)
+    }
+
+    private static func rotate(to orientations: UIInterfaceOrientationMask, after seconds: Double) async {
         try? await Task.sleep(nanoseconds: UInt64(max(seconds, 0) * 1_000_000_000))
         for _ in 0..<40 {
             let done = await MainActor.run { () -> Bool in
@@ -839,7 +854,7 @@ enum DebugSelfShot {
                 let active = scenes().filter { $0.activationState == .foregroundActive }
                 guard !active.isEmpty else { return false }
                 for scene in active {
-                    scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight)) { error in
+                    scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { error in
                         // An iPad in a windowed multitasking mode refuses this ("the current windowing
                         // mode does not allow for programmatic changes"), and setting the device
                         // orientation by key does nothing there either (tried 2026-09-21). Resize the

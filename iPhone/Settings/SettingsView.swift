@@ -96,6 +96,9 @@ struct SettingsSearchEntry: Identifiable {
 struct SettingsView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
+    #if os(iOS)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    #endif
 
     @State private var showingCredits = false
     @State private var selectedDestination: SettingsDestination? = SettingsView.defaultDestination
@@ -116,10 +119,59 @@ struct SettingsView: View {
     @State private var profileDoor: ProfileTilesSection.Door?
     @State private var openProfileDoor = false
 
+    /// The grid-mode tile that was tapped, and its push (see `SettingsGridTile`).
+    @State private var gridDoor: SettingsGridDoor?
+    @State private var openGridDoor = false
+
     /// `pushDestination` is `navigationDestination(isPresented:)`, which needs iOS 16.
     private static var canPushProgrammatically: Bool {
         if #available(iOS 16.0, *) { return true }
         return false
+    }
+
+    /// What a grid-mode tile opens: the pages the list's rows push, by name.
+    private enum SettingsGridDoor: Hashable {
+        case notifications, prayer, quran, hadith, islam
+        case appearance(SettingsAppearancePage)
+    }
+
+    @ViewBuilder
+    private func gridDestination(_ door: SettingsGridDoor) -> some View {
+        switch door {
+        case .notifications: NotificationView()
+        case .prayer: SettingsAdhanView(showNotifications: false)
+        case .quran: SettingsQuranView()
+        case .hadith: SettingsHadithView(presentedAsSheet: false)
+        case .islam: SettingsIslamView()
+        case .appearance(let page): AppearancePageView(page: page)
+        }
+    }
+
+    private func openGrid(_ door: SettingsGridDoor) {
+        gridDoor = door
+        openGridDoor = true
+    }
+
+    /// Grid mode as a shape draws it: the iPhone stack on iOS 16 and later (the Islam tab's rule). The
+    /// iPad/Mac sidebar is a list by nature, and iOS 15 has no programmatic push for the tiles' door.
+    private func usesGrid(split: Bool) -> Bool {
+        settings.settingsGridMode && !split && Self.canPushProgrammatically
+    }
+
+    /// The grid button, the one the Quran, Hadith and Islam tabs carry: the same symbols, haptic and
+    /// label, and hidden while a search is showing results (the Islam tab's rule).
+    @ViewBuilder
+    private var settingsGridButton: some View {
+        if Self.canPushProgrammatically, settingsSearchText.isEmpty {
+            Button {
+                settings.hapticFeedback()
+                withAnimation { settings.settingsGridMode.toggle() }
+            } label: {
+                Image(systemName: settings.settingsGridMode ? "list.bullet" : "square.grid.2x2")
+            }
+            .accessibilityLabel(settings.settingsGridMode ? "Show list" : "Show grid")
+            .tint(settings.accentColor.color)
+        }
     }
     #endif
 
@@ -291,6 +343,10 @@ struct SettingsView: View {
             List { settingsListContent(split: false) },
             disableNowPlayingInset: false
         )
+        // The iPhone stack only: the iPad/Mac sidebar stays a list (see `usesGrid`).
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) { settingsGridButton }
+        }
         #else
         List { settingsListContent(split: false) }
             .navigationTitle("Settings")
@@ -320,6 +376,9 @@ struct SettingsView: View {
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
             .pushDestination(isPresented: $openProfileDoor) {
                 if let profileDoor { profileDoor.destination }
+            }
+            .pushDestination(isPresented: $openGridDoor) {
+                if let gridDoor { gridDestination(gridDoor) }
             }
             .pushDestination(isPresented: $openSpotlight) {
                 if let tip = spotlightTarget, let destination = tip.destination {
@@ -377,6 +436,7 @@ struct SettingsView: View {
         case "islam": return .islamSettings
         // The Islam sub-pages, so each can be screenshotted without a tap.
         case "islamArabic": return .islamPage(.arabicText)
+        case "islamTextSize": return .islamPage(.textSize)
         case "islamAlphabet": return .islamPage(.alphabet)
         case "islamLibraries": return .islamPage(.libraries)
         case "islamReminders": return .islamPage(.sunnahReminders)
@@ -469,6 +529,8 @@ struct SettingsView: View {
             #if os(iOS)
             if split, #available(iOS 16.0, *) {
                 settingsHubSectionSplit
+            } else if usesGrid(split: split) {
+                settingsHubGridSection
             } else {
                 settingsHubSection
             }
@@ -501,9 +563,19 @@ struct SettingsView: View {
         }
         #endif
 
-        appearanceSection
+        #if os(iOS)
+        appearanceSection(grid: usesGrid(split: split))
+        #else
+        appearanceSection(grid: false)
+        #endif
+        // Reset stays a row in both modes: a destructive action keeps its explanation and its two
+        // confirmations, never a tile's one tap.
         resetSection
-        creditsSection
+        #if os(iOS)
+        creditsSection(grid: usesGrid(split: split))
+        #else
+        creditsSection(grid: false)
+        #endif
 
         AlIslamAppsSection()
     }
@@ -625,14 +697,17 @@ struct SettingsView: View {
                 Text(title)
                     .foregroundColor(.primary)
 
-                // The caption column is an iPhone luxury - the 40mm screen has no room for it.
+                // The caption column is an iPhone luxury: the 40mm screen has no room for it. One
+                // line, except at the accessibility sizes, where it cut every hub caption short
+                // ("Fonts, translations, tajweed...", see `SettingsRowLabel.stacks`).
                 #if os(iOS)
                 if let subtitle {
+                    let wraps = dynamicTypeSize.isAccessibilitySize
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .lineLimit(wraps ? nil : 1)
+                        .minimumScaleFactor(wraps ? 1 : 0.8)
                 }
                 #endif
             }
@@ -698,6 +773,43 @@ struct SettingsView: View {
             #endif
         }
     }
+
+    #if os(iOS)
+    /// The hub in grid mode: Notifications across the top, because it spans every area, then the four
+    /// areas two by two in the tab bar's order (Prayer, Quran / Hadith, Islam). The same five pages as
+    /// the rows, each keeping its caption: it is how people find where a setting lives.
+    private var settingsHubGridSection: some View {
+        Section(header: Text("SETTINGS")) {
+            VStack(spacing: 8) {
+                SettingsGridTile(title: "Notifications", systemImage: "bell.badge.fill",
+                                 caption: "Prayer alerts, adhan sounds, reminders",
+                                 tint: SettingsTint.notifications, prominent: true) { openGrid(.notifications) }
+                    .fixedSize(horizontal: false, vertical: true)
+
+                SettingsGridTileRow {
+                    SettingsGridTile(title: "Prayer Settings", systemImage: "safari.fill",
+                                     caption: "Calculation, offsets, traveling mode, sky",
+                                     tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
+                    SettingsGridTile(title: "Quran Settings", systemImage: "character.book.closed.ar",
+                                     caption: "Fonts, translations, tajweed, reciters, themes",
+                                     tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
+                }
+
+                SettingsGridTileRow {
+                    SettingsGridTile(title: "Hadith Settings", systemImage: "text.book.closed.fill",
+                                     caption: "Arabic and English text, reading view",
+                                     tint: SettingsTint.hadith, prominent: true) { openGrid(.hadith) }
+                    // Both brand colours, as on its row (see `SettingsTint.islam`).
+                    SettingsGridTile(title: "Islam Settings", systemImage: "moon.stars.fill",
+                                     caption: "Arabic font, alphabet, libraries, reminders",
+                                     tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
+                                     prominent: true) { openGrid(.islam) }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+    #endif
 
     @available(iOS 16.0, *)
     @ViewBuilder
@@ -782,25 +894,69 @@ struct SettingsView: View {
         #endif
     }
 
-    private var appearanceSection: some View {
+    /// `grid`: the two appearance pages as tiles under the theme and accent controls (which stay).
+    private func appearanceSection(grid: Bool) -> some View {
         Section(header: Text("APPEARANCE")) {
+            #if os(iOS)
+            if grid {
+                SettingsAppearanceView(openPage: { openGrid(.appearance($0)) })
+            } else {
+                SettingsAppearanceView()
+            }
+            #else
             SettingsAppearanceView()
+            #endif
         }
     }
 
-    private var creditsSection: some View {
+    /// `grid`: the three actions as one row of tiles, the profile row's three-across grammar. The
+    /// website and email lines stay rows: they are text to read and copy, not buttons.
+    private func creditsSection(grid: Bool) -> some View {
         Section(header: Text("CREDITS")) {
             creditsIntro
+            #if os(iOS)
+            if grid {
+                creditsTiles
+            } else {
+                viewCreditsButton
+                // App Settings first, the review below it (Abu, 2026-09-16).
+                openAppSettingsButton
+                leaveReviewButton
+            }
+            #else
             viewCreditsButton
-            // App Settings first, the review below it (Abu, 2026-09-16).
             openAppSettingsButton
             leaveReviewButton
+            #endif
             websiteRow
             contactRow
             VersionNumber(width: glyphWidth)
                 .font(.subheadline)
         }
     }
+
+    #if os(iOS)
+    private var creditsTiles: some View {
+        SettingsGridTileRow {
+            SettingsGridTile(title: "View Credits", systemImage: "scroll.fill", tint: SettingsTint.credits) {
+                showingCredits = true
+            }
+            SettingsGridTile(title: "Open App Settings", systemImage: "gearshape.fill", tint: SettingsTint.credits,
+                             haptic: false) {
+                openAppSettings()
+            }
+            SettingsGridTile(title: "Leave a Review", systemImage: "star.bubble.fill", haptic: false) {
+                leaveReview()
+            }
+        }
+        .padding(.vertical, 2)
+        // On the row, not a tile: one presenter for the one sheet (the list row's own rule).
+        .sheet(isPresented: $showingCredits) {
+            CreditsView()
+                .smallMediumSheetPresentation()
+        }
+    }
+    #endif
 
     private var creditsIntro: some View {
         Text("Made by Abubakr Elmallah, who was a 17-year-old high school student when this app was made.\n\nSpecial thanks to my parents and to Mr. Joe Silvey, my English teacher and Muslim Student Association Advisor.")
@@ -1010,6 +1166,7 @@ extension SettingsSearchEntry {
         .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Show Help Shortcuts (Need a Hand?)", path: "Appearance → Look and Feel", keywords: "help shortcuts need a hand need help praying reading questions rows doors tabs hide show nagging beginner transliteration", destination: .appearancePage(.lookAndFeel)),
     ]
 }
 
@@ -1296,6 +1453,24 @@ struct AppearancePageView: View {
         } header: {
             Text("HOW IT FEELS")
         }
+
+        // The Need a Hand? rows on every tab (HelpDoors.swift). Named for what it shows, not for
+        // where it shows it: a toggle called after a place reads as navigation.
+        Section {
+            VStack(alignment: .leading) {
+                Toggle("Show Help Shortcuts", isOn: $settings.showHelpShortcuts.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.showHelpShortcuts) { _ in settings.hapticFeedback() }
+
+                Text("A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran opens Arabic Beginner Mode.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
+        } header: {
+            Text("NEED A HAND?")
+        }
     }
 }
 #endif
@@ -1307,6 +1482,10 @@ struct SettingsAppearanceView: View {
     @ObservedObject var settings = Settings.shared
 
     #if os(iOS)
+    /// Grid mode (`SettingsView.usesGrid`): the two pages as tiles that hand their page to the list's
+    /// one push. Nil keeps the rows.
+    var openPage: ((SettingsAppearancePage) -> Void)? = nil
+
     /// The iPad sidebar gives the five-segment theme control about 54 pt a segment, and "System"
     /// showed as "Syst..." there (2026-09-06 iPad pass); iPads say "Auto". Keyed on the idiom, not
     /// the size class: a split view's sidebar column reports `.compact` even on a 13-inch iPad.
@@ -1332,13 +1511,17 @@ struct SettingsAppearanceView: View {
     private func accentSwatch(_ accentColor: AccentColor) -> some View {
         // Every preset is a single colour, so a plain circle is right here.
         Circle()
-            .fill(accentColor.color)
+            // The hue that names the choice, not the deeper shade light mode paints text with.
+            .fill(accentColor.swatchColor)
             .frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
             .overlay(
                 Circle()
                     .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 2)
             )
             .accessibilityLabel(accentColor.displayName)
+            // A tap gesture, not a Button: VoiceOver heard "Green" with no word that it is a button
+            // or that it is the accent in use.
+            .accessibilityAddTraits(settings.accentColor == accentColor ? [.isButton, .isSelected] : .isButton)
             .onTapGesture {
                 settings.hapticFeedback()
 
@@ -1399,13 +1582,23 @@ struct SettingsAppearanceView: View {
         }
 
         #if os(iOS)
-        // One List row each: a row may hold only one link.
-        ForEach(SettingsAppearancePage.allCases, id: \.self) { page in
-            NavigationLink(destination: LazyDestination { AppearancePageView(page: page) }) {
-                SettingsRowLabel(title: page.title, systemImage: page.systemImage, subtitle: page.caption,
-                                 tint: SettingsTint.appearance)
+        if let openPage {
+            SettingsGridTileRow {
+                ForEach(SettingsAppearancePage.allCases, id: \.self) { page in
+                    SettingsGridTile(title: page.title, systemImage: page.systemImage, caption: page.caption,
+                                     tint: SettingsTint.appearance, prominent: true) { openPage(page) }
+                }
             }
-            .tint(settings.accentColor.color)
+            .padding(.vertical, 2)
+        } else {
+            // One List row each: a row may hold only one link.
+            ForEach(SettingsAppearancePage.allCases, id: \.self) { page in
+                NavigationLink(destination: LazyDestination { AppearancePageView(page: page) }) {
+                    SettingsRowLabel(title: page.title, systemImage: page.systemImage, subtitle: page.caption,
+                                     tint: SettingsTint.appearance)
+                }
+                .tint(settings.accentColor.color)
+            }
         }
         #else
         VStack(alignment: .leading) {
@@ -1418,6 +1611,88 @@ struct SettingsAppearanceView: View {
 }
 
 #if os(iOS)
+// MARK: - Grid mode tiles
+
+/// One tile of the Settings tab's grid mode (2026-09-26, the grid button the Quran, Hadith and Islam
+/// tabs already have): the profile tiles' grammar, an icon chip over the title and a caption on a faint
+/// accent wash. Always a Button: a grid is one List row, and several NavigationLinks in one row all
+/// fire on any tap (`one-link-per-list-row`), so each tile writes one door and the list owns the push.
+/// A leaf: the accent comes off the appearance environment, not an observed `Settings`.
+struct SettingsGridTile: View {
+    @Environment(\.appearance) private var appearance
+
+    let title: String
+    let systemImage: String
+    var caption: String? = nil
+    var tint: Color? = nil
+    var secondaryTint: Color? = nil
+    /// The hub's areas and the appearance pages, two across: a subheadline title over a caption that
+    /// says what the page holds (how people find where a setting lives). Off, the profile row's compact
+    /// scale for three across.
+    var prominent: Bool = false
+    /// Off for an action that already taps its own haptic (App Settings, the review), so one tap is
+    /// one tick.
+    var haptic: Bool = true
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            if haptic { Settings.shared.hapticFeedback() }
+            action()
+        } label: {
+            VStack(spacing: 5) {
+                AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint, size: 34)
+
+                Text(title)
+                    .font(prominent ? .subheadline.weight(.semibold) : .caption.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+
+                if let caption {
+                    Text(caption)
+                        .font(prominent ? .caption : .caption2)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            // Equal heights across a row: the row fixes its own height, and each tile fills it.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(appearance.accent.opacity(0.09))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(caption.map { "\(title). \($0)" } ?? title)
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Tiles side by side, or one per line at the accessibility text sizes (two or three across left each
+/// caption a few letters wide). Equal heights in a row: the profile row's `fixedSize` + fill trick.
+struct SettingsGridTileRow<Content: View>: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 8) { content() }
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            HStack(alignment: .center, spacing: 8) { content() }
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 // MARK: - Your Progress / About You / iCloud Backup
 
 /// The three personal screens, as tiles across ONE row (Abu, 2026-09-22: "about you and icloud
@@ -1529,13 +1804,13 @@ struct ProfileTilesSection: View {
             } else {
                 // `.center`, not `.top`, so each tile's `maxHeight: .infinity` stretches it to the
                 // tallest: "Learning about Islam" wraps to two lines and "Off" does not, and three
-                // cards of three different heights read as a layout bug.
-                HStack(alignment: .center, spacing: 8) {
+                // cards of three different heights read as a layout bug. The grid mode's row: at the
+                // accessibility sizes the three stack, where three across cut "Your Progr...".
+                SettingsGridTileRow {
                     ForEach(tiles, id: \.door.id) { tile in
                         profileTile(tile)
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
             }
         }

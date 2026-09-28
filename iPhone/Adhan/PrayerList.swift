@@ -12,6 +12,13 @@ struct PrayerList: View {
     // the prayer under the thumb changes (a handful of times per drag). Observing `DayScrubber` here made
     // every touch-move of the sun rebuild this whole section - list, sorts and all - ~60×/second.
     @ObservedObject private var scrubHighlight = ScrubHighlight.shared
+    @Environment(\.appearance) private var appearance
+    /// Light or dark as resolved for this screen (Sepia and pale custom backgrounds are light), for
+    /// `tileTextAccent`.
+    @Environment(\.colorScheme) private var colorScheme
+    /// At the accessibility text sizes the footer's side-by-side controls stack instead of truncating
+    /// ("Optiona...", and a "Showing prayers for" squeezed to one letter per line).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     // The calendar day this view last considered "today". Used to detect a rollover that happened while the
     // app was suspended so a stale `selectedDate` doesn't spuriously trigger the TODAY comparison on reopen.
@@ -76,6 +83,60 @@ struct PrayerList: View {
         prayer.displayName
     }
 
+    /// The tracker's answer for a prayer on the day the list is showing, for the dot beside its name
+    /// (Abu, 2026-09-25). Nil for anything the tracker does not record (Shurooq, the optional
+    /// prayers), and on the watch, whose tiles have no room for it.
+    private func trackerMark(for prayer: Prayer) -> PrayerMark? {
+        #if os(iOS)
+        guard Settings.trackablePrayerNames.contains(prayer.nameTransliteration) else { return nil }
+        return settings.prayerMark(for: prayer.nameTransliteration, on: prayer.time)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Whether this platform's rows and tiles draw the notification bell.
+    private static var drawsBells: Bool {
+        #if os(iOS)
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// The VoiceOver element for one prayer row or tile (see `PrayerAccessibility`). `name` is what the
+    /// layout prints (the tiles use the short name, the list the full one).
+    private func prayerAccessibility(for prayer: Prayer, name: String, isCurrent: Bool,
+                                     mark: PrayerMark?, showsBell: Bool) -> PrayerAccessibility {
+        let bell: Settings.PrayerNotificationMode? = showsBell ? settings.notificationMode(for: prayer) : nil
+        let isExpanded = expandedPrayerKey == expansionKey(for: prayer)
+        var states: [String] = []
+        if isCurrent { states.append("current prayer") }
+        if let mark { states.append(Self.spokenMark(mark)) }
+        if let bell { states.append(bell.spokenState) }
+        if isExpanded { states.append("expanded") }
+        return PrayerAccessibility(
+            label: "\(name), \(settings.formatDate(prayer.time))",
+            value: states.joined(separator: ", "),
+            isExpanded: isExpanded,
+            bellMode: bell,
+            toggle: { togglePrayerExpansion(for: prayer) },
+            setBell: { mode in
+                settings.hapticFeedback()
+                settings.setNotificationMode(mode, for: prayer)
+            }
+        )
+    }
+
+    /// The tracker's mark in words (the dot beside the name is colour only).
+    private static func spokenMark(_ mark: PrayerMark) -> String {
+        switch mark {
+        case .onTime: return "prayed on time"
+        case .late: return "prayed late"
+        case .missed: return "missed"
+        }
+    }
+
     private func togglePrayerExpansion(for prayer: Prayer, animated: Bool = true) {
         let prayerKey = expansionKey(for: prayer)
         settings.hapticFeedback()
@@ -133,6 +194,19 @@ struct PrayerList: View {
         let _ = ChangePrinter.hit(Self.self)
         if live.prayers != nil {
             prayerListSection
+                #if DEBUG
+                // `-expandPrayer <name>`: that prayer opened on today's list, for screenshots of the
+                // expanded detail (there is no tap tooling for the simulator).
+                .onAppear {
+                    let args = ProcessInfo.processInfo.arguments
+                    guard let i = args.firstIndex(of: "-expandPrayer"), args.indices.contains(i + 1),
+                          let prayer = displayedPrayers.first(where: { $0.nameTransliteration == args[i + 1] })
+                    else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        expandedPrayerKey = expansionKey(for: prayer)
+                    }
+                }
+                #endif
         }
     }
 
@@ -310,7 +384,7 @@ struct PrayerList: View {
             Divider()
 
             // Both disclosures share one line - two half-width pills instead of two stacked full-width ones.
-            HStack(spacing: 10) {
+            footerButtonPair {
                 footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
                     showOptionalPrayerToggles.toggle()
                 }
@@ -428,12 +502,20 @@ struct PrayerList: View {
                 isCurrent: isCurrent,
                 iconColor: listIconColor,
                 highlight: settings.accentColor.accent2.opacity(0.25),
+                trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
                 trailingContent: {
                     #if os(iOS)
                     prayerBell(for: prayer, rowColor: .primary)
                     #endif
                 }
             )
+            .modifier(prayerAccessibility(
+                for: prayer,
+                name: listDisplayName(for: prayer),
+                isCurrent: isCurrent,
+                mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                showsBell: Self.drawsBells
+            ))
 
             if isExpanded {
                 expandedPrayerDetailContent(for: prayer, in: prayers)
@@ -459,6 +541,7 @@ struct PrayerList: View {
                 PrayerGridTile(
                     prayer: prayer,
                     color: color,
+                    trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
                     trailingContent: {
                         EmptyView()
                     }
@@ -467,6 +550,13 @@ struct PrayerList: View {
                 .onTapGesture {
                     togglePrayerExpansion(for: prayer)
                 }
+                .modifier(prayerAccessibility(
+                    for: prayer,
+                    name: prayer.compactDisplayName,
+                    isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
+                    mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                    showsBell: false
+                ))
             }
         }
         .padding(.horizontal, -20)
@@ -490,6 +580,7 @@ struct PrayerList: View {
                     SplitPrayerRow(
                         prayer: prayer,
                         color: color,
+                        trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
                         trailingContent: {
                             EmptyView()
                         }
@@ -498,6 +589,13 @@ struct PrayerList: View {
                     .onTapGesture {
                         togglePrayerExpansion(for: prayer)
                     }
+                    .modifier(prayerAccessibility(
+                        for: prayer,
+                        name: prayer.compactDisplayName,
+                        isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
+                        mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                        showsBell: false
+                    ))
                 }
             }
 
@@ -512,6 +610,7 @@ struct PrayerList: View {
                     SplitPrayerRow(
                         prayer: prayer,
                         color: color,
+                        trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
                         trailingContent: {
                             EmptyView()
                         }
@@ -520,6 +619,13 @@ struct PrayerList: View {
                     .onTapGesture {
                         togglePrayerExpansion(for: prayer)
                     }
+                    .modifier(prayerAccessibility(
+                        for: prayer,
+                        name: prayer.compactDisplayName,
+                        isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
+                        mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                        showsBell: false
+                    ))
                 }
             }
         }
@@ -555,6 +661,8 @@ struct PrayerList: View {
         let currentName = currentPrayerName
         let currentIndex = prayers.firstIndex { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }
         let accent = settings.accentColor.accent2
+        // The current tile's TEXT; its tint and glow keep the plain accent.
+        let textAccent = tileTextAccent(accent)
 
         // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the tiles flatter
         // and dropped the current tile's glow. The flat pre-26 fill below is the win that matters
@@ -563,7 +671,7 @@ struct PrayerList: View {
             ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
                 let color: Color = isComparisonBaseline
                     ? .secondary
-                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: accent) : .primary)
+                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: textAccent) : .primary)
                 let isCurrent = highlightsCurrent && !isComparisonBaseline
                     && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
@@ -606,9 +714,13 @@ struct PrayerList: View {
                         }
                     }
 
-                    Text(prayer.compactDisplayName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(color)
+                    HStack(spacing: 5) {
+                        Text(prayer.compactDisplayName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(color)
+
+                        PrayerMarkDot(mark: isComparisonBaseline ? nil : trackerMark(for: prayer))
+                    }
 
                     Text(prayer.time, style: .time)
                         .font(.subheadline.monospacedDigit())
@@ -635,6 +747,13 @@ struct PrayerList: View {
                 .onTapGesture {
                     togglePrayerExpansion(for: prayer)
                 }
+                .modifier(prayerAccessibility(
+                    for: prayer,
+                    name: prayer.compactDisplayName,
+                    isCurrent: isCurrent,
+                    mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                    showsBell: Self.drawsBells && !isComparisonBaseline
+                ))
             }
         }
         .lineLimit(1)
@@ -663,17 +782,27 @@ struct PrayerList: View {
     }
 
     private func expandedPrayerDetailContent(for prayer: Prayer, in prayers: [Prayer]) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            PrayerDetailBlock(
-                prayer: prayer,
-                timeWindowText: timeWindowText(for: prayer, in: prayers),
-                referenceText: prayerReferenceText(for: prayer)
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                PrayerDetailBlock(
+                    prayer: prayer,
+                    timeWindowText: timeWindowText(for: prayer, in: prayers),
+                    referenceText: prayerReferenceText(for: prayer)
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
 
+                #if os(iOS)
+                if prayerDisplayMode != .list && prayerDisplayMode != .tiles {
+                    prayerBell(for: prayer, rowColor: .primary)
+                }
+                #endif
+            }
+
+            // Mark it from where you opened it (Abu, 2026-09-25): the same three answers the
+            // tracker's Day view gives, for this prayer on the day the list is showing.
             #if os(iOS)
-            if prayerDisplayMode != .list && prayerDisplayMode != .tiles {
-                prayerBell(for: prayer, rowColor: .primary)
+            if Settings.trackablePrayerNames.contains(prayer.nameTransliteration) {
+                PrayerMarkChooser(prayer: prayer)
             }
             #endif
         }
@@ -686,7 +815,7 @@ struct PrayerList: View {
                 #if os(iOS)
                 travelingModeDescription
 
-                HStack(spacing: 10) {
+                footerButtonPair {
                     footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
                         withAnimation { settings.travelingShowFullPrayers.toggle() }
                     }
@@ -724,23 +853,30 @@ struct PrayerList: View {
     private var dateSelectionFooter: some View {
         #if os(iOS)
         VStack {
-            HStack(spacing: 8) {
-                Text("Showing prayers for")
+            // At the accessibility sizes the stepper alone is about a row wide, and the label beside it
+            // was squeezed to one letter per line: it gets its own line above the stepper there.
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Showing prayers for")
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Spacer(minLength: 4)
+                    dayStepper
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(4)
+            } else {
+                HStack(spacing: 8) {
+                    Text("Showing prayers for")
 
-                dayStepButton(systemName: "chevron.backward", byDays: -1)
+                    Spacer(minLength: 4)
 
-                DatePicker("Showing prayers for", selection: $selectedDate.animation(.easeInOut), displayedComponents: .date)
-                    .datePickerStyle(DefaultDatePickerStyle())
-                    .labelsHidden()
-
-                dayStepButton(systemName: "chevron.forward", byDays: 1)
+                    dayStepper
+                }
+                .padding(4)
             }
-            .padding(4)
 
             if isShowingDifferentDay {
-                HStack(spacing: 10) {
+                footerButtonPair {
                     footerActionButton(compareToday ? "Hide Comparison" : "Compare Today") {
                         compareToday.toggle()
                     }
@@ -782,6 +918,19 @@ struct PrayerList: View {
     }
 
     #if os(iOS)
+    /// The back chevron, the date picker and the forward chevron.
+    private var dayStepper: some View {
+        HStack(spacing: 8) {
+            dayStepButton(systemName: "chevron.backward", byDays: -1)
+
+            DatePicker("Showing prayers for", selection: $selectedDate.animation(.easeInOut), displayedComponents: .date)
+                .datePickerStyle(DefaultDatePickerStyle())
+                .labelsHidden()
+
+            dayStepButton(systemName: "chevron.forward", byDays: 1)
+        }
+    }
+
     /// One of the two chevrons flanking the date picker: steps the shown day backward or forward.
     private func dayStepButton(systemName: String, byDays days: Int) -> some View {
         Button {
@@ -798,32 +947,52 @@ struct PrayerList: View {
                 .conditionalGlassEffect()
         }
         .buttonStyle(.plain)
+        // The chevron's own name ("Back", "Forward") says nothing about days.
+        .accessibilityLabel(days < 0 ? "Previous Day" : "Next Day")
     }
     #endif
 
     /// Pass `isExpanded` for buttons that disclose content below: they get a rotating chevron, so the
     /// title can stay short ("Rakaah Guide") instead of carrying a Show/Hide prefix.
+    ///
+    /// A real `Button` (plain style, so it looks exactly as the tap-gesture pill did): VoiceOver hears a
+    /// button, and a disclosure one also says whether it is open.
     private func footerActionButton(_ title: String, isExpanded: Bool? = nil, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 5) {
-            Text(title)
-
-            if let isExpanded {
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
-            }
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.8)
-        .foregroundColor(settings.accentColor.accent2)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(8)
-        .conditionalGlassEffect()
-        .onTapGesture {
+        Button {
             settings.hapticFeedback()
             withAnimation {
                 action()
             }
+        } label: {
+            HStack(spacing: 5) {
+                Text(title)
+
+                if let isExpanded {
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                        .accessibilityHidden(true)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .foregroundColor(settings.accentColor.accent2)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(8)
+            .conditionalGlassEffect()
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(isExpanded.map { $0 ? "Expanded" : "Collapsed" } ?? "")
+    }
+
+    /// Two footer pills side by side, or stacked once the text is too large for half a row each.
+    @ViewBuilder
+    private func footerButtonPair<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(spacing: 10) { content() }
+        } else {
+            HStack(spacing: 10) { content() }
         }
     }
 
@@ -837,25 +1006,53 @@ struct PrayerList: View {
         currentPrayerName?.contains(prayer.nameTransliteration) ?? false
     }
 
-    /// `prayerColor(for:in:)` with the two index lookups hoisted out of the per-tile closure.
+    /// A prayer already past today: dimmed, but still text people read ("when was Fajr?"). The
+    /// system's `.secondary` turns vibrant on the glass tiles and measured 3.1:1 (dark) and 2.9:1
+    /// (light) there; a plain primary at 60% stays clearly dimmer than the prayers to come and reads
+    /// at about 5:1 on either ground.
+    private static let pastPrayerColor = Color.primary.opacity(0.6)
+
+    /// The accent as the CURRENT tile's text. The tile is tinted with that same accent (25%), so even
+    /// an accent that reads on a plain row can fall short on it: the plain light green measured 2.1:1
+    /// there. The shade is moved only as far as 4.5:1 against the tint it actually sits on (the
+    /// `AccentContrast` arithmetic the app's accent uses): deeper on a light ground, paler on a dark
+    /// one. The default green in dark mode already reads (5.7:1) and is left as it is.
+    private func tileTextAccent(_ accent: Color) -> Color {
+        #if os(iOS)
+        let dark = colorScheme == .dark
+        let shade = AccentContrast.resolved(UIColor(accent), dark: dark)
+        // What the glass tile shows under its tint: white on a light ground, the measured #3B3B3D dark.
+        let base = dark ? AccentContrast.RGB(r: 59 / 255, g: 59 / 255, b: 61 / 255) : AccentContrast.RGB(r: 1, g: 1, b: 1)
+        let tint = AccentContrast.blend(shade, over: base, opacity: 0.25)
+        // 4.6, not 4.5: the glass renders its tint a shade darker than this model (190/222/202 against
+        // 191/223/203 measured), which left an exact 4.5 target reading 4.44 on screen.
+        let text = AccentContrast.legible(shade, against: tint, target: AccentContrast.textRatio + 0.1)
+        return text == shade ? accent : Color(AccentContrast.uiColor(text))
+        #else
+        return accent
+        #endif
+    }
+
+    /// `prayerColor(for:in:)` with the two index lookups hoisted out of the per-tile closure. `accent`
+    /// is already the text shade (`tileTextAccent`).
     private func prayerColor(at index: Int, currentIndex: Int?, accent: Color) -> Color {
-        guard let currentIndex else { return .secondary }
-        if index < currentIndex { return .secondary }
+        guard let currentIndex else { return Self.pastPrayerColor }
+        if index < currentIndex { return Self.pastPrayerColor }
         if index == currentIndex { return accent }
         return .primary
     }
 
     private func prayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
         guard let prayerIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return .secondary
+            return Self.pastPrayerColor
         }
 
         guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }) else {
-            return .secondary
+            return Self.pastPrayerColor
         }
 
         if prayerIndex < currentPrayerIndex {
-            return .secondary
+            return Self.pastPrayerColor
         }
         if prayerIndex == currentPrayerIndex {
             return settings.accentColor.accent2
@@ -865,7 +1062,7 @@ struct PrayerList: View {
 
     private func legacyGridPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
         guard let currentPrayer = live.currentPrayer else {
-            return .secondary
+            return Self.pastPrayerColor
         }
 
         if currentPrayer.nameTransliteration.contains(prayer.nameTransliteration) {
@@ -874,10 +1071,10 @@ struct PrayerList: View {
 
         guard let currentPrayerIndex = prayers.firstIndex(where: { $0.id == currentPrayer.id }),
               let prayerIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return .secondary
+            return Self.pastPrayerColor
         }
 
-        return prayerIndex < currentPrayerIndex ? .secondary : .primary
+        return prayerIndex < currentPrayerIndex ? Self.pastPrayerColor : .primary
     }
 
     /// "Until Asr at 4:52 PM (3h 38m)" - the span from THIS prayer's time to the next one in the displayed
@@ -996,6 +1193,9 @@ struct PrayerList: View {
     }
 
     private func triggerBellAnimation(for prayer: Prayer) {
+        // A wobble is decoration on a control people tap often; Reduce Motion (and Low Power Mode)
+        // gets the new glyph alone, which already says what changed.
+        guard !appearance.reduceAnimations else { return }
         animatingBellPrayerName = prayer.nameTransliteration
 
         withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) {
@@ -1036,9 +1236,23 @@ struct PrayerList: View {
             .contentShape(Rectangle())
             .padding(4)
             .conditionalGlassEffect(flat: true)
+            // The glass circle is 26 pt, under the 28 pt floor and far from the 44 pt the platform asks
+            // for. The TOUCH area grows to 44 without moving anything: an interaction-only shape, so the
+            // hold's context-menu preview still lifts just the circle.
+            .contentShape(.interaction, Rectangle().inset(by: -9))
             .onTapGesture {
                 settings.hapticFeedback()
                 triggerBellAnimation(for: prayer)
+                settings.cycleNotificationMode(for: prayer)
+            }
+            // Where the bell stands alone (the grid and split details) it is its own control; inside a
+            // tile or row VoiceOver reaches it through that element's actions instead.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(prayer.displayName) notifications")
+            .accessibilityValue(mode.spokenState)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction {
+                settings.hapticFeedback()
                 settings.cycleNotificationMode(for: prayer)
             }
             #if os(iOS)
@@ -1082,6 +1296,8 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
     let isCurrent: Bool
     let iconColor: Color
     let highlight: Color
+    /// The tracker's answer, drawn as a dot beside the name (nil = unmarked or untracked).
+    var trackerMark: PrayerMark? = nil
     @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
@@ -1107,6 +1323,10 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
                     Text(displayName)
                         .font(.headline)
                         .foregroundColor(.primary)
+
+                    #if os(iOS)
+                    PrayerMarkDot(mark: trackerMark)
+                    #endif
 
                     Spacer(minLength: 8)
 
@@ -1282,6 +1502,52 @@ private struct PrayerDetailBlock: View {
     }
 }
 
+/// One VoiceOver element per prayer, in every layout. The rows and tiles are tap-gesture stacks, so
+/// without this VoiceOver read the symbol, the name and the time as three unrelated items (none of them
+/// a button), and the bell, an image with a tap gesture, could not be reached at all. The label is what
+/// the tile says in words; the value is what it says by colour and glyph (current, the tracker's mark,
+/// the bell); double tap opens the details, and the bell's three modes are actions, the same three its
+/// context menu offers.
+private struct PrayerAccessibility: ViewModifier {
+    let label: String
+    let value: String
+    let isExpanded: Bool
+    /// Nil where the layout draws no bell (the dimmed TODAY comparison rows, the watch).
+    let bellMode: Settings.PrayerNotificationMode?
+    let toggle: () -> Void
+    let setBell: (Settings.PrayerNotificationMode) -> Void
+
+    func body(content: Content) -> some View {
+        let element = content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(label)
+            .accessibilityValue(value)
+            .accessibilityHint(isExpanded ? "Hides the details" : "Shows the details")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { toggle() }
+
+        if bellMode != nil {
+            element
+                .accessibilityAction(named: "Prenotification") { setBell(.preNotification) }
+                .accessibilityAction(named: "Notification") { setBell(.atTime) }
+                .accessibilityAction(named: "No Notification") { setBell(.off) }
+        } else {
+            element
+        }
+    }
+}
+
+private extension Settings.PrayerNotificationMode {
+    /// The bell in words, for VoiceOver (the glyph alone was the only carrier).
+    var spokenState: String {
+        switch self {
+        case .off: return "notifications off"
+        case .atTime: return "notification on"
+        case .preNotification: return "prenotification on"
+        }
+    }
+}
+
 private extension Prayer {
     var stableDisplayID: String {
         "\(nameTransliteration)-\(Int(time.timeIntervalSince1970))"
@@ -1295,6 +1561,7 @@ private extension Prayer {
 private struct PrayerGridTile<TrailingContent: View>: View {
     let prayer: Prayer
     let color: Color
+    var trackerMark: PrayerMark? = nil
     @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
@@ -1310,6 +1577,10 @@ private struct PrayerGridTile<TrailingContent: View>: View {
                     .fontWeight(.bold)
                     .foregroundColor(color)
 
+                #if os(iOS)
+                PrayerMarkDot(mark: trackerMark)
+                #endif
+
                 trailingContent()
             }
 
@@ -1323,6 +1594,7 @@ private struct PrayerGridTile<TrailingContent: View>: View {
 private struct SplitPrayerRow<TrailingContent: View>: View {
     let prayer: Prayer
     let color: Color
+    var trackerMark: PrayerMark? = nil
     @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
@@ -1336,6 +1608,10 @@ private struct SplitPrayerRow<TrailingContent: View>: View {
                 .fontWeight(.bold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
+
+            #if os(iOS)
+            PrayerMarkDot(mark: trackerMark)
+            #endif
 
             Spacer()
 

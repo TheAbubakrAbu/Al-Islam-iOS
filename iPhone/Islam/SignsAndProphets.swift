@@ -197,6 +197,105 @@ extension View {
     }
 }
 
+// MARK: - Article content
+
+/// One paragraph or quote of a Prophecies or Miracles of the Prophets article. The two libraries
+/// hold about 130 articles between them, so an article is data rendered by `SignArticleSections`
+/// rather than a hand-built view per article (Abu, 2026-09-25: "there's barely any in there").
+///
+/// A hadith is a reference into the bundled shelf, token ranges and all, exactly as
+/// `ScriptureQuote(hadith:)` takes it; `Scripts/verify_prophecies.py` reads every `.hadith(` here
+/// back out of the packs, refuses a weak grade and a range outside the row, and prints the quote.
+enum SignBlock {
+    case text(String)
+    /// "7:73" or "19:29-30", rendered from the app's own mushaf.
+    case quran(String)
+    case hadith(String, cite: String, arabic: ClosedRange<Int>, english: ClosedRange<Int>)
+}
+
+struct SignSection {
+    let heading: String
+    let blocks: [SignBlock]
+
+    init(_ heading: String, _ blocks: [SignBlock]) {
+        self.heading = heading
+        self.blocks = blocks
+    }
+}
+
+/// An article's sections, in order, each under its `ArticleHeader`.
+struct SignArticleSections: View {
+    let sections: [SignSection]
+
+    var body: some View {
+        ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+            Section(header: ArticleHeader(section.heading)) {
+                ForEach(Array(section.blocks.enumerated()), id: \.offset) { _, block in
+                    switch block {
+                    case .text(let text):
+                        Text(verbatim: text)
+                            .font(.body)
+                    case .quran(let reference):
+                        ScriptureQuote(quran: reference)
+                    case let .hadith(link, cite, arabic, english):
+                        ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Strongest
+
+/// The STRONGEST section each signs library leads with: the first three, then a "Show more" row for
+/// the rest (Abu, 2026-09-25: "show like 3 and have a show more button to see all"). The pick is the
+/// app's own in all three libraries, which the footer says.
+struct StrongestSection<Item: Identifiable, Row: View>: View {
+    @Environment(\.appearance) private var appearance
+
+    let items: [Item]
+    let footer: String
+    @ViewBuilder let row: (Item) -> Row
+
+    @State private var showAll = false
+
+    /// Enough to show what the pick is like without pushing the library's own browse off screen.
+    static var collapsedCount: Int { 3 }
+
+    var body: some View {
+        if !items.isEmpty {
+            Section(
+                header: SectionPillHeader(title: "STRONGEST", count: items.count, icon: "star.fill", accentTitle: true),
+                footer: Text(footer)
+            ) {
+                ForEach(showAll ? items : Array(items.prefix(Self.collapsedCount))) { item in
+                    row(item)
+                }
+
+                if items.count > Self.collapsedCount {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        withAnimation(.easeInOut) { showAll.toggle() }
+                    } label: {
+                        HStack {
+                            Text(showAll ? "Show fewer" : "Show \(items.count - Self.collapsedCount) more")
+                                .font(.subheadline.weight(.medium))
+                            Spacer()
+                            Image(systemName: showAll ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .foregroundColor(appearance.accent)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
 // MARK: - The prophet bridge
 
 /// A prophet who appears in both libraries: his story in Pillars & Beliefs, and his signs in Miracles
@@ -207,8 +306,9 @@ struct ProphetSigns: Identifiable {
     /// His name as both indexes print it.
     let name: String
     let arabic: String
-    /// The `ProphetMiraclesView.Entry` id whose article covers his signs.
-    let miracleEntry: String
+    /// The `ProphetMiraclesView.Entry` ids whose articles cover his signs, in the library's order.
+    /// Musa has five; most prophets have one.
+    let miracleEntries: [String]
     /// One line naming the signs, for the row under his name.
     let signs: String
 
@@ -216,13 +316,23 @@ struct ProphetSigns: Identifiable {
     @ViewBuilder
     var storyDestination: some View {
         switch id {
+        case "ProphetNuhView":      ProphetNuhView()
+        case "ProphetHudView":      ProphetHudView()
         case "ProphetSalihView":    ProphetSalihView()
         case "ProphetIbrahimView":  ProphetIbrahimView()
+        case "ProphetLutView":      ProphetLutView()
+        case "ProphetIsmailView":   ProphetIsmailView()
+        case "ProphetYaqubView":    ProphetYaqubView()
+        case "ProphetYusufView":    ProphetYusufView()
+        case "ProphetAyyubView":    ProphetAyyubView()
         case "ProphetMusaView":     ProphetMusaView()
-        case "ProphetIsaView":      ProphetIsaView()
+        case "ProphetHarunView":    ProphetHarunView()
+        case "ProphetDawudView":    ProphetDawudView()
         case "ProphetSulaymanView": ProphetSulaymanView()
         case "ProphetYunusView":    ProphetYunusView()
-        case "ProphetDawudView":    ProphetDawudView()
+        case "ProphetZakariyaView": ProphetZakariyaView()
+        case "ProphetYahyaView":    ProphetYahyaView()
+        case "ProphetIsaView":      ProphetIsaView()
         case "ProphetMuhammadView": ProphetMuhammadView()
         default:                    EmptyView()
         }
@@ -230,32 +340,55 @@ struct ProphetSigns: Identifiable {
 }
 
 enum ProphetSignsIndex {
-    /// Every prophet whose signs the miracles library covers, in the library's own order.
+    /// Every prophet whose signs the miracles library covers, in the order the Quran's history runs.
     static let all: [ProphetSigns] = [
+        .init(id: "ProphetNuhView", name: "Nuh", arabic: "\u{0646}\u{064F}\u{0648}\u{062D}",
+              miracleEntries: ["nuh-ark"], signs: "The ark, and the flood that was left as a sign"),
+        .init(id: "ProphetHudView", name: "Hud", arabic: "\u{0647}\u{064F}\u{0648}\u{062F}",
+              miracleEntries: ["hud-wind"], signs: "One man a whole nation could not touch, then the wind"),
         .init(id: "ProphetSalihView", name: "Salih", arabic: "\u{0635}\u{064E}\u{0627}\u{0644}\u{0650}\u{062D}",
-              miracleEntry: "earlier", signs: "The she-camel brought out of the rock"),
+              miracleEntries: ["salih-camel"], signs: "The she-camel, and the water shared with her"),
         .init(id: "ProphetIbrahimView", name: "Ibrahim", arabic: "\u{0625}\u{0650}\u{0628}\u{0631}\u{064E}\u{0627}\u{0647}\u{0650}\u{064A}\u{0645}",
-              miracleEntry: "earlier", signs: "The fire that was made cool and safe"),
+              miracleEntries: ["ibrahim-fire", "ibrahim-birds"], signs: "The fire made cool, and the four birds"),
+        .init(id: "ProphetLutView", name: "Lut", arabic: "\u{0644}\u{064F}\u{0648}\u{0637}",
+              miracleEntries: ["lut-city"], signs: "The angels at his door, and the city overturned"),
+        .init(id: "ProphetIsmailView", name: "Isma'il", arabic: "\u{0625}\u{0650}\u{0633}\u{0645}\u{064E}\u{0627}\u{0639}\u{0650}\u{064A}\u{0644}",
+              miracleEntries: ["zamzam"], signs: "The spring of Zamzam, opened for him and his mother"),
+        .init(id: "ProphetYaqubView", name: "Ya'qub", arabic: "\u{064A}\u{064E}\u{0639}\u{0642}\u{064F}\u{0648}\u{0628}",
+              miracleEntries: ["yusuf-dream-shirt"], signs: "His sight returned by his son's shirt"),
+        .init(id: "ProphetYusufView", name: "Yusuf", arabic: "\u{064A}\u{064F}\u{0648}\u{0633}\u{064F}\u{0641}",
+              miracleEntries: ["yusuf-dream-shirt"], signs: "The dream fulfilled, and the shirt that healed"),
+        .init(id: "ProphetAyyubView", name: "Ayyub", arabic: "\u{0623}\u{064E}\u{064A}\u{064F}\u{0651}\u{0648}\u{0628}",
+              miracleEntries: ["ayyub-spring"], signs: "The spring that healed him, and his family restored"),
         .init(id: "ProphetMusaView", name: "Musa", arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}",
-              miracleEntry: "earlier", signs: "The staff, the hand, and the parting of the sea"),
+              miracleEntries: ["musa-staff-hand", "musa-nine-signs", "musa-sea", "musa-desert", "musa-cow"],
+              signs: "The staff and the hand, the nine signs, the sea, the springs"),
+        .init(id: "ProphetHarunView", name: "Harun", arabic: "\u{0647}\u{064E}\u{0627}\u{0631}\u{064F}\u{0648}\u{0646}",
+              miracleEntries: ["musa-staff-hand", "musa-sea"], signs: "Beside his brother before Pharaoh and at the sea"),
         .init(id: "ProphetDawudView", name: "Dawud", arabic: "\u{062F}\u{064E}\u{0627}\u{0648}\u{064F}\u{0648}\u{062F}",
-              miracleEntry: "others", signs: "Iron softened in his hands; the mountains echoing him"),
+              miracleEntries: ["dawud-iron"], signs: "Iron softened in his hands; the mountains echoing him"),
         .init(id: "ProphetSulaymanView", name: "Sulayman", arabic: "\u{0633}\u{064F}\u{0644}\u{064E}\u{064A}\u{0645}\u{064E}\u{0627}\u{0646}",
-              miracleEntry: "others", signs: "The wind, the jinn, and the speech of birds and ants"),
+              miracleEntries: ["sulayman-wind-jinn", "sulayman-ant-hoopoe", "sheba-throne"],
+              signs: "The wind, the jinn, the speech of birds and ants, the throne of Sheba"),
         .init(id: "ProphetYunusView", name: "Yunus", arabic: "\u{064A}\u{064F}\u{0648}\u{0646}\u{064F}\u{0633}",
-              miracleEntry: "others", signs: "Kept alive in the belly of the whale"),
-        .init(id: "ProphetIsaView", name: "Isa", arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}",
-              miracleEntry: "earlier", signs: "Speech in the cradle, healing, and the dead raised"),
+              miracleEntries: ["yunus-whale"], signs: "Kept alive in the belly of the whale"),
+        .init(id: "ProphetZakariyaView", name: "Zakariya", arabic: "\u{0632}\u{064E}\u{0643}\u{064E}\u{0631}\u{0650}\u{064A}\u{064E}\u{0651}\u{0627}",
+              miracleEntries: ["zakariya-yahya"], signs: "A son in old age, and three nights without speech"),
+        .init(id: "ProphetYahyaView", name: "Yahya", arabic: "\u{064A}\u{064E}\u{062D}\u{064A}\u{064E}\u{0649}",
+              miracleEntries: ["zakariya-yahya"], signs: "Born to a barren mother and an old father"),
+        .init(id: "ProphetIsaView", name: "'Isa", arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}",
+              miracleEntries: ["isa-birth-cradle", "isa-signs", "table-spread"],
+              signs: "Speech in the cradle, healing, the dead raised, the table"),
         .init(id: "ProphetMuhammadView", name: "Muhammad", arabic: "\u{0645}\u{064F}\u{062D}\u{064E}\u{0645}\u{064E}\u{0651}\u{062F}",
-              miracleEntry: "quran", signs: "The Quran, the splitting of the moon, and more"),
+              miracleEntries: ["quran", "moon", "isra"], signs: "The Quran, the splitting of the moon, and more"),
     ]
 
     /// The prophets whose signs one miracles article covers.
     static func forEntry(_ entryID: String) -> [ProphetSigns] {
-        all.filter { $0.miracleEntry == entryID }
+        all.filter { $0.miracleEntries.contains(entryID) }
     }
 
-    /// The signs article for a prophet page, if the library covers him.
+    /// The signs articles for a prophet page, if the library covers him.
     static func forProphet(_ viewID: String) -> ProphetSigns? {
         all.first { $0.id == viewID }
     }
@@ -274,45 +407,53 @@ struct ProphetMiraclesLink: View {
 
     @State private var openEntry: ProphetMiraclesView.Entry?
 
-    private var signs: ProphetSigns? { ProphetSignsIndex.forProphet(article) }
+    private var entries: [ProphetMiraclesView.Entry] {
+        guard let signs = ProphetSignsIndex.forProphet(article) else { return [] }
+        return signs.miracleEntries.compactMap { id in ProphetMiraclesView.entries.first { $0.id == id } }
+    }
 
     var body: some View {
-        if let signs, let entry = ProphetMiraclesView.entries.first(where: { $0.id == signs.miracleEntry }) {
-            Section(header: ArticleHeader("HIS MIRACLES")) {
-                Button {
-                    settings.hapticFeedback()
-                    openEntry = entry
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "staroflife")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(settings.accentColor.color)
-                            .frame(width: 24)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(signs.signs)
+        let entries = entries
+        if !entries.isEmpty {
+            Section(header: ArticleHeader("HIS MIRACLES"),
+                    footer: Text("In Miracles of the Prophets, under Al-Islam.")) {
+                ForEach(entries) { entry in
+                    Button {
+                        settings.hapticFeedback()
+                        openEntry = entry
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "staroflife")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .foregroundColor(settings.accentColor.color)
+                                .frame(width: 24)
 
-                            Text("Read it in Miracles of the Prophets")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                Text(entry.summary)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            Spacer(minLength: 8)
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
                         }
-
-                        Spacer(minLength: 8)
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, 4)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            // The whole section is ONE row, so the door is a Button writing one state and the
-            // destination hangs off the enclosing List - never a second NavigationLink in the row.
+            // Each door is a Button writing one state and the destination hangs off the enclosing
+            // List, never a NavigationLink per row inside a lazily built section.
             .pushDestination(isPresented: Binding(
                 get: { openEntry != nil },
                 set: { if !$0 { openEntry = nil } }

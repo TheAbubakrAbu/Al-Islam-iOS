@@ -79,6 +79,7 @@ struct SettingsIslamView: View {
 
             Section(header: Text("READING")) {
                 islamPageLink(.arabicText) { arabicTextDestination }
+                islamPageLink(.textSize) { IslamTextSizeSettingsView() }
                 islamPageLink(.alphabet) { alphabetDestination }
             }
 
@@ -115,6 +116,7 @@ struct SettingsIslamView: View {
     private func islamPageDestination(_ page: SettingsIslamPage) -> some View {
         switch page {
         case .arabicText: arabicTextDestination
+        case .textSize: IslamTextSizeSettingsView()
         case .alphabet: alphabetDestination
         case .libraries: librariesDestination
         case .sunnahReminders: SunnahRemindersView()
@@ -283,6 +285,144 @@ struct SettingsIslamView: View {
     }
 }
 
+// MARK: - Text Size
+
+/// The sizes the Islam tab can be set to, smallest first: the standard Dynamic Type steps and the
+/// first two accessibility sizes. The Quran and hadith readers size their text in points, from their
+/// own settings; the Islam tab's hundreds of article pages use text STYLES, so the one control that
+/// sizes all of them is a Dynamic Type override (Abu, 2026-09-25: "for settings in Islam have a text
+/// size").
+enum IslamTextSize {
+    static let steps: [DynamicTypeSize] = [
+        .xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2,
+    ]
+
+    /// The stored index as a size; nil (index -1) follows the device.
+    static func size(for index: Int) -> DynamicTypeSize? {
+        steps.indices.contains(index) ? steps[index] : nil
+    }
+
+    static func name(_ size: DynamicTypeSize) -> String {
+        switch size {
+        case .xSmall: return "Extra Small"
+        case .small: return "Small"
+        case .medium: return "Medium"
+        case .large: return "Default"
+        case .xLarge: return "Large"
+        case .xxLarge: return "Larger"
+        case .xxxLarge: return "Largest"
+        case .accessibility1: return "Accessibility 1"
+        case .accessibility2: return "Accessibility 2"
+        default: return "Accessibility"
+        }
+    }
+}
+
+extension View {
+    /// Renders the Al-Islam tab at Islam Settings' Text Size. Applied once, at `IslamView`'s root:
+    /// every resource and article opens inside that stack, so one modifier covers them all.
+    func islamTextSize() -> some View {
+        modifier(IslamTextSizeModifier())
+    }
+}
+
+/// Reads its own `@AppStorage` rather than observing `Settings`, so the tab root does not re-render
+/// on every Settings publish for one integer. It always applies ONE `dynamicTypeSize` (the chosen
+/// size, or the environment's own when following the device) so switching between the two never
+/// changes the tab's view identity, which would throw away its navigation stack.
+private struct IslamTextSizeModifier: ViewModifier {
+    @AppStorage("islamTextSize") private var index = -1
+    @Environment(\.dynamicTypeSize) private var inherited
+
+    func body(content: Content) -> some View {
+        content.dynamicTypeSize(IslamTextSize.size(for: index) ?? inherited)
+    }
+}
+
+/// Islam Settings -> Text Size: follow the device, or pick a size on a slider, with a preview at
+/// that size.
+struct IslamTextSizeSettingsView: View {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.dynamicTypeSize) private var deviceSize
+
+    private var followsDevice: Bool { IslamTextSize.size(for: settings.islamTextSize) == nil }
+    private var chosen: DynamicTypeSize { IslamTextSize.size(for: settings.islamTextSize) ?? deviceSize }
+
+    var body: some View {
+        List {
+            Group {
+                Section(header: Text("TEXT SIZE"),
+                        footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. The Quran and the hadith books keep their own text sizes, in Quran Settings and Hadith Settings.")) {
+                    Toggle("Use Device Text Size", isOn: Binding(
+                        get: { followsDevice },
+                        set: { follow in
+                            settings.hapticFeedback()
+                            // Turning it off starts the slider at the size the device already uses,
+                            // so nothing jumps until the slider moves.
+                            settings.islamTextSize = follow ? -1 : (IslamTextSize.steps.firstIndex(of: deviceSize) ?? 3)
+                        }
+                    ))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+
+                    if !followsDevice {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Size")
+                                Spacer()
+                                Text(IslamTextSize.name(chosen))
+                                    .foregroundColor(.secondary)
+                            }
+                            .font(.subheadline)
+
+                            HStack(spacing: 12) {
+                                Image(systemName: "textformat.size.smaller")
+                                Slider(
+                                    value: Binding(
+                                        get: { Double(settings.islamTextSize) },
+                                        set: { value in
+                                            let index = Int(value.rounded())
+                                            guard index != settings.islamTextSize else { return }
+                                            settings.hapticFeedback()
+                                            settings.islamTextSize = index
+                                        }
+                                    ),
+                                    in: 0...Double(IslamTextSize.steps.count - 1),
+                                    step: 1
+                                )
+                                .tint(settings.accentColor.color)
+                                Image(systemName: "textformat.size.larger")
+                            }
+                            .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                Section(header: Text("PREVIEW")) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Pillars and Beliefs")
+                            .font(.headline)
+
+                        Text("Every article, guide and library on the Al-Islam tab reads at this size, and so do the lists that lead to them.")
+                            .font(.body)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Islam Settings, Text Size")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                    .dynamicTypeSize(chosen)
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("Text Size")
+    }
+}
+
 // MARK: - The way in from the Al-Islam tab
 
 /// The Islam Settings gear at the top right of the Al-Islam tab and of every resource it opens (Abu,
@@ -369,6 +509,7 @@ extension SettingsSearchEntry {
     static let islamEntries: [SettingsSearchEntry] = [
         .init(title: "Islam Settings", path: "Al-Islam", keywords: "islam arabic font dua dhikr names alphabet libraries sunnah reminders", destination: .islamSettings),
         .init(title: "Highlight Allah (Islam)", path: "Islam Settings → Arabic Text", keywords: "highlight allah name red color dua dhikr adhkar tasbih articles islam", destination: .islamPage(.arabicText)),
+        .init(title: "Text Size (Islam)", path: "Islam Settings → Text Size", keywords: "text size font bigger smaller larger dynamic type articles guides duas islam reading", destination: .islamPage(.textSize)),
         .init(title: "Arabic Font (Islam)", path: "Islam Settings → Arabic Text", keywords: "arabic font face uthmani indopak hijazi kufi basic dua dhikr adhkar names alphabet islam", destination: .islamPage(.arabicText)),
         .init(title: "Arabic Size (Alphabet)", path: "Islam Settings → Arabic Alphabet", keywords: "arabic size slider letters alphabet bigger larger floor", destination: .islamPage(.alphabet)),
         .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet), advanced: true),

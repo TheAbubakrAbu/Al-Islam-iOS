@@ -31,6 +31,9 @@ struct PlayCustomRangeSheet: View {
     @State private var repeatSectionText: String
     @AppStorage("customRangeRepeatPerAyah") private var storedRepeatPerAyah = 1
     @AppStorage("customRangeRepeatSection") private var storedRepeatSection = 1
+    /// Loop the whole section until stopped (Abu, 2026-09-26: "have an infinite option"). The player
+    /// fetches each ayah once and replays the file on every pass (`PlaybackAudioCache`).
+    @AppStorage("customRangeRepeatForever") private var repeatForever = false
     
     @FocusState private var startAyahFocused: Bool
     @FocusState private var endAyahFocused: Bool
@@ -451,6 +454,19 @@ struct PlayCustomRangeSheet: View {
                     Section {
                         repeatRow(title: "Each ayah", value: $repeatPerAyah, text: $repeatPerAyahText, isFocused: $repeatPerAyahFocused)
                         repeatRow(title: "Whole section", value: $repeatSection, text: $repeatSectionText, isFocused: $repeatSectionFocused)
+                            .disabled(repeatForever)
+                            .opacity(repeatForever ? 0.45 : 1)
+                        Toggle(isOn: Binding(
+                            get: { repeatForever },
+                            set: { newValue in
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut) { repeatForever = newValue }
+                            }
+                        )) {
+                            Label("Repeat Forever", systemImage: "infinity")
+                                .font(.subheadline)
+                        }
+                        .tint(settings.accentColor.color)
                     } header: {
                         Label("Repeats", systemImage: "repeat")
                     }
@@ -938,7 +954,7 @@ struct PlayCustomRangeSheet: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 animatedCaption(rangeCountSummary)
-                animatedCaption("Each ayah ×\(repeatPerAyah) · Section ×\(repeatSection)")
+                animatedCaption("Each ayah ×\(repeatPerAyah) · Section ×\(repeatForever ? "\u{221E}" : "\(repeatSection)")")
             }
 
             Spacer(minLength: 8)
@@ -961,7 +977,7 @@ struct PlayCustomRangeSheet: View {
 
     @ViewBuilder
     private var totalPlaysText: some View {
-        let label = Text("\(totalPlayCount)×")
+        let label = Text(repeatForever ? "\u{221E}" : "\(totalPlayCount)×")
         if #available(iOS 16.0, watchOS 9.0, *) {
             label.contentTransition(.numericText())
         } else {
@@ -1093,7 +1109,7 @@ struct PlayCustomRangeSheet: View {
                 settings.hapticFeedback()
                 commitBothAyahFields()
                 commitAllRepeatFields()
-                onPlay(startAyah, endAyah, repeatPerAyah, repeatSection)
+                onPlay(startAyah, endAyah, repeatPerAyah, repeatForever ? QuranPlayer.infiniteRepeat : repeatSection)
                 onCancel()
             } label: {
                 HStack(spacing: 8) {

@@ -185,10 +185,10 @@ private func canonicalLabel(_ name: String, settings: Settings) -> String {
     settings.customPrayerName(for: name) ?? name
 }
 
-/// How each mark presents: its words, its symbol, and its color. On time wears the accent (the color a
-/// checkmark always wore here); late and missed keep their own fixed colors so they read the same
-/// whatever accent is chosen, and so an accent that happens to be orange or red cannot make a late or
-/// missed prayer look like an on-time one.
+/// How each mark presents: its words, its symbol, and its color. Each mark keeps ONE fixed color whatever
+/// accent is chosen: on time green, late orange, missed red (Abu, 2026-09-27: "for prayed on time always
+/// make it green", it wore the accent until then), so a blue or orange accent can never make one answer
+/// look like another.
 private extension PrayerMark {
     var title: String {
         switch self {
@@ -222,11 +222,111 @@ private extension PrayerMark {
         }
     }
 
-    func tint(accent: Color) -> Color {
+    /// The app's readable shades of the three (`AccentColor.color`): the system colors in dark mode, and
+    /// in light mode deep enough to read as text and behind a white glyph (the plain light green, orange
+    /// and red measure 2.2, 2.2 and 3.6:1 on white).
+    var tint: Color {
         switch self {
-        case .onTime: return accent
-        case .late: return .orange
-        case .missed: return .red
+        case .onTime: return AccentColor.green.color
+        case .late: return AccentColor.orange.color
+        case .missed: return AccentColor.red.color
+        }
+    }
+}
+
+/// One answer as a capsule: filled when chosen, tinted outline when not. The Day view's rows and a
+/// prayer's expanded detail on the Adhan tab both use it, so the two can never drift apart.
+private struct TrackerMarkChip: View {
+    let mark: PrayerMark
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        let tint = mark.tint
+
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: mark.symbol)
+                    .font(.system(size: 10, weight: .bold))
+
+                Text(mark.shortTitle)
+                    .font(.caption2.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .foregroundColor(selected ? .white : tint)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(Capsule().fill(selected ? tint : tint.opacity(0.12)))
+            .overlay(Capsule().strokeBorder(tint.opacity(selected ? 0 : 0.35), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mark.title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// The tracker inside a prayer's expanded detail on the Adhan tab (Abu, 2026-09-25: "when i touch a
+/// prayer to open it ... support the different option for prayer tracker"): the Day view's three
+/// answers for that one prayer, on the day the list is showing. Re-tapping the chosen answer clears
+/// it. Before the prayer begins it says so instead, and on an exempt day it says tracking is paused.
+struct PrayerMarkChooser: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let prayer: Prayer
+
+    var body: some View {
+        let name = prayer.nameTransliteration
+        let day = prayer.time
+        let mark = settings.prayerMark(for: name, on: day)
+
+        VStack(alignment: .leading, spacing: 6) {
+            Text("PRAYER TRACKER")
+                .font(.caption2.weight(.bold))
+                .tracking(0.6)
+                .foregroundColor(.secondary)
+
+            if settings.isTrackerExempt(on: day) {
+                Text("Tracking is paused for this day.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else if settings.canMarkPrayer(startingAt: prayer.time, on: day) {
+                HStack(spacing: 6) {
+                    ForEach(PrayerMark.allCases, id: \.self) { option in
+                        TrackerMarkChip(mark: option, selected: mark == option) {
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("Can be marked once \(prayer.displayName) begins.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.top, 4)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+/// The tracker's answer for one prayer as a small dot beside its name in the prayer list, in the
+/// answer's own colour (on time green, late orange, missed red). Nothing at all while the
+/// prayer is unmarked (Abu, 2026-09-25: "leave it blank if not touched").
+struct PrayerMarkDot: View {
+    let mark: PrayerMark?
+
+    var body: some View {
+        if let mark {
+            Circle()
+                .fill(mark.tint)
+                .frame(width: 7, height: 7)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.7), lineWidth: 0.75))
+                .accessibilityLabel(mark.title)
         }
     }
 }
@@ -319,7 +419,7 @@ private struct TrackerPrayerToggle: View {
 
     var body: some View {
         let mark = settings.prayerMark(for: prayer.nameTransliteration, on: date)
-        let tint = mark?.tint(accent: settings.accentColor.accent2) ?? .secondary
+        let tint = mark?.tint ?? .secondary
         let canMark = settings.canMarkPrayer(startingAt: prayer.time, on: date)
 
         // `GridTileMenu`, for its fast hold (this slot is where that pattern was first proved).
@@ -658,9 +758,10 @@ struct PrayerTrackerView: View {
                 Spacer(minLength: 4)
 
                 if stats.totalPrayed > 0 {
+                    // The on-time share wears the on-time mark's own green, not the accent.
                     Text("\(onTimePercent)% on time")
                         .font(.caption2.weight(.semibold).monospacedDigit())
-                        .foregroundColor(accent)
+                        .foregroundColor(PrayerMark.onTime.tint)
                         .lineLimit(1)
                 }
             }
@@ -671,7 +772,7 @@ struct PrayerTrackerView: View {
                 HStack(spacing: 2) {
                     ForEach(parts, id: \.mark) { part in
                         Capsule()
-                            .fill(part.mark.tint(accent: accent))
+                            .fill(part.mark.tint)
                             .frame(width: max(4, available * CGFloat(part.count) / CGFloat(max(total, 1))))
                     }
                 }
@@ -682,7 +783,7 @@ struct PrayerTrackerView: View {
                 ForEach(parts, id: \.mark) { part in
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(part.mark.tint(accent: accent))
+                            .fill(part.mark.tint)
                             .frame(width: 7, height: 7)
 
                         Text("\(part.count) \(part.mark.shortTitle.lowercased())")
@@ -905,7 +1006,7 @@ struct PrayerTrackerView: View {
             if canMark {
                 HStack(spacing: 6) {
                     ForEach(PrayerMark.allCases, id: \.self) { option in
-                        markChip(option, selected: mark == option, accent: accent) {
+                        markChip(option, selected: mark == option) {
                             settings.hapticFeedback()
                             withAnimation(.easeInOut(duration: 0.15)) {
                                 settings.recordTrackerMark(mark == option ? nil : option, for: name, on: day)
@@ -928,30 +1029,8 @@ struct PrayerTrackerView: View {
         .accessibilityLabel("\(prayer.displayName): \(canMark ? (mark?.spokenTitle ?? "not marked") : "not yet")")
     }
 
-    private func markChip(_ mark: PrayerMark, selected: Bool, accent: Color, action: @escaping () -> Void) -> some View {
-        let tint = mark.tint(accent: accent)
-
-        return Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: mark.symbol)
-                    .font(.system(size: 10, weight: .bold))
-
-                Text(mark.shortTitle)
-                    .font(.caption2.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            .foregroundColor(selected ? .white : tint)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(maxWidth: .infinity)
-            .background(Capsule().fill(selected ? tint : tint.opacity(0.12)))
-            .overlay(Capsule().strokeBorder(tint.opacity(selected ? 0 : 0.35), lineWidth: 1))
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(mark.title)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+    private func markChip(_ mark: PrayerMark, selected: Bool, action: @escaping () -> Void) -> some View {
+        TrackerMarkChip(mark: mark, selected: selected, action: action)
     }
 
     private func daySummary(slots: [Prayer], on day: Date) -> some View {
@@ -1133,7 +1212,7 @@ struct PrayerTrackerView: View {
     @ViewBuilder
     private func weekCell(prayerName: String, record: DayRecord) -> some View {
         let mark = record.marks[prayerName]
-        let tint = mark?.tint(accent: settings.accentColor.accent2) ?? .clear
+        let tint = mark?.tint ?? .clear
         let dateLabel = Self.shortDateFormatter.string(from: record.date)
         let hasBegun = hasPrayerBegun(prayerName, on: record.date)
 
@@ -1340,7 +1419,7 @@ struct PrayerTrackerView: View {
     /// deep accent cell whatever the accent happens to be.
     private func markDot(_ mark: PrayerMark) -> some View {
         Circle()
-            .fill(mark.tint(accent: settings.accentColor.accent2))
+            .fill(mark.tint)
             .frame(width: 5, height: 5)
             .overlay(Circle().strokeBorder(Color.white.opacity(0.85), lineWidth: 0.5))
     }

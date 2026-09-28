@@ -230,7 +230,7 @@ struct AqsaView: View {
                     ScriptureQuote(hadith: "muslim:172", cite: "Sahih Muslim 172", arabic: 77...131, english: 67...156)
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(hadith: "bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 4...31)
+                    ScriptureQuote(hadith: "bukhari:1189", cite: "Sahih al-Bukhari 1189", arabic: 25...41, english: 4...30)
                 }
 
                 Section(header: ArticleHeader("REWARDS OF PRAYING IN MASJID AL-AQSA")) {
@@ -1862,6 +1862,20 @@ struct QiraatDoorRow: View {
 }
 #endif
 
+extension QiraatView {
+    /// One reading's card in "The Companions behind each Qiraah", opening the imam's page. Spelled at
+    /// the call site as `lineageRow("Nafi", companions: [...])` so `Scripts/build_islam_corpus.py`
+    /// (`LINEAGE_RE`) keeps the Companions in the Ask AI corpus.
+    @ViewBuilder
+    func lineageRow(_ masterID: String, companions: [String], note: String? = nil) -> some View {
+        if let master = QiraatProfiles.master(id: masterID) {
+            NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
+                QiraahLineageRow(masterID: masterID, companions: companions, note: note)
+            }
+        }
+    }
+}
+
 struct QiraatView: View {
     @Environment(\.appearance) private var appearance
 
@@ -2128,28 +2142,19 @@ struct QiraatView: View {
                     }
                     #endif
 
-                    Group {
-                        Text(articleMarkdown: "**Nafi (Qari of Madinah)**: narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Ibn Kathir (Qari of Makkah)**: narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Abu Amr al-Basri (Qari of Basrah)**: narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Ibn Amir (Qari of Sham)**: narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Asim ibn Abi an-Najud (Qari of Kufah)**: narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Hamzah az-Zayyat (Qari of Kufah)**: narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Ali ibn Hamzah al-Kisai (Qari of Kufah)**: narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Ya‘qub al-Hadrami (Qari of Basrah)**: narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Khalaf al-Bazzar (Qari of Baghdad, in the Kufan tradition)**: narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
-
-                        Text(articleMarkdown: "**Abu Ja‘far al-Madani (Qari of Madinah)**: narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
-                    }
-                    .font(.body)
+                    // One card per reading instead of ten paragraphs of run-on names (Abu, 2026-09-26:
+                    // "listing all the qiraat like that looks terrible"), in the order of the lists above:
+                    // the seven, then the three. The Companions are the article's own lists.
+                    lineageRow("Nafi", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
+                    lineageRow("Ibn Kathir", companions: ["Umar ibn al-Khattab", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn as-Sa’ib"])
+                    lineageRow("Abu Amr", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abu Hurayrah"])
+                    lineageRow("Ibn Amir", companions: ["Uthman ibn Affan", "Abu ad-Darda"])
+                    lineageRow("Asim", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b"], note: "Most Muslims today recite Hafs from Asim")
+                    lineageRow("Hamzah", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Husayn ibn Ali"])
+                    lineageRow("al-Kisai", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah", "Husayn ibn Ali"])
+                    lineageRow("Abu Jafar", companions: ["Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abu Hurayrah"])
+                    lineageRow("Yaqub", companions: ["Umar ibn al-Khattab", "Uthman ibn Affan", "Ali ibn Abi Talib", "Ubayy ibn Ka‘b", "Zayd ibn Thabit", "Abdullah ibn Mas‘ud", "Abu Musa al-Ash‘ari", "Abdullah ibn Abbas", "Abdullah ibn Ayyash", "Abdullah ibn as-Sa’ib", "Abu Hurayrah"])
+                    lineageRow("Khalaf al-Ashir", companions: ["Uthman ibn Affan", "Ali ibn Abi Talib", "Abdullah ibn Mas‘ud", "Zayd ibn Thabit", "Ubayy ibn Ka‘b", "Husayn ibn Ali"])
                 }
 
                 Section(header: ArticleHeader("WHAT THIS CHAIN SHOWS")) {
@@ -2343,11 +2348,11 @@ struct FarewellView: View {
 
                     Text(verbatim: "He (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 783...796, english: 1278...1305)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 783...796, english: 1277...1304)
                     ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 66...80, english: 67...98)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 827...841, english: 1361...1389)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 842...874, english: 1390...1470)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1471...1491)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 827...841, english: 1360...1388)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 842...874, english: 1389...1469)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 875...886, english: 1470...1490)
                     ScriptureQuote(hadith: "tirmidhi:616", cite: "Sunan al-Tirmidhi 616; graded sahih by al-Albani", arabic: 38...53, english: 21...57)
                     ScriptureQuote(hadith: "tirmidhi:2159", cite: "Sunan al-Tirmidhi 2159; graded sahih by al-Albani", arabic: 72...93, english: 80...112)
                     ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُم وَاحِدٌ، وَإِنَّ أَبَاكُم وَاحِدٌ، أَلَا لَا فَضلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحمَرَ عَلَى أَسوَدَ، وَلَا أَسوَدَ عَلَى أَحمَرَ، إِلَّا بِالتَّقوَى", dimmed: true)
@@ -2355,7 +2360,7 @@ struct FarewellView: View {
 
                     Text(verbatim: "Then he asked them:")
                         .font(.body)
-                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 888...917, english: 1492...1564)
+                    ScriptureQuote(hadith: "muslim:1218a", cite: "Sahih Muslim 1218", arabic: 888...917, english: 1491...1563)
                     ScriptureQuote(hadith: "bukhari:1739", cite: "Sahih al-Bukhari 1739", arabic: 89...94, english: 116...130)
                 }
 
@@ -2683,7 +2688,7 @@ struct CaliphatesView: View {
 
                     Text(verbatim: "When some of the Companions were harsh with him, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(hadith: "bukhari:3661", cite: "Sahih al-Bukhari 3661", arabic: 146...163, english: [175...210, 215...222])
+                    ScriptureQuote(hadith: "bukhari:3661", cite: "Sahih al-Bukhari 3661", arabic: 146...163, english: [174...209, 214...221])
 
                     Text(verbatim: "His caliphate lasted just over two years but laid the foundation for unity and stability in the Ummah.")
                         .font(.body)
@@ -2939,7 +2944,7 @@ struct MadhabView: View {
             .text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that those given mercy are the followers of the messengers, who hold to what Allah revealed and are not divided over it. The Prophet (peace be upon him) warned:"),
             .hadith("bukhari:7288", cite: "Sahih al-Bukhari 7288", arabic: 24...32, english: [11...28]),
             .text("Ibn Mas‘ud (may Allah be pleased with him) showed how the Companions handled a difference in fiqh: he disapproved of Uthman completing the prayer at Mina, yet prayed the full four behind him rather than split the congregation:"),
-            .hadith("abudawud:1960", cite: "Sunan Abi Dawud 1960; graded sahih by al-Albani", arabic: 86...102, english: [95...115]),
+            .hadith("abudawud:1960", cite: "Sunan Abi Dawud 1960; graded sahih by al-Albani", arabic: 86...102, english: [95...114]),
             .text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted below), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question)."),
             .markdown("**Is following a madhhab a bid‘ah?**"),
             .text("No. Bid‘ah is introducing into the religion an act of worship that has no basis in it. The Prophet (peace be upon him) said:"),

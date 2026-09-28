@@ -182,6 +182,11 @@ struct AdhanView: View {
                     }
                 }
 
+                // Need a Hand?: the questions this tab's readers ask (praying on time, traveling),
+                // each with the setting that answers it, between the tracker and the glance wall.
+                // See HelpDoors.swift.
+                HelpDoorsSection(area: .adhan)
+
                 Section(header: Text("AT A GLANCE")) {
                     GlanceCard(onSelect: handleGlance)
                 }
@@ -263,6 +268,8 @@ struct AdhanView: View {
                 }
                 .simultaneousGesture(TapGesture().onEnded { settings.hapticFeedback() })
                 .tint(settings.accentColor.accent1)
+                // Icon-only: name where it goes, not the glyph ("Calendar" could be either calendar).
+                .accessibilityLabel("Prayer Times Calendar")
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -272,6 +279,7 @@ struct AdhanView: View {
                     Image(systemName: "gear")
                 }
                 .tint(settings.accentColor.accent2)
+                .accessibilityLabel("Adhan Settings")
             }
         }
         .sheet(item: $settingsSheet) { target in
@@ -665,42 +673,59 @@ private struct DateAndLocationSection: View {
             HijriDateRow(hijriDate: hijriDate)
         }
 
-        CurrentLocationRow(showBigQibla: showBigQibla)
+        CurrentLocationRow(showBigQibla: showBigQibla, toggleQibla: toggleQibla)
             .animation(.easeInOut, value: showBigQibla)
             #if os(iOS)
-            .onTapGesture {
-                withAnimation {
-                    settings.hapticFeedback()
-                    showBigQibla.toggle()
-                }
-            }
+            .onTapGesture(perform: toggleQibla)
             #endif
+    }
+
+    private func toggleQibla() {
+        withAnimation {
+            settings.hapticFeedback()
+            showBigQibla.toggle()
+        }
     }
 }
 
 private struct HijriDateRow: View {
     @ObservedObject private var settings = Settings.shared
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let hijriDate: HijriDate
 
     var body: some View {
         #if os(iOS)
         NavigationLink(destination: LazyDestination { CalendarView() }) {
-            HStack(spacing: 12) {
-                AccentIconChip(systemImage: "calendar", size: 26)
+            Group {
+                // Side by side the two dates share one line, which at the accessibility sizes cut the
+                // English one to "Rabiʿ II 15, 1448..." and shrank the Arabic by half. There they stack.
+                if dynamicTypeSize.isAccessibilitySize {
+                    HStack(alignment: .top, spacing: 12) {
+                        AccentIconChip(systemImage: "calendar", size: 26)
 
-                Text(hijriDate.english)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(.primary)
+                        VStack(alignment: .leading, spacing: 4) {
+                            englishDate
+                            arabicDate
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Spacer()
+                        Spacer(minLength: 0)
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        AccentIconChip(systemImage: "calendar", size: 26)
 
-                Text(hijriDate.arabic)
-                    .font(.footnote)
-                    .foregroundColor(settings.accentColor.color)
+                        englishDate
+
+                        Spacer()
+
+                        arabicDate
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                }
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
             .contextMenu {
                 Text("Date Actions")
                     .foregroundStyle(.secondary)
@@ -727,6 +752,20 @@ private struct HijriDateRow: View {
             .frame(maxWidth: .infinity, alignment: .center)
         #endif
     }
+
+    #if os(iOS)
+    private var englishDate: some View {
+        Text(hijriDate.english)
+            .font(.footnote.weight(.semibold))
+            .foregroundColor(.primary)
+    }
+
+    private var arabicDate: some View {
+        Text(hijriDate.arabic)
+            .font(.footnote)
+            .foregroundColor(settings.accentColor.color)
+    }
+    #endif
 }
 
 private struct CurrentLocationRow: View {
@@ -735,6 +774,8 @@ private struct CurrentLocationRow: View {
     @ObservedObject private var live = LiveState.shared
 
     let showBigQibla: Bool
+    /// The row's tap (big compass on and off), handed down so VoiceOver can reach it from the compass.
+    var toggleQibla: () -> Void = {}
     @State private var showingPrayerTimesMap = false
     #if DEBUG
     @State private var showingWidgetGallery = false
@@ -766,6 +807,14 @@ private struct CurrentLocationRow: View {
                 QiblaView(size: showBigQibla ? 100 : 50)
                     .padding(.leading)
                     .padding(.trailing, 4)
+                    // The whole row toggles the big compass, which VoiceOver could not find: the
+                    // compass is the control it announces.
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Qibla Compass")
+                    .accessibilityValue(showBigQibla ? "Expanded" : "Collapsed")
+                    .accessibilityHint(showBigQibla ? "Shows the small compass" : "Shows the large compass and your coordinates")
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityAction { toggleQibla() }
             }
             .foregroundColor(.primary)
             .font(.subheadline)

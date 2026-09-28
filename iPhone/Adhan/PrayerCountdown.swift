@@ -23,6 +23,8 @@ struct PrayerCountdown: View {
 
     @State private var progress: Double = 0
     @State private var updateTimer: Timer?
+    /// The "TIME LEFT" caption's size under Dynamic Type (see `bigTimeLeft`).
+    @ScaledMetric(relativeTo: .caption2) private var scaledCaption: CGFloat = PrayerCountdown.captionSize
 
     /// The progress bar's refresh. The visible countdown is a self-updating `Text(style: .timer)`, so
     /// nothing here needs to tick faster than the bar can visibly move; the current/next flip is
@@ -90,6 +92,7 @@ struct PrayerCountdown: View {
             // The big centred countdown over the bar; the card draws the moon and "until X" footer itself.
             VStack(spacing: Self.digitsToBarSpacing) {
                 bigTimeLeft(next: next)
+                    .skyLegibility()
                 countdownProgress(next: next)
             }
             .lineLimit(1)
@@ -239,6 +242,8 @@ struct PrayerCountdown: View {
             }
         }
         .conditionalGlassEffect()
+        // VoiceOver read a bare "36%".
+        .accessibilityLabel("Progress until \(countdownDisplayName(for: next))")
         // Symmetric, and only a point: this pads BOTH sides of the bar, and the stack it sits in
         // already supplies the real separation. Paired with dropping `timeLeftRow`'s `.padding(.top)`
         // below - that extra top padding was the whole reason the bar sat nearer the row above it
@@ -251,17 +256,24 @@ struct PrayerCountdown: View {
 
     /// The countdown as the card's centrepiece: a small "TIME LEFT" caption over big rounded digits,
     /// hours and minutes large and the seconds a step smaller. Inherits the card's foreground (white on
-    /// the sky, primary on the plain card); the caption is the secondary shade of that. One step below
-    /// `caption2`, and 26 pt digits (36, then 30): Abu found them "a little too big" on 2026-09-05 and
-    /// "still a little too big" on 2026-09-07.
+    /// the sky, primary on the plain card); the caption is the secondary shade of that. The caption is
+    /// 11 pt, `caption2`'s size and the platform's minimum (it was one step below until 2026-09-26), and
+    /// the digits 26 pt (36, then 30): Abu found them "a little too big" on 2026-09-05 and "still a
+    /// little too big" on 2026-09-07.
     private func bigTimeLeft(next: Prayer) -> some View {
         VStack(spacing: Self.bigTimeLeftSpacing) {
             HStack(spacing: 4) {
                 Image(systemName: "hourglass")
                 Text("TIME LEFT")
             }
-            .font(.system(size: Self.captionSize, weight: .semibold))
-            .foregroundStyle(.secondary)
+            // 11 pt at the default size and never less; grows with Dynamic Type above it, like the
+            // digits (see `CountdownDigits.scaledDigits`, the same reasoning).
+            .font(.system(size: max(Self.captionSize, scaledCaption), weight: .semibold))
+            // On the sky card the caption stands on the open sky, where the system's secondary white
+            // measured 1.73:1 against a midday blue; there it is white and haloed (`skyLegibility`).
+            .foregroundStyle(presentation == .skyFooter ? AnyShapeStyle(Color.white) : AnyShapeStyle(.secondary))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Time left until \(countdownDisplayName(for: next))")
 
             CountdownDigits(target: next.time)
                 // The skyline's GROUND (the horizon line, the pyramids and the mosque, the ground
@@ -274,6 +286,9 @@ struct PrayerCountdown: View {
                 .reportingSkyGroundLine(offset: Self.groundLineOffset)
         }
         .frame(maxWidth: .infinity)
+        // One element: "Time left until Asr, 3 hours, 7 minutes, 41 seconds".
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
         // The solar GRAPH's horizon crossing sits just ABOVE this whole block - the sun rises and
         // sets over the caption and the digits both, in clear air (Abu, 2026-09-18: the arc used to
         // cut through "TIME LEFT"). See `SkyCard.arcTopInset`.
@@ -281,7 +296,8 @@ struct PrayerCountdown: View {
     }
 
     /// The caption's size and the gap under it. The digits are 26 pt bold rounded (`CountdownDigits`).
-    private static let captionSize: CGFloat = 10
+    /// 11 pt, Apple's minimum text size (it was 10 until 2026-09-26); `groundLineOffset` follows it.
+    private static let captionSize: CGFloat = 11
     private static let bigTimeLeftSpacing: CGFloat = 2
 
     #if os(iOS)
@@ -717,23 +733,45 @@ private struct CountdownDigits: View {
 
     let target: Date
 
+    /// 26 pt at the default text size and never less, growing with Dynamic Type above it: at the
+    /// accessibility sizes the plain card's fixed 26 pt digits ended up smaller than the prayer names
+    /// around them. The sky card caps its text at the default size, so there this is always 26, and
+    /// the skyline's ground line (`groundLineOffset`, worked out from 26 pt metrics) stays put.
+    @ScaledMetric(relativeTo: .title) private var scaledDigits: CGFloat = 26
+    private var digitsSize: CGFloat { max(26, scaledDigits) }
+
     var body: some View {
         if appearance.reduceAnimations || appearance.isReducedTier {
             Text(target, style: .timer)
-                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.system(size: digitsSize, weight: .bold, design: .rounded).monospacedDigit())
         } else {
             TimelineView(.periodic(from: Date(), by: 1)) { context in
                 let parts = Self.parts(remaining: target.timeIntervalSince(context.date))
                 HStack(alignment: .lastTextBaseline, spacing: 1) {
                     Text(parts.main)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(size: digitsSize, weight: .bold, design: .rounded))
                     Text(parts.seconds)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .font(.system(size: digitsSize * 15 / 26, weight: .semibold, design: .rounded))
                         .opacity(0.75)
                 }
                 .monospacedDigit()
+                // Read as a duration: the two Texts were spoken as "6:09" and ":35".
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Self.spoken(remaining: target.timeIntervalSince(context.date)))
             }
         }
+    }
+
+    private static let spokenFormatter: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.allowedUnits = [.hour, .minute, .second]
+        return formatter
+    }()
+
+    /// "3 hours, 7 minutes, 41 seconds" (whole seconds, never negative, like `parts`).
+    static func spoken(remaining: TimeInterval) -> String {
+        spokenFormatter.string(from: TimeInterval(max(0, Int(remaining.rounded(.down))))) ?? ""
     }
 
     /// "6:09" and ":35" for six hours, nine minutes and thirty-five seconds; never negative (a stale
@@ -795,6 +833,21 @@ struct SkyGroundLineKey: PreferenceKey {
     }
 }
 #endif
+
+extension View {
+    /// Legibility for white text drawn straight onto the sky card: a soft dark halo hugging the
+    /// glyphs. The sky is the user's own two colours and can be a pale midday blue, where plain white
+    /// measured 2.4:1 ("Started at 1:01 PM") and the "TIME LEFT" caption 1.73:1, against 4.5:1 for
+    /// text this size. The halo darkens only the air around each stroke, so the sky keeps its colour
+    /// everywhere else (a wider scrim would dim the sun and the skyline with it). Two layers: a tight
+    /// one that defines each stroke's edge and a soft one that darkens the air between letters (one
+    /// soft layer alone measured only 3.3:1). Plain shadows, not `softShadow`: this is legibility,
+    /// not decoration, so the reduced tier keeps it too, and it redraws only with its text.
+    func skyLegibility() -> some View {
+        shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 0.5)
+            .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 0)
+    }
+}
 
 private extension View {
     /// Reports the view's top edge to the sky card (iOS only: the Watch has no sky card).

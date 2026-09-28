@@ -270,6 +270,18 @@ final class SemanticSearchEngine: ObservableObject {
         buildsInFlight.insert(corpusID)
         SemanticBuildProgress.shared.set(corpusID, 0)
 
+        // A build reports progress after its first 512 words, seconds in at most, even for the
+        // all-books hadith corpus. One that has reported nothing after this long is stuck below the
+        // word embedding (a simulator without the language asset sat on "Preparing AI search... 0%"
+        // for ever, 2026-09-27): the row falls back to the keyword-only note while the build is left
+        // to finish if it ever does, at which point `store` puts the corpus back in service.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.buildStallTimeout) { [weak self] in
+            guard let self, self.buildsInFlight.contains(corpusID), self.corpora[corpusID] == nil,
+                  SemanticBuildProgress.shared.progress[corpusID] == 0 else { return }
+            self.failedCorpora.insert(corpusID)
+            SemanticBuildProgress.shared.set(corpusID, nil)
+        }
+
         // userInitiated: the user is literally watching the progress row. Every build is behind a
         // typed query or a search-field focus (nothing builds speculatively any more); on the reduced
         // tier it still runs, at utility, so a 51k-hadith embedding never competes with the taps
@@ -348,8 +360,12 @@ final class SemanticSearchEngine: ObservableObject {
         }
     }
 
+    /// How long a build may go without its first progress tick before the UI gives up on it.
+    private static let buildStallTimeout: TimeInterval = 30
+
     private func store(_ corpus: SemanticCorpus, id: String) {
         corpora[id] = corpus
+        failedCorpora.remove(id)
         SemanticBuildProgress.shared.set(id, 1)
         readyCorpora.insert(id)
         lruOrder.removeAll { $0 == id }

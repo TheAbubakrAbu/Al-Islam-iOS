@@ -449,7 +449,7 @@ struct SummaryAyahTile: View {
     let icon: String
     let surah: Surah
     let ayah: Ayah
-    var titleColor: Color = .secondary
+    var titleColor: Color = .secondaryOnGlass
     /// The grid's common tile height (the tallest tile's natural height), once measured.
     var rowHeight: CGFloat? = nil
     /// Whether this tile's recents are the ones currently unfolded below the grid (flips the corner icon).
@@ -611,7 +611,7 @@ struct SummarySurahTile: View {
     let icon: String
     let surah: Surah
     let lastListenedSurah: LastListenedSurah
-    var titleColor: Color = .secondary
+    var titleColor: Color = .secondaryOnGlass
     /// See `SummaryAyahTile.rowHeight`.
     var rowHeight: CGFloat? = nil
     /// See `SummaryAyahTile.isExpanded` / `.onExpand`.
@@ -734,7 +734,8 @@ struct SummarySurahTile: View {
                 HStack(spacing: 6) {
                     Text("\(formatMMSS(lastListenedSurah.currentDuration)) / \(formatMMSS(lastListenedSurah.fullDuration))")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        // The system secondary read 3.1:1 on this glass (see `secondaryOnGlass`).
+                        .foregroundColor(.secondaryOnGlass)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
 

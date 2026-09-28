@@ -731,8 +731,8 @@ struct QiraahMasterDetailView: View {
                 #if os(iOS)
                 QiraatIsnadSection(title: "The reading of \(profile.id)",
                                    subtitle: "\(profile.arabic) · the chain of the reading to the Prophet ﷺ",
-                                   sentence: profile.companions,
-                                   layers: QiraatIsnad.chain(master: profile.id))
+                                   sentence: profile.companions + " " + QiraatIsnad.sentence(master: profile.id),
+                                   chain: QiraatIsnad.chain(master: profile.id))
                 #else
                 Section(header: Text("CHAIN TO THE COMPANIONS")) {
                     ProseText(text: profile.companions)
@@ -791,14 +791,17 @@ struct RiwayahNarratorDetailView: View {
         ScrollViewReader { proxy in
             narratorList
                 #if DEBUG && os(iOS)
-                // "-scrollToDifferences" / "-scrollToChain": bring that section into a headless screenshot.
+                // "-scrollToDifferences" / "-scrollToChain" / "-scrollToChainEnd": bring that section
+                // (or the chain's foot, where it forks into the two narrators) into a headless screenshot.
                 .onAppear {
                     let arguments = ProcessInfo.processInfo.arguments
+                    let chainEnd = arguments.contains("-scrollToChainEnd")
                     let target = arguments.contains("-scrollToDifferences") ? "riwayah-differences"
+                        : chainEnd ? "isnad-chain-end"
                         : arguments.contains("-scrollToChain") ? "riwayah-chain" : nil
                     guard let target else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        withAnimation { proxy.scrollTo(target, anchor: .top) }
+                        withAnimation { proxy.scrollTo(target, anchor: chainEnd ? .bottom : .top) }
                     }
                 }
                 #endif
@@ -841,8 +844,8 @@ struct RiwayahNarratorDetailView: View {
                 // the Prophet, and an image of it").
                 QiraatIsnadSection(title: "\(profile.name) an \(profile.masterID)",
                                    subtitle: "\(profile.arabic) · the chain of the narration to the Prophet ﷺ",
-                                   sentence: QiraatIsnad.sentence(narrator: profile.id),
-                                   layers: QiraatIsnad.chain(narrator: profile.id))
+                                   sentence: QiraatIsnad.sentence(master: profile.masterID, highlighting: profile.id),
+                                   chain: QiraatIsnad.chain(narrator: profile.id))
                     .id("riwayah-chain")
 
                 if !profile.id.isEmpty {
@@ -933,7 +936,13 @@ struct QiraatProfileRow: View {
                 .minimumScaleFactor(0.7)
         }
         .padding(.vertical, 3)
+        .rowSeparatorAtTitle(inset: hasBadge ? Self.titleInset : 0)
     }
+
+    /// The badge (30) plus the stack's spacing (12): where the title starts.
+    static let titleInset: CGFloat = 42
+
+    private var hasBadge: Bool { ordinal != nil || systemImage != nil }
 
     @ViewBuilder
     private var badge: some View {
@@ -950,6 +959,131 @@ struct QiraatProfileRow: View {
                 )
         } else if let systemImage {
             AccentIconChip(systemImage: systemImage, size: 30)
+        }
+    }
+}
+
+/// One reading in "The Companions behind each Qiraah": the reading's row (its place among the ten,
+/// the imam, his two narrators, his Arabic name) with the Companions it is transmitted from as chips
+/// beneath it (Abu, 2026-09-26: "listing all the qiraat like that looks terrible"; it was ten
+/// paragraphs of run-on names). The imam, city and narrators come from the profiles; the Companions
+/// are the article's own list, passed in at the call site, where `Scripts/build_islam_corpus.py`
+/// reads them into the Ask AI corpus (`LINEAGE_RE`).
+struct QiraahLineageRow: View {
+    @Environment(\.appearance) private var appearance
+
+    let masterID: String
+    let companions: [String]
+    var note: String? = nil
+
+    var body: some View {
+        if let master = QiraatProfiles.master(id: masterID) {
+            let narrators = QiraatProfiles.narrators(ofMaster: masterID).map(\.name)
+            VStack(alignment: .leading, spacing: 8) {
+                QiraatProfileRow(
+                    title: "\(master.id) · \(master.city)",
+                    arabic: master.arabic,
+                    detail: narrators.isEmpty ? "" : "Narrated by \(narrators.joined(separator: " and "))",
+                    note: note,
+                    ordinal: QiraatProfiles.ordinal(ofMaster: masterID)
+                )
+
+                companionChips
+                    .padding(.leading, QiraatProfileRow.titleInset)
+            }
+            .padding(.vertical, 2)
+            .rowSeparatorAtTitle(inset: QiraatProfileRow.titleInset)
+        }
+    }
+
+    @ViewBuilder
+    private var companionChips: some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            LeadingChipFlow(spacing: 5) {
+                ForEach(companions, id: \.self) { name in
+                    Text(name)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(appearance.accent.opacity(0.12)))
+                }
+            }
+        } else {
+            Text(companions.joined(separator: " \u{00B7} "))
+                .font(.caption2.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+extension View {
+    /// Starts the List row separator at the row's title. A List aligns the separator to a row's
+    /// text, and a note line under the title (an icon, then text) dragged it part-way across.
+    /// The guide does not exist on watchOS, whose lists draw no separators to align.
+    @ViewBuilder
+    func rowSeparatorAtTitle(inset: CGFloat) -> some View {
+        #if os(watchOS)
+        self
+        #else
+        if #available(iOS 16.0, *) {
+            alignmentGuide(.listRowSeparatorLeading) { $0[.leading] + inset }
+        } else {
+            self
+        }
+        #endif
+    }
+}
+
+/// Chips of any width, wrapped onto as many rows as they need, leading-aligned.
+@available(iOS 16.0, watchOS 9.0, *)
+struct LeadingChipFlow: Layout {
+    var spacing: CGFloat = 5
+
+    private func rows(_ subviews: Subviews, width: CGFloat) -> [[(index: Int, size: CGSize)]] {
+        var rows: [[(index: Int, size: CGSize)]] = [[]]
+        var x: CGFloat = 0
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if !rows[rows.count - 1].isEmpty, x + size.width > width {
+                rows.append([])
+                x = 0
+            }
+            rows[rows.count - 1].append((index, size))
+            x += size.width + spacing
+        }
+        return rows
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? .infinity
+        // Plain loops: the chained map/reduce form timed out the Watch target's type checker.
+        var height: CGFloat = 0
+        var widest: CGFloat = 0
+        for (index, row) in rows(subviews, width: width).enumerated() {
+            var rowWidth: CGFloat = 0
+            var rowHeight: CGFloat = 0
+            for item in row {
+                rowWidth += item.size.width
+                rowHeight = max(rowHeight, item.size.height)
+            }
+            rowWidth += spacing * CGFloat(max(0, row.count - 1))
+            widest = max(widest, rowWidth)
+            height += rowHeight + (index > 0 ? spacing : 0)
+        }
+        return CGSize(width: width == .infinity ? widest : width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(subviews, width: bounds.width) {
+            let rowHeight = row.map(\.size.height).max() ?? 0
+            var x = bounds.minX
+            for item in row {
+                subviews[item.index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(item.size))
+                x += item.size.width + spacing
+            }
+            y += rowHeight + spacing
         }
     }
 }
