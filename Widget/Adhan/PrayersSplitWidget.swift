@@ -225,7 +225,7 @@ struct PrayersEntryView: View {
 }
 
 struct PrayersWidget: Widget {
-    let kind: String = "PrayersWidget"
+    let kind: String = AdhanWidgetKind.PrayersWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

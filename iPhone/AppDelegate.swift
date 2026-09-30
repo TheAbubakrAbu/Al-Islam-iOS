@@ -28,6 +28,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        LaunchClock.rebaseIfPrewarmed()
+        LaunchClock.mark("app delegate: did finish launching")
         registerBackgroundRefreshTask()
         // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
         // Every backgrounding re-arms them (below); the first arm waits for the launch cover to lift.
@@ -275,6 +277,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // delegated on main. Hop once; the expiration handler is installed before the hop.
         DispatchQueue.main.async {
             self.scheduleBackgroundRefreshes()
+            // The fasting countdown ends past its deadline here too: it ran on foreground only, so after
+            // iftar or Fajr the card sat at 0:00 on the Lock Screen for hours (Quality Guide P7).
+            FastingActivityController.refresh()
             // A refresh computed against the stored location faithfully rebuilds widgets for the city you
             // LEFT and feeds the traveling-mode check coordinates from before the trip. Ask for one fresh
             // fix first: its delegate callback commits the move, and that commit re-fetches prayer times,

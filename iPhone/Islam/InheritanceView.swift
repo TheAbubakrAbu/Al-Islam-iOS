@@ -321,6 +321,18 @@ enum Faraid {
             .paternalCousins: n(.paternalCousins) > 0
         ]
         let residuary = FaraidHeir.residuaryOrder.first { present[$0] == true }
+        // The full sister who is a residuary alongside a daughter stands in her brother's rank, so
+        // she shuts out the paternal half-brothers as he would. Their reason used to fall through to
+        // "the fixed shares use up the whole estate", which is not why (Quality Guide A12). The
+        // paternal half-sisters beside a half-brother go with him (without one, the check above
+        // already excluded them); their reason fell through the same way until 2026-09-29.
+        if residuary == .fullSisters, paternalBrothers > 0 {
+            blocked.append((.paternalBrothers, "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)"))
+            if paternalSisters > 0 {
+                blocked.append((.paternalSisters, "blocked by the full sister, who inherits here as a residuary alongside the daughter (‘asabah ma‘a al-ghayr)"))
+                paternalSisters = 0
+            }
+        }
         if let residuary {
             for heir in FaraidHeir.residuaryOrder
             where heir != residuary && FaraidHeir.distantResiduaries.contains(heir) && n(heir) > 0 {
@@ -629,12 +641,9 @@ struct InheritanceCalculatorView: View {
 
     // MARK: The estate, in the order the law spends it
 
+    /// Any keyboard's digits and either separator convention (`TypedAmount`, A11).
     private func amount(_ text: String) -> Double {
-        let cleaned = text.filter { $0.isNumber || $0 == "." || $0 == "," }
-        let normalized = cleaned.contains(".")
-            ? cleaned.replacingOccurrences(of: ",", with: "")
-            : cleaned.replacingOccurrences(of: ",", with: ".")
-        return Double(normalized) ?? 0
+        TypedAmount.parse(text)
     }
 
     private var estateValue: Double { amount(estate) }

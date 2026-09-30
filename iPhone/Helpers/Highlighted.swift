@@ -285,7 +285,8 @@ struct HighlightedSnippet: View {
     }
 
     nonisolated static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
-        var cleaned = String(text.unicodeScalars
+        // Accents fold like every search fold does, so a typed "sahih" paints "Ṣaḥīḥ" in a narration.
+        var cleaned = String(text.foldingLatinDiacritics.unicodeScalars
             .filter { !Self.englishHighlightStripSet.contains($0) }
         ).lowercased()
 

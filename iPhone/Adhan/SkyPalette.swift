@@ -51,6 +51,10 @@ extension Settings {
     /// once per second while its clock ticks; without this every read re-ran `JSONDecoder` on a string
     /// that changes only when the user edits colors. The string compare is a few bytes.
     private static var skyGradientOverridesCache: (json: String, decoded: [String: [String]])?
+    /// The memo is read and written from WidgetKit's background threads too (`sampleEntry()` for
+    /// the placeholder and the gallery preview, several kinds at once), so it is locked the way
+    /// `customColorLock` guards the accent memo (Quality Guide C6).
+    private static let skyGradientOverridesLock = NSLock()
 
     private static let skyGradientSharedSuite = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
 
@@ -67,7 +71,10 @@ extension Settings {
     private var skyGradientOverrides: [String: [String]] {
         get {
             let json = resolvedSkyGradientsJSON
-            if let cached = Self.skyGradientOverridesCache, cached.json == json {
+            Self.skyGradientOverridesLock.lock()
+            let cached = Self.skyGradientOverridesCache
+            Self.skyGradientOverridesLock.unlock()
+            if let cached, cached.json == json {
                 return cached.decoded
             }
             let decoded: [String: [String]]
@@ -77,7 +84,9 @@ extension Settings {
             } else {
                 decoded = [:]
             }
+            Self.skyGradientOverridesLock.lock()
             Self.skyGradientOverridesCache = (json, decoded)
+            Self.skyGradientOverridesLock.unlock()
             return decoded
         }
         set {

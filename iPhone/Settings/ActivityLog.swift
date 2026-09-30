@@ -329,16 +329,24 @@ final class ActivityLog: ObservableObject {
             cursor = calendar.date(byAdding: .day, value: -1, to: anchor) ?? anchor
         }
         var usedFreezeMonths = Set<String>()
+        // Freezes covering the misses just walked past, committed only when an earlier ACTIVE day
+        // shows the run really goes on past them. Spent at the miss itself, the freeze read as used
+        // whenever the run began this month (its first day is always preceded by a miss), and the
+        // dashboard said "Freeze: Used, 0 left" with nothing frozen (Quality Guide A14).
+        var pendingFreezeMonths: [String] = []
         var current = 0
         while true {
             let key = Settings.dayKey(cursor)
             if isActive(on: key) {
+                usedFreezeMonths.formUnion(pendingFreezeMonths)
+                pendingFreezeMonths.removeAll()
                 current += 1
             } else {
                 let month = String(key.prefix(7))
                 // A freeze covers exactly one missed day in its month, and only inside a run.
-                guard current > 0 || result.activeToday, !usedFreezeMonths.contains(month) else { break }
-                usedFreezeMonths.insert(month)
+                guard current > 0 || result.activeToday, !usedFreezeMonths.contains(month),
+                      !pendingFreezeMonths.contains(month) else { break }
+                pendingFreezeMonths.append(month)
             }
             guard let previous = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
             cursor = previous
@@ -405,14 +413,19 @@ final class ActivityLog: ObservableObject {
             .appendingPathComponent(watchFileName, isDirectory: false)
     }
 
+    /// A log this build cannot read is moved aside, never saved over (`UserDataRescue`).
     private func load() {
-        if let url = Self.fileURL, let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([String: [String: Int]].self, from: data) {
-            days = decoded
-        }
-        if let url = Self.watchFileURL, let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([String: [String: Int]].self, from: data) {
-            watchDays = decoded
+        days = Self.loadDays(Self.fileURL) ?? days
+        watchDays = Self.loadDays(Self.watchFileURL) ?? watchDays
+    }
+
+    private static func loadDays(_ url: URL?) -> [String: [String: Int]]? {
+        guard let url, let data = try? Data(contentsOf: url) else { return nil }
+        do {
+            return try JSONDecoder().decode([String: [String: Int]].self, from: data)
+        } catch {
+            UserDataRescue.quarantine(file: url, error: error)
+            return nil
         }
     }
 

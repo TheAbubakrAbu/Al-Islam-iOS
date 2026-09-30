@@ -336,6 +336,14 @@ struct Ayah: Codable, Identifiable, Equatable {
     /// Clean Bismillah (no diacritics). Shown for Fatiha 1 when the riwayah’s first ayah is ta'awwudh.
     static let bismillahCleanArabic = "بسم الله الرحمن الرحيم"
 
+    /// Whether a RAW (vocalized, dotted) ayah text opens with the ta'awwudh: the one case where
+    /// clean mode shows al-Fatihah's 1:1 as the basmala. Tested with the signs stripped and never on
+    /// a dotless or cleaned display string.
+    static func opensWithTaawwudh(_ raw: String) -> Bool {
+        let stripped = raw.removingArabicDiacriticsAndSigns.trimmingCharacters(in: .whitespacesAndNewlines)
+        return stripped.hasPrefix("أعوذ") || stripped.hasPrefix("اعوذ")
+    }
+
     /// Arabic to show in UI. For Fatiha ayah 1 with clean mode, if the ayah doesn’t start with بسم (e.g. ta'awwudh), shows Bismillah instead.
     /// - Parameter qiraahOverride: When non-nil, use this qiraah instead of Settings (e.g. comparison mode). Use "" for Hafs.
     /// - Parameter removeDots: Whether the dots go, with or without `clean`. Nil follows the app setting.
@@ -356,13 +364,25 @@ struct Ayah: Codable, Identifiable, Equatable {
         } else {
             vocalized(textArabic(for: qiraah, surahID: surahId).removingArabicSukoon, removeDots: removeDots)
         }
+        // Al-Fatihah 1:1 in clean mode: only a ta'awwudh gives way to the basmala, tested on the RAW
+        // text with the signs stripped (the composer's own check). "Does not start with بسم" also
+        // caught every riwayah whose 1:1 is al-hamd (Warsh, the Madani, Basri and Shami counts),
+        // which lost its first ayah to a second basmala, and the dotless "ٮسم" under Hide Dots.
         if surahId == 1 && id == 1 && clean {
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.hasPrefix("بسم") {
-                return Self.bismillahCleanArabic
+            if Self.opensWithTaawwudh(textArabic(for: qiraah, surahID: surahId)) {
+                return (removeDots ?? Settings.shared.removeArabicDots)
+                    ? Self.bismillahCleanArabic.removingArabicDots : Self.bismillahCleanArabic
             }
         }
         return text
+    }
+
+    /// The RAW text: fully vocalized and dotted whatever Hide Dots says. What tajweed painting, the
+    /// word-by-word packs, the riwayah word cards and every token alignment address: they key on
+    /// letters, and a dotless ٮ is no longer the qalqalah ب. (`displayArabicText(clean: false)`
+    /// follows Hide Dots since 2026-09-11, so it stopped meaning "raw" for the callers that used it so.)
+    func rawArabicText(surahId: Int, qiraahOverride: String? = nil) -> String {
+        displayArabicText(surahId: surahId, clean: false, removeDots: false, qiraahOverride: qiraahOverride)
     }
 
     init(from decoder: Decoder) throws {
@@ -608,7 +628,8 @@ final class TajweedStore {
         beginnerSpacing: Bool = false,
         removeArabicDots: Bool? = nil
     ) -> CachedPaint? {
-        let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
+        // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
+        let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
@@ -634,7 +655,8 @@ final class TajweedStore {
         removeArabicDots: Bool? = nil,
         completion: @escaping @MainActor () -> Void
     ) {
-        let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
+        // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
+        let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
@@ -671,7 +693,8 @@ final class TajweedStore {
         // entries; now it just misses, and toggling back finds the old entries still there.
         let visibilitySignature = snapshotVisibility()
 
-        let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
+        // Hide Dots stands on its own (2026-09-11): it never waits for Hide Tashkeel.
+        let shouldRemoveArabicDots = removeArabicDots ?? settings.removeArabicDots
 
         // Key the cache on the INPUTS, not on the projected `displayText`. `displayText` is a pure function of
         // (text, requestedDisplayText, cleanDisplayText, beginnerSpacing, shouldRemoveArabicDots), so keying on
@@ -996,7 +1019,10 @@ final class TajweedStore {
         }
 
         guard var out = visibleScalar else { return [] }
-        if cleanDisplayText && removeArabicDots {
+        // Dots go whether or not the tashkeel does: "dots hidden, tashkeel shown" is the early
+        // manuscript stage the option exists for (with the old `cleanDisplayText &&` the
+        // projection kept every dot there, while the plain row dropped them).
+        if removeArabicDots {
             out = dotlessArabicScalar(out)
         }
         return [out]
@@ -1020,29 +1046,10 @@ final class TajweedStore {
         return (0x0621...0x063A).contains(v) || (0x0641...0x064A).contains(v) || v == 0x0671
     }
 
+    /// The shared table (`ArabicRasm.dotless`, Globals.swift), which `removingArabicDots` also maps
+    /// through: one table, so the projection and the string transform stay in lockstep.
     private func dotlessArabicScalar(_ scalar: UnicodeScalar) -> UnicodeScalar {
-        switch scalar.value {
-        case 0x0623, 0x0625: return UnicodeScalar(0x0627)!
-        case 0x0624, 0x0626: return UnicodeScalar(0x0621)!
-        case 0x0622: return UnicodeScalar(0x0627)!
-        case 0x0671: return UnicodeScalar(0x0627)!
-        case 0x0628, 0x062A, 0x062B: return UnicodeScalar(0x066E)!
-        // Noon keeps its own skeleton (U+06BA: bowl in isolated/final, tooth elsewhere), matching
-        // the early-manuscript rasm - see `removingArabicDots` in Globals.swift, its string twin.
-        case 0x0646: return UnicodeScalar(0x06BA)!
-        case 0x064A: return UnicodeScalar(0x0649)!
-        case 0x062C, 0x062E: return UnicodeScalar(0x062D)!
-        case 0x0630: return UnicodeScalar(0x062F)!
-        case 0x0632: return UnicodeScalar(0x0631)!
-        case 0x0634: return UnicodeScalar(0x0633)!
-        case 0x0636: return UnicodeScalar(0x0635)!
-        case 0x0638: return UnicodeScalar(0x0637)!
-        case 0x063A: return UnicodeScalar(0x0639)!
-        case 0x0641: return UnicodeScalar(0x06A1)!
-        case 0x0642: return UnicodeScalar(0x066F)!
-        case 0x0629: return UnicodeScalar(0x0647)!
-        default: return scalar
-        }
+        ArabicRasm.dotless(scalar)
     }
 
     private func platformLabelColor() -> AnyObject {
@@ -3318,8 +3325,24 @@ final class QuranData: ObservableObject {
     @Published private(set) var isVerseSearchReady = false
     private(set) var verseIndex: [VerseIndexEntry] = []
 
-    private var surahIndex = [Int:Int]()
-    private var ayahIndex = [[Int:Int]]()
+    /// What `ayah(surah:ayah:)` and `surah(_:)` read: the surahs and both indexes as ONE value,
+    /// swapped under a lock in the same step that publishes `quran`. They used to be three
+    /// properties assigned one after another on the main actor while the word card's comparison,
+    /// the hadith rows' highlight and the dua resolver read them from background tasks, so a reader
+    /// could pair a new index with the old array (an out-of-range trap) or copy an array the main
+    /// thread was releasing: the suspected source of the 2026-09-21 heap corruption (Quality Guide C5).
+    private struct Lookup {
+        var quran: [Surah] = []
+        var surahIndex: [Int: Int] = [:]
+        var ayahIndex: [[Int: Int]] = []
+    }
+    private let lookupLock = NSLock()
+    private var lookupStorage = Lookup()
+    private var lookup: Lookup {
+        lookupLock.lock()
+        defer { lookupLock.unlock() }
+        return lookupStorage
+    }
     /// Qiraah key the verse index was built for ("" = Hafs). Rebuild when display qiraah changes.
     private var cachedVerseIndexQiraah: String? = nil
     /// Qiraah key the boundary model was built for ("" = Hafs). Rebuild when display qiraah changes.
@@ -3913,8 +3936,9 @@ final class QuranData: ObservableObject {
         await MainActor.run {
             self.quran = surahsToPublish
             self.invalidateDerivedResultCaches()
-            self.surahIndex = sIndex
-            self.ayahIndex = aIndex
+            self.lookupLock.lock()
+            self.lookupStorage = Lookup(quran: surahsToPublish, surahIndex: sIndex, ayahIndex: aIndex)
+            self.lookupLock.unlock()
             self.pageSections = preprocessedSections.pageSections
             self.juzSections = preprocessedSections.juzSections
             self.revelationOrderSurahIDs = preprocessedSections.revelationOrderSurahIDs
@@ -4373,7 +4397,8 @@ final class QuranData: ObservableObject {
     }
     
     func surah(_ number: Int) -> Surah? {
-        surahIndex[number].map { quran[$0] }
+        let lookup = self.lookup
+        return lookup.surahIndex[number].map { lookup.quran[$0] }
     }
 
     // MARK: - Surah Info (bundled, lazily loaded)
@@ -4391,9 +4416,12 @@ final class QuranData: ObservableObject {
         return sources
     }
 
+    /// Safe from any thread (it reads `lookup`, one value published under a lock).
     func ayah(surah: Int, ayah: Int) -> Ayah? {
-        guard let sIdx = surahIndex[surah], let aIdx = ayahIndex[sIdx][ayah] else { return nil }
-        return quran[sIdx].ayahs[aIdx]
+        let lookup = self.lookup
+        guard let sIdx = lookup.surahIndex[surah], lookup.ayahIndex.indices.contains(sIdx),
+              let aIdx = lookup.ayahIndex[sIdx][ayah] else { return nil }
+        return lookup.quran[sIdx].ayahs[aIdx]
     }
 
     func resolveSurahIdentifier(_ raw: String) -> Surah? {
@@ -4465,7 +4493,7 @@ final class QuranData: ObservableObject {
     /// searches and pass through untouched.
     func surahs(_ surahs: [Surah], namedBy query: String, rule: SearchWordRule) -> [Surah] {
         guard rule != .anywhere else { return surahs }
-        var text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = query.trimmingCharacters(in: .whitespacesAndNewlines).foldingLatinDiacritics
         if text.lowercased().hasPrefix("surah ") { text = String(text.dropFirst(6)) }
         let cleaned = settings.cleanSearch(text, whitespace: true)
         guard !cleaned.isEmpty, !cleaned.contains(where: { $0.isNumber }) else { return surahs }
@@ -4876,6 +4904,36 @@ final class QuranData: ObservableObject {
         return surahBoundaryModels[surahID]
     }
 
+    #if DEBUG
+    /// "-auditJuzTables": every `juzList` start and end against the pack's per-ayah juz, one NSLog
+    /// line per disagreement and a summary ("JUZ AUDIT ..."). The two tables disagreed about 3:92
+    /// and 9:93 until 2026-09-28 (Quality Guide A4).
+    @MainActor
+    static func auditJuzTables() {
+        let data = QuranData.shared
+        var packStart: [Int: (Int, Int)] = [:]
+        var packEnd: [Int: (Int, Int)] = [:]
+        for surah in data.quran {
+            for ayah in surah.ayahs {
+                guard let juz = ayah.juz else { continue }
+                if packStart[juz] == nil { packStart[juz] = (surah.id, ayah.id) }
+                packEnd[juz] = (surah.id, ayah.id)
+            }
+        }
+        var problems = 0
+        for juz in juzList {
+            let start = packStart[juz.id], end = packEnd[juz.id]
+            if start.map({ $0 != (juz.startSurah, juz.startAyah) }) ?? true
+                || end.map({ $0 != (juz.endSurah, juz.endAyah) }) ?? true {
+                problems += 1
+                NSLog("JUZ AUDIT juz %d: table %d:%d-%d:%d, pack %@", juz.id, juz.startSurah, juz.startAyah,
+                      juz.endSurah, juz.endAyah, start.map { "\($0.0):\($0.1)-\(end?.0 ?? 0):\(end?.1 ?? 0)" } ?? "none")
+            }
+        }
+        NSLog("JUZ AUDIT DONE: %d of %d juz disagree", problems, juzList.count)
+    }
+    #endif
+
     static let juzList: [Juz] = [
         Juz(id: 1,
             nameArabic: "الم",
@@ -4898,6 +4956,12 @@ final class QuranData: ObservableObject {
             endSurah: 3, endAyah: 92
         ),
 
+        // Juz 4 and juz 11 open at the printed Madani mushaf's ۞ mark: 3:93 (second line of page 62)
+        // and 9:93 (page 201), as Tanzil and Quran.com have them. The ayah at the top of the page
+        // (3:92, 9:94) is NOT the start, and the popular names Lan Tanaloo and Ya'tadhiroon belong
+        // to the Indo-Pak split. quran.qpk carried that page-top split for 3:92 and 9:93 until
+        // 2026-09-29 (Quality Guide A4, D3). The names follow the opening words.
+        // `-auditJuzTables` checks all thirty against the pack.
         Juz(id: 4,
             nameArabic: "كُلُّ ٱلطَّعَامِ",
             nameTransliteration: "Kullu At-Ta'am",
@@ -5106,7 +5170,8 @@ final class QuranData: ObservableObject {
 ///    (usually the selected riwayah), computed as folded-word LCS - the search fold strips
 ///    tashkeel and normalizes hamza carriers, so vocalization and orthography differences don't
 ///    light whole ayahs up, while real word differences (يخدعون / يخادعون, ملك / مالك) do.
-@MainActor
+// Not main-actor bound: the word card's riwayah comparison and the explorer's warm-up run it from
+// detached tasks, and every shared table here sits behind `cacheLock` (Quality Guide C5).
 enum QiraahComparison {
     struct Alignment {
         /// Hafs ayah number → the riwayah's own ayah number whose text contains that Hafs ayah.
@@ -5115,8 +5180,8 @@ enum QiraahComparison {
         let hafsRangeForRiwayah: [Int: ClosedRange<Int>]
     }
 
-    private static var alignmentCache: [String: Alignment] = [:]
-    private static var diffCache: [String: [(Int, Int)]] = [:]
+    nonisolated(unsafe) private static var alignmentCache: [String: Alignment] = [:]
+    nonisolated(unsafe) private static var diffCache: [String: [(Int, Int)]] = [:]
     /// Guards the three tables (this pair and `hafsSideCache`): the word cards compare a word across
     /// the riwayat OFF the main thread now (2026-09-16: a cold Al-Baqarah cost 550 ms on it, paid
     /// while the sheet was still animating in), and the explorer's prewarm already did, while the
@@ -5145,7 +5210,11 @@ enum QiraahComparison {
         if let cachedAlignment { return cachedAlignment }
         #if DEBUG
         var phase = Date()
-        func lap(_ slot: Int) { phaseMillis[slot] += Date().timeIntervalSince(phase) * 1000; phase = Date() }
+        func lap(_ slot: Int) {
+            let elapsed = Date().timeIntervalSince(phase) * 1000
+            cacheLock.lock(); phaseMillis[slot] += elapsed; cacheLock.unlock()
+            phase = Date()
+        }
         #else
         func lap(_ slot: Int) {}
         #endif
@@ -5317,7 +5386,7 @@ enum QiraahComparison {
     }
 
     /// Surah → the Hafs side, shared by every riwayah's alignment of that surah.
-    private static var hafsSideCache: [Int: Side] = [:]
+    nonisolated(unsafe) private static var hafsSideCache: [Int: Side] = [:]
 
     private static func hafsSide(surahID: Int, quranData: QuranData) -> Side? {
         cacheLock.lock()

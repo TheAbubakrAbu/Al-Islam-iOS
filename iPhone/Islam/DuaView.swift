@@ -157,13 +157,14 @@ final class DuaLibrary: ObservableObject {
     func load() {
         guard !resolving else { return }
         resolving = true
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             // The Quran text is what most of these duas are; wait for it rather than resolve to
             // nothing. (Already loaded on any launch that has shown the Quran tab: returns at once.)
             await QuranQuoteSource.waitUntilReady()
-            let filled = await Task.detached(priority: .userInitiated) {
-                DuaLibrary.authored.map { $0.resolved() }
-            }.value
+            // On the main actor: the resolution reads `QuranData`'s arrays and Settings, which the
+            // main actor reassigns, and a detached read of them raced those writes (Quality Guide
+            // C5). It is a few dozen dictionary lookups, not worth a thread.
+            let filled = DuaLibrary.authored.map { $0.resolved() }
             guard let self else { return }
             self.collections = filled
             self.allItems = filled.flatMap(\.items)
@@ -179,6 +180,10 @@ struct DuaView: View {
     /// The "About" card's single open door (one @State + one destination on the List:
     /// every chip lives in the SAME List row, and two links in one row both fire).
     @State private var aboutDoor: SignsAboutDoor?
+    /// The Dua of the Day card's two doors (the Today pill, "More duas for this situation"): one
+    /// state and one destination on the List. Two links in the card's one row both fired on any tap,
+    /// and Back revealed the second screen (Quality Guide G1).
+    @State private var hisnCardDoor: HisnDuaCardDoor?
     #endif
     #if os(iOS)
     /// Hisn al-Muslim, loaded off the main thread for the front page's dua of the day.
@@ -422,7 +427,8 @@ struct DuaView: View {
             if HisnDuasStore.isBundled {
                 if let hisnLibrary, let today = HisnDuasStore.shared.duaOfTheDay() {
                     Section {
-                        HisnDuaOfTheDayCard(entry: today, category: hisnLibrary.categories.first { $0.id == today.categoryID }, library: hisnLibrary)
+                        HisnDuaOfTheDayCard(entry: today, category: hisnLibrary.categories.first { $0.id == today.categoryID },
+                                            library: hisnLibrary) { hisnCardDoor = $0 }
                     }
                 }
                 // The two libraries DO overlap, and the footer says so rather than leaving a reader to
@@ -696,6 +702,13 @@ struct DuaView: View {
         .compactListSectionSpacing()
         #if os(iOS)
         .aboutSignsDestination($aboutDoor)
+        .pushDestination(isPresented: Binding(get: { hisnCardDoor != nil }, set: { if !$0 { hisnCardDoor = nil } })) {
+            switch hisnCardDoor {
+            case .dailyHub: DailyHubView()
+            case .collection(let collection): DuaCollectionView(collection: collection)
+            case nil: EmptyView()
+            }
+        }
         #endif
         .navigationTitle("Dua & Supplications")
         #if os(iOS)
@@ -1664,11 +1677,19 @@ struct HisnDuaLibraryView: View {
 }
 
 /// The day's dua from Hisn al-Muslim, on the dua screen's front page.
+/// Where the Dua of the Day card's buttons lead; the host List pushes it (one destination per List).
+enum HisnDuaCardDoor {
+    case dailyHub
+    case collection(DuaCollection)
+}
+
 struct HisnDuaOfTheDayCard: View {
     @ObservedObject private var settings = Settings.shared
     let entry: HisnDuasStore.Entry
     let category: HisnDuasStore.Category?
     let library: HisnDuasStore.Library
+    /// Opens a door; the card holds no links of its own (a List row may hold one at most).
+    let open: (HisnDuaCardDoor) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -1683,8 +1704,13 @@ struct HisnDuaOfTheDayCard: View {
                 }
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries,
                 // chevron-less so the row keeps its edge clean.
-                DailyHubDoorLabel()
-                    .chevronlessLink { DailyHubView() }
+                Button {
+                    settings.hapticFeedback()
+                    open(.dailyHub)
+                } label: {
+                    DailyHubDoorLabel()
+                }
+                .buttonStyle(.borderless)
             }
             .font(.caption2.weight(.bold))
             .foregroundColor(settings.accentColor.color)
@@ -1715,11 +1741,15 @@ struct HisnDuaOfTheDayCard: View {
             }
 
             if let category {
-                NavigationLink(destination: LazyDestination { DuaCollectionView(collection: HisnDuaLibraryView.collection(for: category, library: library)) }) {
+                Button {
+                    settings.hapticFeedback()
+                    open(.collection(HisnDuaLibraryView.collection(for: category, library: library)))
+                } label: {
                     Label("More duas for this situation", systemImage: "arrow.right.circle")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                 }
+                .buttonStyle(.borderless)
             }
         }
         .padding(.vertical, 6)

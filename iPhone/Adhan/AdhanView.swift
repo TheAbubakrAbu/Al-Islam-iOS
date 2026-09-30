@@ -96,6 +96,9 @@ struct AdhanView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("adhan root: first body")
+        #endif
         let _ = RenderCounter.hit("AdhanView")
         let _ = ChangePrinter.hit(Self.self)
         Group {

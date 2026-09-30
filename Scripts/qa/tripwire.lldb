@@ -1,0 +1,8 @@
+settings set target.process.stop-on-exec false
+breakpoint set -r "AppearanceDefaultTripwire.*note"
+breakpoint command add 1
+bt 45
+detach
+quit
+DONE
+continue

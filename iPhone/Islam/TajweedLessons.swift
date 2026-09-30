@@ -1092,7 +1092,7 @@ private struct TajweedExampleCard: View {
     var body: some View {
         if let surah = quranData.surah(example.surahId),
            let ayah = surah.ayahs.first(where: { $0.id == example.ayahNumber }) {
-            let text = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+            let text = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
             let word = example.words(in: text)
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 12) {

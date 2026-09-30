@@ -29,7 +29,10 @@ from hadith_spans import row as shelf_row  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [ROOT / "iPhone/Islam" / name for name in (
     "PillarViews.swift", "BeliefsViews.swift", "HowToGuides.swift", "AqeedahViews.swift",
-    "SalafiyyahViews.swift", "AnswersViews.swift", "ScholarsViews.swift", "DuaView.swift")]
+    "SalafiyyahViews.swift", "AnswersViews.swift", "ScholarsViews.swift", "DuaView.swift",
+    # The Watch compiles these too (2026-09-29): the Hadith & Its Sciences articles and the Proving
+    # Islam chapters, so their narrations must be in its copy of the shelf.
+    "HadithSciencesViews.swift", "ProvingIslamChapters.swift")]
 OUT = ROOT / "Resources/Data/Islam/HadithQuotes.json.deflate"
 # `hadith: "slug:citation"` (ScriptureQuote, DuaItem) and `.hadith("slug:citation"` (article blocks).
 LINK_RE = re.compile(r'(?:hadith:\s*|(?<!\w)\.hadith\(\s*)"([a-z_0-9]+:(?:\d+[a-z]?|#\d+))"')

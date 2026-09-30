@@ -265,7 +265,11 @@ struct PlayCustomRangeSheet: View {
 
     /// Total recitations the range will play: each ayah × its per-ayah repeats × the whole-section repeats.
     private var totalPlayCount: Int {
-        ayahCount * repeatPerAyah * repeatSection
+        // Reported, never trapping: the fields are clamped while typing now, but a product of three
+        // typed numbers must not be able to crash a render.
+        let perAyah = ayahCount.multipliedReportingOverflow(by: repeatPerAyah)
+        let total = perAyah.partialValue.multipliedReportingOverflow(by: repeatSection)
+        return perAyah.overflow || total.overflow ? Int.max : total.partialValue
     }
 
     @ViewBuilder
@@ -292,10 +296,12 @@ struct PlayCustomRangeSheet: View {
             text.wrappedValue = sanitized
         }
         
-        // While keyboard is active, allow any value (even empty or invalid)
+        // While the keyboard is up the TEXT may say anything, but the value is clamped: a long number
+        // typed here fed the range's play count unclamped, and its product overflowed on the next
+        // render (Quality Guide C2).
         if isFocused {
             if !sanitized.isEmpty, let parsed = Int(sanitized) {
-                value.wrappedValue = parsed
+                value.wrappedValue = min(Swift.max(1, parsed), maxAyah)
             }
             return
         }
@@ -320,10 +326,10 @@ struct PlayCustomRangeSheet: View {
             text.wrappedValue = sanitized
         }
 
-        // While keyboard is active, allow any value (even empty or invalid)
+        // While the keyboard is up the text may say anything; the value is clamped (see above).
         if isFocused {
             if !sanitized.isEmpty, let parsed = Int(sanitized) {
-                value.wrappedValue = parsed
+                value.wrappedValue = min(Swift.max(Self.repeatMin, parsed), Self.repeatMax)
             }
             return
         }

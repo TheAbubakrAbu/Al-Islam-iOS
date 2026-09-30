@@ -124,7 +124,7 @@ final class MutashabihatStore: @unchecked Sendable {
 func mutashabihPhraseText(_ phrase: MutashabihatStore.Phrase, quranData: QuranData) -> String {
     let parts = phrase.sourceKey.split(separator: ":").compactMap { Int($0) }
     guard parts.count == 2, let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) else { return "" }
-    let tokens = WordTokens.tokens(in: ayah.displayArabicText(surahId: parts[0], clean: false, qiraahOverride: ""))
+    let tokens = WordTokens.tokens(in: ayah.rawArabicText(surahId: parts[0], qiraahOverride: ""))
     guard phrase.sourceSpan.lowerBound >= 0, phrase.sourceSpan.upperBound < tokens.count else { return "" }
     return tokens[phrase.sourceSpan].joined(separator: " ")
 }
@@ -206,7 +206,7 @@ struct PhraseOccurrencesView: View {
         let originText: String? = {
             let parts = originKey.split(separator: ":").compactMap { Int($0) }
             guard parts.count == 2, let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) else { return nil }
-            return ayah.displayArabicText(surahId: parts[0], clean: false, qiraahOverride: "")
+            return ayah.rawArabicText(surahId: parts[0], qiraahOverride: "")
         }()
         return phrase.orderedKeys.compactMap { key in
             let parts = key.split(separator: ":").compactMap { Int($0) }
@@ -215,7 +215,7 @@ struct PhraseOccurrencesView: View {
             let tokens = (phrase.occurrences[key] ?? []).flatMap { Array($0) }
             var contrast: [Int] = []
             if key != originKey, let originText {
-                let text = ayah.displayArabicText(surahId: parts[0], clean: false, qiraahOverride: "")
+                let text = ayah.rawArabicText(surahId: parts[0], qiraahOverride: "")
                 let shared = Set(tokens)
                 let diff = QiraatWordDiff.compare(hafs: originText, riwayah: text)
                 let differing = diff.riwayahOnly.filter { !shared.contains($0) }

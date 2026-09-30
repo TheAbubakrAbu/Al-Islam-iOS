@@ -5,8 +5,7 @@ struct HaramView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba, the House of Allah and the Qiblah toward which all Muslims pray.")
-                        .font(.body)
+                    ArticleLead("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba, the House of Allah and the Qiblah toward which all Muslims pray.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -40,12 +39,10 @@ struct HaramView: View {
                 }
 
                 Section(header: ArticleHeader("SPIRITUAL REWARDS AND IMPORTANCE")) {
-                    Text(articleMarkdown: "1. **Multiplied Rewards**: Praying in Masjid Al-Haram is rewarded 100,000 times more than praying elsewhere.")
-                        .font(.body)
-                    Text(articleMarkdown: "2. **Forgiveness of Sins**: Performing Hajj or Umrah with sincerity cleanses one’s sins. The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
+                    ArticleStep("1. **Multiplied Rewards**: Praying in Masjid Al-Haram is rewarded 100,000 times more than praying elsewhere.")
+                    ArticleStep("2. **Forgiveness of Sins**: Performing Hajj or Umrah with sincerity cleanses one’s sins. The Prophet Muhammad (peace and blessings be upon him) said:")
                     ScriptureQuote(hadith: "bukhari:1521", cite: "Sahih al-Bukhari 1521", arabic: 31...41, english: 4...41)
-                    Text(articleMarkdown: "3. **Unity of the Ummah**: Millions of Muslims from diverse cultures and backgrounds gather in Masjid Al-Haram, symbolizing the unity and equality of the Muslim Ummah under the worship of Allah.")
-                        .font(.body)
+                    ArticleStep("3. **Unity of the Ummah**: Millions of Muslims from diverse cultures and backgrounds gather in Masjid Al-Haram, symbolizing the unity and equality of the Muslim Ummah under the worship of Allah.")
                 }
 
                 Section(header: ArticleHeader("QURANIC VERSES ABOUT MAKKAH")) {
@@ -79,8 +76,7 @@ struct HaramView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "A single prayer here equals a hundred thousand elsewhere. It is the heart of Hajj and Umrah, where the whole Ummah gathers as equals before Allah.")
-                        .font(.body)
+                    ArticleClosing("A single prayer here equals a hundred thousand elsewhere. It is the heart of Hajj and Umrah, where the whole Ummah gathers as equals before Allah.")
                 }
 
                 ArticleSourcesSection(article: "HaramView")
@@ -97,8 +93,7 @@ struct NabawiView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Masjid an-Nabawi in Madinah is the Prophet's own mosque and the second holiest in Islam, home to the Rawdah and his resting place.")
-                        .font(.body)
+                    ArticleLead("In short: Masjid an-Nabawi in Madinah is the Prophet's own mosque and the second holiest in Islam, home to the Rawdah and his resting place.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -145,12 +140,9 @@ struct NabawiView: View {
                 }
 
                 Section(header: ArticleHeader("SPIRITUAL BENEFITS")) {
-                    Text(articleMarkdown: "1. **Multiplied Rewards**: Prayers in Masjid An-Nabawi are rewarded 1,000 times more than prayers in other mosques (except Masjid Al-Haram).")
-                        .font(.body)
-                    Text(articleMarkdown: "2. **Connection to the Prophet**: Standing in a place where the Prophet Muhammad (peace and blessings be upon him) worshipped and led his companions strengthens one’s faith and love for him.")
-                        .font(.body)
-                    Text(articleMarkdown: "3. **Rawdah Visit**: Visiting the Rawdah and praying there is considered highly virtuous.")
-                        .font(.body)
+                    ArticleStep("1. **Multiplied Rewards**: Prayers in Masjid An-Nabawi are rewarded 1,000 times more than prayers in other mosques (except Masjid Al-Haram).")
+                    ArticleStep("2. **Connection to the Prophet**: Standing in a place where the Prophet Muhammad (peace and blessings be upon him) worshipped and led his companions strengthens one’s faith and love for him.")
+                    ArticleStep("3. **Rawdah Visit**: Visiting the Rawdah and praying there is considered highly virtuous.")
                 }
 
                 Section(header: ArticleHeader("QURANIC VERSES ABOUT THE MOSQUE")) {
@@ -184,8 +176,7 @@ struct NabawiView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "A prayer here equals a thousand elsewhere. It was the Prophet's center of worship and community, and visiting it deepens a believer's love for him.")
-                        .font(.body)
+                    ArticleClosing("A prayer here equals a thousand elsewhere. It was the Prophet's center of worship and community, and visiting it deepens a believer's love for him.")
                 }
 
                 ArticleSourcesSection(article: "NabawiView")
@@ -202,8 +193,7 @@ struct AqsaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Masjid al-Aqsa in Jerusalem is the third holiest mosque, the first Qiblah, and the destination of the Prophet's Night Journey (Isra and Mi'raj).")
-                        .font(.body)
+                    ArticleLead("In short: Masjid al-Aqsa in Jerusalem is the third holiest mosque, the first Qiblah, and the destination of the Prophet's Night Journey (Isra and Mi'raj).")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -218,9 +208,9 @@ struct AqsaView: View {
                 }
 
                 Section(header: ArticleHeader("SPIRITUAL SIGNIFICANCE")) {
-                    Text(articleMarkdown: "1. **First Qiblah**: Muslims initially faced Masjid Al-Aqsa during their prayers, highlighting its significance from the earliest days of Islam.").font(.body)
-                    Text(articleMarkdown: "2. **Al-Isra wa al-Mi'raj (الإِسرَاء وَالمِعرَاج)**: It was the destination of the miraculous Night Journey of the Prophet Muhammad (peace and blessings be upon him), during which he led all prophets in prayer before ascending to the heavens.").font(.body)
-                    Text(articleMarkdown: "3. **Land of Blessings**: The Quran describes the surroundings of Masjid Al-Aqsa as a blessed land. Allah says:").font(.body)
+                    ArticleStep("1. **First Qiblah**: Muslims initially faced Masjid Al-Aqsa during their prayers, highlighting its significance from the earliest days of Islam.")
+                    ArticleStep("2. **Al-Isra wa al-Mi'raj (الإِسرَاء وَالمِعرَاج)**: It was the destination of the miraculous Night Journey of the Prophet Muhammad (peace and blessings be upon him), during which he led all prophets in prayer before ascending to the heavens.")
+                    ArticleStep("3. **Land of Blessings**: The Quran describes the surroundings of Masjid Al-Aqsa as a blessed land. Allah says:")
                     ScriptureQuote(quran: "21:71")
                 }
 
@@ -273,8 +263,7 @@ struct AqsaView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Blessed by Allah and honored by the prophets, Masjid al-Aqsa remains one of the three mosques to which travel for worship is specially encouraged.")
-                        .font(.body)
+                    ArticleClosing("Blessed by Allah and honored by the prophets, Masjid al-Aqsa remains one of the three mosques to which travel for worship is specially encouraged.")
                 }
 
                 ArticleSourcesSection(article: "AqsaView")
@@ -295,8 +284,7 @@ struct WudhuView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Wudhu is the minor ablution. It is a condition for the validity of the prayer, and it wipes away sins as it is performed.")
-                        .font(.body)
+                    ArticleLead("In short: Wudhu is the minor ablution. It is a condition for the validity of the prayer, and it wipes away sins as it is performed.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -316,24 +304,15 @@ struct WudhuView: View {
                 }
 
                 Section(header: ArticleHeader("HOW TO MAKE WUDHU")) {
-                    Text(articleMarkdown: "1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
-                        .font(.body)
-                    Text(articleMarkdown: "2. Say **“Bismillah“ (بِسمِ اللهِ)**.")
-                        .font(.body)
-                    Text(articleMarkdown: "3. Wash both **hands** up to the wrists, three times.")
-                        .font(.body)
-                    Text(articleMarkdown: "4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
-                        .font(.body)
-                    Text(articleMarkdown: "5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
-                        .font(.body)
-                    Text(articleMarkdown: "6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
-                        .font(.body)
-                    Text(articleMarkdown: "7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
-                        .font(.body)
-                    Text(articleMarkdown: "8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
-                        .font(.body)
-                    Text(articleMarkdown: "9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.“**")
-                        .font(.body)
+                    ArticleStep("1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
+                    ArticleStep("2. Say **“Bismillah“ (بِسمِ اللهِ)**.")
+                    ArticleStep("3. Wash both **hands** up to the wrists, three times.")
+                    ArticleStep("4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
+                    ArticleStep("5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
+                    ArticleStep("6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
+                    ArticleStep("7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
+                    ArticleStep("8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
+                    ArticleStep("9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.“**")
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said about that closing testimony:")
                         .font(.body)
@@ -348,16 +327,11 @@ struct WudhuView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT BREAKS WUDHU")) {
-                    Text(verbatim: "• Anything that exits from the front or back passage: urine, stool, or wind.")
-                        .font(.body)
-                    Text(verbatim: "• Deep sleep, in which a person loses awareness.")
-                        .font(.body)
-                    Text(verbatim: "• Loss of consciousness, whether from fainting, intoxication, or illness.")
-                        .font(.body)
-                    Text(verbatim: "• Touching the private parts directly with the hand, without a barrier.")
-                        .font(.body)
-                    Text(verbatim: "• Eating camel meat. A man asked the Prophet (peace and blessings be upon him) whether he should make wudhu after eating camel meat, and he said:")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• Anything that exits from the front or back passage: urine, stool, or wind.")
+                    ArticleBullet(verbatim: "• Deep sleep, in which a person loses awareness.")
+                    ArticleBullet(verbatim: "• Loss of consciousness, whether from fainting, intoxication, or illness.")
+                    ArticleBullet(verbatim: "• Touching the private parts directly with the hand, without a barrier.")
+                    ArticleBullet(verbatim: "• Eating camel meat. A man asked the Prophet (peace and blessings be upon him) whether he should make wudhu after eating camel meat, and he said:")
                     ScriptureQuote(hadith: "muslim:360a", cite: "Sahih Muslim 360", arabic: 57...61, english: 55...61)
                     Text(verbatim: "Doubt alone does not break it. If you are certain you had wudhu and merely suspect you lost it, you still have it.")
                         .font(.body)
@@ -381,8 +355,7 @@ struct WudhuView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Purity is a condition of prayer and a means of erasing sins. Performed with intention and in the way the Prophet performed it, wudhu is an act of worship in itself.")
-                        .font(.body)
+                    ArticleClosing("Purity is a condition of prayer and a means of erasing sins. Performed with intention and in the way the Prophet performed it, wudhu is an act of worship in itself.")
 
                     NavigationLink(destination: LazyDestination { GhuslView() }) {
                         Label("Next: How to Make Ghusl", systemImage: "drop.fill")
@@ -405,8 +378,7 @@ struct GhuslView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ghusl is the full-body wash that lifts major ritual impurity. Until it is performed, the prayer cannot be prayed.")
-                        .font(.body)
+                    ArticleLead("In short: Ghusl is the full-body wash that lifts major ritual impurity. Until it is performed, the prayer cannot be prayed.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -417,29 +389,19 @@ struct GhuslView: View {
                 }
 
                 Section(header: ArticleHeader("WHEN GHUSL IS OBLIGATORY")) {
-                    Text(verbatim: "• After marital relations, whether or not there is emission.")
-                        .font(.body)
-                    Text(verbatim: "• After the emission of maniy (sexual fluid) with desire, whether awake or from a wet dream.")
-                        .font(.body)
-                    Text(articleMarkdown: "• At the end of **menstruation (حَيض)**.")
-                        .font(.body)
-                    Text(articleMarkdown: "• At the end of **postpartum bleeding (نِفَاس)**.")
-                        .font(.body)
-                    Text(verbatim: "• Upon accepting Islam.")
-                        .font(.body)
-                    Text(verbatim: "• Upon death, the deceased is washed by the living.")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• After marital relations, whether or not there is emission.")
+                    ArticleBullet(verbatim: "• After the emission of maniy (sexual fluid) with desire, whether awake or from a wet dream.")
+                    ArticleBullet("• At the end of **menstruation (حَيض)**.")
+                    ArticleBullet("• At the end of **postpartum bleeding (نِفَاس)**.")
+                    ArticleBullet(verbatim: "• Upon accepting Islam.")
+                    ArticleBullet(verbatim: "• Upon death, the deceased is washed by the living.")
                 }
 
                 Section(header: ArticleHeader("WHEN GHUSL IS RECOMMENDED")) {
-                    Text(articleMarkdown: "• Before the **Jumuah (جُمُعَة)** prayer.")
-                        .font(.body)
-                    Text(articleMarkdown: "• Before the two **Eid** prayers.")
-                        .font(.body)
-                    Text(articleMarkdown: "• Before entering **Ihram (إِحرَام)** for Hajj or Umrah.")
-                        .font(.body)
-                    Text(verbatim: "• After washing a deceased person.")
-                        .font(.body)
+                    ArticleBullet("• Before the **Jumuah (جُمُعَة)** prayer.")
+                    ArticleBullet("• Before the two **Eid** prayers.")
+                    ArticleBullet("• Before entering **Ihram (إِحرَام)** for Hajj or Umrah.")
+                    ArticleBullet(verbatim: "• After washing a deceased person.")
                 }
 
                 Section(header: ArticleHeader("THE COMMAND IN THE QURAN")) {
@@ -456,20 +418,13 @@ struct GhuslView: View {
                         .font(.body)
                     ScriptureQuote(hadith: "bukhari:248", cite: "Sahih al-Bukhari 248", arabic: 26...60, english: 0...59)
 
-                    Text(articleMarkdown: "1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
-                        .font(.body)
-                    Text(articleMarkdown: "2. Say **“Bismillah“**, and wash both **hands** three times.")
-                        .font(.body)
-                    Text(articleMarkdown: "3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
-                        .font(.body)
-                    Text(articleMarkdown: "4. Perform a **complete wudhu**, as you would for prayer.")
-                        .font(.body)
-                    Text(articleMarkdown: "5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
-                        .font(.body)
-                    Text(articleMarkdown: "6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
-                        .font(.body)
-                    Text(articleMarkdown: "7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
-                        .font(.body)
+                    ArticleStep("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
+                    ArticleStep("2. Say **“Bismillah“**, and wash both **hands** three times.")
+                    ArticleStep("3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
+                    ArticleStep("4. Perform a **complete wudhu**, as you would for prayer.")
+                    ArticleStep("5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
+                    ArticleStep("6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
+                    ArticleStep("7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
 
                     Text(articleMarkdown: "**The obligation is only two things:** the intention, and that water reaches every part of the body including the mouth and nose. The order and the repetition above are Sunnah. If a person simply immerses fully in water with the intention, the ghusl is valid.")
                         .font(.body)
@@ -488,8 +443,7 @@ struct GhuslView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ghusl lifts major impurity and returns a person to the state in which they may pray. Its obligation is simple: intend it, and let the water reach all of you.")
-                        .font(.body)
+                    ArticleClosing("Ghusl lifts major impurity and returns a person to the state in which they may pray. Its obligation is simple: intend it, and let the water reach all of you.")
                 }
 
                 ArticleSourcesSection(article: "GhuslView")
@@ -506,8 +460,7 @@ struct JumuahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Jumuah is the Friday congregational prayer that replaces Dhuhr: a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
-                        .font(.body)
+                    ArticleLead("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr: a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -541,20 +494,17 @@ struct JumuahView: View {
                     Text(verbatim: "Muslims are encouraged to engage in specific acts of worship on Jumuah:")
                         .font(.body)
 
-                    Text(articleMarkdown: "1. **Reciting Surah Al-Kahf (سُورَة ٱلكَهف):** The Prophet Muhammad (peace and blessings be upon him) said:")
-                        .font(.body)
+                    ArticleStep("1. **Reciting Surah Al-Kahf (سُورَة ٱلكَهف):** The Prophet Muhammad (peace and blessings be upon him) said:")
 
                     ScriptureQuote(text: "“Whoever reads Surah Al-Kahf on Friday, a light will shine for him between the two Fridays” (al-Hakim 2/368 and al-Bayhaqi; graded sahih by al-Albani, Sahih al-Jami' 6470).", arabic: "مَن قَرَأَ سُورَةَ الكَهفِ فِي يَومِ الجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَينَ الجُمُعَتَينِ", dimmed: true)
 
-                    Text(articleMarkdown: "2. **Sending Salawat on the Prophet (peace and blessings be upon him):**")
-                        .font(.body)
+                    ArticleStep("2. **Sending Salawat on the Prophet (peace and blessings be upon him):**")
 
                     ScriptureQuote(hadith: "abudawud:1047", cite: "Sunan Abi Dawud 1047; graded sahih by al-Albani", arabic: 33...56, english: 4...53)
 
                     ScriptureQuote(hadith: "muslim:408", cite: "Sahih Muslim 408", arabic: 32...39, english: 6...16)
 
-                    Text(articleMarkdown: "3. **Making Dua (Supplication)**: There is a special hour on Friday during which all supplications are accepted. The Prophet Muhammad (peace and blessings be upon him) said:")
-                        .font(.body)
+                    ArticleStep("3. **Making Dua (Supplication)**: There is a special hour on Friday during which all supplications are accepted. The Prophet Muhammad (peace and blessings be upon him) said:")
 
                     ScriptureQuote(hadith: "nasai:1389", cite: "Sunan an-Nasa'i 1389; graded sahih by al-Albani", arabic: 53...73, english: 6...38)
                 }
@@ -563,19 +513,15 @@ struct JumuahView: View {
                     Text(verbatim: "Observing proper etiquette during Jumuah is essential:")
                         .font(.body)
 
-                    Text(verbatim: "1. Arrive early to the mosque and sit attentively during the Khutbah.")
-                        .font(.body)
+                    ArticleStep(verbatim: "1. Arrive early to the mosque and sit attentively during the Khutbah.")
 
-                    Text(verbatim: "2. Wear clean and modest clothing as Friday is a day of significance.")
-                        .font(.body)
+                    ArticleStep(verbatim: "2. Wear clean and modest clothing as Friday is a day of significance.")
 
-                    Text(verbatim: "3. Avoid distractions, such as using phones, during the sermon.")
-                        .font(.body)
+                    ArticleStep(verbatim: "3. Avoid distractions, such as using phones, during the sermon.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Friday is the best day of the week: a weekly gathering for remembrance, with special reward in reciting Surah al-Kahf and sending salawat upon the Prophet.")
-                        .font(.body)
+                    ArticleClosing("Friday is the best day of the week: a weekly gathering for remembrance, with special reward in reciting Surah al-Kahf and sending salawat upon the Prophet.")
                 }
 
                 ArticleSourcesSection(article: "JumuahView")
@@ -594,8 +540,7 @@ struct AdhanOtherView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Adhan is the melodious call announcing each of the five daily prayers, first given in Madinah and famously called by Bilal ibn Rabah.")
-                        .font(.body)
+                    ArticleLead("In short: the Adhan is the melodious call announcing each of the five daily prayers, first given in Madinah and famously called by Bilal ibn Rabah.")
                 }
 
                 Section(header: ArticleHeader("HISTORY")) {
@@ -696,8 +641,7 @@ struct AdhanOtherView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Its words proclaim the greatness and oneness of Allah and the messengership of Muhammad, calling the believers to prayer and to success.")
-                        .font(.body)
+                    ArticleClosing("Its words proclaim the greatness and oneness of Allah and the messengership of Muhammad, calling the believers to prayer and to success.")
                 }
 
                 Section(header: ArticleHeader("THE VIRTUE OF THE ADHAN")) {
@@ -734,8 +678,7 @@ struct IqamahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Iqamah is the second, shorter call given just before the congregation stands, signaling that the prayer is about to begin.")
-                        .font(.body)
+                    ArticleLead("In short: the Iqamah is the second, shorter call given just before the congregation stands, signaling that the prayer is about to begin.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -810,8 +753,7 @@ struct IqamahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Where the Adhan calls the community to gather, the Iqamah announces that the prayer has been established and the rows are to be formed.")
-                        .font(.body)
+                    ArticleClosing("Where the Adhan calls the community to gather, the Iqamah announces that the prayer has been established and the rows are to be formed.")
                 }
 
                 Section(header: ArticleHeader("AFTER THE IQAMAH")) {
@@ -845,21 +787,15 @@ struct TakbiratView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Eid prayer is two rak'ah with extra takbirs, prayed in congregation after sunrise with no Adhan and no Iqamah, followed by the khutbah.")
-                        .font(.body)
+                    ArticleLead("In short: the Eid prayer is two rak'ah with extra takbirs, prayed in congregation after sunrise with no Adhan and no Iqamah, followed by the khutbah.")
                 }
 
                 Section(header: ArticleHeader("BEFORE YOU GO")) {
-                    Text(articleMarkdown: "1. Perform **ghusl (غُسل)**, wear your best clothes, and apply perfume (for men).")
-                        .font(.body)
-                    Text(articleMarkdown: "2. For **Eid al-Fitr**, eat an odd number of dates before leaving. For **Eid al-Adha**, do not eat until after the prayer, so that the first thing you eat is from the sacrifice.")
-                        .font(.body)
-                    Text(articleMarkdown: "3. Pay **Zakat al-Fitr** before the prayer (Eid al-Fitr only). If it is paid after the prayer, it counts as ordinary charity, not as Zakat al-Fitr.")
-                        .font(.body)
-                    Text(verbatim: "4. Say the Takbir on the way, out loud (see below).")
-                        .font(.body)
-                    Text(articleMarkdown: "5. Go out to the **musalla (مُصَلَّى)**, the open prayer ground, which is the Sunnah, and take the women and children with you. Go by one route and return by another. Jabir (may Allah be pleased with him) said:")
-                        .font(.body)
+                    ArticleStep("1. Perform **ghusl (غُسل)**, wear your best clothes, and apply perfume (for men).")
+                    ArticleStep("2. For **Eid al-Fitr**, eat an odd number of dates before leaving. For **Eid al-Adha**, do not eat until after the prayer, so that the first thing you eat is from the sacrifice.")
+                    ArticleStep("3. Pay **Zakat al-Fitr** before the prayer (Eid al-Fitr only). If it is paid after the prayer, it counts as ordinary charity, not as Zakat al-Fitr.")
+                    ArticleStep(verbatim: "4. Say the Takbir on the way, out loud (see below).")
+                    ArticleStep("5. Go out to the **musalla (مُصَلَّى)**, the open prayer ground, which is the Sunnah, and take the women and children with you. Go by one route and return by another. Jabir (may Allah be pleased with him) said:")
                     ScriptureQuote(hadith: "bukhari:986", cite: "Sahih al-Bukhari 986", arabic: 20...31, english: 0...25)
                 }
 
@@ -879,23 +815,16 @@ struct TakbiratView: View {
 
                     Text(articleMarkdown: "**First rak'ah:**")
                         .font(.body)
-                    Text(articleMarkdown: "1. Make the intention in the heart, then the opening takbir, **Takbirat al-Ihram (تَكبِيرَة الإِحرَام)**, raising the hands.")
-                        .font(.body)
-                    Text(articleMarkdown: "2. Say the opening supplication (**du'a al-istiftah**).")
-                        .font(.body)
-                    Text(articleMarkdown: "3. Say **seven takbirs** in total in this rak'ah before the recitation, raising the hands with each. (Scholars differ over whether the opening takbir is counted as one of the seven; both are practised and the prayer is valid either way. Do not argue over it.)")
-                        .font(.body)
-                    Text(articleMarkdown: "4. Then say the ta'awwudh and recite **al-Fatihah**, followed by a surah. From the Sunnah: **Surah al-A'la (87)** in the first rak'ah and **al-Ghashiyah (88)** in the second, or **Qaf (50)** and **al-Qamar (54)**.")
-                        .font(.body)
-                    Text(verbatim: "5. Then complete the rak'ah as normal: ruku', standing, and two prostrations.")
-                        .font(.body)
+                    ArticleStep("1. Make the intention in the heart, then the opening takbir, **Takbirat al-Ihram (تَكبِيرَة الإِحرَام)**, raising the hands.")
+                    ArticleStep("2. Say the opening supplication (**du'a al-istiftah**).")
+                    ArticleStep("3. Say **seven takbirs** in total in this rak'ah before the recitation, raising the hands with each. (Scholars differ over whether the opening takbir is counted as one of the seven; both are practised and the prayer is valid either way. Do not argue over it.)")
+                    ArticleStep("4. Then say the ta'awwudh and recite **al-Fatihah**, followed by a surah. From the Sunnah: **Surah al-A'la (87)** in the first rak'ah and **al-Ghashiyah (88)** in the second, or **Qaf (50)** and **al-Qamar (54)**.")
+                    ArticleStep(verbatim: "5. Then complete the rak'ah as normal: ruku', standing, and two prostrations.")
 
                     Text(articleMarkdown: "**Second rak'ah:**")
                         .font(.body)
-                    Text(articleMarkdown: "6. Stand, and before reciting, say **five takbirs**, raising the hands with each. These are apart from the takbir you said when standing up from prostration.")
-                        .font(.body)
-                    Text(verbatim: "7. Recite al-Fatihah and a surah, then complete the rak'ah, sit for the tashahhud, and give the salaam.")
-                        .font(.body)
+                    ArticleStep("6. Stand, and before reciting, say **five takbirs**, raising the hands with each. These are apart from the takbir you said when standing up from prostration.")
+                    ArticleStep(verbatim: "7. Recite al-Fatihah and a surah, then complete the rak'ah, sit for the tashahhud, and give the salaam.")
 
                     Text(articleMarkdown: "There is **no nafl prayer** before or after the Eid prayer at the musalla.")
                         .font(.body)
@@ -924,11 +853,9 @@ struct TakbiratView: View {
                     Text(verbatim: "In Islam, there are two major annual celebrations known as Eid:")
                         .font(.body)
 
-                    Text(articleMarkdown: "1. **Eid al-Fitr (عِيد الفِطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
-                        .font(.body)
+                    ArticleStep("1. **Eid al-Fitr (عِيد الفِطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
 
-                    Text(articleMarkdown: "2. **Eid al-Adha (عِيد الأَضحَى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
-                        .font(.body)
+                    ArticleStep("2. **Eid al-Adha (عِيد الأَضحَى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
                 }
 
                 Section(header: ArticleHeader("TAKBIRAT AL-EID")) {
@@ -993,8 +920,7 @@ struct TakbiratView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude: after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
-                        .font(.body)
+                    ArticleClosing("By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude: after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
                 }
 
                 ArticleSourcesSection(article: "TakbiratView")
@@ -1011,8 +937,7 @@ struct HijriCalendarView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Hijri calendar is the Islamic lunar calendar of twelve months, dated from the Prophet's migration (Hijrah) to Madinah in 622 CE.")
-                        .font(.body)
+                    ArticleLead("In short: the Hijri calendar is the Islamic lunar calendar of twelve months, dated from the Prophet's migration (Hijrah) to Madinah in 622 CE.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1064,8 +989,7 @@ struct HijriCalendarView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "About eleven days shorter than the solar year, it sets the timing of Ramadan, Hajj, and the two Eids, and marks the four sacred months.")
-                        .font(.body)
+                    ArticleClosing("About eleven days shorter than the solar year, it sets the timing of Ramadan, Hajj, and the two Eids, and marks the four sacred months.")
                 }
 
                 ArticleSourcesSection(article: "HijriCalendarView")
@@ -1085,8 +1009,7 @@ struct SacredMonthsView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: four of the twelve Hijri months are sacred (Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab), and Allah singled them out for honour, forbade fighting in them, and warned against wronging oneself in them.")
-                        .font(.body)
+                    ArticleLead("In short: four of the twelve Hijri months are sacred (Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab), and Allah singled them out for honour, forbade fighting in them, and warned against wronging oneself in them.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1193,8 +1116,7 @@ struct SacredMonthsView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Four months of the twelve are sacred by Allah's decree: Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab. Fighting in them was forbidden, sin in them is heavier, and moving them, as the Arabs once did, was called an increase in disbelief. What is legislated in them is what the texts name: the fast of Ashura in Muharram, and the ten days, Arafah, and Hajj in Dhul-Hijjah. What is not named, above all in Rajab, is left alone.")
-                        .font(.body)
+                    ArticleClosing("Four months of the twelve are sacred by Allah's decree: Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab. Fighting in them was forbidden, sin in them is heavier, and moving them, as the Arabs once did, was called an increase in disbelief. What is legislated in them is what the texts name: the fast of Ashura in Muharram, and the ten days, Arafah, and Hajj in Dhul-Hijjah. What is not named, above all in Rajab, is left alone.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1228,8 +1150,7 @@ struct MoonSightingView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: a Hijri month begins when the new crescent is sighted, and if it cannot be seen the month before is completed as thirty days. Sighting, not calculation, is what the Sunnah made the sign.")
-                        .font(.body)
+                    ArticleLead("In short: a Hijri month begins when the new crescent is sighted, and if it cannot be seen the month before is completed as thirty days. Sighting, not calculation, is what the Sunnah made the sign.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1296,8 +1217,7 @@ struct MoonSightingView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The month begins with the eye, not the calendar: the crescent is sighted, or thirty days are completed. Calculation serves the sighting and does not replace it. Whether one sighting binds the whole ummah or each land follows its own is a real difference among scholars, and in practice a Muslim keeps the fast and the Eid of the people among whom he lives.")
-                        .font(.body)
+                    ArticleClosing("The month begins with the eye, not the calendar: the crescent is sighted, or thirty days are completed. Calculation serves the sighting and does not replace it. Whether one sighting binds the whole ummah or each land follows its own is a real difference among scholars, and in practice a Muslim keeps the fast and the Eid of the people among whom he lives.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1331,8 +1251,7 @@ struct CompileView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Quran was preserved from the start by mass memorization and careful writing, gathered into one volume under Abu Bakr, and standardized under Uthman.")
-                        .font(.body)
+                    ArticleLead("In short: the Quran was preserved from the start by mass memorization and careful writing, gathered into one volume under Abu Bakr, and standardized under Uthman.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1354,12 +1273,9 @@ struct CompileView: View {
                 }
 
                 Section(header: ArticleHeader("DURING THE PROPHET’S LIFETIME ﷺ")) {
-                    Text(verbatim: "• Memorization first: Many Companions memorized the Quran word-for-word and reviewed it with Prophet Muhammad (peace and blessings be upon him) in prayer and lessons.")
-                        .font(.body)
-                    Text(verbatim: "• Official scribes: Verses were dictated to scribes such as Zayd ibn Thabit, Ubayy ibn Ka‘b, and others, and kept as written fragments verified by Prophet Muhammad (peace and blessings be upon him).")
-                        .font(.body)
-                    Text(verbatim: "• Annual review: Jibril reviewed the entire Quran with Prophet Muhammad (peace and blessings be upon him) yearly in Ramadan; in the final year, the review occurred twice, confirming wording and order.")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• Memorization first: Many Companions memorized the Quran word-for-word and reviewed it with Prophet Muhammad (peace and blessings be upon him) in prayer and lessons.")
+                    ArticleBullet(verbatim: "• Official scribes: Verses were dictated to scribes such as Zayd ibn Thabit, Ubayy ibn Ka‘b, and others, and kept as written fragments verified by Prophet Muhammad (peace and blessings be upon him).")
+                    ArticleBullet(verbatim: "• Annual review: Jibril reviewed the entire Quran with Prophet Muhammad (peace and blessings be upon him) yearly in Ramadan; in the final year, the review occurred twice, confirming wording and order.")
                 }
 
                 Section(header: ArticleHeader("FIRST COMPILATION UNDER ABU BAKR")) {
@@ -1414,12 +1330,9 @@ struct CompileView: View {
 
                 Section(header: ArticleHeader("KEY REPORTS (BRIEF)")) {
                     ScriptureQuote(hadith: "bukhari:4992", cite: "Sahih al-Bukhari 4992, Sahih Muslim 818", arabic: 177...187, english: 204...237)
-                    Text(verbatim: "• Double review in final Ramadan (al-Ardah al-Akhirah): reported in authentic narrations.")
-                        .font(.body)
-                    Text(verbatim: "• Abu Bakr’s compilation via Zayd after Yamamah: authentic reports in Sahih collections.")
-                        .font(.body)
-                    Text(verbatim: "• Uthman’s committee (with Zayd) and distribution of official copies: authentic reports in Sahih collections.")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• Double review in final Ramadan (al-Ardah al-Akhirah): reported in authentic narrations.")
+                    ArticleBullet(verbatim: "• Abu Bakr’s compilation via Zayd after Yamamah: authentic reports in Sahih collections.")
+                    ArticleBullet(verbatim: "• Uthman’s committee (with Zayd) and distribution of official copies: authentic reports in Sahih collections.")
                 }
 
                 Section(header: ArticleHeader("MANUSCRIPT EVIDENCE (HISTORICAL NOTES)")) {
@@ -1463,8 +1376,7 @@ struct CompileView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed, fulfilling Allah's promise to preserve it.")
-                        .font(.body)
+                    ArticleClosing("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed, fulfilling Allah's promise to preserve it.")
                 }
 
                 ArticleSourcesSection(article: "CompileView")
@@ -1484,8 +1396,7 @@ struct TajweedView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Tajweed is the science of reciting the Quran correctly: giving each letter its proper articulation and every rule its due.")
-                        .font(.body)
+                    ArticleLead("In short: Tajweed is the science of reciting the Quran correctly: giving each letter its proper articulation and every rule its due.")
                 }
 
                 Section(header: ArticleHeader("TAJWEED LEGEND")) {
@@ -1573,8 +1484,7 @@ struct TajweedView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Reciting with Tajweed preserves the Quran's pronunciation as it was received from the Prophet, and beautifies and safeguards its meaning.")
-                        .font(.body)
+                    ArticleClosing("Reciting with Tajweed preserves the Quran's pronunciation as it was received from the Prophet, and beautifies and safeguards its meaning.")
                 }
 
                 ArticleSourcesSection(article: "TajweedView")
@@ -1618,8 +1528,7 @@ struct JuzView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month, especially in Ramadan.")
-                        .font(.body)
+                    ArticleLead("In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month, especially in Ramadan.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1696,8 +1605,7 @@ struct JuzView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The thirty Juz are a practical division for reading and memorization, not part of the revelation's meaning, helping Muslims complete the Quran regularly.")
-                        .font(.body)
+                    ArticleClosing("The thirty Juz are a practical division for reading and memorization, not part of the revelation's meaning, helping Muslims complete the Quran regularly.")
                 }
 
                 ArticleSourcesSection(article: "JuzView")
@@ -1716,8 +1624,7 @@ struct AhrufView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Quran was revealed in seven ahruf (modes of recitation) as a mercy easing its recitation for the different Arab tribes.")
-                        .font(.body)
+                    ArticleLead("In short: the Quran was revealed in seven ahruf (modes of recitation) as a mercy easing its recitation for the different Arab tribes.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1824,8 +1731,7 @@ struct AhrufView: View {
 
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The seven ahruf are all from Allah; the Uthmanic mushaf, written in a skeletal rasm without dots or tashkeel and sent to all the major cities, supported them, and the canonical recitations preserve them to this day.")
-                        .font(.body)
+                    ArticleClosing("The seven ahruf are all from Allah; the Uthmanic mushaf, written in a skeletal rasm without dots or tashkeel and sent to all the major cities, supported them, and the canonical recitations preserve them to this day.")
                 }
 
                 ArticleSourcesSection(article: "AhrufView")
@@ -1902,8 +1808,7 @@ struct QiraatView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the ten Qiraat are the authentic, mass-transmitted ways of reciting the Quran, each traced through a continuous chain to the Prophet.")
-                        .font(.body)
+                    ArticleLead("In short: the ten Qiraat are the authentic, mass-transmitted ways of reciting the Quran, each traced through a continuous chain to the Prophet.")
                 }
 
                 // The reading is one thing, seeing it another: the explorer walks the places where
@@ -1995,13 +1900,18 @@ struct QiraatView: View {
                     Text(verbatim: "There is no fourth category of contradiction. Across all the canonical readings, not a single ayah makes lawful what another forbids or affirms what another denies; the differences enrich the meaning, never oppose it.")
                         .font(.body)
                         .foregroundColor(appearance.accent)
+
+                    // What a reader SEES when they switch riwayah (Abu, 2026-09-29: "mention which
+                    // riwayahs have hamzas, which don't, which have Madani hamzat al-wasl and which
+                    // have dots"), on a page of its own with counts from the app's texts.
+                    Text(verbatim: "The mushafs differ on the page too: which readings pronounce the hamzah and which ease or drop it, the Madani dot for hamzat al-wasl, and the dots of imalah and taqlil under the letters.")
+                        .font(.body)
+                    ArticleDoorRow(door: .article("RiwayatDifferencesView"))
                 }
 
                 Section(header: ArticleHeader("QIRAAH (قِرَاءَة) VS RIWAYAH (رِوَايَة)")) {
-                    Text(verbatim: "• Qiraah: the recitation method attributed to an Imam of recitation (e.g., Nafi, Asim).")
-                        .font(.body)
-                    Text(verbatim: "• Riwayah: the narration/transmission of that Qiraah by a primary rawi (narrator). Each Qiraah has two principal riwayaat (plural of riwayah).")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• Qiraah: the recitation method attributed to an Imam of recitation (e.g., Nafi, Asim).")
+                    ArticleBullet(verbatim: "• Riwayah: the narration/transmission of that Qiraah by a primary rawi (narrator). Each Qiraah has two principal riwayaat (plural of riwayah).")
 
                     Text(verbatim: "Example: “Hafs an Asim” means the riwayah (narration) of Hafs (حَفص) from the Qiraah (recitation) of Asim (عَاصِم). “Warsh an Nafi” means the riwayah of Warsh (وَرش) from the Qiraah of Nafi (نَافِع).")
                         .font(.body)
@@ -2183,12 +2093,9 @@ struct QiraatView: View {
                 }
 
                 Section(header: ArticleHeader("PRACTICAL STUDY & ADVICE")) {
-                    Text(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
-                        .font(.body)
-                    Text(verbatim: "• Begin with one riwayah (commonly Hafs an Asim), then explore others (e.g., Warsh an Nafi) as you progress.")
-                        .font(.body)
-                    Text(verbatim: "• Remember: differences are a mercy, not a contradiction. They illuminate the Quran’s depth and precision.")
-                        .font(.body)
+                    ArticleBullet(verbatim: "• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
+                    ArticleBullet(verbatim: "• Begin with one riwayah (commonly Hafs an Asim), then explore others (e.g., Warsh an Nafi) as you progress.")
+                    ArticleBullet(verbatim: "• Remember: differences are a mercy, not a contradiction. They illuminate the Quran’s depth and precision.")
                 }
 
                 Section(header: ArticleHeader("IN-APP AUDIO")) {
@@ -2251,8 +2158,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The differences among the Qiraat are all revelation and add richness of meaning; none contradicts another, and all are recited today.")
-                        .font(.body)
+                    ArticleClosing("The differences among the Qiraat are all revelation and add richness of meaning; none contradicts another, and all are recited today.")
 
                     // The textual comparison: the output of a program that diffed the printed mushafs,
                     // word by word against Hafs. It hid behind seven taps on the closing line until
@@ -2321,8 +2227,7 @@ struct FarewellView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Farewell Sermon was the Prophet's final address to the Ummah at Arafat, summarizing the core teachings of Islam for all time.")
-                        .font(.body)
+                    ArticleLead("In short: the Farewell Sermon was the Prophet's final address to the Ummah at Arafat, summarizing the core teachings of Islam for all time.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -2376,8 +2281,7 @@ struct FarewellView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah, delivered as his religion was perfected.")
-                        .font(.body)
+                    ArticleClosing("In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah, delivered as his religion was perfected.")
                 }
 
                 ArticleSourcesSection(article: "FarewellView")
@@ -2394,8 +2298,7 @@ struct SahabahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world, the best generation of this Ummah.")
-                        .font(.body)
+                    ArticleLead("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world, the best generation of this Ummah.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -2486,8 +2389,7 @@ struct SahabahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Allah praised the Companions and was pleased with them. Through them the Quran and Sunnah were preserved and conveyed, and honoring them is part of the faith.")
-                        .font(.body)
+                    ArticleClosing("Allah praised the Companions and was pleased with them. Through them the Quran and Sunnah were preserved and conveyed, and honoring them is part of the faith.")
                 }
 
                 ArticleSourcesSection(article: "SahabahView")
@@ -2506,8 +2408,7 @@ struct WivesView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the wives of the Prophet are the “Mothers of the Believers,” honored for their faith, and several became key teachers of Islam.")
-                        .font(.body)
+                    ArticleLead("In short: the wives of the Prophet are the “Mothers of the Believers,” honored for their faith, and several became key teachers of Islam.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -2601,17 +2502,17 @@ struct WivesView: View {
 
                 Section(header: ArticleHeader("THE ELEVEN WIVES")) {
                     Group {
-                        Text(verbatim: "• Khadijah bint Khuwaylid (may Allah be pleased with her)")
-                        Text(verbatim: "• Sawdah bint Zam’ah (may Allah be pleased with her)")
-                        Text(verbatim: "• Aisha bint Abi Bakr (may Allah be pleased with her)")
-                        Text(verbatim: "• Hafsah bint Umar (may Allah be pleased with her)")
-                        Text(verbatim: "• Zaynab bint Khuzaymah (may Allah be pleased with her)")
-                        Text(verbatim: "• Umm Salamah (Hind bint Abi Umayyah) (may Allah be pleased with her)")
-                        Text(verbatim: "• Zaynab bint Jahsh (may Allah be pleased with her)")
-                        Text(verbatim: "• Juwayriyah bint al-Harith (may Allah be pleased with her)")
-                        Text(verbatim: "• Umm Habibah (Ramlah bint Abi Sufyan) (may Allah be pleased with her)")
-                        Text(verbatim: "• Safiyyah bint Huyayy (may Allah be pleased with her)")
-                        Text(verbatim: "• Maymunah bint al-Harith (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Khadijah bint Khuwaylid (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Sawdah bint Zam’ah (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Aisha bint Abi Bakr (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Hafsah bint Umar (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Zaynab bint Khuzaymah (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Umm Salamah (Hind bint Abi Umayyah) (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Zaynab bint Jahsh (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Juwayriyah bint al-Harith (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Umm Habibah (Ramlah bint Abi Sufyan) (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Safiyyah bint Huyayy (may Allah be pleased with her)")
+                        ArticleBullet(verbatim: "• Maymunah bint al-Harith (may Allah be pleased with her)")
                     }
                     .font(.body)
                 }
@@ -2620,17 +2521,13 @@ struct WivesView: View {
                     Text(verbatim: "These marriages fulfilled many noble purposes:")
                         .font(.body)
 
-                    Text(articleMarkdown: "• **Supporting widows** who lost husbands in early battles.")
-                        .font(.body)
+                    ArticleBullet("• **Supporting widows** who lost husbands in early battles.")
 
-                    Text(articleMarkdown: "• **Forming alliances** with key tribes to strengthen the Muslim community.")
-                        .font(.body)
+                    ArticleBullet("• **Forming alliances** with key tribes to strengthen the Muslim community.")
 
-                    Text(articleMarkdown: "• **Spreading Islamic knowledge**, as many of his wives became teachers and Hadith narrators.")
-                        .font(.body)
+                    ArticleBullet("• **Spreading Islamic knowledge**, as many of his wives became teachers and Hadith narrators.")
 
-                    Text(articleMarkdown: "• **Setting legal and social precedents** for Muslim family law and ethics.")
-                        .font(.body)
+                    ArticleBullet("• **Setting legal and social precedents** for Muslim family law and ethics.")
                 }
 
                 Section(header: ArticleHeader("LEGACY")) {
@@ -2642,8 +2539,7 @@ struct WivesView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Through the Prophet's wives, especially Aisha, much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
-                        .font(.body)
+                    ArticleClosing("Through the Prophet's wives, especially Aisha, much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
                 }
 
                 ArticleSourcesSection(article: "WivesView")
@@ -2660,8 +2556,7 @@ struct CaliphatesView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Caliphate is the leadership that continued the Prophet's mission, beginning with the Rightly Guided Caliphs Abu Bakr, Umar, Uthman, and Ali.")
-                        .font(.body)
+                    ArticleLead("In short: the Caliphate is the leadership that continued the Prophet's mission, beginning with the Rightly Guided Caliphs Abu Bakr, Umar, Uthman, and Ali.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -2784,8 +2679,7 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The Rightly Guided Caliphs are the model of just Islamic governance: preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
-                        .font(.body)
+                    ArticleClosing("The Rightly Guided Caliphs are the model of just Islamic governance: preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
                 }
 
                 ArticleSourcesSection(article: "CaliphatesView")
@@ -3064,8 +2958,7 @@ struct AhlulBaytView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Ahlul Bayt are the family of the Prophet; loving, honoring, and upholding their rights is part of the religion.")
-                        .font(.body)
+                    ArticleLead("In short: the Ahlul Bayt are the family of the Prophet; loving, honoring, and upholding their rights is part of the religion.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -3168,8 +3061,7 @@ struct AhlulBaytView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers, joined with love for all his Companions.")
-                        .font(.body)
+                    ArticleClosing("Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers, joined with love for all his Companions.")
                 }
 
                 ArticleSourcesSection(article: "AhlulBaytView")
@@ -3186,8 +3078,7 @@ struct AhlusSunnahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ahl as-Sunnah wal-Jama'ah are those who hold to the Sunnah of the Prophet upon the understanding of his Companions, united in creed.")
-                        .font(.body)
+                    ArticleLead("In short: Ahl as-Sunnah wal-Jama'ah are those who hold to the Sunnah of the Prophet upon the understanding of his Companions, united in creed.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -3226,25 +3117,19 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: ArticleHeader("THEIR CREED (AQEEDAH)")) {
-                    Text(articleMarkdown: "• **Tawhid**: Allah alone is worshipped, and He alone is the Lord, and He is called by His beautiful Names and described by His perfect Attributes.")
-                        .font(.body)
+                    ArticleBullet("• **Tawhid**: Allah alone is worshipped, and He alone is the Lord, and He is called by His beautiful Names and described by His perfect Attributes.")
 
-                    Text(articleMarkdown: "• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
-                        .font(.body)
+                    ArticleBullet("• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
 
                     ScriptureQuote(quran: "42:11", words: 13...18)
 
-                    Text(articleMarkdown: "• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
-                        .font(.body)
+                    ArticleBullet("• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
 
-                    Text(articleMarkdown: "• **Qadar**: everything occurs by Allah’s knowledge, writing, will, and creation, while the servant has real choice and responsibility.")
-                        .font(.body)
+                    ArticleBullet("• **Qadar**: everything occurs by Allah’s knowledge, writing, will, and creation, while the servant has real choice and responsibility.")
 
-                    Text(articleMarkdown: "• **No takfir** of a Muslim for a major sin, so long as he does not deem it lawful. The sinner remains a believer, deficient in faith.")
-                        .font(.body)
+                    ArticleBullet("• **No takfir** of a Muslim for a major sin, so long as he does not deem it lawful. The sinner remains a believer, deficient in faith.")
 
-                    Text(articleMarkdown: "• Love for **all the Companions** (may Allah be pleased with them) and the **Ahlul Bayt**, without exaggeration in either direction.")
-                        .font(.body)
+                    ArticleBullet("• Love for **all the Companions** (may Allah be pleased with them) and the **Ahlul Bayt**, without exaggeration in either direction.")
                 }
 
                 Section(header: ArticleHeader("THE SAVED GROUP")) {
@@ -3287,8 +3172,7 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Not a sect but the original, undivided Islam: taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
-                        .font(.body)
+                    ArticleClosing("Not a sect but the original, undivided Islam: taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
                 }
 
                 ArticleSourcesSection(article: "AhlusSunnahView")
@@ -3305,8 +3189,7 @@ struct SeerahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Seerah is the life story of Prophet Muhammad: his character, mission, and example, drawn from the Quran and authentic reports.")
-                        .font(.body)
+                    ArticleLead("In short: the Seerah is the life story of Prophet Muhammad: his character, mission, and example, drawn from the Quran and authentic reports.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -3381,8 +3264,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Studying the Seerah shows how revelation was lived and deepens a Muslim's love and following of the Prophet, the best example for all people.")
-                        .font(.body)
+                    ArticleClosing("Studying the Seerah shows how revelation was lived and deepens a Muslim's love and following of the Prophet, the best example for all people.")
                 }
 
                 ArticleSourcesSection(article: "SeerahView")
@@ -3399,8 +3281,7 @@ struct TafsirView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Tafsir is the explanation of the Quran's meanings, soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
-                        .font(.body)
+                    ArticleLead("In short: Tafsir is the explanation of the Quran's meanings, soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -3457,8 +3338,7 @@ struct TafsirView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "True Tafsir rests on knowledge, not opinion; through it the guidance of the Quran becomes clear and livable for every generation.")
-                        .font(.body)
+                    ArticleClosing("True Tafsir rests on knowledge, not opinion; through it the guidance of the Quran becomes clear and livable for every generation.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -3486,8 +3366,7 @@ struct FiqhAqeedahManhajView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: aqeedah is what you believe, fiqh is what you do, and manhaj is how you understand and derive both from revelation.")
-                        .font(.body)
+                    ArticleLead("In short: aqeedah is what you believe, fiqh is what you do, and manhaj is how you understand and derive both from revelation.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -3535,8 +3414,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "United in creed, allowing valid differences in jurisprudence, and following the method of the first generations: this is the balance a Muslim strives for.")
-                        .font(.body)
+                    ArticleClosing("United in creed, allowing valid differences in jurisprudence, and following the method of the first generations: this is the balance a Muslim strives for.")
                 }
 
                 ArticleSourcesSection(article: "FiqhAqeedahManhajView")

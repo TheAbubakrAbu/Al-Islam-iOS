@@ -28,8 +28,7 @@ struct SahabahScholarsView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the first scholars of Islam were the Companions, taught directly by the Prophet. Every chain of knowledge in the religion passes through them.")
-                        .font(.body)
+                    ArticleLead("In short: the first scholars of Islam were the Companions, taught directly by the Prophet. Every chain of knowledge in the religion passes through them.")
                 }
 
                 Section(header: ArticleHeader("WHY SCHOLARS MATTER")) {
@@ -94,8 +93,7 @@ struct SahabahScholarsView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The Companions were the first scholars and the first teachers. Every madhhab of fiqh, every school of tafsir, and every chain of hadith goes back to one of these men and women sitting before the Prophet.")
-                        .font(.body)
+                    ArticleClosing("The Companions were the first scholars and the first teachers. Every madhhab of fiqh, every school of tafsir, and every chain of hadith goes back to one of these men and women sitting before the Prophet.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -226,8 +224,7 @@ struct SalafScholarsView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Tabi'un learned from the Companions, their students became the imams of fiqh and hadith, and together these three generations are the Salaf whose understanding defines Ahl as-Sunnah.")
-                        .font(.body)
+                    ArticleLead("In short: the Tabi'un learned from the Companions, their students became the imams of fiqh and hadith, and together these three generations are the Salaf whose understanding defines Ahl as-Sunnah.")
                 }
 
                 Section(header: ArticleHeader("THE TABI'UN (SUCCESSORS)")) {
@@ -293,8 +290,7 @@ struct SalafScholarsView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "From Ibn al-Musayyib and al-Hasan al-Basri to the four imams and the authors of the six books, the Salaf carried the religion by chains of teacher and student. The understanding of these generations is the measure of every later scholar.")
-                        .font(.body)
+                    ArticleClosing("From Ibn al-Musayyib and al-Hasan al-Basri to the four imams and the authors of the six books, the Salaf carried the religion by chains of teacher and student. The understanding of these generations is the measure of every later scholar.")
                 }
 
                 ArticleSourcesSection(article: "SalafScholarsView")
@@ -311,8 +307,7 @@ struct TabariView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ibn Jarir at-Tabari (224–310 AH) wrote the greatest early tafsir and the great early history of Islam, gathering the explanations of the Companions and Tabi'un with their chains.")
-                        .font(.body)
+                    ArticleLead("In short: Ibn Jarir at-Tabari (224–310 AH) wrote the greatest early tafsir and the great early history of Islam, gathering the explanations of the Companions and Tabi'un with their chains.")
                 }
 
                 Section(header: ArticleHeader("HIS LIFE")) {
@@ -343,8 +338,7 @@ struct TabariView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "At-Tabari gathered what the first generations said about every verse and every year of history, with the chains that let the nation check it. He is the imam of the mufassirun and the historians.")
-                        .font(.body)
+                    ArticleClosing("At-Tabari gathered what the first generations said about every verse and every year of history, with the chains that let the nation check it. He is the imam of the mufassirun and the historians.")
                 }
 
                 ArticleSourcesSection(article: "TabariView")
@@ -361,8 +355,7 @@ struct IbnTaymiyyahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ibn Taymiyyah (661–728 AH) is Shaykh al-Islam, the reviver who defended the creed of the Salaf against the sects and the philosophers, fought the Mongols, and died in prison for the truth. His students carried his knowledge to the whole nation.")
-                        .font(.body)
+                    ArticleLead("In short: Ibn Taymiyyah (661–728 AH) is Shaykh al-Islam, the reviver who defended the creed of the Salaf against the sects and the philosophers, fought the Mongols, and died in prison for the truth. His students carried his knowledge to the whole nation.")
                 }
 
                 Section(header: ArticleHeader("HIS LIFE")) {
@@ -405,8 +398,7 @@ struct IbnTaymiyyahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ibn Taymiyyah revived the creed of the Salaf when it had been buried under kalam and grave-worship, answered every sect from the Quran and Sunnah, and paid for it with his freedom and his life. The title Shaykh al-Islam is his by the agreement of those who came after.")
-                        .font(.body)
+                    ArticleClosing("Ibn Taymiyyah revived the creed of the Salaf when it had been buried under kalam and grave-worship, answered every sect from the Quran and Sunnah, and paid for it with his freedom and his life. The title Shaykh al-Islam is his by the agreement of those who came after.")
                 }
 
                 ArticleSourcesSection(article: "IbnTaymiyyahView")
@@ -423,8 +415,7 @@ struct IbnQayyimView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ibn al-Qayyim (691–751 AH) was the closest student of Ibn Taymiyyah and the scholar who turned the creed of the Salaf into books on the heart, worship, and law that Muslims still read every day.")
-                        .font(.body)
+                    ArticleLead("In short: Ibn al-Qayyim (691–751 AH) was the closest student of Ibn Taymiyyah and the scholar who turned the creed of the Salaf into books on the heart, worship, and law that Muslims still read every day.")
                 }
 
                 Section(header: ArticleHeader("HIS LIFE")) {
@@ -454,8 +445,7 @@ struct IbnQayyimView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ibn al-Qayyim took the knowledge of his teacher and wrote it for the heart. On dhikr, repentance, sin, love of Allah, and the way of the Prophet, his books are the most read of any scholar of the Salaf after the imams themselves.")
-                        .font(.body)
+                    ArticleClosing("Ibn al-Qayyim took the knowledge of his teacher and wrote it for the heart. On dhikr, repentance, sin, love of Allah, and the way of the Prophet, his books are the most read of any scholar of the Salaf after the imams themselves.")
                 }
 
                 ArticleSourcesSection(article: "IbnQayyimView")
@@ -472,8 +462,7 @@ struct DhahabiView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: adh-Dhahabi (673–748 AH) was the hadith master and historian who wrote the biographies of the whole nation, judging every narrator and scholar by the standard of the Salaf.")
-                        .font(.body)
+                    ArticleLead("In short: adh-Dhahabi (673–748 AH) was the hadith master and historian who wrote the biographies of the whole nation, judging every narrator and scholar by the standard of the Salaf.")
                 }
 
                 Section(header: ArticleHeader("HIS LIFE")) {
@@ -504,8 +493,7 @@ struct DhahabiView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Through adh-Dhahabi the nation knows who its scholars and narrators were, what they believed, and how far they can be trusted. He measured every one of them by the Sunnah, and he asked to be measured the same way.")
-                        .font(.body)
+                    ArticleClosing("Through adh-Dhahabi the nation knows who its scholars and narrators were, what they believed, and how far they can be trusted. He measured every one of them by the Sunnah, and he asked to be measured the same way.")
                 }
 
                 ArticleSourcesSection(article: "DhahabiView")
@@ -522,8 +510,7 @@ struct IbnKathirView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ibn Kathir (701–774 AH) wrote the most widely read tafsir of the Quran and the great history al-Bidayah wan-Nihayah, following the method of his teacher Ibn Taymiyyah: the Quran by the Quran, then the Sunnah, then the Salaf.")
-                        .font(.body)
+                    ArticleLead("In short: Ibn Kathir (701–774 AH) wrote the most widely read tafsir of the Quran and the great history al-Bidayah wan-Nihayah, following the method of his teacher Ibn Taymiyyah: the Quran by the Quran, then the Sunnah, then the Salaf.")
                 }
 
                 Section(header: ArticleHeader("HIS LIFE")) {
@@ -552,8 +539,7 @@ struct IbnKathirView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ibn Kathir explained the Quran by the Quran, the Sunnah, and the Salaf, and told the history of the nation from the beginning to the end. No student of the Quran and no reader of the seerah is without his books.")
-                        .font(.body)
+                    ArticleClosing("Ibn Kathir explained the Quran by the Quran, the Sunnah, and the Salaf, and told the history of the nation from the beginning to the end. No student of the Quran and no reader of the seerah is without his books.")
                 }
 
                 ArticleSourcesSection(article: "IbnKathirView")
@@ -570,8 +556,7 @@ struct LaterScholarsView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: after Ibn Taymiyyah's circle, the creed and the hadith of the Salaf were carried by scholars such as Ibn Rajab, Ibn Hajar, Muhammad ibn Abd al-Wahhab, and, in our own era, Ibn Baz, al-Albani, and Ibn al-Uthaymin.")
-                        .font(.body)
+                    ArticleLead("In short: after Ibn Taymiyyah's circle, the creed and the hadith of the Salaf were carried by scholars such as Ibn Rajab, Ibn Hajar, Muhammad ibn Abd al-Wahhab, and, in our own era, Ibn Baz, al-Albani, and Ibn al-Uthaymin.")
                 }
 
                 Section(header: ArticleHeader("THE EIGHTH AND NINTH CENTURIES")) {
@@ -736,8 +721,7 @@ struct LaterScholarsView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The chain never broke. From Ibn Rajab and Ibn Hajar to the revival in Najd and the scholars of the last century, the creed of the Salaf and the science of hadith were handed down teacher to student, and the same is asked of the student today: take the evidence, honour the scholars, and follow the Prophet.")
-                        .font(.body)
+                    ArticleClosing("The chain never broke. From Ibn Rajab and Ibn Hajar to the revival in Najd and the scholars of the last century, the creed of the Salaf and the science of hadith were handed down teacher to student, and the same is asked of the student today: take the evidence, honour the scholars, and follow the Prophet.")
                 }
 
                 ArticleSourcesSection(article: "LaterScholarsView")

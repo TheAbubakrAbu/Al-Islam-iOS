@@ -378,7 +378,7 @@ struct AyahPreviewCard: View {
         let dots = choices.hideDots && !plain
         let beginner = choices.beginner && !plain
         let qiraah = settings.displayQiraahForArabic
-        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraah)
+        let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: qiraah)
         let base = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: dots, qiraahOverride: qiraah)
         let display = beginner ? base.beginnerSpaced : base
 
@@ -414,7 +414,7 @@ struct AyahPreviewCard: View {
         let glosses: [String] = settings.isHafsDisplay && !beginner
             ? (WordByWordStore.shared.glosses(
                 surah: surah.id, ayah: ayah.id,
-                rawText: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil),
+                rawText: ayah.rawArabicText(surahId: surah.id, qiraahOverride: nil),
                 displayText: display
               ) ?? [])
             : []

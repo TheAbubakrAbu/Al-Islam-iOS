@@ -140,7 +140,7 @@ struct ProphetMiraclesView: View {
 
                     AboutSignsSection(heading: "About Miracles & Prophethood",
                                       systemImage: "staroflife",
-                                      doors: [.prophets, .prophet, .god],
+                                      doors: [.prophets, .prophet, .god, .provingIslam],
                                       openDoor: $openDoor)
 
                     Section(footer: Text("Suggested by Yaqeen Institute (\u{201C}The Physical Miracles of Prophet Muhammad\u{201D}), islammessage.org and mysalahmat.com, with their permission. The verses and narrations are quoted from the Quran and hadith collections bundled in this app.")) {
@@ -206,7 +206,7 @@ struct ProphetMiracleArticleView: View {
         ScrollViewReader { proxy in
         List {
             Group {
-                SignArticleSections(sections: entry.sections)
+                SignArticleSections(sections: entry.sections, lead: entry.summary)
 
                 storiesSection
             }

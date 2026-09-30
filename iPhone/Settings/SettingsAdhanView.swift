@@ -35,12 +35,18 @@ struct SettingsAdhanView: View {
     private let requestedPage: SettingsAdhanPage?
     @State private var openRequestedPage = false
     @State private var deepLinkFired = false
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
+    /// (HelpDoors.swift). The dialogs and the change handlers below stay attached, so Traveling
+    /// Mode's confirmation still presents from there.
+    private let standalonePage: SettingsAdhanPage?
 
     init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false,
-         openPrayerCalculation: Bool = false, openPage: SettingsAdhanPage? = nil) {
+         openPrayerCalculation: Bool = false, openPage: SettingsAdhanPage? = nil,
+         standalonePage: SettingsAdhanPage? = nil) {
         self._showNotifications = State(initialValue: showNotifications)
         self.presentedAsSheet = presentedAsSheet
         self.requestedPage = openTravelingMode ? .travelingMode : (openPrayerCalculation ? .prayerCalculation : openPage)
+        self.standalonePage = standalonePage
     }
 
     private var dialogTitle: String {
@@ -57,7 +63,13 @@ struct SettingsAdhanView: View {
     }
 
     var body: some View {
-        rootList
+        Group {
+            if let standalonePage {
+                adhanPageDestination(standalonePage)
+            } else {
+                rootList
+            }
+        }
         #if os(iOS)
         .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: requestedPage != nil) {
             if let page = requestedPage { adhanPageDestination(page) }
@@ -68,7 +80,7 @@ struct SettingsAdhanView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
         }
         #endif
-        .navigationTitle("Al-Adhan Settings")
+        .navigationTitle(standalonePage?.title ?? "Al-Adhan Settings")
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
@@ -292,6 +304,8 @@ struct SettingsAdhanView: View {
         // nothing on screen announces. See TipsAndTricks.swift.
         #if os(iOS)
         TipsSection(area: .adhan, resolve: resolveSearchDestination)
+        // The Adhan tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+        HelpDoorsSettingsSection(area: .adhan)
         #endif
 
         notificationsSection
@@ -834,7 +848,14 @@ struct NotificationView: View {
             stopAdhanPreview()
             #endif
         }
-        .onChange(of: scenePhase) { _ in requestAuthorizationAndFetchPrayerTimes() }
+        // Only on becoming ACTIVE (the return from the system Settings app after turning notifications
+        // on, which is what this exists for). It used to run on every phase change, so a pulled-down
+        // Control Center (`.inactive`) and the backgrounding itself each re-requested authorization,
+        // re-fetched the prayer times and could re-present the "Notifications Off" dialog.
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active else { return }
+            requestAuthorizationAndFetchPrayerTimes()
+        }
         .confirmationDialog("Notifications Off", isPresented: $showAlert, titleVisibility: .visible) {
             Button("Open Settings") {
                 settings.hapticFeedback()
@@ -1241,12 +1262,18 @@ struct NotificationView: View {
         }
     }
 
-    private func smallButton(_ title: String, systemImage: String) -> some View {
+    /// The watch never stacks these. A function rather than the literal `false`: with the literal,
+    /// the watchOS compile of this shared file warned "will never be executed" (Quality Guide T1).
+    private var smallButtonsStack: Bool {
         #if os(iOS)
-        let stacks = permissionCardStacks
+        return permissionCardStacks
         #else
-        let stacks = false
+        return false
         #endif
+    }
+
+    private func smallButton(_ title: String, systemImage: String) -> some View {
+        let stacks = smallButtonsStack
         return HStack(spacing: 6) {
             // Hidden: SF Symbols carry their own traits, and checkmark.seal made the button
             // "Request Access, selected".
@@ -1545,7 +1572,10 @@ struct MoreNotificationView: View {
                 }
             }
         }
-        .onChange(of: scenePhase) { _ in
+        // Same rule as the notifications root above: on becoming active only, never on `.inactive`
+        // (Control Center, a banner) or on the way to the background.
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active else { return }
             settings.requestNotificationAuthorization {
                 settings.fetchPrayerTimes() {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -1713,6 +1743,7 @@ extension SettingsSearchEntry {
 
     static let adhanEntries: [SettingsSearchEntry] = [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
+        .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),
         .init(title: "Optional Prayer Times", path: "Prayer Settings → Optional Prayers", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerPage(.optionalPrayers)),
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),

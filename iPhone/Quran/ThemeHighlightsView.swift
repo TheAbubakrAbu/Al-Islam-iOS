@@ -130,7 +130,9 @@ struct ThemeHighlightsView: View {
 
     /// A menu of the 114 surahs, showing the chosen one's name and how many passages it has.
     private var surahPicker: some View {
-        Picker(selection: $surahID.animation(.easeInOut)) {
+        // A plain binding: an animated one puts the selection in an animated transaction and the menu's
+        // label lags the tap (memory "picker-no-animated-binding", Quality Guide G8).
+        Picker(selection: $surahID) {
             ForEach(quranData.quran) { surah in
                 Text("\(surah.id). \(surah.nameTransliteration)").tag(surah.id)
             }

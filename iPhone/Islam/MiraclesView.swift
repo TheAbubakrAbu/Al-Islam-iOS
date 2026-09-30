@@ -155,7 +155,8 @@ struct MiracleArticle: Identifiable {
             case .ayah(let surah, let first, let endAyah):
                 let last = min(endAyah ?? first, first + 4)
                 var lines: [String] = []
-                for number in first...last {
+                // Clamped like the rendered block: an end before the start must not trap.
+                for number in first...max(first, last) {
                     guard let ayah = quranData.ayah(surah: surah, ayah: number) else { continue }
                     lines.append(ayah.displayArabicText(surahId: surah, clean: false, qiraahOverride: ""))
                     lines.append(ayah.textEnglishSaheeh)
@@ -413,7 +414,7 @@ struct MiraclesView: View {
 
                     AboutSignsSection(heading: "About the Quran & Its Signs",
                                       systemImage: "sparkles",
-                                      doors: [.quran, .prophet, .god],
+                                      doors: [.quran, .prophet, .god, .provingIslam],
                                       openDoor: $openDoor)
 
                     Section(footer: MiracleCreditFooter()) { EmptyView() }
@@ -848,10 +849,26 @@ struct MiracleBlockView: View {
         case .text(let text, let links):
             MiracleProse(text: text, links: links, style: .body)
         case .closer(let text, let links):
-            VStack(alignment: .leading, spacing: 10) {
-                Divider()
+            // The closing line as the article kit's closing card (ArticleDesign.swift): a seal and a
+            // soft accent ground, the way every Pillars and How-to page now ends.
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title3)
+                    .foregroundColor(appearance.accent)
+                    .accessibilityHidden(true)
+
                 MiracleProse(text: text, links: links, style: .closer)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(LinearGradient(colors: [appearance.accent.opacity(0.13), appearance.accent.opacity(0.03)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(appearance.accent.opacity(0.2), lineWidth: 1))
+            )
             .padding(.top, 4)
         case .ayah(let surah, let first, let endAyah):
             // A cited range is capped at five: the point is the verse the article argues from.

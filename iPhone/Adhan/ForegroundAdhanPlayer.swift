@@ -15,8 +15,9 @@ import UserNotifications
 /// can deliver scheduled local notifications late while the app is open (notably on Mac/Catalyst). To make
 /// the adhan reliable in that case, this arms a precise timer for the next at-time adhan and, when it fires
 /// with the app active, plays the selected adhan sound directly and removes the now-redundant scheduled
-/// notification so it can't sound again late. When the app isn't active this does nothing - the system
-/// notification handles it exactly as before.
+/// notification so it can't sound again late. When the app isn't active this does nothing, and the system
+/// notification handles it exactly as before. The exception is a Mac, where a window left open behind
+/// another app keeps the timer armed (`AppLifecycle.adhanScenePhaseChanged`).
 @MainActor
 final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     static let shared = ForegroundAdhanPlayer()

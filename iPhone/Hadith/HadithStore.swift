@@ -26,7 +26,7 @@ final class HadithUserData: ObservableObject {
         favoriteSlugs = Set(UserDefaults.standard.stringArray(forKey: Self.favoritesKey) ?? [])
         favoriteChapterKeys = Set(UserDefaults.standard.stringArray(forKey: Self.chapterFavoritesKey) ?? [])
         if let data = UserDefaults.standard.data(forKey: Self.bookmarksKey),
-           let decoded = try? JSONDecoder().decode([HadithBookmark].self, from: data) {
+           let decoded = UserDataRescue.decodeList(HadithBookmark.self, from: data, key: Self.bookmarksKey) {
             bookmarks = decoded
             // didSet does not fire inside init - seed the lookup index by hand.
             bookmarksByKey = Dictionary(
@@ -47,7 +47,7 @@ final class HadithUserData: ObservableObject {
         favoriteSlugs = Set(defaults.stringArray(forKey: Self.favoritesKey) ?? [])
         favoriteChapterKeys = Set(defaults.stringArray(forKey: Self.chapterFavoritesKey) ?? [])
         bookmarks = defaults.data(forKey: Self.bookmarksKey)
-            .flatMap { try? JSONDecoder().decode([HadithBookmark].self, from: $0) } ?? []
+            .flatMap { UserDataRescue.decodeList(HadithBookmark.self, from: $0, key: Self.bookmarksKey) } ?? []
     }
 
     /// Favorited book slugs, pinned to the top of the catalog. Persisted in UserDefaults.
@@ -355,7 +355,7 @@ final class HadithStore: ObservableObject {
         viewedLog.loadIfNeeded()
         guard lastReadByBook.isEmpty else { return }
         if let data = UserDefaults.standard.data(forKey: Self.lastReadByBookKey),
-           let decoded = try? JSONDecoder().decode([String: HadithLastRead].self, from: data) {
+           let decoded = UserDataRescue.decode([String: HadithLastRead].self, from: data, key: Self.lastReadByBookKey) {
             lastReadByBook = decoded
         }
         // Migrate the old single global entry into its book's slot (once - it then lives in the dict).
@@ -407,7 +407,7 @@ final class HadithStore: ObservableObject {
             guard !didLoad else { return }
             didLoad = true
             if let data = UserDefaults.standard.data(forKey: Self.key),
-               let decoded = try? JSONDecoder().decode([ViewedEntry].self, from: data) {
+               let decoded = UserDataRescue.decodeList(ViewedEntry.self, from: data, key: Self.key) {
                 entries = decoded
             }
         }
@@ -885,7 +885,9 @@ final class HadithStore: ObservableObject {
         // 3. Deterministic pick across the whole library - the day chooses the book, then the hadith
         //    within it, so only ONE book ever has to open.
         let available = HadithCatalogBook.all
-        let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
+        // The daily day's number, not the calendar day's: a first resolve before Fajr filed today's
+        // pick under yesterday's key and the hadith repeated (A10).
+        let day = Settings.shared.dailyDayIndex()
         for offset in 0..<available.count {
             let candidate = available[(day + offset) % available.count]
             guard let data = book(candidate) else { continue }
@@ -926,7 +928,10 @@ final class HadithStore: ObservableObject {
             guard let data = book(candidate) else { continue }
             guard let pickedRow = await Self.dailyWorthyRow(in: data, index: nil) else { continue }
             let pick = data.hadiths[pickedRow]
-            UserDefaults.standard.set("\(Settings.dayKey())|\(candidate.slug)|\(pick.idInBook)", forKey: Self.dailyOverrideKey)
+            // Filed under the DAILY day `resolveDaily` compares against: under the calendar day a
+            // shuffle before Fajr did nothing, and after Fajr yesterday's shuffle replaced the new
+            // day's hadith (Quality Guide A10).
+            UserDefaults.standard.set("\(Settings.shared.dailyDayKey())|\(candidate.slug)|\(pick.idInBook)", forKey: Self.dailyOverrideKey)
             await resolveDaily(force: true)
             return
         }

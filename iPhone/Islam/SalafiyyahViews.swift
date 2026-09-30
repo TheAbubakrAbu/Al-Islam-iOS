@@ -8,8 +8,7 @@ struct TawhidView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: tawhid is to single Allah out in everything that belongs to Him alone: in His lordship, in His worship, and in His names and attributes. It is why the messengers were sent and the meaning of “there is no deity except Allah.” Its opposite, shirk, is the one sin Allah has said He will never forgive for the one who dies upon it.")
-                        .font(.body)
+                    ArticleLead("In short: tawhid is to single Allah out in everything that belongs to Him alone: in His lordship, in His worship, and in His names and attributes. It is why the messengers were sent and the meaning of “there is no deity except Allah.” Its opposite, shirk, is the one sin Allah has said He will never forgive for the one who dies upon it.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS TAWHID?")) {
@@ -285,8 +284,7 @@ struct TawhidView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Tawhid is to single Allah out in His lordship, His worship, and His names and attributes. Every messenger came with it, the pagans of Makkah accepted the first part and were fought over the second, and the whole of the religion is either a fulfilment of it or a protection of it. Say the word, learn what it negates and what it affirms, act on it, and guard it from everything that competes with Allah in the heart.")
-                        .font(.body)
+                    ArticleClosing("Tawhid is to single Allah out in His lordship, His worship, and His names and attributes. Every messenger came with it, the pagans of Makkah accepted the first part and were fought over the second, and the whole of the religion is either a fulfilment of it or a protection of it. Say the word, learn what it negates and what it affirms, act on it, and guard it from everything that competes with Allah in the heart.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -564,8 +562,7 @@ struct QuranSunnahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Quran and the authentic Sunnah are the two sources of Islam; both are revelation, both are binding, and everything else is judged by them.")
-                        .font(.body)
+                    ArticleLead("In short: the Quran and the authentic Sunnah are the two sources of Islam; both are revelation, both are binding, and everything else is judged by them.")
                 }
 
                 Section(header: ArticleHeader("THE QURAN")) {
@@ -762,8 +759,7 @@ struct QuranSunnahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Two sources, both revelation, both binding: the Book of Allah and the Sunnah of His Messenger. Whatever agrees with them is accepted, and whatever contradicts them is rejected, whoever said it.")
-                        .font(.body)
+                    ArticleClosing("Two sources, both revelation, both binding: the Book of Allah and the Sunnah of His Messenger. Whatever agrees with them is accepted, and whatever contradicts them is rejected, whoever said it.")
                 }
 
                 ArticleSourcesSection(article: "QuranSunnahView")
@@ -993,8 +989,7 @@ struct KufrView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: kufr is disbelief, the rejection or denial of what Allah revealed. Some actions and beliefs take a person out of Islam; knowing them is a protection, and judging a specific person by them is the work of the scholars, not of individuals.")
-                        .font(.body)
+                    ArticleLead("In short: kufr is disbelief, the rejection or denial of what Allah revealed. Some actions and beliefs take a person out of Islam; knowing them is a protection, and judging a specific person by them is the work of the scholars, not of individuals.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS KUFR?")) {
@@ -1192,8 +1187,7 @@ struct KufrView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Kufr is covering the truth after it has come. Its nullifiers are known so that they are avoided, not so that Muslims label one another; the door of takfir is guarded by knowledge, conditions, and the scholars.")
-                        .font(.body)
+                    ArticleClosing("Kufr is covering the truth after it has come. Its nullifiers are known so that they are avoided, not so that Muslims label one another; the door of takfir is guarded by knowledge, conditions, and the scholars.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1289,8 +1283,7 @@ struct BidahView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: bid'ah is a newly invented matter in the religion, done as worship, that the Prophet and his Companions did not do. Every bid'ah is misguidance, however good it looks, because the religion was completed.")
-                        .font(.body)
+                    ArticleLead("In short: bid'ah is a newly invented matter in the religion, done as worship, that the Prophet and his Companions did not do. Every bid'ah is misguidance, however good it looks, because the religion was completed.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS BID'AH?")) {
@@ -1479,8 +1472,7 @@ struct BidahView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Worship is what Allah legislated. Anything added to it, however sincere, is a claim that the religion was incomplete, and the Prophet said every such addition is misguidance. The safe road is the one he and his Companions walked.")
-                        .font(.body)
+                    ArticleClosing("Worship is what Allah legislated. Anything added to it, however sincere, is a claim that the religion was incomplete, and the Prophet said every such addition is misguidance. The safe road is the one he and his Companions walked.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1576,8 +1568,7 @@ struct MawlidView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Prophet, his Companions, the Successors, and the four imams never celebrated his birthday. The mawlid appeared centuries later, so it is an innovation, and love for the Prophet is shown by following him.")
-                        .font(.body)
+                    ArticleLead("In short: the Prophet, his Companions, the Successors, and the four imams never celebrated his birthday. The mawlid appeared centuries later, so it is an innovation, and love for the Prophet is shown by following him.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS THE MAWLID?")) {
@@ -1715,8 +1706,7 @@ struct MawlidView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Not one of the first three generations celebrated the mawlid; it came from the Fatimids centuries later. Love of the Prophet is proven by following him, and he himself showed how to mark the day of his birth: by fasting on Mondays.")
-                        .font(.body)
+                    ArticleClosing("Not one of the first three generations celebrated the mawlid; it came from the Fatimids centuries later. Love of the Prophet is proven by following him, and he himself showed how to mark the day of his birth: by fasting on Mondays.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {

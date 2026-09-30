@@ -192,7 +192,7 @@ struct PrayerProgressRingView: View {
 
 @available(iOS 16.0, *)
 struct PrayerProgressRingWidget: Widget {
-    let kind: String = "PrayerProgressRingWidget"
+    let kind: String = AdhanWidgetKind.PrayerProgressRingWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -241,7 +241,7 @@ struct PrayerCountdownCircularView: View {
 
 @available(iOS 16.0, *)
 struct PrayerCountdownCircularWidget: Widget {
-    let kind: String = "PrayerCountdownCircularWidget"
+    let kind: String = AdhanWidgetKind.PrayerCountdownCircularWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -368,7 +368,7 @@ struct PrayerWaveView: View {
 
 @available(iOS 16.0, *)
 struct PrayerWaveWidget: Widget {
-    let kind: String = "PrayerWaveWidget"
+    let kind: String = AdhanWidgetKind.PrayerWaveWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -472,7 +472,7 @@ struct PrayerDayView: View {
 }
 
 struct PrayerDayWidget: Widget {
-    let kind: String = "PrayerDayWidget"
+    let kind: String = AdhanWidgetKind.PrayerDayWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -487,7 +487,7 @@ struct PrayerDayWidget: Widget {
 
 /// The Prayer Day widget, unchanged, over the current prayer's sky gradient.
 struct PrayerDaySkyWidget: Widget {
-    let kind: String = "PrayerDaySkyWidget"
+    let kind: String = AdhanWidgetKind.PrayerDaySkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -614,7 +614,7 @@ struct FastingCountdownView: View {
 }
 
 struct FastingCountdownWidget: Widget {
-    let kind: String = "FastingCountdownWidget"
+    let kind: String = AdhanWidgetKind.FastingCountdownWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -629,7 +629,7 @@ struct FastingCountdownWidget: Widget {
 
 /// The Fasting Countdown widget, unchanged, over the current prayer's sky gradient.
 struct FastingCountdownSkyWidget: Widget {
-    let kind: String = "FastingCountdownSkyWidget"
+    let kind: String = AdhanWidgetKind.FastingCountdownSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -685,7 +685,7 @@ struct PrayerRowLockView: View {
 
 @available(iOS 16.0, *)
 struct PrayerRowLockWidget: Widget {
-    let kind: String = "PrayerRowLockWidget"
+    let kind: String = AdhanWidgetKind.PrayerRowLockWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -747,7 +747,7 @@ struct NextPrayerProgressView: View {
 
 @available(iOS 16.0, *)
 struct NextPrayerProgressWidget: Widget {
-    let kind: String = "NextPrayerProgressWidget"
+    let kind: String = AdhanWidgetKind.NextPrayerProgressWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -808,7 +808,7 @@ struct PrayerListSmallView: View {
 }
 
 struct PrayerListSmallWidget: Widget {
-    let kind: String = "PrayerListSmallWidget"
+    let kind: String = AdhanWidgetKind.PrayerListSmallWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -823,7 +823,7 @@ struct PrayerListSmallWidget: Widget {
 
 /// The Prayer List widget, unchanged, over the current prayer's sky gradient.
 struct PrayerListSmallSkyWidget: Widget {
-    let kind: String = "PrayerListSmallSkyWidget"
+    let kind: String = AdhanWidgetKind.PrayerListSmallSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -935,7 +935,7 @@ struct NextPrayerBoardView: View {
 }
 
 struct NextPrayerBoardWidget: Widget {
-    let kind: String = "NextPrayerBoardWidget"
+    let kind: String = AdhanWidgetKind.NextPrayerBoardWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -950,7 +950,7 @@ struct NextPrayerBoardWidget: Widget {
 
 /// The Current Prayer widget, unchanged, over the current prayer's sky gradient.
 struct NextPrayerBoardSkyWidget: Widget {
-    let kind: String = "NextPrayerBoardSkyWidget"
+    let kind: String = AdhanWidgetKind.NextPrayerBoardSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

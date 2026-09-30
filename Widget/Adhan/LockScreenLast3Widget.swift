@@ -41,7 +41,7 @@ struct LockScreen4EntryView: View {
 }
 
 struct LockScreen4Widget: Widget {
-    let kind: String = "LockScreen4Widget"
+    let kind: String = AdhanWidgetKind.LockScreen4Widget.rawValue
 
     var body: some WidgetConfiguration {
         #if os(iOS)

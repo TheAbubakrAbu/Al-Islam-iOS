@@ -346,7 +346,7 @@ final class SunnahReminderStore: ObservableObject {
 
     private nonisolated static func loadConfigs(from defaults: UserDefaults) -> [String: Config] {
         guard let data = defaults.data(forKey: defaultsKey),
-              let decoded = try? JSONDecoder().decode([String: Config].self, from: data) else { return [:] }
+              let decoded = UserDataRescue.decode([String: Config].self, from: data, key: defaultsKey, defaults: defaults) else { return [:] }
         return decoded
     }
 

@@ -158,7 +158,15 @@ struct AppearanceEnvironmentKey: EnvironmentKey {
     /// never touches; `check_root_wiring.py` beside `sync_from_islam.sh` now fails the sync on it).
     /// A fresh read is still not LIVE, since nothing invalidates the reader when Settings changes,
     /// so an app root must inject; this only guarantees a fallback reader is right when it renders.
-    static var defaultValue: AppearanceEnvironment {
+    ///
+    /// Stored as an Optional (nil = no root injected) so the injectors can write through
+    /// `injectedAppearance`, whose getter never builds the fallback: a key-path write reads the old
+    /// value first, and through `appearance` that read built a default snapshot (and tripped the DEBUG
+    /// tripwire) on every launch, from the root's own injection (Quality Guide G11).
+    static let defaultValue: AppearanceEnvironment? = nil
+
+    /// The fallback for a reader with no root above it (see above).
+    static func fallback() -> AppearanceEnvironment {
         #if DEBUG
         AppearanceDefaultTripwire.note()
         #endif
@@ -182,7 +190,15 @@ enum AppearanceDefaultTripwire {
 #endif
 
 extension EnvironmentValues {
+    /// What every reader takes: the injected value, or the fallback for a tree no root reaches.
     var appearance: AppearanceEnvironment {
+        get { self[AppearanceEnvironmentKey.self] ?? AppearanceEnvironmentKey.fallback() }
+        set { self[AppearanceEnvironmentKey.self] = newValue }
+    }
+
+    /// What the injectors write (`.environment(\.injectedAppearance, value)`): the same storage, with
+    /// a getter that never builds the fallback, so an injection is not itself a default read.
+    var injectedAppearance: AppearanceEnvironment? {
         get { self[AppearanceEnvironmentKey.self] }
         set { self[AppearanceEnvironmentKey.self] = newValue }
     }
@@ -318,7 +334,7 @@ struct AppearanceEnvironmentInjector: ViewModifier {
         AppearanceChangeLog.note(environment)
         #endif
         return content
-            .environment(\.appearance, environment)
+            .environment(\.injectedAppearance, environment)
             .accentColor(environment.accent)
             .tint(environment.accent)
             .preferredColorScheme(environment.colorScheme)
@@ -778,10 +794,13 @@ extension View {
 
     /// `readingWidth`: a reading list (the ayah list, a hadith chapter, an article) keeps its rows
     /// inside a ~840 pt column on wide layouts, see `ReadingColumnMargins`.
+    /// `followsListViewLive`: restyle at once when "Default List View" flips. Only the screen that
+    /// holds that switch wants it; every other List keeps the style it opened with (see
+    /// `ConditionalListStyle.latchedDefaultView`).
     func applyConditionalListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0,
-                                   readingWidth: Bool = false) -> some View {
+                                   readingWidth: Bool = false, followsListViewLive: Bool = false) -> some View {
         modifier(ConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin,
-                                      readingWidth: readingWidth))
+                                      readingWidth: readingWidth, followsListViewLive: followsListViewLive))
     }
 
 
@@ -1080,6 +1099,11 @@ struct WatchTopGlowOverlay: View {
 struct AccentWashedBackground: ViewModifier {
     @Environment(\.appearance) private var appearance
     @Environment(\.colorScheme) private var systemColorScheme
+    /// A List's own latched "Default List View" (`ConditionalListStyle`), so its ground matches the
+    /// style it kept; nil follows the setting.
+    var defaultViewOverride: Bool? = nil
+
+    private var usesDefaultView: Bool { defaultViewOverride ?? appearance.defaultView }
 
     func body(content: Content) -> some View {
         #if os(iOS)
@@ -1118,7 +1142,7 @@ struct AccentWashedBackground: ViewModifier {
         if appearance.hasCustomTheme {
             return appearance.themeBackground ?? Color(.systemGroupedBackground)
         }
-        if appearance.defaultView {
+        if usesDefaultView {
             return Color(.systemGroupedBackground)
         }
         return (appearance.colorScheme ?? systemColorScheme) == .dark ? .black : .white
@@ -1211,6 +1235,18 @@ struct ConditionalListStyle: ViewModifier {
     let disableNowPlayingInset: Bool
     var topContentMargin: CGFloat = 0
     var readingWidth: Bool = false
+    var followsListViewLive: Bool = false
+
+    /// "Default List View" as this List first appeared with it. The style is an `AnyView` swap (the two
+    /// list styles are different types), so a live flip destroyed and rebuilt every mounted List, 277
+    /// of them: no animation, and each lost its scroll position and state (the Quran reader in another
+    /// tab came back at the top of its surah). Latched, a flip restyles each screen as it next opens
+    /// (Quality Guide G3); the Look and Feel page, which holds the switch, follows it live.
+    @State private var latchedDefaultView: Bool?
+
+    private var usesDefaultView: Bool {
+        followsListViewLive ? appearance.defaultView : (latchedDefaultView ?? appearance.defaultView)
+    }
 
     private var shouldShowNowPlaying: Bool {
         playback.showsNowPlaying
@@ -1230,6 +1266,9 @@ struct ConditionalListStyle: ViewModifier {
         .tint(appearance.accent)
         .dismissKeyboardOnScroll()
         .topContentMargin(topContentMargin)
+        .onAppear {
+            if latchedDefaultView == nil { latchedDefaultView = appearance.defaultView }
+        }
         // Force the theme's light/dark base here (not just at the app root) so sheets - which are their own
         // presentation contexts and don't inherit the root's preferredColorScheme - also adopt the theme.
         .preferredColorScheme(appearance.colorScheme)
@@ -1256,17 +1295,17 @@ struct ConditionalListStyle: ViewModifier {
     // itself lives in `AccentWashedBackground` - one implementation for lists, sheets, and the watch.)
     @ViewBuilder
     private func styledContent(_ content: Content) -> some View {
-        let base = appearance.defaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
+        let base = usesDefaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
 
         if #available(iOS 16.0, *) {
             // Always hidden (not just for custom themes): the wash reproduces every theme's system
             // color exactly, and hiding the system layer is what lets the accent glow show through.
             base
                 .scrollContentBackground(.hidden)
-                .modifier(AccentWashedBackground())
+                .modifier(AccentWashedBackground(defaultViewOverride: usesDefaultView))
         } else {
             base
-                .modifier(AccentWashedBackground())
+                .modifier(AccentWashedBackground(defaultViewOverride: usesDefaultView))
         }
     }
     #endif
@@ -1633,6 +1672,15 @@ final class GridTileMenuHold: ObservableObject {
 
 /// The clear UIKit layer over a fast-hold tile: tap runs the tile's action, a short hold (or a
 /// secondary click, for a pointer) opens the anchor menu underneath.
+///
+/// RIGHT CLICK (2026-09-29, Abu: "Right click doesnt work on grids on mac"). On a Mac running the app as
+/// Designed for iPad, and on an iPad trackpad, a secondary click does not arrive as a touch at all (the
+/// app does not opt into indirect input events), so the secondary-button tap below never fired. UIKit
+/// sends a right click to a context-menu interaction instead, and the layer covers the anchor, so the
+/// click found none. On the pad idiom (which a Mac is, here) the layer now carries one. It stands aside
+/// for a finger: the interaction's own hold comes after the fast hold has opened the menu, and a second
+/// open there dismissed it (and could flip every tile to the slow fallback), so it answers only while
+/// the hold recognizer holds no touch and has not just opened the menu.
 private struct GridTileHoldLayer: UIViewRepresentable {
     let isEnabled: Bool
     @Binding var isPressed: Bool
@@ -1653,35 +1701,71 @@ private struct GridTileHoldLayer: UIViewRepresentable {
         }
     }
 
-    final class HoldView: UIView {
+    final class HoldView: UIView, UIContextMenuInteractionDelegate {
         var onTap: () -> Void = {}
         var onPressChange: (Bool) -> Void = { _ in }
+        private weak var holdRecognizer: UILongPressGestureRecognizer?
+        /// When the menu last opened here, by any route. Two routes answering one press (the fast hold,
+        /// then the interaction's own hold) opened it twice, and the second open dismissed it.
+        private var openedAt: Date = .distantPast
+        private var openedJustNow: Bool { Date().timeIntervalSince(openedAt) < 1.5 }
 
         func install() {
             let hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
             hold.minimumPressDuration = GridTileMenuHold.duration
             addGestureRecognizer(hold)
+            holdRecognizer = hold
 
             // Waiting on the hold costs a tap nothing: the hold fails the moment the finger lifts early.
             let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
             tap.require(toFail: hold)
             addGestureRecognizer(tap)
 
+            // Never after a hold: on the iPadOS 26.5 simulator this recognizer also took a finger held
+            // about a second, and its second open at the lift closed the menu the hold had opened (0 of
+            // 10 long holds kept their menu; measured 2026-09-29). A real right click is quick, so the
+            // hold has failed by its lift.
             let secondary = UITapGestureRecognizer(target: self, action: #selector(secondaryClicked))
             secondary.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
             secondary.buttonMaskRequired = .secondary
+            secondary.require(toFail: hold)
             addGestureRecognizer(secondary)
+
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                addInteraction(UIContextMenuInteraction(delegate: self))
+            }
+        }
+
+        /// A right click: the anchor's own menu at the pointer when its button exposes one, else the
+        /// anchor opened the way a hold opens it.
+        func contextMenuInteraction(_ interaction: UIContextMenuInteraction,
+                                    configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+            guard isUserInteractionEnabled, !openedJustNow else { return nil }
+            if let hold = holdRecognizer,
+               hold.numberOfTouches > 0 || hold.state == .began || hold.state == .changed {
+                return nil
+            }
+            if let menu = (anchorButton() as? UIButton)?.menu {
+                openedAt = Date()
+                Settings.shared.hapticFeedback()
+                return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in menu }
+            }
+            DispatchQueue.main.async { [weak self] in self?.openMenu() }
+            return nil
         }
 
         @objc private func tapped() { onTap() }
 
-        @objc private func secondaryClicked() { openMenu() }
+        @objc private func secondaryClicked() {
+            if !openedJustNow { openMenu() }
+        }
 
         @objc private func held(_ recognizer: UILongPressGestureRecognizer) {
             if recognizer.state == .began { openMenu() }
         }
 
         private func openMenu() {
+            openedAt = Date()
             onPressChange(false)
             guard #available(iOS 17.4, *), let button = anchorButton() else {
                 GridTileMenuHold.shared.markUnavailable()
@@ -1729,6 +1813,141 @@ private struct GridTileHoldLayer: UIViewRepresentable {
             super.touchesCancelled(touches, with: event)
             onPressChange(false)
         }
+    }
+}
+
+/// Equal-width chips in as few rows as fit, each row filling the width: the doors under the Quran and
+/// Hadith summaries. A fixed three to a row broke their names mid-word in an iPad sidebar ("His-tory",
+/// "Brows e by", "Topi...", Abu 2026-09-29), where a third of the row is about 80 pt; an iPhone row
+/// gives each of three about 103. So the row takes as many as leave each chip `minimumChipWidth`, up
+/// to `maximumPerRow`; four never go three and one (Abu, 2026-09-26: "2 lines if there's 4"), and a
+/// row that ends up short stretches its chips across the width. Rows are as tall as their tallest
+/// chip, and a chip whose frame has `maxHeight: .infinity` takes that height.
+@available(iOS 16.0, *)
+struct EvenChipRows: Layout {
+    var spacing: CGFloat = 10
+    /// Three to a row from a 278 pt row (an iPhone SE's is about 295), two in an iPad sidebar's 245 to 260.
+    var minimumChipWidth: CGFloat = 86
+    var maximumPerRow: Int = 3
+
+    private func rows(count: Int, width: CGFloat) -> [Range<Int>] {
+        guard count > 0 else { return [] }
+        let fit = max(1, Int((width + spacing) / (minimumChipWidth + spacing)))
+        var perRow = max(1, min(count, maximumPerRow, fit))
+        if count == 4, perRow == 3 { perRow = 2 }
+        return stride(from: 0, to: count, by: perRow).map { $0..<min($0 + perRow, count) }
+    }
+
+    private func chipWidth(in row: Range<Int>, width: CGFloat) -> CGFloat {
+        max((width - spacing * CGFloat(row.count - 1)) / CGFloat(row.count), 0)
+    }
+
+    private func rowHeights(_ rows: [Range<Int>], width: CGFloat, subviews: Subviews) -> [CGFloat] {
+        rows.map { row in
+            let proposal = ProposedViewSize(width: chipWidth(in: row, width: width), height: nil)
+            return row.map { subviews[$0].sizeThatFits(proposal).height }.max() ?? 0
+        }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? CGFloat(min(subviews.count, maximumPerRow)) * (minimumChipWidth + spacing)
+        let rows = rows(count: subviews.count, width: width)
+        let heights = rowHeights(rows, width: width, subviews: subviews)
+        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let rows = rows(count: subviews.count, width: bounds.width)
+        let heights = rowHeights(rows, width: bounds.width, subviews: subviews)
+        var y = bounds.minY
+        for (row, height) in zip(rows, heights) {
+            let width = chipWidth(in: row, width: bounds.width)
+            var x = bounds.minX
+            for index in row {
+                subviews[index].place(at: CGPoint(x: x, y: y), anchor: .topLeading,
+                                      proposal: ProposedViewSize(width: width, height: height))
+                x += width + spacing
+            }
+            y += height + spacing
+        }
+    }
+}
+
+/// A section header's title with its controls (the Today pill, a count, a fold button) trailing it on
+/// one line when both fit, and under it when they don't. Squeezed onto one line in an iPad sidebar the
+/// title wrapped mid-word ("YOUR SUM- / MARY") beside a pill reading "To- / da / y" (2026-09-29).
+/// Between the two, a title a little too long for the line shrinks up to a fifth first
+/// (`HeaderLineLayout`): "NEED A HAND?" missed a sidebar's line by a few points and would otherwise
+/// have left its count and chevron alone on a second line. Before iOS 16 (no `ViewThatFits`) it is the
+/// one line it always was.
+struct AdaptiveSectionHeader<Title: View, Controls: View>: View {
+    var forceStacked = false
+    @ViewBuilder let title: () -> Title
+    @ViewBuilder let controls: () -> Controls
+
+    private var stacked: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            title()
+            HStack(spacing: 8) { controls() }
+        }
+    }
+
+    var body: some View {
+        if forceStacked {
+            stacked
+        } else if #available(iOS 16.0, *) {
+            ViewThatFits(in: .horizontal) {
+                HeaderLineLayout {
+                    title()
+                        .lineLimit(1)
+                        .minimumScaleFactor(HeaderLineLayout.minimumScale)
+                    HStack(spacing: 8) { controls() }
+                        .fixedSize()
+                }
+                stacked
+            }
+        } else {
+            HStack(spacing: 8) {
+                title()
+                Spacer()
+                controls()
+            }
+        }
+    }
+}
+
+/// One header line: the title (subview 0) at the leading edge, the controls (subview 1) at the
+/// trailing edge, both centred vertically. Its IDEAL width is the tightest line it can make, the title
+/// at `minimumScale`, so `ViewThatFits` takes it whenever the shrunk title fits; placed, the title gets
+/// all the room the controls leave, and scales only as far as it must.
+@available(iOS 16.0, *)
+struct HeaderLineLayout: Layout {
+    static let minimumScale: CGFloat = 0.8
+    var spacing: CGFloat = 8
+
+    /// The title's ideal width times this is the least room it can take on the line. A little above
+    /// `minimumScale`: an icon beside the words does not shrink with them.
+    private static let fitFactor: CGFloat = 0.85
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard subviews.count == 2 else { return .zero }
+        let title = subviews[0].sizeThatFits(.unspecified)
+        let controls = subviews[1].sizeThatFits(.unspecified)
+        let width = proposal.width ?? (title.width * Self.fitFactor + spacing + controls.width)
+        let titleWidth = min(title.width, max(width - spacing - controls.width, 0))
+        let titleHeight = subviews[0].sizeThatFits(ProposedViewSize(width: titleWidth, height: nil)).height
+        return CGSize(width: width, height: max(titleHeight, controls.height))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let title = subviews[0].sizeThatFits(.unspecified)
+        let controls = subviews[1].sizeThatFits(.unspecified)
+        let titleWidth = min(title.width, max(bounds.width - spacing - controls.width, 0))
+        subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+                          proposal: ProposedViewSize(width: titleWidth, height: nil))
+        subviews[1].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+                          proposal: ProposedViewSize(width: controls.width, height: controls.height))
     }
 }
 #endif
@@ -1942,58 +2161,84 @@ struct SectionPillHeader: View {
     }
 
     var body: some View {
+        #if os(iOS)
+        // The count and buttons drop under the title where the two do not fit on one line: squeezed
+        // beside them in an iPad sidebar, "NEED A HAND?" wrapped to two lines (2026-09-29).
+        AdaptiveSectionHeader { titleLabel } controls: { controls }
+        #else
+        HStack(spacing: 8) {
+            titleLabel
+
+            Spacer()
+
+            controls
+        }
+        #endif
+    }
+
+    @ViewBuilder
+    private var titleLabel: some View {
         HStack(spacing: 8) {
             if let icon {
                 Image(systemName: icon)
                     .foregroundStyle(appearance.accent)
+                    // Decoration beside the title: VoiceOver read the symbol's own name as a heading
+                    // of its own ("Question Mark In A Filled Circle", "Bookmark") before the title.
+                    .accessibilityHidden(true)
             }
 
-            if accentTitle {
-                Text(title)
-                    .foregroundStyle(appearance.accent)
-            } else {
-                Text(title)
+            // The heading trait said explicitly: a List hands it to the header's FIRST element, which
+            // was the icon, so the title itself read as plain text.
+            Group {
+                if accentTitle {
+                    Text(title)
+                        .foregroundStyle(appearance.accent)
+                } else {
+                    Text(title)
+                }
             }
+            .accessibilityAddTraits(.isHeader)
+        }
+    }
 
-            Spacer()
+    @ViewBuilder
+    private var controls: some View {
+        // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
+        // of the cluster (it is information, not a control), then the buttons: shuffle, then the
+        // expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
+        // must follow this order too.
+        CountPill(count: count, overflow: overflow)
 
-            // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
-            // of the cluster (it is information, not a control), then the buttons - shuffle, then the
-            // expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
-            // must follow this order too.
-            CountPill(count: count, overflow: overflow)
+        if let onShuffle {
+            // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
+            // and as wide as it is tall.
+            Image(systemName: "shuffle")
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(appearance.accent)
+                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .conditionalGlassEffect(circle: true)
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    onShuffle()
+                }
+                .accessibilityLabel("Random \(title.lowercased())")
+                // Tap-gesture images: without these VoiceOver said "image" and offered no action.
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
+        }
 
-            if let onShuffle {
-                // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
-                // and as wide as it is tall.
-                Image(systemName: "shuffle")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(appearance.accent)
-                    .frame(width: Self.pillHeight, height: Self.pillHeight)
-                    .conditionalGlassEffect(circle: true)
-                    .onTapGesture {
-                        Settings.shared.hapticFeedback()
-                        onShuffle()
-                    }
-                    .accessibilityLabel("Random \(title.lowercased())")
-                    // Tap-gesture images: without these VoiceOver said "image" and offered no action.
-                    .accessibilityRemoveTraits(.isImage)
-                    .accessibilityAddTraits(.isButton)
-            }
-
-            if let isExpanded {
-                Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
-                    .foregroundColor(appearance.accent)
-                    .padding(4)
-                    .conditionalGlassEffect()
-                    .onTapGesture {
-                        Settings.shared.hapticFeedback()
-                        withAnimation { isExpanded.wrappedValue.toggle() }
-                    }
-                    .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")
-                    .accessibilityRemoveTraits(.isImage)
-                    .accessibilityAddTraits(.isButton)
-            }
+        if let isExpanded {
+            Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
+                .foregroundColor(appearance.accent)
+                .padding(4)
+                .conditionalGlassEffect()
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    withAnimation { isExpanded.wrappedValue.toggle() }
+                }
+                .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
         }
     }
 }

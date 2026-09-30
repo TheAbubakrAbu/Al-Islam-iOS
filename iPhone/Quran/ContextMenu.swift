@@ -189,6 +189,9 @@ struct SurahContextMenu: View {
     }
 
     var body: some View {
+        #if DEBUG
+        let _ = RenderCounter.hit("SurahContextMenu")
+        #endif
         #if os(iOS)
         if let surah = quranData.surah(surahID) {
             Button {
@@ -221,11 +224,14 @@ struct SurahContextMenu: View {
             )
         }
 
+        // An ayah's audio is Hafs-numbered, so the pick is a Hafs ayah (never one of the textless ids
+        // minted for the beta riwayat) and the option shows in a Hafs display only (A5).
+        if settings.isHafsDisplay {
         Button {
             settings.hapticFeedback()
 
             if let surah = quranData.surah(surahID) {
-                if let randomAyah = surah.ayahs.randomElement() {
+                if let randomAyah = surah.ayahs.filter({ !$0.textHafs.isEmpty }).randomElement() {
                     quranPlayer.playAyah(
                         surahNumber: surahID,
                         ayahNumber: randomAyah.id,
@@ -235,6 +241,7 @@ struct SurahContextMenu: View {
             }
         } label: {
             Label("Play Random Ayah", systemImage: "shuffle.circle")
+        }
         }
 
         if lastListened == nil {
@@ -601,7 +608,9 @@ struct AyahContextMenuModifier: ViewModifier {
                     Button(role: .destructive) {
                         settings.hapticFeedback()
                         withAnimation {
-                            settings.ayahOfTheDayHiddenDate = Settings.dayKey()
+                            // The DAILY day (Fajr rollover by default), the key the card compares
+                            // against: the calendar day hid nothing between midnight and Fajr (A10).
+                            settings.ayahOfTheDayHiddenDate = settings.dailyDayKey()
                         }
                     } label: { Label("Hide for Today", systemImage: "eye.slash") }
 
@@ -1468,15 +1477,14 @@ struct SelectAyahTextSheet: View {
         var text = arabicAyah.displayArabicText(
             surahId: surah.id,
             clean: false,
+            removeDots: false,
             qiraahOverride: selectedQiraah
         )
         if hideTashkeel {
-            text = text.removingArabicDiacriticsAndSigns
-            if surah.id == 1 && arabicAyah.id == 1 {
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.hasPrefix("بسم") {
-                    text = Ayah.bismillahCleanArabic
-                }
+            if surah.id == 1 && arabicAyah.id == 1 && Ayah.opensWithTaawwudh(text) {
+                text = Ayah.bismillahCleanArabic
+            } else {
+                text = text.removingArabicDiacriticsAndSigns
             }
         }
         if hideDots { text = text.removingArabicDots }

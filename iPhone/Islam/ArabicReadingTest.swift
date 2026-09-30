@@ -1624,7 +1624,7 @@ final class ReadingTestProgress: ObservableObject {
 
     private init() {
         let defaults = UserDefaults.standard
-        if let data = defaults.data(forKey: Self.key), let decoded = try? JSONDecoder().decode([String: Record].self, from: data) {
+        if let data = defaults.data(forKey: Self.key), let decoded = UserDataRescue.decode([String: Record].self, from: data, key: Self.key, defaults: defaults) {
             records = decoded
             hasSaved = true
         } else {

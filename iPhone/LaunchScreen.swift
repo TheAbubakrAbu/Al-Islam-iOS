@@ -128,6 +128,9 @@ struct LaunchScreen: View {
     @State private var rightGlassOffset: CGFloat = 0
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("launch screen: first body")
+        #endif
         GeometryReader { geo in
             let layoutScale = LaunchScreenLayout.scale(for: geo.size)
             ZStack {
@@ -154,6 +157,7 @@ struct LaunchScreen: View {
         }
         .ignoresSafeArea()
         .onAppear {
+            LaunchClock.mark("launch screen: on appear")
             Task { @MainActor in
                 await runLaunchAnimation()
             }

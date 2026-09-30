@@ -40,6 +40,8 @@ struct AskAIChatView: View {
     /// Whether the transcript keeps pinning its bottom as text streams. A reader who scrolls up to
     /// re-read stops being dragged back down; reaching the bottom again (or a new turn) re-arms it.
     @State private var followsStream = true
+    /// "New Conversation" clears the whole transcript, so it asks first.
+    @State private var confirmReset = false
     #if DEBUG
     /// `-askAI "q1||q2||q3"`: the remaining questions, asked one at a time as each answer settles.
     @State private var debugQueue: [String] = []
@@ -86,8 +88,7 @@ struct AskAIChatView: View {
                 Menu {
                     Button {
                         settings.hapticFeedback()
-                        // The transcript is cleared; a typed-but-unsent draft is the reader's, and stays.
-                        chat.reset()
+                        confirmReset = true
                     } label: {
                         Label("New Conversation", systemImage: "square.and.pencil")
                     }
@@ -119,6 +120,17 @@ struct AskAIChatView: View {
                 .accessibilityLabel("Conversation options")
             }
         }
+        .confirmationDialog("Start a new conversation?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("New Conversation", role: .destructive) {
+                settings.hapticFeedback()
+                // The transcript is cleared (an answer still streaming stops first); a
+                // typed-but-unsent draft is the reader's, and stays.
+                chat.reset()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This conversation and its sources will be cleared.")
+        }
         #if DEBUG
         .onChange(of: chat.isAnswering) { answering in
             guard !answering, !debugQueue.isEmpty else { return }
@@ -133,6 +145,8 @@ struct AskAIChatView: View {
             #if canImport(FoundationModels)
             if #available(iOS 26.0, *) { AskAIEngine.prewarm() }
             #endif
+            // The indexes only matter when a question can be asked.
+            if OnDeviceAsk.isAvailable { AskAIRetriever.prewarm() }
             guard !askedInitial else { return }
             askedInitial = true
             var question = initialQuestion?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -677,7 +691,7 @@ private struct AskAISourceCard: View {
     @State private var expanded = false
 
     var body: some View {
-        if case .prayer = source.kind {
+        if !opensAScreen {
             label
         } else {
             NavigationLink {
@@ -712,6 +726,24 @@ private struct AskAISourceCard: View {
         return appearance.islamUsesCustomArabicFace
     }
 
+    /// A card that opens nothing in this app (a kind it does not ship, or the timetable) stays a
+    /// plain card: the link would push an empty screen.
+    private var opensAScreen: Bool {
+        switch source.kind {
+        case .prayer: return false
+        #if !HAS_QURAN
+        case .ayah, .tafsir, .surah: return false
+        #endif
+        #if !HAS_HADITH
+        case .hadith: return false
+        #endif
+        #if !HAS_TIPS
+        case .tip: return false
+        #endif
+        default: return true
+        }
+    }
+
     private var label: some View {
         HStack(alignment: .top, spacing: 10) {
             Text("\(number)")
@@ -735,7 +767,7 @@ private struct AskAISourceCard: View {
                             .background(Capsule().fill(accent.opacity(0.14)))
                     }
                     Spacer(minLength: 0)
-                    if case .prayer = source.kind {} else {
+                    if opensAScreen {
                         Image(systemName: "chevron.right")
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
@@ -830,14 +862,25 @@ enum AskAISourceDestination {
     static func view(for source: AskAISource) -> some View {
         switch source.kind {
         case .ayah(let surahID, let ayahID), .tafsir(let surahID, let ayahID, _):
+            #if HAS_QURAN
             if let surah = QuranData.shared.surah(surahID) {
                 SurahView(surah: surah, ayah: ayahID)
             }
+            #else
+            let _ = (surahID, ayahID)
+            EmptyView()
+            #endif
         case .surah(let surahID):
+            #if HAS_QURAN
             if let surah = QuranData.shared.surah(surahID) {
                 SurahView(surah: surah)
             }
+            #else
+            let _ = surahID
+            EmptyView()
+            #endif
         case .hadith(let slug, let idInBook):
+            #if HAS_HADITH
             if let book = HadithCatalogBook.bySlug[slug],
                let data = HadithStore.shared.book(book),
                let hadith = data.hadiths.first(where: { $0.idInBook == idInBook }) {
@@ -847,6 +890,10 @@ enum AskAISourceDestination {
                     HadithReferenceView(book: book, resolved: hadith)
                 }
             }
+            #else
+            let _ = (slug, idInBook)
+            EmptyView()
+            #endif
         case .article(let id, _):
             if let destination = IslamArticles.destination(for: id) {
                 destination
@@ -863,10 +910,19 @@ enum AskAISourceDestination {
         case .hisnDua:
             HisnDuaLibraryView()
         case .tip(let id):
+            #if HAS_TIPS
             if let tip = TipCatalog.all.first(where: { $0.id == id }), let destination = tip.destination {
                 SettingsSearchDestinationView.view(for: destination)
             } else {
                 TipsHubView()
+            }
+            #else
+            let _ = id
+            EmptyView()
+            #endif
+        case .setting(let id):
+            if let entry = SettingsSearchEntry.all.first(where: { $0.id == id }) {
+                SettingsSearchDestinationView.view(for: entry.destination)
             }
         case .prayer:
             EmptyView()

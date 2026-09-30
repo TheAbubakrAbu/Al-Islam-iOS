@@ -105,6 +105,27 @@ enum IslamArticles {
         case "JuzView": return AnyView(JuzView())
         case "AhrufView": return AnyView(AhrufView())
         case "QiraatView": return AnyView(QiraatView())
+        case "ProvingClosingView": return AnyView(ProvingClosingView())
+        case "ProvingQuestionsView": return AnyView(ProvingQuestionsView())
+        case "ProvingGodView": return AnyView(ProvingGodView())
+        case "ProvingJesusView": return AnyView(ProvingJesusView())
+        case "ProvingEthicsView": return AnyView(ProvingEthicsView())
+        case "ProvingScriptureView": return AnyView(ProvingScriptureView())
+        case "ProvingBibleView": return AnyView(ProvingBibleView())
+        case "ProvingSourcesView": return AnyView(ProvingSourcesView())
+        case "ProvingProphecyView": return AnyView(ProvingProphecyView())
+        case "ProvingScienceView": return AnyView(ProvingScienceView())
+        case "ProvingIjazView": return AnyView(ProvingIjazView())
+        case "ProvingPreservationView": return AnyView(ProvingPreservationView())
+        case "ProvingStylometryView": return AnyView(ProvingStylometryView())
+        case "ProvingContinuationView": return AnyView(ProvingContinuationView())
+        case "ProvingProphetView": return AnyView(ProvingProphetView())
+        case "ProvingFingerprintView": return AnyView(ProvingFingerprintView())
+        case "ProvingCaseView": return AnyView(ProvingCaseView())
+        case "HadithRejectorsView": return AnyView(HadithRejectorsView())
+        case "HadithPreservationView": return AnyView(HadithPreservationView())
+        case "HadithSciencesView": return AnyView(HadithSciencesView())
+        case "RiwayatDifferencesView": return AnyView(RiwayatDifferencesView())
         case "FarewellView": return AnyView(FarewellView())
         case "SahabahView": return AnyView(SahabahView())
         case "WivesView": return AnyView(WivesView())
@@ -232,9 +253,10 @@ enum IslamArticles {
     }
 
     /// Lowercased, everything non-alphanumeric flattened to a space, so "wudhu," and "(wudhu)" both
-    /// match "wudhu".
+    /// match "wudhu"; Latin accents folded first, so "Ṣaḥīḥ" and "Jāmiʿ" match "sahih" and "jami".
+    /// `HadeethEncStore.foldEnglish` is this same rule over bytes and must stay identical to it.
     static func fold(_ text: String) -> String {
-        String(text.lowercased().unicodeScalars.map { scalar in
+        String(text.foldingLatinDiacritics.lowercased().unicodeScalars.map { scalar in
             CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
         })
     }

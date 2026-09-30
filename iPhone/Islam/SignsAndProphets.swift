@@ -54,6 +54,8 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
     case dhikrVirtue
     /// The 99 Names article in Pillars & Beliefs, the written half of the names library.
     case namesOfAllahArticle
+    /// The Proving Islam library (2026-09-29): what the signs libraries argue, as one cumulative case.
+    case provingIslam
 
     var id: String { rawValue }
 
@@ -83,6 +85,7 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
         case .masjidNabawi:        return "Al-Masjid an-Nabawi"
         case .dhikrVirtue:         return "Tasbih and Dhikr"
         case .namesOfAllahArticle: return "The 99 Names of Allah"
+        case .provingIslam:        return "Is Islam True? The Complete Case"
         }
     }
 
@@ -115,6 +118,7 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
         // library's own subject; `AllahPillarView` is what the 99 Names card already points at.
         case .dhikrVirtue:          AllahPillarView()
         case .namesOfAllahArticle:  NamesOfAllahPillarView()
+        case .provingIslam:         ProvingIslamView()
         }
     }
 }
@@ -224,25 +228,166 @@ struct SignSection {
 }
 
 /// An article's sections, in order, each under its `ArticleHeader`.
+///
+/// Drawn with the article design kit (2026-09-29, Abu: "pretty designs ... so it's not just a blob of
+/// text"): the entry's one-line summary opens the page as its lead card; the sections that tell what
+/// history did ("WHAT HAPPENED" and its kin) run down a timeline rail; and the sections that step back
+/// to judge it ("WHY IT IS STRIKING", "A NOTE") are set as one card. The words are the data's own.
 struct SignArticleSections: View {
     let sections: [SignSection]
+    /// The entry's summary, drawn as the page's `ArticleLead`. Nil draws no lead.
+    var lead: String? = nil
+
+    /// How a section's prose is drawn, read from its heading.
+    enum Style {
+        case plain
+        case timeline
+        case note(systemImage: String)
+
+        init(heading: String) {
+            switch heading {
+            case "WHAT HAPPENED", "WHAT CAME OF IT", "WHAT IS SEEN NOW", "WHAT THEY DID WITH IT":
+                self = .timeline
+            case "A NOTE":
+                self = .note(systemImage: "text.bubble.fill")
+            default:
+                self = heading.hasPrefix("WHY ") ? .note(systemImage: "sparkles") : .plain
+            }
+        }
+    }
+
+    /// One List row: a paragraph, a card of paragraphs, or a quote.
+    private enum Row {
+        case text(String, style: Style, first: Bool, last: Bool)
+        case note([String], systemImage: String)
+        case block(SignBlock)
+    }
+
+    /// The section's rows: in a note section, a run of paragraphs becomes one card.
+    private static func rows(_ blocks: [SignBlock], style: Style) -> [Row] {
+        var rows: [Row] = []
+        var pending: [String] = []
+        func flush(_ systemImage: String) {
+            if !pending.isEmpty { rows.append(.note(pending, systemImage: systemImage)); pending = [] }
+        }
+        let texts = blocks.enumerated().compactMap { index, block -> Int? in
+            if case .text = block { return index }
+            return nil
+        }
+        for (index, block) in blocks.enumerated() {
+            switch (block, style) {
+            case (.text(let text), .note):
+                pending.append(text)
+            case (.text(let text), _):
+                rows.append(.text(text, style: style, first: index == texts.first, last: index == texts.last))
+            default:
+                if case .note(let icon) = style { flush(icon) }
+                rows.append(.block(block))
+            }
+        }
+        if case .note(let icon) = style { flush(icon) }
+        return rows
+    }
 
     var body: some View {
+        if let lead {
+            Section {
+                ArticleLead(lead)
+            }
+        }
         ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
             Section(header: ArticleHeader(section.heading)) {
-                ForEach(Array(section.blocks.enumerated()), id: \.offset) { _, block in
-                    switch block {
-                    case .text(let text):
+                ForEach(Array(Self.rows(section.blocks, style: Style(heading: section.heading)).enumerated()), id: \.offset) { _, row in
+                    switch row {
+                    case let .text(text, style, first, last):
+                        if case .timeline = style {
+                            SignTimelineParagraph(text: text, first: first, last: last)
+                        } else {
+                            Text(verbatim: text)
+                                .font(.body)
+                        }
+                    case let .note(paragraphs, systemImage):
+                        SignNoteCard(paragraphs: paragraphs, systemImage: systemImage)
+                    case .block(.quran(let reference)):
+                        ScriptureQuote(quran: reference)
+                    case let .block(.hadith(link, cite, arabic, english)):
+                        ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
+                    case .block(.text(let text)):
                         Text(verbatim: text)
                             .font(.body)
-                    case .quran(let reference):
-                        ScriptureQuote(quran: reference)
-                    case let .hadith(link, cite, arabic, english):
-                        ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
                     }
                 }
             }
         }
+    }
+}
+
+/// A paragraph of what history did, on a rail: a dot at the start of each paragraph and a line that
+/// runs on to the next, so a section of three events reads as a sequence.
+private struct SignTimelineParagraph: View {
+    @Environment(\.appearance) private var appearance
+
+    let text: String
+    let first: Bool
+    let last: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(appearance.accent)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(appearance.accent.opacity(0.25), lineWidth: 4))
+                    .padding(.top, 6)
+                Rectangle()
+                    .fill(appearance.accent.opacity(last ? 0 : 0.3))
+                    .frame(width: 2)
+                    .frame(maxHeight: .infinity)
+            }
+            .frame(width: 12)
+            .accessibilityHidden(true)
+
+            Text.islamText(text, highlightAllah: appearance.highlightAllahIslam)
+                .font(.body)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
+/// The paragraphs of a "why" or "note" section as one card: the section's heading already names it,
+/// so the card carries only its mark.
+private struct SignNoteCard: View {
+    @Environment(\.appearance) private var appearance
+
+    let paragraphs: [String]
+    let systemImage: String
+
+    var body: some View {
+        let accent = appearance.accent
+        HStack(alignment: .top, spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 26)
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                    Text.islamText(paragraph, highlightAllah: appearance.highlightAllahIslam)
+                        .font(.body)
+                        .lineLimit(nil)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [accent.opacity(0.12), accent.opacity(0.03)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(accent.opacity(0.2), lineWidth: 1))
+        )
+        .padding(.vertical, 3)
     }
 }
 
@@ -405,7 +550,11 @@ struct ProphetMiraclesLink: View {
     /// The prophet page's own view-type name, e.g. "ProphetMusaView".
     let article: String
 
-    @State private var openEntry: ProphetMiraclesView.Entry?
+    /// The page's door, hosted on the page's List (`prophetMiraclesHost`): the destination used to
+    /// hang off this Section, and a modifier on a Section inside a List is applied to each child, so
+    /// up to seven destinations (header, footer, rows) shared one Bool: a double push, or a push
+    /// dropped or popped (Quality Guide G2).
+    @Environment(\.prophetMiracleDoor) private var openEntry
 
     private var entries: [ProphetMiraclesView.Entry] {
         guard let signs = ProphetSignsIndex.forProphet(article) else { return [] }
@@ -420,7 +569,7 @@ struct ProphetMiraclesLink: View {
                 ForEach(entries) { entry in
                     Button {
                         settings.hapticFeedback()
-                        openEntry = entry
+                        openEntry.wrappedValue = entry
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "staroflife")
@@ -452,15 +601,36 @@ struct ProphetMiraclesLink: View {
                     .buttonStyle(.plain)
                 }
             }
-            // Each door is a Button writing one state and the destination hangs off the enclosing
-            // List, never a NavigationLink per row inside a lazily built section.
+        }
+    }
+}
+
+/// The prophet page's miracle door: set by `ProphetMiraclesLink`'s rows, pushed by the page List's one
+/// destination (`prophetMiraclesHost`). A constant nil outside a host.
+private struct ProphetMiracleDoorKey: EnvironmentKey {
+    static let defaultValue: Binding<ProphetMiraclesView.Entry?> = .constant(nil)
+}
+
+extension EnvironmentValues {
+    var prophetMiracleDoor: Binding<ProphetMiraclesView.Entry?> {
+        get { self[ProphetMiracleDoorKey.self] }
+        set { self[ProphetMiracleDoorKey.self] = newValue }
+    }
+}
+
+/// Owns the door and hangs its ONE destination on the page's List (never on a Section or row).
+struct ProphetMiraclesHost: ViewModifier {
+    @State private var openEntry: ProphetMiraclesView.Entry?
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.prophetMiracleDoor, $openEntry)
             .pushDestination(isPresented: Binding(
                 get: { openEntry != nil },
                 set: { if !$0 { openEntry = nil } }
             )) {
                 if let openEntry { ProphetMiracleArticleView(entry: openEntry) }
             }
-        }
     }
 }
 #endif

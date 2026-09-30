@@ -138,7 +138,7 @@ struct PropheciesView: View {
 
                     AboutSignsSection(heading: "About Prophecy & Prophethood",
                                       systemImage: "checkmark.seal",
-                                      doors: [.prophet, .sunnah, .hadith],
+                                      doors: [.prophet, .sunnah, .hadith, .provingIslam],
                                       openDoor: $openDoor)
 
                     Section(footer: Text("Suggested by islamreligion.com, Yaqeen Institute (Sh. Mohammad Elshinawy, \u{201C}The Prophecies of Prophet Muhammad\u{201D}) and Proving Islam, with their permission. The narrations themselves are quoted from the collections bundled in this app.")) {
@@ -206,7 +206,7 @@ struct ProphecyArticleView: View {
     var body: some View {
         List {
             Group {
-                SignArticleSections(sections: entry.sections)
+                SignArticleSections(sections: entry.sections, lead: entry.summary)
             }
             .themedListRowBackground()
         }

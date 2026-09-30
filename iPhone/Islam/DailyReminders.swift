@@ -299,6 +299,13 @@ final class DailyReminderStore: ObservableObject {
     /// Every write of the daily blob goes through here, so the once-a-day rebuild and the resolved
     /// card's updates never interleave a load-modify-save.
     private static let widgetQueue = DispatchQueue(label: "com.al-islam.daily-widget-blob", qos: .utility)
+    /// Which resolved card is newest: bumped (main) by every `writeResolvedWidgetCard`, and recorded
+    /// (on `widgetQueue`) as each one lands. The full rebuild captures the resolved card BEFORE its
+    /// background build and saved a whole snapshot after it, so a card the resolver wrote in between
+    /// was overwritten by the older one, and `publish` never rewrites an unchanged card: the widget
+    /// kept a stale card all day (Quality Guide A13).
+    private static var resolvedGeneration = 0
+    nonisolated(unsafe) private static var writtenResolvedGeneration = 0
 
     /// One corpus entry (or resolved pick) as the widget draws it. Main thread: a verse reads the
     /// Quran text.
@@ -321,7 +328,10 @@ final class DailyReminderStore: ObservableObject {
         let settings = Settings.shared
         let dayIndex = settings.dailyDayIndex()
         let card = entry.map { widgetCard(for: $0, quranFace: settings.fontArabic) }
+        Self.resolvedGeneration += 1
+        let generation = Self.resolvedGeneration
         Self.widgetQueue.async {
+            Self.writtenResolvedGeneration = generation
             var snapshot = DailyWidgetStore.load() ?? DailyWidgetSnapshot()
             let wantedDay: Int? = card == nil ? nil : dayIndex
             guard snapshot.resolvedDayIndex != wantedDay || snapshot.resolved?.id != card?.id else { return }
@@ -379,6 +389,7 @@ final class DailyReminderStore: ObservableObject {
             // Today's resolved pick rides along, so the rebuild never drops what the resolver wrote.
             let resolver = DailyReminderResolver.shared
             let resolvedCard = resolver.isAppPick ? resolver.card.map { self.widgetCard(for: $0, quranFace: quranFace) } : nil
+            let capturedGeneration = Self.resolvedGeneration
             let todayIndex = settings.dailyDayIndex()
             let names = NamesViewModel.shared.namesOfAllah.map {
                 NameInput(number: $0.number, arabic: $0.displayArabicName.replacingOccurrences(of: "\n", with: " "),
@@ -409,7 +420,14 @@ final class DailyReminderStore: ObservableObject {
                     snapshot.resolved = resolvedCard
                     snapshot.resolvedDayIndex = todayIndex
                 }
-                Self.widgetQueue.sync { DailyWidgetStore.save(snapshot) }
+                Self.widgetQueue.sync {
+                    // A resolved card written while this build ran is newer than the one captured.
+                    if Self.writtenResolvedGeneration > capturedGeneration, let current = DailyWidgetStore.load() {
+                        snapshot.resolved = current.resolved
+                        snapshot.resolvedDayIndex = current.resolvedDayIndex
+                    }
+                    DailyWidgetStore.save(snapshot)
+                }
             }.value
 
             UserDefaults.standard.set(stamp, forKey: Self.widgetsWrittenKey)
@@ -810,8 +828,9 @@ final class SavedReflectionsStore: ObservableObject {
             flush: { SavedReflectionsStore.ioQueue.sync {} },
             reload: { SavedReflectionsStore.shared.reloadFromStorage() }
         )
-        guard let url = Self.fileURL, let data = try? Data(contentsOf: url),
-              let decoded = try? JSONDecoder().decode([SavedReflection].self, from: data) else { return }
+        // Never overwritten on a failed decode: an unreadable entry is dropped with the file copied
+        // aside, an unreadable file is moved aside (`UserDataRescue`).
+        guard let url = Self.fileURL, let decoded = UserDataRescue.loadList(SavedReflection.self, file: url) else { return }
         items = decoded
         keys = Set(decoded.map(\.key))
     }
@@ -819,8 +838,7 @@ final class SavedReflectionsStore: ObservableObject {
     /// The file changed underneath this object (a restore): read it again, the key index with it.
     private func reloadFromStorage() {
         Self.ioQueue.sync {}
-        let decoded = Self.fileURL.flatMap { try? Data(contentsOf: $0) }
-            .flatMap { try? JSONDecoder().decode([SavedReflection].self, from: $0) } ?? []
+        let decoded = Self.fileURL.flatMap { UserDataRescue.loadList(SavedReflection.self, file: $0) } ?? []
         items = decoded
         keys = Set(decoded.map(\.key))
     }
@@ -891,6 +909,12 @@ struct ReminderOfTheDayCard: View {
     let entry: DailyReminderEntry
     /// The Today pill in the header; off inside the Today screen itself, which hosts this card.
     var showsHubDoor: Bool = true
+    /// Which header pill was tapped, owned by the HOST List, which carries the one destination
+    /// (`reminderCardDestination`). The destination used to sit on this card, a row inside a lazy
+    /// List: SwiftUI faulted "Do not put a navigation destination modifier inside a lazy container",
+    /// and a resolver publish that re-keyed the card (the daily rollover) popped the pushed Saved
+    /// Reflections or Today screen by itself (Quality Guide G2).
+    @Binding var openDoor: HeaderDoor?
 
     @State private var hadithLink: DailyReminderEntry.HadithLink?
 
@@ -900,7 +924,6 @@ struct ReminderOfTheDayCard: View {
         case reflections, hub
         var id: String { rawValue }
     }
-    @State private var openDoor: HeaderDoor?
 
     private var accent: Color { appearance.accent }
 
@@ -1030,12 +1053,17 @@ struct ReminderOfTheDayCard: View {
         .sheet(item: $hadithLink) { link in
             ReminderHadithSheet(link: link)
         }
-        // The ONE destination the two header pills share.
-        .pushDestination(isPresented: Binding(
-            get: { openDoor != nil },
-            set: { if !$0 { openDoor = nil } }
+    }
+}
+
+extension View {
+    /// The ONE destination the Reminder of the Day card's two header pills share, on the host List.
+    func reminderCardDestination(_ openDoor: Binding<ReminderOfTheDayCard.HeaderDoor?>) -> some View {
+        pushDestination(isPresented: Binding(
+            get: { openDoor.wrappedValue != nil },
+            set: { if !$0 { openDoor.wrappedValue = nil } }
         )) {
-            switch openDoor {
+            switch openDoor.wrappedValue {
             case .reflections: SavedReflectionsView()
             case .hub:         DailyHubView()
             case .none:        EmptyView()
@@ -1086,11 +1114,13 @@ struct ReminderOfTheDaySection: View {
     var showsHubDoor: Bool = true
     /// The Today screen shows every daily pick itself, so a card that IS one of them stays off it.
     var hidesAppPicks: Bool = false
+    /// The card's header door, owned by the host List (`reminderCardDestination`).
+    @Binding var openDoor: ReminderOfTheDayCard.HeaderDoor?
 
     var body: some View {
         if let entry = resolver.card, !(hidesAppPicks && resolver.isAppPick) {
             Section {
-                ReminderOfTheDayCard(entry: entry, showsHubDoor: showsHubDoor)
+                ReminderOfTheDayCard(entry: entry, showsHubDoor: showsHubDoor, openDoor: $openDoor)
             }
         }
     }

@@ -52,8 +52,13 @@ struct HadithTrailingToolbar: ViewModifier {
 // MARK: - The tab root: collections
 
 struct HadithView: View {
+    #if DEBUG
+    /// `-launchHadithSettings` presents once per launch (see the hook in the body's onAppear).
+    private static var debugSettingsHookScheduled = false
+    #endif
     @ObservedObject private var settings = Settings.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var store = HadithStore.shared
     /// The favorites and bookmark sections render user marks, which the store only FORWARDS (they
     /// live in HadithUserData, their own publisher) - observing it here is what re-renders them.
@@ -279,7 +284,7 @@ struct HadithView: View {
     private func matches(_ book: HadithCatalogBook) -> Bool {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return true }
-        if book.englishTitle.localizedCaseInsensitiveContains(query) ||
+        if book.englishTitle.localizedCaseInsensitiveContains(query.foldingLatinDiacritics) ||
             book.arabicTitle.localizedCaseInsensitiveContains(query) {
             return true
         }
@@ -394,6 +399,9 @@ struct HadithView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("hadith root: first body")
+        #endif
         navigationContainer
             // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
             // Manager) and the container swapped between the split view and the stack. Carry the open
@@ -875,13 +883,19 @@ struct HadithView: View {
                 if ProcessInfo.processInfo.arguments.contains(where: {
                     $0 == "-launchHadithSettings" || $0 == "-launchHadithSettingsReading"
                 }) {
-                    // After the reveal, like a real tap: this onAppear also runs during the
-                    // under-cover tab walk, where the sheet would present from a detached tab
-                    // host (UIKit assert in the log).
-                    Task { @MainActor in
-                        await AppReveal.waitUntilRevealed()
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                        showHadithSettings = true
+                    // After the reveal AND the warm walk, like a real tap, and once: this onAppear
+                    // runs on every visit of the under-cover tab walk, and a slow launch can lift the
+                    // cover (it has a time cap) while the walk still has another tab selected, which
+                    // logged "A sheet was presented but its presenter is not yet in the window"
+                    // (Quality Guide G12).
+                    if !Self.debugSettingsHookScheduled {
+                        Self.debugSettingsHookScheduled = true
+                        Task { @MainActor in
+                            await AppReveal.waitUntilRevealed()
+                            await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 10_000_000_000)
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                            showHadithSettings = true
+                        }
                     }
                 }
                 #endif
@@ -998,14 +1012,18 @@ struct HadithView: View {
     /// tiles in one section. On by default; the full rows return when it's off (Hadith settings).
     @ViewBuilder
     private var summaryTilesSection: some View {
+        // The pill and the history button drop under the title where the three do not fit on one line
+        // (an iPad sidebar broke it into "YOUR / SUM- / MARY" beside "To- / da / y").
         Section(header:
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-            
-                Text("YOUR SUMMARY")
+            AdaptiveSectionHeader(forceStacked: dynamicTypeSize.isAccessibilitySize) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .accessibilityHidden(true)
 
-                Spacer()
-
+                    Text("YOUR SUMMARY")
+                        .accessibilityAddTraits(.isHeader)
+                }
+            } controls: {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
                 NavigationLink(destination: LazyDestination { DailyHubView() }) {
                     DailyHubDoorLabel()
@@ -1206,25 +1224,40 @@ struct HadithView: View {
         // at once (Abu, 2026-09-19: "opening Browse by Theme or History or Topics/Encyclopedia/
         // History opens all 3"). Each chip now just records which door was tapped, and ONE
         // `navigationDestination` on the List pushes that one. See `openDoor`.
-        HStack(spacing: 10) {
-            if HadithTopicsStore.isBundled {
-                doorButton(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
+        //
+        // `EvenChipRows` from iOS 16: an iPad sidebar has no room for three ("Topi...", "En..."), so the
+        // row breaks where each name would.
+        Group {
+            if #available(iOS 16.0, *) {
+                EvenChipRows(maximumPerRow: dynamicTypeSize.isAccessibilitySize ? 1 : 3) {
+                    encyclopediaDoorButtons
+                }
+            } else {
+                HStack(spacing: 10) { encyclopediaDoorButtons }
             }
-
-            if HadeethEncStore.isBundled {
-                doorButton(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
-            }
-
-            doorButton(.history, title: "History", systemImage: "clock.arrow.circlepath")
         }
         .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var encyclopediaDoorButtons: some View {
+        if HadithTopicsStore.isBundled {
+            doorButton(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
+        }
+
+        if HadeethEncStore.isBundled {
+            doorButton(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
+        }
+
+        doorButton(.history, title: "History", systemImage: "clock.arrow.circlepath")
     }
 
     /// The doors under the summary. One `@State` + one destination, so exactly one screen opens.
     enum SummaryDoor: String, Identifiable, Hashable {
         case topics, encyclopedia, history
-        /// The two "About Hadith & the Sunnah" cards, which share the same one-destination plumbing.
-        case sunnah, hadithPillar
+        /// The "About Hadith & the Sunnah" cards, which share the same one-destination plumbing: the two
+        /// pillar screens, then (2026-09-29) the Hadith & Its Sciences group of Pillars & Beliefs.
+        case sunnah, hadithPillar, hadithSciences, hadithPreservation, hadithRejectors
         var id: String { rawValue }
     }
 
@@ -1270,6 +1303,9 @@ struct HadithView: View {
         case .history:      HadithHistoryView()
         case .sunnah:       SunnahPillarView()
         case .hadithPillar: HadithPillarView()
+        case .hadithSciences:     HadithSciencesView()
+        case .hadithPreservation: HadithPreservationView()
+        case .hadithRejectors:    HadithRejectorsView()
         case .none:         EmptyView()
         }
     }
@@ -1318,6 +1354,12 @@ struct HadithView: View {
                 aboutDoorButton("What is the Sunnah?", door: .sunnah)
 
                 aboutDoorButton("What are Hadiths?", door: .hadithPillar)
+
+                aboutDoorButton("The Sciences of Hadith", door: .hadithSciences)
+
+                aboutDoorButton("How the Hadith Were Preserved", door: .hadithPreservation)
+
+                aboutDoorButton("Answering the Hadith Rejectors", door: .hadithRejectors)
 
                 Text("Learn more under Al-Islam → Pillars and Beliefs.")
                     .font(.caption2)

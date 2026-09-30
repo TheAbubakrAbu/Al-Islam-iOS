@@ -192,12 +192,23 @@ enum MushafPDFLibrary {
 /// be the default"). Pinned on every layout pass because `scaleFactorForSizeToFit` only exists once the view
 /// has a size, and changes with it (rotation, the bars folding).
 private final class FitFlooredPDFView: PDFView {
+    /// What the floor was last pinned for: only a new size or a new document (a riwayah switch
+    /// installs one) re-pins, and a property is written only when its value changes. It re-wrote all
+    /// three scales on every layout pass of every mounted page (up to 13) for nothing.
+    private var pinnedSize: CGSize = .zero
+    private var pinnedDocument: ObjectIdentifier?
+
     override func layoutSubviews() {
         super.layoutSubviews()
+        let documentID = document.map(ObjectIdentifier.init)
+        guard bounds.size != pinnedSize || documentID != pinnedDocument else { return }
         let fit = scaleFactorForSizeToFit
         guard fit > 0 else { return }
-        minScaleFactor = fit
-        maxScaleFactor = max(fit * 5, 5)
+        pinnedSize = bounds.size
+        pinnedDocument = documentID
+        if minScaleFactor != fit { minScaleFactor = fit }
+        let ceiling = max(fit * 5, 5)
+        if maxScaleFactor != ceiling { maxScaleFactor = ceiling }
         if scaleFactor < fit { scaleFactor = fit }
     }
 }
@@ -218,6 +229,14 @@ private struct MushafPDFPageView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
+    /// Exactly the space offered: the PDF view's own intrinsic size moves with its scale, and asking
+    /// it fed the layout back into itself (G4).
+    @available(iOS 16.0, *)
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: PDFView, context: Context) -> CGSize? {
+        guard let width = proposal.width, let height = proposal.height, width.isFinite, height.isFinite else { return nil }
+        return CGSize(width: width, height: height)
+    }
+
     func makeUIView(context: Context) -> PDFView {
         let view = FitFlooredPDFView()
         view.displayMode = .singlePage
@@ -227,8 +246,23 @@ private struct MushafPDFPageView: UIViewRepresentable {
         view.pageShadowsEnabled = false
         // No document-level paging: this view shows exactly one page and the TabView moves between them.
         view.usePageViewController(false)
-        install(page, in: view, coordinator: context.coordinator)
+        // No find interaction: the reader has its own find bar.
+        if #available(iOS 16.0, *) { view.isFindInteractionEnabled = false }
+        // Installed on the next run-loop turn, outside SwiftUI's update. PDFKit's document view makes
+        // itself first responder the moment it enters a window, and doing that inside the update (the
+        // page view being inserted into the pager) ran SwiftUI's focus bridge mid-graph: the facsimile's
+        // nine "AttributeGraph: Cycle detected" errors (traced with lldb on `print_cycle`, G4).
+        coordinatedInstall(page, in: view, coordinator: context.coordinator)
         return view
+    }
+
+    /// `install` deferred a turn (see `makeUIView`); a newer page asked for meanwhile wins.
+    private func coordinatedInstall(_ page: PDFPage, in view: PDFView, coordinator: Coordinator) {
+        coordinator.installed = page
+        DispatchQueue.main.async {
+            guard coordinator.installed === page else { return }
+            install(page, in: view, coordinator: coordinator)
+        }
     }
 
     /// Was empty, which is what made a riwayah switch look stuck: changing riwayah hands this view a page
@@ -236,7 +270,7 @@ private struct MushafPDFPageView: UIViewRepresentable {
     /// The facsimile only caught up once the pager tore the view down and rebuilt it - i.e. after a swipe.
     func updateUIView(_ view: PDFView, context: Context) {
         guard context.coordinator.installed !== page else { return }
-        install(page, in: view, coordinator: context.coordinator)
+        coordinatedInstall(page, in: view, coordinator: context.coordinator)
     }
 
     /// A one-page document rather than the whole mushaf: with the full document installed, `PDFView` would

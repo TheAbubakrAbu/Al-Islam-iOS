@@ -24,12 +24,17 @@ import SwiftUI
 enum IslamArticleHome: String, Hashable, CaseIterable {
     case pillars
     case guides
+    /// The Proving Islam library (2026-09-29): the cumulative case that Islam is true, adapted from
+    /// provingislam.net's "The Complete Case". Its chapters are ordinary catalog articles, so search,
+    /// the Ask AI corpus and the in-page search reach them like any other page.
+    case proving
 
     /// The resource's title, as the Islam tab prints it.
     var title: String {
         switch self {
         case .pillars: return "Pillars & Beliefs"
         case .guides: return "How-To Guides"
+        case .proving: return "Proving Islam"
         }
     }
 
@@ -37,6 +42,7 @@ enum IslamArticleHome: String, Hashable, CaseIterable {
         switch self {
         case .pillars: return "moon.stars"
         case .guides: return "list.bullet.rectangle"
+        case .proving: return "checkmark.shield"
         }
     }
 }
@@ -65,8 +71,16 @@ struct IslamArticleGroup: Identifiable {
     let title: String
     let home: IslamArticleHome
     let entries: [IslamArticleEntry]
+    /// How many rows the index shows before a "Show All" row takes over, for a group long enough to
+    /// bury the sections under it (the 25 prophets). Nil shows every row.
+    var foldedCount: Int? = nil
 
     var id: String { "\(home.rawValue)/\(title)" }
+
+    /// What the rows are, for a folded group's "Show All 25 Prophets".
+    var rowNoun: String {
+        title.localizedCaseInsensitiveContains("PROPHETS") ? "Prophets" : "Articles"
+    }
 
     /// The group's icon, drawn on every row in it as an `AccentIconChip` (Abu, 2026-09-19: the index
     /// rows were bare text while every other list in the app leads with a chip, so Pillars and the
@@ -80,6 +94,13 @@ struct IslamArticleGroup: Identifiable {
         case "THE 25 PROPHETS NAMED IN THE QURAN": return "person.wave.2"
         case "THE THREE HOLY MOSQUES":          return "building.2"
         case "QURAN & TAFSIR":                  return "book.closed"
+        case "HADITH & ITS SCIENCES":           return "books.vertical"
+        case "THE METHOD":                      return "scalemass"
+        case "THE MESSENGER":                   return "person.fill.checkmark"
+        case "THE BOOK":                        return "book"
+        case "WHAT HE COULD NOT HAVE KNOWN":    return "eye"
+        case "THE MESSAGE":                     return "text.quote"
+        case "THE VERDICT":                     return "checkmark.seal"
         case "THE ISLAMIC CALENDAR":            return "calendar"
         case "HISTORICAL & BIOGRAPHICAL":       return "clock.arrow.circlepath"
         case "SCHOLARS OF AHL AS-SUNNAH":       return "text.book.closed"
@@ -115,10 +136,10 @@ enum IslamArticleCatalog {
 
     private static func group(_ title: String, _ home: IslamArticleHome,
                               _ rows: [(id: String, title: String, key: String, aliases: [String])],
-                              emphasized: Bool = false) -> IslamArticleGroup {
+                              emphasized: Bool = false, foldedCount: Int? = nil) -> IslamArticleGroup {
         IslamArticleGroup(title: title, home: home, entries: rows.map {
             entry($0.id, $0.title, title, home, key: $0.key, emphasized: emphasized, aliases: $0.aliases)
-        })
+        }, foldedCount: foldedCount)
     }
 
     /// Pillars & Beliefs, in the order the index shows them.
@@ -176,7 +197,9 @@ enum IslamArticleCatalog {
             ("ProphetYahyaView", "Yahya", "yahya", ["john the baptist"]),
             ("ProphetIsaView", "Isa", "isa", ["jesus", "masih", "messiah", "injil", "maryam", "mary"]),
             ("ProphetMuhammadView", "Muhammad", "muhammad-prophet", ["final messenger", "seal of the prophets", "khatam"]),
-        ]),
+        // Folded to the first five (Abu, 2026-09-29: "shrink it and have a show more"): all 25 rows
+        // pushed the Holy Mosques and everything after them far down the index.
+        ], foldedCount: 5),
         group("THE THREE HOLY MOSQUES", .pillars, [
             ("HaramView", "Masjid Al-Haram (The Holy Mosque)", "haram", ["makkah", "mecca", "kaaba", "kabah"]),
             ("NabawiView", "Masjid An-Nabawi (The Prophet\u{2019}s Mosque)", "nabawi", ["madinah", "medina", "prophet's mosque"]),
@@ -190,6 +213,24 @@ enum IslamArticleCatalog {
             ("JuzView", "The 30 Juz (Parts)", "juz", ["ajza", "para", "hizb", "parts of the quran"]),
             ("AhrufView", "The 7 Ahruf (Modes)", "ahruf", ["harf", "modes", "seven ahruf"]),
             ("QiraatView", "The 10 Qiraat (Recitations)", "qiraat", ["qiraah", "riwayah", "hafs", "warsh", "readings"]),
+            ("RiwayatDifferencesView", "How the Riwayat Differ on the Page", "riwayat-differences",
+             ["hamzah", "hamza", "hamzat al-wasl", "wasl", "madani", "maghribi", "dot", "dots", "imalah", "taqlil",
+              "tas-hil", "tashil", "ibdal", "naql", "silah", "warsh", "qalun", "qaloon", "susi", "duri", "abu jafar",
+              "hamzah az-zayyat", "kisai", "orthography", "mushaf differences", "dabt"]),
+        ]),
+        // Its own group beside the Quran's (Abu, 2026-09-29: "add Hadith sciences ... make that its own
+        // link near the Quran stuff like tafsir and seerah").
+        group("HADITH & ITS SCIENCES", .pillars, [
+            ("HadithSciencesView", "The Sciences of Hadith", "hadith-sciences",
+             ["mustalah", "mustalah al-hadith", "ulum al-hadith", "usul al-hadith", "isnad", "matn", "sahih", "hasan",
+              "daif", "da'if", "weak", "mawdu", "fabricated", "grading", "grades", "jarh", "tadil", "rijal", "narrators",
+              "mutawatir", "ahad", "authentic"]),
+            ("HadithPreservationView", "How the Hadith Were Preserved", "hadith-preservation",
+             ["compilation", "writing hadith", "tadwin", "six books", "kutub as-sittah", "muwatta", "musnad",
+              "umar ibn abd al-aziz", "zuhri", "sahifah", "hammam", "bukhari", "muslim"]),
+            ("HadithRejectorsView", "Answering the Hadith Rejectors", "hadith-rejectors",
+             ["quranist", "quranists", "quran only", "quran alone", "quraniyyun", "ahl al-quran", "hadith rejector",
+              "sunnah rejector", "munkir", "inkar as-sunnah", "parwez", "rashad khalifa"]),
         ]),
         group("THE ISLAMIC CALENDAR", .pillars, [
             ("HijriCalendarView", "Hijri Calendar", "hijri", ["islamic calendar", "lunar", "months", "muharram", "ramadan"]),
@@ -287,14 +328,65 @@ enum IslamArticleCatalog {
         ]),
     ]
 
+    /// The Proving Islam library's chapters, in reading order: how the case works, then the man, the
+    /// book, what he could not have known, the message, and the verdict. Adapted from provingislam.net's
+    /// "The Complete Case" (Abu, 2026-09-29: "incorporate Proving Islam ... actually use a lot of their
+    /// stuff"), in the app's own words and held to its sahih/hasan rule.
+    static let provingGroups: [IslamArticleGroup] = [
+        group("THE METHOD", .proving, [
+            ("ProvingCaseView", "How the Case Works", "case", ["cumulative case", "method", "occam", "evidence", "proof"]),
+            ("ProvingFingerprintView", "The Human Fingerprint Test", "fingerprint",
+             ["fingerprints", "aristotle", "galen", "ptolemy", "darwin", "errors", "human author"]),
+        ]),
+        group("THE MESSENGER", .proving, [
+            ("ProvingProphetView", "The Prophet\u{2019}s Character", "character",
+             ["al-amin", "trustworthy", "safa", "khadijah", "heraclius", "abu sufyan", "motive", "liar", "fraud"]),
+            ("ProvingContinuationView", "One Message, Many Messengers", "continuation",
+             ["prophets", "messengers", "last brick", "seal of the prophets", "religion of ibrahim", "same message"]),
+        ]),
+        group("THE BOOK", .proving, [
+            ("ProvingStylometryView", "Two Voices: Quran and Hadith", "stylometry",
+             ["stylometry", "sayoud", "sadeghi", "style", "author", "authorship"]),
+            ("ProvingPreservationView", "Preserved as Promised", "preservation",
+             ["preservation", "birmingham", "sanaa", "manuscript", "memorisation", "15:9", "corruption"]),
+            ("ProvingIjazView", "The Unmatched Quran", "ijaz",
+             ["ijaz", "inimitability", "challenge", "poetry", "walid ibn al-mughirah", "musaylimah", "eloquence"]),
+            ("ProvingScienceView", "The Errors It Did Not Make", "science",
+             ["science", "scientific", "expanding universe", "orbits", "bees", "iron", "embryo", "water"]),
+        ]),
+        group("WHAT HE COULD NOT HAVE KNOWN", .proving, [
+            ("ProvingProphecyView", "Foretold, and Fulfilled", "prophecy",
+             ["prophecy", "prophecies", "byzantines", "abu lahab", "mongols", "falsifiable", "fulfilled"]),
+            ("ProvingSourcesView", "Where Could He Have Learned It?", "sources",
+             ["borrowing", "arabic bible", "king or pharaoh", "abdullah ibn salam", "copied", "teacher"]),
+            ("ProvingBibleView", "The Bible Points Ahead", "bible",
+             ["bible", "deuteronomy 18", "isaiah 42", "paraclete", "ishmael", "ismail", "kedar", "cornerstone"]),
+            ("ProvingScriptureView", "The Quran and Earlier Scripture", "scripture",
+             ["torah", "gospel", "talmud", "midrash", "muhaymin", "parallels", "luke", "earlier scripture"]),
+        ]),
+        group("THE MESSAGE", .proving, [
+            ("ProvingEthicsView", "Justice Beyond the Tribe", "ethics",
+             ["justice", "ethics", "law", "4:135", "harvard", "tribalism", "harm"]),
+            ("ProvingJesusView", "Jesus in the Gospels", "jesus",
+             ["jesus", "isa", "gospels", "trinity", "messiah", "christianity", "prophet jesus"]),
+            ("ProvingGodView", "God: The Prior Question", "god",
+             ["god", "existence of god", "atheism", "first cause", "fine-tuning", "fitrah", "creator"]),
+        ]),
+        group("THE VERDICT", .proving, [
+            ("ProvingQuestionsView", "Six Hard Questions", "questions", ["questions", "sceptic", "skeptic", "critic"]),
+            ("ProvingClosingView", "The Converging Case", "closing", ["conclusion", "closing", "verdict", "invitation"]),
+        ]),
+    ]
+
     static func groups(for home: IslamArticleHome) -> [IslamArticleGroup] {
         switch home {
         case .pillars: return pillarsGroups
         case .guides: return guidesGroups
+        case .proving: return provingGroups
         }
     }
 
-    static let all: [IslamArticleEntry] = (pillarsGroups + guidesGroups).flatMap(\.entries)
+    static let all: [IslamArticleEntry] = (pillarsGroups + guidesGroups + provingGroups).flatMap(\.entries)
 
     static let byID: [String: IslamArticleEntry] = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
@@ -322,6 +414,7 @@ enum IslamArticleCatalog {
             switch home {
             case .pillars: return AnyView(PillarsView(openArticle: request))
             case .guides: return AnyView(GuidesView(openArticle: request))
+            case .proving: return AnyView(ProvingIslamView(openArticle: request))
             }
         }
         #endif
@@ -355,15 +448,58 @@ struct IslamArticleIndexSections: View {
     @Environment(\.appearance) private var appearance
 
     let groups: [IslamArticleGroup]
+    /// The folded groups (`IslamArticleGroup.foldedCount`) the reader opened. Held by the index screen,
+    /// so a search and back finds them as they were, and so "Scroll To Article" can open the group its
+    /// row is folded into.
+    @Binding var unfolded: Set<String>
+
+    init(groups: [IslamArticleGroup], unfolded: Binding<Set<String>> = .constant([])) {
+        self.groups = groups
+        self._unfolded = unfolded
+    }
 
     var body: some View {
         ForEach(groups) { group in
+            let folded = group.foldedCount.map { $0 < group.entries.count && !unfolded.contains(group.id) } ?? false
             Section(header: Text(group.title)) {
-                ForEach(group.entries) { entry in
+                ForEach(folded ? Array(group.entries.prefix(group.foldedCount ?? 0)) : group.entries) { entry in
                     row(entry, icon: group.systemImage)
+                }
+
+                if group.foldedCount.map({ $0 < group.entries.count }) == true {
+                    foldButton(group, folded: folded)
                 }
             }
         }
+    }
+
+    /// "Show All 25 Prophets" under a folded group, "Show Fewer" once it is open: the Quran themes'
+    /// "Show All" row, so the two read alike.
+    private func foldButton(_ group: IslamArticleGroup, folded: Bool) -> some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            withAnimation(.easeInOut) {
+                if folded {
+                    _ = unfolded.insert(group.id)
+                } else {
+                    _ = unfolded.remove(group.id)
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: folded ? "chevron.down.circle" : "chevron.up.circle")
+                    .font(.subheadline)
+
+                Text(folded ? "Show All \(group.entries.count) \(group.rowNoun)" : "Show Fewer")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+            }
+            .foregroundColor(appearance.accent)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// One index row: an accent chip, then the title. Every other list in the app leads with a chip
@@ -551,6 +687,58 @@ enum ArticleBlock {
     /// wording is not the shelf's.
     case hadith(String, cite: String, arabic: ClosedRange<Int>? = nil, english: [ClosedRange<Int>] = [],
                 text: String? = nil, arabicText: String? = nil)
+
+    // The design blocks (ArticleDesign.swift, 2026-09-29). Every string here is prose the corpus
+    // builder reads, spelled as these cases spell them.
+
+    /// The "In short" card that opens a page.
+    case lead(String)
+    /// One numbered step, "3. Wash both **hands** ...", markdown.
+    case step(String)
+    /// One bullet, markdown ("•" optional).
+    case bullet(String)
+    /// A point set apart in a card with an icon and a title; markdown.
+    case callout(String, title: String, icon: String = "lightbulb.fill")
+    /// A term with its Arabic set large and its meaning (markdown) under it.
+    case term(String, arabic: String, meaning: String)
+    /// Number tiles.
+    case stats([ArticleStat])
+    /// A chain drawn node by node (an isnad, a line of transmission).
+    case chain([ArticleChainLink], caption: String? = nil)
+    /// A short list in one card under a heading; each item markdown.
+    case checklist([String], title: String, icon: String = "checkmark.circle.fill")
+    /// Two things side by side (two spellings, two claims).
+    case versus(ArticleVersus.Side, ArticleVersus.Side, quranic: Bool = true)
+    /// The scale of hadith grades (`HadithGradeLadder`).
+    case gradeLadder
+    /// A row that opens another page: an article, a prophecy, a site.
+    case door(ArticleDoor)
+}
+
+/// Where an article's `door` row goes. Articles are named by their catalog id, so a door can never
+/// point at a page the catalog does not have without the corpus gate noticing (see
+/// Scripts/build_islam_corpus.py, which checks every `.article(` door).
+enum ArticleDoor {
+    /// A Pillars & Beliefs, How-to or Proving Islam article, by its view-type id.
+    case article(String)
+    /// A Prophecies of the Prophet article, by its entry id (iOS; the watch draws nothing).
+    case prophecy(String)
+    /// A Miracles of the Quran article, by its slug in the miracles pack, with the title to show (the
+    /// row must not load the pack just to draw itself).
+    case miracle(String, title: String)
+    /// A Miracles of the Prophets article, by its entry id.
+    case prophetMiracle(String)
+    /// One of the signs libraries, whole.
+    case library(ArticleLibrary)
+    /// The Proving Islam library itself.
+    case provingIslam
+    /// A page on the web.
+    case link(String, title: String, subtitle: String)
+}
+
+/// The signs libraries a door can open whole.
+enum ArticleLibrary {
+    case miraclesOfQuran, propheciesOfProphet, miraclesOfProphets
 }
 
 struct ArticleSection {
@@ -565,6 +753,10 @@ struct ArticleSection {
 
 /// The sections of a data-backed article: one `Section(header: ArticleHeader(...))` each, the same
 /// anchors a search result scrolls to, one row per block.
+///
+/// Two sections every article has are drawn as cards without the data saying so (2026-09-29): the
+/// first paragraph of SUMMARY is the page's `ArticleLead`, and the first paragraph of IN SUMMARY its
+/// `ArticleClosing`. The words are the same `.text` they always were.
 struct ArticleSectionsView: View {
     let sections: [ArticleSection]
 
@@ -573,21 +765,42 @@ struct ArticleSectionsView: View {
             let section = sections[index]
             Section(header: ArticleHeader(section.heading)) {
                 ForEach(section.blocks.indices, id: \.self) { blockIndex in
-                    ArticleBlockView(block: section.blocks[blockIndex])
+                    ArticleBlockView(block: section.blocks[blockIndex],
+                                     role: Self.role(heading: section.heading, blockIndex: blockIndex))
                 }
             }
+        }
+    }
+
+    static func role(heading: String, blockIndex: Int) -> ArticleBlockView.Role {
+        guard blockIndex == 0 else { return .body }
+        switch heading {
+        case "SUMMARY": return .lead
+        case "IN SUMMARY": return .closing
+        default: return .body
         }
     }
 }
 
 struct ArticleBlockView: View {
+    /// Where the block sits, for the two paragraphs a page's structure promotes to cards.
+    enum Role {
+        case body, lead, closing
+    }
+
     let block: ArticleBlock
+    var role: Role = .body
 
     var body: some View {
         switch block {
         case .text(let prose):
-            Text(verbatim: prose)
-                .font(.body)
+            switch role {
+            case .lead: ArticleLead(prose)
+            case .closing: ArticleClosing(prose)
+            case .body:
+                Text(verbatim: prose)
+                    .font(.body)
+            }
         case .markdown(let prose):
             Text(articleMarkdown: prose)
                 .font(.body)
@@ -597,7 +810,155 @@ struct ArticleBlockView: View {
             ScriptureQuote(quran: reference, words: words)
         case .hadith(let link, let cite, let arabic, let english, let text, let arabicText):
             ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english, text: text, arabicText: arabicText)
+        case .lead(let prose):
+            ArticleLead(prose)
+        case .step(let prose):
+            ArticleStep(prose)
+        case .bullet(let prose):
+            ArticleBullet(prose)
+        case .callout(let prose, let title, let icon):
+            ArticleCallout(prose, title: title, systemImage: icon)
+        case .term(let term, let arabic, let meaning):
+            ArticleTermCard(term, arabic: arabic, meaning: meaning)
+        case .stats(let stats):
+            ArticleStatGrid(stats)
+        case .chain(let links, let caption):
+            ArticleChainDiagram(links, caption: caption)
+        case .checklist(let items, let title, let icon):
+            ArticleChecklist(items, title: title, systemImage: icon)
+        case .versus(let left, let right, let quranic):
+            ArticleVersus(left, right, quranic: quranic)
+        case .gradeLadder:
+            HadithGradeLadder()
+        case .door(let door):
+            ArticleDoorRow(door: door)
         }
+    }
+}
+
+/// One `door` block: a row that opens another page. One link per row (the List rule every article
+/// keeps), with the destination built only when it is opened.
+struct ArticleDoorRow: View {
+    @Environment(\.appearance) private var appearance
+
+    let door: ArticleDoor
+
+    var body: some View {
+        switch door {
+        case .article(let id):
+            if let entry = IslamArticleCatalog.byID[id] {
+                NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
+                    label(title: entry.title, subtitle: "\(entry.home.title) \u{203A} \(Self.groupTitle(entry.group))",
+                          systemImage: IslamArticleCatalog.groups(for: entry.home).first { $0.title == entry.group }?.systemImage
+                              ?? entry.home.systemImage)
+                }
+            }
+        case .prophecy(let id):
+            #if os(iOS)
+            if let entry = PropheciesView.entries.first(where: { $0.id == id }) {
+                NavigationLink(destination: LazyDestination { ProphecyArticleView(entry: entry) }) {
+                    label(title: entry.title, subtitle: entry.summary, systemImage: "checkmark.seal")
+                }
+            }
+            #else
+            EmptyView()
+            #endif
+        case .miracle(let slug, let title):
+            #if os(iOS)
+            NavigationLink(destination: LazyDestination { MiracleDoorDestination(slug: slug) }) {
+                label(title: title, subtitle: "Miracles of the Quran", systemImage: "sparkle.magnifyingglass")
+            }
+            #else
+            EmptyView()
+            #endif
+        case .prophetMiracle(let id):
+            #if os(iOS)
+            if let entry = ProphetMiraclesView.entries.first(where: { $0.id == id }) {
+                NavigationLink(destination: LazyDestination { ProphetMiracleArticleView(entry: entry) }) {
+                    label(title: entry.title, subtitle: entry.summary, systemImage: "staroflife")
+                }
+            }
+            #else
+            EmptyView()
+            #endif
+        case .library(let library):
+            #if os(iOS)
+            switch library {
+            case .miraclesOfQuran:
+                NavigationLink(destination: LazyDestination { MiraclesView() }) {
+                    label(title: "Miracles of the Quran", subtitle: "Signs in creation, science, and history",
+                          systemImage: "sparkle.magnifyingglass")
+                }
+            case .propheciesOfProphet:
+                NavigationLink(destination: LazyDestination { PropheciesView() }) {
+                    label(title: "Prophecies of the Prophet", subtitle: "What he foretold, and what history did",
+                          systemImage: "checkmark.seal")
+                }
+            case .miraclesOfProphets:
+                NavigationLink(destination: LazyDestination { ProphetMiraclesView() }) {
+                    label(title: "Miracles of the Prophets", subtitle: "The signs given to the prophets, and to him",
+                          systemImage: "staroflife")
+                }
+            }
+            #else
+            EmptyView()
+            #endif
+        case .provingIslam:
+            #if os(iOS)
+            NavigationLink(destination: LazyDestination { ProvingIslamView() }) {
+                label(title: "Proving Islam: The Complete Case",
+                      subtitle: "The case that Islam is true, one line of evidence at a time",
+                      systemImage: IslamArticleHome.proving.systemImage)
+            }
+            #else
+            EmptyView()
+            #endif
+        case .link(let raw, let title, let subtitle):
+            if let url = URL(string: raw) {
+                Link(destination: url) {
+                    label(title: title, subtitle: subtitle, systemImage: "link", external: true)
+                }
+            }
+        }
+    }
+
+    /// "HADITH & ITS SCIENCES" -> "Hadith & Its Sciences", with the small words kept small.
+    static func groupTitle(_ group: String) -> String {
+        let small: Set<String> = ["of", "the", "and", "in", "to", "a", "an", "on", "at", "for"]
+        return group.lowercased().split(separator: " ").enumerated().map { index, word in
+            let text = String(word)
+            if index > 0, small.contains(text) { return text }
+            if text.hasPrefix("(") { return "(" + text.dropFirst().capitalized }
+            return text.capitalized
+        }.joined(separator: " ")
+    }
+
+    private func label(title: String, subtitle: String, systemImage: String, external: Bool = false) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 29)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 4)
+
+            if external {
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 3)
     }
 }
 
@@ -1239,7 +1600,7 @@ struct ArticleSearchChrome: ViewModifier {
                 #endif
             }
             .onChange(of: searchText) { text in
-                search.update(query: text, homes: [.pillars, .guides], within: articleID)
+                search.update(query: text, homes: [.pillars, .guides, .proving], within: articleID)
                 if !text.isEmpty { scrollTarget = nil }
             }
             .onChange(of: scrollTarget) { target in
@@ -1282,7 +1643,7 @@ private struct ArticleSearchResults: View {
 
                 IslamArticleSearchSections(
                     query: query,
-                    homes: [.pillars, .guides],
+                    homes: [.pillars, .guides, .proving],
                     contentHits: search.contentHits,
                     isSearching: search.isSearching,
                     showHome: true,
@@ -1757,6 +2118,167 @@ enum ArticleSources {
             ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti"),
             ArticleSource(title: "The revelation of the Quran in seven styles (ahruf, sing. harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/5142"),
             ArticleSource(title: "'Uthmaan's compilation of the Mushaf in one style (harf)", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/125091"),
+        ],
+        "RiwayatDifferencesView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Hirz al-Amani wa Wajh at-Tahani (ash-Shatibiyyah)", subtitle: "Al-Qasim ibn Firruh ash-Shatibi, the principles of the seven readings"),
+            ArticleSource(title: "Ad-Durrah al-Mudiyyah", subtitle: "Ibn al-Jazari, the three readings that complete the ten"),
+            ArticleSource(title: "An-Nashr fi al-Qira’at al-‘Ashr", subtitle: "Ibn al-Jazari, the ten readings and their narrators"),
+            ArticleSource(title: "Al-Muhkam fi Naqt al-Masahif", subtitle: "Abu ‘Amr ad-Dani, on the marks added to the mushaf"),
+            ArticleSource(title: "The printed mushafs of the twenty riwayat", subtitle: "The King Fahd Complex and Islamweb editions this app’s texts are taken from"),
+        ],
+        "HadithSciencesView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Muqaddimah of Sahih Muslim", subtitle: "Imam Muslim on the isnad, with the sayings of Ibn Sirin and Ibn al-Mubarak"),
+            ArticleSource(title: "Muqaddimah Ibn as-Salah", subtitle: "Ibn as-Salah, ‘Ulum al-Hadith, with ash-Shafi‘i’s ar-Risalah on the conditions of a report"),
+            ArticleSource(title: "Nuzhat an-Nazar and Taqrib at-Tahdhib", subtitle: "Ibn Hajar al-‘Asqalani, on the terms of the science and the ranks of the narrators"),
+            ArticleSource(title: "Conditions of a saheeh (sound) hadeeth", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/79163"),
+            ArticleSource(title: "The science of hadith is based on reason and shar‘i guidelines", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/239540"),
+        ],
+        "HadithPreservationView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Bari and Hady as-Sari", subtitle: "Ibn Hajar al-‘Asqalani, on the writing of hadith and his count of Sahih al-Bukhari"),
+            ArticleSource(title: "Muqaddimah Ibn as-Salah", subtitle: "Ibn as-Salah, ‘Ulum al-Hadith, on the writing of hadith and the two Sahihs"),
+            ArticleSource(title: "Sahifah Hammam ibn Munabbih", subtitle: "Edited by Muhammad Hamidullah, with an introduction on the early compilation of hadith"),
+            ArticleSource(title: "The soundness of the hadeeth “Do not write anything from me…” and explanation of what it means", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/22394"),
+            ArticleSource(title: "What are the reasons why the hadiths were written down?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/488953"),
+        ],
+        "HadithRejectorsView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Ar-Risalah and Jima' al-'Ilm", subtitle: "Ash-Shafi'i, on the Sunnah as the Wisdom, and his debate with a man who rejected all reports"),
+            ArticleSource(title: "Al-Ihkam fi Usul al-Ahkam", subtitle: "Ibn Hazm, on the one who takes only what he finds in the Quran"),
+            ArticleSource(title: "Jami' Bayan al-'Ilm wa Fadlih", subtitle: "Ibn Abd al-Barr, the chapter on the place of the Sunnah beside the Book"),
+            ArticleSource(title: "AHL Al-Quran Movement in Colonial Punjab: Exclusion of Hadith Literature", subtitle: "Saadia Sumbal, Journal of Social Sciences and Humanities 29:1 (2021)", url: "https://ojs.aiou.edu.pk/index.php/jssh/article/view/2202"),
+            ArticleSource(title: "Refutation of those who quote the Holy Quran to reject the Sunnah and justify not acting upon it", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/256435"),
+        ],
+        "ProvingCaseView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the methodology and the note on intellectual honesty", url: "https://provingislam.net/"),
+            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalani, on the mutawatir report and the certainty it gives"),
+            ArticleSource(title: "Al-Jawab as-Sahih li-man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, his reply to a Christian treatise sent from Cyprus"),
+        ],
+        "ProvingFingerprintView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the human fingerprint test", url: "https://provingislam.net/"),
+            ArticleSource(title: "Tafsir al-Quran al-Azim", subtitle: "Ibn Kathir, on 4:82 and 18:86"),
+            ArticleSource(title: "Ibn al-Nafis, the pulmonary circulation, and the Islamic Golden Age", subtitle: "John B. West, Journal of Applied Physiology, 2008", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC2612469/"),
+            ArticleSource(title: "The Variation of Animals and Plants under Domestication", subtitle: "Charles Darwin, 1868, where he proposed pangenesis"),
+            ArticleSource(title: "Dialogue Concerning the Two Chief World Systems", subtitle: "Galileo Galilei, 1632, whose fourth day sets out his theory of the tides"),
+        ],
+        "ProvingProphetView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "As-Silsilah as-Sahihah", subtitle: "Muhammad Nasir ad-Din al-Albani, no. 92: the report of ‘Aqil ibn Abi Talib, graded hasan"),
+            ArticleSource(title: "Al-Jami‘ li-Ahkam al-Quran", subtitle: "Al-Qurtubi, on what the Prophet concealed in Quran 33:37"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the Prophet’s character and the psychology of fraud", url: "https://provingislam.net/"),
+            ArticleSource(title: "Detailed discussion about the verse “But you did hide in yourself that which Allaah will make manifest” [al-Ahzaab 33:37]", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/96464"),
+        ],
+        "ProvingContinuationView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Majmu‘ al-Fatawa", subtitle: "Ibn Taymiyyah, vol. 18, on “I was a prophet while Adam was between spirit and body”"),
+            ArticleSource(title: "The Holy Bible, King James Version", subtitle: "Deuteronomy 6:4 and Mark 12:29"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on prophetic continuation", url: "https://provingislam.net/"),
+            ArticleSource(title: "Muhammad (peace and blessings of Allah be upon him) is the Seal of the Prophets and Messengers", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/113393"),
+        ],
+        "ProvingStylometryView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "I'jaz al-Quran", subtitle: "Abu Bakr al-Baqillani, the chapter on the speech of the Prophet"),
+            ArticleSource(title: "The Chronology of the Qurʾān: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58 (2011), pages 210–299"),
+            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Halim Sayoud, Literary and Linguistic Computing 27:4 (2012), pages 427–444", url: "https://academic.oup.com/dsh/article-abstract/27/4/427/941526"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on stylometry", url: "https://provingislam.net/"),
+        ],
+        "ProvingPreservationView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Jami' li-Ahkam al-Quran", subtitle: "Al-Qurtubi, on 15:9 and the scriptures entrusted to their guardians"),
+            ArticleSource(title: "Ṣanʿāʾ 1 and the Origins of the Qurʾān", subtitle: "Behnam Sadeghi and Mohsen Goudarzi, Der Islam 87 (2012), pages 1–129"),
+            ArticleSource(title: "A Textual Commentary on the Greek New Testament", subtitle: "Bruce M. Metzger, on Mark 16:9–20, John 7:53–8:11 and 1 John 5:7–8"),
+            ArticleSource(title: "Birmingham Qur'an manuscript dated among the oldest in the world", subtitle: "University of Birmingham, 22 July 2015", url: "https://www.birmingham.ac.uk/news-archive/2015/birmingham-quran-manuscript-dated-among-the-oldest-in-the-world"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on preservation", url: "https://provingislam.net/"),
+        ],
+        "ProvingIjazView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Itqan fi Ulum al-Quran", subtitle: "As-Suyuti, the chapter on the inimitability of the Quran"),
+            ArticleSource(title: "Al-Mustadrak 'ala as-Sahihayn", subtitle: "Al-Hakim, with adh-Dhahabi's Talkhis: the report of al-Walid ibn al-Mughirah"),
+            ArticleSource(title: "Al-Isti'ab fi Ma'rifat al-Ashab", subtitle: "Ibn 'Abd al-Barr, the entry on Labid ibn Rabi'ah"),
+            ArticleSource(title: "Miraculous aspects of the Holy Qur’an", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/245475"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the unmatched Qur'an", url: "https://provingislam.net/"),
+        ],
+        "ProvingScienceView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari"),
+            ArticleSource(title: "Jami' al-Bayan and Tafsir al-Quran al-'Azim", subtitle: "al-Tabari and Ibn Kathir, for the classical range of meaning of each verse"),
+            ArticleSource(title: "Al-Muwafaqat", subtitle: "al-Shatibi, on the limits of reading the sciences into the Quran"),
+            ArticleSource(title: "History of Animals, Meteorology and Generation of Animals", subtitle: "Aristotle, the Greek science the Quran's age inherited, on bees, hail, metals and the embryo"),
+            ArticleSource(title: "Development of Religion and Thought in Ancient Egypt", subtitle: "James Henry Breasted (1912), on the Pyramid Texts"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on scientific compatibility", url: "https://provingislam.net/"),
+        ],
+        "ProvingProphecyView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with Sunan Abi Dawud, Jami` at-Tirmidhi, Sunan an-Nasa'i and Sunan Ibn Majah"),
+            ArticleSource(title: "Sharh Sahih Muslim", subtitle: "al-Nawawi, on the hadith of the Turks and of the last Chosroes and Caesar"),
+            ArticleSource(title: "'Awn al-Ma'bud", subtitle: "The commentary on Sunan Abi Dawud, on the hadith of al-Basrah and the Tigris"),
+            ArticleSource(title: "The History of the Decline and Fall of the Roman Empire", subtitle: "Edward Gibbon, chapter 46, on the Persian war of Heraclius"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on prophecy", url: "https://provingislam.net/"),
+            ArticleSource(title: "Proofs of Islam", subtitle: "Proving Islam: prophecies and historical accuracies", url: "https://provingislam.com/proofs"),
+        ],
+        "ProvingSourcesView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Bible in Arabic", subtitle: "Sidney H. Griffith, Princeton University Press, 2013"),
+            ArticleSource(title: "Tafsir al-Quran al-'Azim", subtitle: "Ibn Kathir, on 6:105, 16:103 and 2:102"),
+            ArticleSource(title: "Majmu' al-Fatawa", subtitle: "Ibn Taymiyyah, on the protection of the prophets (4/319-320)"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on historical and scriptural knowledge", url: "https://provingislam.net/"),
+            ArticleSource(title: "Qur'anic Accuracy Vs. Biblical Error: The Kings & Pharaohs of Egypt", subtitle: "Islamic Awareness, citing Gardiner's Egyptian Grammar and Wilkinson's Dictionary of Ancient Egypt", url: "https://www.islamic-awareness.org/quran/contrad/external/josephdetail.html"),
+        ],
+        "ProvingBibleView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with al-Hakim’s Mustadrak"),
+            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, the chapters on the glad tidings of the earlier prophets and the Faraqlit"),
+            ArticleSource(title: "Hidayat al-Hayara fi Ajwibat al-Yahud wan-Nasara", subtitle: "Ibn al-Qayyim, with the debate on Deuteronomy 18 in the Maghrib"),
+            ArticleSource(title: "Izhar al-Haqq", subtitle: "Rahmatullah al-Kairanawi, the sixteenth glad tiding: the parable of the vineyard"),
+            ArticleSource(title: "The Holy Bible, King James Version", subtitle: "Every Bible passage quoted; the Jewish readings from Rashi and the Aramaic Targum"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on Biblical prophecies", url: "https://provingislam.net/"),
+        ],
+        "ProvingScriptureView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari"),
+            ArticleSource(title: "Tafsir al-Quran al-‘Azim", subtitle: "Ibn Kathir, on 5:48, 2:63, 7:171 and 27:76, and his introduction on the reports of the People of the Book"),
+            ArticleSource(title: "The Mishnah, the Talmud and the Midrash", subtitle: "Mishnah Sanhedrin 4:5; Babylonian Talmud, Shabbat 88a and Bava Metzia 86b; Genesis Rabbah 48:14; Pirkei de-Rabbi Eliezer 21; Midrash Tanhuma, Bereshit 10"),
+            ArticleSource(title: "The Holy Bible, King James Version, and the Arabic Gospel of the Infancy", subtitle: "The Bible as quoted; the infancy gospel in the Ante-Nicene Fathers, volume 8"),
+            ArticleSource(title: "The failure of a Jewish program of public satire in the squares of Medina", subtitle: "Reuven Firestone, in the journal Judaism (1997), on “we hear and we disobey”"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the Quran and prior scripture", url: "https://provingislam.net/"),
+        ],
+        "ProvingEthicsView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Al-Arba‘un an-Nawawiyyah", subtitle: "An-Nawawi, hadith 32 (no harm) and 33 (proof on the claimant), with his gradings"),
+            ArticleSource(title: "On Liberty", subtitle: "John Stuart Mill, 1859: the harm principle"),
+            ArticleSource(title: "The “Constitution” of Medina: Translation, Commentary, and Meaning Today", subtitle: "Ovamir Anjum, Yaqeen Institute for Islamic Research, 2021"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on ethics and law", url: "https://provingislam.net/"),
+            ArticleSource(title: "Which Islamic or Qur'anic verse or quote is written on Harvard's main gate?", subtitle: "Harvard Library, Ask a Librarian: Quran 4:135 in the Words of Justice exhibit", url: "https://ask.library.harvard.edu/faq/82441"),
+        ],
+        "ProvingJesusView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Holy Bible, King James Version", subtitle: "The Gospels, Acts and Hebrews, quoted in the standard text of the Authorized Version"),
+            ArticleSource(title: "Al-Jawab as-Sahih li man Baddala Din al-Masih", subtitle: "Ibn Taymiyyah, on John 17:3 and John 20:17 among the Gospels’ own witness"),
+            ArticleSource(title: "The Catholic Encyclopedia", subtitle: "“The Blessed Trinity” (1912), on Theophilus of Antioch and Tertullian"),
+            ArticleSource(title: "Trinity: History of Trinitarian Doctrines", subtitle: "Stanford Encyclopedia of Philosophy", url: "https://plato.stanford.edu/entries/trinity/trinity-history.html"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on Jesus", url: "https://provingislam.net/"),
+        ],
+        "ProvingGodView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Dar' Ta'arud al-Aql wan-Naql", subtitle: "Ibn Taymiyyah, on why a regress of causes is impossible"),
+            ArticleSource(title: "Just Six Numbers", subtitle: "Martin Rees (1999), the constants on which stars and life depend"),
+            ArticleSource(title: "The Beginning of the Universe", subtitle: "Alexander Vilenkin, Inference: International Review of Science (2015), on the Borde-Guth-Vilenkin theorem"),
+            ArticleSource(title: "Fine-Tuning", subtitle: "Stanford Encyclopedia of Philosophy", url: "https://plato.stanford.edu/entries/fine-tuning/"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on God’s existence", url: "https://provingislam.net/"),
+        ],
+        "ProvingQuestionsView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the section on the key questions", url: "https://provingislam.net/"),
+            ArticleSource(title: "King or Pharaoh?", subtitle: "Mohammad Baqer, Proving Islam", url: "https://provingislam.com/proofs/kingorpharaoh"),
+            ArticleSource(title: "Author discrimination between the Holy Quran and Prophet’s statements", subtitle: "Halim Sayoud, Literary and Linguistic Computing 27:4, 2012"),
+            ArticleSource(title: "The Chronology of the Qur’an: A Stylometric Research Program", subtitle: "Behnam Sadeghi, Arabica 58, 2011"),
+            ArticleSource(title: "The Codex of a Companion of the Prophet and the Qur’an of the Prophet", subtitle: "Behnam Sadeghi and Uwe Bergmann, Arabica 57, 2010, on the Sana’a palimpsest"),
+        ],
+        "ProvingClosingView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "The Complete Case", subtitle: "Proving Islam, the closing argument and its pillars", url: "https://provingislam.net/"),
+            ArticleSource(title: "Proofs of Islam", subtitle: "Proving Islam, the proof articles on prophecy and history", url: "https://provingislam.com/proofs"),
+            ArticleSource(title: "Nuzhat an-Nazar", subtitle: "Ibn Hajar al-Asqalani, on the mutawatir report and the certainty it gives"),
         ],
         "QiraatView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

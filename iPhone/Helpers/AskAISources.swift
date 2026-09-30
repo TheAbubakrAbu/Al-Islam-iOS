@@ -35,6 +35,8 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case hisnDua(id: String)
         /// A Tips & Tricks entry: how to do something in THIS app.
         case tip(id: String)
+        /// A settings search entry: where a setting lives in THIS app (`SettingsSearchEntry.id`).
+        case setting(id: String)
     }
 
     let kind: Kind
@@ -63,15 +65,58 @@ struct AskAISource: Identifiable, Equatable, Codable {
     /// The verse, surah, hadith or Name the question itself NAMED: labelled SUBJECT in the prompt,
     /// and its card always shows beneath the answer whether or not the model cited it.
     var isSubject = false
+    /// Carried into a follow-up from the previous answer, which already quoted it: the prompt says
+    /// so, and asks the model to build on it rather than quote it again (a bare "why?" used to come
+    /// back with the same two verses re-quoted). Set per turn and never persisted: it is left out
+    /// of `CodingKeys`, so transcripts saved before it existed still decode.
+    var wasQuotedBefore = false
+    /// The words the retrieval matched this source on (folded), for this turn's prompt only: a
+    /// long hadith is clipped around the sentence that holds them instead of from its opening.
+    var focusTerms: [String] = []
 
     var id: String { reference }
+
+    private enum CodingKeys: String, CodingKey {
+        case kind, reference, title, text, arabic, transliteration, provenance, aliases, maxCharacters, isSubject
+    }
+
+    init(kind: Kind, reference: String, title: String, text: String, arabic: String? = nil,
+         transliteration: String? = nil, provenance: [String] = [], aliases: [String] = [],
+         maxCharacters: Int = 500, isSubject: Bool = false) {
+        self.kind = kind
+        self.reference = reference
+        self.title = title
+        self.text = text
+        self.arabic = arabic
+        self.transliteration = transliteration
+        self.provenance = provenance
+        self.aliases = aliases
+        self.maxCharacters = maxCharacters
+        self.isSubject = isSubject
+    }
+
+    /// Lenient: a field a later build added (or an earlier one dropped) takes its default instead
+    /// of failing the whole transcript, which the next save would then have overwritten.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        kind = try container.decode(Kind.self, forKey: .kind)
+        reference = try container.decode(String.self, forKey: .reference)
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? reference
+        text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
+        arabic = try container.decodeIfPresent(String.self, forKey: .arabic)
+        transliteration = try container.decodeIfPresent(String.self, forKey: .transliteration)
+        provenance = try container.decodeIfPresent([String].self, forKey: .provenance) ?? []
+        aliases = try container.decodeIfPresent([String].self, forKey: .aliases) ?? []
+        maxCharacters = try container.decodeIfPresent(Int.self, forKey: .maxCharacters) ?? 500
+        isSubject = try container.decodeIfPresent(Bool.self, forKey: .isSubject) ?? false
+    }
 
     /// Scripture-like sources are quoted in the prompt in quotation marks so the model reads them
     /// as wording; the rest (an article, a tip, the timetable) are prose it may restate.
     var isQuotable: Bool {
         switch kind {
         case .ayah, .hadith, .dua, .hisnDua, .name: return true
-        case .tafsir, .surah, .article, .prayer, .tip: return false
+        case .tafsir, .surah, .article, .prayer, .tip, .setting: return false
         }
     }
 
@@ -98,6 +143,7 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case .name: return "Name of Allah"
         case .dua, .hisnDua: return "Dua"
         case .tip: return "App tip"
+        case .setting: return "Setting"
         }
     }
 
@@ -112,28 +158,81 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case .name: return "sparkle"
         case .dua, .hisnDua: return "hands.and.sparkles.fill"
         case .tip: return "lightbulb.fill"
+        case .setting: return "gearshape.fill"
         }
     }
 
     /// The line the model is given: number, an optional SUBJECT mark, the reference, where it comes
     /// from, then the text clipped to the turn's budget.
     func promptLine(number: Int, characters: Int) -> String {
-        let clipped = Self.clip(text, to: min(maxCharacters, characters))
+        let limit = min(maxCharacters, characters)
+        let clipped = focusTerms.isEmpty ? Self.clip(text, to: limit) : Self.clip(text, to: limit, around: focusTerms)
         let origin = provenance.isEmpty ? "" : " (" + provenance.joined(separator: "; ") + ")"
         let subject = isSubject ? " SUBJECT OF THE QUESTION:" : ""
+        let quoted = wasQuotedBefore ? " (you already quoted this in your previous answer: build on it, do not quote it again)" : ""
         let body = isQuotable ? "\u{201C}\(clipped)\u{201D}" : clipped
-        return "[\(number)]\(subject) \(reference)\(origin): \(body)"
+        return "[\(number)]\(subject) \(reference)\(origin)\(quoted): \(body)"
     }
 
-    /// Clipped at a word boundary, with an ellipsis, so a prompt never ends a source mid-word.
+    /// Clipped at a sentence end when one falls in the last two fifths of the window (so a
+    /// source never hands the model a cut-off sentence to copy), else at a word boundary with an
+    /// ellipsis.
     static func clip(_ text: String, to limit: Int) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > limit else { return trimmed }
-        let head = trimmed.prefix(limit)
+        let head = String(trimmed.prefix(limit))
+        let floor = limit * 3 / 5
+        if let end = head.lastIndex(where: { $0 == "." || $0 == "!" || $0 == "?" }),
+           head.distance(from: head.startIndex, to: end) >= floor {
+            let next = head.index(after: end)
+            if next == head.endIndex || head[next] == " " || head[next] == "\n" || head[next] == "\u{201D}" || head[next] == "\"" {
+                let cut = next < head.endIndex && (head[next] == "\u{201D}" || head[next] == "\"") ? head.index(after: next) : next
+                return String(head[..<cut]).trimmingCharacters(in: .whitespaces)
+            }
+        }
         if let space = head.lastIndex(of: " "), head.distance(from: head.startIndex, to: space) > limit * 2 / 3 {
             return String(head[..<space]) + "\u{2026}"
         }
-        return String(head) + "\u{2026}"
+        return head + "\u{2026}"
+    }
+
+    /// Clipped around the sentence that holds the most of `terms` (folded words the retrieval
+    /// matched on) when that sentence lies past the plain clip: a long narration's matching passage
+    /// sits deep in it, and a clip from the opening handed the model the wrong part to quote (a
+    /// question on patience got Bukhari 4750's opening about drawing lots). The opening stays when
+    /// it holds as many of the terms as any later sentence.
+    static func clip(_ text: String, to limit: Int, around terms: [String]) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > limit else { return trimmed }
+        let wanted = Set(terms.filter { $0.count >= 3 && !$0.contains(" ") })
+        guard !wanted.isEmpty else { return clip(trimmed, to: limit) }
+        func score(_ range: Range<String.Index>) -> Int {
+            let words = Set(AskAILexicon.fold(String(trimmed[range])).split(separator: " ").map(String.init))
+            return wanted.intersection(words).count
+        }
+        // Sentence starts: after ". ", "! " or "? ".
+        var starts: [String.Index] = [trimmed.startIndex]
+        var index = trimmed.startIndex
+        while index < trimmed.endIndex {
+            let next = trimmed.index(after: index)
+            if ".!?".contains(trimmed[index]), next < trimmed.endIndex, trimmed[next] == " " {
+                let start = trimmed.index(after: next)
+                if start < trimmed.endIndex { starts.append(start) }
+            }
+            index = next
+        }
+        var best: (score: Int, start: String.Index)?
+        for (n, start) in starts.enumerated() {
+            let end = n + 1 < starts.count ? starts[n + 1] : trimmed.endIndex
+            let s = score(start..<end)
+            if s > (best?.score ?? 0) { best = (s, start) }
+        }
+        let openingEnd = trimmed.index(trimmed.startIndex, offsetBy: limit)
+        guard let best, best.start >= openingEnd || trimmed.distance(from: trimmed.startIndex, to: best.start) > limit * 3 / 5,
+              score(trimmed.startIndex..<openingEnd) < best.score else {
+            return clip(trimmed, to: limit)
+        }
+        return "\u{2026} " + clip(String(trimmed[best.start...]), to: max(80, limit - 2))
     }
 
     /// The provenance as one footer line ("Surah Al-Baqarah (The Cow) · Saheeh International").
@@ -150,6 +249,7 @@ enum AskAISourceFactory {
     /// retrieved ayah, because when the question names the verse this text IS the answer.
     nonisolated static let subjectCharacterLimit = 1_400
 
+    #if HAS_QURAN
     static func ayah(surah surahID: Int, ayah ayahID: Int, quranData: QuranData,
                      isSubject: Bool = false, maxCharacters: Int = 500) -> AskAISource? {
         guard let surah = quranData.surah(surahID), let ayah = quranData.ayah(surah: surahID, ayah: ayahID) else { return nil }
@@ -169,6 +269,9 @@ enum AskAISourceFactory {
             isSubject: isSubject)
     }
 
+    #endif
+
+    #if HAS_HADITH
     static func hadith(book: HadithCatalogBook, data: HadithBookData, hadith: HadithBookData.Hadith,
                        maxCharacters: Int = 600, isSubject: Bool = false) -> AskAISource? {
         let all = hadith.allText
@@ -204,6 +307,9 @@ enum AskAISourceFactory {
             isSubject: isSubject)
     }
 
+    #endif
+
+    #if HAS_QURAN
     static func tafsir(surah surahID: Int, ayah ayahID: Int, quranData: QuranData,
                        maxCharacters: Int = subjectCharacterLimit) -> AskAISource? {
         guard let surah = quranData.surah(surahID),
@@ -228,7 +334,7 @@ enum AskAISourceFactory {
     private static let themeHeadingRegex = try! NSRegularExpression(
         pattern: #"(?im)^\s*#*\s*(?:theme|subject|subject matter|central theme|summary|contents|topics)\b[^\n]*$"#)
 
-    private static func surahBackground(_ sources: [SurahInfoSource]) -> (text: String, author: String)? {
+    private static func surahBackground(_ sources: [SurahInfoSource]) -> (text: String, noteAuthor: String)? {
         for source in sources {
             let ns = source.contents as NSString
             if let match = themeHeadingRegex.firstMatch(in: source.contents, range: NSRange(location: 0, length: ns.length)) {
@@ -249,7 +355,7 @@ enum AskAISourceFactory {
         let background = surahBackground(quranData.surahInfoSources(for: surahID))
         let text = background.map { facts + " " + $0.text } ?? facts
         var provenance = ["The Quran, surah \(surahID): \(surah.nameTransliteration) (\(surah.nameEnglish)), \(surah.type), \(surah.numberOfAyahs) ayahs"]
-        if let author = background?.author { provenance.append("About this surah, from \(author)") }
+        if let noteAuthor = background?.noteAuthor { provenance.append("About this surah, from \(noteAuthor)") }
         return AskAISource(
             kind: .surah(surahID),
             reference: reference,
@@ -262,18 +368,30 @@ enum AskAISourceFactory {
             isSubject: isSubject)
     }
 
+    #endif
+
     static func article(_ article: IslamArticle, section: IslamArticle.Section, maxCharacters: Int = 700) -> AskAISource {
         let home = IslamArticleCatalog.all.first(where: { $0.id == article.id })?.home.title
         var provenance = ["Al-Islam\u{2019}s own article \u{201C}\(article.title)\u{201D}" + (home.map { " in \($0)" } ?? "")]
         if !section.heading.isEmpty { provenance.append("Section: \(section.heading.capitalized)") }
         let text = section.heading.isEmpty ? section.text : "\(section.heading.capitalized): \(section.text)"
+        // The reference names the SECTION too: two sections of one guide ("Nisab" and "Calculate
+        // 2.5%") are two sources, where one reference per article collapsed them into whichever
+        // came first.
+        let reference = section.heading.isEmpty ? article.title : "\(article.title) \u{203A} \(section.heading.capitalized)"
+        // The bare title is an alias only when it is more than one word: "Salah", "Hajj" or
+        // "Shirk" appears in any answer on the subject, and claimed every pooled section of that
+        // article as cited (41 of the 121 titles are one word).
+        let title = article.title.lowercased()
+        var aliases = ["the article on \(title)", "the app's article on \(title)"]
+        if title.split(separator: " ").count > 1 { aliases.insert(title, at: 0) }
         return AskAISource(
             kind: .article(id: article.id, heading: section.heading),
-            reference: article.title,
+            reference: reference,
             title: article.title,
             text: text,
             provenance: provenance,
-            aliases: ["the article on \(article.title.lowercased())", "the app's article on \(article.title.lowercased())"],
+            aliases: aliases,
             maxCharacters: maxCharacters)
     }
 
@@ -333,6 +451,23 @@ enum AskAISourceFactory {
             maxCharacters: 400)
     }
 
+    /// A setting's place in the app, from the settings search index ("Reciter" at "Quran Settings
+    /// → Recitation"): the one source that can answer "how do I change the reciter".
+    static func setting(_ entry: SettingsSearchEntry) -> AskAISource {
+        var text = "The setting \u{201C}\(entry.title)\u{201D} is at: \(entry.path)."
+        if !entry.keywords.isEmpty { text += " It covers: \(entry.keywords)." }
+        if entry.advanced { text += " It is shown only with Advanced Settings turned on; opening it from Settings search turns them on." }
+        return AskAISource(
+            kind: .setting(id: entry.id),
+            reference: "Setting: \(entry.title)",
+            title: entry.title,
+            text: text,
+            provenance: ["Al-Islam Settings, at \(entry.path)"],
+            aliases: [entry.title.lowercased()],
+            maxCharacters: 400)
+    }
+
+    #if HAS_TIPS
     static func tip(_ tip: AppTip) -> AskAISource {
         AskAISource(
             kind: .tip(id: tip.id),
@@ -344,6 +479,9 @@ enum AskAISourceFactory {
             maxCharacters: 500)
     }
 
+    #endif
+
+    #if HAS_ADHAN
     /// Today's schedule as a source: the times this app computed for this location, with each
     /// prayer's fard count and its sunnah rakahs. Nil when no times have been computed yet.
     static func prayerTimes() -> AskAISource? {
@@ -378,6 +516,7 @@ enum AskAISourceFactory {
             maxCharacters: 900,
             isSubject: true)
     }
+    #endif
 }
 
 #endif

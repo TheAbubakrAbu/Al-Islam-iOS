@@ -16,7 +16,9 @@ enum IshaRule: Equatable {
     }
 
     static func format(_ value: Double) -> String {
-        value == value.rounded()
+        // `Int(_:)` traps on infinity (a custom angle typed as a huge number), so only a finite,
+        // sensibly sized whole number takes the integer path.
+        value.isFinite && abs(value) < 1_000_000 && value == value.rounded()
             ? String(Int(value))
             : String(format: "%.1f", value)
     }

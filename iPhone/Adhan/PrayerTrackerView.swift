@@ -47,6 +47,9 @@ struct PrayerTrackerStats: Equatable {
         // "yyyy-MM-dd" even when the iPhone's SYSTEM calendar is Hijri - the grid geometry may
         // follow the system calendar, the storage keys never do.
         formatter.calendar = Calendar(identifier: .gregorian)
+        // The device's zone as it is NOW, not at first use: a mark made after a trip filed under
+        // the departure zone's date (Quality Guide P1).
+        formatter.timeZone = .autoupdatingCurrent
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
@@ -492,18 +495,35 @@ struct PrayerTrackerSection: View {
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 
-    private var todaySlots: [Prayer] {
-        settings.trackableSlots(for: Date())
+    /// The prayer day the card tracks: YESTERDAY until today's Fajr begins. At 00:30 the card showed
+    /// the new day, so tapping Isha marked tonight's, last night's stayed unmarked and the streak
+    /// reset; where Isha itself starts after midnight it could never be marked at all. The countdown,
+    /// the scrubber and the "Did you pray X?" question already file a prayer by its own day (P4).
+    private var trackerDay: Date {
+        let now = Date()
+        let calendar = Calendar.current
+        let fajr: Date? = {
+            if let today = live.prayers, calendar.isDate(today.day, inSameDayAs: now) {
+                return today.prayers.first { $0.nameTransliteration == "Fajr" }?.time
+            }
+            return settings.getPrayerTimes(for: calendar.startOfDay(for: now))?
+                .first { $0.nameTransliteration == "Fajr" }?.time
+        }()
+        if let fajr, now < fajr, let yesterday = calendar.date(byAdding: .day, value: -1, to: now) {
+            return yesterday
+        }
+        return now
     }
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerTrackerSection")
         if live.prayers != nil {
+            let day = trackerDay
             Section(header: header) {
-                if settings.isTrackerExempt(on: Date()) {
+                if settings.isTrackerExempt(on: day) {
                     pausedCard
                 } else {
-                    trackerCard
+                    trackerCard(day: day)
                 }
 
                 NavigationLink {
@@ -541,19 +561,20 @@ struct PrayerTrackerSection: View {
         }
     }
 
-    private var trackerCard: some View {
-        let slots = todaySlots
+    private func trackerCard(day: Date) -> some View {
+        let slots = settings.trackableSlots(for: day)
         let names = slots.map(\.nameTransliteration)
-        let prayed = settings.trackedPrayerCount(names)
+        let prayed = settings.trackedPrayerCount(names, on: day)
         let complete = !slots.isEmpty && prayed == slots.count
-        let allOnTime = complete && names.allSatisfy { settings.prayerMark(for: $0) == .onTime }
+        let allOnTime = complete && names.allSatisfy { settings.prayerMark(for: $0, on: day) == .onTime }
+        let isToday = Calendar.current.isDateInToday(day)
 
         return VStack(spacing: 14) {
             HStack(spacing: 14) {
                 TrackerProgressRing(prayed: prayed, total: slots.count)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(complete ? "All prayers completed" : "Today")
+                    Text(complete ? "All prayers completed" : (isToday ? "Today" : "Yesterday, until Fajr"))
                         .font(.subheadline.weight(.semibold))
 
                     Text(complete
@@ -573,7 +594,7 @@ struct PrayerTrackerSection: View {
             HStack(spacing: 0) {
                 ForEach(Array(slots.enumerated()), id: \.element.nameTransliteration) { index, prayer in
                     if index > 0 { Spacer(minLength: 6) }
-                    TrackerPrayerToggle(prayer: prayer, date: Date())
+                    TrackerPrayerToggle(prayer: prayer, date: day)
                 }
             }
         }
@@ -1750,7 +1771,7 @@ struct PrayerTrackerView: View {
         var pinned = Calendar(identifier: .gregorian)
         pinned.locale = Locale.current
         pinned.firstWeekday = Calendar.current.firstWeekday
-        pinned.timeZone = Calendar.current.timeZone
+        pinned.timeZone = .autoupdatingCurrent
         return pinned
     }()
 

@@ -189,6 +189,15 @@ struct HadithGradeLine: View {
 }
 
 struct HadithRow: View, Equatable {
+    /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
+    /// else re-renders it when the user's text size changes (Quality Guide G9).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// A text style's point size at the current Dynamic Type size (see `dynamicTypeSize`).
+    private func textStyleSize(_ style: UIFont.TextStyle) -> CGFloat {
+        textStylePointSize(style, at: dynamicTypeSize)
+    }
+
     /// Read as a plain property, NOT observed: every Settings field this body reads is folded into
     /// `renderSettingsSignature`, and the parents that build rows observe Settings themselves - so an
     /// appearance change reaches the row through `==`, while an unrelated publish (a last-read
@@ -326,11 +335,11 @@ struct HadithRow: View, Equatable {
     private var arabicFontSize: CGFloat {
         // Compact rows show the full text, so the type drops to caption scale (+2 keeps the Arabic
         // script legible at that size).
-        (compact ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : settings.hadithArabicFontSize) * fontScale
+        (compact ? textStyleSize(.caption1) + 2 : settings.hadithArabicFontSize) * fontScale
     }
 
     private var englishFontSize: CGFloat {
-        (compact ? UIFont.preferredFont(forTextStyle: .caption2).pointSize : settings.hadithEnglishFontSize) * fontScale
+        (compact ? textStyleSize(.caption2) : settings.hadithEnglishFontSize) * fontScale
     }
 
     /// Which fields confidently contain the query, and - when none does - which single field gets
@@ -2370,13 +2379,35 @@ struct HadithShareSheet: View {
 
         let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
         var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
+        // The longest narrations (Muslim 6843 runs to 31,700 characters) made a card some 20,000 pt
+        // tall, drawn twice at screen scale: about 250 MB a bitmap and a jetsam kill as the sheet
+        // opened (Quality Guide C4). Past `maxCardTextHeight` the text stops at a line and says
+        // where the rest is; the whole card is drawn once, at a scale that keeps the bitmap inside
+        // `maxCardPixels`. An ordinary hadith is untouched on both counts.
+        if textRect.height > Self.maxCardTextHeight {
+            let storage = NSTextStorage(attributedString: text)
+            let layout = NSLayoutManager()
+            storage.addLayoutManager(layout)
+            let container = NSTextContainer(size: CGSize(width: availWidth, height: Self.maxCardTextHeight))
+            container.lineFragmentPadding = 0
+            layout.addTextContainer(container)
+            let shown = layout.characterRange(forGlyphRange: layout.glyphRange(for: container), actualGlyphRange: nil)
+            if shown.length > 0, shown.length < text.length {
+                text.deleteCharacters(in: NSRange(location: shown.length, length: text.length - shown.length))
+                text.append(NSAttributedString(string: "\n\nThe narration continues in the app.", attributes: captionAttr))
+                textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
+            }
+        }
         textRect.size.width  += 2*padding
         textRect.size.height += logoSize.height + extraSpacing + 25
 
         let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height))
+        let format = UIGraphicsImageRendererFormat.preferred()
+        let area = max(1, canvas.width * canvas.height)
+        format.scale = max(1, min(format.scale, (Self.maxCardPixels / area).squareRoot()))
 
-        let r1 = UIGraphicsImageRenderer(size: canvas.size)
-        let blackCard = r1.image { ctx in
+        return UIGraphicsImageRenderer(size: canvas.size, format: format).image { ctx in
+            UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
             UIColor.black.setFill(); ctx.fill(canvas)
             text.draw(in: CGRect(x: padding, y: padding, width: canvas.width - 2*padding, height: canvas.height))
 
@@ -2384,16 +2415,20 @@ struct HadithShareSheet: View {
             let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
             if let logo = logo {
                 let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
+                // Saved and restored, not reset: a reset would also drop the card's rounded clip.
+                ctx.cgContext.saveGState()
                 ctx.cgContext.addPath(UIBezierPath(roundedRect: rect, cornerRadius: logoSize.height*0.25).cgPath)
-                ctx.cgContext.clip(); logo.draw(in: rect); ctx.cgContext.resetClip()
+                ctx.cgContext.clip(); logo.draw(in: rect)
+                ctx.cgContext.restoreGState()
             }
             wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
         }
-        return UIGraphicsImageRenderer(size: canvas.size).image { _ in
-            UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
-            blackCard.draw(at: .zero)
-        }
     }
+
+    /// The tallest text a share card draws (points) before it stops and points to the app.
+    private static let maxCardTextHeight: CGFloat = 12_000
+    /// The largest bitmap a share card may take, in pixels (4 bytes each): about 96 MB.
+    private static let maxCardPixels: CGFloat = 24_000_000
 }
 
 /// "Select Text" for a hadith - the ayah rows' `SelectAyahTextSheet`, for a narration (2026-09-21).

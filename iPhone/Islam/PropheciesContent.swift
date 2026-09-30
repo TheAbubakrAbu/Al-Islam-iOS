@@ -422,6 +422,28 @@ extension PropheciesView {
                       .text("He listed this among the signs before the Hour. He did not say when it would come, and he did not say it would come only once. Nor is it a judgment on a people: within forty years of the fall of Baghdad, Ghazan, the Mongol ruler of Persia, had accepted Islam."),
                   ]),
               ]),
+        // From provingislam.com's "Siege of Baghdad Prophecy" (Mohammad Baqer), 2026-09-29. Abu Dawud 4306
+        // is graded hasan by al-Albani on the shelf; the reading as Baghdad is 'Awn al-Ma'bud's.
+        .init(id: "basrah-qantura", title: "The city on the Tigris, and the sons of Qantura'",
+              summary: "A great city of the Muslims by the Tigris, with a bridge, overrun by broad-faced, small-eyed invaders: read as Baghdad and the Mongols.",
+              group: .empires,
+              aliases: ["baghdad", "basrah", "basra", "tigris", "dijlah", "bridge", "qantura", "banu qantura", "mongols", "tatars", "hulagu", "656", "1258", "abbasid", "siege of baghdad", "bab al-basrah", "awn al-mabud"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Bakrah (may Allah be pleased with him) heard him describe a city that did not yet exist:"),
+                      .hadith("abudawud:4306", cite: "Sunan Abi Dawud 4306; graded hasan by al-Albani", arabic: 36...56, english: 6...47),
+                      .text("One narrator’s wording has “one of the capital cities of the Muslims.” Then he said what would become of it:"),
+                      .hadith("abudawud:4306", cite: "Sunan Abi Dawud 4306; graded hasan by al-Albani", arabic: 70...108, english: 68...144),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("No great Muslim city stood on the Tigris in his lifetime. In 145 AH (762 CE) the 'Abbasid caliph al-Mansur founded Baghdad on its banks, and it became the capital of the caliphate and one of the largest cities in the world, its two halves joined by bridges across the river. One of its quarters took its name from the gate that faced Basrah, Bab al-Basrah."),
+                      .text("In Safar 656 AH (February 1258 CE) the Mongol army of Hulagu, whose ranks were full of Turkic peoples, came down on the city and camped along the river. Baghdad fell, the caliph was put to death, and a great part of its people were killed; its libraries and its place as the capital of the Muslim world did not survive the siege."),
+                      .text("Al-'Azimabadi, commenting on this narration in 'Awn al-Ma'bud, wrote that the city meant is Baghdad, which the Prophet named by one of its parts, that Banu Qantura' is the name of the forefather of the Turks, and that this came to pass in Safar 656."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The narration names al-Basrah, and some read it of Basrah itself; the reading as Baghdad is the commentators', built on the river, the bridge and the quarter that bore Basrah's name. It is quoted here as that reading, alongside “Faces like hammered shields” in this library, which describes the same people from a stronger chain."),
+                  ]),
+              ]),
     ]
 
     // MARK: The Companions and his household
@@ -1128,6 +1150,26 @@ extension PropheciesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("This is one of the few signs of the Hour with a date attached to it by people who watched it happen and knew the hadith. It is quoted here as they reported it, not as proof that the Hour is near: he himself said no one knows when that is."),
+                  ]),
+              ]),
+        // From provingislam.com's "Dhul-Khalasa Prophecy" (Mohammad Baqer), 2026-09-29.
+        .init(id: "dhul-khalasa", title: "The idol of Daws, worshipped again",
+              summary: "An idol-house destroyed at his command would draw worshippers again before the Hour; in 1925 it had to be pulled down a second time.",
+              group: .endTimes,
+              aliases: ["dhul khalasa", "dhu al-khalasa", "dhil khalasa", "daws", "daus", "khath'am", "tabalah", "jarir", "kaaba of yemen", "idol", "idolatry", "shirk", "1344", "1925", "thuruq"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Dhul-Khalasa was an idol-house in the mountains south of Makkah, called before Islam the Kaaba of Yemen. In his own lifetime he sent Jarir ibn 'Abdullah (may Allah be pleased with him) to destroy it:"),
+                      .hadith("bukhari:4355", cite: "Sahih al-Bukhari 4355", arabic: 11...47, english: 0...48),
+                      .text("With the idol in ruins and Arabia turning to Islam, he said it would be worshipped again:"),
+                      .hadith("bukhari:7116", cite: "Sahih al-Bukhari 7116", arabic: 30...40, english: 4...25),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("For centuries the words looked impossible: the peninsula was Muslim and the house was rubble. In later centuries the veneration of stones, trees and graves returned to parts of the southern highlands, and with it the old site."),
+                      .text("In Rabi' al-Thani 1344 AH (late 1925 CE) an expedition sent under King 'Abd al-'Aziz reached the mountains of Daws. A first-hand account printed in a note to the modern edition of al-Azraqi's Akhbar Makkah records that at Thuruq the walls of the house of Dhul-Khalasa were standing, beside a tree the people venerated; the expedition burned the tree, pulled the building down and threw its stones into the valley. One who went with it said a single stone of it could not be moved by fewer than forty men."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Many scholars hold that the sign in its fullest sense comes near the Hour itself, when the religion has been forgotten; what happened at Thuruq shows how such a return begins, a single generation after tawhid had seemed complete. Proving Islam drew attention to this account."),
                   ]),
               ]),
         .init(id: "shepherds-buildings", title: "Barefoot shepherds and tall buildings",

@@ -259,7 +259,7 @@ struct PrayerSkyBackground: ViewModifier {
 // MARK: - The three sky widgets + the normal-background twin
 
 struct PrayerGradientWidget: Widget {
-    let kind: String = "PrayerGradientWidget"
+    let kind: String = AdhanWidgetKind.PrayerGradientWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -274,7 +274,7 @@ struct PrayerGradientWidget: Widget {
 /// The Prayer Glance Sky layout on the standard widget background - for anyone who loves the layout
 /// but wants it to match the rest of their home screen.
 struct PrayerGlanceWidget: Widget {
-    let kind: String = "PrayerGlanceWidget"
+    let kind: String = AdhanWidgetKind.PrayerGlanceWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -288,7 +288,7 @@ struct PrayerGlanceWidget: Widget {
 
 /// The Prayer Countdown widget, unchanged, over the current prayer's sky gradient.
 struct CountdownSkyWidget: Widget {
-    let kind: String = "CountdownSkyWidget"
+    let kind: String = AdhanWidgetKind.CountdownSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -303,7 +303,7 @@ struct CountdownSkyWidget: Widget {
 
 /// The Prayer Grid widget, unchanged, over the current prayer's sky gradient.
 struct PrayersSkyWidget: Widget {
-    let kind: String = "PrayersSkyWidget"
+    let kind: String = AdhanWidgetKind.PrayersSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

@@ -35,6 +35,25 @@ struct TrackedBar: View {
 /// Hashable as well as Equatable: multi-select stores these in a `Set`, because a page-mode selection has to
 /// survive page turns and can straddle two surahs (a page routinely holds the end of one and the start of
 /// the next), so an ayah id on its own can't identify what was picked.
+/// The in-surah "Search In" lane's folded text per ayah: the English pair or the transliteration
+/// pair, the same strings on every pass (they depend on no setting). The filter folded both texts of
+/// every ayah on every body pass, about five times per ayah advance during playback (Quality Guide
+/// F10). Main-thread only, like the filter. Bounded by the Quran itself (6,236 ayahs, two lanes).
+enum SurahLaneBlobs {
+    private static var blobs: [Int: String] = [:]
+
+    static func blob(surahID: Int, ayah: Ayah, translation: Bool) -> String {
+        let key = (surahID * 1000 + ayah.id) * 2 + (translation ? 1 : 0)
+        if let hit = blobs[key] { return hit }
+        let settings = Settings.shared
+        let blob = translation
+            ? settings.cleanSearch(ayah.textEnglishSaheeh) + " " + settings.cleanSearch(ayah.textEnglishMustafa)
+            : settings.cleanSearch(ayah.textTransliteration) + " " + settings.foldedTransliterationForSearch(ayah.textTransliteration)
+        blobs[key] = blob
+        return blob
+    }
+}
+
 struct HighlightedAyahRef: Equatable, Hashable {
     let surahID: Int
     let ayahID: Int
@@ -107,17 +126,16 @@ struct AyahDisplayOverride: Equatable, Hashable, Sendable {
         })
     }
 
-    /// The choices this ayah actually renders with: every pin applied over the app settings. The
-    /// dots rule matches the settings screen (hiding the dots presupposes hidden tashkeel; turning
-    /// tashkeel back on there resets the dots), so `hideDots` never reads true on its own.
+    /// The choices this ayah actually renders with: every pin applied over the app settings. Dots
+    /// and tashkeel are independent, as on the settings screen since 2026-09-11 ("dots hidden,
+    /// tashkeel shown" is the early-manuscript reading the option exists for).
     @MainActor
     func resolved(_ settings: Settings) -> AyahDisplayChoices {
-        let tashkeel = hideTashkeel ?? settings.cleanArabicText
-        return AyahDisplayChoices(
+        AyahDisplayChoices(
             beginner: beginner ?? settings.beginnerMode,
             tajweed: tajweed ?? settings.showTajweedColors,
-            hideTashkeel: tashkeel,
-            hideDots: tashkeel && (hideDots ?? settings.removeArabicDots),
+            hideTashkeel: hideTashkeel ?? settings.cleanArabicText,
+            hideDots: hideDots ?? settings.removeArabicDots,
             highlightAllah: highlightAllah ?? settings.highlightAllahNames,
             wordByWord: wordByWord ?? settings.wordByWordInline
         )
@@ -198,7 +216,7 @@ enum AyahDisplayOption: CaseIterable, Hashable, Sendable {
         case .beginner:       return settings.beginnerMode
         case .tajweed:        return settings.showTajweedColors
         case .hideTashkeel:   return settings.cleanArabicText
-        case .hideDots:       return settings.cleanArabicText && settings.removeArabicDots
+        case .hideDots:       return settings.removeArabicDots
         case .highlightAllah: return settings.highlightAllahNames
         case .wordByWord:     return settings.wordByWordInline
         }
@@ -1772,8 +1790,8 @@ struct SurahView: View {
                 onPlayRandomReciter: { target in
                     playRandomReciter(for: target)
                 }
-            ) {
-                pageReaderControls
+            ) { part in
+                pageReaderControls(part)
             }
             // The list reader gets the top accent glow through `applyConditionalListStyle`; the pager
             // is not a list, so it draws the same wash itself - the mushaf shouldn't be the one
@@ -1916,7 +1934,7 @@ struct SurahView: View {
                 // "word" opens the word card for the "-wordIndex <n>" token (0-based) of the ayah.
                 let wordIndex = launchArgs.firstIndex(of: "-wordIndex").flatMap { launchArgs.indices.contains($0 + 1) ? Int(launchArgs[$0 + 1]) : nil } ?? 0
                 let wordKind: AyahRowSheetKind? = {
-                    let raw = targetAyah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+                    let raw = targetAyah.rawArabicText(surahId: surah.id, qiraahOverride: "")
                     let tokens = WordTokens.tokens(in: raw)
                     guard tokens.indices.contains(wordIndex) else { return nil }
                     let glosses = WordByWordStore.shared.glosses(surah: surah.id, ayah: targetAyah.id) ?? []
@@ -1987,16 +2005,23 @@ struct SurahView: View {
             )
             .smallMediumSheetPresentation()
         }
-        .confirmationDialog("Remove \(selectedAyahs.count) bookmarks?", isPresented: $confirmBulkUnbookmark, titleVisibility: .visible) {
-            Button("Remove (notes will be deleted)", role: .destructive) {
+        .confirmationDialog(
+            selectedAyahs.count == 1 ? "Remove bookmark?" : "Remove \(selectedAyahs.count) bookmarks?",
+            isPresented: $confirmBulkUnbookmark, titleVisibility: .visible
+        ) {
+            Button(bulkUnbookmarkLosesNotes ? "Remove (notes will be deleted)" : "Remove Bookmarks", role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    for ref in selectedAyahs { settings.toggleBookmark(surah: ref.surahID, ayah: ref.ayahID) }
+                    for ref in selectedAyahs where settings.isBookmarked(surah: ref.surahID, ayah: ref.ayahID) {
+                        settings.toggleBookmark(surah: ref.surahID, ayah: ref.ayahID)
+                    }
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Some of the selected ayahs have notes attached to their bookmarks; removing the bookmarks deletes those notes.")
+            Text(bulkUnbookmarkLosesNotes
+                 ? "Some of the selected ayahs have notes attached to their bookmarks; removing the bookmarks deletes those notes."
+                 : "The selected ayahs will be removed from your bookmarks.")
         }
         .confirmationDialog("Note not saved", isPresented: $showBulkRespectAlert, titleVisibility: .visible) {
             Button("OK") {}
@@ -2246,11 +2271,9 @@ struct SurahView: View {
                     return false
                 }
 
-                // Search In: one Latin lane, folded on demand (a surah is 286 ayahs at most).
+                // Search In: one Latin lane, folded once per ayah and lane (`SurahLaneBlobs`).
                 if let lane {
-                    let laneBlob = lane == .translation
-                        ? settings.cleanSearch(a.textEnglishSaheeh) + " " + settings.cleanSearch(a.textEnglishMustafa)
-                        : settings.cleanSearch(a.textTransliteration) + " " + settings.foldedTransliterationForSearch(a.textTransliteration)
+                    let laneBlob = SurahLaneBlobs.blob(surahID: surah.id, ayah: a, translation: lane == .translation)
                     if let booleanQuery {
                         return matchesBooleanAyahSearch(ayah: a, haystack: laneBlob, query: booleanQuery)
                     }
@@ -3299,18 +3322,17 @@ struct SurahView: View {
         .joined(separator: "\n\n")
     }
 
+    /// Whether removing the selected bookmarks would delete a note with one of them.
+    private var bulkUnbookmarkLosesNotes: Bool {
+        selectedAyahs.contains { settings.bookmarkHasNote(surah: $0.surahID, ayah: $0.ayahID) }
+    }
+
     /// Bookmark semantics for a mixed selection: anything unbookmarked -> bookmark everything; all already
-    /// bookmarked -> remove them (behind a confirmation when any would lose its note).
+    /// bookmarked -> remove them, always behind a confirmation (every removal asks first; the dialog
+    /// names the notes when any would go with their bookmarks).
     private func bulkToggleBookmarks() {
         if allSelectedBookmarked {
-            let anyNotes = selectedAyahs.contains { settings.bookmarkHasNote(surah: $0.surahID, ayah: $0.ayahID) }
-            if anyNotes {
-                confirmBulkUnbookmark = true
-            } else {
-                withAnimation(.easeInOut) {
-                    for ref in selectedAyahs { settings.toggleBookmark(surah: ref.surahID, ayah: ref.ayahID) }
-                }
-            }
+            confirmBulkUnbookmark = true
         } else {
             withAnimation(.easeInOut) {
                 for ref in selectedAyahs { settings.ensureBookmarkExists(surah: ref.surahID, ayah: ref.ayahID) }
@@ -3328,35 +3350,45 @@ struct SurahView: View {
 
     /// The controls that sit under the pages - shared verbatim by the text reader and the PDF facsimile, so
     /// search and the riwayah picker land in the same place in both.
-    private var pageReaderControls: some View {
+    /// The page reader's controls, by the part it asks for (`PageReaderControlsPart`): all of them
+    /// stacked on a narrow reader, or the mini player across a wide reader's width and the bar beside
+    /// its footer.
+    private func pageReaderControls(_ part: PageReaderControlsPart) -> some View {
         let active = quranPlayer.isPlaying || quranPlayer.isPaused
+        let showsPlayer = active && part != .bar
+        let showsBar = part != .nowPlaying
         return VStack(spacing: 0) {
-            if active {
+            if showsPlayer {
                 // Now Playing rides on TOP of the bar stack (same as the list reader and the Quran tab).
                 // Tapping it jumps to what's playing - here that means the PAGE holding the recited ayah
-                // (or the playing surah's first page).
-                NowPlayingView(quranView: false, onOpenPlayback: { _ in goToNowPlaying() })
+                // (or the playing surah's first page). Across a wide reader it is one row.
+                NowPlayingView(quranView: false, singleRow: part == .nowPlaying,
+                               onOpenPlayback: { _ in goToNowPlaying() })
                     .padding(.horizontal, 24)
                     .transition(.opacity)
             }
 
-            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
-            Group {
-                if isSelectingAyahs {
-                    selectionActionBar
-                } else {
-                    // Always present in page mode: search sits dead center, with the tajweed legend and the
-                    // riwayah picker flanking it when they apply (an English page shows neither, so the bar
-                    // is just the search).
-                    pageBottomControlsBar
+            if showsBar {
+                // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
+                Group {
+                    if isSelectingAyahs {
+                        selectionActionBar
+                    } else {
+                        // Always present in page mode: search sits dead center, with the tajweed legend and
+                        // the riwayah picker flanking it when they apply (an English page shows neither, so
+                        // the bar is just the search).
+                        pageBottomControlsBar
+                    }
                 }
+                .padding(.top, showsPlayer ? SafeAreaInsetVStackSpacing.standard : 0)
             }
-            .padding(.top, active ? SafeAreaInsetVStackSpacing.standard : 0)
         }
         // Same breathing room the list reader gives this bar - and here the bottom padding is
-        // also what separates it from the page-navigation footer pinned underneath.
-        .padding(.top, SafeAreaInsetVStackSpacing.standard)
-        .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+        // also what separates it from the page-navigation footer pinned underneath. The mini player
+        // on its own takes only the top: the bar under it brings its own, and with nothing playing
+        // it takes no room at all.
+        .padding(.top, part == .nowPlaying && !active ? 0 : SafeAreaInsetVStackSpacing.standard)
+        .padding(.bottom, part == .nowPlaying ? 0 : SafeAreaInsetVStackSpacing.standard)
         .background(Color.white.opacity(0.00001))
         .animation(.easeInOut, value: active)
     }
@@ -3579,25 +3611,29 @@ struct SurahView: View {
                     Text("More Playback")
                         .foregroundStyle(.secondary)
 
-                    Button {
-                        settings.hapticFeedback()
-                        showCustomRangeSheet = true
-                    } label: {
-                        Label("Play Custom Range", systemImage: "slider.horizontal.3")
-                    }
-
-                    Button {
-                        settings.hapticFeedback()
-                        let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }
-                        if let randomAyah = ayahsForQiraah.randomElement() {
-                            quranPlayer.playAyah(
-                                surahNumber: surah.id,
-                                ayahNumber: randomAyah.id,
-                                continueRecitation: true
-                            )
+                    // Ayah-level playback only in a Hafs display, as the ayah menus gate it: the ayah
+                    // audio is Hafs-numbered, so in Warsh (where 2:1 is Hafs 2:1 and 2:2) the
+                    // highlight ran one ayah ahead for the whole surah (Quality Guide A5).
+                    if settings.isHafsDisplay {
+                        Button {
+                            settings.hapticFeedback()
+                            showCustomRangeSheet = true
+                        } label: {
+                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
                         }
-                    } label: {
-                        Label("Play Random Ayah", systemImage: "shuffle.circle")
+
+                        Button {
+                            settings.hapticFeedback()
+                            if let randomAyah = surah.ayahs.filter({ $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }).randomElement() {
+                                quranPlayer.playAyah(
+                                    surahNumber: surah.id,
+                                    ayahNumber: randomAyah.id,
+                                    continueRecitation: true
+                                )
+                            }
+                        } label: {
+                            Label("Play Random Ayah", systemImage: "shuffle.circle")
+                        }
                     }
 
                     Button {
@@ -3641,15 +3677,17 @@ struct SurahView: View {
                     Label("Other Options", systemImage: "ellipsis.circle")
                 }
 
-                Button {
-                    settings.hapticFeedback()
-                    quranPlayer.playAyah(
-                        surahNumber: surah.id,
-                        ayahNumber: 1,
-                        continueRecitation: true
-                    )
-                } label: {
-                    Label("Play Ayah by Ayah", systemImage: "list.number")
+                if settings.isHafsDisplay {
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playAyah(
+                            surahNumber: surah.id,
+                            ayahNumber: 1,
+                            continueRecitation: true
+                        )
+                    } label: {
+                        Label("Play Ayah by Ayah", systemImage: "list.number")
+                    }
                 }
 
                 if canResumeLast, let last = settings.lastListenedSurah {
@@ -3715,7 +3753,10 @@ struct SurahView: View {
     /// Takes the surah explicitly so the page reader can ask for the one its FOOTER is showing - in page mode
     /// the reader roams, and `surah` is only where it was opened.
     private func playRandomReciter(for target: Surah) {
-        guard let randomReciter = reciters.randomElement() else { return }
+        // One who recorded this surah, reading this riwayah where possible (R3): picked from all of
+        // them, a partial reciter was saved as the choice and the surah then failed to play.
+        guard let randomReciter = QuranPlayer.randomReciter(recording: target.id,
+                                                            displayQiraah: settings.displayQiraahForArabic) else { return }
         settings.setSelectedReciter(randomReciter)
         quranPlayer.playSurah(
             surahNumber: target.id,

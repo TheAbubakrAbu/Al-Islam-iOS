@@ -74,7 +74,11 @@ final class AskAIConversation: ObservableObject {
     /// The conversation's current subject (the last standalone question's content words): what a
     /// bare follow-up searches with.
     private var topic: String?
+    /// The topic as the reader typed it, for the suggestion chips of a follow-up.
+    private var topicDisplay: String?
     private var currentQuestion: AskAIQuestion?
+    /// The earlier answers of this conversation, for the echo guard of the turn in flight.
+    private var echoGuard = AskAIText.EchoGuard(previousAnswers: [])
     private var task: Task<Void, Never>?
 
     private init() {
@@ -118,8 +122,29 @@ final class AskAIConversation: ObservableObject {
         let question = AskAIQuestion.analyze(trimmed, previousTopic: topic, hasHistory: !history.isEmpty)
         if !question.isFollowUp, question.intent.retrieves, !question.contentWords.isEmpty {
             topic = question.topic
+            topicDisplay = question.topicDisplay
         }
         currentQuestion = question
+        // A recap or a source question reworks the previous answer on purpose ("say it again"
+        // reproduces its paragraphs), so it gets an empty guard: the echo guard erased the whole
+        // reply and left "Thinking..." on screen for good.
+        echoGuard = question.intent == .recap || question.intent == .sourceQuestion
+            ? AskAIText.EchoGuard(previousAnswers: [])
+            : AskAIText.EchoGuard(previousAnswers: messages.filter { $0.role == .assistant && !$0.failed }.suffix(4).map(\.text))
+        // A long session keeps its most recent turns in memory (the transcript on screen, and what
+        // is saved); the prompt only ever re-sends the last few anyway.
+        if messages.count > Self.keptMessages { messages.removeFirst(messages.count - Self.keptMessages) }
+        #if HAS_QURAN
+        if AskAIText.surahNameTokens.isEmpty, !QuranData.shared.quran.isEmpty {
+            var tokens = Set<String>()
+            for surah in QuranData.shared.quran {
+                for word in AskAILexicon.fold(surah.nameTransliteration).split(separator: " ") where word.count >= 3 {
+                    tokens.insert(String(word))
+                }
+            }
+            AskAIText.surahNameTokens = tokens
+        }
+        #endif
 
         messages.append(Message(role: .user, text: trimmed))
         var reply = Message(role: .assistant, text: "", isStreaming: true)
@@ -141,11 +166,24 @@ final class AskAIConversation: ObservableObject {
             #endif
             var sources: [AskAISource] = []
             var retrievalLog = ""
-            if question.intent == .sourceQuestion {
-                // About the previous answer's sources: those, cited ones first, nothing new.
+            var history = history
+            if question.intent == .sourceQuestion || question.intent == .recap {
+                // About the previous answer, or a rework of it: the sources it cited (all of them
+                // only when it cited none), nothing new. They are renumbered by first appearance,
+                // so the previous answer, which the prompt re-sends, has its markers renumbered to
+                // match: its "[3]...[1]" became sources [C, A], and the old [1] then showed card C.
+                let previousSources = previousReply?.sources ?? []
                 let cited = previousReply?.citedSources ?? []
-                sources = cited + (previousReply?.uncitedSources ?? [])
-                sources = Array(sources.prefix(profile.sourceLimit))
+                sources = Array((cited.isEmpty ? previousSources : cited).prefix(profile.sourceLimit))
+                var renumbered: [Int: Int] = [:]
+                for (old, source) in previousSources.enumerated() {
+                    if let new = sources.firstIndex(where: { $0.reference == source.reference }) { renumbered[old + 1] = new + 1 }
+                }
+                if let last = history.indices.last {
+                    history[last] = AskAIPrompt.Turn(question: history[last].question,
+                                                     answer: AskAIText.renumberingMarkers(history[last].answer, map: renumbered),
+                                                     keepsMarkers: true)
+                }
                 retrievalLog = "previous turn's sources"
             } else if question.intent.retrieves {
                 let outcome = await AskAIRetriever.retrieve(question, budget: profile.retrievalBudget,
@@ -157,6 +195,13 @@ final class AskAIConversation: ObservableObject {
                     + "; ranking " + outcome.ranking.prefix(12).map { String(format: "%@ %.2f", $0.reference, $0.score) }.joined(separator: " | ")
             }
             guard !Task.isCancelled else { return }
+            #if canImport(FoundationModels)
+            if #available(iOS 26.0, *) {
+                let fitted = AskAIPrompt.fit(sources: sources, history: history, profile: profile, intent: question.intent)
+                if fitted.count < sources.count { retrievalLog += "; fitted to \(fitted.count) sources" }
+                sources = fitted
+            }
+            #endif
             updateReply { $0.sources = sources; $0.refreshCitations() }
             lastRetrievalLog = retrievalLog
             await answer(question: question, sources: sources, history: history, kind: kind, profile: profile)
@@ -175,7 +220,7 @@ final class AskAIConversation: ObservableObject {
         var turns = history
         var framing: String?
         var retriedForContext = false
-        var retriedForGuardrail = false
+        var guardrailRetries = 0
         var fellBack = false
         let started = CFAbsoluteTimeGetCurrent()
         var firstToken: Double?
@@ -245,15 +290,35 @@ final class AskAIConversation: ObservableObject {
                     updateReply { $0.sources = sources; $0.text = ""; $0.refreshCitations() }
                     continue
                 }
-                // Apple's guardrail trips on ordinary religious topics (war, punishment, death).
-                // Once, re-ask with the question framed as the educational request it is.
-                if case .guardrail = failure, !retriedForGuardrail {
-                    retriedForGuardrail = true
+                // Apple's guardrail trips on ordinary religious topics (war, punishment, death),
+                // and on a retrieved passage as often as on the question. First re-ask with the
+                // question framed as the educational request it is and fewer sources; then once
+                // more with no sources and no history, so the reader gets an answer rather than a
+                // refusal, and is told the sources were left out.
+                if case .guardrail = failure, guardrailRetries < 2 {
+                    guardrailRetries += 1
                     framing = "Treat this as an educational question about Islamic teaching, scripture and history, and answer it as such."
+                    if guardrailRetries == 1 {
+                        sources = Array(sources.prefix(4))
+                    } else {
+                        sources = []
+                        turns = []
+                    }
                     resetStream()
-                    updateReply { $0.text = ""; $0.refreshCitations() }
+                    updateReply {
+                        $0.sources = sources; $0.text = ""; $0.refreshCitations()
+                        if sources.isEmpty {
+                            $0.note = "Apple Intelligence declined to read the sources the app found for this question, so this answer was written from general knowledge without them."
+                        }
+                    }
                     continue
                 }
+                #if DEBUG
+                lastErrorDescription = "\(type(of: error)): \(error)"
+                #endif
+                // What streamed before the failure reaches the reply now: a trailing flush firing
+                // after `finishReply` replaced its "(The answer stopped early...)" line.
+                if !streamedText.isEmpty { flushStreamed() }
                 finishReply(failed: true, message: AskAIEngine.message(for: failure),
                             elapsed: CFAbsoluteTimeGetCurrent() - started, firstToken: firstToken)
                 return
@@ -268,6 +333,11 @@ final class AskAIConversation: ObservableObject {
     #endif
 
     private var lastPrompt = ""
+    #if DEBUG
+    /// The raw error of the last failed turn, for the `-askAILog` entry (the reader-facing message
+    /// is deliberately generic; the log needs the framework's own words).
+    private var lastErrorDescription = ""
+    #endif
 
     #if DEBUG
     private static func syntheticStream() -> AsyncStream<String> {
@@ -327,8 +397,10 @@ final class AskAIConversation: ObservableObject {
         streamFlushTask = nil
         lastStreamFlush = CFAbsoluteTimeGetCurrent()
         var cleaned = AskAIText.stripMarkdown(streamedText)
+        cleaned = AskAIText.droppingSourceEchoes(cleaned, sources: messages.last?.sources ?? [])
         let count = messages.last?.sources.count ?? 0
         cleaned = AskAIText.normalizeMarkers(cleaned, sourceCount: count).text
+        cleaned = AskAIText.capitalizing(AskAIText.replacingDashes(echoGuard.filter(cleaned)))
         RenderCounter.hit("AskAIFlush")
         updateReply {
             guard $0.text != cleaned else { return }
@@ -347,30 +419,41 @@ final class AskAIConversation: ObservableObject {
     /// a trailing reference list); a failure with nothing streamed shows the reason (or a generic
     /// line), and a failure MID-answer keeps what streamed but says plainly that it stopped early.
     private func finishReply(failed: Bool, message: String? = nil, elapsed: Double? = nil, firstToken: Double? = nil) {
+        // No flush may land after the reply settles (it would overwrite the settled text).
+        resetStream()
         let question = currentQuestion
+        let genericFailure = "I couldn\u{2019}t answer that right now. Try rephrasing the question, or ask again in a moment."
         updateReply { reply in
             reply.isStreaming = false
             reply.elapsed = elapsed
             if failed {
                 reply.failed = true
                 if reply.text.isEmpty {
-                    reply.text = message ?? "I couldn\u{2019}t answer that right now. Try rephrasing the question, or ask again in a moment."
+                    reply.text = message ?? genericFailure
                 } else {
                     reply.text += "\n\n(" + (message ?? "The answer stopped early. Ask again to continue.") + ")"
                 }
             } else {
-                var text = AskAIText.collapsingRepetition(reply.text)
+                var text = AskAIText.collapsingRepetition(echoGuard.filter(AskAIText.droppingSourceEchoes(reply.text, sources: reply.sources)))
                 let markers = AskAIText.normalizeMarkers(text, sourceCount: reply.sources.count)
                 text = markers.text
                 let policed = AskAIText.policeCitations(text, sources: reply.sources)
                 let quoted = AskAIText.policeQuotations(policed.text, sources: reply.sources)
-                reply.text = AskAIText.droppingTrailingReferences(quoted.text)
+                reply.text = AskAIText.capitalizing(AskAIText.replacingDashes(AskAIText.droppingTrailingReferences(quoted.text)))
                 reply.removedCitations = markers.removed + policed.removed
                 reply.flaggedQuotations = quoted.flagged
+                // Nothing left once policed (an empty stream, or every paragraph an echo): a
+                // failure the reader can retry, never an empty card reading "Thinking..." forever.
+                if reply.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    reply.failed = true
+                    reply.text = genericFailure
+                    reply.removedCitations = 0
+                    reply.flaggedQuotations = 0
+                }
             }
             reply.refreshCitations()
-            if !failed, let question {
-                reply.suggestions = AskAIText.suggestions(for: question, cited: reply.citedSources)
+            if !reply.failed, let question {
+                reply.suggestions = AskAIText.suggestions(for: question, cited: reply.citedSources, conversationTopic: topicDisplay)
             }
         }
         isAnswering = false
@@ -398,6 +481,7 @@ final class AskAIConversation: ObservableObject {
         CITED: \(reply.citedReferences.joined(separator: " | "))
         REMOVED: \(reply.removedCitations) FLAGGED: \(reply.flaggedQuotations) FAILED: \(failed)
         NOTE: \(reply.note ?? "")
+        ERROR: \(failed ? lastErrorDescription : "")
         SUGGESTIONS: \(reply.suggestions.joined(separator: " | "))
         A: \(reply.text)
 
@@ -421,6 +505,12 @@ final class AskAIConversation: ObservableObject {
     /// Stops a running answer, keeping whatever streamed so far (an empty reply is dropped with its
     /// question, so a stopped ask leaves no half-turn behind).
     func cancel() {
+        cancel(saving: true)
+    }
+
+    /// `saving: false` is for `reset()`, which saves the empty transcript itself: two saves raced,
+    /// and the old transcript's write could land after the removal and come back next launch.
+    private func cancel(saving: Bool) {
         task?.cancel()
         task = nil
         resetStream()
@@ -435,13 +525,14 @@ final class AskAIConversation: ObservableObject {
                 messages[index].refreshCitations()
             }
         }
-        save()
+        if saving { save() }
     }
 
     func reset() {
-        cancel()
+        cancel(saving: false)
         messages = []
         topic = nil
+        topicDisplay = nil
         currentQuestion = nil
         save()
     }
@@ -460,7 +551,33 @@ final class AskAIConversation: ObservableObject {
     private struct Store: Codable {
         var messages: [Message]
         var topic: String?
+
+        init(messages: [Message], topic: String?) {
+            self.messages = messages
+            self.topic = topic
+        }
+
+        /// Lenient: a message that no longer decodes is dropped, not the whole transcript.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            messages = (try container.decodeIfPresent([Lossy<Message>].self, forKey: .messages) ?? []).compactMap(\.value)
+            topic = try container.decodeIfPresent(String.self, forKey: .topic)
+        }
     }
+
+    /// One element of a list that decodes to nil instead of failing the list.
+    private struct Lossy<Value: Decodable>: Decodable {
+        let value: Value?
+        init(from decoder: Decoder) throws {
+            value = try? Value(from: decoder)
+        }
+    }
+
+    /// The most recent messages kept (in memory and on disk): twenty turns.
+    private static let keptMessages = 40
+    /// A saved source's text, clipped: every answer stored its sources whole (a full Ibn Kathir
+    /// entry each), and the transcript loads on the main thread when the chat opens.
+    private static let savedSourceCharacters = 2_400
 
     private static var storeURL: URL {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
@@ -468,8 +585,15 @@ final class AskAIConversation: ObservableObject {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: Self.storeURL),
-              let store = try? JSONDecoder().decode(Store.self, from: data) else { return }
+        guard let data = try? Data(contentsOf: Self.storeURL) else { return }
+        let store: Store
+        do {
+            store = try JSONDecoder().decode(Store.self, from: data)
+        } catch {
+            // Never let the next save overwrite a transcript this build cannot read.
+            UserDataRescue.quarantine(file: Self.storeURL, error: error)
+            return
+        }
         // A turn that was mid-stream when the app quit settles as it stood.
         messages = store.messages.map { message in
             var settled = message
@@ -480,16 +604,58 @@ final class AskAIConversation: ObservableObject {
         topic = store.topic
     }
 
+    /// Saves run one at a time, in the order they were asked for: as separate detached tasks, the
+    /// old transcript's write could land after "New Conversation" removed the file.
+    private static let saveQueue = DispatchQueue(label: "AskAIConversation.save", qos: .utility)
+
     private func save() {
-        let store = Store(messages: messages.filter { !$0.isStreaming }, topic: topic)
+        let kept = messages.filter { !$0.isStreaming }.suffix(Self.keptMessages).map { message -> Message in
+            var clipped = message
+            clipped.sources = message.sources.map { source in
+                guard source.text.count > Self.savedSourceCharacters else { return source }
+                return AskAISource(kind: source.kind, reference: source.reference, title: source.title,
+                                   text: AskAISource.clip(source.text, to: Self.savedSourceCharacters),
+                                   arabic: source.arabic, transliteration: source.transliteration,
+                                   provenance: source.provenance, aliases: source.aliases,
+                                   maxCharacters: source.maxCharacters, isSubject: source.isSubject)
+            }
+            return clipped
+        }
+        let store = Store(messages: Array(kept), topic: topic)
         let url = Self.storeURL
-        Task.detached(priority: .utility) {
+        Self.saveQueue.async {
             if store.messages.isEmpty {
                 try? FileManager.default.removeItem(at: url)
             } else if let data = try? JSONEncoder().encode(store) {
                 try? data.write(to: url, options: .atomic)
             }
         }
+    }
+}
+
+extension AskAIConversation.Message {
+    /// Lenient: a field one build adds (or another drops) takes its default instead of failing the
+    /// whole transcript. A required field the committed build had never written failed every saved
+    /// conversation, and the next save then overwrote it.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        role = try container.decode(AskAIConversation.Role.self, forKey: .role)
+        text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
+        sources = (try? container.decodeIfPresent([AskAISource].self, forKey: .sources)) ?? []
+        isStreaming = try container.decodeIfPresent(Bool.self, forKey: .isStreaming) ?? false
+        failed = try container.decodeIfPresent(Bool.self, forKey: .failed) ?? false
+        removedCitations = try container.decodeIfPresent(Int.self, forKey: .removedCitations) ?? 0
+        flaggedQuotations = try container.decodeIfPresent(Int.self, forKey: .flaggedQuotations) ?? 0
+        asksForRuling = try container.decodeIfPresent(Bool.self, forKey: .asksForRuling) ?? false
+        // An intent or engine a later build added reads as unknown, not as a broken file.
+        intent = (try? container.decodeIfPresent(AskAIIntent.self, forKey: .intent)) ?? nil
+        engine = (try? container.decodeIfPresent(AskAIEngineKind.self, forKey: .engine)) ?? nil
+        isFollowUp = try container.decodeIfPresent(Bool.self, forKey: .isFollowUp) ?? false
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        citedReferences = try container.decodeIfPresent([String].self, forKey: .citedReferences) ?? []
+        suggestions = try container.decodeIfPresent([String].self, forKey: .suggestions) ?? []
+        elapsed = try container.decodeIfPresent(Double.self, forKey: .elapsed)
     }
 }
 

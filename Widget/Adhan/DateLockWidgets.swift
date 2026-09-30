@@ -80,7 +80,7 @@ struct HijriDateLockView: View {
 
 @available(iOS 16.0, *)
 struct HijriDateLockWidget: Widget {
-    let kind: String = "HijriDateLockWidget"
+    let kind: String = AdhanWidgetKind.HijriDateLockWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -95,7 +95,7 @@ struct HijriDateLockWidget: Widget {
 
 @available(iOS 16.0, *)
 struct HijriDateArabicLockWidget: Widget {
-    let kind: String = "HijriDateArabicLockWidget"
+    let kind: String = AdhanWidgetKind.HijriDateArabicLockWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -149,7 +149,7 @@ struct DualCalendarLockView: View {
 
 @available(iOS 16.0, *)
 struct DualCalendarLockWidget: Widget {
-    let kind: String = "DualCalendarLockWidget"
+    let kind: String = AdhanWidgetKind.DualCalendarLockWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -216,7 +216,7 @@ struct NextPrayerDateLockView: View {
 
 @available(iOS 16.0, *)
 struct NextPrayerDateLockWidget: Widget {
-    let kind: String = "NextPrayerDateLockWidget"
+    let kind: String = AdhanWidgetKind.NextPrayerDateLockWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

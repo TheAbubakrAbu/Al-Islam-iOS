@@ -1,0 +1,98 @@
+# name|seconds|args   (a line starting with ! runs a shell command with the app terminated)
+# Resets use launch arguments: simctl spawn defaults <bundle id> does not reach the app's domain on iOS 27.
+adhan|9|
+adhan-tracker|8|-openPrayerTracker
+adhan-city|8|-openCityPrayerTimes
+adhan-qibla|8|-showBigQibla
+adhan-glance-calc|7|-glanceAction calculation
+adhan-glance-prayercal|7|-glanceAction prayerCalendar
+adhan-glance-hijri|7|-glanceAction hijriCalendar
+adhan-glance-home|7|-glanceAction home
+adhan-travel|8|-travelingMode 1
+adhan-travel-off|6|-travelingMode 0
+adhan-catchup|8|-adhanCatchUpProbe
+adhan-daily-rollover|8|-dailyRolloverProbe
+quran-list|8|-launchTabQuran -quranListMode -noAutoOpenMushaf
+quran-list-surah|9|-launchTabQuran -quranListMode -lastRead 2:255
+quran-page|10|-launchTabQuran -quranPageMode -lastRead 2:255
+quran-page-arabic|10|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -lastRead 18:1
+quran-page-pdf|10|-launchTabQuran -quranPageMode -mushafPageLanguage pdf -lastRead 36:1
+quran-page-warsh|10|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -displayQiraah "Warsh an Nafi" -lastRead 2:1
+reset-hafs|8|-launchTabQuran -quranListMode -lastRead 1:1 -displayQiraah "" -seedBool removeArabicDots=0,cleanArabicText=0
+# The C1 crash repro (Hafs, dots removed, tashkeel on); fixed 2026-09-28, so this must stay alive:
+quran-page-dotless|15|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -displayQiraah "" -lastRead 2:11 -seedBool removeArabicDots=1,cleanArabicText=0
+reset-dots|8|-launchTabQuran -quranListMode -lastRead 1:1 -displayQiraah "" -seedBool removeArabicDots=0,cleanArabicText=0
+quran-page-findjump|10|-launchTabQuran -quranPageMode -lastRead 2:1 -mushafFindBar "20:6" -mushafFindJump
+quran-page-findstep|12|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -lastRead 2:1 -mushafFindBar "الله" -mushafFindStep -1
+quran-page-collapsed|8|-launchTabQuran -quranPageMode -lastRead 55:1 -mushafCollapseBars
+quran-page-picker|8|-launchTabQuran -quranPageMode -lastRead 1:1 -openSurahPicker
+quran-page-sheet-range|9|-launchTabQuran -quranPageMode -lastRead 2:1 -openPageSheet customRange
+quran-row-sheet-range|9|-launchTabQuran -quranListMode -lastRead 2:1 -openRowSheet customRange
+quran-row-sheet-word|9|-launchTabQuran -quranListMode -lastRead 2:1 -openRowSheet word -wordIndex 1
+quran-search|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "mercy"
+quran-search-arabic|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "الرحمن"
+quran-search-ref|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "2:255"
+quran-surah-search|8|-launchTabQuran -quranListMode -noAutoOpenMushaf -surahSearch "yaseen"
+quran-settings|8|-launchQuranSettings
+quran-reader-settings|9|-launchTabQuran -quranListMode -lastRead 2:1 -launchReaderSettings
+quran-history|8|-openQuranHistory
+quran-themes|8|-openThemes
+quran-surah-info|9|-launchTabQuran -quranListMode -lastRead 2:1 -openSurahInfo
+quran-word-of-day|8|-openWordOfDay
+quran-play|12|-launchTabQuran -quranListMode -lastRead 1:1 -playSurah 1:1
+quran-qiraat-analysis|9|-launchTabQuran -quranListMode -lastRead 2:1 -showQiraatAnalysis
+quran-comparison|9|-launchTabQuran -quranListMode -lastRead 2:1 -qiraatComparisonMode
+quran-custom-range|8|-showCustomRangeSheet
+hadith|8|-launchTabHadith
+hadith-book|9|-launchTabHadith -launchHadithBook bukhari
+hadith-open|9|-launchTabHadith -launchHadithOpen bukhari:1
+hadith-search|9|-launchTabHadith -hadithSearch "patience"
+hadith-search-ref|9|-launchTabHadith -hadithSearch "1:4"
+hadith-search-arabic|9|-launchTabHadith -hadithSearch "الصبر"
+hadith-topics|8|-launchHadithTopics
+hadith-enc|8|-launchHadithEncyclopedia
+hadith-history|8|-launchHadithHistory
+hadith-settings|8|-launchHadithSettings
+islam|8|-launchTabIslam
+islam-arabicAlphabet|8|-launchTabIslam -islamDestination arabicAlphabet
+islam-tajweedFoundations|8|-launchTabIslam -islamDestination tajweedFoundations
+islam-namesOfAllah|8|-launchTabIslam -islamDestination namesOfAllah
+islam-commonAdhkar|8|-launchTabIslam -islamDestination commonAdhkar
+islam-commonDuas|8|-launchTabIslam -islamDestination commonDuas
+islam-tasbihCounter|8|-launchTabIslam -islamDestination tasbihCounter
+islam-zakahCalculator|8|-launchTabIslam -islamDestination zakahCalculator
+islam-inheritanceCalculator|8|-launchTabIslam -islamDestination inheritanceCalculator
+islam-hijriCalendarConverter|8|-launchTabIslam -islamDestination hijriCalendarConverter
+islam-masjidLocator|8|-launchTabIslam -islamDestination masjidLocator
+islam-halalFoodLocator|8|-launchTabIslam -islamDestination halalFoodLocator
+islam-journal|8|-launchTabIslam -islamDestination journal
+islam-pillarsAndBasics|8|-launchTabIslam -islamDestination pillarsAndBasics
+islam-howToGuides|8|-launchTabIslam -islamDestination howToGuides
+islam-islamicWallpapers|8|-launchTabIslam -islamDestination islamicWallpapers
+islam-miraclesOfQuran|8|-launchTabIslam -islamDestination miraclesOfQuran
+islam-propheciesOfProphet|8|-launchTabIslam -islamDestination propheciesOfProphet
+islam-miraclesOfProphets|8|-launchTabIslam -islamDestination miraclesOfProphets
+islam-search|9|-launchTabIslam -islamSearch "wudu"
+islam-reminder|8|-launchTabIslam -islamScrollToReminder
+islam-askai|90|-launchTabIslam -islamDestination askAI -askAIReset -askAILog -askAI "hello||What does the Quran say about patience?||who narrated that hadith?||how do I change the reciter"
+settings|8|-launchTabSettings
+settings-search|8|-launchTabSettings -settingsSearch "font"
+settings-prayer|8|-launchTabSettings -settingsOpen prayer
+settings-prayerSky|8|-launchTabSettings -settingsOpen prayerSky
+settings-notifications|8|-launchTabSettings -settingsOpen notifications
+settings-nagging|8|-launchTabSettings -settingsOpen nagging
+settings-quran|8|-launchTabSettings -settingsOpen quran
+settings-hadith|8|-launchTabSettings -settingsOpen hadith
+settings-islam|8|-launchTabSettings -settingsOpen islam
+settings-islamArabic|8|-launchTabSettings -settingsOpen islamArabic
+settings-appearance|8|-launchTabSettings -settingsOpen appearance
+settings-appearanceLook|8|-launchTabSettings -settingsOpen appearanceLook
+settings-tips|8|-launchTabSettings -settingsOpen tips
+settings-cloudBackup|8|-launchTabSettings -settingsOpen cloudBackup
+settings-aboutYou|8|-showAboutYou
+settings-credits|8|-showCredits
+settings-widget-gallery|8|-widgetGallery
+settings-profile|8|-openProfile
+settings-daily-hub|8|-openDailyHub
+settings-learn-more|8|-openLearnMore
+settings-cloud-offer|8|-showCloudOffer

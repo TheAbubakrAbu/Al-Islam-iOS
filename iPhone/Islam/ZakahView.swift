@@ -80,14 +80,9 @@ struct ZakahCalculatorView: View {
         return formatter
     }()
 
-    /// Tolerant parse: grouping separators and currency symbols are stripped rather than rejected.
+    /// Any keyboard's digits and either separator convention (`TypedAmount`, A11).
     private func amount(_ text: String) -> Double {
-        let cleaned = text.filter { $0.isNumber || $0 == "." || $0 == "," }
-        // Treat a comma as a decimal separator only when there is no period competing for the job.
-        let normalized = cleaned.contains(".")
-            ? cleaned.replacingOccurrences(of: ",", with: "")
-            : cleaned.replacingOccurrences(of: ",", with: ".")
-        return Double(normalized) ?? 0
+        TypedAmount.parse(text)
     }
 
     private var totalAssets: Double {

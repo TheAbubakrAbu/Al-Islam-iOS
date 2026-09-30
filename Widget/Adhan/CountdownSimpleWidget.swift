@@ -48,7 +48,7 @@ struct SimpleEntryView: View {
 }
 
 struct SimpleWidget: Widget {
-    let kind: String = "SimpleWidget"
+    let kind: String = AdhanWidgetKind.SimpleWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -63,7 +63,7 @@ struct SimpleWidget: Widget {
 
 /// The Simple Countdown widget, unchanged, over the current prayer's sky gradient.
 struct SimpleSkyWidget: Widget {
-    let kind: String = "SimpleSkyWidget"
+    let kind: String = AdhanWidgetKind.SimpleSkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

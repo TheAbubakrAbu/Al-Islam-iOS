@@ -23,7 +23,7 @@ struct MoonPhase: Equatable {
         }
     }
 
-    var illuminationPercent: Int { Int((illumination * 100).rounded()) }
+    var illuminationPercent: Int { illumination.isFinite ? Int((illumination * 100).rounded()) : 0 }
 
     /// One-entry memo. Callers pass hourly-quantized dates (see SkyView's `moonDate`), so the tab's
     /// per-second tick hits this instead of re-running the full ephemeris trig for an identical result.
@@ -83,7 +83,9 @@ struct MoonPhase: Equatable {
         let sunDistance = 149_598_000.0   // km
 
         // Geocentric elongation of the Moon from the Sun, then the Sun–Moon–Earth (phase) angle.
-        let phi = acos(sin(sunDec) * sin(moonDec) + cos(sunDec) * cos(moonDec) * cos(sunRA - moonRA))
+        // Clamped: rounding can carry the cosine a hair past 1, and acos(1.0000001) is NaN, which
+        // then trapped wherever the illumination became an Int.
+        let phi = acos(min(max(sin(sunDec) * sin(moonDec) + cos(sunDec) * cos(moonDec) * cos(sunRA - moonRA), -1), 1))
         let inc = atan2(sunDistance * sin(phi), moonDistance - sunDistance * cos(phi))
         // Position angle of the bright limb: its sign is what distinguishes waxing from waning.
         let limbAngle = atan2(

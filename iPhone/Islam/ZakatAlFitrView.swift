@@ -23,12 +23,9 @@ struct ZakatAlFitrView: View {
 
     private var totalKilos: Int { Int((Double(fitrPeople) * Self.kilosPerSa).rounded()) }
 
+    /// Any keyboard's digits and either separator convention (`TypedAmount`, A11).
     private func amount(_ text: String) -> Double {
-        let cleaned = text.filter { $0.isNumber || $0 == "." || $0 == "," }
-        let normalized = cleaned.contains(".")
-            ? cleaned.replacingOccurrences(of: ",", with: "")
-            : cleaned.replacingOccurrences(of: ",", with: ".")
-        return Double(normalized) ?? 0
+        TypedAmount.parse(text)
     }
 
     private static let currencyFormatter: NumberFormatter = {

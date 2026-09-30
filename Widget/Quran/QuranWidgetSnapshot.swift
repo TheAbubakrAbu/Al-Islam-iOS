@@ -16,7 +16,7 @@ import Foundation
 struct QuranWidgetSnapshot: Codable {
     /// A tajweed color span over the Arabic text, in UTF-16 offsets, with the color as 0–1 RGB. Plain
     /// `Codable` so it survives the App Group without serializing SwiftUI/UIKit color objects.
-    struct ColorRun: Codable {
+    struct ColorRun: Codable, Equatable {
         let start: Int
         let length: Int
         let r: Double
@@ -24,7 +24,7 @@ struct QuranWidgetSnapshot: Codable {
         let b: Double
     }
 
-    struct AyahCard: Codable {
+    struct AyahCard: Codable, Equatable {
         let arabic: String
         let reference: String
         let english: String
@@ -33,8 +33,28 @@ struct QuranWidgetSnapshot: Codable {
         var fontName: String?
         /// Tajweed color spans over `arabic` (empty/nil when tajweed is off). Base text stays adaptive.
         var colorRuns: [ColorRun]?
+        /// Where the card is from, so a tap on the widget opens that ayah (`QuranDeepLink`). Optional:
+        /// cards written before 2026-09-28 have none and open the app where it last was.
+        var surah: Int?
+        var ayah: Int?
     }
-    struct ListenCard: Codable {
+    /// One bookmark, as the Chosen Ayah widget's picker lists it: the reference, the note and a short
+    /// translation, never the Arabic (the picker is a list of names, the widget renders the text).
+    struct BookmarkCard: Codable, Equatable {
+        let surah: Int
+        let ayah: Int
+        let note: String?
+        /// The Saheeh International translation, clipped for a picker row.
+        let english: String
+        let createdAt: Date?
+    }
+    /// An ayah a placed Chosen Ayah widget asked for, rendered by the app with the reader's settings.
+    struct ChosenCard: Codable, Equatable {
+        let surah: Int
+        let ayah: Int
+        let card: AyahCard
+    }
+    struct ListenCard: Codable, Equatable {
         let name: String
         let reciter: String
         let current: Double
@@ -58,6 +78,16 @@ struct QuranWidgetSnapshot: Codable {
     /// are ignored on decode and dropped by the next save.)
     var fajrByDay: [String: TimeInterval]?
 
+    /// The bookmarks, in mushaf order, for the Chosen Ayah widget's picker (2026-09-28). nil until
+    /// the app has written a snapshot on a build that knows them.
+    var bookmarks: [BookmarkCard]?
+    /// The ayahs the placed Chosen Ayah widgets show, pre-rendered by the app (font, tajweed, clean
+    /// text) so the widget draws them exactly as the reader would.
+    var chosenAyahs: [ChosenCard]?
+    /// The reader's Arabic face when the snapshot was written, for an ayah the widget has to typeset
+    /// itself (one chosen while the app was not running, before the app pre-renders it).
+    var arabicFontName: String?
+
     init(
         lastRead: AyahCard? = nil,
         lastListened: ListenCard? = nil,
@@ -76,9 +106,33 @@ struct QuranWidgetSnapshot: Codable {
         self.fajrByDay = fajrByDay
     }
 
+    /// The pre-rendered card for one ayah, if a placed widget asked for it.
+    func chosenCard(surah: Int, ayah: Int) -> AyahCard? {
+        chosenAyahs?.first { $0.surah == surah && $0.ayah == ayah }?.card
+    }
+
     /// Today's index under the daily boundary the app wrote (Fajr by default), or plain local days.
     static func dailyDayIndex(for date: Date = Date(), fajrByDay: [String: TimeInterval]?) -> Int {
         DailyRollover.dayIndex(for: date, fajrByDay: fajrByDay)
+    }
+}
+
+/// The app's URL scheme, as the Quran widgets use it: a tap on an ayah widget opens that ayah
+/// (`MainTabView.onOpenURL` routes it through `AppNavigation`). Registered in Info-Main.plist.
+enum QuranDeepLink {
+    static let scheme = "alislam"
+
+    /// `alislam://ayah/2/255`
+    static func ayah(surah: Int, ayah: Int) -> URL? {
+        URL(string: "\(scheme)://ayah/\(surah)/\(ayah)")
+    }
+
+    /// The surah and ayah of an `ayah` link, or nil for any other URL.
+    static func parseAyah(_ url: URL) -> (surah: Int, ayah: Int)? {
+        guard url.scheme?.lowercased() == scheme, url.host?.lowercased() == "ayah" else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 2, let surah = Int(parts[0]), let ayah = Int(parts[1]) else { return nil }
+        return (surah, ayah)
     }
 }
 

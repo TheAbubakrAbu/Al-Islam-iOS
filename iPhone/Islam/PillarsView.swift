@@ -14,6 +14,9 @@ struct PillarsView: View {
         self.openArticle = openArticle
     }
 
+    /// The folded groups opened with "Show All" (the 25 prophets). See `IslamArticleIndexSections`.
+    @State private var unfoldedGroups: Set<String> = []
+
     #if os(iOS)
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -21,6 +24,8 @@ struct PillarsView: View {
     /// The index row a result asked to scroll to ("Scroll To Article"), consumed once the search clears.
     @State private var scrollTarget: String?
     @StateObject private var search = IslamArticleSearchModel()
+    /// The pillar the hero's building opened (a catalog id).
+    @State private var heroArticle: String?
     #endif
 
     var body: some View {
@@ -30,7 +35,12 @@ struct PillarsView: View {
             List {
                 Group {
                     if query.isEmpty {
-                        IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups)
+                        Section {
+                            IslamPillarsHero(open: $heroArticle)
+                                .articleCardRow()
+                        }
+
+                        IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups, unfolded: $unfoldedGroups)
                     } else {
                         AskAISearchSection(query: query)
 
@@ -41,6 +51,9 @@ struct PillarsView: View {
                             isSearching: search.isSearching,
                             onScrollTo: { entry in
                                 withAnimation { searchText = "" }
+                                // A prophet past the first five is folded away: open the group so the
+                                // row is there to scroll to.
+                                unfoldedGroups.insert("\(entry.home.rawValue)/\(entry.group)")
                                 scrollTarget = entry.listID
                             }
                         )
@@ -50,6 +63,14 @@ struct PillarsView: View {
             }
             .applyConditionalListStyle()
             .autoOpenArticle(openArticle, home: .pillars)
+            // The hero's columns are Buttons in ONE List row writing this, with one destination on
+            // the List (the one-link-per-row rule).
+            .pushDestination(isPresented: Binding(
+                get: { heroArticle != nil },
+                set: { if !$0 { heroArticle = nil } }
+            )) {
+                if let heroArticle { IslamArticleCatalog.destination(id: heroArticle) }
+            }
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
                                      scrollTarget: scrollTarget, proxy: proxy)
         }
@@ -68,7 +89,7 @@ struct PillarsView: View {
         }
         #else
         List {
-            IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups)
+            IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups, unfolded: $unfoldedGroups)
                 .themedListRowBackground()
         }
         .applyConditionalListStyle()
@@ -115,7 +136,12 @@ struct ArticleAutoOpen: ViewModifier {
     static func launchRequest(for home: IslamArticleHome) -> IslamArticleOpenRequest? {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        let argument = home == .pillars ? "-pillarsArticle" : "-guidesArticle"
+        let argument: String
+        switch home {
+        case .pillars: argument = "-pillarsArticle"
+        case .guides: argument = "-guidesArticle"
+        case .proving: argument = "-provingArticle"
+        }
         guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1),
               let entry = IslamArticleCatalog.groups(for: home).flatMap(\.entries)
                 .first(where: { $0.debugKey == arguments[idx + 1] }) else { return nil }
@@ -450,3 +476,156 @@ private struct ScriptureQuoteBody: View, Equatable {
         #endif
     }
 }
+
+#if os(iOS)
+/// The Pillars & Beliefs index's opening card (Abu, 2026-09-29: "pretty designs ... for pillars"): the
+/// hadith of the five, drawn the way it is worded, as a building. The roof is Islam, the five pillars
+/// hold it up, and it stands on the six of iman. Every column and every foundation stone opens its
+/// article. They are Buttons writing one binding, because the whole card is ONE List row and two
+/// NavigationLinks in one row both fire on any tap.
+struct IslamPillarsHero: View {
+    @Environment(\.appearance) private var appearance
+    @Binding var open: String?
+
+    private struct Pillar: Identifiable {
+        let id: String
+        let name: String
+        let arabic: String
+        let systemImage: String
+    }
+
+    private static let five: [Pillar] = [
+        Pillar(id: "ShahadahView", name: "Shahadah", arabic: "الشَّهَادَة", systemImage: "quote.bubble"),
+        Pillar(id: "SalahView", name: "Salah", arabic: "الصَّلَاة", systemImage: "sun.max"),
+        Pillar(id: "ZakahView", name: "Zakah", arabic: "الزَّكَاة", systemImage: "heart.circle"),
+        Pillar(id: "SawmView", name: "Sawm", arabic: "الصَّوم", systemImage: "moon.stars"),
+        Pillar(id: "HajjView", name: "Hajj", arabic: "الحَجّ", systemImage: "house"),
+    ]
+
+    private static let six: [Pillar] = [
+        Pillar(id: "GodView", name: "Allah", arabic: "", systemImage: "circle.hexagongrid"),
+        Pillar(id: "AngelsView", name: "Angels", arabic: "", systemImage: "wind"),
+        Pillar(id: "BooksView", name: "Books", arabic: "", systemImage: "book.closed"),
+        Pillar(id: "ProphetsView", name: "Prophets", arabic: "", systemImage: "person.2"),
+        Pillar(id: "DayView", name: "Last Day", arabic: "", systemImage: "hourglass"),
+        Pillar(id: "QadarView", name: "Qadar", arabic: "", systemImage: "scalemass"),
+    ]
+
+    var body: some View {
+        let accent = appearance.accent
+        VStack(spacing: 0) {
+            // The roof.
+            ZStack {
+                PillarsRoof()
+                    .fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
+                                         startPoint: .top, endPoint: .bottom))
+                VStack(spacing: 0) {
+                    Text("الإِسلَام")
+                        .font(appearance.islamArabicFont(base: 22, relativeTo: .title3))
+                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    Text("ISLAM IS BUILT ON FIVE")
+                        .font(.system(size: 9, weight: .heavy))
+                        .tracking(1.4)
+                }
+                .foregroundColor(.white)
+                .padding(.top, 16)
+            }
+            .frame(height: 70)
+            .accessibilityElement(children: .combine)
+
+            // The five columns.
+            HStack(spacing: 6) {
+                ForEach(Self.five) { pillar in
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        open = pillar.id
+                    } label: {
+                        VStack(spacing: 5) {
+                            Image(systemName: pillar.systemImage)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(accent)
+                            Text(pillar.name)
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            Text(pillar.arabic)
+                                .font(appearance.islamArabicFont(base: 13, relativeTo: .caption))
+                                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(accent.opacity(0.12))
+                                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .strokeBorder(accent.opacity(0.3), lineWidth: 1))
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(pillar.name), a pillar of Islam")
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+
+            // The foundation: the six of iman.
+            VStack(spacing: 6) {
+                Text("ON THE SIX PILLARS OF IMAN")
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(1.4)
+                    .foregroundColor(accent)
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 3), spacing: 5) {
+                    ForEach(Self.six) { pillar in
+                        Button {
+                            Settings.shared.hapticFeedback()
+                            open = pillar.id
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: pillar.systemImage)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(accent)
+                                Text(pillar.name)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(accent.opacity(0.1)))
+                            .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Belief in \(pillar.name)")
+                    }
+                }
+            }
+            .padding(10)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(accent.opacity(0.06))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(accent.opacity(0.25), lineWidth: 1))
+            )
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+/// A shallow pediment: the roof over the five columns.
+private struct PillarsRoof: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+#endif

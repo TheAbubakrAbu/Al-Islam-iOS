@@ -49,7 +49,7 @@ struct TajweedAyahWords {
     func words(in quran: QuranData) -> String {
         guard let surah = quran.surah(surahId),
               let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return "" }
-        return words(in: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: ""))
+        return words(in: ayah.rawArabicText(surahId: surah.id, qiraahOverride: ""))
     }
 
     /// The tokens of `ayahText` at `span`, joined; empty when the span falls outside the text. A token

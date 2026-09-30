@@ -1754,11 +1754,11 @@ struct QiraatExplorerView: View {
     /// Every resolve needs its surah's alignment against Hafs, and building one costs about 7 ms a
     /// riwayah: stepping into a new surah blocked the main thread for 46 ms with the seven default
     /// riwayat and 240 ms with all nineteen (`-qiraatBench`, optimized build, iPhone 17 Pro
-    /// simulator). It cannot simply move off the main thread (`QiraahComparison` is main-only by
-    /// the crash-hardening rule), so it moves EARLY instead: while the reader looks at this place,
-    /// the NEXT surah is aligned one riwayah per runloop turn, and the step into it finds the
-    /// tables already built. Forward only (that is the direction the bar walks), and never on the
-    /// reduced tier, which does no prebuilds at all.
+    /// simulator). So it moves EARLY: while the reader looks at this place, the NEXT surah is
+    /// aligned, and the step into it finds the tables already built. Off the main thread since
+    /// `QiraahComparison` put its tables behind a lock (Quality Guide C5, F11), like the word card's
+    /// comparison. Forward only (that is the direction the bar walks), and never on the reduced
+    /// tier, which does no prebuilds at all.
     private func warmNextSurah() {
         warmTask?.cancel()
         guard !AppPerformance.shouldAvoidBroadPrewarm, surahID < 114 else { return }
@@ -1770,14 +1770,14 @@ struct QiraatExplorerView: View {
         case .surah: tags = [compareTag]
         }
         guard !tags.isEmpty else { return }
-        warmTask = Task { @MainActor in
+        let quranData = self.quranData
+        warmTask = Task.detached(priority: .utility) {
             #if DEBUG
             let started = DispatchTime.now().uptimeNanoseconds
             #endif
             for tag in tags {
                 guard !Task.isCancelled else { return }
                 _ = QiraahComparison.alignment(surahID: next, tag: tag, quranData: quranData)
-                await Task.yield()
             }
             #if DEBUG
             if RenderCounter.enabled {

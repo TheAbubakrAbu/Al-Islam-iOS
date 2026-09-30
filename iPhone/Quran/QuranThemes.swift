@@ -465,26 +465,6 @@ struct ThemesBrowseView: View {
                 }
             }
 
-            // The four corpora as one segmented switch: the app's themes, then the Quranic Universal
-            // Library's thematic topics, concepts and A-Z index. Only with the QUL pack bundled.
-            if QuranTopicsStore.isBundled {
-                Section {
-                    Picker("Corpus", selection: $family) {
-                        ForEach(ThemeBrowseFamily.allCases) { item in
-                            Text(item.title).tag(item)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: family) { _ in
-                        settings.hapticFeedback()
-                        collapsedDomains.removeAll()
-                        showAllDomains.removeAll()
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                    .listRowBackground(Color.clear)
-                }
-            }
-
             // What is lit in the reader right now, with a way to put each one (or all) out.
             if !isSearching, !themeHighlights.lit.isEmpty {
                 Section(header: HStack {
@@ -564,6 +544,29 @@ struct ThemesBrowseView: View {
         }
         #endif
         .dismissKeyboardOnScroll()
+        // The four corpora as one segmented switch: the app's themes, then the Quranic Universal
+        // Library's thematic topics, concepts and A-Z index. Only with the QUL pack bundled. Pinned
+        // under the bar rather than a row of the list: it switches hundreds of rows, and changing
+        // corpus from deep in one must not mean scrolling back up (Abu, 2026-09-28).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if QuranTopicsStore.isBundled {
+                Picker("Corpus", selection: $family) {
+                    ForEach(ThemeBrowseFamily.allCases) { item in
+                        Text(item.title).tag(item)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: family) { _ in
+                    settings.hapticFeedback()
+                    collapsedDomains.removeAll()
+                    showAllDomains.removeAll()
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial)
+                .overlay(Divider(), alignment: .bottom)
+            }
+        }
         // The app's own bottom search bar, not `.searchable` - the same inset the surah picker and
         // the Quran/Hadith readers use, so every search in the app sits in the same place.
         .adaptiveSafeArea(edge: .bottom) {

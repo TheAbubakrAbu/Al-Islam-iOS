@@ -61,7 +61,7 @@ extension Settings {
     var quranPlan: QuranPlan? {
         get {
             if let cached = Self.quranPlanCache, cached.data == quranPlanData { return cached.value }
-            let decoded = try? Self.decoder.decode(QuranPlan.self, from: quranPlanData)
+            let decoded = UserDataRescue.decode(QuranPlan.self, from: quranPlanData, key: "quranPlanData", decoder: Self.decoder)
             Self.quranPlanCache = (quranPlanData, decoded)
             return decoded
         }
@@ -221,13 +221,15 @@ enum QuranPlannerMath {
         let endPage: Int?
     }
 
-    private static var spanCache: (khatmCount: Int, count: Int, span: TodaySpan?)?
+    private static var spanCache: (khatmRevision: Int, count: Int, span: TodaySpan?)?
 
     /// The next `count` unread ayahs in mushaf order, starting at the first gap in khatm progress.
-    /// Memoized on (khatm total, count): the walk is ~6k set lookups and callers render often.
+    /// Memoized on (khatm revision, count): the walk is ~6k set lookups and callers render often. The
+    /// key was the khatm TOTAL, so marking one ayah and unmarking another kept a stale span (F10).
     static func todaySpan(quran: [Surah], settings: Settings, count: Int) -> TodaySpan? {
-        let khatmCount = settings.khatmCompletedAyahSetCache.count
-        if let cached = spanCache, cached.khatmCount == khatmCount, cached.count == count {
+        settings.ensureKhatmCacheLoaded()
+        let khatmRevision = settings.khatmRevision
+        if let cached = spanCache, cached.khatmRevision == khatmRevision, cached.count == count {
             return cached.span
         }
 
@@ -257,7 +259,7 @@ enum QuranPlannerMath {
                 endPage: last.ayah.page
             )
         }
-        spanCache = (khatmCount, count, span)
+        spanCache = (khatmRevision, count, span)
         return span
     }
 
@@ -370,18 +372,18 @@ struct QuranPlannerToolbarButton: View {
         .accessibilityLabel("Quran Planner")
         .tint(settings.accentColor.accent1)
         .onAppear {
-            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
         }
         // Midnight rollover while the app stays open: the system posts a significant-time-change at
         // day boundaries, so "today" resets without waiting for the next onAppear.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
         }
         // Completion stamping right when the final ayah is marked (settle no-ops otherwise). Async
         // hop: settle may write settings, which must not publish from inside a view update.
         .onReceive(settings.objectWillChange) { _ in
             DispatchQueue.main.async {
-                settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+                settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
             }
         }
         .sheet(isPresented: $showingPlanner, onDismiss: {
@@ -473,7 +475,7 @@ struct QuranPlannerView: View {
     }
 
     private var totalCompleted: Int {
-        settings.khatmCompletedAyahSetCache.count
+        settings.khatmCompletedAyahCount
     }
 
     private var accent: Color { settings.accentColor.color }

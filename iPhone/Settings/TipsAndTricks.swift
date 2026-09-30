@@ -171,6 +171,11 @@ enum TipCatalog {
         if #available(iOS 16.0, *) { return true }
         return false
     }
+    /// The Chosen Ayah widget is configured through App Intents, which widgets gained in iOS 17.
+    private static var hasChosenAyahWidget: Bool {
+        if #available(iOS 17.0, *) { return true }
+        return false
+    }
     private static var hasLiveActivities: Bool {
         if #available(iOS 16.2, *) { return true }
         return false
@@ -554,8 +559,12 @@ enum TipCatalog {
                place: "Siri and Shortcuts", isAvailable: { hasSiriShortcuts }),
         AppTip(id: "quran.widgets", area: .quran, group: "THE QURAN TAB", systemImage: "rectangle.3.group.fill",
                title: "The Quran on your Home Screen",
-               detail: "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, and your Last Listened Surah.",
-               place: "Home Screen"),
+               detail: "Widgets for the Ayah of the Day, the Reminder of the Day, a Name of Allah, your Last Read Ayah, your Last Listened Surah, and a Chosen Ayah you pick yourself. Tapping an ayah widget opens that ayah.",
+               place: "Home Screen and Lock Screen"),
+        AppTip(id: "quran.chosenWidget", area: .quran, group: "THE QURAN TAB", systemImage: "bookmark.fill",
+               title: "Choose the ayah on your widget",
+               detail: "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Pick one of your bookmarks, or type a reference such as 2:255 or Yaseen 9. Until you choose, it shows your newest bookmark.",
+               place: "Home Screen and Lock Screen, Edit Widget", isAvailable: { hasChosenAyahWidget }),
     ]
 
     // MARK: Hadith
@@ -833,7 +842,7 @@ enum TipCatalog {
                place: "Settings tab, Appearance, Look and Feel", destination: .appearancePage(.lookAndFeel)),
         AppTip(id: "app.helpdoors", area: .app, group: "HOW IT LOOKS", systemImage: "questionmark.circle.fill",
                title: "A question on every tab",
-               detail: "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it. Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran opens Arabic Beginner Mode, and Reading in One Language? on the hadith hides the Arabic or the English. Show Help Shortcuts, in Look and Feel, puts the rows away or brings them back.",
+               detail: "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it. Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both. Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them.",
                place: "Adhan, Quran, Hadith and Islam tabs", destination: .appearancePage(.lookAndFeel)),
     ]
 }

@@ -83,14 +83,15 @@ struct AyahQiraahComparisonSheet: View {
     }
 
     private var filteredOptions: [QiraahDisplay] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Accent-blind ("Nāfiʿ" finds Nafi'), the way every other search in the app reads a query.
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).foldingLatinDiacritics
         guard !query.isEmpty else { return options }
         return options.filter { option in
-            option.label.localizedCaseInsensitiveContains(query) ||
-            option.arabicCaption.localizedCaseInsensitiveContains(query) ||
-            option.teacher.localizedCaseInsensitiveContains(query) ||
-            option.teacherArabic.localizedCaseInsensitiveContains(query) ||
-            (qiraahText(for: option)?.localizedCaseInsensitiveContains(query) ?? false)
+            option.label.localizedStandardContains(query) ||
+            option.arabicCaption.localizedStandardContains(query) ||
+            option.teacher.localizedStandardContains(query) ||
+            option.teacherArabic.localizedStandardContains(query) ||
+            (qiraahText(for: option)?.localizedStandardContains(query) ?? false)
         }
     }
 
@@ -469,7 +470,7 @@ struct AyahQiraahComparisonSheet: View {
         guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
               tag.isEmpty || ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
         return ResolvedQiraahText(
-            text: ayah.displayArabicText(surahId: surahNumber, clean: false, qiraahOverride: tag),
+            text: ayah.rawArabicText(surahId: surahNumber, qiraahOverride: tag),
             ownNumber: nil,
             mergedSpan: nil
         )
@@ -878,7 +879,8 @@ private final class EnglishComparisonViewModel: ObservableObject {
             }
 
             let decoded = try JSONDecoder().decode(AyahEditionResponse.self, from: data)
-            translations = Dictionary(uniqueKeysWithValues: decoded.data.map { ($0.edition.identifier, $0.text) })
+            // Server data: a repeated edition must not trap (the first one wins).
+            translations = Dictionary(decoded.data.map { ($0.edition.identifier, $0.text) }, uniquingKeysWith: { first, _ in first })
             loadedReference = reference
         } catch {
             if !Self.isCancellation(error) {
@@ -926,9 +928,10 @@ struct AyahEnglishComparisonSheet: View {
         }
         guard !query.isEmpty else { return sorted }
 
+        let plain = query.foldingLatinDiacritics
         return sorted.filter { edition in
-            edition.name.localizedCaseInsensitiveContains(query) ||
-            inAppTranslationText(for: edition.id).localizedCaseInsensitiveContains(query)
+            edition.name.localizedStandardContains(plain) ||
+            inAppTranslationText(for: edition.id).localizedStandardContains(plain)
         }
     }
 
@@ -942,9 +945,10 @@ struct AyahEnglishComparisonSheet: View {
         }
         guard !query.isEmpty else { return sorted }
 
+        let plain = query.foldingLatinDiacritics
         return sorted.filter { edition in
-            edition.name.localizedCaseInsensitiveContains(query) ||
-            (viewModel.translations[edition.id]?.localizedCaseInsensitiveContains(query) ?? false)
+            edition.name.localizedStandardContains(plain) ||
+            (viewModel.translations[edition.id]?.localizedStandardContains(plain) ?? false)
         }
     }
 
@@ -958,9 +962,10 @@ struct AyahEnglishComparisonSheet: View {
 
         guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) else { return false }
         let arabic = ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText)
-        return "Transliteration".localizedCaseInsensitiveContains(query) ||
+        let plain = query.foldingLatinDiacritics
+        return "Transliteration".localizedStandardContains(plain) ||
             arabic.localizedCaseInsensitiveContains(query) ||
-            ayah.textTransliteration.localizedCaseInsensitiveContains(query)
+            ayah.textTransliteration.localizedStandardContains(plain)
     }
 
     // The translation the reader is currently displaying - pinned above the list so every row can be
@@ -1248,7 +1253,8 @@ struct ResolvedQiraahText {
 /// anchored through Hafs so merged/shifted numbering never serves the wrong verse (the old direct read
 /// did exactly that for every non-Kufi-counted riwayah). File-scope rather than view-local so the
 /// comparison rows and the AI summarize gatherer (`AyahAISources`) resolve identical text.
-@MainActor
+// Not main-actor bound: the word card resolves riwayah text from a detached task (see
+// `QiraahComparison`, and QuranData's lock-published lookups, Quality Guide C5).
 enum QiraahAyahResolver {
     /// `clean` = strip tashkeel/signs via `displayArabicText`. The comparison sheet passes `false`
     /// and layers its OWN sheet-local Hide Tashkeel / Hide Dots on top (so unchecking them there

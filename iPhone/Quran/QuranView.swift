@@ -615,7 +615,8 @@ struct QuranView: View {
     }
 
     private func parsePageJuzQuery(from raw: String) -> PageJuzQuery {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Accents folded before the keywords are read: "Juzʾ 30" is "juz 30".
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).foldingLatinDiacritics
         guard !trimmed.isEmpty else {
             return PageJuzQuery(page: nil, juz: nil, isExplicitPage: false, isExplicitJuz: false)
         }
@@ -1152,6 +1153,9 @@ struct QuranView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("quran root: first body")
+        #endif
         RenderCounter.hit("QuranView")
         return navigationContainer
         .confirmationDialog(
@@ -1188,11 +1192,11 @@ struct QuranView: View {
             guard !isPicker else { return }
             prewarmQuranDestinations()
             #if os(iOS)
-            // The topic and morphology packs parse off-main here, so a root typed into the search
-            // or a chip under an ayah never waits on a first parse. (The Word of the Day corpus is
+            // The topic and morphology packs parse off-main after the reveal (full tier), so a root
+            // typed into the search or a chip under an ayah never waits on a first parse, and the
+            // launch no longer pays for them (Quality Guide F5). (The Word of the Day corpus is
             // prewarmed at app init, ahead of the under-cover walk this task runs in.)
-            QuranTopicsStore.prewarm()
-            MorphologyStore.prewarm()
+            QuranLaunchWarmup.scheduleStudyPacksAfterReveal()
             #endif
             // (The cross-language lexicon used to be kicked from here too; it is the app root's
             // post-reveal work now, because this task also runs during the under-cover tab walk.)
@@ -1312,6 +1316,19 @@ struct QuranView: View {
         // realization that costs, and that happens on the way back in, where it would have anyway);
         // what it buys is that the return renders the reader directly instead of the list plus a push.
         .onReceive(NotificationCenter.default.publisher(for: Self.didEnterBackgroundNotification)) { _ in
+            #if os(iOS)
+            // NOT while something modal is up. A share sheet handing an ayah to Messages, a sheet
+            // left open while a call comes in: the app backgrounds, but the user has not LEFT - they
+            // are mid-action and coming straight back to what they had open. Re-arranging the stack
+            // underneath put the mushaf where the surah list (and the share sheet's context) had
+            // been (Abu, 2026-09-28: "I was sharing an ayah, then I come back and page mode comes
+            // back"). See `ModalPresence`.
+            let modal = ModalPresence.isPresenting
+            #if DEBUG
+            NSLog("QURAN BACKGROUND modal=%d pathEmpty=%d pageMode=%d", modal ? 1 : 0, path.isEmpty ? 1 : 0, settings.quranPageMode ? 1 : 0)
+            #endif
+            guard !modal else { return }
+            #endif
             openMushafUnanimated()
         }
         .onChange(of: searchHandoff.pendingQuery) { query in
@@ -1743,6 +1760,9 @@ struct QuranView: View {
                 quranData.ensureVerseSearchIndex()
                 prepareQuranSemanticCorpus()
                 prewarmRankedLanes()
+                // Roots and topics answer in the same list; on the reduced tier nothing warmed them.
+                QuranTopicsStore.prewarm()
+                MorphologyStore.prewarm()
             }
             // The one-time vector build finishing mid-query: re-run the pending AI search so the results
             // appear the moment the corpus is ready, without another keystroke.
@@ -2354,8 +2374,10 @@ struct QuranView: View {
         // `fixedMenuOrder`, so declared order IS the visual top-to-bottom order.
         Button {
             settings.hapticFeedback()
+            // A Hafs ayah: the audio is Hafs-numbered, and a surah can carry textless ids minted for
+            // the beta riwayat (A5).
             if let randomSurah = quranData.quran.randomElement(),
-               let randomAyah = randomSurah.ayahs.randomElement() {
+               let randomAyah = randomSurah.ayahs.filter({ !$0.textHafs.isEmpty }).randomElement() {
                 quranPlayer.playAyah(
                     surahNumber: randomSurah.id,
                     ayahNumber: randomAyah.id,
@@ -2368,7 +2390,10 @@ struct QuranView: View {
 
         Button {
             settings.hapticFeedback()
-            if let randomSurah = quranData.quran.randomElement() {
+            // A surah the chosen reciter recorded (R3): Dibirov carries 24, Minshawi 1387 26.
+            let chosen = settings.reciter == Settings.randomReciterName ? nil : settings.resolvedSelectedReciterIgnoringRandom()
+            let recorded = quranData.quran.filter { chosen?.carriesSurah($0.id) ?? true }
+            if let randomSurah = (recorded.isEmpty ? quranData.quran : recorded).randomElement() {
                 quranPlayer.playSurah(surahNumber: randomSurah.id, surahName: randomSurah.nameTransliteration)
             } else {
                 let randomID = Int.random(in: 1...114)
@@ -2435,10 +2460,19 @@ struct QuranView: View {
     #if os(iOS)
     /// The last ten Ayahs of the Day: today first, then back through the previous days. The picker is a pure
     /// function of the date, so "history" needs no storage - earlier days are simply recomputed.
-    private var recentAyahsOfTheDay: [(dayLabel: String, surah: Surah, ayah: Ayah)] {
+    /// One formatter for the history's day labels (it was built per access, Quality Guide F10).
+    /// Auto-updating, so a locale or zone change reaches the labels.
+    private static let ayahOfTheDayLabelFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
         formatter.dateStyle = .medium
         formatter.doesRelativeDateFormatting = true
+        return formatter
+    }()
+
+    private var recentAyahsOfTheDay: [(dayLabel: String, surah: Surah, ayah: Ayah)] {
+        let formatter = Self.ayahOfTheDayLabelFormatter
 
         return (0..<10).compactMap { daysBack in
             guard let date = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()),
@@ -2673,18 +2707,23 @@ struct QuranView: View {
             // takes the whole screen, and in the iPad/Mac split it pushes in the LEFT column.
             let doors = summaryDoors(showWordChip: !wordFillsGrid && word != nil)
             // One per row at the accessibility text sizes, where two cut "Word of the Day" mid-name.
-            let perRow = dynamicTypeSize.isAccessibilitySize ? 1 : (doors.count == 4 ? 2 : max(1, doors.count))
-            VStack(spacing: 10) {
-                ForEach(Array(stride(from: 0, to: doors.count, by: perRow)), id: \.self) { start in
-                    HStack(spacing: 10) {
-                        ForEach(doors[start..<min(start + perRow, doors.count)]) { door in
-                            Button {
-                                settings.hapticFeedback()
-                                openDoor(door)
-                            } label: {
-                                summaryDoorChip(title: door.title, systemImage: door.systemImage)
+            let maxPerRow = dynamicTypeSize.isAccessibilitySize ? 1 : 3
+            Group {
+                if #available(iOS 16.0, *) {
+                    // As many to a row as keep each chip's name whole (`EvenChipRows`): three on an
+                    // iPhone, two in an iPad sidebar, where a third of the row broke "His-tory".
+                    EvenChipRows(maximumPerRow: maxPerRow) {
+                        ForEach(doors) { door in summaryDoorButton(door) }
+                    }
+                } else {
+                    let perRow = maxPerRow == 1 ? 1 : (doors.count == 4 ? 2 : max(1, doors.count))
+                    VStack(spacing: 10) {
+                        ForEach(Array(stride(from: 0, to: doors.count, by: perRow)), id: \.self) { start in
+                            HStack(spacing: 10) {
+                                ForEach(doors[start..<min(start + perRow, doors.count)]) { door in
+                                    summaryDoorButton(door)
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -2694,35 +2733,25 @@ struct QuranView: View {
     }
 
     /// "YOUR SUMMARY" and the Today pill. One heading for VoiceOver: the sparkle used to be announced
-    /// as its own heading, "Sparkle". At the accessibility text sizes the pill drops under the title,
-    /// which beside it had room only for "YOUR / SUM- / MARY".
-    @ViewBuilder
+    /// as its own heading, "Sparkle". Wherever the two do not fit on one line (the accessibility text
+    /// sizes, an iPad sidebar), the pill drops under the title, which beside it had room only for
+    /// "YOUR / SUM- / MARY".
     private var summaryHeader: some View {
-        let title = HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(settings.accentColor.color)
-                .accessibilityHidden(true)
-            Text("YOUR SUMMARY")
-                .foregroundStyle(settings.accentColor.color)
-                .accessibilityAddTraits(.isHeader)
-        }
-        // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-        let todayDoor = NavigationLink(destination: dailyHubDestination) {
-            DailyHubDoorLabel()
-        }
-        .buttonStyle(.plain)
-
-        if dynamicTypeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 8) {
-                title
-                todayDoor
-            }
-        } else {
+        AdaptiveSectionHeader(forceStacked: dynamicTypeSize.isAccessibilitySize) {
             HStack(spacing: 8) {
-                title
-                Spacer()
-                todayDoor
+                Image(systemName: "sparkles")
+                    .foregroundStyle(settings.accentColor.color)
+                    .accessibilityHidden(true)
+                Text("YOUR SUMMARY")
+                    .foregroundStyle(settings.accentColor.color)
+                    .accessibilityAddTraits(.isHeader)
             }
+        } controls: {
+            // Everything of the day on one screen (2026-09-16): the door every daily card carries.
+            NavigationLink(destination: dailyHubDestination) {
+                DailyHubDoorLabel()
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -2753,6 +2782,16 @@ struct QuranView: View {
             doors.append(.init(kind: .door(.qiraat), title: "Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical"))
         }
         return doors
+    }
+
+    private func summaryDoorButton(_ door: SummaryDoorChip) -> some View {
+        Button {
+            settings.hapticFeedback()
+            openDoor(door)
+        } label: {
+            summaryDoorChip(title: door.title, systemImage: door.systemImage)
+        }
+        .buttonStyle(.plain)
     }
 
     private func openDoor(_ door: SummaryDoorChip) {
@@ -5427,7 +5466,8 @@ extension QuranData {
             return surahsMatchingCount(ayahFilter: countQuery.ayahs, pageFilter: countQuery.pages)
         }
 
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Accents folded first, so "Sūrah al-Baqarah" takes the "surah X" path below.
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).foldingLatinDiacritics
 
         // "surah X" / "surah -X": jump straight to one surah (negative counts from the end: "surah -1" →
         // An-Nas). Fall back to a name search on the remainder so "surah baqarah" still works.

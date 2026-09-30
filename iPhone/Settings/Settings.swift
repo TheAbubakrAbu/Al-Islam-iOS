@@ -150,6 +150,50 @@ final class StoredContentObserver {
     }
 }
 
+/// Every Adhan-family widget kind on iOS: the ONE table `Settings.reloadWidgets(.adhan)` reloads and
+/// every Adhan widget takes its `kind` from (`let kind = AdhanWidgetKind.X.rawValue`), so a widget
+/// added later cannot be left out of the reload. The four date lock-screen widgets were, and kept an
+/// old city, method or Hijri offset for up to about 30 hours (Quality Guide P8). Gallery order.
+enum AdhanWidgetKind: String, CaseIterable {
+    case PrayerGradientWidget
+    case SolarArcSkyWidget
+    case MoonSkyWidget
+    case SolarMoonSkyWidget
+    case NextPrayerBoardSkyWidget
+    case PrayerDaySkyWidget
+    case CountdownSkyWidget
+    case SimpleSkyWidget
+    case PrayerListSmallSkyWidget
+    case PrayersSkyWidget
+    case Prayers2SkyWidget
+    case FastingCountdownSkyWidget
+    case PrayerGlanceWidget
+    case SolarArcWidget
+    case MoonWidget
+    case SolarMoonWidget
+    case NextPrayerBoardWidget
+    case PrayerDayWidget
+    case CountdownWidget
+    case SimpleWidget
+    case PrayerListSmallWidget
+    case PrayersWidget
+    case Prayers2Widget
+    case FastingCountdownWidget
+    case PrayerProgressRingWidget
+    case PrayerCountdownCircularWidget
+    case LockScreen1Widget
+    case PrayerWaveWidget
+    case LockScreen2Widget
+    case NextPrayerProgressWidget
+    case PrayerRowLockWidget
+    case LockScreen3Widget
+    case LockScreen4Widget
+    case NextPrayerDateLockWidget
+    case DualCalendarLockWidget
+    case HijriDateLockWidget
+    case HijriDateArabicLockWidget
+}
+
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     #if DEBUG
     private static var publishTrace: AnyCancellable?
@@ -315,9 +359,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Widget and complication processes read the App Group mirrors and never touch the khatm cache,
         // the migrations or CoreLocation authorization: all of it is app-only work.
         if Self.isAppProcess {
-            LaunchClock.mark("settings init: before khatm cache")
-            loadKhatmProgressCacheFromStorage()
-            LaunchClock.mark("settings init: khatm cache loaded")
+            // The khatm cache (up to 6,236 keys decoded into three sets) loads on its first use,
+            // `ensureKhatmCacheLoaded`, not here on main during launch (Quality Guide F12).
             Self.locationManager.delegate = self
         }
 
@@ -655,6 +698,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             // One-time seeds of the App Group mirrors, for values stored before each mirror existed
             // (the didSets keep them current from then on). Guarded by a flag so the eight cfprefsd
             // round-trips run once per install, not on every launch.
+            // The traveling "View Full Prayers" mirror arrived later (P10): seeded when absent.
+            if appGroupUserDefaults?.object(forKey: "travelingShowFullPrayers") == nil {
+                appGroupUserDefaults?.setValue(travelingShowFullPrayers, forKey: "travelingShowFullPrayers")
+            }
             let seedKey = "appGroupMirrorsSeeded.v1"
             if appGroupUserDefaults?.bool(forKey: seedKey) != true {
                 // switchHijriDateAtMaghrib: users who enabled the toggle before the mirror existed would
@@ -722,17 +769,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         #if os(watchOS)
         return ["Complication", "CountdownComplication"]
         #else
-        return [
-            "PrayerGradientWidget", "SolarArcSkyWidget", "MoonSkyWidget", "SolarMoonSkyWidget",
-            "NextPrayerBoardSkyWidget", "PrayerDaySkyWidget", "CountdownSkyWidget", "SimpleSkyWidget",
-            "PrayerListSmallSkyWidget", "PrayersSkyWidget", "Prayers2SkyWidget", "FastingCountdownSkyWidget",
-            "PrayerGlanceWidget", "SolarArcWidget", "MoonWidget", "SolarMoonWidget",
-            "NextPrayerBoardWidget", "PrayerDayWidget", "CountdownWidget", "SimpleWidget",
-            "PrayerListSmallWidget", "PrayersWidget", "Prayers2Widget", "FastingCountdownWidget",
-            "PrayerProgressRingWidget", "PrayerCountdownCircularWidget", "LockScreen1Widget",
-            "PrayerWaveWidget", "LockScreen2Widget", "NextPrayerProgressWidget", "PrayerRowLockWidget",
-            "LockScreen3Widget", "LockScreen4Widget",
-        ]
+        return AdhanWidgetKind.allCases.map(\.rawValue)
         #endif
     }()
 
@@ -1017,6 +1054,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             group.setValue(store.integer(forKey: key), forKey: key)
         }
         group.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+        group.setValue(travelingShowFullPrayers, forKey: "travelingShowFullPrayers")
         group.setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
         group.setValue(showSkyScene, forKey: "showSkyScene")
         group.setValue(skySceneStyle, forKey: "skySceneStyle")
@@ -1087,13 +1125,65 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "faraidEstate", "faraidDebts", "faraidFuneral", "faraidBequest", "faraidCounts",
     ]
 
-    /// Key families a keep-content reset spares along with the content, because they are neither a
-    /// preference nor content: `cloudBackup.` is this device's iCloud claim (which profile it writes,
-    /// its device id, the history, the offer's seen flag). A reset that wiped them turned the backup
-    /// off silently, and the next launch minted a new device id, so the device's own profile looked
-    /// like another device's. A full erase deletes them: it IS a fresh install, and
+    /// What describes THIS install rather than the person, in one list for the iCloud backup (never
+    /// backed up: `CloudManifest.deviceOnlyKeys`) and for a keep-content reset (spared, like the
+    /// content: "Reset Settings, Keep My Content" used to wipe `THEfirstLaunch` and the About You
+    /// version, so the splash came back over the Settings tab and About You treated the user as new,
+    /// and every one-shot guard ran again; Quality Guide G10). Location first: the permission prompt promises "your location stays on your
+    /// device", so nothing derived from it leaves, the saved home city and favorite locations
+    /// included. Then what describes THIS install rather than the person: prompts already shown,
+    /// migrations already run, what was last scheduled, what was last drawn.
+    static let deviceOnlyStorageKeys: [String] = [
+        // Location, and everything computed from it (standard defaults and the app group).
+        "currentLocation", "homeLocationData", "favoriteLocations", "prayersData", "currentPrayerData",
+        "nextPrayerData", "currentCountryCode", "lastLocationFixAt", "cityAnchorLatitude", "cityAnchorLongitude",
+        "travelingMode", "travelTurnOffAutomatic", "travelTurnOnAutomatic",
+        "calculationAutoAnsweredCountryCode", "calculationAutoAnsweredMethod", "calculationAutoChanged",
+        "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod",
+        // Onboarding and permission prompts this install has already been through.
+        "THEfirstLaunch", "aboutYouVersionSeen",
+        "locationNeverAskAgain", "notificationNeverAskAgain", "showLocationAlert", "showNotificationAlert",
+        // Migrations and one-time seeds.
+        "appGroupMirrorsSeeded.v1", "settings.explicitlySetKeys", "settings.didSeedExplicitKeys",
+        "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
+        "advancedSettingsPerScreenMigrated",
+        // What was last scheduled, played or drawn here.
+        "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
+        "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
+        "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
+        // The page reader's learned fold and find-bar band pairs: this screen's geometry, like the one above.
+        "mushaf.foldTwins", "mushaf.findTwins",
+        // More of the same, found by `-cloudKeyAudit` in a live domain (2026-09-21): the source scan
+        // cannot see a key declared as a `let flag` constant or passed as an argument. The locator
+        // caches are LOCATION (the masjids and halal places around the home city).
+        "halalLocatorHomeCacheData", "masjidLocatorHomeCacheData",
+        "didPurgeLegacyQuranCaches", "hadithBookCorporaPurged1", "hadithCitationRefresh1",
+        "hadithLegacyCachePurged", "tafsirLegacyCachePurged",
+        "appReviewAskDates", "appReviewSessionCount", "timeSpent",
+        // Retired keys an older build left in the domain; nothing reads them now (`arabicGridMode`: the
+        // pre-4.6.0 alphabet switch the per-screen `gridModeArabicRaw` replaced; `shouldShowRateAlert`:
+        // the old review latch, migrated once by AppReview and never read again).
+        "foregroundAdhanLastPlayedID", "gridMode", "islamGridMode", "namesGridMode", "arabicGridMode",
+        "shouldShowRateAlert",
+        // Today's picks: tomorrow they are wrong anyway.
+        "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
+    ]
+
+    /// Whole families that are device-only: the watch sync's bookkeeping, and the backup's own
+    /// (`cloudBackup.` is this device's iCloud claim: which profile it writes, its device id, the
+    /// history, the offer's seen flag; a reset that wiped it turned the backup off silently, and the
+    /// next launch minted a new device id, so the device's own profile looked like another device's).
+    static let deviceOnlyStoragePrefixes: [String] = ["watchSync.", "cloudBackup."]
+
+    /// A keep-content reset spares these along with the content, because they are neither a
+    /// preference nor content. A full erase deletes them: it IS a fresh install, and
     /// `CloudBackupManager` forgets its claim on `contentErasedNotification`.
-    static let resetSparedPrefixes: [String] = ["cloudBackup."]
+    static func isResetSpared(_ key: String) -> Bool {
+        deviceOnlyStorageKeySet.contains(key) || deviceOnlyStoragePrefixes.contains(where: key.hasPrefix)
+            || key.hasSuffix(UserDataRescue.rescueSuffix)
+    }
+
+    private static let deviceOnlyStorageKeySet = Set(deviceOnlyStorageKeys)
 
     /// The Documents files that are the user's content: the journal, the saved reflections, the
     /// activity log and the watch's mirrored days. A full erase deletes them (until 2026-09-21 it
@@ -1112,11 +1202,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         let standard = UserDefaults.standard
         let domain = Bundle.main.bundleIdentifier.flatMap { standard.persistentDomain(forName: $0) } ?? [:]
 
-        // What the wipe spares: the content and the iCloud claim, unless the user asked to erase everything.
+        // What the wipe spares: the content and the device-only state (the iCloud claim, onboarding and
+        // permission prompts already seen, one-shot guards), unless the user asked to erase everything.
         var preserved: [String: Any] = [:]
         if keepingContent {
             let content = Set(Self.contentStorageKeys)
-            for (key, value) in domain where content.contains(key) || Self.resetSparedPrefixes.contains(where: key.hasPrefix) {
+            for (key, value) in domain where content.contains(key) || Self.isResetSpared(key) {
                 preserved[key] = value
             }
         }
@@ -1508,6 +1599,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var hijriCalendar: Calendar = {
         var calendar = Calendar(identifier: .islamicUmmAlQura)
         calendar.locale = Locale(identifier: "ar")
+        calendar.timeZone = .autoupdatingCurrent   // not the launch zone (P1)
         return calendar
     }()
 
@@ -1573,6 +1665,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             // evening. (init seeds the mirror for values set before this fix shipped.)
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+            // And the widgets rebuild: their entries carry the old flag until then (P9).
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -1892,6 +1986,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet {
             guard oldValue != travelingShowFullPrayers else { return }
             updateCurrentAndNextPrayer()
+            // Mirrored for the widgets and the complication, which never saw it: past Asr the app said
+            // "Asr" while they said "Dhuhr/Asr" (P10). Re-seeded in `PrayersProvider.makeEntryOnMain`.
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(travelingShowFullPrayers, forKey: "travelingShowFullPrayers")
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -2012,7 +2111,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.favoriteReciterIDsCache, cached.data == favoriteReciterIDsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([String].self, from: favoriteReciterIDsData)) ?? []
+            let decoded = UserDataRescue.decode([String].self, from: favoriteReciterIDsData, key: "favoriteReciterIDsData", decoder: Self.decoder) ?? []
             Self.favoriteReciterIDsCache = (favoriteReciterIDsData, decoded)
             return decoded
         }
@@ -2034,7 +2133,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.favoriteQiraahTagsCache, cached.data == favoriteQiraahTagsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([String].self, from: favoriteQiraahTagsData)) ?? []
+            let decoded = UserDataRescue.decode([String].self, from: favoriteQiraahTagsData, key: "favoriteQiraahTagsData", decoder: Self.decoder) ?? []
             Self.favoriteQiraahTagsCache = (favoriteQiraahTagsData, decoded)
             return decoded
         }
@@ -2053,7 +2152,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.favoriteEnglishTranslationIDsCache, cached.data == favoriteEnglishTranslationIDsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([String].self, from: favoriteEnglishTranslationIDsData)) ?? []
+            let decoded = UserDataRescue.decode([String].self, from: favoriteEnglishTranslationIDsData, key: "favoriteEnglishTranslationIDsData", decoder: Self.decoder) ?? []
             Self.favoriteEnglishTranslationIDsCache = (favoriteEnglishTranslationIDsData, decoded)
             return decoded
         }
@@ -2078,7 +2177,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.savedSajdahAyahIDsCache, cached.data == savedSajdahAyahIDsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([String].self, from: savedSajdahAyahIDsData)).flatMap { Set($0) } ?? Set()
+            let decoded = UserDataRescue.decode([String].self, from: savedSajdahAyahIDsData, key: "savedSajdahAyahIDsData", decoder: Self.decoder).flatMap { Set($0) } ?? Set()
             Self.savedSajdahAyahIDsCache = (savedSajdahAyahIDsData, decoded)
             return decoded
         }
@@ -2097,7 +2196,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.savedBrokenLetterAyahIDsCache, cached.data == savedBrokenLetterAyahIDsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([String].self, from: savedBrokenLetterAyahIDsData)).flatMap { Set($0) } ?? Set()
+            let decoded = UserDataRescue.decode([String].self, from: savedBrokenLetterAyahIDsData, key: "savedBrokenLetterAyahIDsData", decoder: Self.decoder).flatMap { Set($0) } ?? Set()
             Self.savedBrokenLetterAyahIDsCache = (savedBrokenLetterAyahIDsData, decoded)
             return decoded
         }
@@ -2122,7 +2221,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             if let cached = Self.favoriteSurahsCache, cached.data == favoriteSurahsData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([Int].self, from: favoriteSurahsData)) ?? []
+            let decoded = UserDataRescue.decode([Int].self, from: favoriteSurahsData, key: "favoriteSurahsData", decoder: Self.decoder) ?? []
             Self.favoriteSurahsCache = (favoriteSurahsData, decoded)
             return decoded
         }
@@ -2142,7 +2241,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("quranPlanData") var quranPlanData = Data() {
         didSet { bumpContentGeneration() }
     }
-    var khatmCompletedAyahSetCache: Set<String> = []
+    /// Whether the three khatm caches below hold the stored set yet: they load on first use
+    /// (`ensureKhatmCacheLoaded`, SettingsQuran.swift), and every reader goes through that.
+    var khatmCacheLoaded = false
+    var khatmCompletedAyahSetCache: Set<String> = [] {
+        didSet { khatmRevision &+= 1 }
+    }
+    /// Bumped by every change to the completed set, so a memo over it (the planner's Today span) can
+    /// tell a changed set from one that merely has the same count (Quality Guide F10).
+    private(set) var khatmRevision = 0
     /// Int-keyed mirror of `khatmCompletedAyahSetCache` (surah * 1000 + ayah). `isKhatmAyahComplete`
     /// runs per ayah row per render while scrolling in khatm mode - the mirror answers it without
     /// building and hashing a "surah:ayah" String each call. Maintained by every mutation site in
@@ -2159,7 +2266,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     var khatmCompletedAyahs: [String] {
         get {
-            Array(khatmCompletedAyahSetCache)
+            ensureKhatmCacheLoaded()
+            return Array(khatmCompletedAyahSetCache)
         }
         set {
             applyKhatmCompletedAyahKeys(newValue, persistImmediately: true)
@@ -2508,12 +2616,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Pass to Ayah.displayArabicText(surahId:clean:qiraahOverride:). Nil means Hafs.
     var displayQiraahForArabic: String? {
         let normalized = Self.normalizeLegacyRiwayahTag(displayQiraah)
+        #if os(watchOS)
+        // The watch ships no beta text: a beta tag held from an older sync would show Hafs under the
+        // riwayah's name with the translation hidden (Quality Guide A8).
+        if Riwayah.isBeta(normalized) { return nil }
+        #endif
         return normalized.isEmpty ? nil : normalized
     }
 
     /// When false, only Arabic is shown (no transliteration or English), since those are for Hafs an Asim only.
     var isHafsDisplay: Bool {
-        Self.normalizeLegacyRiwayahTag(displayQiraah).isEmpty
+        displayQiraahForArabic == nil
     }
 
     /// Arabic riwayah line for settings section headers (matches on-screen Arabic text riwayah).
@@ -2891,6 +3004,29 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// NON-Quran Arabic screens read in it (`IslamArabicFace.uthmani`); the Quran reader keeps
     /// `hafsUthmaniFontName`, the mushaf's own stacking hand.
     static let hafsUthmaniNoStackFontName = "KFGQPCHAFSUthmanicScript-Regula-NoStack"
+
+    #if canImport(UIKit)
+    private static var drawableFontMemo: [String: String] = [:]
+    private static let drawableFontLock = NSLock()
+
+    /// A face THIS process can draw: one its bundle does not ship falls back to the Hafs Uthmani face
+    /// instead of the system font. The widget bundles only Uthmani, Indopak and QuranCommon, so the
+    /// Name of Allah widget's default face (the NoStack twin) and a Hijazi or Kufi Quran face drew
+    /// in the system font; the watch lists Kufi and Hijazi in its Info.plist without the files
+    /// (Quality Guide A9, decision D7: mapped, not bundled, so no size cost).
+    static func drawableArabicFontName(_ name: String) -> String {
+        guard !name.isEmpty, name != systemArabicFontName else { return name }
+        drawableFontLock.lock()
+        defer { drawableFontLock.unlock() }
+        if let known = drawableFontMemo[name] { return known }
+        let resolved = UIFont(name: name, size: 12) != nil || UIFont(name: hafsUthmaniFontName, size: 12) == nil
+            ? name : hafsUthmaniFontName
+        drawableFontMemo[name] = resolved
+        return resolved
+    }
+    #else
+    static func drawableArabicFontName(_ name: String) -> String { name }
+    #endif
     /// What both Hafs faces' PostScript names start with: the test for "is this the mushaf's own
     /// hand", whose Arabic-Indic digits are ayah medallions rather than plain numerals.
     static let hafsFontNamePrefix = "KFGQPCHAFS"
@@ -3035,12 +3171,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("favoriteNameNumbersData") private var favoriteNameNumbersData = Data()
+    /// Memoized on the blob: `isNameFavorite` reads this per row, and each read was a JSON decode.
+    private static var favoriteNameNumbersCache: (data: Data, value: [Int])?
     var favoriteNameNumbers: [Int] {
         get {
-            (try? Self.decoder.decode([Int].self, from: favoriteNameNumbersData)) ?? []
+            if let cached = Self.favoriteNameNumbersCache, cached.data == favoriteNameNumbersData { return cached.value }
+            let decoded = UserDataRescue.decode([Int].self, from: favoriteNameNumbersData, key: "favoriteNameNumbersData", decoder: Self.decoder) ?? []
+            Self.favoriteNameNumbersCache = (favoriteNameNumbersData, decoded)
+            return decoded
         }
         set {
-            favoriteNameNumbersData = (try? Self.encoder.encode(newValue)) ?? Data()
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.favoriteNameNumbersCache = (encoded, newValue)
+            favoriteNameNumbersData = encoded
         }
     }
 
@@ -3220,8 +3363,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Scalar form of `canonicalArabicSearchMap`, built once: `key scalar → replacement scalar`, or `nil`
     /// to drop the scalar entirely. Lets `cleanSearch` normalize in a single pass instead of 22 string scans.
     /// (All `canonicalArabicSearchMap` keys are single scalars and values are one scalar or empty.)
+    /// The Latin accents ride in the same table (`LatinFold`), so "Mūsā" and "ʿImrān" in a query or a
+    /// translation fold to "musa" and "imran" in that same pass.
     private static let canonicalArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
-        var out: [UnicodeScalar: UnicodeScalar?] = [:]
+        var out: [UnicodeScalar: UnicodeScalar?] = LatinFold.scalarMap
         for (key, value) in canonicalArabicSearchMap {
             let keyScalars = Array(key.unicodeScalars)
             guard keyScalars.count == 1 else { continue }
@@ -3298,7 +3443,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     #if HAS_ICLOUD_BACKUP
     /// The iCloud Backup offer (CloudOfferView), the stage after About You: shown once to everyone,
     /// versioned the same way. Device-only: a restored device has not been offered anything. Under
-    /// the `cloudBackup.` prefix so a keep-content reset spares it with the claim (`resetSparedPrefixes`):
+    /// the `cloudBackup.` prefix so a keep-content reset spares it with the claim (`deviceOnlyStoragePrefixes`):
     /// About You is asked again after a reset because its answer IS a preference; whether to back
     /// up was answered, and a device already backing up must not be offered to start.
     static let cloudOfferCurrentVersion = 1
@@ -3310,9 +3455,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("startHereHidden") var startHereHidden: Bool = false
     /// The Start Here steps already opened, comma separated.
     @AppStorage("startHereVisited") var startHereVisitedRaw: String = ""
-    /// The Need a Hand? rows on every tab (HelpDoors.swift): a question and the setting that answers
-    /// it. Appearance > Look and Feel puts them away.
-    @AppStorage("showHelpShortcuts") var showHelpShortcuts: Bool = true
+    /// The Need a Hand? section on each tab (HelpDoors.swift): a few questions, each with the setting
+    /// that answers it. Two sets of raw `HelpDoorArea`s, comma separated, so a tab that is in neither
+    /// shows its questions: the tabs whose section is put away entirely (each tab's settings page
+    /// brings it back, Look and Feel does all four), and the tabs whose section is folded down to its
+    /// header (the arrow beside NEED A HAND?).
+    @AppStorage("helpDoorsHidden") var helpDoorsHiddenRaw: String = ""
+    @AppStorage("helpDoorsCollapsed") var helpDoorsCollapsedRaw: String = ""
 
     // The tab the app opens on (Abu, 2026-09-21: "would be cool to also be able to choose whether one
     // wants adhan quran hadith or islam to be the start"). Raw `LaunchTab` (SettingsView.swift). It

@@ -687,7 +687,7 @@ struct LetterSectionHeader: View {
                 .foregroundColor(settings.accentColor.color)
                 .onTapGesture {
                     settings.hapticFeedback()
-                    settings.toggleLetterFavorite(letterData: letterData)
+                    settings.toggleLetterFavoriteOrConfirm(letterData: letterData)
                 }
         }
     }
@@ -2776,7 +2776,7 @@ struct ArabicLetterRow: View, Equatable {
         // A letter can also match on its hidden `name` / weight keywords / rule, so only guarantee a
         // highlight on a displayed field (transliteration or the letter glyph) when that field itself
         // contains the query - otherwise leave it un-highlighted rather than force-color an unrelated field.
-        let query = searchQuery.lowercased()
+        let query = searchQuery.foldingLatinDiacritics.lowercased()
         let matchedTransliteration = !query.isEmpty && letterData.transliteration.lowercased().contains(query)
         let matchedLetter = !query.isEmpty && letterData.letter.lowercased().contains(query)
         return NavigationLink(destination: LazyDestination { ArabicLetterView(letterData: letterData) }) {
@@ -2817,7 +2817,7 @@ struct ArabicLetterRow: View, Equatable {
                 .highPriorityGesture(
                     TapGesture().onEnded {
                         Settings.shared.hapticFeedback()
-                        Settings.shared.toggleLetterFavorite(letterData: letterData)
+                        Settings.shared.toggleLetterFavoriteOrConfirm(letterData: letterData)
                     }
                 )
                 .accessibilityAddTraits(.isButton)
@@ -2904,7 +2904,7 @@ struct ArabicLetterRow: View, Equatable {
         Button {
             Settings.shared.hapticFeedback()
             withAnimation(.easeInOut) {
-                Settings.shared.toggleLetterFavorite(letterData: letterData)
+                Settings.shared.toggleLetterFavoriteOrConfirm(letterData: letterData)
             }
         } label: {
             Image(systemName: isFavorite ? "star.fill" : "star")
@@ -3189,7 +3189,7 @@ func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> som
     Button(role: isFavorite ? .destructive : nil) {
         settings.hapticFeedback()
         withAnimation(.easeInOut) {
-            settings.toggleLetterFavorite(letterData: letterData)
+            settings.toggleLetterFavoriteOrConfirm(letterData: letterData)
         }
     } label: {
         Label(isFavorite ? "Unfavorite Letter" : "Favorite Letter",
@@ -3339,7 +3339,7 @@ struct ArabicLetterGridTile: View, Equatable {
             accent: accentColor.color,
             accessibilityName: letterData.transliteration
         ) {
-            Settings.shared.toggleLetterFavorite(letterData: letterData)
+            Settings.shared.toggleLetterFavoriteOrConfirm(letterData: letterData)
         }
     }
 

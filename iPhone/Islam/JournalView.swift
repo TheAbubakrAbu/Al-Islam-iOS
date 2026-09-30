@@ -89,6 +89,41 @@ struct JournalAttachment: Codable, Identifiable, Equatable {
     var source: String = ""
 }
 
+/// Lenient decoding for the journal's two types: a field one build adds (or another drops) takes its
+/// default instead of failing the entry. An unknown kind reads as a note.
+extension JournalAttachment {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        kind = try container.decode(JournalAttachmentKind.self, forKey: .kind)
+        refID = try container.decodeIfPresent(String.self, forKey: .refID) ?? ""
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+        subtitle = try container.decodeIfPresent(String.self, forKey: .subtitle) ?? ""
+        arabic = try container.decodeIfPresent(String.self, forKey: .arabic) ?? ""
+        body = try container.decodeIfPresent(String.self, forKey: .body) ?? ""
+        source = try container.decodeIfPresent(String.self, forKey: .source) ?? ""
+    }
+}
+
+extension JournalEntry {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        kind = (try? container.decodeIfPresent(JournalKind.self, forKey: .kind)) ?? .note
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? ""
+        text = try container.decodeIfPresent(String.self, forKey: .text) ?? ""
+        tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
+        speaker = try container.decodeIfPresent(String.self, forKey: .speaker) ?? ""
+        place = try container.decodeIfPresent(String.self, forKey: .place) ?? ""
+        // An attachment this build cannot read goes; the entry and its writing stay.
+        attachments = ((try? container.decodeIfPresent([UserDataRescue.Lossy<JournalAttachment>].self, forKey: .attachments)) ?? nil)?
+            .compactMap(\.value) ?? []
+        pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
+    }
+}
+
 struct JournalEntry: Codable, Identifiable, Equatable {
     var id: String = UUID().uuidString
     var kind: JournalKind = .note
@@ -276,9 +311,12 @@ final class JournalStore: ObservableObject {
         }
     }
 
+    /// A journal this build cannot read is never overwritten: an entry that does not decode is
+    /// dropped (the file copied aside first), and a file that does not decode at all is moved aside
+    /// (`UserDataRescue`). A failed decode used to leave the journal empty, and the next edit wrote
+    /// the empty journal over the reader's file.
     private func load() {
-        guard let data = try? Data(contentsOf: Self.fileURL),
-              let saved = try? JSONDecoder().decode([JournalEntry].self, from: data) else { return }
+        guard let saved = UserDataRescue.loadList(JournalEntry.self, file: Self.fileURL) else { return }
         entries = saved
     }
 
@@ -287,8 +325,7 @@ final class JournalStore: ObservableObject {
     private func reloadFromStorage() {
         Self.ioQueue.sync {}
         tagsCache = nil
-        let saved = (try? Data(contentsOf: Self.fileURL)).flatMap { try? JSONDecoder().decode([JournalEntry].self, from: $0) }
-        entries = saved ?? []
+        entries = UserDataRescue.loadList(JournalEntry.self, file: Self.fileURL) ?? []
     }
 
     #if DEBUG
@@ -1276,12 +1313,12 @@ struct JournalAttachSheet: View {
                                 onPick(JournalAttachment(
                                     kind: .ayah, refID: "\(resolved.surah.id):\(resolved.ayah.id)",
                                     title: "\(resolved.surah.nameTransliteration) \(resolved.surah.id):\(resolved.ayah.id)",
-                                    arabic: resolved.ayah.displayArabicText(surahId: resolved.surah.id, clean: false, qiraahOverride: ""),
+                                    arabic: resolved.ayah.rawArabicText(surahId: resolved.surah.id, qiraahOverride: ""),
                                     body: resolved.ayah.textEnglishSaheeh, source: "Saheeh International"))
                                 dismiss()
                             } label: {
                                 VStack(alignment: .trailing, spacing: 6) {
-                                    Text(resolved.ayah.displayArabicText(surahId: resolved.surah.id, clean: false, qiraahOverride: ""))
+                                    Text(resolved.ayah.rawArabicText(surahId: resolved.surah.id, qiraahOverride: ""))
                                         .font(.custom(appearance.quranDisplayFace, size: 22))
                                         .arabicFontDesign(custom: true)
                                         .multilineTextAlignment(.trailing)

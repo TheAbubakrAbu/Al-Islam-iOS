@@ -372,7 +372,7 @@ final class ThemeHighlights: ObservableObject {
 
     private func load() {
         if let data = UserDefaults.standard.data(forKey: Self.storageKey),
-           let saved = try? JSONDecoder().decode([LitTheme].self, from: data) {
+           let saved = UserDataRescue.decodeList(LitTheme.self, from: data, key: Self.storageKey) {
             // Re-coloured by meaning: a theme lit before the legend wore whichever slot was free.
             lit = Array(saved.prefix(Self.limit)).map { theme in
                 LitTheme(id: theme.id, name: theme.name,

@@ -1251,7 +1251,7 @@ private struct NameRow: View, Equatable {
                 Button {
                     Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        Settings.shared.toggleNameFavorite(number: name.number)
+                        Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
@@ -1262,7 +1262,7 @@ private struct NameRow: View, Equatable {
                 Button {
                     Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        Settings.shared.toggleNameFavorite(number: name.number)
+                        Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
@@ -1394,7 +1394,7 @@ private struct NameRow: View, Equatable {
         }
         .onTapGesture {
             Settings.shared.hapticFeedback()
-            Settings.shared.toggleNameFavorite(number: name.number)
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
         }
         .padding(.vertical, {
             if #available(iOS 26, *) { 0 } else { 8 }
@@ -1552,7 +1552,7 @@ func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> 
     Button(role: isFavorite ? .destructive : nil) {
         Settings.shared.hapticFeedback()
         withAnimation(.easeInOut) {
-            Settings.shared.toggleNameFavorite(number: name.number)
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
         }
     } label: {
         Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
@@ -1619,7 +1619,7 @@ private struct NameGridTile: View, Equatable {
             accent: accentColor.color,
             accessibilityName: name.transliteration
         ) {
-            Settings.shared.toggleNameFavorite(number: name.number)
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
         }
         #else
         tile
@@ -1628,7 +1628,7 @@ private struct NameGridTile: View, Equatable {
                 accent: accentColor.color,
                 accessibilityName: name.transliteration
             ) {
-                Settings.shared.toggleNameFavorite(number: name.number)
+                Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
             }
         #endif
     }

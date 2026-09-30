@@ -52,8 +52,7 @@ struct ProphetAdamView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Adam (peace be upon him) is the first man and the first prophet, whom Allah created with His own hand and taught the names of all things.")
-                        .font(.body)
+                    ArticleLead("In short: Adam (peace be upon him) is the first man and the first prophet, whom Allah created with His own hand and taught the names of all things.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -85,14 +84,11 @@ struct ProphetAdamView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Repentance is the way back.** Adam's sin did not end him; his repentance restored him. The difference between Adam and Iblis is not that one sinned and the other did not, it is that one repented and the other refused.")
-                        .font(.body)
+                    ArticleStep("1. **Repentance is the way back.** Adam's sin did not end him; his repentance restored him. The difference between Adam and Iblis is not that one sinned and the other did not, it is that one repented and the other refused.")
 
-                    Text(articleMarkdown: "2. **Knowledge is an honour Allah gave man.** The angels' rank did not include the names Adam was taught. Allah honoured the son of Adam with knowledge before He honoured him with anything else.")
-                        .font(.body)
+                    ArticleStep("2. **Knowledge is an honour Allah gave man.** The angels' rank did not include the names Adam was taught. Allah honoured the son of Adam with knowledge before He honoured him with anything else.")
 
-                    Text(articleMarkdown: "3. **The enmity of Shaytan is old and personal.** He refused to prostrate to your father and swore to mislead you. Knowing this is half of guarding against it.")
-                        .font(.body)
+                    ArticleStep("3. **The enmity of Shaytan is old and personal.** He refused to prostrate to your father and swore to mislead you. Knowing this is half of guarding against it.")
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said of the sons of Adam:").font(.body)
                     ScriptureQuote(hadith: "ibnmajah:4251", cite: "Sunan Ibn Majah 4251; graded hasan by al-Albani, da'if by Shu'ayb al-Arna'ut", arabic: 29...35, english: 0...17)
@@ -103,8 +99,7 @@ struct ProphetAdamView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The first man was also the first to sin, the first to repent, and the first to be forgiven: the pattern every one of his children lives by.")
-                        .font(.body)
+                    ArticleClosing("The first man was also the first to sin, the first to repent, and the first to be forgiven: the pattern every one of his children lives by.")
                 }
 
                 ArticleSourcesSection(article: "ProphetAdamView")
@@ -112,6 +107,7 @@ struct ProphetAdamView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetAdamView")
+        .prophetMiraclesHost()
         .navigationTitle("Adam")
     }
 }
@@ -123,8 +119,7 @@ struct ProphetIdrisView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Idris (peace be upon him) is praised in the Quran as a man of truth and a prophet whom Allah raised to a high station.")
-                        .font(.body)
+                    ArticleLead("In short: Idris (peace be upon him) is praised in the Quran as a man of truth and a prophet whom Allah raised to a high station.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -149,16 +144,13 @@ struct ProphetIdrisView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Allah's praise is enough.** Two short mentions, and in them Allah calls him truthful, a prophet, patient, and righteous, and says He raised him high. A man needs no longer record than that.")
-                        .font(.body)
+                    ArticleStep("1. **Allah's praise is enough.** Two short mentions, and in them Allah calls him truthful, a prophet, patient, and righteous, and says He raised him high. A man needs no longer record than that.")
 
-                    Text(articleMarkdown: "2. **Silence in revelation is deliberate.** Where the Quran is brief, adding detail from elsewhere and teaching it as religion is exactly what the Salaf refused to do.")
-                        .font(.body)
+                    ArticleStep("2. **Silence in revelation is deliberate.** Where the Quran is brief, adding detail from elsewhere and teaching it as religion is exactly what the Salaf refused to do.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Idris is named for his truthfulness, his patience, and the high station Allah raised him to, and the rest of his story was not given to us.")
-                        .font(.body)
+                    ArticleClosing("Idris is named for his truthfulness, his patience, and the high station Allah raised him to, and the rest of his story was not given to us.")
                 }
 
                 ArticleSourcesSection(article: "ProphetIdrisView")
@@ -166,6 +158,7 @@ struct ProphetIdrisView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIdrisView")
+        .prophetMiraclesHost()
         .navigationTitle("Idris")
     }
 }
@@ -177,8 +170,7 @@ struct ProphetNuhView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Nuh (peace be upon him) called his people to Allah alone for 950 years, and when they refused, Allah saved him and the believers in the ark and drowned the rest.")
-                        .font(.body)
+                    ArticleLead("In short: Nuh (peace be upon him) called his people to Allah alone for 950 years, and when they refused, Allah saved him and the believers in the ark and drowned the rest.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -220,19 +212,15 @@ struct ProphetNuhView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Shirk begins with exaggerating the righteous.** The idols of Nuh's people started as memorials to good men. This is why Islam closes every door to venerating graves and images of the pious.")
-                        .font(.body)
+                    ArticleStep("1. **Shirk begins with exaggerating the righteous.** The idols of Nuh's people started as memorials to good men. This is why Islam closes every door to venerating graves and images of the pious.")
 
-                    Text(articleMarkdown: "2. **Success is not measured in numbers.** After 950 years he had a handful of followers, and he is among the greatest of the messengers. The messenger is asked to convey, not to be accepted.")
-                        .font(.body)
+                    ArticleStep("2. **Success is not measured in numbers.** After 950 years he had a handful of followers, and he is among the greatest of the messengers. The messenger is asked to convey, not to be accepted.")
 
-                    Text(articleMarkdown: "3. **Faith is not inherited.** His own son drowned with the disbelievers. No lineage, not even a prophet's, stands in place of belief.")
-                        .font(.body)
+                    ArticleStep("3. **Faith is not inherited.** His own son drowned with the disbelievers. No lineage, not even a prophet's, stands in place of belief.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Nine and a half centuries of patient calling, a handful of believers, and a son lost to disbelief: Nuh's story is the measure of what a caller owes and what he does not control.")
-                        .font(.body)
+                    ArticleClosing("Nine and a half centuries of patient calling, a handful of believers, and a son lost to disbelief: Nuh's story is the measure of what a caller owes and what he does not control.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -246,6 +234,7 @@ struct ProphetNuhView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetNuhView")
+        .prophetMiraclesHost()
         .navigationTitle("Nuh")
     }
 }
@@ -257,8 +246,7 @@ struct ProphetHudView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Hud (peace be upon him) was sent to the people of 'Aad, who were the strongest of their age, and their strength is what destroyed them.")
-                        .font(.body)
+                    ArticleLead("In short: Hud (peace be upon him) was sent to the people of 'Aad, who were the strongest of their age, and their strength is what destroyed them.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -286,19 +274,15 @@ struct ProphetHudView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Strength is a test, not a proof.** 'Aad measured themselves by what they could build and lift, and asked who was stronger than them. The wind answered.")
-                        .font(.body)
+                    ArticleStep("1. **Strength is a test, not a proof.** 'Aad measured themselves by what they could build and lift, and asked who was stronger than them. The wind answered.")
 
-                    Text(articleMarkdown: "2. **“Our fathers did it“ is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
-                        .font(.body)
+                    ArticleStep("2. **“Our fathers did it“ is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
 
-                    Text(articleMarkdown: "3. **What you long for can be what ruins you.** They welcomed the cloud as rain. Not everything a person hopes for is good for him.")
-                        .font(.body)
+                    ArticleStep("3. **What you long for can be what ruins you.** They welcomed the cloud as rain. Not everything a person hopes for is good for him.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "'Aad were the strongest people of their time and the Quran remembers them only as a warning: power without submission is nothing before Allah.")
-                        .font(.body)
+                    ArticleClosing("'Aad were the strongest people of their time and the Quran remembers them only as a warning: power without submission is nothing before Allah.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -312,6 +296,7 @@ struct ProphetHudView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetHudView")
+        .prophetMiraclesHost()
         .navigationTitle("Hud")
     }
 }
@@ -323,8 +308,7 @@ struct ProphetSalihView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Salih (peace be upon him) was sent to Thamud with a she-camel as a clear sign, and when they hamstrung her the punishment came.")
-                        .font(.body)
+                    ArticleLead("In short: Salih (peace be upon him) was sent to Thamud with a she-camel as a clear sign, and when they hamstrung her the punishment came.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -352,19 +336,15 @@ struct ProphetSalihView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they“ hamstrung her, because they were pleased with it.")
-                        .font(.body)
+                    ArticleStep("1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they“ hamstrung her, because they were pleased with it.")
 
-                    Text(articleMarkdown: "2. **Signs do not create faith.** They asked for a sign, received exactly what they asked for, and killed it. Whoever has decided not to believe will not be argued into it.")
-                        .font(.body)
+                    ArticleStep("2. **Signs do not create faith.** They asked for a sign, received exactly what they asked for, and killed it. Whoever has decided not to believe will not be argued into it.")
 
-                    Text(articleMarkdown: "3. **The ruins of the punished are not tourist sites.** The Sunnah is to pass them weeping, in fear of Allah, not to wander them taking in the view.")
-                        .font(.body)
+                    ArticleStep("3. **The ruins of the punished are not tourist sites.** The Sunnah is to pass them weeping, in fear of Allah, not to wander them taking in the view.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Thamud carved palaces from mountains and were destroyed over a camel: the sign they demanded became the proof against them.")
-                        .font(.body)
+                    ArticleClosing("Thamud carved palaces from mountains and were destroyed over a camel: the sign they demanded became the proof against them.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -379,6 +359,7 @@ struct ProphetSalihView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetSalihView")
+        .prophetMiraclesHost()
         .navigationTitle("Salih")
     }
 }
@@ -390,8 +371,7 @@ struct ProphetIbrahimView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ibrahim (peace be upon him) is the friend of Allah and the father of the prophets, who broke his people's idols, was thrown into the fire, and was ready to sacrifice his son.")
-                        .font(.body)
+                    ArticleLead("In short: Ibrahim (peace be upon him) is the friend of Allah and the father of the prophets, who broke his people's idols, was thrown into the fire, and was ready to sacrifice his son.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -443,19 +423,15 @@ struct ProphetIbrahimView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Tawhid is worth standing alone for.** He stood against his father, his people and his king, by himself, and Allah calls him a nation in himself.")
-                        .font(.body)
+                    ArticleStep("1. **Tawhid is worth standing alone for.** He stood against his father, his people and his king, by himself, and Allah calls him a nation in himself.")
 
-                    Text(articleMarkdown: "2. **Submission is tested in what you love most.** The command was not about the knife; it was about whether anything competed with Allah in his heart.")
-                        .font(.body)
+                    ArticleStep("2. **Submission is tested in what you love most.** The command was not about the knife; it was about whether anything competed with Allah in his heart.")
 
-                    Text(articleMarkdown: "3. **Leave what you love in Allah's care.** He left a wife and a nursing child in an empty valley because he was commanded to, and Allah built a city and a pilgrimage there.")
-                        .font(.body)
+                    ArticleStep("3. **Leave what you love in Allah's care.** He left a wife and a nursing child in an empty valley because he was commanded to, and Allah built a city and a pilgrimage there.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The friend of Allah broke the idols, walked into the fire, and raised the knife: every test asked him for what he loved, and he gave it.")
-                        .font(.body)
+                    ArticleClosing("The friend of Allah broke the idols, walked into the fire, and raised the knife: every test asked him for what he loved, and he gave it.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -470,6 +446,7 @@ struct ProphetIbrahimView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIbrahimView")
+        .prophetMiraclesHost()
         .navigationTitle("Ibrahim")
     }
 }
@@ -481,8 +458,7 @@ struct ProphetLutView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Lut (peace be upon him) was sent to a people who invented an obscenity no nation had committed before, and they were destroyed for it.")
-                        .font(.body)
+                    ArticleLead("In short: Lut (peace be upon him) was sent to a people who invented an obscenity no nation had committed before, and they were destroyed for it.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -512,19 +488,15 @@ struct ProphetLutView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **A sin can become a people's identity, and that is when it destroys them.** What was condemned was not only the act but the public, defended, organised practice of it.")
-                        .font(.body)
+                    ArticleStep("1. **A sin can become a people's identity, and that is when it destroys them.** What was condemned was not only the act but the public, defended, organised practice of it.")
 
-                    Text(articleMarkdown: "2. **Marriage does not transfer faith.** Lut's wife lived in a prophet's house and was destroyed with her people. The Quran gives her and Nuh's wife as the example for this.")
-                        .font(.body)
+                    ArticleStep("2. **Marriage does not transfer faith.** Lut's wife lived in a prophet's house and was destroyed with her people. The Quran gives her and Nuh's wife as the example for this.")
 
-                    Text(articleMarkdown: "3. **Standing alone is not failure.** He said, if only I had against you some power. Allah records the wish, and He sent the angels the same night.")
-                        .font(.body)
+                    ArticleStep("3. **Standing alone is not failure.** He said, if only I had against you some power. Allah records the wish, and He sent the angels the same night.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Lut warned a people who had made a sin into a public custom, and Allah overturned their cities and left the ruins as a sign.")
-                        .font(.body)
+                    ArticleClosing("Lut warned a people who had made a sin into a public custom, and Allah overturned their cities and left the ruins as a sign.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -538,6 +510,7 @@ struct ProphetLutView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetLutView")
+        .prophetMiraclesHost()
         .navigationTitle("Lut")
     }
 }
@@ -549,8 +522,7 @@ struct ProphetIsmailView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ismail (peace be upon him) is the son Ibrahim was commanded to sacrifice, who helped him raise the Ka'bah, and the forefather of Prophet Muhammad.")
-                        .font(.body)
+                    ArticleLead("In short: Ismail (peace be upon him) is the son Ibrahim was commanded to sacrifice, who helped him raise the Ka'bah, and the forefather of Prophet Muhammad.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -578,19 +550,15 @@ struct ProphetIsmailView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **He was true to his promise.** Of everything that could be said about him, Allah chose this. A man who keeps his word is rare enough that Allah praises it by name.")
-                        .font(.body)
+                    ArticleStep("1. **He was true to his promise.** Of everything that could be said about him, Allah chose this. A man who keeps his word is rare enough that Allah praises it by name.")
 
-                    Text(articleMarkdown: "2. **Obedience is a young man's virtue too.** He was a boy when he told his father to do what he was commanded. Faith is not something that arrives with age.")
-                        .font(.body)
+                    ArticleStep("2. **Obedience is a young man's virtue too.** He was a boy when he told his father to do what he was commanded. Faith is not something that arrives with age.")
 
-                    Text(articleMarkdown: "3. **Build and ask for acceptance.** Father and son laid the stones of the Ka'bah and asked Allah to accept it from them. Doing the work is not the same as having it accepted.")
-                        .font(.body)
+                    ArticleStep("3. **Build and ask for acceptance.** Father and son laid the stones of the Ka'bah and asked Allah to accept it from them. Doing the work is not the same as having it accepted.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The boy who offered his own neck grew into the man who built the House, and the last of the prophets came from his line.")
-                        .font(.body)
+                    ArticleClosing("The boy who offered his own neck grew into the man who built the House, and the last of the prophets came from his line.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -604,6 +572,7 @@ struct ProphetIsmailView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIsmailView")
+        .prophetMiraclesHost()
         .navigationTitle("Ismail")
     }
 }
@@ -615,8 +584,7 @@ struct ProphetIshaqView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ishaq (peace be upon him) was the son given to Ibrahim and Sarah in old age as glad tidings, and a prophet from whose line came the prophets of the Children of Israel.")
-                        .font(.body)
+                    ArticleLead("In short: Ishaq (peace be upon him) was the son given to Ibrahim and Sarah in old age as glad tidings, and a prophet from whose line came the prophets of the Children of Israel.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -641,16 +609,13 @@ struct ProphetIshaqView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Allah's promise does not answer to age or circumstance.** A barren woman past childbearing was given a son, and a prophet, and a line of prophets after him.")
-                        .font(.body)
+                    ArticleStep("1. **Allah's promise does not answer to age or circumstance.** A barren woman past childbearing was given a son, and a prophet, and a line of prophets after him.")
 
-                    Text(articleMarkdown: "2. **The glad tidings were of a righteous son, not merely a son.** What was announced was his prophethood. A child is a blessing in proportion to what he becomes.")
-                        .font(.body)
+                    ArticleStep("2. **The glad tidings were of a righteous son, not merely a son.** What was announced was his prophethood. A child is a blessing in proportion to what he becomes.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ishaq was the promise kept to an old man and a barren woman, and the door through which the prophets of Bani Israil came.")
-                        .font(.body)
+                    ArticleClosing("Ishaq was the promise kept to an old man and a barren woman, and the door through which the prophets of Bani Israil came.")
                 }
 
                 ArticleSourcesSection(article: "ProphetIshaqView")
@@ -658,6 +623,7 @@ struct ProphetIshaqView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIshaqView")
+        .prophetMiraclesHost()
         .navigationTitle("Ishaq")
     }
 }
@@ -669,8 +635,7 @@ struct ProphetYaqubView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Yaqub (peace be upon him), also called Israil, is the father of the twelve tribes, whose patience at losing Yusuf the Quran holds up as beautiful patience.")
-                        .font(.body)
+                    ArticleLead("In short: Yaqub (peace be upon him), also called Israil, is the father of the twelve tribes, whose patience at losing Yusuf the Quran holds up as beautiful patience.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -698,19 +663,15 @@ struct ProphetYaqubView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Beautiful patience is not silence about pain.** He said his grief was severe and he wept until he lost his sight. He complained of it to Allah, and to no one else. That is the distinction.")
-                        .font(.body)
+                    ArticleStep("1. **Beautiful patience is not silence about pain.** He said his grief was severe and he wept until he lost his sight. He complained of it to Allah, and to no one else. That is the distinction.")
 
-                    Text(articleMarkdown: "2. **Despair of Allah's mercy is a disbelief of its own.** He sent his sons back to search after years, when everyone else had given up.")
-                        .font(.body)
+                    ArticleStep("2. **Despair of Allah's mercy is a disbelief of its own.** He sent his sons back to search after years, when everyone else had given up.")
 
-                    Text(articleMarkdown: "3. **The last thing a father should worry about is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
-                        .font(.body)
+                    ArticleStep("3. **The last thing a father should worry about is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Yaqub lost a son, went blind with weeping, never once despaired of Allah, and died asking his children only what they would worship.")
-                        .font(.body)
+                    ArticleClosing("Yaqub lost a son, went blind with weeping, never once despaired of Allah, and died asking his children only what they would worship.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -724,6 +685,7 @@ struct ProphetYaqubView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetYaqubView")
+        .prophetMiraclesHost()
         .navigationTitle("Yaqub")
     }
 }
@@ -735,8 +697,7 @@ struct ProphetYusufView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Yusuf (peace be upon him) was thrown in a well by his brothers, sold as a slave, imprisoned though innocent, raised to authority over Egypt, and then forgave them all.")
-                        .font(.body)
+                    ArticleLead("In short: Yusuf (peace be upon him) was thrown in a well by his brothers, sold as a slave, imprisoned though innocent, raised to authority over Egypt, and then forgave them all.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -768,22 +729,17 @@ struct ProphetYusufView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Fleeing sin can cost you, and it is still the cheaper price.** He preferred prison to disobedience, and Allah gave him Egypt.")
-                        .font(.body)
+                    ArticleStep("1. **Fleeing sin can cost you, and it is still the cheaper price.** He preferred prison to disobedience, and Allah gave him Egypt.")
 
-                    Text(articleMarkdown: "2. **Clear your name before you accept a position.** He would not walk out of prison under a cloud. Reputation is a trust, not vanity.")
-                        .font(.body)
+                    ArticleStep("2. **Clear your name before you accept a position.** He would not walk out of prison under a cloud. Reputation is a trust, not vanity.")
 
-                    Text(articleMarkdown: "3. **Forgiveness is the strongest thing a person in power can do.** He had every legal right and total authority, and he used neither.")
-                        .font(.body)
+                    ArticleStep("3. **Forgiveness is the strongest thing a person in power can do.** He had every legal right and total authority, and he used neither.")
 
-                    Text(articleMarkdown: "4. **Whoever fears Allah and is patient, Allah does not waste his reward.** This is the sentence Yusuf himself gives as the summary of his own life (Quran 12:90).")
-                        .font(.body)
+                    ArticleStep("4. **Whoever fears Allah and is patient, Allah does not waste his reward.** This is the sentence Yusuf himself gives as the summary of his own life (Quran 12:90).")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "A well, a slave market, a prison, and then a throne: Yusuf's life is the proof that Allah's plan runs underneath what looks like ruin.")
-                        .font(.body)
+                    ArticleClosing("A well, a slave market, a prison, and then a throne: Yusuf's life is the proof that Allah's plan runs underneath what looks like ruin.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -797,6 +753,7 @@ struct ProphetYusufView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetYusufView")
+        .prophetMiraclesHost()
         .navigationTitle("Yusuf")
     }
 }
@@ -808,8 +765,7 @@ struct ProphetAyyubView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ayyub (peace be upon him) lost his health, his wealth and his children, and the Quran names him the model of patience because he never complained of his Lord.")
-                        .font(.body)
+                    ArticleLead("In short: Ayyub (peace be upon him) lost his health, his wealth and his children, and the Quran names him the model of patience because he never complained of his Lord.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -832,19 +788,15 @@ struct ProphetAyyubView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Patience is not refusing to ask.** He did call on his Lord. Patience is in how you ask, and in never accusing Allah in your asking.")
-                        .font(.body)
+                    ArticleStep("1. **Patience is not refusing to ask.** He did call on his Lord. Patience is in how you ask, and in never accusing Allah in your asking.")
 
-                    Text(articleMarkdown: "2. **Allah tests those He loves.** Illness is not a sign of Allah's anger. Ayyub was a prophet through every year of it.")
-                        .font(.body)
+                    ArticleStep("2. **Allah tests those He loves.** Illness is not a sign of Allah's anger. Ayyub was a prophet through every year of it.")
 
-                    Text(articleMarkdown: "3. **Relief comes, and it comes complete.** He was given his family back and the like of them with them. Allah does not restore by halves.")
-                        .font(.body)
+                    ArticleStep("3. **Relief comes, and it comes complete.** He was given his family back and the like of them with them. Allah does not restore by halves.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ayyub lost everything a man can lose and Allah called him an excellent servant, one who constantly turned back: the whole definition of patience in one verse.")
-                        .font(.body)
+                    ArticleClosing("Ayyub lost everything a man can lose and Allah called him an excellent servant, one who constantly turned back: the whole definition of patience in one verse.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -858,6 +810,7 @@ struct ProphetAyyubView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetAyyubView")
+        .prophetMiraclesHost()
         .navigationTitle("Ayyub")
     }
 }
@@ -869,8 +822,7 @@ struct ProphetShuaybView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Shu'ayb (peace be upon him) was sent to Madyan, a people who cheated in weights and measures, and he tied honest trade directly to faith.")
-                        .font(.body)
+                    ArticleLead("In short: Shu'ayb (peace be upon him) was sent to Madyan, a people who cheated in weights and measures, and he tied honest trade directly to faith.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -898,19 +850,15 @@ struct ProphetShuaybView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Cheating in trade is a matter of creed.** A whole nation was destroyed over weights and measures. Islam does not separate the prayer mat from the marketplace.")
-                        .font(.body)
+                    ArticleStep("1. **Cheating in trade is a matter of creed.** A whole nation was destroyed over weights and measures. Islam does not separate the prayer mat from the marketplace.")
 
-                    Text(articleMarkdown: "2. **Practise before you preach.** He said he did not want to contradict himself by doing what he forbade. A caller is measured against his own words first.")
-                        .font(.body)
+                    ArticleStep("2. **Practise before you preach.** He said he did not want to contradict himself by doing what he forbade. A caller is measured against his own words first.")
 
-                    Text(articleMarkdown: "3. **“Our wealth is our own business“ is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
-                        .font(.body)
+                    ArticleStep("3. **“Our wealth is our own business“ is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Shu'ayb told a nation of traders that a crooked scale and a sound faith cannot live in the same man, and they refused to believe him.")
-                        .font(.body)
+                    ArticleClosing("Shu'ayb told a nation of traders that a crooked scale and a sound faith cannot live in the same man, and they refused to believe him.")
                 }
 
                 ArticleSourcesSection(article: "ProphetShuaybView")
@@ -918,6 +866,7 @@ struct ProphetShuaybView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetShuaybView")
+        .prophetMiraclesHost()
         .navigationTitle("Shu'ayb")
     }
 }
@@ -929,8 +878,7 @@ struct ProphetMusaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Musa (peace be upon him) is the prophet Allah spoke to directly, who confronted Pharaoh, brought the Children of Israel out of Egypt, and received the Torah.")
-                        .font(.body)
+                    ArticleLead("In short: Musa (peace be upon him) is the prophet Allah spoke to directly, who confronted Pharaoh, brought the Children of Israel out of Egypt, and received the Torah.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -986,19 +934,15 @@ struct ProphetMusaView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Speak gently, even to a tyrant.** The instruction to Musa and Harun before Pharaoh was to speak a gentle word. If that was the manner with Pharaoh, harshness has no excuse anywhere else.")
-                        .font(.body)
+                    ArticleStep("1. **Speak gently, even to a tyrant.** The instruction to Musa and Harun before Pharaoh was to speak a gentle word. If that was the manner with Pharaoh, harshness has no excuse anywhere else.")
 
-                    Text(articleMarkdown: "2. **Ask Allah to open your chest before you ask Him for the task.** His dua at Tuwa asked for ease in himself first, and for a helper, before anything else.")
-                        .font(.body)
+                    ArticleStep("2. **Ask Allah to open your chest before you ask Him for the task.** His dua at Tuwa asked for ease in himself first, and for a helper, before anything else.")
 
-                    Text(articleMarkdown: "3. **Certainty is not the absence of a visible way out.** With the sea in front and the army behind, he said his Lord was with him and would guide him, and the sea was not yet open when he said it.")
-                        .font(.body)
+                    ArticleStep("3. **Certainty is not the absence of a visible way out.** With the sea in front and the army behind, he said his Lord was with him and would guide him, and the sea was not yet open when he said it.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Raised in the tyrant's house to bring down the tyrant, Musa was given the Torah, the sea, and the one honour of being spoken to by Allah directly.")
-                        .font(.body)
+                    ArticleClosing("Raised in the tyrant's house to bring down the tyrant, Musa was given the Torah, the sea, and the one honour of being spoken to by Allah directly.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1013,6 +957,7 @@ struct ProphetMusaView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetMusaView")
+        .prophetMiraclesHost()
         .navigationTitle("Musa")
     }
 }
@@ -1024,8 +969,7 @@ struct ProphetHarunView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Harun (peace be upon him) was the brother Musa asked for, sent with him to Pharaoh, and left in charge when Musa went to the mountain.")
-                        .font(.body)
+                    ArticleLead("In short: Harun (peace be upon him) was the brother Musa asked for, sent with him to Pharaoh, and left in charge when Musa went to the mountain.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1054,19 +998,15 @@ struct ProphetHarunView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Ask Allah for the help you need, by name.** Musa asked for his brother specifically, and Allah gave him a prophet as his helper.")
-                        .font(.body)
+                    ArticleStep("1. **Ask Allah for the help you need, by name.** Musa asked for his brother specifically, and Allah gave him a prophet as his helper.")
 
-                    Text(articleMarkdown: "2. **Unity is weighed against correction, and it is a real weight.** Harun feared dividing the people. The Quran records his reasoning without condemning it.")
-                        .font(.body)
+                    ArticleStep("2. **Unity is weighed against correction, and it is a real weight.** Harun feared dividing the people. The Quran records his reasoning without condemning it.")
 
-                    Text(articleMarkdown: "3. **A deputy is answerable.** He was left in charge and he was questioned about what happened on his watch, though he had warned them.")
-                        .font(.body)
+                    ArticleStep("3. **A deputy is answerable.** He was left in charge and he was questioned about what happened on his watch, though he had warned them.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Harun was given to Musa as an answered prayer, stood beside him before Pharaoh, and held a people together while they turned to a calf.")
-                        .font(.body)
+                    ArticleClosing("Harun was given to Musa as an answered prayer, stood beside him before Pharaoh, and held a people together while they turned to a calf.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -1080,6 +1020,7 @@ struct ProphetHarunView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetHarunView")
+        .prophetMiraclesHost()
         .navigationTitle("Harun")
     }
 }
@@ -1091,8 +1032,7 @@ struct ProphetDhulKiflView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Dhul-Kifl (peace be upon him) is named twice in the Quran, both times among the patient and the excellent, and nothing more of his story is given.")
-                        .font(.body)
+                    ArticleLead("In short: Dhul-Kifl (peace be upon him) is named twice in the Quran, both times among the patient and the excellent, and nothing more of his story is given.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1117,16 +1057,13 @@ struct ProphetDhulKiflView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Allah's testimony is the whole record.** Patient, righteous, among the excellent: that is what Allah chose to preserve about him, and it is more than a biography.")
-                        .font(.body)
+                    ArticleStep("1. **Allah's testimony is the whole record.** Patient, righteous, among the excellent: that is what Allah chose to preserve about him, and it is more than a biography.")
 
-                    Text(articleMarkdown: "2. **Do not fill Allah's silences.** The honest answer about his life is that we do not know, and saying so is part of knowledge.")
-                        .font(.body)
+                    ArticleStep("2. **Do not fill Allah's silences.** The honest answer about his life is that we do not know, and saying so is part of knowledge.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Two verses, both of them praise, and no story: Dhul-Kifl is remembered for his patience and for nothing we were told to add to it.")
-                        .font(.body)
+                    ArticleClosing("Two verses, both of them praise, and no story: Dhul-Kifl is remembered for his patience and for nothing we were told to add to it.")
                 }
 
                 ArticleSourcesSection(article: "ProphetDhulKiflView")
@@ -1134,6 +1071,7 @@ struct ProphetDhulKiflView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetDhulKiflView")
+        .prophetMiraclesHost()
         .navigationTitle("Dhul-Kifl")
     }
 }
@@ -1145,8 +1083,7 @@ struct ProphetDawudView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Dawud (peace be upon him) killed Jalut as a young man, was given kingship and the Zabur, and the mountains and birds joined him when he praised Allah.")
-                        .font(.body)
+                    ArticleLead("In short: Dawud (peace be upon him) killed Jalut as a young man, was given kingship and the Zabur, and the mountains and birds joined him when he praised Allah.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1175,19 +1112,15 @@ struct ProphetDawudView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Eat from the work of your own hands.** A prophet and a king made armour for a living. Work is not beneath anyone.")
-                        .font(.body)
+                    ArticleStep("1. **Eat from the work of your own hands.** A prophet and a king made armour for a living. Work is not beneath anyone.")
 
-                    Text(articleMarkdown: "2. **The best worship is what you can keep up.** Half the night in prayer, a day of fasting and a day off: the Prophet called this the most beloved to Allah, not the most extreme.")
-                        .font(.body)
+                    ArticleStep("2. **The best worship is what you can keep up.** Half the night in prayer, a day of fasting and a day off: the Prophet called this the most beloved to Allah, not the most extreme.")
 
-                    Text(articleMarkdown: "3. **A sincere judge who errs is not condemned.** Allah gave understanding to Sulayman in that case and praised both of them for judgement and knowledge.")
-                        .font(.body)
+                    ArticleStep("3. **A sincere judge who errs is not condemned.** Allah gave understanding to Sulayman in that case and praised both of them for judgement and knowledge.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Dawud was given a kingdom, a scripture, a voice the mountains answered, and a trade he lived from: worship and work in one life.")
-                        .font(.body)
+                    ArticleClosing("Dawud was given a kingdom, a scripture, a voice the mountains answered, and a trade he lived from: worship and work in one life.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1202,6 +1135,7 @@ struct ProphetDawudView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetDawudView")
+        .prophetMiraclesHost()
         .navigationTitle("Dawud")
     }
 }
@@ -1213,8 +1147,7 @@ struct ProphetSulaymanView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Sulayman (peace be upon him) was given a kingdom like no one after him, understood the speech of birds and ants, and ruled over the jinn and the wind.")
-                        .font(.body)
+                    ArticleLead("In short: Sulayman (peace be upon him) was given a kingdom like no one after him, understood the speech of birds and ants, and ruled over the jinn and the wind.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1257,19 +1190,15 @@ struct ProphetSulaymanView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **The greater the blessing, the greater the gratitude owed.** At every marvel in his story, Sulayman's first words are about thanking Allah and about his own soul.")
-                        .font(.body)
+                    ArticleStep("1. **The greater the blessing, the greater the gratitude owed.** At every marvel in his story, Sulayman's first words are about thanking Allah and about his own soul.")
 
-                    Text(articleMarkdown: "2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and this from a bird that had never lied to him.")
-                        .font(.body)
+                    ArticleStep("2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and this from a bird that had never lied to him.")
 
-                    Text(articleMarkdown: "3. **The jinn do not know the unseen.** They laboured on for a dead king leaning on a staff. This one verse closes the door on every claim built on their supposed knowledge.")
-                        .font(.body)
+                    ArticleStep("3. **The jinn do not know the unseen.** They laboured on for a dead king leaning on a staff. This one verse closes the door on every claim built on their supposed knowledge.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Given wind, jinn, and the speech of animals, Sulayman's recorded reaction to all of it was to ask Allah to let him be grateful.")
-                        .font(.body)
+                    ArticleClosing("Given wind, jinn, and the speech of animals, Sulayman's recorded reaction to all of it was to ask Allah to let him be grateful.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1284,6 +1213,7 @@ struct ProphetSulaymanView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetSulaymanView")
+        .prophetMiraclesHost()
         .navigationTitle("Sulayman")
     }
 }
@@ -1295,8 +1225,7 @@ struct ProphetIlyasView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Ilyas (peace be upon him) was sent to a people who worshipped an idol called Ba'l, and he called them back to Allah alone.")
-                        .font(.body)
+                    ArticleLead("In short: Ilyas (peace be upon him) was sent to a people who worshipped an idol called Ba'l, and he called them back to Allah alone.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1318,16 +1247,13 @@ struct ProphetIlyasView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Every idol has a name, and naming it is part of the call.** He did not speak about shirk in the abstract. He asked them why they called on Ba'l.")
-                        .font(.body)
+                    ArticleStep("1. **Every idol has a name, and naming it is part of the call.** He did not speak about shirk in the abstract. He asked them why they called on Ba'l.")
 
-                    Text(articleMarkdown: "2. **“Will you not fear Allah?“ is the whole message.** His opening question is the same one Nuh, Hud, Salih and Shu'ayb opened with.")
-                        .font(.body)
+                    ArticleStep("2. **“Will you not fear Allah?“ is the whole message.** His opening question is the same one Nuh, Hud, Salih and Shu'ayb opened with.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Ilyas asked a people worshipping an idol why they had left the best of creators, and Allah preserved his name among the believers.")
-                        .font(.body)
+                    ArticleClosing("Ilyas asked a people worshipping an idol why they had left the best of creators, and Allah preserved his name among the believers.")
                 }
 
                 ArticleSourcesSection(article: "ProphetIlyasView")
@@ -1335,6 +1261,7 @@ struct ProphetIlyasView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIlyasView")
+        .prophetMiraclesHost()
         .navigationTitle("Ilyas")
     }
 }
@@ -1346,8 +1273,7 @@ struct ProphetAlyasaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Alyasa (peace be upon him) is named twice in the Quran, both times among the chosen and the excellent, with no episode of his life related.")
-                        .font(.body)
+                    ArticleLead("In short: Alyasa (peace be upon him) is named twice in the Quran, both times among the chosen and the excellent, with no episode of his life related.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1368,16 +1294,13 @@ struct ProphetAlyasaView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Being counted among them is the honour.** Allah lists him beside Ismail and Yunus and says He preferred them above the worlds. No further detail is needed for that to mean something.")
-                        .font(.body)
+                    ArticleStep("1. **Being counted among them is the honour.** Allah lists him beside Ismail and Yunus and says He preferred them above the worlds. No further detail is needed for that to mean something.")
 
-                    Text(articleMarkdown: "2. **A believer accepts the limits of what was revealed.** Belief in the prophets includes believing in those whose names and stories we were never given at all.")
-                        .font(.body)
+                    ArticleStep("2. **A believer accepts the limits of what was revealed.** Belief in the prophets includes believing in those whose names and stories we were never given at all.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Alyasa is named among those Allah chose above the worlds, and that is the entire record we were given of him.")
-                        .font(.body)
+                    ArticleClosing("Alyasa is named among those Allah chose above the worlds, and that is the entire record we were given of him.")
                 }
 
                 ArticleSourcesSection(article: "ProphetAlyasaView")
@@ -1385,6 +1308,7 @@ struct ProphetAlyasaView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetAlyasaView")
+        .prophetMiraclesHost()
         .navigationTitle("Alyasa")
     }
 }
@@ -1396,8 +1320,7 @@ struct ProphetYunusView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Yunus (peace be upon him) left his people without permission, was swallowed by the whale, and the dua he made in that darkness is answered for anyone who says it.")
-                        .font(.body)
+                    ArticleLead("In short: Yunus (peace be upon him) left his people without permission, was swallowed by the whale, and the dua he made in that darkness is answered for anyone who says it.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1428,19 +1351,15 @@ struct ProphetYunusView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Begin with tawhid, then admit the wrong.** His dua declares Allah's oneness and perfection first and only then confesses. That order is why it is answered.")
-                        .font(.body)
+                    ArticleStep("1. **Begin with tawhid, then admit the wrong.** His dua declares Allah's oneness and perfection first and only then confesses. That order is why it is answered.")
 
-                    Text(articleMarkdown: "2. **No darkness is outside Allah's reach.** Inside a whale, inside the sea, inside the night, and he was heard.")
-                        .font(.body)
+                    ArticleStep("2. **No darkness is outside Allah's reach.** Inside a whale, inside the sea, inside the night, and he was heard.")
 
-                    Text(articleMarkdown: "3. **A caller does not get to quit on his own timing.** His leaving was before permission, and the Quran never hides it.")
-                        .font(.body)
+                    ArticleStep("3. **A caller does not get to quit on his own timing.** His leaving was before permission, and the Quran never hides it.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Yunus walked away, was swallowed by the sea, and called on Allah in a way that has been answering his descendants ever since.")
-                        .font(.body)
+                    ArticleClosing("Yunus walked away, was swallowed by the sea, and called on Allah in a way that has been answering his descendants ever since.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1455,6 +1374,7 @@ struct ProphetYunusView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetYunusView")
+        .prophetMiraclesHost()
         .navigationTitle("Yunus")
     }
 }
@@ -1466,8 +1386,7 @@ struct ProphetZakariyaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Zakariya (peace be upon him) was an old man with a barren wife who asked Allah for an heir in private, and was given Yahya.")
-                        .font(.body)
+                    ArticleLead("In short: Zakariya (peace be upon him) was an old man with a barren wife who asked Allah for an heir in private, and was given Yahya.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1494,19 +1413,15 @@ struct ProphetZakariyaView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Call on Allah in secret.** The Quran points out that he called his Lord a private call. The best dua has no audience.")
-                        .font(.body)
+                    ArticleStep("1. **Call on Allah in secret.** The Quran points out that he called his Lord a private call. The best dua has no audience.")
 
-                    Text(articleMarkdown: "2. **Nothing is too late to ask for.** An old man with a barren wife asked for a child, and the Quran preserves both the impossibility and the answer.")
-                        .font(.body)
+                    ArticleStep("2. **Nothing is too late to ask for.** An old man with a barren wife asked for a child, and the Quran preserves both the impossibility and the answer.")
 
-                    Text(articleMarkdown: "3. **Ask for what will outlast you.** He wanted an heir to the religion, not to an estate. He said he feared for what would come after him.")
-                        .font(.body)
+                    ArticleStep("3. **Ask for what will outlast you.** He wanted an heir to the religion, not to an estate. He said he feared for what would come after him.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "A private prayer from an old man who had every reason not to bother, and Allah named the child before he was born.")
-                        .font(.body)
+                    ArticleClosing("A private prayer from an old man who had every reason not to bother, and Allah named the child before he was born.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -1520,6 +1435,7 @@ struct ProphetZakariyaView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetZakariyaView")
+        .prophetMiraclesHost()
         .navigationTitle("Zakariya")
     }
 }
@@ -1531,8 +1447,7 @@ struct ProphetYahyaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Yahya (peace be upon him) was given wisdom as a child, and Allah greeted him with peace on the day he was born, the day he dies, and the day he is raised.")
-                        .font(.body)
+                    ArticleLead("In short: Yahya (peace be upon him) was given wisdom as a child, and Allah greeted him with peace on the day he was born, the day he dies, and the day he is raised.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1554,19 +1469,15 @@ struct ProphetYahyaView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Take the Book with strength.** Not casually, not as decoration. The command to Yahya was to hold it firmly, and it was given to him as a child.")
-                        .font(.body)
+                    ArticleStep("1. **Take the Book with strength.** Not casually, not as decoration. The command to Yahya was to hold it firmly, and it was given to him as a child.")
 
-                    Text(articleMarkdown: "2. **Youth is no excuse for shallowness.** Allah gave him judgement while he was still young. Age is not the qualification.")
-                        .font(.body)
+                    ArticleStep("2. **Youth is no excuse for shallowness.** Allah gave him judgement while he was still young. Age is not the qualification.")
 
-                    Text(articleMarkdown: "3. **Chastity and kindness to parents are named beside prophethood.** Allah lists them among his honours, which tells you what Allah counts as an honour.")
-                        .font(.body)
+                    ArticleStep("3. **Chastity and kindness to parents are named beside prophethood.** Allah lists them among his honours, which tells you what Allah counts as an honour.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Named by Allah, given wisdom as a boy, dutiful to his parents, and greeted with peace at birth, at death, and at the resurrection.")
-                        .font(.body)
+                    ArticleClosing("Named by Allah, given wisdom as a boy, dutiful to his parents, and greeted with peace at birth, at death, and at the resurrection.")
                 }
 
                 // His signs, in Miracles of the Prophets (`ProphetSignsIndex`). This file compiles for
@@ -1580,6 +1491,7 @@ struct ProphetYahyaView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetYahyaView")
+        .prophetMiraclesHost()
         .navigationTitle("Yahya")
     }
 }
@@ -1591,8 +1503,7 @@ struct ProphetIsaView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Isa (peace be upon him) was born to Maryam without a father, given the Injil, raised up by Allah before he could be killed, and will return before the Hour. He is a servant of Allah, not His son.")
-                        .font(.body)
+                    ArticleLead("In short: Isa (peace be upon him) was born to Maryam without a father, given the Injil, raised up by Allah before he could be killed, and will return before the Hour. He is a servant of Allah, not His son.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1640,19 +1551,15 @@ struct ProphetIsaView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **Every miracle was by Allah's permission.** The Quran repeats the phrase each time. The one who performs a sign is not the one who owns it.")
-                        .font(.body)
+                    ArticleStep("1. **Every miracle was by Allah's permission.** The Quran repeats the phrase each time. The one who performs a sign is not the one who owns it.")
 
-                    Text(articleMarkdown: "2. **Love without exaggeration.** A Muslim who denies Isa is not a Muslim, and a Muslim who deifies him is not either. The Sunnah is the middle.")
-                        .font(.body)
+                    ArticleStep("2. **Love without exaggeration.** A Muslim who denies Isa is not a Muslim, and a Muslim who deifies him is not either. The Sunnah is the middle.")
 
-                    Text(articleMarkdown: "3. **He called to the same thing every prophet called to.** Worship Allah, my Lord and your Lord. That sentence is in his mouth in the Quran twice.")
-                        .font(.body)
+                    ArticleStep("3. **He called to the same thing every prophet called to.** Worship Allah, my Lord and your Lord. That sentence is in his mouth in the Quran twice.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Born of a virgin, speaking in the cradle, raising the dead by Allah's leave, and saying of himself only that he was the servant of Allah.")
-                        .font(.body)
+                    ArticleClosing("Born of a virgin, speaking in the cradle, raising the dead by Allah's leave, and saying of himself only that he was the servant of Allah.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1667,6 +1574,7 @@ struct ProphetIsaView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetIsaView")
+        .prophetMiraclesHost()
         .navigationTitle("Isa")
     }
 }
@@ -1678,8 +1586,7 @@ struct ProphetMuhammadView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Muhammad (peace and blessings be upon him) is the final Messenger, sent to all of humanity, given the Quran, and the example every Muslim follows.")
-                        .font(.body)
+                    ArticleLead("In short: Muhammad (peace and blessings be upon him) is the final Messenger, sent to all of humanity, given the Quran, and the example every Muslim follows.")
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
@@ -1720,19 +1627,15 @@ struct ProphetMuhammadView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    Text(articleMarkdown: "1. **He is the seal.** Belief in his finality is part of the Shahadah. No revelation, no prophet, and no new law comes after him.")
-                        .font(.body)
+                    ArticleStep("1. **He is the seal.** Belief in his finality is part of the Shahadah. No revelation, no prophet, and no new law comes after him.")
 
-                    Text(articleMarkdown: "2. **Following is the proof of loving.** Allah tied His own love to it: say, if you love Allah, then follow me, and Allah will love you (Quran 3:31).")
-                        .font(.body)
+                    ArticleStep("2. **Following is the proof of loving.** Allah tied His own love to it: say, if you love Allah, then follow me, and Allah will love you (Quran 3:31).")
 
-                    Text(articleMarkdown: "3. **Honour him as Allah honoured him, and no further.** Servant and Messenger. He chose those two words for himself, and so should we.")
-                        .font(.body)
+                    ArticleStep("3. **Honour him as Allah honoured him, and no further.** Servant and Messenger. He chose those two words for himself, and so should we.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "The last Messenger, sent as a mercy to all the worlds, whose example is the way and whose finality is part of the creed.")
-                        .font(.body)
+                    ArticleClosing("The last Messenger, sent as a mercy to all the worlds, whose example is the way and whose finality is part of the creed.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1747,6 +1650,20 @@ struct ProphetMuhammadView: View {
             .themedListRowBackground()
         }
         .selectableArticleList(article: "ProphetMuhammadView")
+        .prophetMiraclesHost()
         .navigationTitle("Muhammad")
+    }
+}
+
+extension View {
+    /// Hosts the "HIS MIRACLES" door of a prophet page on its List (`ProphetMiraclesHost`, G2). The
+    /// miracles library is iOS only; on the watch this is the page unchanged.
+    @ViewBuilder
+    func prophetMiraclesHost() -> some View {
+        #if os(iOS)
+        modifier(ProphetMiraclesHost())
+        #else
+        self
+        #endif
     }
 }

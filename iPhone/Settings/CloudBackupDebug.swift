@@ -213,6 +213,8 @@ enum CloudBackupDebug {
         let content = CloudManifest.contentKeySet
         let survivingContent = domain.keys.filter { content.contains($0) }.sorted()
         out += "disk content keys \(survivingContent.count), preference keys \(domain.keys.filter { CloudManifest.preferenceKeySet.contains($0) }.count)\n"
+        // G10: the device-only state a keep-content reset spares (the splash and About You stay seen).
+        out += "device-only: THEfirstLaunch \(describe(domain["THEfirstLaunch"])) aboutYouVersionSeen \(describe(domain["aboutYouVersionSeen"])) spared keys \(domain.keys.filter(Settings.isResetSpared).count)\n"
         for key in survivingContent { out += "  content \(key) = \(describe(domain[key]))\n" }
         for name in CloudManifest.files {
             let size = CloudSnapshot.documentURL(name).flatMap { try? Data(contentsOf: $0) }?.count ?? 0

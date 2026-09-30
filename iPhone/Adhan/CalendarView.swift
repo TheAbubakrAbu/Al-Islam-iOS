@@ -106,6 +106,7 @@ struct CalendarView: View {
     private static let ummAlQuraEN: Calendar = {
         var calendar = Calendar(identifier: .islamicUmmAlQura)
         calendar.locale = Locale(identifier: "en")
+        calendar.timeZone = .autoupdatingCurrent   // not the launch zone (P1)
         return calendar
     }()
 

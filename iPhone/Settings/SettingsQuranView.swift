@@ -15,10 +15,15 @@ struct SettingsQuranView: View {
     private let requestedPage: SettingsQuranPage?
     @State private var openRequestedPage = false
     @State private var deepLinkFired = false
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
+    /// (HelpDoors.swift), which should open on the page the question is about rather than flash this
+    /// root and push the page a beat later.
+    private let standalonePage: SettingsQuranPage?
 
-    init(presentedAsSheet: Bool = false, openPage: SettingsQuranPage? = nil) {
+    init(presentedAsSheet: Bool = false, openPage: SettingsQuranPage? = nil, standalonePage: SettingsQuranPage? = nil) {
         self.presentedAsSheet = presentedAsSheet
         self.requestedPage = openPage
+        self.standalonePage = standalonePage
     }
 
     private var includeEnglish: Binding<Bool> {
@@ -79,6 +84,18 @@ struct SettingsQuranView: View {
     #endif
 
     var body: some View {
+        #if os(iOS)
+        if let standalonePage {
+            quranPageDestination(standalonePage)
+        } else {
+            rootBody
+        }
+        #else
+        rootBody
+        #endif
+    }
+
+    private var rootBody: some View {
         rootList
         #if DEBUG && os(iOS)
         .background(
@@ -172,6 +189,8 @@ struct SettingsQuranView: View {
     private var rootSections: some View {
         #if os(iOS)
         TipsSection(area: .quran, resolve: resolveSearchDestination)
+        // The Quran tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+        HelpDoorsSettingsSection(area: .quran)
         #endif
 
         Section(header: Text("READING")) {
@@ -867,15 +886,25 @@ struct SettingsQuranView: View {
             // segment, snap back to the old one and slide again, landing ~0.6 s after the tap while
             // the caption below had already changed (frame capture on the iPhone 17 Pro simulator).
             Picker("Arabic Font", selection: Binding(
-                get: { Settings.pickerFaceName(for: settings.fontArabic) },
+                get: {
+                    #if os(watchOS)
+                    // A face this watch cannot draw (a synced Hijazi or Kufi) shows as the Uthmani it falls back to.
+                    return Settings.drawableArabicFontName(Settings.pickerFaceName(for: settings.fontArabic))
+                    #else
+                    return Settings.pickerFaceName(for: settings.fontArabic)
+                    #endif
+                },
                 set: { settings.fontArabic = $0 }
             )) {
                 Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                 Text("Indopak").tag(Settings.indopakFontName)
+                #if !os(watchOS)
                 // The hand of the earliest mushafs themselves (Al-Islam Hijazi, built from hijazifont).
+                // Not on the watch: its bundle ships neither file (A9).
                 Text("Hijazi").tag(Settings.hijaziFontName)
                 // The angular script of the early Abbasid mushafs (Noto Kufi Arabic).
                 Text("Kufi").tag(Settings.kufiFontName)
+                #endif
                 Text("Basic").tag(Settings.systemArabicFontName)
             }
             #if os(iOS)
@@ -1432,8 +1461,8 @@ struct FavoritesView: View {
 
     private func removeLetters(at offsets: IndexSet) {
         let sorted = settings.favoriteLetters.sorted()
-        let idsToRemove = Set(offsets.map { sorted[$0].id })
-        settings.favoriteLetters.removeAll { idsToRemove.contains($0.id) }
+        let lettersToRemove = Set(offsets.map { sorted[$0].letter })
+        settings.favoriteLetters.removeAll { lettersToRemove.contains($0.letter) }
     }
 
     private func removeKhatmSurahs(at offsets: IndexSet) {
@@ -1462,6 +1491,7 @@ extension SettingsSearchEntry {
         .init(title: "Keep Sheet Open", path: "Quran Settings → Reading View", keywords: "ayah actions sheet stay open stack tafsir custom range underneath second", destination: .quranPage(.readingView), advanced: true),
         .init(title: "Ayah Card Size", path: "Ayah actions sheet", keywords: "preview card arabic bigger smaller plus minus percent remember size", destination: .quranSettings),
         .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
+        .init(title: "Need a Hand? on the Quran Tab", path: "Quran Settings", keywords: "need a hand help shortcuts questions show hide quran tab need help reading beginner transliteration kahf friday", destination: .quranSettings),
         .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
         .init(title: "Recitation Type & Random Reciter", path: "Quran Settings → Recitation", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranPage(.recitation)),
         .init(title: "After Surah Recitation Ends", path: "Quran Settings → Recitation", keywords: "next surah previous end stop continue autoplay recitation end", destination: .quranPage(.recitation), advanced: true),
@@ -2878,12 +2908,12 @@ struct ReciterListView: View {
             .onAppear {
                 settings.migrateLegacyReciterIdIfNeeded()
 
-                withAnimation {
+                _ = withAnimation {
                     settings.revertToDefaultReciterIfMissing()
                 }
 
                 #if os(iOS)
-                reciters.forEach { downloadManager.ensureStateLoaded(for: $0) }
+                downloadManager.ensureStatesLoaded(for: reciters)
                 downloadManager.purgeIncompleteReciterDownloads()
                 #endif
 

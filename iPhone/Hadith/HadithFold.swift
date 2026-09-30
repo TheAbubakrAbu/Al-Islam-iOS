@@ -13,7 +13,7 @@ import Foundation
 // unless its own fold produces the same value.
 //
 // The rules themselves are the ones the app has always used for hadith search:
-//   English  strip punctuation/symbols/marks, lowercase
+//   English  Latin accents folded ("Ṣaḥīḥ" is "sahih"), strip punctuation/symbols/marks, lowercase
 //   Arabic   canonical letter folds and mark stripping, then whitespace collapsing
 
 enum HadithFold {
@@ -25,11 +25,46 @@ enum HadithFold {
     private static let englishStripSet: CharacterSet =
         CharacterSet.punctuationCharacters.union(.symbols).union(.nonBaseCharacters)
 
-    /// The English fold: strip, then lowercase. No whitespace collapsing (the app's highlighter twin
-    /// doesn't collapse either, and a query folded the same way lines up with it).
+    /// The English fold: Latin accents folded, then strip, then lowercase. No whitespace collapsing
+    /// (the app's highlighter twin doesn't collapse either, and a query folded the same way lines up
+    /// with it).
     static func english(_ text: String) -> String {
-        String(text.unicodeScalars.filter { !englishStripSet.contains($0) }).lowercased()
+        var kept = String.UnicodeScalarView()
+        kept.reserveCapacity(text.unicodeScalars.count)
+        for scalar in text.unicodeScalars where !latinDropped.contains(scalar.value) {
+            let plain = latinBase[scalar.value] ?? scalar
+            if !englishStripSet.contains(plain) { kept.append(plain) }
+        }
+        return String(kept).lowercased()
     }
+
+    // MARK: Latin accents
+
+    /// ʻ ʼ ʾ ʿ, the marks academic transliteration writes for 'ayn and hamza ("Jāmiʿ", "Nasāʾī").
+    /// They are letters, not punctuation, so the strip keeps them; dropped here so "jami" finds "Jāmiʿ".
+    private static let latinDropped: Set<UInt32> = [0x02BB, 0x02BC, 0x02BE, 0x02BF]
+
+    /// The plain letter of every accented Latin letter ("ā" -> "a", "Ṣ" -> "S"), so "sahih" finds a
+    /// translation that writes "Ṣaḥīḥ" and the other way round. It is the first scalar of the letter's
+    /// canonical decomposition, kept when that is an ASCII letter, over Latin-1 Supplement, Latin
+    /// Extended-A and -B and Latin Extended Additional; plus the letters romanizations use that have no
+    /// decomposition (ı ł ø đ ħ). Unicode never changes a decomposition once assigned, so this table,
+    /// tools/fold.py's and the app's `LatinFold` are the same table.
+    private static let latinBase: [UInt32: UnicodeScalar] = {
+        var table: [UInt32: UnicodeScalar] = [:]
+        for value in Array(UInt32(0x00C0)...0x024F) + Array(UInt32(0x1E00)...0x1EFF) {
+            guard let scalar = UnicodeScalar(value),
+                  let first = String(scalar).decomposedStringWithCanonicalMapping.unicodeScalars.first,
+                  first != scalar, first.isASCII, first.properties.isAlphabetic else { continue }
+            table[value] = first
+        }
+        let undecomposed: [(UInt32, UnicodeScalar)] = [
+            (0x0131, "i"), (0x0141, "L"), (0x0142, "l"), (0x00D8, "O"), (0x00F8, "o"),
+            (0x0110, "D"), (0x0111, "d"), (0x0126, "H"), (0x0127, "h"),
+        ]
+        for (value, plain) in undecomposed { table[value] = plain }
+        return table
+    }()
 
     // MARK: Arabic
 
@@ -165,8 +200,10 @@ enum HadithFold {
     }
 
     /// Strings chosen to exercise every rule above: hamza carriers, dagger alif, alif maqsurah, teh
-    /// marbuta, tashkeel, Quranic signs, the salawat ligature, apostrophes, punctuation, digits, and
-    /// whitespace collapsing. Change a fold rule and at least one of these changes with it.
+    /// marbuta, tashkeel, Quranic signs, the salawat ligature, apostrophes, punctuation, digits,
+    /// whitespace collapsing, and Latin accents (precomposed, combining, the 'ayn and hamza marks, a
+    /// dotted capital I, and letters with no decomposition). Change a fold rule and at least one of
+    /// these changes with it.
     static let probes: [String] = [
         "إنَّمَا الْأَعْمَالُ بِالنِّيَّاتِ",
         "قَالَ رَسُولُ اللَّهِ ﷺ",
@@ -179,6 +216,7 @@ enum HadithFold {
         "Mu'adh ibn Jabal - [of His] - Abu Dawud 1:23",
         "  doubled   spaces\tand\ttabs\nand\nnewlines  ",
         "MiXeD CaSe, punctuation!? and symbols +=%$#@ and digits 0123456789",
+        "Ṣaḥīḥ al-Bukhārī, Jāmiʿ at-Tirmidhī, an-Nasāʾī, ʻUmar, Abi\u{0304} Da\u{0304}wu\u{0304}d, İbrāhīm, Muħammad, Øre, ß",
         "",
     ]
 

@@ -35,9 +35,10 @@ struct NameOfAllahEntry: TimelineEntry {
 
 private enum DailyWidgetShared {
     static let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
-    static let accent: AccentColor = {
+    /// Read on each timeline build: a reused extension process kept the previous accent (P11).
+    static var accent: AccentColor {
         AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
-    }()
+    }
 
     static func reload(for snapshot: DailyWidgetSnapshot?) -> Date {
         DailyRollover.nextRollover(after: Date(), fajrByDay: snapshot?.fajrByDay)
@@ -285,7 +286,7 @@ struct NameOfAllahWidgetView: View {
     private func arabicText(size: CGFloat) -> some View {
         if let fontName = entry.fontName, !fontName.isEmpty, fontName != Settings.systemArabicFontName {
             Text(entry.arabic)
-                .font(.custom(fontName, size: size))
+                .font(.custom(Settings.drawableArabicFontName(fontName), size: size))
                 .arabicFontDesign(custom: true)
         } else {
             Text(entry.arabic)

@@ -117,11 +117,12 @@ def manifest_classes():
     classes = {}
     for key in swift_string_array(settings, "static let contentStorageKeys"):
         classes[key] = "content"
-    for declaration, label in (
-        ("static let listedPreferenceKeys", "preference"),
-        ("static let deviceOnlyKeys", "device-only"),
+    # The device-only list lives in Settings.swift since the keep-content reset spares it too.
+    for source, declaration, label in (
+        (manifest, "static let listedPreferenceKeys", "preference"),
+        (settings, "static let deviceOnlyStorageKeys", "device-only"),
     ):
-        for key in swift_string_array(manifest, declaration):
+        for key in swift_string_array(source, declaration):
             if key in classes and classes[key] != label:
                 sys.exit(f"`{key}` is listed twice: {classes[key]} and {label}")
             classes[key] = label
@@ -139,7 +140,7 @@ def manifest_classes():
         if key in classes and classes[key] != label:
             sys.exit(f"`{key}` is in the app-group table as {label} but listed as {classes[key]}")
         classes[key] = label
-    prefixes = swift_string_array(manifest, "static let deviceOnlyPrefixes")
+    prefixes = swift_string_array(settings, "static let deviceOnlyStoragePrefixes")
     files = swift_string_array(settings, "static let contentDocumentFiles")
     return classes, prefixes, files
 

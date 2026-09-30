@@ -162,14 +162,14 @@ struct ArabicView: View {
 
     private var filteredStandard: [LetterData] {
         guard !searchText.isEmpty else { return standardArabicLetters }
-        let st = searchText.lowercased()
+        let st = searchText.foldingLatinDiacritics.lowercased()
         return standardArabicLetters.filter { matchesSearch($0, st) }
     }
 
     private var filteredOther: [LetterData] {
         let allOtherLetters = otherArabicLetters + nonArabicArabicScriptLetters
         guard !searchText.isEmpty else { return allOtherLetters }
-        let st = searchText.lowercased()
+        let st = searchText.foldingLatinDiacritics.lowercased()
         return allOtherLetters.filter {
             $0.letter.lowercased().contains(st)
                 || $0.name.lowercased().contains(st)
@@ -215,7 +215,7 @@ struct ArabicView: View {
     /// Families whose own name matches the query, offered above the letters: typing "safeer" should
     /// lead to the whistling family itself, not only to its three letters.
     private var matchingFamilies: [LetterFamily] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).foldingLatinDiacritics.lowercased()
         guard query.count >= 3 else { return [] }
         return LetterTraits.allFamilies.filter { family in
             family.name.lowercased().contains(query)

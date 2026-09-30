@@ -95,6 +95,8 @@ enum StartHere {
                       systemImage: "sparkle.magnifyingglass", resource: "miraclesOfQuran"),
                 .init(id: "prophecies", title: "What the Prophet foretold", subtitle: "His prophecies, and what history did",
                       systemImage: "checkmark.seal", resource: "propheciesOfProphet"),
+                .init(id: "proving", title: "Is it true?", subtitle: "The complete case, one line of evidence at a time",
+                      systemImage: "checkmark.shield", resource: "provingIslam"),
                 .init(id: "names", title: "Who Allah is", subtitle: "His 99 Names, each with its meaning",
                       systemImage: "signature", resource: "namesOfAllah"),
             ]
@@ -219,7 +221,8 @@ struct AboutYouView: View {
     }
 
     private var deviceName: String {
-        UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        if ProcessInfo.processInfo.isiOSAppOnMac { return "Mac" }
+        return UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
     }
 
     private func optionCard(_ option: UserBackground) -> some View {

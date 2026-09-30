@@ -10,11 +10,16 @@ import UIKit
 /// Where a UIKit presentation from SwiftUI lands: the key window's root, then down through whatever it
 /// is presenting (a sheet, a share sheet, another alert), so the new controller sits on top of what
 /// the user is looking at instead of failing underneath it.
+///
+/// The active scene first, then a visible inactive one: a Mac window behind another app's, or the
+/// other side of an iPad split, is still on screen and can take a menu's click. With only the active
+/// scene, such a click found no controller and `RemovalConfirmation` removed WITHOUT asking (Mac
+/// audit, 2026-09-29).
 @MainActor
 func topmostViewController() -> UIViewController? {
-    let scene = UIApplication.shared.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .first { $0.activationState == .foregroundActive }
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let scene = scenes.first { $0.activationState == .foregroundActive }
+        ?? scenes.first { $0.activationState == .foregroundInactive }
 
     guard let window = scene?.windows.first(where: \.isKeyWindow) ?? scene?.windows.first,
           var top = window.rootViewController else { return nil }
@@ -98,6 +103,40 @@ extension Settings {
             confirmTitle: "Remove from Favorites"
         ) { [weak self] in
             self?.toggleSurahFavorite(surah: surah)
+        }
+    }
+
+    /// Favorites the letter, or asks before removing it from the favorites.
+    @MainActor
+    func toggleLetterFavoriteOrConfirm(letterData: LetterData) {
+        guard isLetterFavorite(letterData: letterData) else {
+            toggleLetterFavorite(letterData: letterData)
+            return
+        }
+
+        RemovalConfirmation.present(
+            title: "Remove from favorites?",
+            message: "\(letterData.transliteration) (\(letterData.letter)) will be removed from your favorite letters.",
+            confirmTitle: "Remove from Favorites"
+        ) { [weak self] in
+            self?.toggleLetterFavorite(letterData: letterData)
+        }
+    }
+
+    /// Favorites the Name of Allah, or asks before removing it from the favorites.
+    @MainActor
+    func toggleNameFavoriteOrConfirm(number: Int, transliteration: String) {
+        guard isNameFavorite(number: number) else {
+            toggleNameFavorite(number: number)
+            return
+        }
+
+        RemovalConfirmation.present(
+            title: "Remove from favorites?",
+            message: "\(transliteration) will be removed from your favorite Names.",
+            confirmTitle: "Remove from Favorites"
+        ) { [weak self] in
+            self?.toggleNameFavorite(number: number)
         }
     }
 }
@@ -191,6 +230,14 @@ extension Settings {
 
     func toggleSurahFavoriteOrConfirm(surah: Int) {
         toggleSurahFavorite(surah: surah)
+    }
+
+    func toggleLetterFavoriteOrConfirm(letterData: LetterData) {
+        toggleLetterFavorite(letterData: letterData)
+    }
+
+    func toggleNameFavoriteOrConfirm(number: Int, transliteration: String) {
+        toggleNameFavorite(number: number)
     }
 }
 #endif

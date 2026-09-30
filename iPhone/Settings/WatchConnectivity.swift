@@ -244,6 +244,11 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         // No watch, no work: without this, every debounced publish on a phone that has never paired a
         // watch still built and diffed the 122-key snapshot.
         guard session.isPaired, session.isWatchAppInstalled else { return }
+        #else
+        // The same on the watch: without the phone app there is no counterpart, `updateApplicationContext`
+        // throws, nothing is ever recorded as pushed, and every change rebuilt the snapshot, failed and
+        // wrote two plist blobs (Quality Guide P12).
+        guard session.isCompanionAppInstalled else { return }
         #endif
 
         let snapshot = Settings.shared.watchSyncSnapshot()
@@ -253,10 +258,12 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         // Only a genuinely new local value gets a fresh stamp, nudged past the held one if the clock
         // hasn't advanced (rapid successive edits, or a backward clock correction), so the new value is
         // strictly newer than anything either device has seen for that key.
+        var stampsChanged = false
         for (key, value) in snapshot {
             if let held = fields[key], Self.plistEqual(held.v, value) { continue }
             let base = fields[key]?.t ?? 0
             fields[key] = Field(t: max(now, base.nextUp), r: deviceRank, v: value)
+            stampsChanged = true
         }
 
         // The payload carries only keys present in this device's snapshot: a key this device doesn't hold
@@ -295,16 +302,19 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
             "timestamp": maxT, "rank": deviceRank, "settings": legacySettings,
         ]
 
+        var pushed = false
         do {
             try session.updateApplicationContext(payload)
             // Recorded only AFTER the reliable channel accepted the payload; a failed write leaves the
             // candidate ≠ lastPushed, so the next trigger (settings change, background flush, reachability
             // change, activation) simply rebuilds and retries it.
             lastPushedFields = candidate
+            pushed = true
         } catch {
             logger.debug("WC updateApplicationContext error: \(error)")
         }
-        persistState()
+        // Written only when something it holds moved: a failing retry changes neither map (P12).
+        if stampsChanged || pushed { persistState() }
 
         // Skipped on the reduced tier (Low Power Mode, thermal): the context alone reaches the peer on its
         // next activation, and the message is only the "peer is open right now" fast path.
@@ -507,7 +517,9 @@ extension Settings {
         "useFontArabic", "THEfontArabic", "fontArabicSize", "englishFontSize",
         "showTajweedColors", "reciter", "reciterId", "reciteType", "displayQiraah",
         "showOtherQiraatReciters", "qiraatComparisonMode",
-        "quranGridMode", "quranPageMode", "mushafPageLanguage", "showFullSurahRow", "showMuqattaatHelper",
+        // (Not "quranPageMode" or "mushafPageLanguage": the watch has no page reader, and a synced
+        // page mode broke its jump back to the playing ayah. Quality Guide P13.)
+        "quranGridMode", "showFullSurahRow", "showMuqattaatHelper",
         "showPageJuzDividers", "searchForSurahs", "showBookmarks", "showFavorites",
         "saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah", "showAyahOfTheDay",
         // [Al-Quran] Tajweed categories
@@ -606,6 +618,12 @@ extension Settings {
         if let scheme = dict["colorSchemeString"] as? String {
             dict["colorSchemeString"] = Self.baseColorScheme(scheme, customHex: customBackgroundColorHex)
         }
+        // A BETA riwayah's text exists on the phone only (BetaQiraatStore is iOS-only): the watch would
+        // show Hafs under "Current Riwayah: Hisham". It is sent as Hafs, sanitized at send AND at the
+        // watch's apply, the reading themes' pattern (Quality Guide A8).
+        if let tag = dict["displayQiraah"] as? String, Settings.Riwayah.isBeta(tag) {
+            dict["displayQiraah"] = Settings.Riwayah.hafsTag
+        }
         return dict
     }
 
@@ -642,6 +660,12 @@ extension Settings {
         #endif
 
         let store = UserDefaults.standard
+        #if os(watchOS)
+        // A page mode an older build synced here: the watch has no page reader (P13).
+        for key in ["quranPageMode", "mushafPageLanguage"] where store.object(forKey: key) != nil {
+            store.removeObject(forKey: key)
+        }
+        #endif
         for key in Self.watchSyncedAppStorageKeys {
             #if os(iOS)
             // Phone-authoritative: normally already dropped at the merge layer, but the apply must refuse
@@ -656,6 +680,10 @@ extension Settings {
             let incoming: Any = {
                 if key == "colorSchemeString", let scheme = rawIncoming as? String {
                     return Settings.baseColorScheme(scheme, customHex: customBackgroundColorHex)
+                }
+                // No beta text on the watch (see `watchSyncSnapshot`).
+                if key == "displayQiraah", let tag = rawIncoming as? String, Settings.Riwayah.isBeta(tag) {
+                    return Settings.Riwayah.hafsTag
                 }
                 return rawIncoming
             }()

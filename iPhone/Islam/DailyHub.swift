@@ -23,6 +23,8 @@ struct DailyHubView: View {
     @State private var wordReady = WordOfDayStore.shared.isLoaded
     /// The living line under today's Name, from the names' depth pack (parsed off-main once).
     @State private var nameLiving: String?
+    /// The Reminder card's header door, pushed from this List (G2).
+    @State private var reminderDoor: ReminderOfTheDayCard.HeaderDoor?
 
     private var accent: Color { settings.accentColor.color }
 
@@ -36,13 +38,14 @@ struct DailyHubView: View {
                 duaSection
                 nameSection
                 // Only on a Sunnah or dhikr day: on the other four the reminder IS one of the picks above.
-                ReminderOfTheDaySection(showsHubDoor: false, hidesAppPicks: true)
+                ReminderOfTheDaySection(showsHubDoor: false, hidesAppPicks: true, openDoor: $reminderDoor)
                 footerSection
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .compactListSectionSpacing()
+        .reminderCardDestination($reminderDoor)
         .navigationTitle("Today")
         .navigationBarTitleDisplayMode(.inline)
         .task {

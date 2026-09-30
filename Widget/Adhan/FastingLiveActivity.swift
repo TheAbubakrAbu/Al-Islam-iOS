@@ -45,10 +45,14 @@ struct FastingLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: context.attributes.phase.symbol)
             } compactTrailing: {
-                Text(timerInterval: context.state.startTime...context.state.endTime, countsDown: true)
-                    .monospacedDigit()
-                    .frame(maxWidth: 44)
-                    .appFontDesign()
+                if context.isStale {
+                    Image(systemName: "checkmark")
+                } else {
+                    Text(timerInterval: context.state.startTime...context.state.endTime, countsDown: true)
+                        .monospacedDigit()
+                        .frame(maxWidth: 44)
+                        .appFontDesign()
+                }
             } minimal: {
                 Image(systemName: context.attributes.phase.symbol)
             }
@@ -64,6 +68,33 @@ private struct FastingLockScreenView: View {
     private var tint: Color { context.attributes.phase == .suhoor ? .indigo : .orange }
 
     var body: some View {
+        if context.isStale {
+            ended
+        } else {
+            countdown
+        }
+    }
+
+    /// Past the deadline (the stale date is a minute after it) and not yet ended by the app: say the
+    /// time has come instead of a countdown frozen at 0:00 (P7).
+    private var ended: some View {
+        HStack(spacing: 10) {
+            Image(systemName: context.attributes.phase.symbol)
+                .font(.title3)
+                .foregroundStyle(tint)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(context.state.prayerName) has begun")
+                    .font(.headline)
+                Text("at \(context.state.endTime, style: .time)\(context.attributes.city.isEmpty ? "" : " in \(context.attributes.city)")")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding()
+    }
+
+    private var countdown: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label(context.attributes.phase.title, systemImage: context.attributes.phase.symbol)

@@ -167,21 +167,21 @@ struct ShareAyahSheet: View {
         hideArabicDots: Bool,
         qiraahOverride: String? = nil
     ) -> String {
-        var base = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraahOverride)
+        // The full dotted text (`removeDots: false`), then this card's own switches: the reader's
+        // global Hide Dots must not decide for the share sheet's.
+        var base = ayah.displayArabicText(surahId: surah.id, clean: false, removeDots: false, qiraahOverride: qiraahOverride)
         if cleanArabic {
-            base = base.removingArabicDiacriticsAndSigns
-            if surah.id == 1 && ayah.id == 1 {
-                let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.hasPrefix("بسم") {
-                    base = Ayah.bismillahCleanArabic
-                }
+            if surah.id == 1 && ayah.id == 1 && Ayah.opensWithTaawwudh(base) {
+                base = Ayah.bismillahCleanArabic
+            } else {
+                base = base.removingArabicDiacriticsAndSigns
             }
         }
         return hideArabicDots ? base.removingArabicDots : base
     }
 
     private static func shareRawArabicText(surah: Surah, ayah: Ayah) -> String {
-        ayah.displayArabicText(surahId: surah.id, clean: false)
+        ayah.rawArabicText(surahId: surah.id)
     }
 
     private static func allahHighlightRanges(in source: String) -> [Range<String.Index>] {
@@ -228,20 +228,23 @@ struct ShareAyahSheet: View {
 
     // Internal (not private): HadithShareSheet applies the SAME Allah-name reddening to its share card
     // and text preview, so the two share surfaces render the names identically.
-    static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool) {
+    /// `color`: the share card passes its backdrop's own Allah ink (`ShareBackdrop.Palette.allah`).
+    static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool,
+                                    color: UIColor = .red) {
         guard enabled, attributed.length > 0 else { return }
         for range in allahHighlightNSRanges(in: source) {
-            attributed.addAttribute(.foregroundColor, value: UIColor.red, range: range)
+            attributed.addAttribute(.foregroundColor, value: color, range: range)
         }
     }
 
     private static func allahHighlightedAttributedString(
         _ string: String,
         attributes: [NSAttributedString.Key: Any],
-        enabled: Bool
+        enabled: Bool,
+        color: UIColor = .red
     ) -> NSAttributedString {
         let attributed = NSMutableAttributedString(string: string, attributes: attributes)
-        applyAllahHighlight(to: attributed, source: string, enabled: enabled)
+        applyAllahHighlight(to: attributed, source: string, enabled: enabled, color: color)
         return attributed
     }
 
@@ -264,14 +267,15 @@ struct ShareAyahSheet: View {
         qiraah: String,
         font: UIFont,
         paragraphStyle: NSParagraphStyle,
-        textColor: UIColor
+        textColor: UIColor,
+        allahColor: UIColor = .red
     ) -> NSAttributedString? {
         guard shareSettings.showTajweed,
               qiraah.isEmpty else {
             return nil
         }
 
-        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraah)
+        let rawText = ayah.rawArabicText(surahId: surah.id, qiraahOverride: qiraah)
         let displayText = Self.shareArabicText(
             surah: surah,
             ayah: ayah,
@@ -285,7 +289,9 @@ struct ShareAyahSheet: View {
             text: rawText,
             displayText: displayText,
             cleanDisplayText: shareSettings.cleanArabic,
-            removeArabicDots: shareSettings.hideArabicDots || settings.removeArabicDots
+            // The card's own switch only, the one `displayText` was built with: mixing in the
+            // reader's global flag projected a dotless string onto a dotted card.
+            removeArabicDots: shareSettings.hideArabicDots
         ) else {
             return nil
         }
@@ -312,7 +318,7 @@ struct ShareAyahSheet: View {
                 attributed.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: range)
             }
         }
-        Self.applyAllahHighlight(to: attributed, source: displayText, enabled: settings.highlightAllahNames)
+        Self.applyAllahHighlight(to: attributed, source: displayText, enabled: settings.highlightAllahNames, color: allahColor)
         return attributed
     }
 
@@ -1024,221 +1030,9 @@ struct ShareAyahSheet: View {
     /// never resolved here (resolution touches the main-actor alignment cache).
     private func drawImage(surah: Surah?, ayah: Ayah?, hafsAyah hafsAyahSnapshot: Ayah?, shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat, backdrop: ShareBackdrop) -> UIImage {
         guard let surah, let ayah else { return UIImage() }
-        let hafsAyah = hafsAyahSnapshot ?? ayah
-
-        // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
-        // UIKit-drawn image, so the design is asked for explicitly).
-        let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
-        let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah, style: settings.arabicScriptStyle)
-        // Dots-hidden text renders in the chosen face too (the ttfs carry real dotless glyphs now).
-        // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
-        // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
-        let arabicFont = UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
-            ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15)
-        let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
-        let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
-
-        // The backdrop's inks: the classic card keeps the reader's accent, the designs carry their own.
-        let palette = backdrop.palette
-        let textColor      = palette.text
-        let arabicColor    = palette.arabic
-        let secondaryColor = palette.caption
-        let accent         = palette.accent ?? settings.accentColor.color.uiColor
-
-        // --- Layout constants
-        let spacing: CGFloat = 8, extraSpacing: CGFloat = 30
-        let iPhoneCanvasCap: CGFloat = 500
-        let deviceWidth = screenWidth - 50
-        let maxWidth = min(deviceWidth, iPhoneCanvasCap)
-        let padding = backdrop.padding(forWidth: maxWidth)
-        let headroom = backdrop.headroom(forWidth: maxWidth)
-
-        // Paragraph styles
-        let right = NSMutableParagraphStyle();  right.alignment = .right
-        let left  = NSMutableParagraphStyle();  left.alignment  = .left
-        let cent  = NSMutableParagraphStyle();  cent.alignment  = .center
-
-        // Attr dictionaries
-        var bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
-        if palette.textShadow {
-            // Translation lines over scenery carry a soft shadow so they read on the sky.
-            let shadow = NSShadow()
-            shadow.shadowOffset = CGSize(width: 0, height: 1)
-            shadow.shadowBlurRadius = 8
-            shadow.shadowColor = UIColor(white: 0, alpha: 0.55)
-            bodyAttr[.shadow] = shadow
-        }
-        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: arabicColor, .paragraphStyle: right]
-        let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: arabicColor, .paragraphStyle: right]
-        let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent,    .paragraphStyle: left]
-        let arAccent = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent,    .paragraphStyle: right]
-        let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent,    .paragraphStyle: cent]
-        let captionAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor,.paragraphStyle: left]
-        let captionCentAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
-
-        // --- Compose full attributed text once
-        let text = NSMutableAttributedString()
-        func append(_ str: String, _ attrs: [NSAttributedString.Key: Any], highlightAllah: Bool = true) {
-            text.append(Self.allahHighlightedAttributedString(str, attributes: attrs, enabled: highlightAllah && settings.highlightAllahNames))
-        }
-        func appendAttributed(_ attributed: NSAttributedString) { text.append(attributed) }
-        func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
-
-        // Arabic
-        if shareSettings.arabic {
-            let arabicText = Self.shareArabicText(
-                surah: surah,
-                ayah: ayah,
-                cleanArabic: effectiveCleanArabic,
-                hideArabicDots: effectiveHideArabicDots,
-                qiraahOverride: shareQiraah
-            )
-
-            if settings.showAyahInformation {
-                append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) ", arAccent, highlightAllah: false)
-                append("\(surah.idArabic):\(ayah.idArabic)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            } else {
-            }
-
-            if let tajweedText = Self.shareArabicImageAttributedText(
-                surah: surah,
-                ayah: ayah,
-                shareSettings: shareSettings,
-                settings: settings,
-                qiraah: shareQiraah,
-                font: arabicFont,
-                paragraphStyle: right,
-                textColor: arabicColor
-            ) {
-                appendAttributed(tajweedText)
-                if !settings.showAyahInformation {
-                    append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
-                }
-            } else {
-                append(arabicText, arAttr)
-                if !settings.showAyahInformation {
-                    append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
-                }
-            }
-        }
-
-        // Transliteration (always offered; the text itself follows Hafs numbering)
-        if shareSettings.transliteration {
-            let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
-                : surah.nameTransliteration
-
-            sepIfNeeded()
-
-            if settings.showAyahInformation {
-                append("[\(trLabelName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            }
-
-            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", bodyAttr)
-        }
-
-        let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
-        if wantsAnyEnglish {
-            let enHeaderName = (!shareSettings.transliteration)
-                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
-                : surah.nameEnglish
-
-            sepIfNeeded()
-
-            if settings.showAyahInformation {
-                append("[\(enHeaderName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
-                append("\n", bodyAttr, highlightAllah: false)
-            }
-
-            if shareSettings.englishSaheeh {
-                if settings.showAyahInformation {
-                    append("- Saheeh International", captionAttr, highlightAllah: false)
-                    append("\n", bodyAttr, highlightAllah: false)
-                }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", bodyAttr)
-            }
-
-            if shareSettings.englishMustafa {
-                if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
-
-                if settings.showAyahInformation {
-                    append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
-                    append("\n", bodyAttr, highlightAllah: false)
-                }
-                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", bodyAttr)
-            }
-        }
-
-        if includeNote, let note = noteText {
-            sepIfNeeded()
-            append("- Note", captionAttr, highlightAllah: false)
-            append("\n", bodyAttr, highlightAllah: false)
-            append(note, bodyAttr)
-        }
-
-        if shareSettings.includeQiraah {
-            sepIfNeeded()
-            let labels = Self.qiraahLabels(displayQiraah: shareQiraah)
-            append("Riwayah: \(labels.english) – \(labels.arabic)", captionCentAttr, highlightAllah: false)
-        }
-        if settings.showSurahInformation {
-            if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
-            append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
-        }
-        // --- Watermark
-        let wmString = AppIdentifiers.appFullName
-        let wmText = NSAttributedString(string: wmString, attributes: centAccent)
-        var logo = UIImage(named: AppIdentifiers.appName)
-
-        var wmTextSize = wmText.size()
-        var logoSize = CGSize(width: wmTextSize.height, height: wmTextSize.height)
-        let availWidth = maxWidth - 2*padding
-        let desiredWmW = logoSize.width + spacing + wmTextSize.width
-
-        if desiredWmW > availWidth {
-            let scale = availWidth / desiredWmW
-            wmTextSize = CGSize(width: wmTextSize.width*scale, height: wmTextSize.height*scale)
-            logoSize = CGSize(width: logoSize.width*scale, height: logoSize.height*scale)
-            if let img = logo {
-                let r = UIGraphicsImageRenderer(size: logoSize)
-                logo = r.image { _ in img.draw(in: CGRect(origin: .zero, size: logoSize)) }
-            }
-        }
-
-        let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
-        var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
-        textRect.size.width  += 2*padding
-        // The classic card's 20/15 vertical margins, widened with the design's padding.
-        textRect.size.height += logoSize.height + extraSpacing + 25 + 2 * (padding - 20)
-
-        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height + headroom.top + headroom.bottom))
-        // The editorial card's watermark: the ayah itself, faint and large, behind the words.
-        let watermark = Self.backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, shareSettings: shareSettings,
-                                               qiraah: shareQiraah, fontName: arabicFontName, width: maxWidth, color: arabicColor)
-
-        let r1 = UIGraphicsImageRenderer(size: canvas.size)
-        let blackCard = r1.image { ctx in
-            let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding,
-                                   height: textRect.height - 2*padding)
-            backdrop.paint(canvas: canvas, textFrame: textFrame, watermark: watermark, in: ctx.cgContext)
-            text.draw(in: CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding, height: canvas.height))
-
-            let wmY = canvas.height - headroom.bottom - (padding - 20) - logoSize.height - extraSpacing/2
-            let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
-            if let logo = logo {
-                let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
-                ctx.cgContext.addPath(UIBezierPath(roundedRect: rect, cornerRadius: logoSize.height*0.25).cgPath)
-                ctx.cgContext.clip(); logo.draw(in: rect); ctx.cgContext.resetClip()
-            }
-            wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
-        }
-        return UIGraphicsImageRenderer(size: canvas.size).image { _ in
-            UIBezierPath(roundedRect: canvas, cornerRadius: backdrop.cornerRadius).addClip()
-            blackCard.draw(at: .zero)
-        }
+        return Self.composeCard(surah: surah, ayah: ayah, hafsAyah: hafsAyahSnapshot ?? ayah, shareSettings: shareSettings,
+                                settings: settings, qiraah: shareQiraah, includeNote: includeNote, noteText: noteText,
+                                screenWidth: screenWidth, backdrop: backdrop)
     }
 
     /// The editorial backdrop's watermark: the shared Arabic, marks stripped, in the chosen face,
@@ -1318,7 +1112,11 @@ extension ShareAyahSheet {
             // Same phone-like clamp as the share-sheet render - see `ShareAyahRender.maxImageWidth`.
             let screenWidth = min(UIScreen.main.bounds.width, ShareAyahRender.maxImageWidth)
             DispatchQueue.global(qos: .userInitiated).async {
-                let img = buildShareImage(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText, screenWidth: screenWidth)
+                // The remembered backdrop (the share sheet's chips), so Copy Image matches the last share.
+                let img = composeCard(surah: surah, ayah: ayah, hafsAyah: ayah, shareSettings: shareSettings, settings: settings,
+                                      qiraah: Settings.normalizeLegacyRiwayahTag(settings.displayQiraah),
+                                      includeNote: includeNote, noteText: noteText, screenWidth: screenWidth,
+                                      backdrop: .stored)
                 DispatchQueue.main.async {
                     UIPasteboard.general.image = img
                 }
@@ -1392,11 +1190,20 @@ extension ShareAyahSheet {
         return s
     }
 
-    private static func buildShareImage(surah: Surah, ayah: Ayah, shareSettings: ShareSettings, settings: Settings, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
-        // Rounded, to match the app's system-font design (see the note in the other renderer above).
-        let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+    /// THE share card: the share sheet's preview and share, and Copy Image from the actions sheet.
+    /// One composer, so the two can never disagree about a header, an ink or the tajweed base color
+    /// (the copy path was a second, drifting copy until 2026-09-29: tajweed's plain letters took the
+    /// translation's white on the Nature card and its Arabic header lost the accent).
+    /// `hafsAyah` carries the transliteration and translations (the sheet's smart matching); `qiraah`
+    /// is the riwayah the Arabic, its face and the riwayah line follow. Safe off the main thread.
+    static func composeCard(surah: Surah, ayah: Ayah, hafsAyah: Ayah, shareSettings: ShareSettings, settings: Settings,
+                            qiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat,
+                            backdrop: ShareBackdrop) -> UIImage {
+        // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
+        // UIKit-drawn image, so the design is asked for explicitly).
+        let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic, style: settings.arabicScriptStyle)
+        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: qiraah, style: settings.arabicScriptStyle)
         // Dots-hidden text renders in the chosen face too (the ttfs carry real dotless glyphs now).
         // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
         // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
@@ -1404,24 +1211,34 @@ extension ShareAyahSheet {
             ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
-        // The remembered backdrop (the share sheet's chips), so Copy Image matches the last share.
-        let backdrop = ShareBackdrop.stored
+
+        // The backdrop's inks: the classic card keeps the reader's accent, the designs carry their own.
+        // The accent is dynamic (4.5:1 in each appearance), so it is resolved for the card's ground,
+        // not the phone's: the light variant is the dark one, made for white.
         let palette = backdrop.palette
-        let textColor = palette.text
-        let arabicColor = palette.arabic
+        let textColor      = palette.text
+        let arabicColor    = palette.arabic
         let secondaryColor = palette.caption
-        let accent = palette.accent ?? settings.accentColor.color.uiColor
+        let accent = ShareInk.readable(palette.accent ?? settings.accentColor.color.uiColor,
+                                       on: palette.ground, dark: palette.isDark, minimum: 4.5)
+
+        // --- Layout constants
         let spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
         let deviceWidth = screenWidth - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
         let padding = backdrop.padding(forWidth: maxWidth)
         let headroom = backdrop.headroom(forWidth: maxWidth)
-        let right = NSMutableParagraphStyle(); right.alignment = .right
-        let left = NSMutableParagraphStyle(); left.alignment = .left
-        let cent = NSMutableParagraphStyle(); cent.alignment = .center
+
+        // Paragraph styles
+        let right = NSMutableParagraphStyle();  right.alignment = .right
+        let left  = NSMutableParagraphStyle();  left.alignment  = .left
+        let cent  = NSMutableParagraphStyle();  cent.alignment  = .center
+
+        // Attr dictionaries
         var bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
         if palette.textShadow {
+            // Translation lines over scenery carry a soft shadow so they read on the sky.
             let shadow = NSShadow()
             shadow.shadowOffset = CGSize(width: 0, height: 1)
             shadow.shadowBlurRadius = 8
@@ -1431,26 +1248,33 @@ extension ShareAyahSheet {
         let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
-        let _ = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent, .paragraphStyle: right] as [NSAttributedString.Key: Any]
+        let arAccent = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
         let captionAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
         let captionCentAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
+
+        // --- Compose full attributed text once
         let text = NSMutableAttributedString()
         func append(_ str: String, _ attrs: [NSAttributedString.Key: Any], highlightAllah: Bool = true) {
-            text.append(Self.allahHighlightedAttributedString(str, attributes: attrs, enabled: highlightAllah && settings.highlightAllahNames))
+            text.append(Self.allahHighlightedAttributedString(str, attributes: attrs, enabled: highlightAllah && settings.highlightAllahNames,
+                                                              color: palette.allah))
         }
-        func appendAttributed(_ attributed: NSAttributedString) { text.append(attributed) }
         func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
+
+        // Arabic
         if shareSettings.arabic {
             let arabicText = Self.shareArabicText(
                 surah: surah,
                 ayah: ayah,
                 cleanArabic: effectiveCleanArabic(shareSettings),
                 hideArabicDots: effectiveHideArabicDots(shareSettings),
-                qiraahOverride: settings.displayQiraahForArabic
+                qiraahOverride: qiraah
             )
+
             if settings.showAyahInformation {
-            } else {
+                append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) ", arAccent, highlightAllah: false)
+                append("\(surah.idArabic):\(ayah.idArabic)]", accentAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
             }
 
             if let tajweedText = Self.shareArabicImageAttributedText(
@@ -1458,104 +1282,187 @@ extension ShareAyahSheet {
                 ayah: ayah,
                 shareSettings: shareSettings,
                 settings: settings,
-                qiraah: Settings.normalizeLegacyRiwayahTag(settings.displayQiraah),
+                qiraah: qiraah,
                 font: arabicFont,
                 paragraphStyle: right,
-                textColor: textColor
+                textColor: arabicColor,
+                allahColor: palette.allah
             ) {
-                if settings.showAyahInformation {
-                    append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
-                }
-                appendAttributed(tajweedText)
-                if !settings.showAyahInformation {
-                    append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
-                }
+                text.append(tajweedText)
             } else {
-                if settings.showAyahInformation {
-                    append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
-                }
                 append(arabicText, arAttr)
-                if !settings.showAyahInformation {
-                    append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
-                }
+            }
+            if !settings.showAyahInformation {
+                append(" \(ayah.idArabic)", arNumberAttr, highlightAllah: false)
             }
         }
+
+        // Transliteration (always offered; the text itself follows Hafs numbering)
         if shareSettings.transliteration {
-            let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameTransliteration
+            let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
+                : surah.nameTransliteration
+
             sepIfNeeded()
-            if settings.showAyahInformation { append("[\(trLabelName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
-            append(settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))", bodyAttr)
+
+            if settings.showAyahInformation {
+                append("[\(trLabelName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
+            }
+
+            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", bodyAttr)
         }
+
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
         if wantsAnyEnglish {
-            let enHeaderName = (!shareSettings.transliteration) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameEnglish
+            let enHeaderName = (!shareSettings.transliteration)
+                ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
+                : surah.nameEnglish
+
             sepIfNeeded()
-            if settings.showAyahInformation { append("[\(enHeaderName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
-            if shareSettings.englishSaheeh {
-                if settings.showAyahInformation { append("- Saheeh International", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
-                append(settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))", bodyAttr)
+
+            if settings.showAyahInformation {
+                append("[\(enHeaderName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
             }
+
+            if shareSettings.englishSaheeh {
+                if settings.showAyahInformation {
+                    append("- Saheeh International", captionAttr, highlightAllah: false)
+                    append("\n", bodyAttr, highlightAllah: false)
+                }
+                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", bodyAttr)
+            }
+
             if shareSettings.englishMustafa {
                 if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
-                if settings.showAyahInformation { append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
-                append(settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))", bodyAttr)
+
+                if settings.showAyahInformation {
+                    append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
+                    append("\n", bodyAttr, highlightAllah: false)
+                }
+                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", bodyAttr)
             }
         }
-        if includeNote, let note = noteText { sepIfNeeded(); append("- Note", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false); append(note, bodyAttr) }
+
+        if includeNote, let note = noteText {
+            sepIfNeeded()
+            append("- Note", captionAttr, highlightAllah: false)
+            append("\n", bodyAttr, highlightAllah: false)
+            append(note, bodyAttr)
+        }
+
         if shareSettings.includeQiraah {
             sepIfNeeded()
-            let labels = qiraahLabels(displayQiraah: settings.displayQiraah)
+            let labels = Self.qiraahLabels(displayQiraah: qiraah)
             append("Riwayah: \(labels.english) – \(labels.arabic)", captionCentAttr, highlightAllah: false)
         }
         if settings.showSurahInformation {
             if shareSettings.includeQiraah { append("\n", bodyAttr, highlightAllah: false) } else { sepIfNeeded() }
             append("\(surah.ayahCountLabel()) – \(surah.pageCountLabel) – \(surah.type.capitalized) \(surah.type == "makkan" ? "🕋" : "🕌")", captionCentAttr, highlightAllah: false)
         }
+        // Every run on the card's ground at 3:1 or better: the tajweed colors (made for the reader's
+        // white or black page) and any custom ones, which the designs' own inks already clear.
+        ShareInk.enforce(text, palette: palette, minimum: 3)
+
+        // --- Watermark
         let wmString = AppIdentifiers.appFullName
         let wmText = NSAttributedString(string: wmString, attributes: centAccent)
         var logo = UIImage(named: AppIdentifiers.appName)
+
         var wmTextSize = wmText.size()
         var logoSize = CGSize(width: wmTextSize.height, height: wmTextSize.height)
-        let availWidth = maxWidth - 2 * padding
+        let availWidth = maxWidth - 2*padding
         let desiredWmW = logoSize.width + spacing + wmTextSize.width
+
         if desiredWmW > availWidth {
             let scale = availWidth / desiredWmW
-            wmTextSize = CGSize(width: wmTextSize.width * scale, height: wmTextSize.height * scale)
-            logoSize = CGSize(width: logoSize.width * scale, height: logoSize.height * scale)
+            wmTextSize = CGSize(width: wmTextSize.width*scale, height: wmTextSize.height*scale)
+            logoSize = CGSize(width: logoSize.width*scale, height: logoSize.height*scale)
             if let img = logo {
                 let r = UIGraphicsImageRenderer(size: logoSize)
                 logo = r.image { _ in img.draw(in: CGRect(origin: .zero, size: logoSize)) }
             }
         }
+
         let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
         var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
-        textRect.size.width += 2 * padding
+        textRect.size.width  += 2*padding
+        // The classic card's 20/15 vertical margins, widened with the design's padding.
         textRect.size.height += logoSize.height + extraSpacing + 25 + 2 * (padding - 20)
+
         let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height + headroom.top + headroom.bottom))
-        let watermark = backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, shareSettings: shareSettings,
-                                          qiraah: settings.displayQiraahForArabic, fontName: arabicFontName, width: maxWidth, color: arabicColor)
+        // The editorial card's watermark: the ayah itself, faint and large, behind the words.
+        let watermark = Self.backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, shareSettings: shareSettings,
+                                               qiraah: qiraah, fontName: arabicFontName, width: maxWidth, color: arabicColor)
+
         let r1 = UIGraphicsImageRenderer(size: canvas.size)
-        let blackCard = r1.image { ctx in
-            let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2 * padding,
-                                   height: textRect.height - 2 * padding)
+        let card = r1.image { ctx in
+            let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding,
+                                   height: textRect.height - 2*padding)
             backdrop.paint(canvas: canvas, textFrame: textFrame, watermark: watermark, in: ctx.cgContext)
-            text.draw(in: CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2 * padding, height: canvas.height))
-            let wmY = canvas.height - headroom.bottom - (padding - 20) - logoSize.height - extraSpacing / 2
+            text.draw(in: CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding, height: canvas.height))
+
+            let wmY = canvas.height - headroom.bottom - (padding - 20) - logoSize.height - extraSpacing/2
             let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
             if let logo = logo {
                 let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
-                ctx.cgContext.addPath(UIBezierPath(roundedRect: rect, cornerRadius: logoSize.height * 0.25).cgPath)
+                ctx.cgContext.addPath(UIBezierPath(roundedRect: rect, cornerRadius: logoSize.height*0.25).cgPath)
                 ctx.cgContext.clip(); logo.draw(in: rect); ctx.cgContext.resetClip()
             }
             wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
         }
         return UIGraphicsImageRenderer(size: canvas.size).image { _ in
             UIBezierPath(roundedRect: canvas, cornerRadius: backdrop.cornerRadius).addClip()
-            blackCard.draw(at: .zero)
+            card.draw(at: .zero)
         }
     }
 
 }
+
+#if DEBUG
+extension ShareAyahSheet {
+    /// "-shareCardGallery [tag]": every backdrop for four sample cards, one PNG each in
+    /// Documents/sharecards/<tag>/ (read them with `simctl get_app_container <udid> <bid> data`),
+    /// then "SHARE GALLERY <folder>" in the log. Samples: 1:1 with tajweed and the Saheeh line; 2:255
+    /// (long) with transliteration; 112:1 without tajweed and both translations (the Allah highlight
+    /// in two scripts); 2:1 with tajweed alone, so the madd and ghunnah inks show on every ground.
+    static func debugRenderGallery(tag: String) {
+        let settings = Settings.shared
+        let quranData = QuranData.shared
+        let samples: [(name: String, surah: Int, ayah: Int, share: ShareSettings)] = [
+            ("fatihah", 1, 1, ShareSettings(arabic: true, englishSaheeh: true, showTajweed: true)),
+            ("kursi", 2, 255, ShareSettings(arabic: true, transliteration: true, englishSaheeh: true, showTajweed: true)),
+            ("ikhlas", 112, 1, ShareSettings(arabic: true, englishSaheeh: true, englishMustafa: true)),
+            ("tajweed", 2, 5, ShareSettings(arabic: true, showTajweed: true)),
+        ]
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("sharecards/\(tag)", isDirectory: true)
+        try? FileManager.default.removeItem(at: folder)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for sample in samples {
+            guard let surah = quranData.surah(sample.surah),
+                  let ayah = surah.ayahs.first(where: { $0.id == sample.ayah }) else { continue }
+            for backdrop in ShareBackdrop.allCases {
+                let image = composeCard(surah: surah, ayah: ayah, hafsAyah: ayah, shareSettings: sample.share, settings: settings,
+                                        qiraah: "", includeNote: false, noteText: nil, screenWidth: 402, backdrop: backdrop)
+                try? image.pngData()?.write(to: folder.appendingPathComponent("\(sample.name)-\(backdrop.rawValue).png"))
+            }
+        }
+        // The classic card takes the reader's accent: every preset's contrast on its black ground,
+        // as the phone's appearance would have resolved it and as the card now draws it.
+        let classic = ShareBackdrop.classic.palette
+        for accent in AccentColor.allCases where accent != .custom {
+            let raw = UIColor(accent.color)
+            let lightResolved = raw.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+            let drawn = ShareInk.readable(raw, on: classic.ground, dark: classic.isDark, minimum: 4.5)
+            NSLog("SHARE GALLERY accent %@: light-mode ink %.1f:1, drawn %.1f:1", accent.rawValue,
+                  ShareInk.contrast(lightResolved, on: classic.ground), ShareInk.contrast(drawn, on: classic.ground))
+        }
+        NSLog("SHARE GALLERY %@", folder.path)
+    }
+}
+#endif
 
 extension Color { var uiColor: UIColor { UIColor(self) } }
 

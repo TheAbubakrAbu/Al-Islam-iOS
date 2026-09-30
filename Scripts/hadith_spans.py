@@ -203,7 +203,11 @@ def words(text: str, ranges) -> str:
     out = []
     for first, last in ranges:
         if 0 <= first <= last < len(tokens):
-            out.append(" ".join(tokens[first:last + 1]))
+            # The app trims quote marks off each piece (`WordRange.trimmingQuotes` in HadithQuote.swift),
+            # since the quote card adds its own; the corpus reads the same words.
+            piece = " ".join(tokens[first:last + 1]).strip("\"“”‘’")
+            if piece:
+                out.append(piece)
     return " … ".join(out)
 
 

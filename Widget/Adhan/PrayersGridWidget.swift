@@ -154,7 +154,7 @@ struct Prayers2EntryView: View {
 }
 
 struct Prayers2Widget: Widget {
-    let kind: String = "Prayers2Widget"
+    let kind: String = AdhanWidgetKind.Prayers2Widget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
@@ -169,7 +169,7 @@ struct Prayers2Widget: Widget {
 
 /// The Prayer Split widget, unchanged, over the current prayer's sky gradient.
 struct Prayers2SkyWidget: Widget {
-    let kind: String = "Prayers2SkyWidget"
+    let kind: String = AdhanWidgetKind.Prayers2SkyWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

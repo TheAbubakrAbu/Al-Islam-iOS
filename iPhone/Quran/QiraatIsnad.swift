@@ -734,7 +734,7 @@ struct QiraatIsnadSection: View {
     private func render() {
         rendering = true
         let card = QiraatIsnadShareCard(title: title, subtitle: subtitle, chain: chain)
-            .environment(\.appearance, appearance)
+            .environment(\.injectedAppearance, appearance)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3
         renderer.proposedSize = ProposedViewSize(width: 560, height: nil)

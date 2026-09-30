@@ -271,8 +271,10 @@ struct AyahRow: View, Equatable {
 
     nonisolated static func prewarmArabicDisplay(surah: Surah, settings: Settings, limit: Int? = nil) {
         let clean = settings.cleanArabicText
-        // Same key shape as `arabicDisplayText` (dots only count with hidden tashkeel), so the warm hits.
-        let dots = clean && settings.removeArabicDots
+        // Same key shape as `arabicDisplayText`, so the warm hits; and the text is computed with the
+        // SAME dots bit the key carries (it used to key on `clean && dots` while the text read the
+        // global flag, filing dotless text under a dotted key).
+        let dots = settings.removeArabicDots
         let beginner = settings.beginnerMode
         let qiraah = settings.displayQiraahForArabic
         let qiraahKey = qiraah ?? "Hafs"
@@ -282,7 +284,7 @@ struct AyahRow: View, Equatable {
             let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
-            let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraah)
+            let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: dots, qiraahOverride: qiraah)
             let displayText = beginner ? baseText.beginnerSpaced : baseText
             Self.arabicDisplayCache.setObject(displayText as NSString, forKey: key)
         }
@@ -355,7 +357,7 @@ struct AyahRow: View, Equatable {
               !beginner,
               comparisonQiraahOverride == nil else { return nil }
 
-        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+        let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: nil)
         return WordByWordStore.shared.glosses(
             surah: surah.id,
             ayah: ayah.id,
@@ -372,7 +374,7 @@ struct AyahRow: View, Equatable {
     /// layout just omits the line.
     private func wordByWordTransliterations(displayText: String) -> [String] {
         guard settings.wordByWordInlineTransliteration else { return [] }
-        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+        let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: nil)
         return WordByWordStore.shared.transliterations(
             surah: surah.id,
             ayah: ayah.id,
@@ -412,7 +414,7 @@ struct AyahRow: View, Equatable {
 
     private func arabicTajweedText(displayText renderedDisplayText: String, beginner: Bool) -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
-        let text = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
+        let text = ayah.rawArabicText(surahId: surah.id, qiraahOverride: comparisonQiraahOverride)
         // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
         // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
         // its plain first paint until something else re-rendered it (a tap, a font change, even the
@@ -538,7 +540,7 @@ struct AyahRow: View, Equatable {
         // onto the stripped rendering - so the print's coloring survives the strip, like Hafs's does.
         let fullText: String? = {
             guard displayChoices.hideTashkeel else { return nil }
-            let full = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
+            let full = ayah.rawArabicText(surahId: surah.id, qiraahOverride: comparisonQiraahOverride)
             return beginner ? full.beginnerSpaced : full
         }()
         return QiraahTajweedStore.shared.attributedText(
@@ -1141,7 +1143,7 @@ struct AyahRow: View, Equatable {
         // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
         // Tashkeel and Signs" off the display text IS raw, so the second resolve is skipped.
         let rawText = displayChoices.hideTashkeel
-            ? ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+            ? ayah.rawArabicText(surahId: surah.id, qiraahOverride: nil)
             : displayText
 
         if trimmed.containsArabicLetters {

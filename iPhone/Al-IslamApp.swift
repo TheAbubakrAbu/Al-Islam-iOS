@@ -31,6 +31,9 @@ struct AlIslamApp: App {
 
     init() {
         LaunchClock.mark("app init")
+        #if DEBUG
+        LaunchClock.installStallWatch()
+        #endif
         // Activate WatchConnectivity so settings sync (and watch app-installed detection) work both ways.
         _ = WatchConnectivityManager.shared
 
@@ -251,11 +254,30 @@ private struct MainTabView: View {
     // (see `LaunchWarmup`) before it reveals - so the user only ever sees a fully-built opening tab, and the first
     // tap on Quran reuses the warm tab instantly. No visible tab flip, no first-tap stall.
     @State private var selectedTab: AppTab = .adhan
+    /// A deep link (an ayah widget's tap, a Sunnah reminder's) arrived before the under-cover warm
+    /// finished: the warm's last step must land on the Quran tab. `pendingQuran` itself cannot say
+    /// so by then, because the Quran tab clears it while the warm is still waiting on that tab's
+    /// layout, and a cold launch from a widget revealed on the launch tab with the ayah hidden.
+    @State private var landOnQuranAfterWarm = false
     @State private var didWarm = false
+    /// The opening Adhan tab's content waits for the launch cover's first frame, like the warm walk
+    /// below: built in the same pass, it held that frame (and the cover's animation task) for about
+    /// 780 ms in a Debug build, so the cover came up at +1.1 s instead of +0.5 s (Quality Guide F1).
+    /// Behind an opaque cover either way; true from the start when nothing covers the tabs.
+    @State private var initialTabMounted: Bool
+
+    init(isCovered: Bool) {
+        self.isCovered = isCovered
+        _initialTabMounted = State(initialValue: !isCovered)
+    }
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("main tab view: first body")
+        #endif
         tabs
             #if DEBUG
+            .onAppear { LaunchClock.markOnce("main tab view: on appear") }
             .onReceive(NotificationCenter.default.publisher(for: Self.debugSwitchTabNotification)) { note in
                 if let raw = note.object as? String, let tab = AppTab(rawValue: raw) {
                     selectedTab = tab
@@ -267,7 +289,15 @@ private struct MainTabView: View {
             // A Sunnah reminder's tap (or its "Open" row anywhere in Settings) lands on the Quran
             // tab; the tab's own `.onReceive` opens the reader from there.
             .onReceive(AppNavigation.shared.$pendingQuran) { target in
-                if target != nil { selectedTab = .quran }
+                guard target != nil else { return }
+                selectedTab = .quran
+                if !LaunchWarmup.shared.isWarm { landOnQuranAfterWarm = true }
+            }
+            // A tap on an ayah widget (`QuranDeepLink`, alislam://ayah/2/255) opens that ayah: the
+            // same route a Sunnah reminder's tap takes, so page mode and list mode both land on it.
+            .onOpenURL { url in
+                guard let target = QuranDeepLink.parseAyah(url) else { return }
+                AppNavigation.shared.open(.ayah(target.surah, target.ayah))
             }
             // A Reminder of the Day card's "Open" lands on the Islam tab (or the Hadith tab); the
             // Islam tab's own `.onReceive` pushes the resource from there.
@@ -294,6 +324,10 @@ private struct MainTabView: View {
             // "-spellingProbe": surah queries through the app's REAL `filteredSurahs`, so the fallback
             // gate is checked against the live index (English names included), not a copy of the engine.
             .task { await SpellingProbe.runIfRequested() }
+            // "-chosenAyahProbe": the Chosen Ayah widget's picker, run in-process (ChosenAyahIntent.swift).
+            .task { await ChosenAyahProbe.runIfRequested() }
+            // "-askAITextProbe": Ask AI's pure text functions on the audit's failing inputs (AskAIText.swift).
+            .task { AskAITextProbe.runIfRequested() }
             #endif
             // The Reminder of the Day is a card at the top of the Islam tab, never a sheet (Abu,
             // 2026-09-12: the sheet clipped the card and covered the landing tab).
@@ -353,18 +387,8 @@ private struct MainTabView: View {
                 }
                 MushafPagination.dumpPrintTokens(quranData: QuranData.shared)
             }
-            // "-auditPrintLines" - compose every page of the displayed riwayah on its printed-line
-            // table and report any page whose lines don't hold (see MushafPageRenderCache.auditPrintLines).
-            .task {
-                guard ProcessInfo.processInfo.arguments.contains("-auditPrintLines") else { return }
-                while QuranData.shared.quran.count < 114 {
-                    try? await Task.sleep(nanoseconds: 250_000_000)
-                    guard !Task.isCancelled else { return }
-                }
-                let pages = MushafPagination.pages(quran: QuranData.shared.quran,
-                                                   qiraah: Settings.shared.displayQiraahForArabic)
-                MushafPageRenderCache.auditPrintLines(pages: pages)
-            }
+            // ("-auditPrintLines" is retired: print-matched lines were withdrawn on 2026-08-31 and
+            // `MushafComposeConfig.printLines` is always nil, so it could only print "no table".)
             // "-auditTajweedLegends" - print the tajweed legend's by-rule comparison index (the
             // compare screen is only reachable by tapping; see TajweedLegendView.auditRuleSections).
             .task {
@@ -393,6 +417,38 @@ private struct MainTabView: View {
                 await AppReveal.waitUntilRevealed()
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 ExtraRemindersStore.logDuaSlotProbe()
+            }
+            // "-openSecondWindow": a second app window a moment after the reveal (iPad and Mac allow
+            // several; `UIApplicationSupportsMultipleScenes` is on), so a sweep can run every screen with
+            // the shared stores and presenters driving two windows at once. Once per process: every
+            // window runs this root's tasks, so without the flag each new window asked for another.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-openSecondWindow"),
+                      UIDevice.current.userInterfaceIdiom != .phone, !DebugSecondWindow.requested else { return }
+                DebugSecondWindow.requested = true
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                if #available(iOS 17.0, *) {
+                    UIApplication.shared.activateSceneSession(for: UISceneSessionActivationRequest(role: .windowApplication)) { error in
+                        NSLog("SECOND WINDOW failed: %@", error.localizedDescription)
+                    }
+                    NSLog("SECOND WINDOW requested")
+                }
+            }
+            // "-shareCardGallery [tag]": every share-card backdrop for four sample ayahs, as PNGs in
+            // Documents/sharecards/<tag> (ShareAyah.swift).
+            .task {
+                let arguments = ProcessInfo.processInfo.arguments
+                guard let index = arguments.firstIndex(of: "-shareCardGallery") else { return }
+                let tag = arguments.indices.contains(index + 1) ? arguments[index + 1] : "gallery"
+                await QuranData.shared.waitUntilLoaded()
+                ShareAyahSheet.debugRenderGallery(tag: tag)
+            }
+            // "-auditJuzTables": `QuranData.juzList` against quran.qpk's per-ayah juz (Quality Guide A4).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditJuzTables") else { return }
+                await QuranData.shared.waitUntilCoreLoaded()
+                QuranData.auditJuzTables()
             }
             // "-auditPacks" - fingerprint every bundled pack and loose payload through the app's own
             // readers (see PackAudit); run before and after a repack and diff Documents/packaudit.txt.
@@ -512,6 +568,8 @@ private struct MainTabView: View {
             //   +3.5 s  the 6,236-entry ayah search index (utility; full tier only, otherwise on demand)
             //   +4.0 s  the ranked search's corpus lanes, once the index is there (utility; full tier only)
             //   +4.5 s  the hadith typo vocabulary (a file read, or once a walk of the packs; full tier only)
+            //   +5.0 s  the topic and morphology packs (QuranView's task schedules it, so Al-Quran gets it
+            //           too: `QuranLaunchWarmup.scheduleStudyPacksAfterReveal`; full tier only)
             //
             // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model, off-main.
             // Deferred until AFTER the reveal: it's only needed once a search field gains focus, and
@@ -690,7 +748,8 @@ private struct MainTabView: View {
 
         // 3) Back on the landing tab; let it become the rendered tab again before the reveal. A
         // launch from a Sunnah reminder's tap lands on the Quran tab instead.
-        selectedTab = AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
+        selectedTab = landOnQuranAfterWarm || AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
+        landOnQuranAfterWarm = false
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()
@@ -703,7 +762,11 @@ private struct MainTabView: View {
     private var launchTab: AppTab {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
-        if ProcessInfo.processInfo.arguments.contains("-launchTabHadith") { return .hadith }
+        // The Hadith settings hooks present from the Hadith tab, so they land there too: on another
+        // tab the sheet's presenter is not in the window (Quality Guide G12).
+        if ProcessInfo.processInfo.arguments.contains(where: {
+            $0 == "-launchTabHadith" || $0 == "-launchHadithSettings" || $0 == "-launchHadithSettingsReading"
+        }) { return .hadith }
         if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
         if ProcessInfo.processInfo.arguments.contains("-launchTabSettings") { return .settings }
         #endif
@@ -725,11 +788,24 @@ private struct MainTabView: View {
     }
 
     @ViewBuilder
+    private var adhanTab: some View {
+        if initialTabMounted {
+            AdhanView()
+        } else {
+            Color.clear
+                .task {
+                    await LaunchWarmup.shared.waitUntilCoverUp(maxWaitNanos: 1_000_000_000)
+                    initialTabMounted = true
+                }
+        }
+    }
+
+    @ViewBuilder
     private var tabs: some View {
         if #available(iOS 18.0, *) {
             TabView(selection: $selectedTab) {
                 Tab("Adhan", systemImage: "mecca", value: AppTab.adhan) {
-                    AdhanView()
+                    adhanTab
                 }
 
                 Tab("Quran", systemImage: "character.book.closed.ar", value: AppTab.quran) {
@@ -753,7 +829,7 @@ private struct MainTabView: View {
             }
         } else {
             TabView(selection: $selectedTab) {
-                AdhanView()
+                adhanTab
                     .tabItem {
                         Image(systemName: "safari")
                         Text("Adhan")
@@ -930,7 +1006,13 @@ enum SpellingProbe {
             "tevbe", "baraah", "bani israil", "tabarak", "amma", "dahr", "lahab", "tabbat", "inshirah",
             "tawhid", "joseph", "jonah", "mary", "noah", "abraham", "hamim sajdah", "iqra", "ilaf",
             // Must stay what they were: a working query, a number, a filter, and junk.
-            "baqarah", "cow", "36", "makki", "xyz", "pizza", "chicago", "coca cola", "pacific"
+            "baqarah", "cow", "36", "makki", "xyz", "pizza", "chicago", "coca cola", "pacific",
+            // Prophets no surah is named after: nothing, not whatever starts with the same letters
+            // once every vowel reads as "a" ("musa" was al-Masad, al-Fatihah's al-Mathani, ...).
+            "musa", "mūsā", "isa", "adam", "harun", "dawud", "sulaiman", "ayyub", "zakariya",
+            // Half-typed names: the as-you-type tier must still reach them.
+            "baqa", "rahm", "rehm", "yus", "ekhl", "kah", "keh", "mol", "tevb", "ebra", "ibra", "hujur",
+            "anka", "mary", "mer", "fus", "zum", "waq", "vak", "naz", "shu"
         ]
         print("SPELLPROBE surahs=\(data.quran.count) curated=\(SurahSpelling.latin.count)")
         for query in queries {
@@ -979,5 +1061,13 @@ enum SpellingProbe {
         print("SPELLPROBE aliases: \(wrong) resolve to the WRONG surah, \(missing) unresolved, of \(total)")
         print("SPELLPROBE done")
     }
+}
+#endif
+
+#if DEBUG
+/// `-openSecondWindow`'s once-per-process flag (every window runs the root's `.task`s).
+@MainActor
+enum DebugSecondWindow {
+    static var requested = false
 }
 #endif

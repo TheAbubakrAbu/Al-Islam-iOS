@@ -102,13 +102,13 @@ final class ExtraRemindersStore: ObservableObject {
 
     private nonisolated static func loadCustom(from defaults: UserDefaults) -> [CustomReminder] {
         guard let data = defaults.data(forKey: customKey),
-              let decoded = try? JSONDecoder().decode([CustomReminder].self, from: data) else { return [] }
+              let decoded = UserDataRescue.decodeList(CustomReminder.self, from: data, key: customKey, defaults: defaults) else { return [] }
         return decoded
     }
 
     private nonisolated static func loadConfig(from defaults: UserDefaults) -> ExtraReminderConfig {
         guard let data = defaults.data(forKey: configKey),
-              let decoded = try? JSONDecoder().decode(ExtraReminderConfig.self, from: data) else { return ExtraReminderConfig() }
+              let decoded = UserDataRescue.decode(ExtraReminderConfig.self, from: data, key: configKey, defaults: defaults) else { return ExtraReminderConfig() }
         return decoded
     }
 

@@ -17,6 +17,200 @@ enum WatchScreen {
 }
 #endif
 
+// MARK: - User data that no longer decodes
+
+/// The rule for a store of the reader's own data (a journal, a transcript, bookmarks) whose saved
+/// form no longer decodes: never let the next save overwrite it. A decode failure used to leave the
+/// store empty, and the first edit then wrote the empty store over the reader's file. Now the bytes
+/// are kept aside ("<name>.corrupt-<time>" beside a file, "<key>.corrupt" for a defaults blob) and
+/// the failure is logged, so the store can start fresh without destroying anything.
+enum UserDataRescue {
+    private static func stamp() -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: Date())
+    }
+
+    /// Moves a file that failed to decode aside. Returns false only when the move itself failed, in
+    /// which case the caller must not save over `url` this session.
+    @discardableResult
+    static func quarantine(file url: URL, error: Error?) -> Bool {
+        let target = url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".corrupt-" + stamp())
+        do {
+            try FileManager.default.moveItem(at: url, to: target)
+            NSLog("USER DATA %@ did not decode (%@); kept as %@", url.lastPathComponent, String(describing: error), target.lastPathComponent)
+            return true
+        } catch let moveError {
+            NSLog("USER DATA %@ did not decode (%@) and could not be moved aside (%@)", url.lastPathComponent, String(describing: error), String(describing: moveError))
+            return false
+        }
+    }
+
+    /// What a rescued defaults blob's key ends in. Device-only (never backed up, spared by a
+    /// keep-content reset like the content it rescues): `Settings.isResetSpared`, `CloudManifest`.
+    static let rescueSuffix = ".corrupt"
+
+    /// Copies a defaults blob that failed to decode to "<key>.corrupt" (once: an earlier rescue is
+    /// never overwritten by a later one), so the store can be rewritten without losing it.
+    /// The write waits for the next main-queue turn: the stores decode inside getters that view
+    /// bodies read, and a body must never write defaults. That turn still comes long before any edit
+    /// could save over the original key.
+    static func quarantine(defaultsKey key: String, data: Data, in defaults: UserDefaults = .standard, error: Error?) {
+        let rescueKey = key + rescueSuffix
+        NSLog("USER DATA defaults %@ did not decode (%@); %d bytes kept under %@", key, String(describing: error), data.count, rescueKey)
+        DispatchQueue.main.async {
+            if defaults.data(forKey: rescueKey) == nil { defaults.set(data, forKey: rescueKey) }
+        }
+    }
+
+    /// One element of a stored list that decodes to nil instead of failing the whole list.
+    struct Lossy<Value: Decodable>: Decodable {
+        let value: Value?
+        init(from decoder: Decoder) throws { value = try? Value(from: decoder) }
+    }
+
+    /// A defaults blob decoded, or nil. Empty data (the unset default) is nil without complaint; a
+    /// blob that fails is kept under "<key>.corrupt" before nil comes back.
+    static func decode<T: Decodable>(_ type: T.Type, from data: Data, key: String,
+                                     decoder: JSONDecoder = JSONDecoder(), defaults: UserDefaults = .standard) -> T? {
+        guard !data.isEmpty else { return nil }
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            quarantine(defaultsKey: key, data: data, in: defaults, error: error)
+            return nil
+        }
+    }
+
+    /// A defaults list decoded entry by entry: an entry this build cannot read is dropped (the blob
+    /// kept under "<key>.corrupt" first) instead of failing, and emptying, the whole list.
+    static func decodeList<T: Decodable>(_ type: T.Type, from data: Data, key: String,
+                                         decoder: JSONDecoder = JSONDecoder(), defaults: UserDefaults = .standard) -> [T]? {
+        guard !data.isEmpty else { return nil }
+        do {
+            let items = try decoder.decode([Lossy<T>].self, from: data)
+            let values = items.compactMap(\.value)
+            if values.count < items.count {
+                quarantine(defaultsKey: key, data: data, in: defaults, error: nil)
+                NSLog("USER DATA defaults %@: %d of %d entries unreadable", key, items.count - values.count, items.count)
+            }
+            return values
+        } catch {
+            quarantine(defaultsKey: key, data: data, in: defaults, error: error)
+            return nil
+        }
+    }
+
+    /// A file of the reader's own entries decoded entry by entry; nil when there is no file. A file
+    /// that does not decode at all is moved aside; one that loses entries is copied aside first.
+    static func loadList<T: Decodable>(_ type: T.Type, file url: URL, decoder: JSONDecoder = JSONDecoder()) -> [T]? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
+        do {
+            let items = try decoder.decode([Lossy<T>].self, from: data)
+            let values = items.compactMap(\.value)
+            if values.count < items.count {
+                let copy = url.deletingLastPathComponent().appendingPathComponent(url.lastPathComponent + ".corrupt-" + stamp())
+                try? data.write(to: copy, options: .atomic)
+                NSLog("USER DATA %@: %d of %d entries unreadable; the file was copied to %@",
+                      url.lastPathComponent, items.count - values.count, items.count, copy.lastPathComponent)
+            }
+            return values
+        } catch {
+            quarantine(file: url, error: error)
+            return nil
+        }
+    }
+}
+
+// MARK: - Typed amounts
+
+/// A money or quantity amount as a person types it, on any keyboard: Western, Arabic-Indic or
+/// Persian digits, the Arabic decimal and thousands marks (U+066B, U+066C), and either convention
+/// for the two separators. The calculators kept "any numeric character" and then handed Arabic-Indic
+/// digits to `Double(_:)`, which read them as nothing (every field 0), and a pasted "1.234,56" came
+/// out as 1.23456, a zakah a thousand times too low (Quality Guide A11).
+enum TypedAmount {
+    private static let localeFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.locale = .autoupdatingCurrent
+        return formatter
+    }()
+    private static let lock = NSLock()
+
+    static func parse(_ text: String) -> Double {
+        var plain = text.normalizingArabicIndicDigitsToWestern
+        plain = plain.replacingOccurrences(of: "\u{066B}", with: ".")      // Arabic decimal separator
+        plain = plain.replacingOccurrences(of: "\u{066C}", with: ",")      // Arabic thousands separator
+        plain = plain.replacingOccurrences(of: "\u{060C}", with: ",")      // Arabic comma
+        let cleaned = String(plain.unicodeScalars.filter {
+            ("0"..."9").contains($0) || $0 == "." || $0 == ","
+        }.map(Character.init))
+        guard cleaned.contains(where: \.isNumber) else { return 0 }
+
+        // The device's own convention first (a German "1.234,56", an American "1,234.56").
+        lock.lock()
+        let localized = localeFormatter.number(from: cleaned)?.doubleValue
+        lock.unlock()
+        if let localized, localized.isFinite { return localized }
+
+        // Otherwise the LAST separator is the decimal one when both appear; a lone comma is decimal
+        // only before one or two digits ("1,5"), a lone repeated separator is grouping ("1.000.000").
+        let dots = cleaned.filter { $0 == "." }.count
+        let commas = cleaned.filter { $0 == "," }.count
+        var normalized = cleaned
+        if dots > 0, commas > 0 {
+            let decimal: Character = cleaned.lastIndex(of: ".")! > cleaned.lastIndex(of: ",")! ? "." : ","
+            let grouping: Character = decimal == "." ? "," : "."
+            normalized = cleaned.replacingOccurrences(of: String(grouping), with: "")
+                .replacingOccurrences(of: String(decimal), with: ".")
+        } else if commas > 0 {
+            let tail = cleaned.split(separator: ",", omittingEmptySubsequences: false).last ?? ""
+            normalized = commas == 1 && tail.count <= 2
+                ? cleaned.replacingOccurrences(of: ",", with: ".")
+                : cleaned.replacingOccurrences(of: ",", with: "")
+        } else if dots > 1 {
+            normalized = cleaned.replacingOccurrences(of: ".", with: "")
+        }
+        guard let value = Double(normalized), value.isFinite else { return 0 }
+        return value
+    }
+}
+
+// MARK: - The dotless rasm
+
+/// The ONE table behind Hide Arabic Dots: the string transform (`String.removingArabicDots`) and the
+/// tajweed projection (`TajweedStore.dotlessArabicScalar`) both map through it, so they can never
+/// drift apart. Every entry is one BMP scalar to one BMP scalar: length-preserving by construction.
+///
+/// Noon maps to U+06BA (not U+066E like ba/ta/tha): in the early rasm a FINAL noon keeps its deep
+/// bowl while ba/ta/tha finals stay flat, and U+06BA is exactly that skeleton, a bowl in isolated
+/// and final position and a tooth elsewhere. The seated hamzas lose their seat's hamza, the alef
+/// forms (hamza above or below, madda, wasla) become a bare alef, ta marbuta becomes ha.
+enum ArabicRasm {
+    static func dotless(_ scalar: Unicode.Scalar) -> Unicode.Scalar {
+        switch scalar.value {
+        case 0x0623, 0x0625, 0x0622, 0x0671: return "\u{0627}"
+        case 0x0624, 0x0626: return "\u{0621}"
+        case 0x0628, 0x062A, 0x062B: return "\u{066E}"
+        case 0x0646: return "\u{06BA}"
+        case 0x064A: return "\u{0649}"
+        case 0x062C, 0x062E: return "\u{062D}"
+        case 0x0630: return "\u{062F}"
+        case 0x0632: return "\u{0631}"
+        case 0x0634: return "\u{0633}"
+        case 0x0636: return "\u{0635}"
+        case 0x0638: return "\u{0637}"
+        case 0x063A: return "\u{0639}"
+        case 0x0641: return "\u{06A1}"
+        case 0x0642: return "\u{066F}"
+        case 0x0629: return "\u{0647}"
+        default: return scalar
+        }
+    }
+}
+
 // MARK: - App identifiers
 /// Central place for reverse-DNS strings and the App Group name.
 /// When you change these, update `Resources/Entitlements-Main.entitlements`,
@@ -329,9 +523,13 @@ enum AccentColor: String, CaseIterable, Identifiable {
     /// complication reads the App Group mirror the app writes on every change, so painting `.custom`
     /// no longer costs the extension the whole `Settings.init` (three location decodes, ~240 stored
     /// properties) for one string. Read once per extension process - it is a short-lived one.
-    private static let extensionCustomHex: String = {
-        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?.string(forKey: "customAccentColorHex") ?? "34C759"
-    }()
+    /// Read from the App Group on every use, not once per process: WidgetKit reuses an extension
+    /// process across reloads, and a cached hex kept painting the previous custom accent (P11).
+    /// (The defaults read is served from memory; `cachedCustomColor` still memoizes the parse.)
+    private static let appGroupStore = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
+    private static var extensionCustomHex: String {
+        appGroupStore?.string(forKey: "customAccentColorHex") ?? "34C759"
+    }
     private static var customHexForThisProcess: String {
         Settings.isAppProcess ? Settings.shared.customAccentColorHex : extensionCustomHex
     }
@@ -718,6 +916,24 @@ extension String {
         unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) || (0x0750...0x077F).contains($0.value) || (0x08A0...0x08FF).contains($0.value) }
     }
 
+    /// Latin letters with accents folded to their plain letters, and the transliteration marks for 'ayn
+    /// and hamza dropped: "Sunan Abī Dāwūd" reads "Sunan Abi Dawud", "Ṣaḥīḥ" reads "Sahih", "Jāmiʿ"
+    /// reads "Jami". References and names are often written, or pasted, in academic transliteration,
+    /// while every book name, alias and translation the searches match against is spelled plainly
+    /// (Abu, 2026-09-29: "allow me to search this up with diacritics, so strip it"). Arabic script, and
+    /// everything else outside the Latin blocks, passes through untouched: the Arabic folds decide what
+    /// their own marks mean, and some of them (hamza) have to keep them. See `LatinFold`.
+    var foldingLatinDiacritics: String {
+        // Most text has nothing to fold; say so without building a copy.
+        guard unicodeScalars.contains(where: LatinFold.affects) else { return self }
+        var out = String.UnicodeScalarView()
+        out.reserveCapacity(unicodeScalars.count)
+        for scalar in unicodeScalars where !LatinFold.isDropped(scalar) {
+            out.append(LatinFold.base(scalar) ?? scalar)
+        }
+        return String(out)
+    }
+
     var normalizingArabicIndicDigitsToWestern: String {
         let arabicIndicZero: UInt32 = 0x0660
         let easternArabicIndicZero: UInt32 = 0x06F0
@@ -914,19 +1130,19 @@ extension String {
         return dropped == self ? [self] : [self, dropped]
     }
 
-    /// Noon maps to U+06BA (not U+066E like ba/ta/tha): in the early rasm a FINAL noon keeps its
-    /// deep bowl while ba/ta/tha finals stay flat, and U+06BA is exactly that skeleton - bowl in
-    /// isolated/final position, tooth elsewhere. Must stay in lockstep with `dotlessArabicScalar`
-    /// (QuranData.swift), the scalar-level twin the tajweed projection uses.
+    /// The text with every dotted letter swapped for its dotless skeleton (`ArabicRasm.dotless`),
+    /// scalar by scalar: the harakat stay where they are and the UTF-16 length never changes.
+    ///
+    /// It used to map whole Characters, which only matched a letter with no mark on it: with the
+    /// tashkeel shown, 110,383 of the Hafs text's 124,850 dotted letters kept their dots, and every
+    /// alef + maddah (U+0627 U+0653, canonically equal to the key "آ") collapsed to a bare alef,
+    /// deleting the maddah 2,872 times and shortening the string, which is what crashed page mode
+    /// (Quality Guide C1, A1).
     var removingArabicDots: String {
-        let dotlessMap: [Character: Character] = [
-            "أ": "ا", "إ": "ا", "ؤ": "ء", "ئ": "ء",
-            "آ": "ا", "ٱ": "ا", "ى": "ى",
-            "ب": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ں", "ي": "ى",
-            "ج": "ح", "خ": "ح", "ذ": "د", "ز": "ر", "ش": "س", "ض": "ص",
-            "ظ": "ط", "غ": "ع", "ف": "ڡ", "ق": "ٯ", "ة": "ه"
-        ]
-        return String(map { dotlessMap[$0] ?? $0 })
+        var scalars = String.UnicodeScalarView()
+        scalars.reserveCapacity(unicodeScalars.count)
+        for scalar in unicodeScalars { scalars.append(ArabicRasm.dotless(scalar)) }
+        return String(scalars)
     }
     
     func removeDiacriticsFromLastLetter() -> String {
@@ -1050,34 +1266,89 @@ enum SpellingFold {
         return all.count > 1 ? all.filter { !articles.contains($0) } : all
     }
 
+    /// `foldWord(_:keepVowels: true)` with each vowel run kept as its CLASS instead of "a", for the
+    /// as-you-type tier: a is A; i and y are I; o, u and w are U; e is E, which is either a or i
+    /// (Rehman, Ebrahim). A run is classed by its first letter ("ou" is U, "ai" is A). One symbol
+    /// per symbol of the key, so a prefix of one is a prefix of the other.
+    fileprivate static func classedWord(_ word: String) -> String {
+        var folded = word
+        for (from, to) in consonantFolds {
+            folded = folded.replacingOccurrences(of: from, with: to)
+        }
+        var out = ""
+        var previous: Character?
+        var inRun = false
+        for (index, character) in folded.enumerated() {
+            let isVowel = vowels.contains(character) || ((character == "y" || character == "w") && index > 0)
+            if isVowel {
+                if inRun { continue }
+                inRun = true
+                let symbol: Character
+                switch character {
+                case "a": symbol = "A"
+                case "e": symbol = "E"
+                case "i", "y": symbol = "I"
+                default: symbol = "U"
+                }
+                out.append(symbol)
+                previous = symbol
+            } else {
+                inRun = false
+                if character == previous { continue }
+                previous = character
+                out.append(character)
+            }
+        }
+        // The key's closing-h rule: a final h after a vowel is written by some and not others.
+        if out.count > 2, out.hasSuffix("h"), let vowel = out.dropLast().last, "AEIU".contains(vowel) {
+            out.removeLast()
+        }
+        return out
+    }
+
+    /// Whether `typed` is the start of `name`, both classed: consonants must be equal and vowels of
+    /// one class, except that E meets A or I.
+    fileprivate static func startsClassed(_ name: String, with typed: String) -> Bool {
+        guard typed.count <= name.count else { return false }
+        for (a, b) in zip(typed, name) where a != b {
+            guard (a == "E" && (b == "A" || b == "I")) || (b == "E" && (a == "A" || a == "I")) else { return false }
+        }
+        return true
+    }
+
     /// Everything a query could be the start of, precomputed per name: each word, and the run of
     /// words from each word onward glued together (so "abdelbaset" meets "Abdul Basit").
     struct Entry: Equatable {
         fileprivate let keyed: [String]
         fileprivate let skeletons: [String]
+        /// The keyed forms with their vowels classed (`classedWord`), for the prefix tier only.
+        fileprivate let classed: [String]
 
         init(names: [String]) {
             var keyed = Set<String>()
             var skeletons = Set<String>()
-            func forms(of name: String, keepVowels: Bool) -> [String] {
+            var classed = Set<String>()
+            func forms(of name: String, _ fold: (String) -> String) -> [String] {
                 let raw = SpellingFold.nameWords(name)
-                let parts = raw.map { SpellingFold.foldWord($0, keepVowels: keepVowels) }
+                let parts = raw.map(fold)
                 var out = parts.indices.flatMap { [parts[$0], parts[$0...].joined()] }
                 // An article glued onto the word ("Alafasy"): also reachable without it ("Afasy").
                 for (index, word) in raw.enumerated() where word.count >= 6 && (word.hasPrefix("al") || word.hasPrefix("el")) {
-                    let bare = SpellingFold.foldWord(String(word.dropFirst(2)), keepVowels: keepVowels)
+                    let bare = fold(String(word.dropFirst(2)))
                     out.append(bare)
                     out.append(([bare] + parts[(index + 1)...]).joined())
                 }
                 return out.filter { $0.count >= 2 }
             }
             for name in names {
-                keyed.formUnion(forms(of: name, keepVowels: true))
-                skeletons.formUnion(forms(of: name, keepVowels: false))
+                keyed.formUnion(forms(of: name) { SpellingFold.foldWord($0, keepVowels: true) })
+                skeletons.formUnion(forms(of: name) { SpellingFold.foldWord($0, keepVowels: false) })
+                classed.formUnion(forms(of: name, SpellingFold.classedWord))
             }
             // Sorted: a Set's order is not stable, and rows that hold an entry compare with `==`.
             self.keyed = keyed.sorted()
             self.skeletons = skeletons.sorted()
+            self.classed = classed.sorted()
         }
     }
 
@@ -1085,6 +1356,9 @@ enum SpellingFold {
     struct Query {
         fileprivate let keyed: [String]
         fileprivate let skeletons: [String]
+        fileprivate let classed: [String]
+        /// Letters typed, all words together: a long query whose skeleton is two letters says little.
+        fileprivate let letters: Int
 
         /// `nil` when the text has nothing foldable to say (digits only, Arabic script, too short).
         init?(_ text: String) {
@@ -1117,13 +1391,15 @@ enum SpellingFold {
                 }
                 return readings
             }
-            func fold(_ keepVowels: Bool) -> [String] {
+            func fold(_ word: (String) -> String) -> [String] {
                 var seen = Set<String>()
-                return forms.map { $0.map { SpellingFold.foldWord($0, keepVowels: keepVowels) }.joined() }
+                return forms.map { $0.map(word).joined() }
                     .filter { $0.count >= 2 && seen.insert($0).inserted }
             }
-            keyed = fold(true)
-            skeletons = fold(false)
+            keyed = fold { SpellingFold.foldWord($0, keepVowels: true) }
+            skeletons = fold { SpellingFold.foldWord($0, keepVowels: false) }
+            classed = fold(SpellingFold.classedWord)
+            letters = parts.joined().count
             guard !keyed.isEmpty || !skeletons.isEmpty else { return nil }
         }
     }
@@ -1134,17 +1410,24 @@ enum SpellingFold {
     }
 
     static func strength(of query: Query, in entry: Entry) -> Strength? {
-        func test(_ needles: [String], _ haystack: [String], exact: Strength, prefix: Strength) -> Strength? {
-            var best: Strength?
-            for needle in needles {
-                if haystack.contains(needle) { return exact }
-                // A prefix this short would be the start of everything.
-                if needle.count >= 3, haystack.contains(where: { $0.hasPrefix(needle) }) { best = prefix }
-            }
-            return best
+        if query.keyed.contains(where: entry.keyed.contains) { return .keyExact }
+        // The as-you-type tier compares vowels by class. With every vowel read as "a", "musa" was
+        // the start of al-Masad, al-Mathani and al-Masabih, so a prophet's name listed five surahs
+        // it has nothing to do with. The exact tiers stay vowel-blind: Rahmaan IS Rahman.
+        // A prefix this short would be the start of everything.
+        if query.classed.contains(where: { typed in
+            typed.count >= 3 && entry.classed.contains { SpellingFold.startsClassed($0, with: typed) }
+        }) {
+            return .keyPrefix
         }
-        return test(query.keyed, entry.keyed, exact: .keyExact, prefix: .keyPrefix)
-            ?? test(query.skeletons, entry.skeletons, exact: .skeletonExact, prefix: .skeletonPrefix)
+        var best: Strength?
+        for needle in query.skeletons {
+            // Two consonants are all "ayyub" and "abu" have in common once the vowels go: a
+            // skeleton that short only counts for a query about as short.
+            if entry.skeletons.contains(needle), needle.count >= 3 || query.letters <= 3 { return .skeletonExact }
+            if needle.count >= 3, entry.skeletons.contains(where: { $0.hasPrefix(needle) }) { best = .skeletonPrefix }
+        }
+        return best
     }
 
     /// The items the fold finds, best tier only: when some name IS the query once folded, a merely
@@ -1292,7 +1575,7 @@ extension EnvironmentValues {
 /// marks sit at the hand-offs the launch is built from - stores ready, Quran tab settled, warm, finale,
 /// reveal - so a session can read where a cold launch spends its time instead of guessing from sleeps.
 enum LaunchClock {
-    static let start = Date()
+    nonisolated(unsafe) private(set) static var start = Date()
     static func elapsedMS() -> Int { Int(Date().timeIntervalSince(start) * 1000) }
     #if DEBUG
     static let enabled = ProcessInfo.processInfo.arguments.contains("-launchTiming")
@@ -1300,8 +1583,52 @@ enum LaunchClock {
         guard enabled else { return }
         NSLog("LAUNCH TIMING %@ +%d ms", label, elapsedMS())
     }
+    /// Called from `didFinishLaunching`, which iOS never prewarms: when the app struct was initialized
+    /// long before it (iOS prewarming ran the process ahead of the tap; one run read "stores ready
+    /// +67,517 ms"), the clock restarts here and says so, so every later mark is from the real launch
+    /// (Quality Guide T9). A normal launch reaches this about 150 ms after init and keeps its start.
+    static func rebaseIfPrewarmed() {
+        guard enabled else { return }
+        let early = elapsedMS()
+        guard early > 1_000 else { return }
+        start = Date()
+        NSLog("LAUNCH TIMING rebased at did finish launching: the app was prewarmed %d ms earlier +0 ms", early)
+    }
+    private static var marked: Set<String> = []
+    private static var stallObserver: CFRunLoopObserver?
+    /// Logs every main run-loop iteration over 40 ms in the first 10 s: "stall <from>-<to> ms".
+    /// With the marks, says what held the main thread between two of them.
+    static func installStallWatch() {
+        guard enabled, stallObserver == nil else { return }
+        var last = 0
+        var lastActivity = ""
+        stallObserver = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.allActivities.rawValue, true, 0) { _, activity in
+            let now = elapsedMS()
+            guard now < 10_000 else { return }
+            if last > 0, now - last > 40 {
+                NSLog("LAUNCH TIMING stall %d-%d ms (%d) after %@", last, now, now - last, lastActivity)
+            }
+            last = now
+            switch activity {
+            case .entry: lastActivity = "entry"
+            case .beforeTimers: lastActivity = "beforeTimers"
+            case .beforeSources: lastActivity = "beforeSources"
+            case .beforeWaiting: lastActivity = "beforeWaiting"
+            case .afterWaiting: lastActivity = "afterWaiting"
+            case .exit: lastActivity = "exit"
+            default: lastActivity = "other"
+            }
+        }
+        CFRunLoopAddObserver(CFRunLoopGetMain(), stallObserver, .commonModes)
+    }
+    /// `mark` the first time only (for a body, which runs again).
+    static func markOnce(_ label: String) {
+        guard enabled, marked.insert(label).inserted else { return }
+        mark(label)
+    }
     #else
     @inline(__always) static func mark(_ label: String) {}
+    @inline(__always) static func rebaseIfPrewarmed() {}
     #endif
 }
 
@@ -1402,10 +1729,16 @@ enum MemoryFootprint {
 #if canImport(UIKit)
 /// `UIFont(name:size:)` resolves the face through the font registry every call; the mushaf composer
 /// asked for it ~450 times per page fit and the word-by-word layout once per cell (Phase 5 step 11).
-/// Keyed by name and size, thread-safe, never evicted (a few dozen entries at most).
+/// Keyed by name and exact size (a rounded key would hand the word-by-word layout a font a hair off the
+/// size SwiftUI draws the same word at), thread-safe.
+///
+/// Bounded: each page fit's bisection adds about a hundred sizes that are never asked for again, and
+/// nothing evicted them (Quality Guide F7). A full cache starts over, and a memory warning purges it
+/// (`MemoryTrim`).
 enum QuranFontCache {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var fonts: [String: UIFont] = [:]
+    private static let capacity = 600
 
     static func font(name: String, size: CGFloat) -> UIFont? {
         let key = "\(name)|\(size)"
@@ -1413,8 +1746,15 @@ enum QuranFontCache {
         if let hit = fonts[key] { lock.unlock(); return hit }
         lock.unlock()
         guard let font = UIFont(name: name, size: size) else { return nil }
-        lock.lock(); fonts[key] = font; lock.unlock()
+        lock.lock()
+        if fonts.count >= capacity { fonts.removeAll(keepingCapacity: true) }
+        fonts[key] = font
+        lock.unlock()
         return font
+    }
+
+    static func purge() {
+        lock.lock(); fonts.removeAll(); lock.unlock()
     }
 }
 
@@ -1536,4 +1876,66 @@ enum PackTrace {
             }
         }
     }
+}
+
+/// The Latin half of search folding: accented letters to their plain letters, and the marks
+/// transliteration uses for 'ayn and hamza dropped. Scalar by scalar, so a byte-level fold (the
+/// Encyclopedia's `foldEnglish`) and the String one (`String.foldingLatinDiacritics`) agree exactly.
+/// Only Latin-1 Supplement, Latin Extended-A/B, Latin Extended Additional, the four modifier marks and
+/// the combining accents are touched; Arabic script never is. The hadith packs carry the same table,
+/// built into their search text by `HadithFold.english` (a copy from Hadith-JSON-Engine, so it cannot
+/// call this); UnitTests/SearchFoldTests.swift holds the two to one answer per scalar.
+enum LatinFold {
+    /// ʻ ʼ ʾ ʿ, the 'ayn and hamza marks of academic transliteration ("Jāmiʿ", "Nasāʾī"), and the
+    /// combining accents U+0300-036F, which is how a pasted "ā" arrives when it was typed decomposed.
+    static func isDropped(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x02BB, 0x02BC, 0x02BE, 0x02BF, 0x0300...0x036F: return true
+        default: return false
+        }
+    }
+
+    /// The plain letter for an accented Latin letter ("ā" -> "a", "Ḥ" -> "H"), or nil.
+    static func base(_ scalar: Unicode.Scalar) -> Unicode.Scalar? {
+        switch scalar.value {
+        case 0x00C0...0x024F, 0x1E00...0x1EFF: return table[scalar.value]
+        default: return nil
+        }
+    }
+
+    /// Whether folding changes this scalar at all: the fast path's test.
+    static func affects(_ scalar: Unicode.Scalar) -> Bool {
+        isDropped(scalar) || base(scalar) != nil
+    }
+
+    /// Every scalar the fold changes and what it becomes (nil: dropped), for a fold that runs from a
+    /// scalar table of its own (`Settings.cleanSearch`).
+    static var scalarMap: [Unicode.Scalar: Unicode.Scalar?] {
+        var map: [Unicode.Scalar: Unicode.Scalar?] = [:]
+        for (value, plain) in table {
+            if let scalar = Unicode.Scalar(value) { map.updateValue(plain, forKey: scalar) }
+        }
+        for value in [UInt32(0x02BB), 0x02BC, 0x02BE, 0x02BF] + Array(UInt32(0x0300)...0x036F) {
+            if let scalar = Unicode.Scalar(value) { map.updateValue(nil, forKey: scalar) }
+        }
+        return map
+    }
+
+    /// Each accented letter's base letter, from its canonical decomposition (kept only when that
+    /// base is plain ASCII), plus the few letters romanizations use that have none. Built once.
+    private static let table: [UInt32: Unicode.Scalar] = {
+        var table: [UInt32: Unicode.Scalar] = [:]
+        for value in Array(UInt32(0x00C0)...0x024F) + Array(UInt32(0x1E00)...0x1EFF) {
+            guard let scalar = Unicode.Scalar(value),
+                  let first = String(scalar).decomposedStringWithCanonicalMapping.unicodeScalars.first,
+                  first.value < 0x80, first != scalar, first.properties.isAlphabetic else { continue }
+            table[value] = first
+        }
+        let undecomposed: [(UInt32, Unicode.Scalar)] = [
+            (0x0131, "i"), (0x0141, "L"), (0x0142, "l"), (0x00D8, "O"), (0x00F8, "o"),
+            (0x0110, "D"), (0x0111, "d"), (0x0126, "H"), (0x0127, "h"),
+        ]
+        for (value, plain) in undecomposed { table[value] = plain }
+        return table
+    }()
 }

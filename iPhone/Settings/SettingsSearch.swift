@@ -436,6 +436,24 @@ extension SettingsSearchEntry {
     /// diacritic-insensitive), and results order by WHERE they matched - title prefix first, then
     /// title, then path, then keywords-only - so "not" puts Notifications above rows that merely
     /// mention it. Ties keep the index's hand-authored order.
+    /// Each entry's folded title, path and keywords, folded once per entry: `rank` runs in body passes,
+    /// and it re-folded every entry's three strings on each one (Quality Guide F10).
+    private static let foldLock = NSLock()
+    nonisolated(unsafe) private static var foldedByID: [String: (title: String, path: String, keywords: String)] = [:]
+
+    private static func folded(_ entry: SettingsSearchEntry) -> (title: String, path: String, keywords: String) {
+        let key = entry.id + "|" + entry.keywords
+        foldLock.lock()
+        if let hit = foldedByID[key] { foldLock.unlock(); return hit }
+        foldLock.unlock()
+        func fold(_ text: String) -> String {
+            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        }
+        let value = (fold(entry.title), fold(entry.path), fold(entry.keywords))
+        foldLock.lock(); foldedByID[key] = value; foldLock.unlock()
+        return value
+    }
+
     static func rank(_ entries: [SettingsSearchEntry], query rawQuery: String) -> [SettingsSearchEntry] {
         let query = rawQuery
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -443,14 +461,8 @@ extension SettingsSearchEntry {
         guard !query.isEmpty else { return [] }
         let terms = query.split(separator: " ").map(String.init)
 
-        func fold(_ text: String) -> String {
-            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        }
-
         let scored: [(entry: SettingsSearchEntry, score: Int, order: Int)] = entries.enumerated().compactMap { order, entry in
-            let title = fold(entry.title)
-            let path = fold(entry.path)
-            let keywords = fold(entry.keywords)
+            let (title, path, keywords) = folded(entry)
             var score = 0
             for term in terms {
                 if title.hasPrefix(term) { score += 40 }
@@ -502,6 +514,25 @@ enum SettingsSearchDestinationView {
             if let area { TipsView(area: area) } else { TipsHubView() }
         case .credits: CreditsView(presentedAsSheet: false)
         case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
+        }
+    }
+
+    /// The same destinations as the ROOT of a stack of their own: a sub-screen is shown by itself,
+    /// never behind its settings root. For a sheet that is about one page (a Need a Hand? door), where
+    /// the root flashing past and the push a beat later only get in the way, and a back button would
+    /// lead to a whole settings area nobody asked for. Everything else maps as `view(for:)` does.
+    @ViewBuilder
+    static func page(for destination: SettingsSearchEntry.Destination) -> some View {
+        switch destination {
+        case .travelingMode: SettingsAdhanView(showNotifications: false, standalonePage: .travelingMode)
+        case .prayerCalculation: SettingsAdhanView(showNotifications: false, standalonePage: .prayerCalculation)
+        case .skyColors: SkyColorsView()
+        case .prayerPage(.skyColors): SkyColorsView()
+        case .prayerPage(let page): SettingsAdhanView(showNotifications: false, standalonePage: page)
+        case .quranPage(let page): SettingsQuranView(standalonePage: page)
+        case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, standalonePage: page)
+        case .islamPage(let page): SettingsIslamView(standalonePage: page)
+        default: view(for: destination)
         }
     }
 }

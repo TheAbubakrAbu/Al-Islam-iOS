@@ -208,6 +208,15 @@ final class WordOfDayStore: @unchecked Sendable {
 /// word in the reader's own face, its gloss - and no transliteration-and-count line (Abu, 2026-09-07:
 /// it made every other tile taller for nothing).
 struct SummaryWordTile: View, Equatable {
+    /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
+    /// else re-renders it when the user's text size changes (Quality Guide G9).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// A text style's point size at the current Dynamic Type size (see `dynamicTypeSize`).
+    private func textStyleSize(_ style: UIFont.TextStyle) -> CGFloat {
+        textStylePointSize(style, at: dynamicTypeSize)
+    }
+
     static let title = "Word of the Day"
 
     let word: WordOfDayEntry
@@ -268,7 +277,7 @@ struct SummaryWordTile: View, Equatable {
 
                 if let arabic {
                     Text(arabic)
-                        .font(Font.arabic(fontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.2))
+                        .font(Font.arabic(fontName, size: textStyleSize(.subheadline) * 1.2))
                         .arabicFontDesign(custom: customFace)
                         .foregroundColor(.primary)
                         .lineLimit(1)

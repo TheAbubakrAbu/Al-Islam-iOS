@@ -190,6 +190,32 @@ struct AyahTafsirSheet: View {
         return clampedLower...clampedUpper
     }
 
+    /// Two-level author choice: language first, then the three authors of that language (six
+    /// segments in one control were unreadably cramped). Pinned under the bar (see `body`).
+    private var editionPickers: some View {
+        VStack(spacing: 8) {
+            Picker("Language", selection: languageBinding) {
+                Text("English").tag(false)
+                Text("العَرَبِيَّة").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            Picker("Tafsir", selection: selectedAuthorBinding) {
+                ForEach(selectedAuthor.isArabic ? TafsirAuthor.arabicCases : TafsirAuthor.englishCases) { author in
+                    Text(author.shortTitle).tag(author)
+                }
+            }
+            .pickerStyle(.segmented)
+            // No `.animation(value: selectedAuthor)` here: an animated selection change fights the
+            // segmented control's own slide (slide, snap back, slide again; Quality Guide G8).
+            .onChange(of: selectedAuthor) { _ in settings.hapticFeedback() }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .overlay(Divider(), alignment: .bottom)
+    }
+
     var body: some View {
         NavigationView {
             // The ScrollView is ALWAYS mounted - the loading skeleton overlays it instead of replacing
@@ -201,23 +227,6 @@ struct AyahTafsirSheet: View {
                         VStack(alignment: .leading, spacing: 16) {
                             noticeCard
                             arabicAyahsCard
-
-                            // Two-level author choice: language first, then the three authors of that
-                            // language - six segments in one control were unreadably cramped.
-                            Picker("Language", selection: languageBinding) {
-                                Text("English").tag(false)
-                                Text("العَرَبِيَّة").tag(true)
-                            }
-                            .pickerStyle(.segmented)
-
-                            Picker("Tafsir", selection: selectedAuthorBinding) {
-                                ForEach(selectedAuthor.isArabic ? TafsirAuthor.arabicCases : TafsirAuthor.englishCases) { author in
-                                    Text(author.shortTitle).tag(author)
-                                }
-                            }
-                            .pickerStyle(.segmented)
-                            .animation(.easeInOut, value: selectedAuthor)
-                            .onChange(of: selectedAuthor) { _ in settings.hapticFeedback() }
 
                             if let tafsirText = selectedTafsirText {
                                 VStack(alignment: selectedAuthor.isArabic ? .trailing : .leading, spacing: 12) {
@@ -272,6 +281,11 @@ struct AyahTafsirSheet: View {
                         }
                         .padding()
                     }
+                    // The edition pickers ride as a safe-area inset ABOVE the scroll view, not as its
+                    // first rows: a reader deep in a long tafsir switches language or author without
+                    // scrolling back to the top (Abu, 2026-09-28). Same build as the comparison sheets'
+                    // pinned strips (a material band under the bar, a divider at its foot).
+                    .safeAreaInset(edge: .top, spacing: 0) { editionPickers }
                     .safeAreaInset(edge: .bottom) {
                         if hasActiveSearch {
                             TafsirFindBar(
@@ -535,7 +549,9 @@ private struct SurahInfoSourceChips: View {
                 .padding(.horizontal, 2)
                 .padding(.vertical, 2)
             }
-            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            // Next turn: on appear the strip's chips are not laid out yet, and an immediate scrollTo
+            // left the chosen source uncentred (Quality Guide G12).
+            .onAppear { DispatchQueue.main.async { proxy.scrollTo(selection, anchor: .center) } }
             .onChange(of: selection) { name in
                 withAnimation(.easeInOut) { proxy.scrollTo(name, anchor: .center) }
             }
@@ -669,11 +685,6 @@ struct SurahInfoSheet: View {
                             noticeCard
                             surahHeaderCard
 
-                            if sources.count > 1 {
-                                SurahInfoSourceChips(sources: sources, selection: selectedSourceBinding)
-                                    .onChange(of: selectedSourceName) { _ in settings.hapticFeedback() }
-                            }
-
                             if let source = selectedSource {
                                 let arabic = Self.isArabic(source.contents)
                                 VStack(alignment: arabic ? .trailing : .leading, spacing: 12) {
@@ -714,6 +725,19 @@ struct SurahInfoSheet: View {
                             }
                         }
                         .padding()
+                    }
+                    // The source chips are pinned under the bar, like the tafsir sheet's edition
+                    // pickers: Maududi, Ibn Ashur and the outlines are long reads, and switching
+                    // between them should never mean scrolling back to the top (Abu, 2026-09-28).
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        if sources.count > 1 {
+                            SurahInfoSourceChips(sources: sources, selection: selectedSourceBinding)
+                                .onChange(of: selectedSourceName) { _ in settings.hapticFeedback() }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.ultraThinMaterial)
+                                .overlay(Divider(), alignment: .bottom)
+                        }
                     }
                     .safeAreaInset(edge: .bottom) {
                         if hasActiveSearch {

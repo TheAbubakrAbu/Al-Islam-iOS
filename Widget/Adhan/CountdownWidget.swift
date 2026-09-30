@@ -216,7 +216,7 @@ struct CountdownEntryView: View {
 }
 
 struct CountdownWidget: Widget {
-    let kind: String = "CountdownWidget"
+    let kind: String = AdhanWidgetKind.CountdownWidget.rawValue
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in

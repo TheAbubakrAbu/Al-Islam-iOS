@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// A text style's point size, taking the Dynamic Type size so the caller has read it: a view that bakes
+/// the size into a fixed font must depend on `dynamicTypeSize`, or a text-size change never re-renders it
+/// (Quality Guide G9). `preferredFont` itself reads the app's current size.
+func textStylePointSize(_ style: UIFont.TextStyle, at dynamicTypeSize: DynamicTypeSize) -> CGFloat {
+    _ = dynamicTypeSize
+    return UIFont.preferredFont(forTextStyle: style).pointSize
+}
+
 /// Measured widths for the fixed-format number badges ("100", "10:100"), keyed by template + text style
 /// + the resolved font's point size (which tracks Dynamic Type). The measurement - `UIFont.preferredFont`
 /// plus an `NSString.size` layout pass - used to run in every row body; the answer only changes when the
@@ -41,6 +49,15 @@ struct TinyProgressBar: View {
 }
 
 struct SurahRow: View, Equatable {
+    /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
+    /// else re-renders it when the user's text size changes (Quality Guide G9).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// A text style's point size at the current Dynamic Type size (see `dynamicTypeSize`).
+    private func textStyleSize(_ style: UIFont.TextStyle) -> CGFloat {
+        textStylePointSize(style, at: dynamicTypeSize)
+    }
+
     @ObservedObject var settings = Settings.shared
     
     let surah: Surah
@@ -391,7 +408,7 @@ struct SurahRow: View, Equatable {
                 HighlightedSnippet(
                     source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
                     term: searchQuery,
-                    font: Font.arabic(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
+                    font: Font.arabic(fontArabic, size: textStyleSize(.title3)),
                     accent: accentColor.color,
                     fg: .primary,
                     // HighlightedSnippet applies its own `.lineLimit` to the inner Text, which would otherwise
@@ -402,7 +419,7 @@ struct SurahRow: View, Equatable {
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
                 Text(surah.idArabic)
-                    .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title1).pointSize))
+                    .font(.custom(Settings.hafsUthmaniFontName, size: textStyleSize(.title1)))
                     .arabicFontDesign(custom: true)
                     .foregroundColor(accentColor.color)
             }
@@ -425,14 +442,14 @@ struct SurahRow: View, Equatable {
             // clear for that overlay. The id now prefixes the transliteration below (e.g. "1: Al-Fatihah").
             HStack(spacing: 4) {
                 Text(surah.idArabic)
-                    .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
+                    .font(.custom(Settings.hafsUthmaniFontName, size: textStyleSize(.title3)))
                     .arabicFontDesign(custom: true)
                     .foregroundColor(accentColor.color)
 
                 HighlightedSnippet(
                     source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
                     term: searchQuery,
-                    font: Font.arabic(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
+                    font: Font.arabic(fontArabic, size: textStyleSize(.title3)),
                     accent: accentColor.color,
                     fg: .primary,
                     lineLimit: 1
@@ -550,6 +567,15 @@ struct SurahRow: View, Equatable {
 }
 
 struct SurahAyahRow: View, Equatable {
+    /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
+    /// else re-renders it when the user's text size changes (Quality Guide G9).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// A text style's point size at the current Dynamic Type size (see `dynamicTypeSize`).
+    private func textStyleSize(_ style: UIFont.TextStyle) -> CGFloat {
+        textStylePointSize(style, at: dynamicTypeSize)
+    }
+
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
@@ -613,8 +639,10 @@ struct SurahAyahRow: View, Equatable {
 
     private func arabicTajweedText() -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
-        let text = ayah.displayArabicText(surahId: surah.id, clean: false)
-        let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
+        // The raw text to paint, and the text on screen (Hide Dots applies with or without Hide
+        // Tashkeel; the store's default follows the same setting).
+        let text = ayah.rawArabicText(surahId: surah.id)
+        let displayText = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
         // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
         // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
@@ -655,6 +683,7 @@ struct SurahAyahRow: View, Equatable {
         return [
             settings.showTajweedColors ? "1" : "0",
             settings.cleanArabicText ? "1" : "0",
+            settings.removeArabicDots ? "1" : "0",
             settings.beginnerMode ? "1" : "0",
             settings.displayQiraah,
             categorySignature
@@ -740,7 +769,7 @@ struct SurahAyahRow: View, Equatable {
                     HighlightedSnippet(
                         source: arabicDisplayText(),
                         term: "",
-                        font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * arabicScale),
+                        font: Font.arabic(settings.quranDisplayFontName, size: textStyleSize(.subheadline) * arabicScale),
                         accent: settings.accentColor.color,
                         fg: .primary,
                         preStyledSource: arabicTajweedText(),
@@ -869,8 +898,10 @@ struct AyahArabicSnippet: View, Equatable {
 
     private func arabicTajweedText() -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
-        let text = ayah.displayArabicText(surahId: surah.id, clean: false)
-        let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
+        // The raw text to paint, and the text on screen (Hide Dots applies with or without Hide
+        // Tashkeel; the store's default follows the same setting).
+        let text = ayah.rawArabicText(surahId: surah.id)
+        let displayText = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
         // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
         // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
@@ -1020,6 +1051,15 @@ struct AyahSearchResultRow: View {
 }
 
 struct AyahSearchRow: View, Equatable {
+    /// Read wherever this view bakes a text style's size into a fixed font (`textStyleSize`): nothing
+    /// else re-renders it when the user's text size changes (Quality Guide G9).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// A text style's point size at the current Dynamic Type size (see `dynamicTypeSize`).
+    private func textStyleSize(_ style: UIFont.TextStyle) -> CGFloat {
+        textStylePointSize(style, at: dynamicTypeSize)
+    }
+
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject private var settings = Settings.shared
@@ -1218,6 +1258,7 @@ struct AyahSearchRow: View, Equatable {
         return [
             settings.showTajweedColors ? "1" : "0",
             settings.cleanArabicText ? "1" : "0",
+            settings.removeArabicDots ? "1" : "0",
             settings.beginnerMode ? "1" : "0",
             settings.displayQiraah,
             categorySignature,
@@ -1403,7 +1444,7 @@ struct AyahSearchRow: View, Equatable {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
-                    font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
+                    font: .custom(searchArabicFontName, size: textStyleSize(.body)),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),
@@ -1477,7 +1518,7 @@ struct AyahSearchRow: View, Equatable {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
-                    font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
+                    font: .custom(searchArabicFontName, size: textStyleSize(.body)),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),

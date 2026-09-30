@@ -69,5 +69,12 @@ struct Widgets: WidgetBundle {
         AyahOfTheDayWidget()
         DailyReminderWidget()
         NameOfAllahWidget()
+        #if os(iOS)
+        // The configurable one: an ayah picked from the bookmarks or typed in (App Intents
+        // configuration, so iOS 17). Home screen small/medium, lock screen rectangular and inline.
+        if #available(iOS 17.0, *) {
+            ChosenAyahWidget()
+        }
+        #endif
     }
 }

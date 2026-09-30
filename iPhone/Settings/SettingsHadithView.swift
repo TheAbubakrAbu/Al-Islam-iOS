@@ -14,6 +14,9 @@ struct SettingsHadithView: View {
     var presentedAsSheet: Bool = true
     /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
     var openPage: SettingsHadithPage? = nil
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
+    /// (HelpDoors.swift), which opens on the page itself instead of this root.
+    var standalonePage: SettingsHadithPage? = nil
     @State private var openRequestedPage = false
     @State private var deepLinkFired = false
 
@@ -25,7 +28,9 @@ struct SettingsHadithView: View {
     #endif
 
     var body: some View {
-        if presentedAsSheet {
+        if let standalonePage {
+            hadithPageDestination(standalonePage)
+        } else if presentedAsSheet {
             NavigationView {
                 settingsList
                     .navigationTitle("Hadith Settings")
@@ -93,6 +98,8 @@ struct SettingsHadithView: View {
     private var settingsList: some View {
         SettingsScopedSearch(scope: .hadith, resolve: resolveSearchDestination) {
             TipsSection(area: .hadith, resolve: resolveSearchDestination)
+            // The Hadith tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+            HelpDoorsSettingsSection(area: .hadith)
 
             Section(header: Text("READING")) {
                 hadithPageLink(.readingView) { readingViewDestination }
@@ -257,6 +264,7 @@ struct SettingsHadithView: View {
 extension SettingsSearchEntry {
     static let hadithEntries: [SettingsSearchEntry] = [
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
+        .init(title: "Need a Hand? on the Hadith Tab", path: "Hadith Settings", keywords: "need a hand help shortcuts questions show hide hadith tab one language arabic english allah red", destination: .hadithSettings),
         .init(title: "Show Hadith Arabic", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic text toggle display", destination: .hadithPage(.arabicText)),
         .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system", destination: .hadithPage(.arabicText)),
         .init(title: "Show Hadith English", path: "Hadith Settings → English Text", keywords: "hadith english translation narrator toggle display", destination: .hadithPage(.englishText)),

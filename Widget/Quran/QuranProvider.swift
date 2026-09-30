@@ -7,6 +7,8 @@ enum QuranWidgetKind {
     case lastListenedSurah
     case lastListenedAyah
     case ayahOfTheDay
+    /// The configurable one (ChosenAyahWidget.swift): its own provider, this shared look.
+    case chosenAyah
 
     var title: String {
         switch self {
@@ -14,6 +16,7 @@ enum QuranWidgetKind {
         case .lastListenedSurah: return "Last Listened Surah"
         case .lastListenedAyah: return "Last Listened Ayah"
         case .ayahOfTheDay: return "Ayah of the Day"
+        case .chosenAyah: return "Chosen Ayah"
         }
     }
 
@@ -23,6 +26,7 @@ enum QuranWidgetKind {
         case .lastListenedSurah: return "play.fill"
         case .lastListenedAyah: return "play.circle"
         case .ayahOfTheDay: return "sparkles"
+        case .chosenAyah: return "bookmark.fill"
         }
     }
 }
@@ -40,6 +44,8 @@ struct QuranWidgetEntry: TimelineEntry {
     var arabicFontName: String? = nil
     /// Tajweed color spans over `primaryText` (Arabic only).
     var arabicColorRuns: [QuranWidgetSnapshot.ColorRun]? = nil
+    /// Where a tap lands (`QuranDeepLink.ayah`); nil opens the app where it last was.
+    var deepLink: URL? = nil
 }
 
 struct QuranWidgetProvider: TimelineProvider {
@@ -48,11 +54,12 @@ struct QuranWidgetProvider: TimelineProvider {
     /// The accent, read from the App Group mirror the app writes on every accent change. Reading it
     /// through `Settings.shared` cost this process the whole `Settings.init` (three location decodes,
     /// ~240 stored properties) to learn one string; `.custom` resolves through the mirrored hex the
-    /// same way. Cached per process: every kind's snapshot and timeline share it.
+    /// same way. Read on each build (a defaults read, served from memory): cached for the process,
+    /// a reused extension kept painting the previous accent (P11).
     private static let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
-    private static let accent: AccentColor = {
+    private static var accent: AccentColor {
         AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
-    }()
+    }
 
     // Placeholder (the redacted skeleton) and the widget-gallery preview must always show representative
     // content so they can never render blank - the app may not have written a snapshot yet (fresh install,
@@ -75,7 +82,7 @@ struct QuranWidgetProvider: TimelineProvider {
             // The day turns over when the app's daily cards do: Fajr from the table the app wrote,
             // else local midnight (via the calendar, not +86,400s: DST days are 23 or 25 hours).
             policy = .after(DailyRollover.nextRollover(after: Date(), fajrByDay: QuranWidgetStore.load()?.fajrByDay))
-        case .lastReadAyah, .lastListenedSurah, .lastListenedAyah:
+        case .lastReadAyah, .lastListenedSurah, .lastListenedAyah, .chosenAyah:
             policy = .never
         }
         completion(Timeline(entries: [entry], policy: policy))
@@ -99,7 +106,7 @@ struct QuranWidgetProvider: TimelineProvider {
                 tertiaryText: "00:42 / 01:30",
                 accentColor: accent
             )
-        case .lastReadAyah, .lastListenedAyah, .ayahOfTheDay:
+        case .lastReadAyah, .lastListenedAyah, .ayahOfTheDay, .chosenAyah:
             return QuranWidgetEntry(
                 date: Date(),
                 kind: kind,
@@ -134,6 +141,9 @@ struct QuranWidgetProvider: TimelineProvider {
                 return snapshot.ayahOfTheDay
             }()
             return makeAyahEntry(accent: accent, card: appCard ?? ayahOfTheDayCard(from: snapshot))
+        case .chosenAyah:
+            // Never built here: the Chosen Ayah widget has its own configurable provider.
+            return sampleEntry()
         }
     }
 
@@ -155,7 +165,9 @@ struct QuranWidgetProvider: TimelineProvider {
             tertiaryText: snippet(card.english),
             accentColor: accent,
             arabicFontName: card.fontName,
-            arabicColorRuns: card.colorRuns
+            arabicColorRuns: card.colorRuns,
+            // A tap opens the ayah itself (2026-09-28), for every card that knows where it is from.
+            deepLink: card.surah.flatMap { s in card.ayah.flatMap { a in QuranDeepLink.ayah(surah: s, ayah: a) } }
         )
     }
 
@@ -212,6 +224,17 @@ struct QuranWidgetEntryView: View {
         return false
     }
 
+    /// The one-line family above the lock screen clock (the Chosen Ayah widget offers it): no room
+    /// for Arabic, so it reads "Al-Baqarah 2:255 · <translation>".
+    private var isInlineFamily: Bool {
+        #if os(iOS)
+        if #available(iOSApplicationExtension 16.0, *) {
+            return widgetFamily == .accessoryInline
+        }
+        #endif
+        return false
+    }
+
     /// On iOS 17+ the system applies default content margins (like the Adhan widgets), so we add no extra
     /// padding; on older iOS we pad manually.
     private var contentPadding: CGFloat {
@@ -221,23 +244,37 @@ struct QuranWidgetEntryView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            header
-
-            if isAccessoryRectangularFamily {
-                accessoryBody
+        Group {
+            if isInlineFamily {
+                inlineBody
             } else {
-                regularBody
-            }
+                VStack(alignment: .leading, spacing: 6) {
+                    header
 
-            Spacer(minLength: 0)
+                    if isAccessoryRectangularFamily {
+                        accessoryBody
+                    } else {
+                        regularBody
+                    }
+
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(contentPadding)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(contentPadding)
         // The placeholder entry is already representative sample content, so show it as-is. Left redacted,
         // WidgetKit blurs it into the grey smudge that reads as "this widget is broken".
         .unredacted()
-        .widgetContainerBackground(accessory: isAccessoryRectangularFamily)
+        .widgetContainerBackground(accessory: isAccessoryRectangularFamily || isInlineFamily)
+        // A tap opens the ayah in the app when the entry knows which one it shows; `widgetURL(nil)`
+        // keeps the plain "open the app" tap for the ones that don't.
+        .widgetURL(entry.deepLink)
+    }
+
+    private var inlineBody: some View {
+        let translation = (entry.tertiaryText ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return Text(translation.isEmpty ? entry.title : "\(entry.title) · \(translation)")
     }
 
     private var header: some View {
@@ -257,7 +294,7 @@ struct QuranWidgetEntryView: View {
     private func primaryText(arabicSize: CGFloat, lineLimit: Int) -> some View {
         if let fontName = entry.arabicFontName, !fontName.isEmpty {
             Text(Self.arabicAttributed(entry.primaryText, runs: entry.arabicColorRuns))
-                .font(.custom(fontName, size: arabicSize))
+                .font(.custom(Settings.drawableArabicFontName(fontName), size: arabicSize))
                 .arabicFontDesign(custom: fontName != Settings.systemArabicFontName)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.trailing)
@@ -292,7 +329,9 @@ struct QuranWidgetEntryView: View {
     private var accessoryBody: some View {
         VStack(alignment: .leading, spacing: 2) {
             primaryText(arabicSize: 16, lineLimit: 2)
-            if let secondary = entry.secondaryText {
+            // The second line is the reference for the reading widgets; the Chosen Ayah widget
+            // already names the ayah in its header and puts the note here, or the translation.
+            if let secondary = entry.secondaryText ?? entry.tertiaryText {
                 Text(secondary)
                     .font(.caption2)
                     .foregroundColor(.secondary)

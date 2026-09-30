@@ -110,7 +110,8 @@ extension DateFormatter {
     private static func configuredTimeFormatter(localeIdentifier: String? = nil) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        formatter.timeZone = .current
+        // Auto-updating: `.current` froze the zone of first use into every time string (P1).
+        formatter.timeZone = .autoupdatingCurrent
 
         if let localeIdentifier {
             formatter.locale = Locale(identifier: localeIdentifier)

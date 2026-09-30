@@ -378,10 +378,11 @@ final class HadeethEncStore: @unchecked Sendable {
     // MARK: Folds
 
     /// `IslamArticles.fold` over bytes: ASCII letters lowercased and digits kept, every other ASCII
-    /// byte a space, non-ASCII scalars through the rule itself (`CharacterSet.alphanumerics` after
-    /// lowercasing). The per-scalar `Character` boxing of the String version was most of the 1.6 s
-    /// the folds used to cost. The query folds through this same function, so the two agree byte
-    /// for byte ("-auditPacks" also checks it against the String version over every narration).
+    /// byte a space, Latin accents folded (`LatinFold`), other non-ASCII scalars through the rule
+    /// itself (`CharacterSet.alphanumerics` after lowercasing). The per-scalar `Character` boxing of
+    /// the String version was most of the 1.6 s the folds used to cost. The query folds through this
+    /// same function, so the two agree byte for byte ("-auditPacks" also checks it against the String
+    /// version over every narration).
     static func foldEnglish(_ text: String, into out: inout [UInt8]) {
         for scalar in text.unicodeScalars {
             let value = scalar.value
@@ -391,6 +392,12 @@ final class HadeethEncStore: @unchecked Sendable {
                 case 0x61...0x7A, 0x30...0x39: out.append(UInt8(value))
                 default: out.append(0x20)
                 }
+            } else if LatinFold.isDropped(scalar) {
+                continue
+            } else if let plain = LatinFold.base(scalar) {
+                // Always an ASCII letter, lowercased the way the branch above lowercases one.
+                let byte = UInt8(plain.value)
+                out.append((0x41...0x5A).contains(byte) ? byte + 32 : byte)
             } else {
                 for lowered in String(scalar).lowercased().unicodeScalars {
                     if CharacterSet.alphanumerics.contains(lowered) {

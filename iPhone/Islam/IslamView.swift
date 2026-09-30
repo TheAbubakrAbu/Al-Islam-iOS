@@ -27,6 +27,8 @@ struct IslamView: View {
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
+    /// The Reminder of the Day card's header door, pushed from the List that hosts the card (G2).
+    @State private var reminderDoor: ReminderOfTheDayCard.HeaderDoor?
     /// The resource row a result asked to scroll to ("Scroll To ..."), consumed once the search clears.
     @State private var scrollTarget: String?
     @StateObject private var articleSearch = IslamArticleSearchModel()
@@ -106,6 +108,9 @@ struct IslamView: View {
         case miraclesOfQuran
         case propheciesOfProphet
         case miraclesOfProphets
+        // The case that Islam is true (Abu, 2026-09-29). A full-width banner under the grid, like Ask
+        // AI (`bannerResources`), so the grid keeps its eighteen tiles in rows of three.
+        case provingIslam
         case askAI
 
         /// Screens the door leaves alone. The alphabet, the 99 Names, the inheritance calculator and
@@ -140,6 +145,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "Miracles of the Quran"
             case .propheciesOfProphet: return "Prophecies of the Prophet"
             case .miraclesOfProphets: return "Miracles of the Prophets"
+            case .provingIslam: return "Proving Islam"
             case .journal: return "Islamic Journal"
             }
         }
@@ -164,6 +170,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "sparkle.magnifyingglass"
             case .propheciesOfProphet: return "checkmark.seal"
             case .miraclesOfProphets: return "staroflife"
+            case .provingIslam: return "checkmark.shield"
             case .journal: return "square.and.pencil"
             }
         }
@@ -189,6 +196,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "Signs in creation, science, and history"
             case .propheciesOfProphet: return "What he foretold, and what history did"
             case .miraclesOfProphets: return "The signs given to the prophets, and to him"
+            case .provingIslam: return "The complete case that Islam is true, one line of evidence at a time"
             case .journal: return "Notes from khutbahs, classes, and your reading"
             }
         }
@@ -216,6 +224,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "Miracles of\nthe Quran"
             case .propheciesOfProphet: return "Prophecies of\nthe Prophet"
             case .miraclesOfProphets: return "Miracles of\nthe Prophets"
+            case .provingIslam: return "Proving\nIslam"
             case .journal: return "Islamic\nJournal"
             }
         }
@@ -245,6 +254,7 @@ struct IslamView: View {
             case .howToGuides: return ["how to", "guide", "steps", "wudu", "salah", "ghusl"]
             case .miraclesOfQuran: return ["miracles", "miracle", "science", "scientific", "signs", "creation", "embryology", "astronomy", "cosmology", "universe", "ijaz"]
             case .propheciesOfProphet: return ["prophecy", "prophecies", "foretold", "predicted", "prediction", "future", "signs of the hour", "end times", "fulfilled"]
+            case .provingIslam: return ["proof", "proofs", "prove", "proving", "evidence", "is islam true", "truth of islam", "apologetics", "dawah", "case for islam", "complete case", "provingislam", "fingerprint", "stylometry", "ijaz"]
             case .miraclesOfProphets: return ["miracles", "prophets", "moses", "musa", "jesus", "isa", "abraham", "ibrahim", "salih", "moon", "splitting", "staff", "sea", "proof", "prophethood",
                                               "david", "dawud", "solomon", "sulayman", "jonah", "yunus", "whale", "iron", "jinn", "ants", "birds",
                                               "night journey", "isra", "miraj", "ascension", "aqsa", "cradle", "she-camel", "fire"]
@@ -259,6 +269,9 @@ struct IslamView: View {
         private static let searchBlobs: [IslamDestination: String] = Dictionary(uniqueKeysWithValues: allCases.map {
             ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords).joined(separator: " ")))
         })
+
+        /// The resources the grid draws as full-width banners under its tiles, in this order.
+        static let bannerResources: [IslamDestination] = [.provingIslam, .askAI]
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row).
@@ -301,6 +314,9 @@ struct IslamView: View {
     }
 
     var body: some View {
+        #if DEBUG
+        let _ = LaunchClock.markOnce("islam root: first body")
+        #endif
         navigationContainer
             #if os(iOS)
             // Islam Settings' Text Size, for the whole tab: every resource and article opens inside
@@ -422,7 +438,7 @@ struct IslamView: View {
             // Reminder: the tab opens on what it is for (see HelpDoors.swift).
             HelpDoorsSection(area: .islam)
 
-            ReminderOfTheDaySection()
+            ReminderOfTheDaySection(openDoor: $reminderDoor)
                 .id("reminder")
             #endif
 
@@ -445,6 +461,7 @@ struct IslamView: View {
                 }
             }
             .applyConditionalListStyle()
+            .reminderCardDestination($reminderDoor)
             .navigationTitle("Al-Islam")
             #if DEBUG
             .debugPushDestination(isPresented: $debugOpenArticle) {
@@ -508,7 +525,7 @@ struct IslamView: View {
             #endif
         }
         .onChange(of: searchText) { text in
-            articleSearch.update(query: text, homes: [.pillars, .guides])
+            articleSearch.update(query: text, homes: [.pillars, .guides, .proving])
             if !text.isEmpty { scrollTarget = nil }
         }
         #else
@@ -549,7 +566,7 @@ struct IslamView: View {
 
             IslamArticleSearchSections(
                 query: query,
-                homes: [.pillars, .guides],
+                homes: [.pillars, .guides, .proving],
                 contentHits: articleSearch.contentHits,
                 isSearching: articleSearch.isSearching,
                 showHome: true,
@@ -669,9 +686,10 @@ struct IslamView: View {
             // the full width, with the caption the tiles cannot carry, and sits BELOW the grid
             // (Abu, 2026-09-19: the references are what the tab is for; the assistant is the thing
             // you reach for when they have not answered you). Pulled OUT of `items` so it never
-            // draws twice.
-            let askAI = items.first { $0 == .askAI }
-            let tiles = items.filter { $0 != .askAI }
+            // draws twice. Proving Islam joins it (2026-09-29): a whole library with a sentence to
+            // say, and the nineteenth resource, which as a tile would leave a row of one.
+            let banners = IslamDestination.bannerResources.filter { items.contains($0) }
+            let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
 
             // Press-and-hold offers the row's menu through `GridTileMenu` - a plain `contextMenu`
             // here would lift the WHOLE row (every tile at once) as its preview, since the grid is
@@ -700,16 +718,16 @@ struct IslamView: View {
                     }
                 }
 
-                if let askAI {
-                    resourceGridStar(askAI, on: GridTileMenu {
+                ForEach(banners, id: \.self) { banner in
+                    resourceGridStar(banner, on: GridTileMenu {
                         settings.hapticFeedback()
-                        islamPath.append(askAI)
+                        islamPath.append(banner)
                     } menu: {
-                        favoriteToggleButton(askAI)
+                        favoriteToggleButton(banner)
                     } label: {
-                        askAIBanner(askAI)
+                        resourceBanner(banner)
                     })
-                    .id(Self.rowID(askAI))
+                    .id(Self.rowID(banner))
                 }
             }
             // 1, not 4: the section row already carries ~16pt of its own vertical inset, so 4
@@ -748,11 +766,11 @@ struct IslamView: View {
         .tint(settings.accentColor.color)
     }
 
-    /// Ask AI's full-width banner in grid mode: the chip, the title, and the caption the one-third
-    /// tile had no room for. Deliberately the same glass and favorite tinting as a tile, so it reads
-    /// as the same family of control at a different size.
+    /// A full-width banner in grid mode (Proving Islam, Ask AI): the chip, the title, and the caption
+    /// the one-third tile had no room for. Deliberately the same glass and favorite tinting as a tile,
+    /// so it reads as the same family of control at a different size.
     @available(iOS 16.0, *)
-    private func askAIBanner(_ item: IslamDestination) -> some View {
+    private func resourceBanner(_ item: IslamDestination) -> some View {
         HStack(spacing: 12) {
             AccentIconChip(systemImage: item.systemImage, size: 32)
 
@@ -938,6 +956,7 @@ struct IslamView: View {
         // The detail column's screens show the Now Playing bar; suppress the sidebar's copy or
         // recitation puts one identical bar in EACH column (the Quran tab's rule).
         .applyConditionalListStyle(disableNowPlayingInset: true)
+        .reminderCardDestination($reminderDoor)
         .navigationTitle("Al-Islam")
         // The same control, on the same setting, as the iPhone list's - the iPad simply never had it,
         // so the toggle was unreachable on the one layout where it is shown as a sidebar. The gear
@@ -1031,6 +1050,8 @@ struct IslamView: View {
             PropheciesView()
         case .miraclesOfProphets:
             ProphetMiraclesView()
+        case .provingIslam:
+            ProvingIslamView()
         case .journal:
             JournalView()
         }
@@ -1096,6 +1117,12 @@ struct IslamView: View {
                 GuidesView()
             }
 
+            #if os(iOS)
+            resourceLink(title: "Proving Islam", systemImage: "checkmark.shield") {
+                ProvingIslamView()
+            }
+            #endif
+
             resourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle") {
                 WallpaperView()
             }
@@ -1135,12 +1162,12 @@ struct IslamView: View {
             // (`resourceItems`): as half a sidebar row it was one tile among the references, with
             // no room for the caption that says what it does (Abu, 2026-09-23: "it should be the full
             // row similar to how it is on iphone"). Pulled out of `items` so it never draws twice.
-            let askAI = items.first { $0 == .askAI }
-            let tiles = items.filter { $0 != .askAI }
+            let banners = IslamDestination.bannerResources.filter { items.contains($0) }
+            let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
 
-            // One row for the grid and the banner, 8 pt apart like the tiles, for the iPhone grid's
-            // reasons: no gap between two rows' insets, and no empty grid above the banner when Ask AI
-            // is a section's only item (Favorites).
+            // One row for the grid and the banners, 8 pt apart like the tiles, for the iPhone grid's
+            // reasons: no gap between two rows' insets, and no empty grid above a banner when it is a
+            // section's only item (Favorites).
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
@@ -1157,14 +1184,14 @@ struct IslamView: View {
                     }
                 }
 
-                if let askAI {
-                    resourceGridStar(askAI, on: GridTileMenu {
-                        selectSplitResource(askAI)
+                ForEach(banners, id: \.self) { banner in
+                    resourceGridStar(banner, on: GridTileMenu {
+                        selectSplitResource(banner)
                     } menu: {
-                        favoriteToggleButton(askAI)
+                        favoriteToggleButton(banner)
                     } label: {
-                        askAIBanner(askAI)
-                            .gridSelectionRing(selectedResource == askAI)
+                        resourceBanner(banner)
+                            .gridSelectionRing(selectedResource == banner)
                     })
                 }
             }
@@ -1314,19 +1341,21 @@ struct ProphetQuote: View {
                 sweepOffset = -600
                 rotateRing = false
             }
-        }
-        #if os(iOS)
-        .contextMenu {
-            Text("Copy")
-                .foregroundStyle(.secondary)
+            // On the card, not the Section: a Section's context menu lifts its header with the card
+            // (Quality Guide G12).
+            #if os(iOS)
+            .contextMenu {
+                Text("Copy")
+                    .foregroundStyle(.secondary)
 
-            Button {
-                UIPasteboard.general.string = "O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Sermon\nMusnad Ahmad 22978\n\nJumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
-            } label: {
-                Label("Copy Text", systemImage: "doc.on.doc")
+                Button {
+                    UIPasteboard.general.string = "O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Sermon\nMusnad Ahmad 22978\n\nJumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
+                } label: {
+                    Label("Copy Text", systemImage: "doc.on.doc")
+                }
             }
+            #endif
         }
-        #endif
     }
 
     /// One pass of light across the card - a narrow diagonal band, brighter at its centre, that never

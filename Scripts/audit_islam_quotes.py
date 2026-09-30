@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from islam_packs import Hadith, quran_ayah, strip_marks, is_weak, _quran
 
 ROOT=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'iPhone','Islam')+'/'
-FILES=['PillarViews','BeliefsViews','HowToGuides','AqeedahViews','SalafiyyahViews','AnswersViews','ScholarsViews']
+FILES=['PillarViews','BeliefsViews','HowToGuides','AqeedahViews','SalafiyyahViews','AnswersViews','ScholarsViews','HadithSciencesViews','ProvingIslamChapters']
 SLUG={'sahih al-bukhari':'bukhari','sahih bukhari':'bukhari','sahih muslim':'muslim','muqaddimah of sahih muslim':'muslim',
       'sunan abi dawud':'abudawud','sunan abu dawud':'abudawud','sunan al-tirmidhi':'tirmidhi','jami at-tirmidhi':'tirmidhi',
       'sunan ibn majah':'ibnmajah',"sunan an-nasa'i":'nasai','sunan al-darimi':'darimi','musnad ahmad':'ahmed'}
@@ -76,9 +76,9 @@ for f,line,ref,words in refs:
     except SystemExit as e: bad.append((f,line,ref,words,str(e)))
 print(len(refs),'Quran references,',len(refs)-len(bad),'render from the app\'s text')
 for row in bad: print('  QURAN_REF_BAD',row)
-hrefs=builder.hadith_references(); bad_h=[]
+hrefs=_corpus.hadith_references(); bad_h=[]
 for f,line,args in hrefs:
-    try: builder.hadith_quote(args)
+    try: _corpus.hadith_quote(args)
     except SystemExit as e: bad_h.append((f,line,str(e)))
 print(len(hrefs),'hadith references,',len(hrefs)-len(bad_h),'render from the shelf')
 for row in bad_h: print('  HADITH_REF_BAD',row)

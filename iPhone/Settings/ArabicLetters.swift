@@ -63,6 +63,10 @@ struct Tashkeel: Identifiable, Equatable {
     var length: String? = nil
 }
 
+/// Hands out the letters' ids. The three tables are lazily built globals, and each later table touches
+/// the one before it first, so the ids are always standard 1-28, other 29-40, non-Arabic 41-46. They
+/// used to follow first touch: a launch that opened a non-Arabic letter first numbered those six 1-6
+/// (Quality Guide C8). Favorites no longer depend on ids at all; they match by `letter`.
 private enum LetterID {
     private static var nextValue = 1
 
@@ -170,7 +174,11 @@ let standardArabicLetters: [LetterData] = [
     )
 ]
 
-let otherArabicLetters: [LetterData] = [
+let otherArabicLetters: [LetterData] = {
+    // The table before this one first (see `LetterID`): the ids come out in one order however
+    // the tables are first touched.
+    _ = standardArabicLetters.count
+    return [
     LetterData(id: LetterID.next(), letter: "ة", forms: ["ـة", "ـة ـ", "ة ـ"], name: "تَاء مَربُوطَة", transliteration: "taa marbuuTah", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ء", forms: ["ـ ء", "ـ ء ـ", "ء ـ"], name: "هَمزَة", transliteration: "hamza", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "أ", forms: ["ـأ", "ـأ ـ", "أ ـ"], name: "هَمزَة عَلَى أَلِف", transliteration: "hamza on alif", showTashkeel: false, sound: ""),
@@ -183,16 +191,22 @@ let otherArabicLetters: [LetterData] = [
     LetterData(id: LetterID.next(), letter: "وٓ", forms: ["ـوٓ", "ـوٓ ـ", "وٓ ـ"], name: "وَاو مَدّ", transliteration: "waaw madd", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ى", forms: ["ـى", "ـى ـ", "ى ـ"], name: "أَلِف مَقصُورَة", transliteration: "alif maqSoorah", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ل ا - لا", forms: ["ـلا", "ـلا ـ", "لا ـ"], name: "لَام أَلِف", transliteration: "laam alif", showTashkeel: false, sound: ""),
-]
+    ]
+}()
 
-let nonArabicArabicScriptLetters: [LetterData] = [
+let nonArabicArabicScriptLetters: [LetterData] = {
+    // The table before this one first (see `LetterID`): the ids come out in one order however
+    // the tables are first touched.
+    _ = otherArabicLetters.count
+    return [
     LetterData(id: LetterID.next(), letter: "پ", forms: ["ـپ", "ـپـ", "پـ"], name: "پے", transliteration: "pe", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "چ", forms: ["ـچ", "ـچـ", "چـ"], name: "چے", transliteration: "che", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ڤ", forms: ["ـڤ", "ـڤـ", "ڤـ"], name: "ڤے", transliteration: "ve", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "گ", forms: ["ـگ", "ـگـ", "گـ"], name: "گاف", transliteration: "gaaf (gaa)", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ڭ", forms: ["ـڭ", "ـڭـ", "ڭـ"], name: "ڭاف", transliteration: "ngaf", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ژ", forms: ["ـژ", "ـژ ـ", "ژ ـ"], name: "ژے", transliteration: "zhe", showTashkeel: false, sound: "")
-]
+    ]
+}()
 
 /// Where a non-Arabic letter comes from: the languages that added it to the Arabic script, and the sound
 /// they added it for. Keyed by the letter's transliteration (the key the letter page's `nonArabicBaseSound`
@@ -419,12 +433,21 @@ let tashkeels: [Tashkeel] = [
 extension Settings {
     /// Memoized: the alphabet rows call `isLetterFavorite` per row per render.
     private static var favoriteLettersCache: (data: Data, value: [LetterData])?
+    /// A saved favorite is matched to this launch's table entry by its LETTER: the stored copy carries
+    /// the id of the launch that saved it, and ids used to depend on which table was touched first,
+    /// so a saved ب could render as پ and a second ب could be saved beside it (Quality Guide C8).
     var favoriteLetters: [LetterData] {
         get {
             if let cached = Self.favoriteLettersCache, cached.data == favoriteLetterData {
                 return cached.value
             }
-            let decoded = (try? Self.decoder.decode([LetterData].self, from: favoriteLetterData)) ?? []
+            let stored = UserDataRescue.decodeList(LetterData.self, from: favoriteLetterData,
+                                                   key: "favoriteLetterData", decoder: Self.decoder) ?? []
+            var seen = Set<String>()
+            let decoded = stored.compactMap { saved -> LetterData? in
+                guard seen.insert(saved.letter).inserted else { return nil }
+                return Self.canonicalLetter(saved.letter) ?? saved
+            }
             Self.favoriteLettersCache = (favoriteLetterData, decoded)
             return decoded
         }
@@ -438,7 +461,7 @@ extension Settings {
     func toggleLetterFavorite(letterData: LetterData) {
         withAnimation {
             if isLetterFavorite(letterData: letterData) {
-                favoriteLetters.removeAll(where: { $0.id == letterData.id })
+                favoriteLetters.removeAll(where: { $0.letter == letterData.letter })
             } else {
                 favoriteLetters.append(letterData)
             }
@@ -446,6 +469,13 @@ extension Settings {
     }
 
     func isLetterFavorite(letterData: LetterData) -> Bool {
-        favoriteLetters.contains { $0.id == letterData.id }
+        favoriteLetters.contains { $0.letter == letterData.letter }
+    }
+
+    /// This launch's table entry for a letter, from any of the three tables.
+    private static func canonicalLetter(_ letter: String) -> LetterData? {
+        standardArabicLetters.first { $0.letter == letter }
+            ?? otherArabicLetters.first { $0.letter == letter }
+            ?? nonArabicArabicScriptLetters.first { $0.letter == letter }
     }
 }

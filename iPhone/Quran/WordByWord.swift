@@ -501,9 +501,20 @@ enum CrossLanguageWordHighlight {
 
         if let ready { return ready }
         if !alreadyStarted {
-            // Snapshot the (value-type) surah array on the calling thread; the fold work moves off it.
-            let surahs = quranSnapshot()
-            DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+            if Thread.isMainThread {
+                // Snapshot the (value-type) surah array here; the fold work moves off main.
+                let surahs = quranSnapshot()
+                DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+            } else {
+                // Asked first from a background task (a hadith search row's detached highlight):
+                // `QuranData.quran` belongs to the main thread, which reassigns it at load and on a
+                // qiraah change, and copying it here raced that write (the suspected source of the
+                // 2026-09-21 heap corruption, Quality Guide C5). The snapshot is taken on main.
+                DispatchQueue.main.async {
+                    let surahs = QuranData.shared.quran
+                    DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+                }
+            }
         }
         return nil
     }
@@ -1747,7 +1758,8 @@ private struct WordQiraahCell: Identifiable {
 /// those Hafs words by a token-level LCS over letter skeletons, and each riwayah's own text for the
 /// same Hafs span is then walked back the other way. Going through Hafs (rather than riwayah to
 /// riwayah directly) means one alignment per riwayah instead of one per pair.
-@MainActor
+// Not main-actor bound: the word card runs it detached. What it reads is thread-safe: QuranData's
+// lookups are published under a lock, the comparison's caches sit behind its own (Quality Guide C5).
 private enum WordAcrossRiwayat {
     /// The shared rasm skeleton (`QiraahComparison.wordSkeleton`): marks off, hamza seats and
     /// dotless letters folded, so spelling differences never break the word matching.
@@ -1804,7 +1816,7 @@ private enum WordAcrossRiwayat {
         for n in span {
             guard let hafsAyah = QuranData.shared.ayah(surah: surah, ayah: n) else { continue }
             out.append(contentsOf: WordTokens.tokens(
-                in: hafsAyah.displayArabicText(surahId: surah, clean: false, qiraahOverride: "")
+                in: hafsAyah.rawArabicText(surahId: surah, qiraahOverride: "")
             ))
         }
         return out
@@ -2315,7 +2327,7 @@ struct WordMeaningSheet: View {
     private typealias LocatedWord = (text: String, tokenIndex: Int, range: NSRange)
 
     private var rawWord: LocatedWord? {
-        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+        let rawText = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
         let ranges = WordTokens.ranges(in: rawText)
         let tokens = WordTokens.tokens(in: rawText)
         guard ranges.count == tokens.count else { return nil }
@@ -2595,7 +2607,7 @@ struct RiwayahWordSheet: View {
     /// indices and letter extents address. Same display-index-over-raw-tokens walk as the Hafs
     /// card: clean mode deletes ornament-only tokens, so the display index skips them.
     private var rawWord: (text: String, tokenIndex: Int, range: NSRange)? {
-        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: tag)
+        let rawText = ayah.rawArabicText(surahId: surah.id, qiraahOverride: tag)
         let ranges = WordTokens.ranges(in: rawText)
         let tokens = WordTokens.tokens(in: rawText)
         guard ranges.count == tokens.count else { return nil }

@@ -2860,8 +2860,9 @@ struct HadithChapterPickerSheet: View {
             let folded = HadithFold.query(query)
             return all.filter { bookData.matches($0.element, folded) }
         }
+        let plain = query.foldingLatinDiacritics
         return all.filter {
-            $0.element.english.localizedCaseInsensitiveContains(query) || String($0.offset + 1) == query
+            $0.element.english.foldingLatinDiacritics.localizedCaseInsensitiveContains(plain) || String($0.offset + 1) == query
         }
     }
 

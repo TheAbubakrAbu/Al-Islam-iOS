@@ -2,6 +2,9 @@
 import Foundation
 import CloudKit
 import Combine
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// The iCloud half of the backup (docs/iCloud Sync Guide.md, sections 4 and 8): profiles in the
 /// user's private CloudKit database, one record each, and this device's claim on one of them.
@@ -71,6 +74,10 @@ final class CloudBackupManager: ObservableObject {
         static let lastSavedBytes = "cloudBackup.lastSavedBytes"
         static let lastSavedAutomatically = "cloudBackup.lastSavedAutomatically"
         static let history = "cloudBackup.history"
+        /// The owner a restore-and-switch is taking the profile over from, kept until the first save
+        /// that lands: a claim whose first save failed (offline, rate limited) used to forget it, and
+        /// the next automatic save read the old phone's ownership as "taken over" and stopped for good.
+        static let pendingTakeoverOwner = "cloudBackup.pendingTakeoverOwner"
     }
 
     /// This install, for the profile's `ownerDeviceID`. Made once; a reinstall is a new device,
@@ -205,7 +212,6 @@ final class CloudBackupManager: ObservableObject {
     private let container = CKContainer(identifier: CloudBackupManager.containerIdentifier)
     private var database: CKDatabase { container.privateCloudDatabase }
     private var zoneID: CKRecordZone.ID { CKRecordZone.ID(zoneName: Self.zoneName, ownerName: CKCurrentUserDefaultName) }
-    private var contentChangedSinceSave = false
     private var observers: [NSObjectProtocol] = []
 
     private init() {
@@ -251,13 +257,10 @@ final class CloudBackupManager: ObservableObject {
         #endif
         ObjectPublishCounter.attach(self, label: "CloudBackupManager")
 
-        // Any content store publishing is "something changed"; cheap, and it only arms a flag.
-        observers.append(NotificationCenter.default.addObserver(
-            forName: ActivityLog.didChangeNotification, object: nil, queue: .main
-        ) { [weak self] _ in MainActor.assumeIsolated { self?.contentChangedSinceSave = true } })
-        observers.append(NotificationCenter.default.addObserver(
-            forName: Settings.storedContentReplacedNotification, object: nil, queue: .main
-        ) { [weak self] _ in MainActor.assumeIsolated { self?.contentChangedSinceSave = true } })
+        // (No "something changed" flag any more: it was armed only by the activity log and by
+        // restores, so bookmarks, notes, the tracker, the journal and every setting never triggered
+        // the leaving-foreground backup. Every pass now captures and compares the digest locally,
+        // before any network call, and uploads only a snapshot that differs. Quality Guide C9.)
         // A full erase (posted on the main thread, delivered inside the post): the defaults domain
         // that held the claim is already gone; memory follows, before the erase's own reload lands.
         observers.append(NotificationCenter.default.addObserver(
@@ -277,7 +280,6 @@ final class CloudBackupManager: ObservableObject {
         lastSavedBytes = 0
         lastSavedAutomatically = false
         status = .idle
-        contentChangedSinceSave = false
         profiles = []
         history = []
         deviceID = UUID().uuidString
@@ -404,11 +406,13 @@ final class CloudBackupManager: ObservableObject {
         snapshot.apply(mode)
         let how = mode == .replace ? "Replace" : "Merge"
         guard claim else {
-            contentChangedSinceSave = true
             record(.restored, "Restored \u{201C}\(profile.nickname)\u{201D} with \(how)")
             return
         }
         setClaim(profileID: profile.id, nickname: profile.nickname)
+        // Kept until a save lands (`markSaved`), so a failed first save can be retried by any
+        // later one instead of reading as a takeover (Quality Guide C10).
+        defaults.set(profile.ownerDeviceID, forKey: Key.pendingTakeoverOwner)
         // Claim by writing: the record's owner becomes this device, with this device's content
         // (which, after the restore, includes the profile's). `force` because the digest we last
         // saved is not this profile's.
@@ -420,7 +424,6 @@ final class CloudBackupManager: ObservableObject {
     /// profile behind it.
     func restore(file snapshot: CloudSnapshot, named name: String, mode: CloudSnapshot.RestoreMode) {
         snapshot.apply(mode)
-        contentChangedSinceSave = true
         record(.restored, "Restored the file \u{201C}\(name)\u{201D} with \(mode == .replace ? "Replace" : "Merge")")
     }
 
@@ -509,12 +512,38 @@ final class CloudBackupManager: ObservableObject {
         let age = lastSavedAt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude
         switch reason {
         case .background:
-            guard contentChangedSinceSave || lastSavedAt == nil, age > Self.backgroundInterval else { return }
+            guard age > Self.backgroundInterval else { return }
         case .foreground:
             guard age > Self.staleInterval else { return }
         }
+        #if canImport(UIKit)
+        // Leaving the foreground: without a background task the upload was suspended mid-flight
+        // with `isBusy` still set, and the next foreground's passes and Back Up Now returned
+        // silently (Quality Guide C11).
+        let finish = BackgroundTaskEnd()
+        if reason == .background {
+            finish.id = UIApplication.shared.beginBackgroundTask(withName: "iCloud backup") { finish.end() }
+        }
+        Task {
+            try? await save(force: false, creating: false, automatic: true)
+            finish.end()
+        }
+        #else
         Task { try? await save(force: false, creating: false, automatic: true) }
+        #endif
     }
+
+    #if canImport(UIKit)
+    /// Ends a background task exactly once, from the expiration handler or the save's end.
+    private final class BackgroundTaskEnd {
+        var id: UIBackgroundTaskIdentifier = .invalid
+        @MainActor func end() {
+            guard id != .invalid else { return }
+            UIApplication.shared.endBackgroundTask(id)
+            id = .invalid
+        }
+    }
+    #endif
 
     enum AutomaticReason { case background, foreground }
 
@@ -522,16 +551,24 @@ final class CloudBackupManager: ObservableObject {
     /// unchanged snapshot only refreshes the date locally. `expectOwner` is the owner we are
     /// deliberately taking over from (an adopt); any other foreign owner means WE were taken over.
     private func save(force: Bool, creating: Bool, automatic: Bool, expectOwner: String? = nil) async throws {
+        if isBusy {
+            // The automatic pass yields; Back Up Now, a claim or a new profile waits for the save in
+            // flight and then runs. Returning silently let a restore log "switched" while the old
+            // save, for the old profile, was still writing (Quality Guide C10).
+            guard !automatic else { return }
+            while isBusy { try await Task.sleep(nanoseconds: 100_000_000) }
+        }
         guard isEnabled, let profileID else { throw Failure.notEnabled }
-        guard !isBusy else { return }
         isBusy = true
         status = .saving
         defer { isBusy = false }
+        // Read once, at the start: a rename or a switch during the upload must not relabel this save.
+        let nickname = self.nickname
+        let expectOwner = expectOwner ?? defaults.string(forKey: Key.pendingTakeoverOwner)
 
         do {
-            guard await refreshAccountStatus() else { throw Failure.noAccount }
-            try await ensureZone()
-
+            // The snapshot and its digest first, both local: an unchanged pass stops here, before
+            // any network call (every leaving-foreground pass now gets this far, see C9).
             let snapshot = CloudSnapshot.capture(deviceID: deviceID)
             let digest = snapshot.contentDigest
             if !force, digest == defaults.string(forKey: Key.lastSavedDigest) {
@@ -539,6 +576,8 @@ final class CloudBackupManager: ObservableObject {
                 record(.unchanged, "Checked, nothing new since the last backup")
                 return
             }
+            guard await refreshAccountStatus() else { throw Failure.noAccount }
+            try await ensureZone()
             let payload = try snapshot.encoded()
 
             // The record as the server has it, so the owner can be checked and the change tag kept.
@@ -557,7 +596,10 @@ final class CloudBackupManager: ObservableObject {
                     throw Failure.takenOver
                 }
             }
-            try fill(record, nickname: nickname, snapshot: snapshot, payload: payload, digest: digest)
+            let payloadFile = try fill(record, nickname: nickname, snapshot: snapshot, payload: payload, digest: digest)
+            // The payload's temp copy goes once the upload is done, landed or not (one used to be
+            // left in tmp/ by every save).
+            defer { try? FileManager.default.removeItem(at: payloadFile) }
             let saved = try await modify(record, policy: .ifServerRecordUnchanged)
             markSaved(digest: digest, bytes: payload.count, automatic: automatic)
             let size = ByteCountFormatter.string(fromByteCount: Int64(payload.count), countStyle: .file)
@@ -588,7 +630,7 @@ final class CloudBackupManager: ObservableObject {
         defaults.set(bytes, forKey: Key.lastSavedBytes)
         defaults.set(automatic, forKey: Key.lastSavedAutomatically)
         defaults.set(false, forKey: Key.takenOver)
-        contentChangedSinceSave = false
+        defaults.removeObject(forKey: Key.pendingTakeoverOwner)
         status = .saved
     }
 
@@ -696,7 +738,8 @@ final class CloudBackupManager: ObservableObject {
 
     // MARK: Pieces
 
-    private func fill(_ record: CKRecord, nickname: String, snapshot: CloudSnapshot, payload: Data, digest: String) throws {
+    /// Returns the payload's temp file, which the caller removes once the upload is done.
+    private func fill(_ record: CKRecord, nickname: String, snapshot: CloudSnapshot, payload: Data, digest: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("profile-\(UUID().uuidString).aib")
         try payload.write(to: url, options: .atomic)
         record[Field.nickname] = nickname as NSString
@@ -709,6 +752,7 @@ final class CloudBackupManager: ObservableObject {
         record[Field.payloadBytes] = NSNumber(value: payload.count)
         record[Field.payloadDigest] = digest as NSString
         record[Field.summary] = snapshot.summaryLine as NSString
+        return url
     }
 
     private func summary(of record: CKRecord) -> ProfileSummary? {
@@ -735,6 +779,7 @@ final class CloudBackupManager: ObservableObject {
         defaults.set(name, forKey: Key.nickname)
         defaults.set(false, forKey: Key.takenOver)
         defaults.removeObject(forKey: Key.lastSavedDigest)
+        defaults.removeObject(forKey: Key.pendingTakeoverOwner)
     }
 
     private func clearClaim() {
@@ -743,7 +788,8 @@ final class CloudBackupManager: ObservableObject {
         lastSavedAt = nil
         lastSavedBytes = 0
         lastSavedAutomatically = false
-        for key in [Key.enabled, Key.profileID, Key.lastSavedAt, Key.lastSavedDigest, Key.takenOver, Key.lastSavedBytes, Key.lastSavedAutomatically] {
+        for key in [Key.enabled, Key.profileID, Key.lastSavedAt, Key.lastSavedDigest, Key.takenOver, Key.lastSavedBytes,
+                    Key.lastSavedAutomatically, Key.pendingTakeoverOwner] {
             defaults.removeObject(forKey: key)
         }
     }

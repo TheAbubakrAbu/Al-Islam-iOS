@@ -24,6 +24,9 @@ struct SettingsIslamView: View {
     var presentedAsSheet: Bool = false
     /// A sub-screen to push a beat after the root mounts: what a settings search result lands on.
     var openPage: SettingsIslamPage? = nil
+    /// One sub-screen shown ON ITS OWN, as the root of its stack: a Need a Hand? door's sheet
+    /// (HelpDoors.swift), which opens on the page itself instead of this root.
+    var standalonePage: SettingsIslamPage? = nil
     @State private var openRequestedPage = false
     @State private var deepLinkFired = false
 
@@ -35,7 +38,9 @@ struct SettingsIslamView: View {
     #endif
 
     var body: some View {
-        if presentedAsSheet {
+        if let standalonePage {
+            islamPageDestination(standalonePage)
+        } else if presentedAsSheet {
             NavigationView {
                 settingsList
                     .navigationTitle("Islam Settings")
@@ -76,6 +81,8 @@ struct SettingsIslamView: View {
     private var settingsList: some View {
         SettingsScopedSearch(scope: .islam, resolve: resolveSearchDestination) {
             TipsSection(area: .islam, resolve: resolveSearchDestination)
+            // The Islam tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+            HelpDoorsSettingsSection(area: .islam)
 
             Section(header: Text("READING")) {
                 islamPageLink(.arabicText) { arabicTextDestination }
@@ -508,6 +515,7 @@ extension View {
 extension SettingsSearchEntry {
     static let islamEntries: [SettingsSearchEntry] = [
         .init(title: "Islam Settings", path: "Al-Islam", keywords: "islam arabic font dua dhikr names alphabet libraries sunnah reminders", destination: .islamSettings),
+        .init(title: "Need a Hand? on the Islam Tab", path: "Islam Settings", keywords: "need a hand help shortcuts questions show hide islam tab getting started text size fajr day begin", destination: .islamSettings),
         .init(title: "Highlight Allah (Islam)", path: "Islam Settings → Arabic Text", keywords: "highlight allah name red color dua dhikr adhkar tasbih articles islam", destination: .islamPage(.arabicText)),
         .init(title: "Text Size (Islam)", path: "Islam Settings → Text Size", keywords: "text size font bigger smaller larger dynamic type articles guides duas islam reading", destination: .islamPage(.textSize)),
         .init(title: "Arabic Font (Islam)", path: "Islam Settings → Arabic Text", keywords: "arabic font face uthmani indopak hijazi kufi basic dua dhikr adhkar names alphabet islam", destination: .islamPage(.arabicText)),

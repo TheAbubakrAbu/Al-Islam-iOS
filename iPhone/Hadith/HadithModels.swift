@@ -684,8 +684,9 @@ enum HadithReferenceParser {
         // Apostrophes BIND, they don't separate: "Nasa'i" is one word. Splitting on them left the
         // single letter "i" standing as a name for Sunan an-Nasa'i (and "il" for the Shama'il).
         // The joined `normalize` form is unaffected either way - that is why the alias tables still match.
-        var text = raw.lowercased()
-        for apostrophe in ["'", "\u{2019}", "\u{02BC}", "`"] {
+        // Accents fold first, so "Sunan Abī Dāwūd" is "abi dawud" and "Nasāʾī" is "nasai".
+        var text = raw.foldingLatinDiacritics.lowercased()
+        for apostrophe in ["'", "\u{2018}", "\u{2019}", "\u{02BC}", "`"] {
             text = text.replacingOccurrences(of: apostrophe, with: "")
         }
         return text
@@ -880,9 +881,13 @@ enum HadithReferenceParser {
     }
 
     static func canonical(_ raw: String) -> String {
+        // Accents fold before any pattern reads the text: a pasted "Ṣaḥīḥ al-Bukhārī 1" or "3331 Sunan
+        // Abī Dāwūd" has to meet the ASCII letter classes below the way the plain spelling does.
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines).normalizingArabicIndicDigitsToWestern
-        let lowered = text.lowercased()
-        if let range = lowered.range(of: "sunnah.com/") {
+            .foldingLatinDiacritics
+        // Searched in `text` itself: a range found in `text.lowercased()` does not index `text` (an
+        // "İ" lowercases to two scalars), and slicing with it failed or trapped (Quality Guide C3).
+        if let range = text.range(of: "sunnah.com/", options: .caseInsensitive) {
             var tail = String(text[range.upperBound...])
             if let query = tail.firstIndex(where: { $0 == "?" || $0 == "#" }) { tail = String(tail[..<query]) }
             let parts = tail.split(whereSeparator: { $0 == "/" || $0 == ":" }).map(String.init)

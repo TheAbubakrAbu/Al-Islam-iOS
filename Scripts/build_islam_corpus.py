@@ -47,6 +47,9 @@ SOURCES = [
     ROOT / "iPhone/Islam/SalafiyyahViews.swift",
     ROOT / "iPhone/Islam/ScholarsViews.swift",
     ROOT / "iPhone/Islam/AnswersViews.swift",
+    ROOT / "iPhone/Islam/RiwayatDifferencesView.swift",
+    ROOT / "iPhone/Islam/HadithSciencesViews.swift",
+    ROOT / "iPhone/Islam/ProvingIslamChapters.swift",
 ]
 OUT = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
 
@@ -61,7 +64,35 @@ STRUCT_RE = re.compile(r"^struct (\w+): View \{", re.M)
 # `.text("...")`, `.markdown("...")` and `.quote(text: "...")` blocks; read those too.
 TEXT_ARG = r"(?:verbatim:\s*|articleMarkdown:\s*)?"
 SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEXT_ARG + r")|ArticleSection\()(" + STR + r")[),]", re.S)
-TEXT_RE = re.compile(r"(?:(?<![\w.])Text\(" + TEXT_ARG + r"|(?<!\w)\.(?:text|markdown)\()(" + STR + r")\)", re.S)
+# The design kit (iPhone/Islam/ArticleDesign.swift, 2026-09-29) draws a lead, a step, a bullet and a
+# closing paragraph as cards; each takes the paragraph as the `Text` it replaced did, so the corpus
+# reads them as prose: `ArticleLead("...")`, `ArticleStep("1. ...")`, `ArticleBullet(verbatim: "...")`,
+# `ArticleClosing(articleMarkdown: "...")`, and the data blocks `.lead(`, `.step(`, `.bullet(`.
+TEXT_RE = re.compile(r"(?:(?<![\w.])(?:Text|ArticleLead|ArticleStep|ArticleBullet|ArticleClosing)\(" + TEXT_ARG
+                     + r"|(?<!\w)\.(?:text|markdown|lead|step|bullet)\()(" + STR + r")\)", re.S)
+# The kit's other cards, read into sentences: a callout ("Title. Body"), a term card ("Term (Arabic):
+# meaning"), stat tiles ("value label"), a chain ("name, detail"), a checklist ("Title: item item"),
+# the two sides of a comparison ("label: caption"), and the scale of hadith grades.
+CALLOUT_RE = re.compile(r"(?:(?<![\w.])ArticleCallout\(|(?<!\w)\.callout\()\s*(" + STR + r")\s*,\s*title:\s*(" + STR + r")", re.S)
+TERM_RE = re.compile(r"(?:(?<![\w.])ArticleTermCard\(|(?<!\w)\.term\()\s*(" + STR + r")\s*,\s*arabic:\s*(" + STR
+                     + r")\s*,\s*meaning:\s*(" + STR + r")\s*\)", re.S)
+STAT_RE = re.compile(r"ArticleStat\(\s*(" + STR + r")\s*,\s*(" + STR + r")\s*\)", re.S)
+CHAIN_LINK_RE = re.compile(r"ArticleChainLink\(\s*(" + STR + r")(?:\s*,\s*(" + STR + r"))?\s*\)", re.S)
+CHAIN_CAPTION_RE = re.compile(r"(?:(?<![\w.])ArticleChainDiagram\(|(?<!\w)\.chain\()\s*\[.*?\]\s*,\s*caption:\s*(" + STR + r")", re.S)
+CHECKLIST_RE = re.compile(r"(?:(?<![\w.])ArticleChecklist\(|(?<!\w)\.checklist\()\s*\[(.*?)\]\s*,\s*title:\s*(" + STR + r")", re.S)
+SIDE_RE = re.compile(r"ArticleVersus\.Side\(\s*(" + STR + r")(?:\s*,\s*arabic:\s*(" + STR + r"))?\s*,\s*caption:\s*(" + STR + r")\s*\)", re.S)
+LADDER_RE = re.compile(r"HadithGradeLadder\(\)|(?<!\w)\.gradeLadder\b")
+# The riwayat page's cards (RiwayatDifferencesView.swift): each spelling ("Warsh (يُومِنُونَ): note"), each
+# bar of the tilt chart, and the at-a-glance table, read from its `RiwayahTraits.all` literals.
+SPELLING_CARD_RE = re.compile(r"RiwayahSpellingCard\(\s*title:\s*(" + STR + r")", re.S)
+SPELLING_RE = re.compile(r"RiwayahSpelling\(\s*(" + STR + r")\s*,\s*arabic:\s*(" + STR + r")\s*,\s*note:\s*(" + STR + r")\s*\)", re.S)
+BAR_CHART_RE = re.compile(r"RiwayahBarChart\(\s*title:\s*(" + STR + r")", re.S)
+BAR_RE = re.compile(r"RiwayahBar\(\s*(" + STR + r")\s*,\s*filled:\s*(\d+)\s*,\s*hollow:\s*(\d+)\s*\)", re.S)
+TRAITS_TABLE_RE = re.compile(r"RiwayahTraitsTable\(\)")
+TRAITS_RE = re.compile(r"RiwayahTraits\(name:\s*(" + STR + r"),\s*from:\s*(" + STR + r"),\s*tag:\s*[\w.]+,\s*hamzah:\s*(" + STR
+                       + r"),\s*wasl:\s*(" + STR + r"),\s*dots:\s*(" + STR + r"),\s*silah:\s*(" + STR + r"),\s*madd:\s*(" + STR + r")\)", re.S)
+RIWAYAT_PAGE = Path(__file__).resolve().parent.parent / "iPhone/Islam/RiwayatDifferencesView.swift"
+DESIGN_KIT = Path(__file__).resolve().parent.parent / "iPhone/Islam/ArticleDesign.swift"
 QUOTE_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + STR + r")", re.S)
 # The 10 Qiraat article's "Companions behind each Qiraah" cards (2026-09-26): each reading is
 # `lineageRow("Nafi", companions: ["Umar ibn al-Khattab", ...], note: "...")`, drawn as chips, so
@@ -226,6 +257,44 @@ def unquote(literal: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
+_ladder_cache = None
+
+
+def grade_ladder_text() -> str:
+    """The scale of hadith grades as the card draws it, read from `HadithGrade.all` and
+    `HadithGrade.byNumber` in ArticleDesign.swift (the one copy of those definitions)."""
+    global _ladder_cache
+    if _ladder_cache is None:
+        src = DESIGN_KIT.read_text(encoding="utf-8")
+        grades = re.findall(r"HadithGrade\(name:\s*(" + STR + r"),\s*arabic:\s*(" + STR + r"),\s*english:\s*(" + STR
+                            + r"),\s*definition:\s*(" + STR + r"),\s*verdict:\s*(" + STR + r")", src, re.S)
+        block = src[src.index("static let byNumber"):]
+        block = block[:block.index("]\n")]
+        numbers = re.findall(r"\(\s*(" + STR + r")\s*,\s*(" + STR + r")\s*,\s*(" + STR + r")\s*\)", block, re.S)
+        if len(grades) != 4 or not numbers:
+            raise SystemExit("ERROR: could not read the hadith grade scale from ArticleDesign.swift")
+        lines = [f"{unquote(n)} ({unquote(a)}), {unquote(e)}: {unquote(d)} {unquote(v)}." for n, a, e, d, v in grades]
+        lines += [f"{unquote(n)} ({unquote(a)}): {unquote(m)}." for n, a, m in numbers]
+        _ladder_cache = " ".join(lines)
+    return _ladder_cache
+
+
+_traits_cache = None
+
+
+def riwayah_traits_text() -> str:
+    """The riwayat page's at-a-glance table as sentences, from `RiwayahTraits.all`."""
+    global _traits_cache
+    if _traits_cache is None:
+        rows = TRAITS_RE.findall(RIWAYAT_PAGE.read_text(encoding="utf-8"))
+        if len(rows) != 20:
+            raise SystemExit(f"ERROR: expected 20 RiwayahTraits rows, found {len(rows)}")
+        _traits_cache = " ".join(
+            f"{unquote(n)} {unquote(f)}: hamzah {unquote(h)}; hamzat al-wasl {unquote(w)}; tilt {unquote(d)}; "
+            f"silah {unquote(si)}; separated madd {unquote(m)}." for n, f, h, w, d, si, m in rows)
+    return _traits_cache
+
+
 def articles():
     found = []
     for path in SOURCES:
@@ -255,6 +324,36 @@ def articles():
                 if m.group(3):
                     sentence += f" {unquote(m.group(3))}."
                 hits.append((m.start(1), "computed", sentence))
+            # The design kit's cards (see the regexes above).
+            for m in CALLOUT_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(2))}. {unquote(m.group(1))}"))
+            for m in TERM_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))} ({unquote(m.group(2))}): {unquote(m.group(3))}"))
+            for m in STAT_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))} {unquote(m.group(2))}."))
+            for m in CHAIN_CAPTION_RE.finditer(body):
+                hits.append((m.start(), "computed", f"{unquote(m.group(1))}:"))
+            for m in CHAIN_LINK_RE.finditer(body):
+                detail = f", {unquote(m.group(2))}" if m.group(2) and unquote(m.group(2)) else ""
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))}{detail}."))
+            for m in CHECKLIST_RE.finditer(body):
+                items = [unquote(item) for item in re.findall(STR, m.group(1))]
+                hits.append((m.start(), "computed", f"{unquote(m.group(2))}: " + " ".join(items)))
+            for m in SIDE_RE.finditer(body):
+                arabic = f" ({unquote(m.group(2))})" if m.group(2) else ""
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))}{arabic}: {unquote(m.group(3))}"))
+            for m in LADDER_RE.finditer(body):
+                hits.append((m.start(), "computed", grade_ladder_text()))
+            for m in SPELLING_CARD_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))}:"))
+            for m in SPELLING_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))} ({unquote(m.group(2))}): {unquote(m.group(3))}."))
+            for m in BAR_CHART_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))}:"))
+            for m in BAR_RE.finditer(body):
+                hits.append((m.start(1), "computed", f"{unquote(m.group(1))}: {m.group(2)} filled dots, {m.group(3)} hollow rings."))
+            for m in TRAITS_TABLE_RE.finditer(body):
+                hits.append((m.start(), "computed", riwayah_traits_text()))
             # A section header IS a Text(...), so it matches twice - keep the heading, drop the twin.
             headings = {pos for pos, kind, _ in hits if kind == "heading"}
             hits = [h for h in hits if not (h[1] == "text" and h[0] in headings)]

@@ -8,8 +8,7 @@ struct SufismAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: purifying the heart is part of Islam, but the later Sufi orders added intermediaries, grave veneration, invented dhikr, absolute obedience to shaykhs, and claims that Allah dwells in or is one with creation. Each of these is answered by the Quran and the Sunnah.")
-                        .font(.body)
+                    ArticleLead("In short: purifying the heart is part of Islam, but the later Sufi orders added intermediaries, grave veneration, invented dhikr, absolute obedience to shaykhs, and claims that Allah dwells in or is one with creation. Each of these is answered by the Quran and the Sunnah.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS SUFISM?")) {
@@ -233,8 +232,7 @@ struct SufismAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Purify the heart by the Sunnah, call upon Allah alone, leave the graves as the Prophet left them, and keep every shaykh beneath the text. That is the tazkiyah of the Salaf, and it needs no order.")
-                        .font(.body)
+                    ArticleClosing("Purify the heart by the Sunnah, call upon Allah alone, leave the graves as the Prophet left them, and keep every shaykh beneath the text. That is the tazkiyah of the Salaf, and it needs no order.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -317,8 +315,7 @@ struct ShiaAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: the Shia claim that Ali was appointed by divine text, that the imams are infallible, and that the Companions betrayed the Prophet. The Quran praises the Companions, Ali himself ranked Abu Bakr and Umar above himself, and the imamate is found nowhere among the pillars of Islam.")
-                        .font(.body)
+                    ArticleLead("In short: the Shia claim that Ali was appointed by divine text, that the imams are infallible, and that the Companions betrayed the Prophet. The Quran praises the Companions, Ali himself ranked Abu Bakr and Umar above himself, and the imamate is found nowhere among the pillars of Islam.")
                 }
 
                 Section(header: ArticleHeader("WHO ARE THE SHIA?")) {
@@ -577,8 +574,7 @@ struct ShiaAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Allah praised the Companions, Ali ranked Abu Bakr and Umar above himself and married his daughter to Umar, no imamate is among the pillars, and no one after the Prophet is infallible. Love of the Ahlul Bayt, which Ahl as-Sunnah share, does not require any of the beliefs built upon it.")
-                        .font(.body)
+                    ArticleClosing("Allah praised the Companions, Ali ranked Abu Bakr and Umar above himself and married his daughter to Umar, no imamate is among the pillars, and no one after the Prophet is infallible. Love of the Ahlul Bayt, which Ahl as-Sunnah share, does not require any of the beliefs built upon it.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -673,8 +669,7 @@ struct ChristianityAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Muslims honour Isa (Jesus) as one of the greatest messengers, born of a virgin, and reject that he is God, the son of God, or part of a trinity. The Quran, the words of Jesus in the Gospels, and reason all point the same way: Jesus called to the worship of one God.")
-                        .font(.body)
+                    ArticleLead("In short: Muslims honour Isa (Jesus) as one of the greatest messengers, born of a virgin, and reject that he is God, the son of God, or part of a trinity. The Quran, the words of Jesus in the Gospels, and reason all point the same way: Jesus called to the worship of one God.")
                 }
 
                 Section(header: ArticleHeader("WHAT MUSLIMS BELIEVE ABOUT JESUS")) {
@@ -893,8 +888,7 @@ struct ChristianityAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Islam gives Jesus his true place: a mighty messenger and the word of Allah, not God and not His son. He ate food, prayed, and called to the worship of his Lord and ours, and he foretold the one who would come after him.")
-                        .font(.body)
+                    ArticleClosing("Islam gives Jesus his true place: a mighty messenger and the word of Allah, not God and not His son. He ate food, prayed, and called to the worship of his Lord and ours, and he foretold the one who would come after him.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -972,6 +966,13 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                 }
 
+                // Where the same question is argued at length (Proving Islam, 2026-09-29).
+                Section(header: ArticleHeader("GO DEEPER")) {
+                    ArticleDoorRow(door: .article("ProvingJesusView"))
+                    ArticleDoorRow(door: .article("ProvingBibleView"))
+                    ArticleDoorRow(door: .provingIslam)
+                }
+
                 ArticleSourcesSection(article: "ChristianityAnswerView")
             }
             .themedListRowBackground()
@@ -986,8 +987,7 @@ struct JudaismAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Muslims believe in Musa (Moses), the Torah, and all the prophets of the Children of Israel. The Quran answers the rejection of Jesus and Muhammad, the changing of the scripture, and the claim of a chosen race, and calls the Jews back to the covenant of their own prophets.")
-                        .font(.body)
+                    ArticleLead("In short: Muslims believe in Musa (Moses), the Torah, and all the prophets of the Children of Israel. The Quran answers the rejection of Jesus and Muhammad, the changing of the scripture, and the claim of a chosen race, and calls the Jews back to the covenant of their own prophets.")
                 }
 
                 Section(header: ArticleHeader("WHAT MUSLIMS BELIEVE")) {
@@ -1210,8 +1210,7 @@ struct JudaismAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Islam honours Moses and the Torah, and asks the Children of Israel to keep the covenant they gave: to believe in the messengers who came after him, whom their own scripture foretold, and to worship the God of Abraham as Abraham did.")
-                        .font(.body)
+                    ArticleClosing("Islam honours Moses and the Torah, and asks the Children of Israel to keep the covenant they gave: to believe in the messengers who came after him, whom their own scripture foretold, and to worship the God of Abraham as Abraham did.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1305,8 +1304,7 @@ struct HinduismAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Hinduism worships many gods through images and teaches rebirth and caste. The Quran answers with the argument of Ibrahim against idols, the oneness of the Creator, the resurrection instead of reincarnation, and the equality of all people before Allah.")
-                        .font(.body)
+                    ArticleLead("In short: Hinduism worships many gods through images and teaches rebirth and caste. The Quran answers with the argument of Ibrahim against idols, the oneness of the Creator, the resurrection instead of reincarnation, and the equality of all people before Allah.")
                 }
 
                 Section(header: ArticleHeader("WHAT HINDUISM TEACHES")) {
@@ -1510,8 +1508,7 @@ struct HinduismAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "One Creator without image, one life followed by judgement, and one humanity ranked only by piety: this is what Ibrahim taught in a land of idols, and what Islam offers in its place.")
-                        .font(.body)
+                    ArticleClosing("One Creator without image, one life followed by judgement, and one humanity ranked only by piety: this is what Ibrahim taught in a land of idols, and what Islam offers in its place.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1607,8 +1604,7 @@ struct PaganismAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: paganism, old and new, worships created things: idols, spirits, ancestors, nature, and stars. The Quran shows where idol worship came from, why the pagans' own admission that Allah is the Creator refutes them, and why nothing created deserves worship.")
-                        .font(.body)
+                    ArticleLead("In short: paganism, old and new, worships created things: idols, spirits, ancestors, nature, and stars. The Quran shows where idol worship came from, why the pagans' own admission that Allah is the Creator refutes them, and why nothing created deserves worship.")
                 }
 
                 Section(header: ArticleHeader("WHAT IS PAGANISM?")) {
@@ -1801,8 +1797,7 @@ struct PaganismAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Paganism is the worship of created things, born of excess in honouring the dead and the beautiful. The pagans themselves admit that Allah created them, and that admission is the proof that He alone should be worshipped.")
-                        .font(.body)
+                    ArticleClosing("Paganism is the worship of created things, born of excess in honouring the dead and the beautiful. The pagans themselves admit that Allah created them, and that admission is the proof that He alone should be worshipped.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -1901,8 +1896,7 @@ struct BuddhismAnswerView: View {
         List {
             Group {
                 Section(header: ArticleHeader("SUMMARY")) {
-                    Text(verbatim: "In short: Buddhism seeks escape from suffering through detachment and rebirth, without a Creator. The Quran answers that the world has a purpose and a Maker, that suffering is a test with meaning, that the self is real and accountable, and that salvation is by Allah's mercy, not by extinguishing desire.")
-                        .font(.body)
+                    ArticleLead("In short: Buddhism seeks escape from suffering through detachment and rebirth, without a Creator. The Quran answers that the world has a purpose and a Maker, that suffering is a test with meaning, that the self is real and accountable, and that salvation is by Allah's mercy, not by extinguishing desire.")
                 }
 
                 Section(header: ArticleHeader("WHAT BUDDHISM TEACHES")) {
@@ -2124,8 +2118,7 @@ struct BuddhismAnswerView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    Text(verbatim: "Buddhism describes suffering and denies the Creator; Islam names the Creator and gives suffering its meaning. There is one life, one soul, one Judge, and one road: worship Allah, be patient, and hope for His mercy.")
-                        .font(.body)
+                    ArticleClosing("Buddhism describes suffering and denies the Creator; Islam names the Creator and gives suffering its meaning. There is one life, one soul, one Judge, and one road: worship Allah, be patient, and hope for His mercy.")
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
@@ -2213,6 +2206,12 @@ struct AtheismAnswerView: View {
         List {
             Group {
                 ArticleSectionsView(sections: Self.sections)
+
+                // Where the same question is argued at length (Proving Islam, 2026-09-29).
+                Section(header: ArticleHeader("GO DEEPER")) {
+                    ArticleDoorRow(door: .article("ProvingGodView"))
+                    ArticleDoorRow(door: .provingIslam)
+                }
 
                 ArticleSourcesSection(article: "AtheismAnswerView")
             }

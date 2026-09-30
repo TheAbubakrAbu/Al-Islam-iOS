@@ -14,6 +14,10 @@ struct NowPlayingView: View {
     @Binding private var scrollDown: Int
     @Binding private var searchText: String
     private let onOpenPlayback: ((PlaybackContext) -> Void)?
+    /// One row even when big: the page reader lays the bar across its whole width when it is wide
+    /// (`PageReaderControlsPart.nowPlaying`), where the big player's three stacked rows only cost the
+    /// page height.
+    private let singleRow: Bool
 
     @State private var confirmClearQueue = false
     /// Last real playback context, kept so the bar can stay mounted (hidden) after playback stops - tearing
@@ -30,11 +34,13 @@ struct NowPlayingView: View {
         quranView: Bool = false,
         scrollDown: Binding<Int> = .constant(-1),
         searchText: Binding<String> = .constant(""),
+        singleRow: Bool = false,
         onOpenPlayback: ((PlaybackContext) -> Void)? = nil
     ) {
         self.quranView = quranView
         _scrollDown = scrollDown
         _searchText = searchText
+        self.singleRow = singleRow
         self.onOpenPlayback = onOpenPlayback
     }
 
@@ -77,7 +83,8 @@ struct NowPlayingView: View {
                 }
                 // Pin a stable full width so the small and big players are the same size and only the
                 // height animates - keeps the card from resizing sideways when expanding/collapsing.
-                .overlay(alignment: .topTrailing) {
+                // Centred on the one-row bar, which is only as tall as its controls.
+                .overlay(alignment: singleRow ? .trailing : .topTrailing) {
                     expandToggleButton
                 }
                 .contextMenu {
@@ -355,7 +362,9 @@ struct NowPlayingView: View {
     private func playerRow(isPlaying: Bool) -> some View {
         #if os(iOS)
         Group {
-            if isExpanded {
+            if isExpanded && singleRow {
+                singleRowExpandedPlayer(isPlaying: isPlaying)
+            } else if isExpanded {
                 expandedPlayerRow(isPlaying: isPlaying)
             } else {
                 compactPlayerRow(isPlaying: isPlaying)
@@ -412,6 +421,60 @@ struct NowPlayingView: View {
         }
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
+    }
+
+    /// The big player as ONE row (`singleRow`): the title leading, the progress bar with its times in
+    /// the middle, the whole transport trailing (Abu, 2026-09-29: "should be all horizontal and take up
+    /// both sides" under the two-page spread).
+    private func singleRowExpandedPlayer(isPlaying: Bool) -> some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 1) {
+                titleBlock(expanded: true)
+            }
+            .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
+
+            if nowPlaying.isPlaying || nowPlaying.isPaused {
+                inlineProgress(isPlaying: isPlaying)
+                    .frame(minWidth: 120, maxWidth: .infinity)
+            }
+
+            HStack(spacing: 14) {
+                transportButtons(isPlaying: isPlaying)
+            }
+            .fixedSize()
+            // Clearance for the expand button, as on the small player.
+            .padding(.trailing, 30)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+    }
+
+    /// The elapsed time, the progress bar and the duration on one line, for the one-row big player.
+    /// The same timeline and cadence as `transportRowWithProgress`.
+    private func inlineProgress(isPlaying: Bool) -> some View {
+        TimelineView(.periodic(from: .now, by: isPlaying ? (appearance.isReducedTier ? 1 : 0.5) : 3600)) { _ in
+            let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
+            let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
+            let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0
+            let safeElapsed = elapsed.isFinite ? max(0, elapsed) : 0
+
+            HStack(spacing: 8) {
+                Text(total > 0 ? Self.formatMMSS(safeElapsed) : "")
+                    .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .trailing)
+
+                TinyProgressBar(fraction: total > 0 ? safeElapsed / total : 0, color: settings.accentColor.color)
+
+                Text(total > 0 ? Self.formatMMSS(total) : "")
+                    .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .leading)
+            }
+            .font(.caption2)
+            .monospacedDigit()
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            // Jumps to each tick, never eases (see `transportRowWithProgress`).
+            .transaction { $0.animation = nil }
+        }
     }
 
     /// Small player (matches 4.4.4): one row, three controls, no seek, no progress bar.

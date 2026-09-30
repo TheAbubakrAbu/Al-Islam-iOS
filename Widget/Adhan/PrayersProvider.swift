@@ -174,7 +174,7 @@ struct PrayersProvider: TimelineProvider {
 
     // MARK: Per-process memo
     //
-    // Every Adhan kind (37 on iOS, 2 on the watch) has its own provider, and after a reload WidgetKit
+    // Every Adhan kind (`Settings.AdhanWidgetKind`, 37 on iOS; 2 on the watch) has its own provider, and after a reload WidgetKit
     // asks each placed one for a timeline in one burst - each of which re-seeded Settings from the App
     // Group, re-ran the prayer computation and rebuilt the boundary timeline. The inputs are the same
     // for all of them, so the first build is cached and the rest return it. Keyed on every App Group
@@ -194,6 +194,11 @@ struct PrayersProvider: TimelineProvider {
         var customAngles: [Double?]
         var skyGradients: String?
         var showSkyScene: Bool
+        // Read only in `Settings.init` before 2026-09-28, so a reused process kept the old rule and
+        // names; and the traveling "View Full Prayers" flag was never mirrored at all (P10, P11).
+        var highLatitudeRule: String?
+        var customPrayerNames: [String: String]
+        var travelingShowFullPrayers: Bool
     }
     private static var memo: (inputs: Inputs, builtAt: Date, entries: [PrayersEntry])?
     private static let memoMaxAge: TimeInterval = 5 * 60
@@ -212,7 +217,10 @@ struct PrayersProvider: TimelineProvider {
             offsets: Settings.prayerOffsetKeys.map { store?.integer(forKey: $0) ?? 0 },
             customAngles: ["customFajrAngle", "customIshaAngle"].map { store?.object(forKey: $0) as? Double },
             skyGradients: store?.string(forKey: "skyGradients"),
-            showSkyScene: store?.object(forKey: "showSkyScene") as? Bool ?? true
+            showSkyScene: store?.object(forKey: "showSkyScene") as? Bool ?? true,
+            highLatitudeRule: store?.string(forKey: "highLatitudeRule"),
+            customPrayerNames: (store?.dictionary(forKey: "customPrayerNames") as? [String: String]) ?? [:],
+            travelingShowFullPrayers: store?.bool(forKey: "travelingShowFullPrayers") ?? false
         )
     }
 
@@ -395,6 +403,13 @@ struct PrayersProvider: TimelineProvider {
         settings.prayerCalculation = store?.string(forKey: "prayerCalculation") ?? "Muslim World League"
         settings.hijriOffset = store?.integer(forKey: "hijriOffset") ?? 0
         settings.switchHijriDateAtMaghrib = store?.bool(forKey: "switchHijriDateAtMaghrib") ?? false
+        // Re-seeded on every build (their didSets do nothing in an extension): read once in
+        // `Settings.init`, a reused process built tomorrow's table with the old high-latitude rule
+        // and the old prayer spellings (P11).
+        let rule = store?.string(forKey: "highLatitudeRule") ?? Settings.automaticHighLatitudeRule
+        if settings.highLatitudeRule != rule { settings.highLatitudeRule = rule }
+        let names = (store?.dictionary(forKey: "customPrayerNames") as? [String: String]) ?? [:]
+        if settings.customPrayerNames != names { settings.customPrayerNames = names }
 
         // The user's manual offsets, mirrored from the app. Written to this process's standard
         // defaults (where @AppStorage reads) rather than assigned through the properties - each
@@ -414,6 +429,12 @@ struct PrayersProvider: TimelineProvider {
                extensionDefaults.object(forKey: key) as? Double != mirrored {
                 extensionDefaults.set(mirrored, forKey: key)
             }
+        }
+        // Traveling mode's "View Full Prayers" (P10): past Asr the app shows "Asr" while the widgets,
+        // never told, said "Dhuhr/Asr". Same mirror as the offsets (it is @AppStorage here too).
+        let fullPrayers = store?.bool(forKey: "travelingShowFullPrayers") ?? false
+        if extensionDefaults.bool(forKey: "travelingShowFullPrayers") != fullPrayers {
+            extensionDefaults.set(fullPrayers, forKey: "travelingShowFullPrayers")
         }
 
         settings.fetchPrayerTimes()

@@ -221,20 +221,6 @@ struct SimilarAyahsSheet: View {
             Group {
                 if let matches {
                     List {
-                        if MutashabihatStore.isBundled {
-                            Section {
-                                Picker("List", selection: $tab) {
-                                    ForEach(Tab.allCases) { item in
-                                        Text(item.title).tag(item)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .onChange(of: tab) { _ in settings.hapticFeedback() }
-                                .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                                .listRowBackground(Color.clear)
-                            }
-                        }
-
                         if tab == .phrases {
                             let list = phrases ?? []
                             if list.isEmpty {
@@ -255,12 +241,6 @@ struct SimilarAyahsSheet: View {
                                 .foregroundColor(.secondary)
                         } else {
                             let shown = matches.filter { filter.matches($0) }
-                            Section {
-                                filterChips(matches)
-                                    .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12))
-                                    .listRowBackground(Color.clear)
-                            }
-
                             Section(footer: sourcesFootnote) {
                                 if shown.isEmpty {
                                     Text("No \(filter.title.lowercased()) matches for this ayah. Try another filter.")
@@ -274,6 +254,34 @@ struct SimilarAyahsSheet: View {
                         }
                     }
                     .applyConditionalListStyle(disableNowPlayingInset: true)
+                    // The Similar / Phrases switch is pinned under the bar rather than being the
+                    // list's first row: both lists run long, and switching between them should
+                    // never mean scrolling back up (the tafsir sheet's rule, Abu 2026-09-28).
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        let showsChips = tab == .similar && !matches.isEmpty
+                        if MutashabihatStore.isBundled || showsChips {
+                            VStack(spacing: 6) {
+                                if MutashabihatStore.isBundled {
+                                    Picker("List", selection: $tab) {
+                                        ForEach(Tab.allCases) { item in
+                                            Text(item.title).tag(item)
+                                        }
+                                    }
+                                    .pickerStyle(.segmented)
+                                    .onChange(of: tab) { _ in settings.hapticFeedback() }
+                                }
+                                // The reason filter rides in the same band: the match rows below are
+                                // full Arabic plus English, so narrowing them must not need a scroll up.
+                                if showsChips {
+                                    filterChips(matches)
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial)
+                            .overlay(Divider(), alignment: .bottom)
+                        }
+                    }
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -358,7 +366,7 @@ struct SimilarAyahsSheet: View {
     /// (Hide Tashkeel deletes the standalone ۞ token, so the display can be one token shorter).
     private func displayRanges(for match: SimilarAyahMatch, surah: Surah, ayah: Ayah, display: String) -> [NSRange] {
         guard !match.spans.isEmpty else { return [] }
-        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+        let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
         let rawTokens = WordTokens.tokens(in: raw)
         let displayRanges = WordTokens.ranges(in: display)
         // Raw token index → display token index: identity when the counts agree, else the raw

@@ -36,6 +36,9 @@ enum CloudManifest {
         var seen = Set(listedPreferenceKeys)
         var keys = listedPreferenceKeys
         for key in Settings.watchSyncedAppStorageKeys where seen.insert(key).inserted { keys.append(key) }
+        // The per-screen Advanced Settings switches, built by interpolation (`AdvancedScreen.storageKey`),
+        // so no list could name them all and the source scan never saw eight of the ten (Quality Guide T4).
+        for key in Settings.AdvancedScreen.allCases.map(\.storageKey) where seen.insert(key).inserted { keys.append(key) }
         return keys
     }()
 
@@ -43,6 +46,7 @@ enum CloudManifest {
         "THEfontArabic", "acceptedBetaQiraatNotice", "adhanNotificationSound", "adhanOverridesSilentMode",
         "adhanSoundAsr", "adhanSoundDhuhr", "adhanSoundFajr", "adhanSoundIsha", "adhanSoundMaghrib",
         "alIslamGlow", "alertToneSound", "arabicFilterMode", "arabicLetterSizeIndex",
+        "arabicShelfAxisQualities", "arabicShelfAxisRules", "askAIEngine",
         "automaticKhatmCompletion", "ayahPreviewCardScale", "beginnerMode", "betaQiraatEnabled",
         "calculationAutomatic", "classicLook", "classicLookInLowPower", "cleanArabicText",
         "colorSchemeString", "confirmedMinshawiAyahFallbackReciterIDs", "copyAyahArabic",
@@ -52,7 +56,8 @@ enum CloudManifest {
         "defaultView", "displayQiraah", "englishFontSize", "extraReminders", "faraidShowWider",
         "fontArabicSize", "gridModeArabicRaw", "gridModeIslamRaw", "gridModeNamesRaw", "gridModeSettingsRaw",
         "hadithArabicFontSize", "hadithEnglishFontSize", "hadithGridMode", "hadithSearchFilterPreferences",
-        "hadithSearchHelpCollapsed", "hapticOn", "hideEnglishInArabicLetters", "highlightAllahNames",
+        "hadithSearchHelpCollapsed", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
+        "hideEnglishInArabicLetters", "highlightAllahNames",
         "highlightAllahNamesHadith", "highlightAllahNamesIslam", "hijriCalendarDisplayMode",
         "islamArabicFontFace", "islamTextSize", "keepAyahSheetOpen", "khatmGroupByJuz", "launchTab", "launchTabChosen",
         "mushafBottomBarsCollapsed", "mushafFitPage", "mushafPDFAppearance", "mushafPageLanguage",
@@ -81,7 +86,9 @@ enum CloudManifest {
         "saveLastReadAyah", "searchForSurahs", "shareArabicFont", "shareAyahBackdrop",
         "shareAyahLastActionMode", "shareHadithArabic", "shareHadithEnglish", "shareHadithFontFace",
         "shareHadithHideTashkeel", "shareHadithIncludeNote", "shareHadithLastActionMode",
-        "shareHadithReference", "shareIncludeRiwayah", "shareShowAyahInformation",
+        "shareHadithReference", "shareIncludeRiwayah", "shareNameArabic", "shareNameDescription",
+        "shareNameFirstFound", "shareNameFontFace", "shareNameLastActionMode", "shareNameOtherNames",
+        "shareNameTranslation", "shareNameTransliteration", "shareShowAyahInformation",
         "shareShowSurahInformation", "shortAdhanAsr", "shortAdhanDhuhr", "shortAdhanFajr", "shortAdhanIsha",
         "shortAdhanMaghrib", "showAccentGlow", "showArabicText", "showAyahOfTheDay", "showBookmarks",
         "showDescription", "showDuha", "showEnglishMustafa", "showEnglishSaheeh", "showFavoriteLetters",
@@ -113,44 +120,13 @@ enum CloudManifest {
     /// decodes either cannot damage either date format.
     static var files: [String] { Settings.contentDocumentFiles }
 
-    /// Never backed up. Location first: the permission prompt promises "your location stays on your
-    /// device", so nothing derived from it leaves, the saved home city and favorite locations
-    /// included. Then what describes THIS install rather than the person: prompts already shown,
-    /// migrations already run, what was last scheduled, what was last drawn.
-    static let deviceOnlyKeys: [String] = [
-        // Location, and everything computed from it (standard defaults and the app group).
-        "currentLocation", "homeLocationData", "favoriteLocations", "prayersData", "currentPrayerData",
-        "nextPrayerData", "currentCountryCode", "lastLocationFixAt", "cityAnchorLatitude", "cityAnchorLongitude",
-        "travelingMode", "travelTurnOffAutomatic", "travelTurnOnAutomatic",
-        "calculationAutoAnsweredCountryCode", "calculationAutoAnsweredMethod", "calculationAutoChanged",
-        "calculationAutoDetectedCountryCode", "calculationAutoDetectedMethod", "calculationAutoPreviousMethod",
-        // Onboarding and permission prompts this install has already been through.
-        "THEfirstLaunch", "aboutYouVersionSeen",
-        "locationNeverAskAgain", "notificationNeverAskAgain", "showLocationAlert", "showNotificationAlert",
-        // Migrations and one-time seeds.
-        "appGroupMirrorsSeeded.v1", "settings.explicitlySetKeys", "settings.didSeedExplicitKeys",
-        "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
-        // What was last scheduled, played or drawn here.
-        "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
-        "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
-        "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
-        // The page reader's learned fold and find-bar band pairs: this screen's geometry, like the one above.
-        "mushaf.foldTwins", "mushaf.findTwins",
-        // More of the same, found by `-cloudKeyAudit` in a live domain (2026-09-21): the source scan
-        // cannot see a key declared as `let flag = "..."` or passed as an argument. The locator
-        // caches are LOCATION (the masjids and halal places around the home city).
-        "halalLocatorHomeCacheData", "masjidLocatorHomeCacheData",
-        "didPurgeLegacyQuranCaches", "hadithBookCorporaPurged1", "hadithCitationRefresh1",
-        "hadithLegacyCachePurged", "tafsirLegacyCachePurged",
-        "appReviewAskDates", "appReviewSessionCount", "timeSpent",
-        // Retired keys an older build left in the domain; nothing reads them now.
-        "foregroundAdhanLastPlayedID", "gridMode", "islamGridMode", "namesGridMode",
-        // Today's picks: tomorrow they are wrong anyway.
-        "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
-    ]
+    /// Never backed up: `Settings.deviceOnlyStorageKeys` and `deviceOnlyStoragePrefixes`. Kept in
+    /// Settings.swift, like the content list, because a keep-content reset spares them too and that
+    /// file compiles in the sibling apps, where this one does not (Quality Guide G10).
+    static var deviceOnlyKeys: [String] { Settings.deviceOnlyStorageKeys }
 
     /// Whole families that are device-only: the watch sync's bookkeeping, and the backup's own.
-    static let deviceOnlyPrefixes: [String] = ["watchSync.", "cloudBackup."]
+    static var deviceOnlyPrefixes: [String] { Settings.deviceOnlyStoragePrefixes }
 
     // MARK: Lookups
 
@@ -164,6 +140,8 @@ enum CloudManifest {
         contentKeySet.contains(key) || preferenceKeySet.contains(key) || deviceOnlyKeySet.contains(key)
             || appGroupPreferenceKeys.contains(key)
             || deviceOnlyPrefixes.contains(where: key.hasPrefix)
+            // A rescued blob that did not decode ("<key>.corrupt"): this device's, never backed up.
+            || key.hasSuffix(UserDataRescue.rescueSuffix)
     }
 
     static func isSystemKey(_ key: String) -> Bool {

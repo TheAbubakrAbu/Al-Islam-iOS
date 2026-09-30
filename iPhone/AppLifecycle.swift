@@ -18,6 +18,33 @@ enum ScreenAwake {
     }
 }
 
+/// Whether anything modal is up over the app's windows: a sheet, a share sheet, an alert, a
+/// confirmation dialog. The "leaving the app" behaviours (the Quran tab re-opening the mushaf on
+/// `didEnterBackground`) must not run while one is presented: a share sheet that hands off to
+/// Messages backgrounds the app, and the user is coming straight back to that sheet, not leaving.
+///
+/// Walks every window's controller tree rather than reading `rootViewController.presentedViewController`
+/// alone: a SwiftUI sheet is presented from the hosting controller that declares it, which may be a
+/// child (a tab's navigation stack), and only that controller's `presentedViewController` is set when
+/// the presentation defines its own context.
+@MainActor
+enum ModalPresence {
+    static var isPresenting: Bool {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .contains { window in
+                guard let root = window.rootViewController else { return false }
+                return presents(root)
+            }
+    }
+
+    private static func presents(_ controller: UIViewController) -> Bool {
+        if controller.presentedViewController != nil { return true }
+        return controller.children.contains { presents($0) }
+    }
+}
+
 /// The app's foreground/background orchestration, in one named place.
 ///
 /// This is deliberately NOT in `Settings`: a phase change touches several subsystems (playback
@@ -65,7 +92,13 @@ enum AppLifecycle {
             settings.refreshLocationIfStale()
             settings.beginForegroundLocationCadence()
         } else {
-            ForegroundAdhanPlayer.shared.stop()
+            // A Mac window behind another app's sits at .inactive for as long as it stays open, and the
+            // in-app player is the adhan's only on-time path there (the system delivers late on a Mac,
+            // and `willPresent` silences a late delivery), so it stays armed until the window really
+            // leaves (2026-09-29). An iPhone or iPad disarms at .inactive as before.
+            if !(ProcessInfo.processInfo.isiOSAppOnMac && phase == .inactive) {
+                ForegroundAdhanPlayer.shared.stop()
+            }
             // A high-accuracy burst pins the GPS. `AdhanView.onDisappear` ends it when you navigate away,
             // but backgrounding the app doesn't disappear the view - without this the burst would run to
             // its 25-second timeout with the screen off.
@@ -117,15 +150,24 @@ enum AppLifecycle {
             DailyReminderStore.shared.refreshWidgets()
             ActivityLog.shared.refreshSummaryIfDayChanged()
             ExtraRemindersStore.shared.rearmIfNeeded()
+            // The Chosen Ayah widgets: which ayahs their placed copies ask for (a choice made while
+            // the app was closed), so each gets a card in the reader's styling. A no-op when nothing
+            // changed since the last answer.
+            settings.refreshChosenAyahWidgets()
         }
         if phase != .active {
-            settings.refreshQuranWidgets()
             ActivityLog.shared.flush()
             // A page flip within the last second may still have its last-read write pending.
             settings.flushPendingLastRead()
             // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
             // the system can suspend or kill the process.
             settings.flushPendingKhatmProgress()
+        }
+        // The widget write waits for a REAL backgrounding (after the flushes, so it reads the last
+        // page): `.inactive` is also Notification Center, Control Center and the app switcher, and
+        // ran the whole rebuild (and a second one on the `.background` that follows) each time.
+        if phase == .background {
+            settings.refreshQuranWidgets(.backgrounding)
         }
     }
 
@@ -181,8 +223,13 @@ enum AppLifecycle {
         #if HAS_ICLOUD_BACKUP
         // The iCloud backup's automatic pass (Al-Islam only): silent, throttled, and a no-op when
         // nothing changed (see CloudBackupManager.automaticSaveIfDue). Leaving the foreground is the
-        // main trigger, AFTER the flushes above have landed the pending writes it will read.
-        CloudBackupManager.shared.automaticSaveIfDue(reason: phase == .active ? .foreground : .background)
+        // main trigger, AFTER the flushes above have landed the pending writes it will read; not on
+        // `.inactive` (a pull of Notification Center is not leaving).
+        if phase == .active {
+            CloudBackupManager.shared.automaticSaveIfDue(reason: .foreground)
+        } else if phase == .background {
+            CloudBackupManager.shared.automaticSaveIfDue(reason: .background)
+        }
         #endif
         guard phase != .active else { return }
         // Send any just-made setting change before the app is suspended, so it can't be lost (and
@@ -206,6 +253,8 @@ enum MemoryTrim {
         HadithArabicChunks.purgeCache()
         // The explorer's computed place tables and counts.
         QiraatPlacesStore.shared.purgeComputed()
+        // The mushaf fit's fonts (bounded, but a page fit's probes fill it; rebuilt on the next fit).
+        QuranFontCache.purge()
         #if DEBUG
         MemoryFootprint.logLater("memory warning trim", delay: 2)
         #endif

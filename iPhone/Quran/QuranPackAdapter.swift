@@ -59,15 +59,38 @@ enum QuranPackLoader {
 
     /// Pack file names, and where Xcode may have put them. Internal: every `.qpk` lookup in the
     /// app (including NamesView's and the semantic-corpus stamp's) goes through this one probe.
-    static func url(_ name: String) -> URL? {
+    /// `allowContainingApp` lets an EXTENSION read the pack out of the app it lives in; it is
+    /// opt-in (only the Chosen Ayah widget's one-ayah read asks), so no other extension caller can
+    /// start a whole-Quran load inside a ~30 MB widget process by accident.
+    static func url(_ name: String, allowContainingApp: Bool = false) -> URL? {
         if let directory = packDirectory {
             let candidate = directory.appendingPathComponent("\(name).qpk")
             return FileManager.default.fileExists(atPath: candidate.path) ? candidate : nil
         }
-        return Bundle.main.url(forResource: name, withExtension: "qpk", subdirectory: "Quran")
-            ?? Bundle.main.url(forResource: name, withExtension: "qpk", subdirectory: "Data/Quran")
-            ?? Bundle.main.url(forResource: name, withExtension: "qpk")
+        if let local = url(name, in: Bundle.main) { return local }
+        guard allowContainingApp else { return nil }
+        return containingAppBundle.flatMap { url(name, in: $0) }
     }
+
+    private static func url(_ name: String, in bundle: Bundle) -> URL? {
+        bundle.url(forResource: name, withExtension: "qpk", subdirectory: "Quran")
+            ?? bundle.url(forResource: name, withExtension: "qpk", subdirectory: "Data/Quran")
+            ?? bundle.url(forResource: name, withExtension: "qpk")
+    }
+
+    /// The app bundle an extension lives inside (`Al-Islam.app/PlugIns/Widget.appex` -> `Al-Islam.app`),
+    /// so the widget extension can read quran.qpk without the bundle shipping a second copy of it.
+    /// The Chosen Ayah widget typesets an ayah chosen while the app is not running from this
+    /// (ChosenAyahWidget.swift); nil in the app itself and wherever the walk finds no `.app`.
+    private static let containingAppBundle: Bundle? = {
+        guard Bundle.main.bundleURL.pathExtension == "appex" else { return nil }
+        var url = Bundle.main.bundleURL
+        for _ in 0..<4 {
+            url.deleteLastPathComponent()
+            if url.pathExtension == "app" { return Bundle(url: url) }
+        }
+        return nil
+    }()
 
     /// Riwayah key in the pack → the `Ayah` field it populates. Mirrors `QuranData.qiraatKeys`.
     private static let qiraatFields: [(packKey: String, field: String)] = [
