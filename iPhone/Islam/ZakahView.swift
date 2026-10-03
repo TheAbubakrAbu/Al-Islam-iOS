@@ -141,6 +141,23 @@ struct ZakahCalculatorView: View {
             Group {
                 // The ANSWER first (Abu, 2026-09-19). The old order put seven empty amount rows and
                 // ~340 words of footer between the reader and the number they opened the screen for.
+                // The hero above it is short on purpose: the answer stays on the first screen.
+                #if os(iOS)
+                if shows("result") {
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "THE THIRD PILLAR",
+                        systemImage: "percent",
+                        headline: "Take, [O, Muhammad], from their wealth a charity by which you purify them and cause them increase.",
+                        source: "Quran 9:103",
+                        message: "Enter what you own and what you owe. The calculator weighs it against the nisab and works out what is due, with zakat al-fitr beside it.",
+                        stats: [
+                            ResourceHeroStat("2.5%", "the rate"),
+                            ResourceHeroStat("1 year", "held (hawl)"),
+                            ResourceHeroStat("8", "recipient groups"),
+                        ]
+                    ))
+                }
+                #endif
                 if shows("result") { resultSection }
                 if shows("assets") { assetsSection }
                 if shows("liabilities") { liabilitiesSection }
@@ -435,15 +452,43 @@ struct ZakahCalculatorView: View {
         .padding(.vertical, 2)
     }
 
+    /// The notes as an article section rather than one caption-sized block (Abu, 2026-10-03: "make it
+    /// pretty like pillars and beliefs"): what zakah is as the lead card, the sides the calculator
+    /// takes as bullets, and the caution as a callout. The words are the old single string's, split at
+    /// its paragraph breaks.
     private var notesSection: some View {
         Section(header: Text("WHAT THIS ASSUMES")) {
-            Text(Self.notes)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            ArticleLead(Self.notesLead)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: Self.notesSides)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ForEach(Self.notesPositions, id: \.self) { position in
+                    ArticleBullet(verbatim: position)
+                }
+            }
+            .padding(.vertical, 4)
+
+            ArticleCallout(paragraphs: [Self.notesCaution], title: "Not a Fatwa",
+                           systemImage: "exclamationmark.triangle.fill")
         }
     }
 
-    static let notes = "Zakah is a fortieth of the wealth that has sat with you at or above the nisab for a lunar year. وَأَقِيمُوا ٱلصَّلَوٰةَ وَءَاتُوا ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (2:110). It goes to the eight kinds of people named in 9:60, and not to your parents, your children or your wife, who are yours to support anyway.\n\nWhere scholars differ, this calculator takes a side, and you should know which:\n\nGold and silver jewellery is counted, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi‘i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \"Do you pay the zakah on this?\" (Abu Dawud 1563). If you follow the other view, leave the field empty.\n\nBanknotes are measured against the lower of the two nisabs, which is silver.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone.\n\nBusiness stock is valued at what you would sell it for today, not what you paid.\n\nThis is a quick guide for the ordinary case, and nothing more. It is not a fatwa. Property held to rent, a business with debtors and creditors on both sides, retirement accounts, crops, livestock, gold mixed with stones, a year you are unsure of: every one of those needs a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah who can hear your actual situation. Ask one before you rely on this number."
+    static let notesLead = "Zakah is a fortieth of the wealth that has sat with you at or above the nisab for a lunar year. وَأَقِيمُوا ٱلصَّلَوٰةَ وَءَاتُوا ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (2:110). It goes to the eight kinds of people named in 9:60, and not to your parents, your children or your wife, who are yours to support anyway."
+
+    static let notesSides = "Where scholars differ, this calculator takes a side, and you should know which:"
+
+    static let notesPositions = [
+        "Gold and silver jewellery is counted, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi‘i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \"Do you pay the zakah on this?\" (Abu Dawud 1563). If you follow the other view, leave the field empty.",
+        "Banknotes are measured against the lower of the two nisabs, which is silver.",
+        "A debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.",
+        "Shares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone.",
+        "Business stock is valued at what you would sell it for today, not what you paid.",
+    ]
+
+    static let notesCaution = "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. Property held to rent, a business with debtors and creditors on both sides, retirement accounts, crops, livestock, gold mixed with stones, a year you are unsure of: every one of those needs a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah who can hear your actual situation. Ask one before you rely on this number."
 
     // MARK: Rows
 

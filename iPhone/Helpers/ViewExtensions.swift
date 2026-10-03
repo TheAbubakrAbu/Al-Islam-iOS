@@ -2153,6 +2153,9 @@ struct SectionPillHeader: View {
     var onShuffle: (() -> Void)? = nil
     /// "5+" style count - set when the count is a floor from an early-exited search.
     var overflow: Bool = false
+    /// A magnifier that starts a search held to this section's items (the Quran bookmarks and
+    /// favorites). Sits between the count and the shuffle.
+    var onSearch: (() -> Void)? = nil
 
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
@@ -2204,10 +2207,25 @@ struct SectionPillHeader: View {
     @ViewBuilder
     private var controls: some View {
         // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
-        // of the cluster (it is information, not a control), then the buttons: shuffle, then the
-        // expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
+        // of the cluster (it is information, not a control), then the buttons: search, shuffle, then
+        // the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
         // must follow this order too.
         CountPill(count: count, overflow: overflow)
+
+        if let onSearch {
+            Image(systemName: "magnifyingglass")
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(appearance.accent)
+                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .conditionalGlassEffect(circle: true)
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    onSearch()
+                }
+                .accessibilityLabel("Search \(title.lowercased())")
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
+        }
 
         if let onShuffle {
             // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),

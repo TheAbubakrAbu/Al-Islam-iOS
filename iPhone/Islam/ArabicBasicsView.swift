@@ -379,10 +379,10 @@ struct DefaultTashkeelView: View {
 
     // MARK: Sections
 
+    /// Opens on the article lead (Abu, 2026-10-03: every overview "pretty like pillars and beliefs").
     private var meaningSection: some View {
         Section {
-            Text("Tashkeel is optional in written Arabic. The Quran, children's books and learner texts print every mark; almost everything else (books, news, signs, messages) prints none, and the reader supplies them from knowing the word.")
-                .font(.body)
+            ArticleLead("Tashkeel is optional in written Arabic. The Quran, children's books and learner texts print every mark; almost everything else (books, news, signs, messages) prints none, and the reader supplies them from knowing the word.")
 
             Text("Default tashkeel is the small set of marks you can supply WITHOUT knowing the word, because the letters themselves force them. It is the first thing a reader leans on in unmarked text.")
                 .font(.body)
@@ -515,7 +515,7 @@ struct DefaultTashkeelView: View {
 /// thing telling them apart. The table is the point of the page: every pair, side by side.
 ///
 /// The shapes are drawn in the Uthmani face whatever the reader's Arabic face is. The stack is that
-/// face's drawing; another face may join the two side by side and the page would be showing nothing.
+/// face's drawing; Kufi and the system face join the two side by side and the page would show nothing.
 struct BaaHaaShapesView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
@@ -572,6 +572,9 @@ struct BaaHaaShapesView: View {
         #endif
     }
 
+    /// The glyph is a card of its own, then the article lead opens the words under it (2026-10-03): a
+    /// lead between two plain rows would split one rounded group into two square-cornered halves.
+    @ViewBuilder
     private var shapeSection: some View {
         Section {
             VStack(spacing: 4) {
@@ -591,14 +594,15 @@ struct BaaHaaShapesView: View {
             .frame(maxWidth: .infinity)
             .rowSeparatorFromLeadingEdge()
             .accessibilityElement(children: .combine)
+        } header: {
+            Text("THE SHAPE")
+        }
 
-            Text("Five letters share the baa shape at the start of a word (ب ت ث ن ي), and three share the haa shape (ج ح خ). Join any of the first onto any of the second and you get this one outline, fifteen ways.")
-                .font(.body)
+        Section {
+            ArticleLead("Five letters share the baa shape at the start of a word (ب ت ث ن ي), and three share the haa shape (ج ح خ). Join any of the first onto any of the second and you get this one outline, fifteen ways.")
 
             Text("In the mushaf's hand the first letter does not sit beside the haa on the line. It rides above it as a small hook, which is why the pair is hard to recognize from the two letters you learned separately. Only the dots tell the fifteen apart: the dots on the hook belong to the first letter, and the dot in or over the bowl belongs to the second.")
                 .font(.body)
-        } header: {
-            Text("THE SHAPE")
         }
     }
 
@@ -642,7 +646,7 @@ struct BaaHaaShapesView: View {
         } header: {
             Text("ALL 15 COMBINATIONS")
         } footer: {
-            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmani hand the mushaf is printed in; the app's own Arabic faces write the two letters side by side.")
+            Text("Each row is one opening letter, each column the letter it joins. The trailing line (ـ) only shows that the word carries on. Shown in the Uthmani hand the mushaf is printed in, whatever your Arabic face is.")
         }
     }
 
@@ -711,7 +715,7 @@ struct BaaHaaShapesView: View {
         } header: {
             Text("WORDS YOU MEET IN THE QURAN")
         } footer: {
-            Text("Drawn in the mushaf's own Uthmani hand, the way the Quran reader prints them, whatever your Arabic face is. Everywhere else in the app the pair is written side by side, so these rows are where to learn the stacked form.")
+            Text("Drawn in the mushaf's own Uthmani hand, the way the Quran reader prints them, whatever your Arabic face is, so the stacked form shows even if your face writes the pair side by side.")
         }
     }
 }
@@ -782,6 +786,8 @@ struct LaamAlifShapesView: View {
         #endif
     }
 
+    /// The glyph, then the lead and the words under it: `BaaHaaShapesView.shapeSection`'s layout.
+    @ViewBuilder
     private var shapeSection: some View {
         Section {
             VStack(spacing: 4) {
@@ -801,14 +807,15 @@ struct LaamAlifShapesView: View {
             .frame(maxWidth: .infinity)
             .rowSeparatorFromLeadingEdge()
             .accessibilityElement(children: .combine)
+        } header: {
+            Text("THE SHAPE")
+        }
 
-            Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
-                .font(.body)
+        Section {
+            ArticleLead("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
 
             Text("The sound does not change: read it as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there. Only when the alif comes second does the laam fold over it.")
                 .font(.body)
-        } header: {
-            Text("THE SHAPE")
         }
     }
 

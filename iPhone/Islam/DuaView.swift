@@ -214,10 +214,12 @@ struct DuaView: View {
     /// Collection rows filter IN PLACE while searching, the reading lists' rule.
     private func filteredCollections(for normalizedQuery: String) -> [DuaCollection] {
         guard !normalizedQuery.isEmpty else { return collections }
-        return collections.filter {
+        let matched = collections.filter {
             $0.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
                 || $0.subtitle.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
         }
+        // The collection named for the query leads the ones whose subtitle mentions it.
+        return SearchRank.sorted(matched, by: normalizedQuery) { [$0.title, $0.subtitle] }
     }
 
     /// Every dua in EVERY collection matching the query - so a search here finds the supplication
@@ -415,12 +417,25 @@ struct DuaView: View {
         List {
             Group {
             if query.isEmpty {
+            #if os(iOS)
+            ResourceHeroSection(ResourceHero(
+                eyebrow: "SUPPLICATION",
+                systemImage: "text.book.closed.fill",
+                headline: "Call upon Me; I will respond to you.",
+                source: "Quran 40:60",
+                message: HisnDuasStore.isBundled
+                    ? "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source, and the whole of Hisn al-Muslim beside them."
+                    : "Short, daily supplications that keep your heart connected to Allah in every situation, each with its source.",
+                stats: [
+                    ResourceHeroStat("\(DuaLibrary.shared.allItems.count)", "duas"),
+                    ResourceHeroStat("\(DuaLibrary.shared.collections.count)", "collections"),
+                ] + (hisnLibrary.map { [ResourceHeroStat("\($0.entries.count)", "in Hisn al-Muslim")] } ?? [])
+            ))
+            #else
             Section(header: Text("SUPPLICATIONS TO ALLAH")) {
-                Text("Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                    .padding(.vertical, 8)
+                ArticleLead("Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)")
             }
+            #endif
 
             #if os(iOS)
             // Hisn al-Muslim: the whole Fortress, and today's dua from it.
@@ -611,59 +626,37 @@ struct DuaView: View {
             }
 
             if query.isEmpty {
+            // The article kit's cards (Abu, 2026-10-03: "make it pretty like pillars and beliefs"): the
+            // word and its root as an etymology card, the virtues as a lead and two quoted callouts.
             Section(header: Text("ETYMOLOGY")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Arabic root: د ع و (d-ʿ-w)")
-                        .font(
-                            settings.islamUsesCustomArabicFace
-                                ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
-                                : .subheadline.weight(.semibold)
-                        )
-                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                        .foregroundColor(settings.accentColor.color)
-
-                    Text("Core meaning: to call, to invite, to summon")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-
-                    Text("Dua literally means calling out, especially calling upon Allah. In Islam it is not just asking for things; it is an act of worship, turning to Him with need, hope, fear, and love.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(Color.secondary.opacity(0.1))
-                )
-                .padding(-4)
+                ArticleEtymologyCard("Dua", arabic: "دُعَاء", root: "د ع و", rootLatin: "d-ʿ-w",
+                                     coreMeaning: "to call, to invite, to summon",
+                                     text: "Dua literally means calling out, especially calling upon Allah. In Islam it is not just asking for things; it is an act of worship, turning to Him with need, hope, fear, and love.")
             }
 
             Section(header: Text("VIRTUES OF DUA")) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Dua is an act of worship and a direct connection with Allah. No sincere call is lost: it is answered now, delayed for wisdom, or stored as reward.")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                }
+                ArticleLead("Dua is an act of worship and a direct connection with Allah. No sincere call is lost: it is answered now, delayed for wisdom, or stored as reward.")
 
-                DuaReflectionCard(
-                    title: "Quranic Promise",
-                    lines: [
+                ArticleCallout(
+                    bullets: [
                         "And your Lord says, \"Call upon Me; I will respond to you.\" (Quran 40:60)",
                         "And when My servants ask you concerning Me, indeed I am near. I respond to the invocation of the supplicant when he calls upon Me. (Quran 2:186)",
                         "Is He not best who responds to the desperate one when he calls upon Him and removes evil and makes you inheritors of the earth? (Quran 27:62)"
                     ],
-                    accent: settings.accentColor.color
+                    title: "Quranic Promise",
+                    systemImage: "book.closed.fill"
                 )
+                .articleCardRow()
 
-                DuaReflectionCard(
-                    title: "Prophetic Guidance",
-                    lines: [
+                ArticleCallout(
+                    bullets: [
                         "Dua is worship. (Abu Dawud 1479; Tirmidhi 3247, sahih)",
                         "No Muslim supplicates, so long as it is not for sin or for severing kinship, but Allah gives him one of three: the answer is hastened, it is stored for him in the Hereafter, or an equivalent evil is turned away from him. (Musnad Ahmad 11133, hasan)"
                     ],
-                    accent: settings.accentColor.color
+                    title: "Prophetic Guidance",
+                    systemImage: "quote.bubble.fill"
                 )
+                .articleCardRow()
             }
 
                 Section {
@@ -897,9 +890,7 @@ struct DuaCollectionView: View {
         // "ABOUT", not the collection's own name again - the navigation title directly above already says
         // "Sleep & Waking"; a header shouting "SLEEP & WAKING DUAS" right under it was saying it twice.
         Section(header: Text("ABOUT")) {
-            Text(collection.introduction)
-                .font(.subheadline)
-                .foregroundColor(.primary)
+            ArticleLead(collection.introduction)
         }
     }
 
@@ -1171,34 +1162,6 @@ private enum DuaCollections {
             DuaItem(quran: "66:8", words: 34...44, transliteration: "Rabbanaaa atmim lanaa nooranaa waghfir lana innaka 'alaa kulli shai'in qadeer", translation: "Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.")
         ]
     )
-}
-
-private struct DuaReflectionCard: View {
-    let title: String
-    let lines: [String]
-    let accent: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(accent)
-
-            ForEach(lines, id: \.self) { line in
-                Text("• \(line)")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.secondary.opacity(0.1))
-        )
-        .padding(-4)
-    }
 }
 
 #Preview {
@@ -1532,9 +1495,7 @@ struct HisnDuaLibraryView: View {
                 if let library {
                     if query.isEmpty {
                         Section(header: Text("THE FORTRESS OF THE MUSLIM")) {
-                            Text("Hisn al-Muslim, the pocket book of supplications compiled by Sa'id ibn Ali ibn Wahf al-Qahtani from the Quran and the authentic Sunnah: \(library.entries.count) duas for \(library.categories.count) situations, each with its reference, and a recitation to follow along with.")
-                                .font(.subheadline)
-                                .padding(.vertical, 6)
+                            ArticleLead("Hisn al-Muslim, the pocket book of supplications compiled by Sa'id ibn Ali ibn Wahf al-Qahtani from the Quran and the authentic Sunnah: \(library.entries.count) duas for \(library.categories.count) situations, each with its reference, and a recitation to follow along with.")
                         }
 
                         Section(header: SectionPillHeader(title: "THROUGH THE DAY", count: library.collections.count)) {
@@ -1650,9 +1611,9 @@ struct HisnDuaLibraryView: View {
     private static func filter(_ library: HisnDuasStore.Library?, query: String) -> (categories: [HisnDuasStore.Category], matches: [HisnDuasStore.Entry]) {
         guard let library else { return ([], []) }
         guard !query.isEmpty else { return (library.categories, []) }
-        let categories = library.categories.filter { category in
+        let categories = SearchRank.sorted(library.categories.filter { category in
             (category.label + " " + category.arabic).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)
-        }
+        }, by: query) { [$0.label, $0.arabic] }
         let matches = library.entries.filter { entry in
             (entry.translation + " " + entry.transliteration + " " + entry.arabic)
                 .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)

@@ -360,7 +360,8 @@ struct MiraclesView: View {
         guard let library else { return [] }
         let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return [] }
-        return library.articles.filter { article in terms.allSatisfy { article.searchKey.contains($0) } }
+        let matched = library.articles.filter { article in terms.allSatisfy { article.searchKey.contains($0) } }
+        return SearchRank.sorted(matched, by: query) { [$0.title] }
     }
 
     private func scheduleFilter(_ text: String) {
@@ -377,11 +378,18 @@ struct MiraclesView: View {
         List {
             if let library {
                 if query.isEmpty {
-                    Section {
-                        Text("Two hundred short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafsir, and a scientific claim can move on. Read them as invitations to reflect.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "SIGNS IN CREATION",
+                        systemImage: "sparkle.magnifyingglass",
+                        headline: "We will show them Our signs in the horizons and within themselves until it becomes clear to them that it is the truth.",
+                        source: "Quran 41:53",
+                        message: "Two hundred short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafsir, and a scientific claim can move on. Read them as invitations to reflect.",
+                        stats: [
+                            ResourceHeroStat("\(library.articles.count)", "articles"),
+                            ResourceHeroStat("\(MiracleCategory.allCases.count)", "fields"),
+                            ResourceHeroStat("\(library.strongest.count)", "strongest"),
+                        ]
+                    ))
 
                     StrongestSection(
                         items: library.strongest,
@@ -410,6 +418,21 @@ struct MiraclesView: View {
                                 }
                             }
                         }
+                    }
+
+                    // Proving Islam's chapters on the Quran (2026-10-02): the signs in it this library does
+                    // not carry, from its language and its preservation to what it knows of earlier scripture.
+                    Section(
+                        header: SectionPillHeader(title: "FROM PROVING ISLAM", count: 7, icon: "checkmark.shield"),
+                        footer: Text("The errors of its age it did not make, the challenge no one met, how it was kept, why it does not read like the speech of the man who recited it, and what it knows of earlier scripture.")
+                    ) {
+                        ArticleDoorRow(door: .article("ProvingScienceView"))
+                        ArticleDoorRow(door: .article("ProvingIjazView"))
+                        ArticleDoorRow(door: .article("ProvingPreservationView"))
+                        ArticleDoorRow(door: .article("ProvingFingerprintView"))
+                        ArticleDoorRow(door: .article("ProvingStylometryView"))
+                        ArticleDoorRow(door: .article("ProvingSourcesView"))
+                        ArticleDoorRow(door: .article("ProvingScriptureView"))
                     }
 
                     AboutSignsSection(heading: "About the Quran & Its Signs",
@@ -700,24 +723,90 @@ struct MiracleArticleView: View {
     @State private var linkOpen = false
     @State private var copied = false
 
+    /// The one line the article argues, with its links.
+    private var claim: (text: String, links: [MiracleLink])? {
+        for block in article.blocks {
+            if case .claim(let text, let links) = block { return (text, links) }
+        }
+        return nil
+    }
+
+    /// The subject and level ("Botany · Simple"): in the accent on its own, grey beside the lead's
+    /// accent eyebrow.
+    private func categoryLine(_ color: Color) -> some View {
+        Text("\(article.category.title) · \(article.level.title)")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+    }
+
+    /// The claim as the page's IN SHORT card, the article kit's `ArticleLead` (Abu, 2026-10-03: "make
+    /// it pretty like pillars and beliefs"). Drawn here rather than with `ArticleLead` itself because
+    /// the claim is `MiracleProse`, which carries the article's in-prose links; the ground, the eyebrow
+    /// and the faint sparkles are the lead's own. The subject line rides on the eyebrow's row, and
+    /// under it when the two do not fit one line.
+    private func claimLead(_ claim: (text: String, links: [MiracleLink])) -> some View {
+        let accent = appearance.accent
+        let eyebrow = HStack(spacing: 6) {
+            Image(systemName: "sparkle")
+            Text("IN SHORT")
+                .tracking(1.1)
+        }
+        .font(.caption.weight(.bold))
+        .foregroundColor(accent)
+        .accessibilityElement(children: .combine)
+
+        let stacked = VStack(alignment: .leading, spacing: 4) {
+            eyebrow
+            categoryLine(.secondary)
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            if #available(iOS 16.0, *) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        eyebrow
+                        Spacer(minLength: 8)
+                        categoryLine(.secondary).lineLimit(1)
+                    }
+                    stacked
+                }
+            } else {
+                stacked
+            }
+
+            MiracleProse(text: claim.text, links: claim.links, style: .claim)
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            ArticleCardGround(accent: accent, strength: 1.25, radius: 18)
+                .overlay(
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 58, weight: .bold))
+                        .foregroundColor(accent.opacity(0.07))
+                        .offset(x: 8, y: 12),
+                    alignment: .bottomTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        )
+        .padding(.vertical, 3)
+        .articleCardRow()
+    }
+
     var body: some View {
         let _ = RenderCounter.hit("MiracleArticleView")
         ScrollViewReader { proxy in
         List {
             Group {
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("\(article.category.title) · \(article.level.title)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(appearance.accent)
-
-                        ForEach(Array(article.blocks.enumerated()), id: \.offset) { _, block in
-                            if case .claim(let text, let links) = block {
-                                MiracleProse(text: text, links: links, style: .claim)
-                            }
-                        }
+                    if let claim {
+                        claimLead(claim)
+                    } else {
+                        // Two of the 202 articles argue no single claim: the subject line alone.
+                        categoryLine(appearance.accent)
+                            .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 2)
                 }
 
                 Section {

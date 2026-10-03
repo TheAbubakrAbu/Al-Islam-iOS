@@ -10,12 +10,24 @@ import Foundation
 //
 //   1. the words as typed (a whole-word hit beats a substring hit)
 //   2. stemmed and spell-corrected forms ("praying" -> "pray", "رحمته" -> "رحمة", "mercyful" -> "merciful")
-//   3. the consonant skeleton, a poor man's root search for Arabic ("صبر" -> "الصابرين") and a
-//      transliteration match for Latin ("rabbana" -> "ربنا")
+//   3. for a romanised word, the SOUND OUTLINE of the app's own transliteration ("tawbah" reaches
+//      "tawbatu", "dhikr" reaches "zikr", "shaytan" reaches "Shaitaana": see `romanKey`)
+//   4. the consonant skeleton, a poor man's root search for Arabic ("صبر" -> "الصابرين") and the
+//      last resort for a romanised word the transliteration spells too differently to reach
 //
 // Every ayah is then scored on where its words landed, how much of the query it covers, how short it
 // is and how early the match sits, and the list is the ayahs carrying the WHOLE query - or, when none
 // does, the ones carrying the most of it (`relaxed`), rather than an empty screen.
+//
+// HOW a word matched always outranks WHERE: the match quality is scaled above the tie-breakers
+// (brevity, position, the words sitting near each other), so a short ayah that merely contains the
+// stem can never lead an ayah carrying the word that was typed.
+//
+// Two rules run after the scan, for Latin-script queries only, to settle "a misspelt English word"
+// against "a romanised Arabic one", which "shirk" or "fajr" cannot settle on their own (Tilawa,
+// update 79): a one-word query with a correction whose skeleton is a WHOLE Arabic word in a few
+// ayahs is a romanisation, so the correction goes; otherwise, when the words themselves answered in
+// more ayahs than the skeleton did, the skeleton's guesses go.
 //
 // Ported from the Tilawa app's quranSearchEngine.ts and translit.ts (Jamil Hammoudeh), with
 // permission. The corpus lanes are derived from the app's own `VerseIndexEntry` folds, so a query is
@@ -45,25 +57,70 @@ enum QuranRankedSearch {
 
     private static let arabicWeight = 14
     private static let englishWeight = 10
-    private static let transliterationWeight = 5
     private static let wholeWordBonus = 8
     private static let phraseBonus = 45
     private static let wholePhraseBonus = 20
     private static let stemPenalty = 3
     private static let fuzzyPenalty = 6
     private static let skeletonPenalty = 7
-    private static let skeletonWholeWordBonus = 25
+    /// A Latin word typed as the START of a word ("merc" in "mercy") beats the same letters inside
+    /// one ("merc" in "commerce"). Arabic words wear clitics in front, so there it says nothing.
+    private static let prefixBonus = 4
+    /// What a romanised word is worth when its skeleton is a whole Arabic word, and when it is only
+    /// a run inside one. The whole-word value sits between a typed word found inside another (10)
+    /// and one found standing alone (18): the Arabic word is very likely the one meant, and it must
+    /// still never outrank the row that carries what was typed.
+    private static let latinSkeletonWhole = 11
+    private static let latinSkeletonInside = 2
+    /// What a romanised word is worth against the transliteration's sound outlines. Arabic builds a
+    /// word by wrapping its stem, so WHERE the outline sits in a word says how likely it is the word:
+    ///
+    ///   whole   "tawbah" is "tawbatu"                                        the word itself
+    ///   tight   "alhamdulillah" is "alhamdu lillaahi"                        the word, split by the recitation
+    ///   ending  "sabr" ends "bissabri", "shaytan" ends "ash-shaitaanu"       the word behind its clitics
+    ///   start   "salah" starts "saalihaati"                                  usually another word
+    ///   inside  a long outline in the middle of a word                       a guess
+    private static let romanWhole = 12
+    private static let romanTight = 11
+    private static let romanEnding = 10
+    private static let romanStart = 7
+    private static let romanInside = 5
+    /// An outline's least length per tier: three symbols name a whole word and nothing less.
+    private static let minRomanKey = 3
+    private static let minRomanEdge = 4
+    private static let minRomanInside = 6
+    private static let minRomanTight = 7
+    /// A ROMANISED word (one the translations do not use, even as part of a word) found in the
+    /// transliteration as typed: standing alone it is the word (`wholeWordBonus`, as ever); as the
+    /// start of a longer word or inside one it is usually another word ("salah" in "sa-alahaa"), so
+    /// both rank below the outline tiers above instead of above them.
+    private static let romanisedPrefixPenalty = 2
+    private static let romanisedInsidePenalty = 3
     private static let coverageWeight = 34
     private static let brevityWeight = 12
     private static let brevityWordsPerPoint = 4
     private static let positionWeight = 8
     private static let positionCharsPerPoint = 25
+    /// The words of a several-word query sitting near each other (short of the phrase bonus).
+    private static let proximityWeight = 6
+    private static let proximityCharsPerPoint = 12
+    /// Match quality is multiplied by this before the tie-breakers (at most 26 together) are added,
+    /// so they order rows of EQUAL quality and nothing else.
+    private static let qualityScale = 32
 
     private static let fuzzyMinLength = 4
     private static let fuzzyLongWord = 7
     private static let minSkeletonLength = 4
     private static let minArabicSkeleton = 3
     private static let longRomanisedWord = 6
+    /// A short romanised word ("sabr" is "sbr", "dhikr" is "zkr") folds to three consonants: too
+    /// generic to search as a run, so it is matched as a WHOLE Arabic word, allowing the clitics a
+    /// word wears in front (ال is "l"; ب ك ف with or without it; the verb prefixes ت ن; س / است).
+    private static let shortSkeletonLength = 3
+    private static let shortSkeletonPrefixes = ["", "l", "b", "bl", "k", "kl", "f", "fl", "fb", "t", "n", "s", "st"]
+    /// A one-word query with a spelling correction is read as a romanisation when its skeleton is a
+    /// whole Arabic word in at least this many ayahs.
+    private static let romanisedMinWholeWords = 3
 
     // MARK: - Corpus lanes
 
@@ -80,23 +137,47 @@ enum QuranRankedSearch {
         /// Consonant skeletons of the Arabic, word breaks kept (precision) and removed (recall).
         let skeletonWords: [[UInt8]]
         let skeletonTight: [[UInt8]]
+        /// The transliteration as sound outlines (`romanKey`): each word's outline, space-padded, and
+        /// every word's outline as one run (so a romanised phrase, or one word the recitation splits
+        /// in two, is found across the breaks).
+        let romanWords: [[UInt8]]
+        let romanTight: [[UInt8]]
         let wordCounts: [Int]
         /// Every Latin word the translations use, for spelling correction: the set for membership,
         /// the space-joined blob (bytes) for the substring test, the words by length (bytes) for the
         /// edit-distance walk, which used to allocate a `[Character]` per candidate.
         let vocabulary: Set<String>
         let vocabularyBlob: [UInt8]
-        let vocabularyByLength: [Int: [VocabularyWord]]
+        /// The words of the TRANSLATIONS alone. `vocabulary` also holds every romanised word of the
+        /// transliteration, and two decisions must not see those: "is this an ordinary English word"
+        /// (which keeps the skeleton tier off; "qul huwa allahu ahad" used to answer with 2:282
+        /// because all four are transliteration words) and "what did they mean to type" ("tawbah"
+        /// was corrected to "tawrah", the transliteration's Torah).
+        let translationWords: Set<String>
+        /// The same words space-joined, for "is this part of an English word" (a half-typed "merc").
+        let translationBlob: [UInt8]
+        let correctionsByLength: [Int: [VocabularyWord]]
+        /// Corrections already looked up, the "none" answer included: the walk is repeated for every
+        /// keystroke typed after a misspelt word.
+        private var nearest: [String: String?] = [:]
+        private let nearestLock = NSLock()
 
         init(snapshot: QuranData.VerseSearchSnapshot) {
             key = Self.key(for: snapshot)
             let entries = snapshot.verseIndex
+            // ONE thread on purpose. Building the corpus in stretches on every core was measured
+            // slower, repeatably (1.0 to 1.4 s against 0.66 to 0.70 s, optimized build, 2026-10-02):
+            // the folds contend with each other.
             var english: [[UInt8]] = []
             var arabic: [[UInt8]] = []
             var arabicStems: [[UInt8]] = []
             var skeletonWords: [[UInt8]] = []
             var skeletonTight: [[UInt8]] = []
+            var romanWords: [[UInt8]] = []
+            var romanTight: [[UInt8]] = []
             var wordCounts: [Int] = []
+            romanWords.reserveCapacity(entries.count)
+            romanTight.reserveCapacity(entries.count)
             english.reserveCapacity(entries.count)
             arabic.reserveCapacity(entries.count)
             arabicStems.reserveCapacity(entries.count)
@@ -104,6 +185,7 @@ enum QuranRankedSearch {
             skeletonTight.reserveCapacity(entries.count)
             wordCounts.reserveCapacity(entries.count)
             var words = Set<String>()
+            var translation = Set<String>()
             for entry in entries {
                 english.append(Array((" " + entry.englishBlob + " ").utf8))
                 arabic.append(Array((" " + entry.arabicBlob + " ").utf8))
@@ -114,29 +196,188 @@ enum QuranRankedSearch {
                 let skeletons = cleanTokens.map(arabicSkeleton).filter { !$0.isEmpty }
                 skeletonWords.append(Array((" " + skeletons.joined(separator: " ") + " ").utf8))
                 skeletonTight.append(Array(collapseSkeleton(skeletons.joined()).utf8))
-                wordCounts.append(max(1, cleanTokens.count))
+                wordCounts.append(Swift.max(1, cleanTokens.count))
                 for word in entry.englishTokens where word.count >= fuzzyMinLength && Self.isLatinWord(word) {
                     words.insert(word)
                 }
+                let latin = Self.latinTokens(entry, snapshot: snapshot)
+                for word in latin.translation where Self.isLatinWord(word) {
+                    translation.insert(word)
+                }
+                var outlineWords: [UInt8] = [0x20]
+                var outlineTight: [UInt8] = []
+                for word in latin.transliteration {
+                    let key = romanKey(word)
+                    guard !key.isEmpty else { continue }
+                    outlineWords.append(contentsOf: key)
+                    outlineWords.append(0x20)
+                    appendRun(key, to: &outlineTight)
+                }
+                romanWords.append(outlineWords)
+                romanTight.append(outlineTight)
             }
+            // No translation text to read (a snapshot whose offsets do not resolve): fall back to
+            // the mixed list, which is what both decisions used before.
+            if translation.isEmpty { translation = words }
             self.english = english
             self.arabic = arabic
             self.arabicStems = arabicStems
             self.skeletonWords = skeletonWords
             self.skeletonTight = skeletonTight
+            self.romanWords = romanWords
+            self.romanTight = romanTight
             self.wordCounts = wordCounts
             vocabulary = words
             vocabularyBlob = Array((" " + words.joined(separator: " ") + " ").utf8)
+            translationWords = translation
+            translationBlob = Array((" " + translation.joined(separator: " ") + " ").utf8)
             var byLength: [Int: [VocabularyWord]] = [:]
-            for word in words { byLength[word.utf8.count, default: []].append(VocabularyWord(Array(word.utf8))) }
-            vocabularyByLength = byLength
+            for word in translation where word.count >= fuzzyMinLength {
+                byLength[word.utf8.count, default: []].append(VocabularyWord(Array(word.utf8)))
+            }
+            correctionsByLength = byLength
+        }
+
+        /// The folded words of the translations and of the transliteration (its pause hints left out),
+        /// read off the index's own `englishTokens` wherever that is provably the same thing, folded
+        /// afresh otherwise. `englishTokens` is the two translations, the transliteration and its
+        /// vowel-folded twin, each folded and split, one after another; the transliteration's chunks
+        /// map one to one onto its tokens, so counting them says where each part begins. The reading
+        /// is trusted only when the twin folds back exactly at both ends (see `verifyLatinTokens`).
+        /// Folding everything again cost half of the corpus build (optimized, 2026-10-02: 280 of 640 ms).
+        fileprivate static func latinTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot)
+            -> (translation: [String], transliteration: [String]) {
+            let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+            guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return ([], []) }
+            let ayah = snapshot.surahs[si].ayahs[ai]
+            let tokens = entry.englishTokens
+            if let shape = transliterationShape(ayah.textTransliteration), !shape.isEmpty {
+                let count = shape.count
+                let start = tokens.count - 2 * count
+                if start >= 0,
+                   foldedTransliterationToken(tokens[start]) == tokens[start + count],
+                   foldedTransliterationToken(tokens[start + count - 1]) == tokens[tokens.count - 1] {
+                    var transliteration: [String] = []
+                    transliteration.reserveCapacity(count)
+                    for (offset, chunk) in shape.enumerated() {
+                        if chunk.touched {
+                            // A pause hint rode on this chunk ("Salaah,(ti)"): fold what stands outside it.
+                            let outside = Settings.shared.cleanSearch(String(decoding: chunk.outside, as: UTF8.self), whitespace: true)
+                            if !outside.isEmpty { transliteration.append(contentsOf: outside.split(separator: " ").map(String.init)) }
+                        } else {
+                            transliteration.append(tokens[start + offset])
+                        }
+                    }
+                    return (Array(tokens[0..<start]), transliteration)
+                }
+            }
+            return (translationTokens(entry, snapshot: snapshot), transliterationTokens(entry, snapshot: snapshot))
+        }
+
+        private struct TransliterationChunk {
+            var outside: [UInt8] = []
+            var touched = false
+            var survives = false
+        }
+
+        /// The transliteration's chunks (its whitespace-separated runs that the search fold keeps),
+        /// each with the bytes it holds outside any parentheses and whether it touched one. Nil when a
+        /// character the fold might drop or keep is in it (anything beyond ASCII): then it is folded.
+        private static func transliterationShape(_ text: String) -> [TransliterationChunk]? {
+            var chunks: [TransliterationChunk] = []
+            var current = TransliterationChunk()
+            var open = false
+            var depth = 0
+            func close() {
+                if open, current.survives { chunks.append(current) }
+                current = TransliterationChunk()
+                open = false
+            }
+            for byte in text.utf8 {
+                if byte >= 0x80 { return nil }
+                switch byte {
+                case 0x20, 0x09, 0x0A, 0x0D:
+                    close()
+                case 0x28:                                           // (
+                    open = true; current.touched = true; depth += 1
+                case 0x29:                                           // )
+                    open = true; current.touched = true; depth = Swift.max(0, depth - 1)
+                default:
+                    open = true
+                    let letter = (0x61...0x7A).contains(byte) || (0x41...0x5A).contains(byte) || (0x30...0x39).contains(byte)
+                    if letter { current.survives = true }
+                    if depth > 0 { current.touched = true } else { current.outside.append(byte) }
+                }
+            }
+            close()
+            return chunks
+        }
+
+        /// `Settings.foldedTransliterationForSearch` on one folded token: the same replacements in the
+        /// same order.
+        private static func foldedTransliterationToken(_ token: String) -> String {
+            var folded = token
+            for (long, short) in [("aa", "a"), ("ee", "i"), ("ii", "i"), ("oo", "u"), ("uu", "u")] {
+                folded = folded.replacingOccurrences(of: long, with: short)
+            }
+            return folded
+        }
+
+        #if DEBUG
+        /// How many ayahs the shortcut reads differently from the folds (a unit test holds it at 0).
+        static func verifyLatinTokens(snapshot: QuranData.VerseSearchSnapshot) -> Int {
+            var mismatches = 0
+            for entry in snapshot.verseIndex {
+                let fast = latinTokens(entry, snapshot: snapshot)
+                if fast.translation != translationTokens(entry, snapshot: snapshot)
+                    || fast.transliteration != transliterationTokens(entry, snapshot: snapshot) {
+                    mismatches += 1
+                }
+            }
+            return mismatches
+        }
+        #endif
+
+        /// The folded words of the ayah's two translations (the transliteration left out).
+        fileprivate static func translationTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> [String] {
+            let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+            guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return [] }
+            let ayah = snapshot.surahs[si].ayahs[ai]
+            return Settings.shared.cleanSearch(ayah.textEnglishSaheeh + " " + ayah.textEnglishMustafa, whitespace: true)
+                .split(separator: " ").map(String.init)
+        }
+
+        /// The folded words of the ayah's transliteration, its pause hints ("Salaah,(ti)") left out:
+        /// they are alternatives to the ending before them, not words of their own.
+        fileprivate static func transliterationTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> [String] {
+            let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+            guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return [] }
+            var text = ""
+            var depth = 0
+            for character in snapshot.surahs[si].ayahs[ai].textTransliteration {
+                if character == "(" { depth += 1; continue }
+                if character == ")" { depth = Swift.max(0, depth - 1); continue }
+                if depth == 0 { text.append(character) }
+            }
+            return Settings.shared.cleanSearch(text, whitespace: true).split(separator: " ").map(String.init)
+        }
+
+        func cachedCorrection(for token: String) -> String?? {
+            nearestLock.lock(); defer { nearestLock.unlock() }
+            return nearest[token]
+        }
+
+        func remember(correction: String?, for token: String) {
+            nearestLock.lock(); defer { nearestLock.unlock() }
+            if nearest.count >= 2048 { nearest.removeAll(keepingCapacity: true) }
+            nearest[token] = correction
         }
 
         static func key(for snapshot: QuranData.VerseSearchSnapshot) -> String {
             "\(snapshot.qiraahKey)|\(snapshot.verseIndex.count)|\(snapshot.verseIndex.first?.arabicBlob.hashValue ?? 0)"
         }
 
-        private static func cleanArabicTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> [String] {
+        fileprivate static func cleanArabicTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> [String] {
             let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
             guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else {
                 return entry.arabicTokens
@@ -191,6 +432,39 @@ enum QuranRankedSearch {
         return (built, ms)
     }
 
+    #if DEBUG
+    /// For the unit test: ayahs whose Latin tokens the shortcut reads differently from the folds.
+    static func verifyLatinTokenShortcut(snapshot: QuranData.VerseSearchSnapshot) -> Int {
+        Lanes.verifyLatinTokens(snapshot: snapshot)
+    }
+
+    /// "-rankedBench": what one build of the lanes costs away from the launch's own work, and what
+    /// each kind of folding in it costs alone. Nothing is cached.
+    static func benchmarkLanesBuild(snapshot: QuranData.VerseSearchSnapshot) -> String {
+        func time(_ work: () -> Void) -> Double {
+            let started = DispatchTime.now().uptimeNanoseconds
+            work()
+            return Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+        }
+        let entries = snapshot.verseIndex
+        let whole = time { _ = Lanes(snapshot: snapshot) }
+        let arabic = time { for entry in entries { _ = Lanes.cleanArabicTokens(entry, snapshot: snapshot) } }
+        let translation = time { for entry in entries { _ = Lanes.translationTokens(entry, snapshot: snapshot) } }
+        let outlines = time {
+            for entry in entries {
+                for word in Lanes.transliterationTokens(entry, snapshot: snapshot) { _ = romanKey(word) }
+            }
+        }
+        let shortcut = time {
+            for entry in entries {
+                for word in Lanes.latinTokens(entry, snapshot: snapshot).transliteration { _ = romanKey(word) }
+            }
+        }
+        return String(format: "whole %.1f ms, arabic tokens %.1f, translation tokens %.1f, outlines %.1f, both by the shortcut %.1f",
+                      whole, arabic, translation, outlines, shortcut)
+    }
+    #endif
+
     /// Builds the lanes ahead of the first ranked query, off the main thread: the post-reveal
     /// schedule does it on the full tier, the search field's focus on the reduced one (Tilawa
     /// Guide, Phase 4 step 2). A no-op once they are cached.
@@ -221,20 +495,89 @@ enum QuranRankedSearch {
         let fuzzyPadded: [UInt8]?
         let skeletonBytes: [UInt8]?
         let skeletonPadded: [UInt8]?
+        /// " word": the typed word at the start of a word (Latin lanes only).
+        let textLeading: [UInt8]
+        /// The whole-word needles of a short romanised word, one per clitic it may wear (see
+        /// `shortSkeletonPrefixes`). Empty for Arabic script, for a word the run search already
+        /// covers, and for fewer than three consonants, where even a whole word says nothing
+        /// ("iman" is "mn").
+        let shortSkeletonNeedles: [[UInt8]]
+        /// The word's sound outlines (see `romanKey`), one per way its spelling can be read. Empty
+        /// for Arabic script and for a word too short to mean anything.
+        let romanKeys: [RomanKey]
+        /// A Latin word the translations do not use, even as part of a word: a romanised one.
+        let romanised: Bool
+        /// The first letters of a longer romanised word as typed ("tawb" of "tawbah"). Two words can
+        /// share a sound outline ("tawbatu" repentance, "tabbat" may they perish); the transliteration
+        /// that also STARTS the way the word was typed is the likelier one, and leads its tier.
+        let literalStart: [UInt8]?
+        /// What a result row should paint for this word: the correction, else the typed word, else
+        /// (when only its stem is a word of the corpus) the stem.
+        let highlight: String
 
-        init(text: String, stems: [String], fuzzy: String?, skeleton: String?, rawSkeleton: String) {
+        init(text: String, stems: [String], fuzzy: String?, skeleton: String?, rawSkeleton: String,
+             isArabic: Bool, romanised: Bool, highlight: String) {
             self.text = text
+            self.romanised = romanised
             self.stems = stems
             self.fuzzy = fuzzy
             self.skeleton = skeleton
             self.rawSkeleton = rawSkeleton
+            self.highlight = highlight
             textBytes = Array(text.utf8)
             textPadded = Array(" \(text) ".utf8)
-            stemBytes = stems.map { Array($0.utf8) }
+            textLeading = Array(" \(text)".utf8)
+            // An English stem is matched at the START of a word: "kindness" reaches "kind" and
+            // "kindly", and no longer "mankind". An Arabic stem sits behind its clitics, so there
+            // it stays a plain run.
+            stemBytes = stems.map { Array((isArabic ? $0 : " \($0)").utf8) }
             fuzzyBytes = fuzzy.map { Array($0.utf8) }
             fuzzyPadded = fuzzy.map { Array(" \($0) ".utf8) }
             skeletonBytes = skeleton.map { Array($0.utf8) }
             skeletonPadded = skeleton.map { Array(" \($0) ".utf8) }
+            if !isArabic, skeleton == nil, rawSkeleton.count == QuranRankedSearch.shortSkeletonLength {
+                shortSkeletonNeedles = QuranRankedSearch.shortSkeletonPrefixes.map { Array(" \($0)\(rawSkeleton) ".utf8) }
+            } else {
+                shortSkeletonNeedles = []
+            }
+            romanKeys = isArabic ? [] : QuranRankedSearch.romanKeys(for: text)
+            literalStart = !isArabic && romanised && text.count >= 5 ? Array(text.utf8.prefix(4)) : nil
+        }
+    }
+
+    /// One reading of a romanised word, ready for the lanes.
+    struct RomanKey {
+        /// The outline as typed: the run searched for across word breaks.
+        let full: [UInt8]
+        /// The outline without the vowel it ends on, bare and at a word start (" key").
+        let bare: [UInt8]
+        let leading: [UInt8]
+        /// The word standing whole, and ending a longer one, each with the closing vowels a word of
+        /// the recitation may carry: "tawbat" is "tawbatu", "tawbata" and "tawbati". The endings are
+        /// empty for an outline that opens on a vowel: nothing anchors it, and "-aman" ends every
+        /// accusative from "'aleeman" to "hakeeman".
+        let wholes: [[UInt8]]
+        let endings: [[UInt8]]
+
+        /// `pauseForm` is a word typed with the "-ah" of a ta marbuta, read as it stands: that is how
+        /// the word sounds at a pause and nowhere else, so it takes no closing vowel ("tawbah" is
+        /// not "ijtabaahu").
+        init(full: [UInt8], pauseForm: Bool) {
+            self.full = full
+            let stem = pauseForm ? full : QuranRankedSearch.strippedRomanKey(full)
+            bare = stem
+            leading = [0x20] + stem
+            let closings: [[UInt8]] = pauseForm ? [[]] : [[], [0x61], [0x75]]
+            var standing: [[UInt8]] = []
+            var closing: [[UInt8]] = []
+            let anchored = stem.first.map { !QuranRankedSearch.isOutlineVowel($0) } ?? false
+            for vowel in closings {
+                let ended = stem + vowel + [0x20]
+                standing.append([0x20] + ended)
+                if anchored { closing.append(ended) }
+            }
+            wholes = standing
+            endings = closing
         }
     }
 
@@ -250,6 +593,8 @@ enum QuranRankedSearch {
         let requiredBytes: [[UInt8]]
         /// The tokens' skeletons as one run (adjacency is the precision story for a multi-word query).
         let joinedSkeleton: [UInt8]
+        /// The tokens' sound outlines as one run, one per reading of the query's spelling.
+        let joinedRoman: [[UInt8]]
 
         init(isArabic: Bool, phrase: String, required: [String], tokens: [Token], corrections: [Correction], terms: [String]) {
             self.isArabic = isArabic
@@ -262,6 +607,7 @@ enum QuranRankedSearch {
             phrasePadded = Array(" \(phrase) ".utf8)
             requiredBytes = required.map { Array($0.utf8) }
             joinedSkeleton = Array(collapseSkeleton(tokens.map(\.rawSkeleton).joined()).utf8)
+            joinedRoman = isArabic || tokens.count < 2 ? [] : QuranRankedSearch.joinedRomanKeys(for: tokens.map(\.text))
         }
     }
 
@@ -280,7 +626,8 @@ enum QuranRankedSearch {
 
     private static let englishSuffixes = ["ings", "ing", "edly", "ness", "ies", "ed", "es", "ly", "s"]
 
-    private static func stemEnglish(_ token: String) -> String? {
+    /// The one English stemmer of both ranked lanes (the hadith lane calls this too).
+    static func stemEnglish(_ token: String) -> String? {
         guard token.count >= 5, Lanes.isLatinWord(token) else { return nil }
         for suffix in englishSuffixes where token.hasSuffix(suffix) && token.count - suffix.count >= 4 {
             let stem = String(token.dropLast(suffix.count))
@@ -335,26 +682,36 @@ enum QuranRankedSearch {
 
     /// The corpus word a mistyped one most likely meant, or nil. Anything the translations already use
     /// as a substring is left alone: a half-typed "merc" is a prefix, not a typo for "merciful".
-    private static func nearestWord(_ token: String, lanes: Lanes) -> String? {
+    ///
+    /// A word whose STEM the corpus knows is an inflection, not a typo: "mercies" stems to "mercy",
+    /// and used to be "corrected" to "merges" (two edits away) ahead of it. The candidates are the
+    /// translations' words only: a correction is English spelling, and the transliteration's words
+    /// are not English ("tawbah" became "tawrah").
+    private static func nearestWord(_ token: String, stems: [String], lanes: Lanes) -> String? {
         guard token.count >= fuzzyMinLength, Lanes.isLatinWord(token) else { return nil }
         let bytes = Array(token.utf8)
         if contains(bytes, in: lanes.vocabularyBlob) { return nil }
+        for stem in stems where contains(Array(" \(stem)".utf8), in: lanes.vocabularyBlob) { return nil }
+        if let cached = lanes.cachedCorrection(for: token) { return cached }
         let max = token.count >= fuzzyLongWord ? 2 : 1
         let mask = VocabularyWord.letterMask(of: bytes)
         var best: [UInt8]?
         var bestDistance = max + 1
-        for length in (bytes.count - max)...(bytes.count + max) {
-            for candidate in lanes.vocabularyByLength[length] ?? [] {
+        search: for length in (bytes.count - max)...(bytes.count + max) {
+            for candidate in lanes.correctionsByLength[length] ?? [] {
                 guard candidate.mayBeWithin(max, of: mask) else { continue }
                 let distance = boundedEditDistance(bytes, candidate.bytes, max: max)
                 if distance < bestDistance {
                     bestDistance = distance
                     best = candidate.bytes
-                    if distance == 1 { return String(decoding: candidate.bytes, as: UTF8.self) }
+                    // One edit is as close as a different word gets.
+                    if distance == 1 { break search }
                 }
             }
         }
-        return best.map { String(decoding: $0, as: UTF8.self) }
+        let found = best.map { String(decoding: $0, as: UTF8.self) }
+        lanes.remember(correction: found, for: token)
+        return found
     }
 
     /// A vocabulary word with the set of letters it uses, for the exact pre-test that spares the edit
@@ -453,10 +810,10 @@ enum QuranRankedSearch {
             #if DEBUG
             let fuzzyStarted = DispatchTime.now().uptimeNanoseconds
             #endif
-            let fuzzy = isArabic ? nil : nearestWord(text, lanes: lanes)
+            let fuzzy = isArabic ? nil : nearestWord(text, stems: stems, lanes: lanes)
             #if DEBUG
             if RenderCounter.enabled {
-                let candidates = ((text.count - 2)...(text.count + 2)).reduce(0) { $0 + (lanes.vocabularyByLength[$1]?.count ?? 0) }
+                let candidates = ((text.count - 2)...(text.count + 2)).reduce(0) { $0 + (lanes.correctionsByLength[$1]?.count ?? 0) }
                 NSLog("RANKED quran fuzzy %@ -> %@ %.1f ms (%d candidates of %d words)", text, fuzzy ?? "-",
                       Double(DispatchTime.now().uptimeNanoseconds - fuzzyStarted) / 1_000_000, candidates, lanes.vocabulary.count)
             }
@@ -467,8 +824,19 @@ enum QuranRankedSearch {
             }
             let skeleton = isArabic ? arabicSkeleton(text) : latinSkeleton(text)
             let minimum = (isArabic || text.count >= longRomanisedWord) ? minArabicSkeleton : minSkeletonLength
+            // The word a row should paint. A typed word that is no word of the corpus but whose
+            // stem is ("forgivness" -> "forgiv") paints the stem, or the row would paint nothing.
+            var paint = fuzzy ?? text
+            if fuzzy == nil, !isArabic, let stem = stems.first,
+               !contains(Array(text.utf8), in: lanes.vocabularyBlob),
+               contains(Array(" \(stem)".utf8), in: lanes.vocabularyBlob) {
+                paint = stem
+            }
             return Token(text: text, stems: stems, fuzzy: fuzzy,
-                         skeleton: skeleton.count >= minimum ? skeleton : nil, rawSkeleton: skeleton)
+                         skeleton: skeleton.count >= minimum ? skeleton : nil, rawSkeleton: skeleton,
+                         isArabic: isArabic,
+                         romanised: !isArabic && !contains(Array(text.utf8), in: lanes.translationBlob),
+                         highlight: paint)
         }
         required.forEach(remember)
         return Query(isArabic: isArabic, phrase: phrase, required: required, tokens: tokens,
@@ -480,7 +848,14 @@ enum QuranRankedSearch {
     private struct FieldScore {
         var score: Int
         var matched: Int
+        /// Where the earliest match starts, for the position bonus.
         var position: Int
+        /// How far apart the first and last matched words sit (0 for one word).
+        var span = 0
+        /// A word was reached only through its spelling correction.
+        var fuzzy = false
+        /// Skeleton tier only: a skeleton matched a WHOLE Arabic word, not a run inside one.
+        var whole = false
     }
 
     /// The byte offset of the first occurrence of `needle` in `haystack`, or nil.
@@ -512,10 +887,20 @@ enum QuranRankedSearch {
     }
 
     /// What one query word is worth against one padded field, or nil.
-    private static func tokenHit(_ text: [UInt8], token: Token, weight: Int) -> FieldScore? {
+    /// `latin` is the translation lane: a word-start hit earns `prefixBonus` there.
+    private static func tokenHit(_ text: [UInt8], token: Token, weight: Int, latin: Bool) -> FieldScore? {
         if let at = find(token.textBytes, in: text) {
-            let whole = contains(token.textPadded, in: text)
-            return FieldScore(score: weight + (whole ? wholeWordBonus : 0), matched: 1, position: units(before: at, in: text))
+            // The best-placed occurrence decides the worth AND the position: a word standing alone
+            // later in the ayah counts as that, not as the run inside another word before it.
+            if let whole = find(token.textPadded, in: text) {
+                return FieldScore(score: weight + wholeWordBonus, matched: 1, position: units(before: whole, in: text))
+            }
+            if latin, let start = find(token.textLeading, in: text) {
+                return FieldScore(score: weight + (token.romanised ? -romanisedPrefixPenalty : prefixBonus), matched: 1,
+                                  position: units(before: start, in: text))
+            }
+            return FieldScore(score: weight - (latin && token.romanised ? romanisedInsidePenalty : 0), matched: 1,
+                              position: units(before: at, in: text))
         }
         for stem in token.stemBytes {
             if let at = find(stem, in: text) {
@@ -525,49 +910,76 @@ enum QuranRankedSearch {
         if let fuzzy = token.fuzzyBytes, let at = find(fuzzy, in: text) {
             let whole = token.fuzzyPadded.map { contains($0, in: text) } ?? false
             return FieldScore(score: weight - fuzzyPenalty + (whole ? wholeWordBonus : 0), matched: 1,
-                              position: units(before: at, in: text))
+                              position: units(before: at, in: text), fuzzy: true)
         }
         return nil
     }
 
-    private static func scoreField(_ text: [UInt8], query: Query, weight: Int) -> FieldScore? {
+    private static func scoreField(_ text: [UInt8], query: Query, weight: Int, latin: Bool = false) -> FieldScore? {
         var score = 0
         var matched = 0
+        var fuzzy = false
         var position = Int.max
+        var last = 0
         for token in query.tokens {
-            guard let hit = tokenHit(text, token: token, weight: weight) else { continue }
+            guard let hit = tokenHit(text, token: token, weight: weight, latin: latin) else { continue }
             score += hit.score
             matched += 1
+            if hit.fuzzy { fuzzy = true }
             position = Swift.min(position, hit.position)
+            last = Swift.max(last, hit.position)
         }
         guard matched > 0 else { return nil }
         if query.tokens.count > 1, !query.phraseBytes.isEmpty, contains(query.phraseBytes, in: text) {
             score += phraseBonus
             if contains(query.phrasePadded, in: text) { score += wholePhraseBonus }
         }
-        return FieldScore(score: score, matched: matched, position: position == Int.max ? 0 : position)
+        let first = position == Int.max ? 0 : position
+        return FieldScore(score: score, matched: matched, position: first, span: matched > 1 ? last - first : 0, fuzzy: fuzzy)
     }
 
-    private static func scoreSkeleton(words: [UInt8], tight: [UInt8], query: Query, weight: Int, wholeBonus: Int) -> FieldScore? {
+    /// `whole` is what a skeleton standing as a whole Arabic word is worth, `inside` a run inside one;
+    /// `phrase` is added when a several-word query is found as ONE run.
+    private static func scoreSkeleton(words: [UInt8], tight: [UInt8], query: Query,
+                                      whole wholeScore: Int, inside insideScore: Int, phrase: Int) -> FieldScore? {
         // Adjacency is the whole precision story for a multi-word query, so it is matched as ONE run
         // against the tight view: "qul huwa allahu" must not be satisfied by three fragments.
         let joined = query.joinedSkeleton
         if query.tokens.count > 1, joined.count >= minSkeletonLength, let at = find(joined, in: tight) {
-            let score = (Swift.max(1, weight - skeletonPenalty) + wholeBonus) * query.tokens.count
-            return FieldScore(score: score, matched: query.tokens.count, position: units(before: at, in: tight))
+            return FieldScore(score: wholeScore * query.tokens.count + phrase, matched: query.tokens.count,
+                              position: units(before: at, in: tight), whole: true)
         }
         var score = 0
         var matched = 0
+        var whole = false
         var position = Int.max
-        let base = Swift.max(1, weight - skeletonPenalty)
         for token in query.tokens {
+            if !token.shortSkeletonNeedles.isEmpty {
+                var found: Int?
+                for needle in token.shortSkeletonNeedles {
+                    if let at = find(needle, in: words) { found = Swift.min(found ?? Int.max, at) }
+                }
+                guard let at = found else { continue }
+                score += wholeScore
+                whole = true
+                matched += 1
+                position = Swift.min(position, units(before: at, in: words))
+                continue
+            }
             guard let skeleton = token.skeletonBytes, let padded = token.skeletonPadded else { continue }
             if let at = find(skeleton, in: words) {
-                score += base + (contains(padded, in: words) ? wholeBonus : 0)
-                position = Swift.min(position, units(before: at, in: words))
+                if let standing = find(padded, in: words) {
+                    score += wholeScore
+                    whole = true
+                    position = Swift.min(position, units(before: standing, in: words))
+                } else {
+                    score += insideScore
+                    position = Swift.min(position, units(before: at, in: words))
+                }
             } else if let at = find(skeleton, in: tight) {
                 // One romanised token routinely spans two Arabic ones ("alhamdulillah" is الحمد لله).
-                score += base + (skeleton.count >= minSkeletonLength ? wholeBonus : 0)
+                // A long one is paid like a whole word: six consonants across a word break is no accident.
+                score += skeleton.count >= minSkeletonLength ? wholeScore : insideScore
                 position = Swift.min(position, units(before: at, in: tight))
             } else {
                 continue
@@ -575,7 +987,60 @@ enum QuranRankedSearch {
             matched += 1
         }
         guard matched > 0 else { return nil }
-        return FieldScore(score: score, matched: matched, position: position == Int.max ? 0 : position)
+        return FieldScore(score: score, matched: matched, position: position == Int.max ? 0 : position, whole: whole)
+    }
+
+    /// The earliest occurrence of any of `needles`, or nil.
+    private static func firstHit(of needles: [[UInt8]], in haystack: [UInt8]) -> Int? {
+        var earliest: Int?
+        for needle in needles {
+            if let at = find(needle, in: haystack), at < (earliest ?? Int.max) { earliest = at }
+        }
+        return earliest
+    }
+
+    /// What the query is worth against one ayah's transliteration outlines, or nil. `text` is the
+    /// ayah's Latin lane, for the literal-start nudge (see `Token.literalStart`).
+    private static func scoreRoman(words: [UInt8], tight: [UInt8], text: [UInt8], query: Query) -> FieldScore? {
+        // A romanised phrase is matched as ONE run first, for the same reason the skeleton is.
+        for joined in query.joinedRoman {
+            if let at = find(joined, in: tight) {
+                return FieldScore(score: romanWhole * query.tokens.count + phraseBonus, matched: query.tokens.count,
+                                  position: at, whole: true)
+            }
+        }
+        var score = 0
+        var matched = 0
+        var whole = false
+        var position = Int.max
+        for token in query.tokens {
+            var best = 0
+            var bestAt = 0
+            for key in token.romanKeys {
+                var worth = 0
+                var at = 0
+                if let hit = firstHit(of: key.wholes, in: words) {
+                    worth = romanWhole; at = hit
+                } else if key.full.count >= minRomanTight, let hit = find(key.full, in: tight) {
+                    worth = romanTight; at = hit
+                } else if key.bare.count >= minRomanEdge, let hit = firstHit(of: key.endings, in: words) {
+                    worth = romanEnding; at = hit
+                } else if key.bare.count >= minRomanEdge, let hit = find(key.leading, in: words) {
+                    worth = romanStart; at = hit
+                } else if key.bare.count >= minRomanInside, let hit = find(key.bare, in: words) {
+                    worth = romanInside; at = hit
+                }
+                if worth > best { best = worth; bestAt = at }
+            }
+            guard best > 0 else { continue }
+            score += best
+            if let start = token.literalStart, contains(start, in: text) { score += 1 }
+            matched += 1
+            if best >= romanEnding { whole = true }
+            position = Swift.min(position, bestAt)
+        }
+        guard matched > 0 else { return nil }
+        return FieldScore(score: score, matched: matched, position: position == Int.max ? 0 : position, whole: whole)
     }
 
     private struct Candidate {
@@ -584,6 +1049,16 @@ enum QuranRankedSearch {
         let matched: Int
         /// Reached through the consonant skeleton alone (see the last-resort rule in `search`).
         var viaSkeleton = false
+        /// Reached through the transliteration's sound outlines.
+        var viaRoman = false
+        /// The winning lane reached the query only through a spelling correction.
+        var viaFuzzy = false
+        /// The row is here only by its SOUND: the words themselves covered less of the query.
+        var guessed = false
+        /// A romanised reading (outline or skeleton) matched this row too, whichever lane won it...
+        var echo = false
+        /// ...and matched a whole word (or the start of one), not a run inside one.
+        var echoWhole = false
     }
 
     // MARK: - Search
@@ -601,6 +1076,8 @@ enum QuranRankedSearch {
         // the exact scan.
         if trimmed.rangeOfCharacter(from: .decimalDigits) != nil { return Outcome() }
         if trimmed.contains(where: { "&|!#^%$=".contains($0) }) { return Outcome() }
+        // One Latin letter is in most of the Quran: nothing to rank, and the exact scan lists it.
+        if !trimmed.containsArabicLetters, trimmed.filter(\.isLetter).count < 2 { return Outcome() }
         #if DEBUG
         let searchStarted = DispatchTime.now().uptimeNanoseconds
         var lanesMs = 0.0
@@ -626,7 +1103,9 @@ enum QuranRankedSearch {
         let entries = snapshot.verseIndex
         // The skeleton tier is the noisiest one, so it is only consulted for words the translations do
         // not recognise: "mercy" means what it says; "alhamdulillah" and "صبر" are what it is for.
-        let useSkeleton = query.tokens.contains { !$0.rawSkeleton.isEmpty && !lanes.vocabulary.contains($0.text) }
+        // The TRANSLATIONS' words, not the transliteration's: a romanised word is exactly the kind
+        // the tier exists for, and the transliteration spells each one a single way.
+        let useSkeleton = query.tokens.contains { !$0.rawSkeleton.isEmpty && !lanes.translationWords.contains($0.text) }
         var candidates: [Candidate] = []
         var best = 0
 
@@ -643,7 +1122,13 @@ enum QuranRankedSearch {
             var score = 0
             var matched = 0
             var position = 0
+            var span = 0
             var viaSkeleton = false
+            var viaRoman = false
+            var viaFuzzy = false
+            var echo = false
+            var echoWhole = false
+            var worded = 0
 
             if query.isArabic {
                 var field = scoreField(arabicText, query: query, weight: arabicWeight)
@@ -652,9 +1137,10 @@ enum QuranRankedSearch {
                        stemmed.matched > (field?.matched ?? 0) {
                         field = stemmed
                     }
+                    let base = Swift.max(1, arabicWeight - skeletonPenalty)
                     if useSkeleton, (field?.matched ?? 0) < query.tokens.count,
                        let skeleton = scoreSkeleton(words: lanes.skeletonWords[index], tight: lanes.skeletonTight[index],
-                                                    query: query, weight: arabicWeight, wholeBonus: wholeWordBonus),
+                                                    query: query, whole: base + wholeWordBonus, inside: base, phrase: 0),
                        skeleton.matched > (field?.matched ?? 0) {
                         field = skeleton
                         viaSkeleton = true
@@ -664,51 +1150,118 @@ enum QuranRankedSearch {
                     score = field.score
                     matched = field.matched
                     position = field.position
+                    span = field.span
                 }
             } else {
-                if let direct = scoreField(englishText, query: query, weight: englishWeight) {
+                if let direct = scoreField(englishText, query: query, weight: englishWeight, latin: true) {
                     score = direct.score
                     matched = direct.matched
                     position = direct.position
+                    span = direct.span
+                    viaFuzzy = direct.fuzzy
+                    worded = direct.matched
                 }
-                // Romanised queries reach the Arabic only through the skeleton, ranked below the words:
-                // someone typing Latin letters usually means the words, and only sometimes the sound.
-                if useSkeleton, matched < query.tokens.count,
+                // A romanised query reaches the Arabic through its SOUND: first the transliteration's
+                // outlines, then the consonant skeleton. Both rank below the words: someone typing
+                // Latin letters usually means the words, and only sometimes the sound. A row the words
+                // reached only through a spelling correction is asked as well, so the contest below
+                // can tell a row carrying the Arabic word from one carrying the corrector's guess.
+                //
+                // The outlines are asked of EVERY row once the query holds a romanised word, and win a
+                // row they answer better: "salah" found as the start of "sa-alahaa" must not keep the
+                // row from being read as what it is, and "sabr" is the whole word in "sabru".
+                if useSkeleton, let roman = scoreRoman(words: lanes.romanWords[index], tight: lanes.romanTight[index],
+                                                       text: englishText, query: query) {
+                    echo = true
+                    echoWhole = roman.whole
+                    if roman.matched > matched || (roman.matched == matched && (viaFuzzy || roman.score > score)) {
+                        score = roman.score
+                        matched = roman.matched
+                        position = roman.position
+                        span = 0
+                        viaRoman = true
+                        viaFuzzy = false
+                    }
+                }
+                if useSkeleton, matched < query.tokens.count || viaFuzzy,
                    let skeleton = scoreSkeleton(words: lanes.skeletonWords[index], tight: lanes.skeletonTight[index],
-                                                query: query, weight: transliterationWeight, wholeBonus: skeletonWholeWordBonus),
-                   skeleton.matched > matched {
-                    score = skeleton.score
-                    matched = skeleton.matched
-                    position = skeleton.position
-                    viaSkeleton = true
+                                                query: query, whole: latinSkeletonWhole, inside: latinSkeletonInside,
+                                                phrase: phraseBonus) {
+                    echo = true
+                    if skeleton.whole { echoWhole = true }
+                    if skeleton.matched > matched {
+                        score = skeleton.score
+                        matched = skeleton.matched
+                        position = skeleton.position
+                        span = 0
+                        viaSkeleton = true
+                        viaRoman = false
+                        viaFuzzy = false
+                    }
                 }
             }
 
             guard matched > 0 else { continue }
+            // Quality first, scaled clear of the tie-breakers: covering the query, then how each word
+            // matched. Brevity, position and nearness only order rows the quality cannot tell apart.
             score += Int((Double(coverageWeight * matched) / Double(query.tokens.count)).rounded())
+            score *= qualityScale
             score += Swift.max(0, brevityWeight - lanes.wordCounts[index] / brevityWordsPerPoint)
             score += Swift.max(0, positionWeight - position / positionCharsPerPoint)
+            if matched > 1 { score += Swift.max(0, proximityWeight - span / proximityCharsPerPoint) }
             if matched > best { best = matched }
-            candidates.append(Candidate(index: index, score: score, matched: matched, viaSkeleton: viaSkeleton))
+            candidates.append(Candidate(index: index, score: score, matched: matched, viaSkeleton: viaSkeleton,
+                                        viaRoman: viaRoman, viaFuzzy: viaFuzzy,
+                                        guessed: (viaRoman || viaSkeleton) && worded < matched,
+                                        echo: echo, echoWhole: echoWhole))
         }
 
         // Everything carrying the WHOLE query, or, when nothing does, the rows covering the most of it.
         //
-        // The skeleton is the LAST resort: when any ayah carries the words themselves (as typed or by
-        // stem), the rows that only share their consonants stand down. Without this a run of consonants
+        // For an ARABIC query the skeleton is the LAST resort: when any ayah carries the words themselves
+        // (as typed or by stem), the rows that only share their consonants stand down. Without this a run of consonants
         // across a word break outranked the word with a prefix on it: "الصبر" led with 23:86
         // (ٱلسَّبۡعِ وَرَبُّ reads l-s-b-r), above every بِٱلصَّبۡرِ in the Quran.
-        let covering = candidates.filter { $0.matched == best }
-        let direct = covering.filter { !$0.viaSkeleton }
-        let kept = (direct.isEmpty ? covering : direct)
-            .sorted { $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index }
+        var kept = candidates.filter { $0.matched == best }
+        var corrections = query.corrections
+        var romanised = false
+        if query.isArabic {
+            let direct = kept.filter { !$0.viaSkeleton }
+            if !direct.isEmpty { kept = direct }
+        } else if useSkeleton {
+            // A one-word query the corrector "fixed" that is also a whole Arabic word in a few ayahs
+            // was a romanisation, not a typo. The correction goes, and with it the rows only the
+            // correction reached; a row carrying the Arabic word as well stays.
+            if query.tokens.count == 1, corrections.count == 1,
+               kept.reduce(0, { $0 + ($1.echoWhole ? 1 : 0) }) >= romanisedMinWholeWords {
+                romanised = true
+                corrections = []
+                kept = kept.filter { !$0.viaFuzzy || $0.echo }
+            } else {
+                // A typo ("patiance") or a half-typed word ("forgiv") is no word of the translations
+                // either, so the romanised tiers fire and guess at rows that have nothing to do with
+                // what was meant. When the words answered in more ayahs than the guess did, the
+                // guesses go. A romanisation the text carries nowhere is untouched: there the sound
+                // IS the answer.
+                let guessed = kept.reduce(0) { $0 + ($1.guessed ? 1 : 0) }
+                if guessed > 0, kept.count - guessed > guessed {
+                    kept = kept.filter { !$0.guessed }
+                }
+            }
+            // The consonant skeleton is the last resort here too: it reads Arabic LETTERS, so "tawbah"
+            // (t-b-h) is also تتبعها, while the transliteration tells the two apart. Once the words or
+            // the outlines answered anywhere, the rows only the skeleton reached stand down.
+            let heard = kept.filter { !$0.viaSkeleton }
+            if !heard.isEmpty { kept = heard }
+        }
+        kept.sort { $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index }
         var outcome = Outcome()
         outcome.total = kept.count
         outcome.hits = kept.prefix(limit).map { entries[$0.index] }
-        outcome.corrections = query.corrections
+        outcome.corrections = corrections
         outcome.relaxed = best > 0 && best < query.tokens.count
         // The typed words with their corrections applied: what the rows should paint.
-        outcome.highlightQuery = query.tokens.map { $0.fuzzy ?? $0.text }.joined(separator: " ")
+        outcome.highlightQuery = query.tokens.map { romanised ? $0.text : $0.highlight }.joined(separator: " ")
         return outcome
     }
 
@@ -762,6 +1315,161 @@ enum QuranRankedSearch {
         return collapseSkeleton(out)
     }
 
+    // MARK: - Sound outlines
+
+    /// A romanised word reduced to how it sounds in outline, the same way on both sides: the query
+    /// word and every word of the app's transliteration. Nobody spells romanised Arabic one way
+    /// ("tawbah" / "tauba", "shaytan" / "shaitan", "Rahmaan" / "Rahman"), and the transliteration
+    /// spells each word a single way, so a typed spelling rarely matches it letter for letter. In
+    /// outline they agree:
+    ///
+    ///   - a run of vowels is ONE vowel, of one of two kinds by its first letter: a, e and i are
+    ///     "a"; o and u are "u". How long a vowel is and which of a/e/i it is are a writer's choice
+    ///     ("Rahmaan" / "Rahman", "Muslim" / "Moslem"); a/i against u is not ("salaah" the prayer,
+    ///     "sallooh" burn him, "su-ilat" she is asked)
+    ///   - w and y are vowels unless a vowel follows them ("yawm" / "yaum", "shaytan" / "shaitan");
+    ///     before a vowel they are the consonant ("tawwaab", "qaiyoom")
+    ///   - doubled letters collapse (shadda is written "bb" or "b")
+    ///   - sh, kh and gh are one sound each; c is k, p is b, v is w
+    ///
+    /// q stays apart from k: the transliteration always writes ق as q, and most people type it so.
+    /// Unlike the consonant skeleton this keeps WHERE the vowels fall, so "kufr" is not "kafara"
+    /// and "sabr" is not "saabir", and it reads the transliteration rather than the Arabic letters,
+    /// so "tawbah" is not "tatba'uhaa".
+    static func romanKey(_ word: String) -> [UInt8] {
+        var letters: [UInt8] = []
+        letters.reserveCapacity(word.utf8.count)
+        for byte in word.utf8 where byte >= 0x61 && byte <= 0x7A { letters.append(byte) }
+        var out: [UInt8] = []
+        out.reserveCapacity(letters.count)
+        func isVowel(_ byte: UInt8) -> Bool {
+            byte == 0x61 || byte == 0x65 || byte == 0x69 || byte == 0x6F || byte == 0x75
+        }
+        // A vowel after a vowel belongs to the run already open (which keeps its first kind); a
+        // consonant after itself is the same consonant doubled.
+        func push(_ symbol: UInt8) {
+            if let last = out.last, last == symbol || (isOutlineVowel(symbol) && isOutlineVowel(last)) { return }
+            out.append(symbol)
+        }
+        var index = 0
+        while index < letters.count {
+            let letter = letters[index]
+            let next: UInt8? = index + 1 < letters.count ? letters[index + 1] : nil
+            switch letter {
+            case 0x61, 0x65, 0x69:                                // a e i
+                push(0x61)
+            case 0x6F, 0x75:                                      // o u
+                push(0x75)
+            case 0x77:                                            // w
+                if let next, isVowel(next) { push(letter) } else { push(0x75) }
+            case 0x79:                                            // y
+                if let next, isVowel(next) { push(letter) } else { push(0x61) }
+            case 0x73 where next == 0x68:                         // sh
+                push(0x53); index += 1
+            case 0x6B where next == 0x68:                         // kh
+                push(0x4B); index += 1
+            case 0x67 where next == 0x68:                         // gh
+                push(0x47); index += 1
+            case 0x63 where next == 0x68:                         // ch, a French or Maghrebi sh
+                push(0x53); index += 1
+            case 0x63, 0x78:                                      // c x
+                push(0x6B)
+            case 0x70:                                            // p
+                push(0x62)
+            case 0x76:                                            // v
+                push(0x77)
+            default:
+                push(letter)
+            }
+            index += 1
+        }
+        return out
+    }
+
+    /// The outline without the vowel a word ends on: the case ending in connected recitation
+    /// ("tawbatu", "tawbata", "tawbati" are one word), and on the query side whatever vowel the
+    /// writer closed the word with.
+    static func strippedRomanKey(_ key: [UInt8]) -> [UInt8] {
+        guard key.count > 2, let last = key.last, isOutlineVowel(last) else { return key }
+        return Array(key.dropLast())
+    }
+
+    /// The two vowel symbols of an outline.
+    static func isOutlineVowel(_ symbol: UInt8) -> Bool { symbol == 0x61 || symbol == 0x75 }
+
+    /// Appends a word's outline to a run of them, merging across the join the way `romanKey` does
+    /// inside a word, so the run reads the same however the words were divided.
+    static func appendRun(_ key: [UInt8], to run: inout [UInt8]) {
+        for symbol in key {
+            if let last = run.last, last == symbol || (isOutlineVowel(symbol) && isOutlineVowel(last)) { continue }
+            run.append(symbol)
+        }
+    }
+
+    /// The ways the letters of one typed word can be read before it is reduced: as written; with
+    /// "th" as ث and "dh" as ذ (the transliteration writes them s and z); with "dh" as ض
+    /// ("ramadhan"); and with k as ق ("koran", "kadr").
+    private static func letterReadings(_ word: String) -> [String] {
+        var readings = [word]
+        if word.contains("th") || word.contains("dh") {
+            readings.append(word.replacingOccurrences(of: "th", with: "s").replacingOccurrences(of: "dh", with: "z"))
+        }
+        if word.contains("dh") {
+            readings.append(word.replacingOccurrences(of: "dh", with: "d"))
+        }
+        if word.contains("k") {
+            // Not the k of "kh", which is one sound of its own.
+            let swapped = word.replacingOccurrences(of: "kh", with: "\u{1}")
+                .replacingOccurrences(of: "k", with: "q").replacingOccurrences(of: "\u{1}", with: "kh")
+            if swapped != word { readings.append(swapped) }
+        }
+        return readings
+    }
+
+    /// Every reading of one typed word as an outline. A final "-ah" is read twice: as the ta
+    /// marbuta it usually is, "-at" in connected speech ("tawbah" is "tawbatu"), and as it stands,
+    /// the way the word sounds at a pause.
+    fileprivate static func romanKeys(for word: String) -> [RomanKey] {
+        guard word.count >= minRomanKey, Lanes.isLatinWord(word) else { return [] }
+        var seen = Set<[UInt8]>()
+        var keys: [RomanKey] = []
+        func add(_ reading: String, pauseForm: Bool) {
+            let full = romanKey(reading)
+            guard strippedRomanKey(full).count >= minRomanKey, seen.insert(full).inserted else { return }
+            keys.append(RomanKey(full: full, pauseForm: pauseForm))
+        }
+        for reading in letterReadings(word) {
+            if reading.count > 3, reading.hasSuffix("ah") || reading.hasSuffix("eh") {
+                add(String(reading.dropLast()) + "t", pauseForm: false)
+                add(reading, pauseForm: true)
+            } else {
+                add(reading, pauseForm: false)
+            }
+        }
+        return keys
+    }
+
+    /// A several-word query as one run of outlines, per reading of its spelling.
+    fileprivate static func joinedRomanKeys(for words: [String]) -> [[UInt8]] {
+        guard words.allSatisfy(Lanes.isLatinWord) else { return [] }
+        let readings: [(String) -> String] = [
+            { $0 },
+            { $0.replacingOccurrences(of: "th", with: "s").replacingOccurrences(of: "dh", with: "z") },
+            { $0.replacingOccurrences(of: "dh", with: "d") },
+        ]
+        var seen = Set<[UInt8]>()
+        var runs: [[UInt8]] = []
+        for reading in readings {
+            var run: [UInt8] = []
+            for word in words { appendRun(romanKey(reading(word)), to: &run) }
+            // The last word's closing vowel is the writer's, and the recitation may run on past it.
+            let trimmed = strippedRomanKey(run)
+            guard trimmed.count >= minRomanTight + 1, seen.insert(trimmed).inserted else { continue }
+            runs.append(trimmed)
+        }
+        return runs
+    }
+
     static func latinSkeleton(_ text: String) -> String {
         var lowered = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased()
         for (pattern, replacement) in latinDigraphs {
@@ -772,5 +1480,69 @@ enum QuranRankedSearch {
             if let mapped = latinSingles[character] { out.append(mapped) }
         }
         return collapseSkeleton(out)
+    }
+}
+
+// MARK: - Ayahs known by a name
+
+/// The ayahs people ask for by NAME. No text search can answer these: the name is in none of
+/// them ("Ayat al-Kursi" is 2:255, whose text says "kursiyyuhu" once and "ayah" nowhere), so
+/// "ayatul kursi" used to list the ayahs that open "tilka aayaatul kitaab". Only names every
+/// reader means the same ayah by are here; a WHOLE query has to be the name, so "kursi" and
+/// "light" stay ordinary searches.
+enum NamedAyah {
+    struct Entry: Equatable {
+        let surah: Int
+        let ayah: Int
+        let title: String
+    }
+
+    private static let table: [(entry: Entry, latin: [String], arabic: [String])] = [
+        (Entry(surah: 2, ayah: 255, title: "Ayat al-Kursi"),
+         ["ayatul kursi", "ayat al kursi", "ayat kursi", "ayah al kursi", "ayah kursi", "ayathul kursi",
+          "ayat ul kursi", "ayat el kursi", "ayatal kursiy", "throne verse", "the throne verse",
+          "verse of the throne", "the verse of the throne"],
+         ["آية الكرسي", "اية الكرسي", "آيه الكرسي"]),
+        (Entry(surah: 24, ayah: 35, title: "Ayat an-Nur"),
+         ["ayatun nur", "ayat an nur", "ayat al nur", "ayat nur", "ayah an nur", "ayat un nur", "ayat en nur",
+          "light verse", "the light verse", "verse of light", "the verse of light"],
+         ["آية النور", "اية النور"]),
+        (Entry(surah: 2, ayah: 282, title: "Ayat ad-Dayn"),
+         ["ayatud dayn", "ayat ad dayn", "ayat al dayn", "ayat dayn", "ayah ad dayn", "ayat ud dayn",
+          "ayat al mudayanah", "ayatul mudayanah", "debt verse", "the debt verse", "verse of debt",
+          "the verse of debt"],
+         ["آية الدين", "اية الدين", "آية المداينة", "اية المداينة"]),
+    ]
+
+    /// Spaces and marks removed, then reduced to a sound outline, so "Ayatul Kursi", "ayat-ul-kursee"
+    /// and "Āyat al-Kursī" are one name.
+    private static func latinKey(_ text: String) -> [UInt8] {
+        let letters = text.foldingLatinDiacritics.lowercased().filter { $0.isASCII && $0.isLetter }
+        return QuranRankedSearch.strippedRomanKey(QuranRankedSearch.romanKey(String(letters)))
+    }
+
+    private static func arabicKey(_ text: String) -> String {
+        Settings.shared.cleanSearch(text, whitespace: true).filter { !$0.isWhitespace }
+    }
+
+    private static let latinIndex: [[UInt8]: Entry] = {
+        var index: [[UInt8]: Entry] = [:]
+        for row in table { for name in row.latin { index[latinKey(name)] = row.entry } }
+        return index
+    }()
+
+    private static let arabicIndex: [String: Entry] = {
+        var index: [String: Entry] = [:]
+        for row in table { for name in row.arabic { index[arabicKey(name)] = row.entry } }
+        return index
+    }()
+
+    static func resolve(_ query: String) -> Entry? {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Every name is between a handful and a few dozen letters, and none carries a digit.
+        guard trimmed.count >= 7, trimmed.count <= 32,
+              trimmed.rangeOfCharacter(from: .decimalDigits) == nil else { return nil }
+        if trimmed.containsArabicLetters { return arabicIndex[arabicKey(trimmed)] }
+        return latinIndex[latinKey(trimmed)]
     }
 }

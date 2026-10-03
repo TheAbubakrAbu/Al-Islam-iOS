@@ -152,23 +152,16 @@ struct ReadingTestView: View {
 
     // MARK: Sections
 
+    /// The ladder's `ResourceHero` (2026-10-03), the progress and the two ways in as its footer. The
+    /// footer holds buttons, so the card is a VoiceOver container and each one is reached on its own.
     private var introSection: some View {
-        Section {
+        ResourceHeroSection(ResourceHero(
+            eyebrow: "READING TEST",
+            systemImage: "text.book.closed.fill",
+            headline: "From one letter to a page with no tashkeel",
+            message: "\(ReadingTier.all.count) tiers, in the order a qaa'idah teaches reading before the Quran. Each one tests reading, spelling and listening, never meaning. Eight right out of ten passes a tier, and any tier can be opened at any time."
+        ) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top, spacing: 12) {
-                    AccentIconChip(systemImage: "text.book.closed.fill", size: 34)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("From one letter to a page with no tashkeel")
-                            .font(.subheadline.weight(.semibold))
-
-                        Text("\(ReadingTier.all.count) tiers, in the order a qaa'idah teaches reading before the Quran. Each one tests reading, spelling and listening, never meaning. Eight right out of ten passes a tier, and any tier can be opened at any time.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
                 if progress.passedCount > 0 {
                     ProgressView(value: Double(progress.passedCount), total: Double(ReadingTier.all.count))
                         .tint(accent)
@@ -191,8 +184,7 @@ struct ReadingTestView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
-        }
+        })
     }
 
     private func introButton(_ title: String, systemImage: String, filled: Bool, action: @escaping () -> Void) -> some View {
@@ -460,22 +452,22 @@ struct ReadingTierView: View {
         #endif
     }
 
+    /// The tier's `ResourceHero` (2026-10-03): its place on the ladder as the eyebrow, its name in both
+    /// languages, then the specimen set large and where the learner stands, as the footer.
     private func heroSection(_ record: ReadingTestProgress.Record) -> some View {
-        Section {
+        ResourceHeroSection(ResourceHero(
+            eyebrow: "Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)".uppercased(),
+            systemImage: "text.book.closed.fill",
+            headline: tier.title,
+            arabic: tier.arabic,
+            message: ""
+        ) {
             VStack(spacing: 8) {
                 ReadingArabic(text: tier.drawnSpecimen, base: 44, style: .largeTitle, plain: tier.display == .unmarked)
                     .foregroundColor(accent)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
                     .frame(maxWidth: .infinity, minHeight: 64)
-
-                Text(tier.arabic)
-                    .font(.headline)
-                    .foregroundColor(accent)
-
-                Text("Tier \(tier.number) of \(ReadingTier.all.count) \u{00B7} \(tier.stage.title)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
 
                 if record.attempts > 0 {
                     ReadingIconText(record.mastered ? "Mastered: every answer right, no hints"
@@ -484,24 +476,29 @@ struct ReadingTierView: View {
                           systemImage: record.mastered ? "checkmark.seal.fill" : record.passed ? "checkmark.circle.fill" : "chart.bar")
                         .font(.caption.weight(.semibold))
                         .foregroundColor(record.passed ? accent : .secondary)
-                        .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-        }
+        })
     }
 
+    /// The first paragraph is the tier's article lead; the rest stay prose under it.
     private var teachesSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(tier.teaches, id: \.self) { paragraph in
-                    Text(paragraph)
-                        .font(.subheadline)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if let lead = tier.teaches.first {
+                ArticleLead(lead)
             }
-            .padding(.vertical, 2)
+
+            if tier.teaches.count > 1 {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(tier.teaches.dropFirst()), id: \.self) { paragraph in
+                        Text(paragraph)
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         } header: {
             Text("WHAT THIS TIER TESTS")
         }

@@ -165,16 +165,18 @@ struct HadithView: View {
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showHadithKeywordResults = HadithView.opensOnKeywordResults
-    /// "-hadithKeywordResults" (DEBUG): every query opens the switch on Keyword Results, because a
-    /// screenshot cannot tap it. It has to be re-read on each typed query: "-hadithSearch" seeds the
-    /// text a beat after launch, and that seeding is itself a new query.
-    static let opensOnKeywordResults: Bool = {
+    /// Which list a new query opens on: the keyword lists unless the reader chose AI first
+    /// (`SearchFilterBar.opensOnKeywordResults`). "-hadithKeywordResults" and "-hadithAIResults"
+    /// (DEBUG) force one or the other, because a screenshot cannot tap the switch. Re-read on each
+    /// typed query: "-hadithSearch" seeds the text a beat after launch, and that seeding is itself a
+    /// new query.
+    static var opensOnKeywordResults: Bool {
         #if DEBUG
-        return ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults")
-        #else
-        return false
+        if ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults") { return true }
+        if ProcessInfo.processInfo.arguments.contains("-hadithAIResults") { return false }
         #endif
-    }()
+        return SearchFilterBar.opensOnKeywordResults
+    }
     @State private var globalAITask: Task<Void, Never>?
     /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
     @State private var isGatheringAllBooks = false
@@ -380,7 +382,7 @@ struct HadithView: View {
                         Text("• Reference: 'bukhari 5103' or 'muslim 3:12' (just '3:12' inside a book)")
                         Text("• AI: meaning search, 'controlling anger'")
                         Text("• Ask: questions get an on-device AI answer")
-                        Text("• The buttons above narrow it: books, Sahih / Hasan / Da'if, All Words, Best Match")
+                        Text("• The buttons above narrow it: books, Sahih / Hasan / Da'if, Best Match, and More for the rest")
                         Text("• Text and AI search cover all 17 collections")
                     }
                     .font(.caption)
@@ -621,7 +623,9 @@ struct HadithView: View {
 
                     if !searchText.isEmpty {
                         // The Quran search's order: matching books first, then chapters, then hadiths.
-                        let results = HadithCatalogBook.all.filter(matches)
+                        let results = SearchRank.sorted(HadithCatalogBook.all.filter(matches), by: searchText) {
+                            [$0.englishTitle, $0.arabicTitle]
+                        }
                         if !results.isEmpty {
                             boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
                         } else if referenceResult == nil, numberQuery == nil,
@@ -2017,6 +2021,9 @@ struct HadithView: View {
                         chapterHits.append(GlobalChapterHit(book: entry.book, data: entry.data, chapter: chapter))
                     }
                 }
+                // The page shows five: the chapter NAMED for the query leads, across the shelf, instead
+                // of the first five that mention it in catalog order. Ties keep that order.
+                chapterHits = SearchRank.sorted(chapterHits, by: query) { [$0.chapter.english, $0.chapter.arabic] }
             }
 
             // Hadiths: books from the cursor onward, `maxConcurrent` at a time, in catalog order.
@@ -2148,11 +2155,6 @@ struct HadithView: View {
             // Load More, which only extends the exact list.
             guard !loadMore, sweepHadiths else { return }
             let books = library.compactMap { $0 }
-            struct Scored {
-                let bookIndex: Int
-                let row: Int
-                let score: Int
-            }
             // A grading is tested AFTER the ranking (it reads text blocks, and the ranking offers
             // thousands of rows): keep a deeper list, then cut it to the graded forty.
             let cap = filters.grades.isEmpty ? Self.rankedHadithCap : Self.rankedHadithCap * 5
@@ -2163,7 +2165,7 @@ struct HadithView: View {
             // more words, or a single word the sweep found nothing for (a likely typo).
             if reduced, filters.sort != .relevance, !finalHadiths.isEmpty || !finalChapters.isEmpty,
                query.split(whereSeparator: { $0.isWhitespace }).count < 2 { return }
-            let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [Scored], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
+            let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [HadithRankedSearch.ShelfHit], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
                 #if DEBUG
                 let vocabStarted = DispatchTime.now().uptimeNanoseconds
                 #endif
@@ -2180,40 +2182,19 @@ struct HadithView: View {
                 #if DEBUG
                 let parseMs = Double(DispatchTime.now().uptimeNanoseconds - rankStarted) / 1_000_000
                 #endif
-                // One pass over the library, every row with how many words it carries: the strict
-                // list is the rows carrying every word; the relaxed one (multi-word queries, only when
-                // nothing is strict) the rows carrying the most of it. Each list keeps its forty best
-                // in a bounded heap instead of sorting every hit of a common word.
-                let tokenCount = parsed.tokens.count
-                let outranks: (Scored, Scored) -> Bool = { a, b in
-                    if a.score != b.score { return a.score > b.score }
-                    if a.bookIndex != b.bookIndex { return a.bookIndex < b.bookIndex }
-                    return a.row < b.row
-                }
-                var strict = TopK<Scored>(capacity: cap, outranks: outranks)
-                var partial = TopK<Scored>(capacity: cap, outranks: outranks)
-                for (index, entry) in books.enumerated() {
-                    if Task.isCancelled { break }
-                    for hit in HadithRankedSearch.rank(book: entry.book, data: entry.data, query: parsed) {
-                        if hit.matched == tokenCount {
-                            strict.offer(Scored(bookIndex: index, row: hit.row, score: hit.score))
-                        } else if tokenCount > 1 {
-                            partial.offer(Scored(bookIndex: index, row: hit.row,
-                                                 score: hit.score + HadithRankedSearch.relaxedBonus(matched: hit.matched)))
-                        }
-                    }
-                }
-                let relaxed = strict.offered == 0 && partial.offered > 0
-                let chosen = relaxed ? partial : strict
+                // One pass over the library (see `HadithRankedSearch.rankShelf`): the rows carrying
+                // every word, or, when none does, the ones carrying the most of them, the best `cap`.
+                let shelf = HadithRankedSearch.rankShelf(books: books, query: parsed, cap: cap)
+                let relaxed = shelf.relaxed
                 #if DEBUG
                 if RenderCounter.enabled {
                     NSLog("RANKED hadith %.1f ms (strict %d, partial %d, relaxed %d, parse %.1f ms, vocab %.1f ms)",
                           Double(DispatchTime.now().uptimeNanoseconds - rankStarted) / 1_000_000,
-                          strict.offered, partial.offered, relaxed ? 1 : 0, parseMs, vocabMs)
+                          shelf.strictCount, shelf.partialCount, relaxed ? 1 : 0, parseMs, vocabMs)
                 }
                 #endif
-                var top = chosen.sorted()
-                var total = chosen.offered
+                var top = shelf.top
+                var total = shelf.total
                 if !filters.grades.isEmpty {
                     top = top.filter { item in
                         let entry = books[item.bookIndex]
@@ -2460,6 +2441,23 @@ struct HadithView: View {
         return "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha"
     }
 
+    /// When the book was compiled, dated the classical way by its compiler's death ("d. 256 AH /
+    /// 870 CE"), under the counts on a list row and a grid tile alike, so the shelf reads in time.
+    private func bookEraLabel(_ book: HadithCatalogBook) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: "calendar")
+                .imageScale(.small)
+            Text(book.era)
+                .monospacedDigit()
+        }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(book.eraAccessibilityLabel)
+    }
+
     /// One small glass chip in the shared stat-pill language.
     /// Deliberately tight: three of these share one row with the title and the Arabic name, and the pill
     /// padding was what pushed the counts into ellipses ("7,27...") the moment the row got narrow.
@@ -2555,6 +2553,8 @@ struct HadithView: View {
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+
+                bookEraLabel(book)
             }
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2621,11 +2621,13 @@ struct HadithView: View {
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+
+                bookEraLabel(book)
             }
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             // A fixed height so every tile in the grid lines up regardless of how its titles wrap.
-            .frame(height: 84)
+            .frame(height: 100)
             .padding(.vertical, 4)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())

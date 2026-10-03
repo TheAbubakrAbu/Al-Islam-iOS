@@ -347,6 +347,7 @@ hadith-settings|8|-launchHadithSettings
 islam|8|-launchTabIslam
 islam-arabicAlphabet|8|-launchTabIslam -islamDestination arabicAlphabet
 islam-tajweedFoundations|8|-launchTabIslam -islamDestination tajweedFoundations
+islam-tajweedCourse|8|-launchTabIslam -islamDestination tajweedCourse
 islam-namesOfAllah|8|-launchTabIslam -islamDestination namesOfAllah
 islam-commonAdhkar|8|-launchTabIslam -islamDestination commonAdhkar
 islam-commonDuas|8|-launchTabIslam -islamDestination commonDuas

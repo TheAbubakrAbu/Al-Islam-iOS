@@ -1463,17 +1463,31 @@ struct TajweedView: View {
                 }
 
                 Section(header: ArticleHeader("FOR MORE DETAILS")) {
-                    // Foundations links straight back to this article, so the pair is a corridor.
+                    // Both link straight back to this article, so each pair is a corridor.
                     // This file compiles for the Watch, where `OpenScreenLink` does not exist.
                     #if os(iOS)
                     OpenScreenLink(screen: .tajweedFoundations) {
                         TajweedFoundationsView()
                     } label: {
-                        tajweedFoundationsRowLabel
+                        tajweedRowLabel("Tajweed Foundations", caption: "Every rule on a page of its own, with examples and the letters it applies to")
+                    }
+
+                    if TajweedLessonsStore.isBundled {
+                        OpenScreenLink(screen: .tajweedCourse) {
+                            TajweedCourseView()
+                        } label: {
+                            tajweedRowLabel("Tajweed Course", caption: "The rules taught in order, lesson by lesson, with ayahs to play and a quiz in each")
+                        }
                     }
                     #else
                     NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
-                        tajweedFoundationsRowLabel
+                        tajweedRowLabel("Tajweed Foundations", caption: "Every rule on a page of its own, with examples and the letters it applies to")
+                    }
+
+                    if TajweedLessonsStore.isBundled {
+                        NavigationLink(destination: LazyDestination { TajweedCourseView() }) {
+                            tajweedRowLabel("Tajweed Course", caption: "The rules taught in order, lesson by lesson")
+                        }
                     }
                     #endif
                 }
@@ -1507,14 +1521,14 @@ struct TajweedView: View {
         #endif
     }
 
-    /// The Foundations row's face, shared by the iOS `OpenScreenLink` and the Watch's plain link, so
-    /// the two branches can never drift.
-    private var tajweedFoundationsRowLabel: some View {
+    /// A tajweed resource row's face, shared by the iOS `OpenScreenLink` and the Watch's plain link,
+    /// so the two branches can never drift.
+    private func tajweedRowLabel(_ title: String, caption: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(verbatim: "Tajweed Foundations")
+            Text(verbatim: title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundColor(appearance.accent)
-            Text(verbatim: "Comprehensive guide with rules, topics, and detailed explanations")
+            Text(verbatim: caption)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

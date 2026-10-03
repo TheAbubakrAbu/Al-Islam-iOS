@@ -14,6 +14,69 @@ fileprivate extension HadithBookData.Hadith {
     }
 }
 
+// MARK: - The book's opening card
+
+/// A collection's opening card, the hero every Islam resource opens on (Abu, 2026-10-03: "make it
+/// pretty like pillars and beliefs ... and each Hadith book"): its shelf as the eyebrow, the title with
+/// its Arabic, the compiler, the figures (chapters, hadiths, and the date the collection is known by),
+/// then its story. The story stays selectable, because it is the one paragraph on the screen a reader
+/// would quote, and folds away during a search, where it filled the screen and pushed every result
+/// below the fold; the title, compiler and figures stay.
+private struct HadithBookHero: View {
+    @Environment(\.appearance) private var appearance
+
+    let book: HadithCatalogBook
+    let chapters: Int
+    let hadiths: Int
+    let showsStory: Bool
+
+    var body: some View {
+        let era = book.eraStat
+        ResourceHero(eyebrow: book.group.rawValue,
+                     systemImage: "books.vertical.fill",
+                     headline: book.englishTitle,
+                     arabic: book.arabicTitle,
+                     message: "") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 10) {
+                    AccentIconChip(systemImage: "person.fill", size: 26)
+                        .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(book.authorEnglish)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text(book.authorArabic)
+                            .font(appearance.islamArabicFont(base: 17, relativeTo: .subheadline))
+                            .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                            .foregroundColor(appearance.accent)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+
+                ResourceHeroStats([
+                    ResourceHeroStat(chapters.formatted(), chapters == 1 ? "chapter" : "chapters"),
+                    ResourceHeroStat(hadiths.formatted(), "hadiths"),
+                    ResourceHeroStat(era.value, era.label),
+                ])
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, \(book.eraAccessibilityLabel)")
+
+                if showsStory {
+                    SelectableProse(text: book.longDescription,
+                                    textStyle: .subheadline,
+                                    secondary: true)
+                }
+            }
+        }
+        .articleCardRow()
+    }
+}
+
 // MARK: - One collection: chapters + book search
 
 struct HadithBookView: View {
@@ -151,12 +214,8 @@ struct HadithBookView: View {
     // Intelligence devices (`OnDeviceAsk.isAvailable`).
     @State private var showAskAI = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
-    /// `showKeywordResults`). Reset to the AI list on every new query.
-    #if DEBUG
-    @State private var showBookKeywordResults = ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults")
-    #else
-    @State private var showBookKeywordResults = false
-    #endif
+    /// `showKeywordResults`). Reset on every new query to the list the reader's preference opens on.
+    @State private var showBookKeywordResults = HadithView.opensOnKeywordResults
 
     private func runAISearch(query: String, data: HadithBookData?) {
         aiSearchTask?.cancel()
@@ -540,40 +599,10 @@ struct HadithBookView: View {
         List {
             Group {
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(data.metadata.english.title)
-                                .font(.subheadline.weight(.semibold))
-
-                            Spacer(minLength: 8)
-
-                            HighlightedSnippet(
-                                source: book.arabicTitle,
-                                term: "",
-                                font: settings.useFontArabic
-                                    ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
-                                    : .subheadline,
-                                accent: settings.accentColor.color,
-                                fg: settings.accentColor.color
-                            )
-                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                        }
-
-                        Text("\(book.authorEnglish) (\(book.authorArabic)) - \(book.era)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        // The fuller, authentic orientation to this collection - selectable,
-                        // because it's the one paragraph on the screen a reader would quote.
-                        // Folded away during a search: the paragraph filled the screen and pushed
-                        // every result below the fold. The title and author lines stay.
-                        if !isSearchActive {
-                            SelectableProse(text: book.longDescription,
-                                            textStyle: .footnote,
-                                            secondary: true)
-                        }
-                    }
-                    .padding(.vertical, 2)
+                    HadithBookHero(book: book,
+                                   chapters: data.chapters.count,
+                                   hadiths: data.hadiths.count,
+                                   showsStory: !isSearchActive)
                 }
 
                 // This book's own remembered spot - the Quran's Last Read Ayah, per book. Jumps into
@@ -933,7 +962,7 @@ struct HadithBookView: View {
                 statPill("\(data.chapters.count) Ch")
                 statPill("\(data.hadiths.count.formatted()) Ha")
             } else {
-                statPill("\(data.chapters.count) Chapters")
+                statPill("\(data.chapters.count) \(data.chapters.count == 1 ? "Chapter" : "Chapters")")
                 statPill("\(data.hadiths.count.formatted()) Hadiths")
             }
         }

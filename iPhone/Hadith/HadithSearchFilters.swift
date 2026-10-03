@@ -287,6 +287,8 @@ struct HadithSearchFilters: Equatable {
 
 struct HadithSearchFilterBar: View {
     @Environment(\.appearance) private var appearance
+    /// Shared with the Quran search's row (`SearchFilterBar`): off, the common buttons only.
+    @AppStorage(SearchFilterBar.everyButtonKey) private var showsEveryButton = false
     @Binding var filters: HadithSearchFilters
     /// Which screen the row rides on: a book or a chapter drops the collection buttons.
     var scope: HadithSearchFilters.Scope = .allBooks
@@ -318,8 +320,11 @@ struct HadithSearchFilterBar: View {
                 if scope.choosesBooks {
                     divider
                     booksMenu
-                    chipButton("Six Books", systemImage: nil, isOn: filters.books == HadithSearchFilters.sixBooks) {
-                        filters.books = filters.books == HadithSearchFilters.sixBooks ? [] : HadithSearchFilters.sixBooks
+                    // The short row keeps the one preset most readers want; the other shows once it is on.
+                    if showsEveryButton || filters.books == HadithSearchFilters.sixBooks {
+                        chipButton("Six Books", systemImage: nil, isOn: filters.books == HadithSearchFilters.sixBooks) {
+                            filters.books = filters.books == HadithSearchFilters.sixBooks ? [] : HadithSearchFilters.sixBooks
+                        }
                     }
                     chipButton("Bukhari & Muslim", systemImage: nil, isOn: filters.books == HadithSearchFilters.sahihayn) {
                         filters.books = filters.books == HadithSearchFilters.sahihayn ? [] : HadithSearchFilters.sahihayn
@@ -334,29 +339,37 @@ struct HadithSearchFilterBar: View {
                 }
 
                 divider
-                Menu {
-                    Picker("Words", selection: $filters.words) {
-                        ForEach(HadithSearchFilters.Words.allCases) { Text($0.title).tag($0) }
+                if showsEveryButton {
+                    wordsMenu
+                    Menu {
+                        Picker("Order", selection: $filters.sort) {
+                            ForEach(HadithSearchFilters.Sort.allCases) { Text($0.title).tag($0) }
+                        }
+                    } label: {
+                        chipLabel(filters.sort.title, systemImage: "arrow.up.arrow.down",
+                                  isOn: filters.sort != .collection, isMenu: true)
                     }
-                } label: {
-                    chipLabel(filters.words == .phrase ? "Words" : filters.words.title,
-                              systemImage: "text.word.spacing", isOn: filters.words != .phrase, isMenu: true)
-                }
-                Menu {
-                    Picker("Order", selection: $filters.sort) {
-                        ForEach(HadithSearchFilters.Sort.allCases) { Text($0.title).tag($0) }
+
+                    divider
+                    ForEach(scope.kinds) { kind in
+                        chipButton(kind.title, systemImage: kind.systemImage, isOn: filters.shows(kind, in: scope)) {
+                            filters.toggle(kind, in: scope)
+                        }
                     }
-                } label: {
-                    chipLabel(filters.sort.title, systemImage: "arrow.up.arrow.down",
-                              isOn: filters.sort != .collection, isMenu: true)
+                } else {
+                    // The one ordering choice as a switch, then a Words rule only once it is set.
+                    chipButton("Best Match", systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
+                        filters.sort = filters.sort == .relevance ? .collection : .relevance
+                    }
+                    if filters.words != .phrase { wordsMenu }
                 }
 
                 divider
-                ForEach(scope.kinds) { kind in
-                    chipButton(kind.title, systemImage: kind.systemImage, isOn: filters.shows(kind, in: scope)) {
-                        filters.toggle(kind, in: scope)
-                    }
+                chipButton(showsEveryButton ? "Fewer" : "More",
+                           systemImage: showsEveryButton ? "chevron.left" : "ellipsis", isOn: false) {
+                    showsEveryButton.toggle()
                 }
+                .accessibilityHint(showsEveryButton ? "Shows only the common filters" : "Shows every filter as a button")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
@@ -365,6 +378,17 @@ struct HadithSearchFilterBar: View {
 
     private var divider: some View {
         Capsule().fill(Color.secondary.opacity(0.3)).frame(width: 1, height: 18)
+    }
+
+    private var wordsMenu: some View {
+        Menu {
+            Picker("Words", selection: $filters.words) {
+                ForEach(HadithSearchFilters.Words.allCases) { Text($0.title).tag($0) }
+            }
+        } label: {
+            chipLabel(filters.words == .phrase ? "Words" : filters.words.title,
+                      systemImage: "text.word.spacing", isOn: filters.words != .phrase, isMenu: true)
+        }
     }
 
     private var booksTitle: String {
@@ -449,6 +473,8 @@ struct HadithSearchFilterBar: View {
 
 struct HadithSearchFilterSheet: View {
     @Environment(\.appearance) private var appearance
+    @AppStorage(SearchFilterBar.everyButtonKey) private var showsEveryButton = false
+    @AppStorage(SearchFilterBar.aiFirstKey) private var opensOnAI = false
     @Binding var filters: HadithSearchFilters
     /// Which screen opened the sheet: a book or a chapter has no COLLECTIONS section.
     var scope: HadithSearchFilters.Scope = .allBooks
@@ -520,6 +546,29 @@ struct HadithSearchFilterSheet: View {
                         header("SHOW")
                     } footer: {
                         Text("Remembered between searches.")
+                    }
+
+                    Section {
+                        optionRow("Keyword Results", detail: "The hadiths carrying your words, closest match first",
+                                  isOn: !opensOnAI) { opensOnAI = false }
+                        optionRow("AI Results", detail: "The hadiths closest in meaning, found on this device",
+                                  isOn: opensOnAI) { opensOnAI = true }
+                    } header: {
+                        header("OPEN ON")
+                    } footer: {
+                        Text("When both answer a search, one switch chooses between them. This is the side it starts on. For the Quran search too.")
+                    }
+
+                    Section {
+                        optionRow("Every Filter as a Button",
+                                  detail: "The row over the results shows all of these, not only the common ones",
+                                  isOn: showsEveryButton) {
+                            showsEveryButton.toggle()
+                        }
+                    } header: {
+                        header("THE ROW OVER THE RESULTS")
+                    } footer: {
+                        Text("Off, the row keeps to the collections, the gradings and Best Match, plus any filter set here. The More button in the row does the same. For the Quran search too.")
                     }
 
                     Section {

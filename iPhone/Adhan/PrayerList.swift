@@ -444,6 +444,11 @@ struct PrayerList: View {
             Text("PRAYER TIMES")
 
             #if os(iOS)
+            // The combined list labels itself, so a reader who scrolled past the banner still knows why.
+            if settings.travelingMode {
+                QasrHeaderBadge()
+            }
+
             Spacer()
 
             Picker("", selection: $prayerDisplayModeRawValue) {
@@ -530,21 +535,30 @@ struct PrayerList: View {
     @ViewBuilder
     private func gridContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
         let columns = Array(
-            repeating: GridItem(.flexible(), spacing: 12),
+            repeating: GridItem(.flexible(), spacing: 8),
             count: prayers.count == 4 ? 2 : 3
         )
+        // The same color rules as the tiles (Abu, 2026-10-01: "make adhan grid and split look better
+        // like from Tilawa"): once per grid, the highlighted prayer, its index and the legible accent.
+        let currentName = currentPrayerName
+        let currentIndex = prayers.firstIndex { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }
+        let accent = settings.accentColor.accent2
+        let textAccent = tileTextAccent(accent)
 
-        LazyVGrid(columns: columns, spacing: 12) {
-            ForEach(prayers, id: \.stableDisplayID) { prayer in
-                let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? legacyGridPrayerColor(for: prayer, in: prayers) : .primary)
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
+                let color: Color = isComparisonBaseline
+                    ? .secondary
+                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: textAccent) : .primary)
+                let isCurrent = highlightsCurrent && !isComparisonBaseline
+                    && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
                 PrayerGridTile(
                     prayer: prayer,
                     color: color,
-                    trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                    trailingContent: {
-                        EmptyView()
-                    }
+                    isCurrent: isCurrent,
+                    accent: accent,
+                    trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer)
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -553,13 +567,13 @@ struct PrayerList: View {
                 .modifier(prayerAccessibility(
                     for: prayer,
                     name: prayer.compactDisplayName,
-                    isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
+                    isCurrent: isCurrent,
                     mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
                     showsBell: false
                 ))
             }
         }
-        .padding(.horizontal, -20)
+        .padding(.horizontal, -6)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
@@ -569,70 +583,70 @@ struct PrayerList: View {
     @ViewBuilder
     private func splitContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
         let midpoint = Int(floor(Double(prayers.count) / 2.0))
-        let firstHalf = Array(prayers.prefix(midpoint))
-        let secondHalf = Array(prayers.suffix(prayers.count - midpoint))
+        let indexed = Array(prayers.enumerated())
+        let currentIndex = prayers.firstIndex { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }
+        let textAccent = tileTextAccent(settings.accentColor.accent2)
+        // Traveling's combined names ("Maghrib/Isha") do not fit beside a time in half a row: every
+        // row then stacks its time under its name, so the two columns stay even.
+        let stacked = prayers.contains { $0.nameTransliteration.contains("/") }
 
-        HStack(spacing: 0) {
-            VStack(spacing: 4) {
-                ForEach(firstHalf, id: \.stableDisplayID) { prayer in
-                    let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
+        HStack(alignment: .top, spacing: 6) {
+            splitColumn(Array(indexed.prefix(midpoint)), currentIndex: currentIndex, textAccent: textAccent,
+                        stacked: stacked, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
 
-                    SplitPrayerRow(
-                        prayer: prayer,
-                        color: color,
-                        trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                        trailingContent: {
-                            EmptyView()
-                        }
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        togglePrayerExpansion(for: prayer)
-                    }
-                    .modifier(prayerAccessibility(
-                        for: prayer,
-                        name: prayer.compactDisplayName,
-                        isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
-                        mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                        showsBell: false
-                    ))
-                }
-            }
+            // A neutral hairline, not the accent: the current row's fill is the only color.
+            Rectangle()
+                .fill(Color.primary.opacity(0.15))
+                .frame(width: 0.5)
+                .padding(.vertical, 6)
 
-            Divider()
-                .background(settings.accentColor.accent2)
-                .padding(.horizontal, 8)
-
-            VStack(spacing: 4) {
-                ForEach(secondHalf, id: \.stableDisplayID) { prayer in
-                    let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
-
-                    SplitPrayerRow(
-                        prayer: prayer,
-                        color: color,
-                        trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                        trailingContent: {
-                            EmptyView()
-                        }
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        togglePrayerExpansion(for: prayer)
-                    }
-                    .modifier(prayerAccessibility(
-                        for: prayer,
-                        name: prayer.compactDisplayName,
-                        isCurrent: highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer),
-                        mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
-                        showsBell: false
-                    ))
-                }
-            }
+            splitColumn(Array(indexed.suffix(prayers.count - midpoint)), currentIndex: currentIndex, textAccent: textAccent,
+                        stacked: stacked, isComparisonBaseline: isComparisonBaseline, highlightsCurrent: highlightsCurrent)
         }
+        .padding(.horizontal, -8)
         .lineLimit(1)
         .minimumScaleFactor(0.5)
 
         expandedPrayerDetail(for: prayers)
+    }
+
+    /// One half of the Split layout. `column` keeps each prayer's index in the FULL list, so past /
+    /// current / upcoming colors match the other layouts.
+    private func splitColumn(_ column: [(offset: Int, element: Prayer)], currentIndex: Int?, textAccent: Color,
+                             stacked: Bool, isComparisonBaseline: Bool, highlightsCurrent: Bool) -> some View {
+        let currentName = currentPrayerName
+        let accent = settings.accentColor.accent2
+
+        return VStack(spacing: 2) {
+            ForEach(column, id: \.element.stableDisplayID) { index, prayer in
+                let color: Color = isComparisonBaseline
+                    ? .secondary
+                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: textAccent) : .primary)
+                let isCurrent = highlightsCurrent && !isComparisonBaseline
+                    && (currentName?.contains(prayer.nameTransliteration) ?? false)
+
+                SplitPrayerRow(
+                    prayer: prayer,
+                    color: color,
+                    isCurrent: isCurrent,
+                    accent: accent,
+                    stacked: stacked,
+                    trackerMark: isComparisonBaseline ? nil : trackerMark(for: prayer)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    togglePrayerExpansion(for: prayer)
+                }
+                .modifier(prayerAccessibility(
+                    for: prayer,
+                    name: prayer.compactDisplayName,
+                    isCurrent: isCurrent,
+                    mark: isComparisonBaseline ? nil : trackerMark(for: prayer),
+                    showsBell: false
+                ))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     @ViewBuilder
@@ -1033,48 +1047,13 @@ struct PrayerList: View {
         #endif
     }
 
-    /// `prayerColor(for:in:)` with the two index lookups hoisted out of the per-tile closure. `accent`
-    /// is already the text shade (`tileTextAccent`).
+    /// Past prayers dimmed, the current one in the accent, the rest primary; `currentIndex` is looked
+    /// up once per layout, not per cell. `accent` is already the text shade (`tileTextAccent`).
     private func prayerColor(at index: Int, currentIndex: Int?, accent: Color) -> Color {
         guard let currentIndex else { return Self.pastPrayerColor }
         if index < currentIndex { return Self.pastPrayerColor }
         if index == currentIndex { return accent }
         return .primary
-    }
-
-    private func prayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
-        guard let prayerIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return Self.pastPrayerColor
-        }
-
-        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }) else {
-            return Self.pastPrayerColor
-        }
-
-        if prayerIndex < currentPrayerIndex {
-            return Self.pastPrayerColor
-        }
-        if prayerIndex == currentPrayerIndex {
-            return settings.accentColor.accent2
-        }
-        return .primary
-    }
-
-    private func legacyGridPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
-        guard let currentPrayer = live.currentPrayer else {
-            return Self.pastPrayerColor
-        }
-
-        if currentPrayer.nameTransliteration.contains(prayer.nameTransliteration) {
-            return settings.accentColor.accent2
-        }
-
-        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.id == currentPrayer.id }),
-              let prayerIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return Self.pastPrayerColor
-        }
-
-        return prayerIndex < currentPrayerIndex ? Self.pastPrayerColor : .primary
     }
 
     /// "Until Asr at 4:52 PM (3h 38m)" - the span from THIS prayer's time to the next one in the displayed
@@ -1558,69 +1537,116 @@ private extension Prayer {
     }
 }
 
-private struct PrayerGridTile<TrailingContent: View>: View {
+/// One cell of the Grid layout: icon over name over time, centred, in a rounded well. The current
+/// prayer's well takes the accent (fill, hairline, glow); the rest are a faint neutral well so the
+/// board reads as a grid instead of floating text (the Tilawa grid, 2026-10-01).
+private struct PrayerGridTile: View {
     let prayer: Prayer
     let color: Color
+    let isCurrent: Bool
+    let accent: Color
     var trackerMark: PrayerMark? = nil
-    @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
-        VStack(alignment: .center, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: prayer.image)
-                    .font(.subheadline)
-                    .foregroundColor(color)
-                    .padding([.trailing, .bottom], -2)
+        VStack(alignment: .center, spacing: 4) {
+            Image(systemName: prayer.image)
+                .font(.body.weight(.semibold))
+                .foregroundColor(color)
+                .accessibilityHidden(true)
 
+            HStack(spacing: 4) {
                 Text(prayer.compactDisplayName)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
+                    .font(.subheadline.weight(isCurrent ? .heavy : .bold))
                     .foregroundColor(color)
 
                 #if os(iOS)
                 PrayerMarkDot(mark: trackerMark)
                 #endif
-
-                trailingContent()
             }
 
             Text(prayer.time, style: .time)
-                .font(.subheadline)
+                .font(.footnote.weight(.semibold).monospacedDigit())
                 .foregroundColor(color)
         }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity)
+        .background(PrayerCellWell(isCurrent: isCurrent, accent: accent, cornerRadius: 14))
     }
 }
 
-private struct SplitPrayerRow<TrailingContent: View>: View {
+/// One row of the Split layout: icon, name, time, on a rounded pill that fills with the accent
+/// for the current prayer. `stacked` puts the time under the name (traveling's combined names).
+private struct SplitPrayerRow: View {
     let prayer: Prayer
     let color: Color
+    let isCurrent: Bool
+    let accent: Color
+    var stacked: Bool = false
     var trackerMark: PrayerMark? = nil
-    @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
-        HStack(spacing: 8) {
+        // Footnote type, not subheadline: half a row is narrow. The time keeps its size; the name
+        // trims last.
+        HStack(spacing: 6) {
             Image(systemName: prayer.image)
-                .font(.subheadline)
-                .frame(width: 20, alignment: .center)
+                .font(.footnote.weight(.semibold))
+                .frame(width: 18, alignment: .center)
+                .accessibilityHidden(true)
 
+            if stacked {
+                VStack(alignment: .leading, spacing: 1) {
+                    nameLine
+                    time
+                }
+                Spacer(minLength: 0)
+            } else {
+                nameLine
+                Spacer(minLength: 2)
+                time
+            }
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, stacked ? 8 : 10)
+        .background(PrayerCellWell(isCurrent: isCurrent, accent: accent, cornerRadius: 12, neutralOpacity: 0))
+    }
+
+    private var nameLine: some View {
+        HStack(spacing: 5) {
             Text(prayer.compactDisplayName)
-                .font(.subheadline)
-                .fontWeight(.bold)
+                .font(.footnote.weight(isCurrent ? .heavy : .bold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .minimumScaleFactor(0.75)
+                .layoutPriority(1)
 
             #if os(iOS)
             PrayerMarkDot(mark: trackerMark)
             #endif
-
-            Spacer()
-
-            Text(prayer.time, style: .time)
-                .fontWeight(.bold)
-
-            trailingContent()
         }
-        .foregroundColor(color)
+    }
+
+    private var time: some View {
+        Text(prayer.time, style: .time)
+            .font(.footnote.weight(.semibold).monospacedDigit())
+            .fixedSize()
+    }
+}
+
+/// The rounded ground under a grid cell or split row: the accent at 20% with a hairline and a soft
+/// glow for the current prayer, a faint neutral well (or nothing) for the rest.
+private struct PrayerCellWell: View {
+    let isCurrent: Bool
+    let accent: Color
+    let cornerRadius: CGFloat
+    var neutralOpacity: Double = 0.05
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        shape
+            .fill(isCurrent ? accent.opacity(0.2) : Color.primary.opacity(neutralOpacity))
+            .overlay(shape.strokeBorder(isCurrent ? accent.opacity(0.45) : .clear, lineWidth: 1))
+            .softShadow(color: isCurrent ? accent.opacity(0.3) : .clear, radius: isCurrent ? 6 : 0, x: 0, y: 2)
     }
 }
 

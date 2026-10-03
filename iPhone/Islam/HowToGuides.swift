@@ -1787,69 +1787,60 @@ struct GuidesPathHero: View {
         ("HowToHajjView", "Hajj", "house"),
     ]
 
+    /// The resource's card (`ResourceHero`), with the five steps on their path as its picture.
     var body: some View {
+        ResourceHero(
+            eyebrow: "THE ESSENTIALS, IN ORDER",
+            systemImage: "point.topleft.down.to.point.bottomright.curvepath",
+            headline: "And I did not create the jinn and mankind except to worship Me.",
+            source: "Quran 51:56",
+            message: "Purify, pray, fast, give and make the pilgrimage: tap a step for its guide, each with the Quran and the Sunnah behind it."
+        ) {
+            path
+                .padding(.top, 2)
+        }
+    }
+
+    private var path: some View {
         let accent = appearance.accent
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-                Text("THE ESSENTIALS, IN ORDER")
-                    .tracking(1.2)
-            }
-            .font(.caption.weight(.bold))
-            .foregroundColor(accent)
+        return ZStack(alignment: .top) {
+            // The path the steps sit on.
+            Rectangle()
+                .fill(accent.opacity(0.3))
+                .frame(height: 2)
+                .padding(.horizontal, 30)
+                .padding(.top, 17)
 
-            ZStack(alignment: .top) {
-                // The path the steps sit on.
-                Rectangle()
-                    .fill(accent.opacity(0.3))
-                    .frame(height: 2)
-                    .padding(.horizontal, 30)
-                    .padding(.top, 17)
-
-                HStack(alignment: .top, spacing: 0) {
-                    ForEach(Array(Self.steps.enumerated()), id: \.offset) { index, step in
-                        Button {
-                            Settings.shared.hapticFeedback()
-                            open = step.id
-                        } label: {
-                            VStack(spacing: 6) {
-                                ZStack {
-                                    Circle()
-                                        .fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
-                                                             startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        .frame(width: 36, height: 36)
-                                    Image(systemName: step.systemImage)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.white)
-                                }
-                                Text("\(index + 1). \(step.name)")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundColor(.primary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
+            HStack(alignment: .top, spacing: 0) {
+                ForEach(Array(Self.steps.enumerated()), id: \.offset) { index, step in
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        open = step.id
+                    } label: {
+                        VStack(spacing: 6) {
+                            ZStack {
+                                Circle()
+                                    .fill(LinearGradient(colors: [accent.opacity(0.95), accent.opacity(0.7)],
+                                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: step.systemImage)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.white)
                             }
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
+                            Text("\(index + 1). \(step.name)")
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Step \(index + 1): how to \(step.name)")
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Step \(index + 1): how to \(step.name)")
                 }
             }
-
-            Text("Purify, pray, fast, give and make the pilgrimage: tap a step for its guide, each with the Quran and the Sunnah behind it.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(LinearGradient(colors: [accent.opacity(0.16), accent.opacity(0.04)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(accent.opacity(0.2), lineWidth: 1))
-        )
     }
 }
 #endif

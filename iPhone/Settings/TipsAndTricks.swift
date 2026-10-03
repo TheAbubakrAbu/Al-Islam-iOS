@@ -142,7 +142,9 @@ enum TipCatalog {
             if byGroup[tip.group] == nil { order.append(tip.group) }
             byGroup[tip.group, default: []].append(tip)
         }
-        return order.map { ($0, byGroup[$0] ?? []) }
+        guard !terms.isEmpty else { return order.map { ($0, byGroup[$0] ?? []) } }
+        // Searching: within a group, the tip titled for the query leads the ones that mention it.
+        return order.map { group in (group, SearchRank.sorted(byGroup[group] ?? [], by: query) { [$0.title] }) }
     }
 
     static func tour(in area: TipArea) -> [AppTip] {
@@ -427,8 +429,8 @@ enum TipCatalog {
                place: "Quran reader", tour: true),
         AppTip(id: "quran.wordtap", area: .quran, group: "AYAHS AND WORDS", systemImage: "character.magnify",
                title: "Tap a word twice",
-               detail: "Two taps on a word open its meaning, its root, every other word from that root, the tajweed rules inside it, and a Listen button. A single tap still marks the ayah. It works offline, on Hafs.",
-               place: "Quran reader", destination: .quranPage(.arabicText), tour: true, card: ("Word Meanings", "Tap a word twice for its meaning, root, and tajweed.")),
+               detail: "Two taps on a word open Word Study: its meaning, its grammar with each part of the word lit in turn (prefix, stem, suffix), its root with every word built on it, the ayah's themes, and its tajweed. Switch to any other word of the ayah from the strip, or tap a word of the same root to study it there. A single tap still marks the ayah. It works offline, on Hafs.",
+               place: "Quran reader", destination: .quranPage(.arabicText), tour: true, card: ("Word Study", "Tap a word twice for its meaning, grammar, root, and themes.")),
         AppTip(id: "quran.pins", area: .quran, group: "AYAHS AND WORDS", systemImage: "slider.horizontal.2.square",
                title: "Settings for one ayah",
                detail: "Apply Settings, in an ayah's actions, changes how that one ayah is shown: beginner spacing, tajweed, tashkeel, dots, word by word. Reset to App Settings puts it back.",
@@ -477,23 +479,23 @@ enum TipCatalog {
 
         AppTip(id: "quran.refs", area: .quran, group: "SEARCH", systemImage: "magnifyingglass",
                title: "Search understands references",
-               detail: "Type 2:255, \u{201C}page 50\u{201D}, \u{201C}juz 30\u{201D}, or a surah's number or name. Negative numbers count from the end: \u{201C}-1\u{201D} is the last surah, page, and juz.",
+               detail: "Type 2:255, \u{201C}page 50\u{201D}, \u{201C}juz 30\u{201D}, or a surah's number or name. Negative numbers count from the end: \u{201C}-1\u{201D} is the last surah, page, and juz. An ayah known by a name opens by it: \u{201C}Ayatul Kursi\u{201D} is 2:255.",
                place: "Quran tab, search", tour: true),
         AppTip(id: "quran.filters", area: .quran, group: "SEARCH", systemImage: "slider.horizontal.3",
                title: "Search filter buttons",
-               detail: "A row of buttons appears above the results while you search. Tap several at once: Whole Word, All Words or Any Word, Makki or Madani, inside chosen juz or surahs, translation or transliteration only, Best Match order, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out.",
+               detail: "A short row of buttons appears above the results while you search: your Bookmarks and Favorites, Makki or Madani, and Best Match. Tap More for the rest, several at once: Whole Word, All Words or Any Word, chosen juz or surahs, translation or transliteration only, Go To a page or hizb, and which kinds of result to show. The first button opens every filter on one page, including words to leave out.",
                place: "Quran tab, search", tour: true),
         AppTip(id: "quran.operators", area: .quran, group: "SEARCH", systemImage: "character.cursor.ibeam",
                title: "Whole words, every word, without a word",
-               detail: "The Match button finds whole words only, or words that start or end with what you typed. Words asks for every word anywhere in the ayah, or any one of them, and Without leaves words out. The same buttons sit over the search inside a surah and over page mode's find bar.",
+               detail: "Tap More in the filter row for Match, Words and Without. Match finds whole words only, or words that start or end with what you typed. Words asks for every word anywhere in the ayah, or any one of them, and Without leaves words out. The same buttons sit over the search inside a surah and over page mode's find bar.",
                place: "Quran tab, search"),
         AppTip(id: "quran.spelling", area: .quran, group: "SEARCH", systemImage: "textformat.abc",
                title: "Spell it your way",
-               detail: "Yaseen, Yasin, Bakara, Rehman: romanized spellings find the right surah. \u{201C}makki\u{201D} and \u{201C}madani\u{201D} list the surahs by where they were revealed.",
+               detail: "Yaseen, Yasin, Bakara, Rehman: romanized spellings find the right surah. Romanized words find their ayahs too, however you spell them: sabr, tawbah, dhikr, shaytan, alhamdulillah. \u{201C}makki\u{201D} and \u{201C}madani\u{201D} list the surahs by where they were revealed.",
                place: "Quran tab, search"),
         AppTip(id: "quran.semantic", area: .quran, group: "SEARCH", systemImage: "sparkles",
                title: "Search by meaning",
-               detail: "Ayah search also matches by meaning, on your device, so a phrase like \u{201C}being patient in hardship\u{201D} finds ayahs that never use those words. When both kinds of result exist, a switch chooses between AI Results and Keyword Results.",
+               detail: "Ayah search also matches by meaning, on your device, so a phrase like \u{201C}being patient in hardship\u{201D} finds ayahs that never use those words. When both kinds of result exist, a switch chooses between Keyword Results and AI Results, and the search filters choose which one opens first.",
                place: "Quran tab, search"),
         AppTip(id: "quran.findbar", area: .quran, group: "SEARCH", systemImage: "doc.text.magnifyingglass",
                title: "Find on this page",
@@ -593,7 +595,7 @@ enum TipCatalog {
                place: "Hadith tab, search", tour: true),
         AppTip(id: "hadith.filters", area: .hadith, group: "SEARCH", systemImage: "slider.horizontal.3",
                title: "Search filter buttons",
-               detail: "A row of buttons appears above the results while you search. Choose the collections (or tap Six Books, or Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, switch several words to All Words or Any Word, and order the hadiths by Best Match. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
+               detail: "A short row of buttons appears above the results while you search. Choose the collections (or tap Bukhari & Muslim), keep only Sahih, Hasan, or Da'if narrations, and order the hadiths by Best Match. Tap More for Six Books, All Words or Any Word, and which kinds of result to show. The first button opens every filter on one page. The same row, without the collections, sits over the search inside a book and inside a chapter.",
                place: "Hadith tab, search", tour: true),
         AppTip(id: "hadith.semantic", area: .hadith, group: "SEARCH", systemImage: "sparkles",
                title: "Search by meaning",
@@ -693,8 +695,8 @@ enum TipCatalog {
                place: "Islam tab, Arabic Alphabet"),
         AppTip(id: "islam.course", area: .islam, group: "LEARNING", systemImage: "graduationcap.fill",
                title: "A tajweed course with quizzes",
-               detail: "Tajweed Foundations is one course, from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off.",
-               place: "Islam tab, Tajweed Foundations"),
+               detail: "The Tajweed Course runs from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off. Tajweed Foundations, beside it, keeps every rule on a page of its own to look up.",
+               place: "Islam tab, Tajweed Course"),
         AppTip(id: "islam.names", area: .islam, group: "LEARNING", systemImage: "signature",
                title: "A Name, full screen",
                detail: "Tap a Name of Allah in the grid, or choose View Fullscreen from any row's menu, to fill the screen with it. Tap a name's number badge to favorite it, and the shuffle in the header to land on one at random.",

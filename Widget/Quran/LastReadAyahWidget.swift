@@ -11,5 +11,6 @@ struct LastReadSurahWidget: Widget {
         .supportedFamilies(quranWidgetFamilies())
         .configurationDisplayName("Last Read Ayah")
         .description("Shows the ayah you last read")
+        .disfavoredInCarPlay()
     }
 }

@@ -90,7 +90,8 @@ struct PropheciesView: View {
     private var results: [Entry] {
         let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return [] }
-        return Self.searchIndex.filter { item in terms.allSatisfy { item.key.contains($0) } }.map(\.entry)
+        let matched = Self.searchIndex.filter { item in terms.allSatisfy { item.key.contains($0) } }.map(\.entry)
+        return SearchRank.sorted(matched, by: query) { [$0.title] + $0.aliases }
     }
 
     /// `strongestIDs`, in that order, skipping any id no entry carries.
@@ -118,11 +119,18 @@ struct PropheciesView: View {
         List {
             Group {
                 if query.isEmpty {
-                    Section {
-                        Text(verbatim: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it. Every hadith is quoted from this app's own collections and is sahih or hasan; anything our copies grade weak was left out.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "FORETOLD, AND FULFILLED",
+                        systemImage: "checkmark.seal.fill",
+                        headline: "Nor does he speak from [his own] inclination. It is not but a revelation revealed.",
+                        source: "Quran 53:3\u{2013}4",
+                        message: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it. Every hadith is quoted from this app's own collections and is sahih or hasan; anything our copies grade weak was left out.",
+                        stats: [
+                            ResourceHeroStat("\(Self.entries.count)", "prophecies"),
+                            ResourceHeroStat("\(grouped.count)", "groups"),
+                            ResourceHeroStat("\(Self.strongest.count)", "strongest"),
+                        ]
+                    ))
 
                     StrongestSection(
                         items: Self.strongest,
@@ -134,6 +142,16 @@ struct PropheciesView: View {
                                                           icon: group.systemImage)) {
                             ForEach(rows) { row($0) }
                         }
+                    }
+
+                    // Proving Islam's two chapters on prophecy (2026-10-02): the case it makes from what he
+                    // foretold, and what was foretold OF him, which this library does not carry.
+                    Section(
+                        header: SectionPillHeader(title: "FROM PROVING ISLAM", count: 2, icon: "checkmark.shield"),
+                        footer: Text("The case from prophecy, weighed by what makes a prediction count, and the passages of the Bible that Muslim scholars read as foretelling him.")
+                    ) {
+                        ArticleDoorRow(door: .article("ProvingProphecyView"))
+                        ArticleDoorRow(door: .article("ProvingBibleView"))
                     }
 
                     AboutSignsSection(heading: "About Prophecy & Prophethood",

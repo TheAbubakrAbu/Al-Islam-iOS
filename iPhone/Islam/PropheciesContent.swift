@@ -528,6 +528,27 @@ extension PropheciesView {
                       .text("Nothing about it was public: not that the letter existed, who carried it, or where she would be. The woman herself denied having it until they said they would search her."),
                   ]),
               ]),
+        // From Proving Islam's "Where Could He Have Learned It?" (2026-10-02): knowledge he could not
+        // have had, the same kind as the hidden letter above and the Negus below.
+        .init(id: "ibn-salam", title: "Three questions only a prophet could answer",
+              summary: "The most learned man among the Jews of Madinah came with three questions only a prophet could answer, heard the answers, and testified on the spot.",
+              group: .companions,
+              aliases: ["abdullah ibn salam", "abdullah bin salam", "ibn salam", "jews of madinah", "rabbi", "three questions",
+                        "first portent of the hour", "food of paradise", "fish liver", "resemblance", "jibril", "gabriel", "anas", "medina"],
+              sections: [
+                  SignSection("WHAT HE WAS ASKED", [
+                      .text("When the Prophet arrived in Madinah, 'Abdullah ibn Salam, whom the Jews of the city called the most learned among them, came to test him. Anas narrates:"),
+                      .hadith("bukhari:3329", cite: "Sahih al-Bukhari 3329", arabic: 16...74, english: 0...81),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("He answered all three, and 'Abdullah ibn Salam testified then and there that he was the Messenger of Allah. Knowing his people, he asked the Prophet to question them about him before they heard of his Islam, and hid in the house while they came:"),
+                      .hadith("bukhari:3329", cite: "Sahih al-Bukhari 3329", arabic: 162...184, english: 246...283),
+                      .text("When he came out and declared his faith in front of them, the same men called him the worst of them and the son of the worst."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("He came as an examiner, not as a student, and he chose questions whose answers were not to be had in Makkah or among the Arabs. The answer came, the Prophet said, from Jibril that very moment. The story is told three times in Sahih al-Bukhari (3329, 3938 and 4480), each through Anas."),
+                  ]),
+              ]),
         .init(id: "mutah-martyrs", title: "Three deaths, six hundred miles away",
               summary: "He announced Zayd, Ja'far and Ibn Rawahah's deaths at Mu'tah as they happened, from Madinah.",
               group: .companions,

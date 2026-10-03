@@ -329,6 +329,15 @@ struct TasbihView: View {
     var body: some View {
         List {
             Group {
+                #if os(iOS)
+                ResourceHeroSection(ResourceHero(
+                    eyebrow: "COUNT YOUR DHIKR",
+                    systemImage: "circles.hexagonpath.fill",
+                    headline: "O you who have believed, remember Allah with much remembrance.",
+                    source: "Quran 33:41",
+                    message: "Choose a remembrance below and count each one you say on the card at the bottom of the screen, or name any other dhikr of your own. Your lifetime total and your day streak are kept for you."
+                ))
+                #endif
                 statsSection
                 freeDhikrSection
                 dhikrSelectionSection

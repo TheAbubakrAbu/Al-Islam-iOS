@@ -129,6 +129,7 @@ struct ChosenAyahWidget: Widget {
         .supportedFamilies(chosenAyahWidgetFamilies())
         .configurationDisplayName("Chosen Ayah")
         .description("An ayah you choose: one of your bookmarks, or any reference you type. Hold the widget and choose Edit Widget to pick it.")
+        .disfavoredInCarPlay()
     }
 }
 

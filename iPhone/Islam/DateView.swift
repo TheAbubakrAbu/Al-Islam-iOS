@@ -42,6 +42,18 @@ struct DateView: View {
             ScrollViewReader { proxy in
                 List {
                     Group {
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "THE ISLAMIC CALENDAR",
+                        systemImage: "calendar",
+                        headline: "Indeed, the number of months with Allah is twelve [lunar] months.",
+                        source: "Quran 9:36",
+                        message: "Each month begins with the new crescent, so the Hijri year runs about eleven days shorter than the solar one and Ramadan moves through the seasons. Convert any date between the Hijri and Gregorian calendars.",
+                        stats: [
+                            ResourceHeroStat("12", "lunar months"),
+                            ResourceHeroStat("354", "days, about"),
+                            ResourceHeroStat("622", "CE, year 1 AH"),
+                        ]
+                    ))
                     selectionSection
                     convertedDateSection
                     aboutHijriSection
@@ -85,16 +97,14 @@ struct DateView: View {
     /// act; a reader who does not already know what the Hijri calendar IS met two date pickers and no
     /// explanation. The prose is the Hijri Calendar screen's own opening paragraph, kept word for word
     /// so the two screens cannot drift, and the doors go to the places that say more: the full events
-    /// list and the article.
+    /// list and the article. The definition is the article kit's lead card and the method note a
+    /// callout, the way the Pillars & Beliefs pages open (Abu, 2026-10-03).
     private var aboutHijriSection: some View {
         Section(header: Text("WHAT IS HIJRI?")) {
-            Text("The Hijri calendar is the Islamic lunar calendar. It tracks months by moon cycles, so dates shift through the solar year and are primarily used for Islamic worship and sacred days.")
-                .font(.subheadline)
-                .foregroundColor(.primary)
+            ArticleLead("The Hijri calendar is the Islamic lunar calendar. It tracks months by moon cycles, so dates shift through the solar year and are primarily used for Islamic worship and sacred days.")
 
-            Text("Conversions use the Umm al-Qura Hijri method, with the Hijri offset set in app settings.")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            ArticleCallout(paragraphs: ["Conversions use the Umm al-Qura Hijri method, with the Hijri offset set in app settings."],
+                           title: "Umm al-Qura", systemImage: "moon.stars.fill")
 
             // Forced to `.events`: this row promises the dates, so it must not land on the month grid
             // just because that is the half the reader last had open.

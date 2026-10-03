@@ -89,7 +89,8 @@ struct ProphetMiraclesView: View {
     private var results: [Entry] {
         let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return [] }
-        return Self.searchIndex.filter { item in terms.allSatisfy { item.key.contains($0) } }.map(\.entry)
+        let matched = Self.searchIndex.filter { item in terms.allSatisfy { item.key.contains($0) } }.map(\.entry)
+        return SearchRank.sorted(matched, by: query) { [$0.title] + $0.aliases }
     }
 
     private var grouped: [(Entry.Group, [Entry])] {
@@ -120,11 +121,18 @@ struct ProphetMiraclesView: View {
         List {
             Group {
                 if query.isEmpty {
-                    Section {
-                        Text(verbatim: "Every prophet was given something his people could not explain away, and it was always chosen to speak to them: sorcery in Egypt, medicine among the people of 'Isa, language among the Arabs. Read in that order, the signs given to Muhammad (peace and blessings be upon him) are not an odd claim to assess on their own. They are the last entry in a pattern Muslims, Jews and Christians already accept, and most of them were seen by crowds and reported by named witnesses.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "SIGNS OF PROPHETHOOD",
+                        systemImage: "staroflife.fill",
+                        headline: "We have already sent Our messengers with clear evidences.",
+                        source: "Quran 57:25",
+                        message: "Every prophet was given something his people could not explain away, and it was always chosen to speak to them: sorcery in Egypt, medicine among the people of 'Isa, language among the Arabs. Read in that order, the signs given to Muhammad (peace and blessings be upon him) are not an odd claim to assess on their own. They are the last entry in a pattern Muslims, Jews and Christians already accept, and most of them were seen by crowds and reported by named witnesses.",
+                        stats: [
+                            ResourceHeroStat("\(Self.entries.count)", "articles"),
+                            ResourceHeroStat("\(grouped.count)", "groups"),
+                            ResourceHeroStat("\(Self.strongest.count)", "strongest"),
+                        ]
+                    ))
 
                     StrongestSection(
                         items: Self.strongest,
@@ -136,6 +144,17 @@ struct ProphetMiraclesView: View {
                                                           icon: group.systemImage)) {
                             ForEach(rows) { row($0) }
                         }
+                    }
+
+                    // Proving Islam's chapters on the messengers (2026-10-02): the man himself, the line he
+                    // came at the end of, and the sign he was given that is still open to examination.
+                    Section(
+                        header: SectionPillHeader(title: "FROM PROVING ISLAM", count: 3, icon: "checkmark.shield"),
+                        footer: Text("Who he was before and under revelation, the one message every messenger brought, and the Quran\u{2019}s challenge that no one met.")
+                    ) {
+                        ArticleDoorRow(door: .article("ProvingProphetView"))
+                        ArticleDoorRow(door: .article("ProvingContinuationView"))
+                        ArticleDoorRow(door: .article("ProvingIjazView"))
                     }
 
                     AboutSignsSection(heading: "About Miracles & Prophethood",

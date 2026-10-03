@@ -347,6 +347,9 @@ private struct MainTabView: View {
                 guard let snapshot = quranData.verseSearchSnapshot() else { return }
                 Task.detached(priority: .userInitiated) {
                     for _ in 0..<3 { _ = QuranRankedSearch.search(term, snapshot: snapshot, limit: 6) }
+                    for _ in 0..<3 {
+                        NSLog("RANKED BENCH lanes %@", QuranRankedSearch.benchmarkLanesBuild(snapshot: snapshot))
+                    }
                     NSLog("RANKED BENCH done %@", term)
                 }
             }

@@ -390,9 +390,13 @@ final class NamesViewModel: ObservableObject {
         }
         // Nothing spelled that way: fold the spelling and ask again. A fallback only, so every query
         // that already finds a name returns exactly what it did before.
-        let matches = direct.isEmpty
+        let found = direct.isEmpty
             ? SpellingFold.matches(cleanedQuery, in: namesOfAllah, entry: \.spelling)
             : direct
+        // The name that was typed leads the names whose description merely mentions it ("malik"
+        // listed every name glossed with "king" in number order). A number is not a name.
+        let matches = cleanedQuery.allSatisfy(\.isNumber) ? found
+            : SearchRank.sorted(found, by: cleanedQuery) { [$0.transliteration, $0.name, $0.meaning] + $0.otherNames }
         // Every distinct prefix a user ever types lands here; without a bound the cache grows for the
         // app's lifetime. Recomputing a miss is a filter over 99 names, so wholesale eviction is fine.
         if filterCache.count >= 128 {
@@ -668,6 +672,21 @@ struct NamesView: View {
         ScrollViewReader { proxy in
             List {
                 Group {
+                    #if os(iOS)
+                    if !hasActiveSearch {
+                        ResourceHeroSection(ResourceHero(
+                            eyebrow: "ASMA UL-HUSNA",
+                            systemImage: "signature",
+                            headline: "And to Allah belong the best names, so invoke Him by them.",
+                            source: "Quran 7:180",
+                            message: "Each of His names with its meaning, so that you come to know the One you worship, and call on Him by the name that answers your need.",
+                            stats: [
+                                ResourceHeroStat("99", "names"),
+                                ResourceHeroStat("\(favoriteSet.count)", favoriteSet.count == 1 ? "favorite" : "favorites"),
+                            ]
+                        ))
+                    }
+                    #endif
                     descriptionSection
                     allahSection(hasActiveSearch: hasActiveSearch)
                     favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
@@ -822,10 +841,10 @@ struct NamesView: View {
     private var descriptionSection: some View {
         Section(header: Text("DESCRIPTION")) {
             // The closing sentence explains the "First Found" labels, which only exist in apps that
-            // ship the Quran - it goes with them.
-            Text.islamText(Self.namesDisclaimerText, highlightAllah: settings.highlightAllahNamesIslam)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // ship the Quran, so it goes with them. Set as the screen's opening card, the article kit's
+            // lead (Abu, 2026-10-03); its Highlight Allah is the same `highlightAllahNamesIslam`, read
+            // off the appearance snapshot.
+            ArticleLead(Self.namesDisclaimerText)
 
             // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
             if !settings.namesGridMode {

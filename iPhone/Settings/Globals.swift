@@ -1939,3 +1939,114 @@ enum LatinFold {
         return table
     }()
 }
+
+// MARK: - Best match first
+
+/// Orders what a list search ALREADY matched, so the best answer leads.
+///
+/// Nearly every list search in the app is a filter: it keeps the rows that carry the typed words and
+/// shows them in the order they were written down. That is right for which rows appear and wrong for
+/// which comes first: "ya" listed nine surahs before Ya-Sin, and a dua named for the query sat under
+/// every dua that merely mentions it. This never changes WHAT a search finds. It reorders the rows a
+/// search found by how well each row's NAME answers the query:
+///
+///   the name itself  >  the name starts with it  >  a word of the name starts with it
+///   >  each typed word starts a word of the name  >  the name contains it  >  the name contains each word
+///
+/// Rows of one tier keep the order they came in (mushaf order, book order, the order of a catalogue),
+/// and so does a row matched only by its body, after the rows whose names answered. An article is
+/// not part of a name: "fatihah" IS "Al-Fatihah". One fold serves both sides (`Settings.cleanSearch`:
+/// accents, case, Arabic letter forms and marks), so an Arabic name ranks like a Latin one.
+enum SearchRank {
+    /// A query folded once, for scoring many names.
+    struct Query {
+        let folded: String
+        let terms: [String]
+
+        init?(_ text: String) {
+            let folded = SearchRank.fold(text)
+            guard !folded.isEmpty else { return nil }
+            self.folded = folded
+            terms = folded.split(separator: " ").map(String.init)
+        }
+    }
+
+    /// The search fold, with the joiners of a name read as word breaks: "Al-Fatihah" is two words.
+    static func fold(_ text: String) -> String {
+        var spaced = String.UnicodeScalarView()
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x2D, 0x2F, 0x5F, 0x2010...0x2015: spaced.append(" ")     // - / _ and the dashes
+            default: spaced.append(scalar)
+            }
+        }
+        return Settings.shared.cleanSearch(String(spaced), whitespace: true)
+    }
+
+    /// How well `name` answers the query: 0 when the query is not in it, 1000 when it IS the name.
+    static func score(_ query: Query, name: String) -> Int {
+        let folded = fold(name)
+        guard !folded.isEmpty else { return 0 }
+        var best = score(query, folded: folded)
+        // "Al-Fatihah" answers "fatihah" as a name, not as a word inside one.
+        if best < 1000, let bare = withoutArticle(folded) {
+            best = max(best, score(query, folded: bare))
+        }
+        return best
+    }
+
+    private static func score(_ query: Query, folded name: String) -> Int {
+        let typed = query.folded
+        if name == typed { return 1000 }
+        if name.hasPrefix(typed) { return 800 }
+        if (" " + name).contains(" " + typed) { return 600 }
+        if query.terms.count > 1 {
+            let words = name.split(separator: " ")
+            if query.terms.allSatisfy({ term in words.contains { $0.hasPrefix(term) } }) { return 500 }
+        }
+        if name.contains(typed) { return 400 }
+        if query.terms.count > 1, query.terms.allSatisfy({ name.contains($0) }) { return 300 }
+        return 0
+    }
+
+    private static let latinArticles: Set<Substring> = [
+        "al", "ar", "as", "ash", "an", "at", "ad", "az", "adh", "ath", "el", "ul", "the", "a",
+    ]
+
+    /// The name without the article it opens on, or nil when it opens on none.
+    private static func withoutArticle(_ name: String) -> String? {
+        if name.hasPrefix("ال"), name.count > 3 { return String(name.dropFirst(2)) }
+        guard let space = name.firstIndex(of: " "), latinArticles.contains(name[..<space]) else { return nil }
+        let rest = name[name.index(after: space)...]
+        return rest.isEmpty ? nil : String(rest)
+    }
+
+    /// The best score over an item's names. The first is its title; the others (a subtitle, an
+    /// Arabic or English twin, an alias) count for a little less, so a title match leads its tier.
+    static func score<Names: Sequence>(_ query: Query, names: Names) -> Int where Names.Element == String {
+        var best = 0
+        for (index, name) in names.enumerated() where !name.isEmpty {
+            let worth = score(query, name: name) - (index == 0 ? 0 : 50)
+            if worth > best { best = worth }
+        }
+        return best
+    }
+
+    /// `items` with the ones whose names answer `text` first, best first. Everything else, and every
+    /// tie, keeps the order it came in. The same items come back, always.
+    static func sorted<Item>(_ items: [Item], by text: String, names: (Item) -> [String]) -> [Item] {
+        guard items.count > 1, let query = Query(text) else { return items }
+        var scores: [Int] = []
+        scores.reserveCapacity(items.count)
+        var any = false
+        for item in items {
+            let worth = score(query, names: names(item))
+            if worth > 0 { any = true }
+            scores.append(worth)
+        }
+        guard any else { return items }
+        return items.indices
+            .sorted { scores[$0] != scores[$1] ? scores[$0] > scores[$1] : $0 < $1 }
+            .map { items[$0] }
+    }
+}

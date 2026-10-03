@@ -29,6 +29,15 @@ struct WallpaperView: View {
     var body: some View {
         List {
             Group {
+                #if os(iOS)
+                ResourceHeroSection(ResourceHero(
+                    eyebrow: "FOR YOUR SCREENS",
+                    systemImage: "photo.on.rectangle.angled",
+                    headline: "Let your lock screen remind you of Allah.",
+                    message: "Islamic art and calligraphy for your phone. Press and hold any wallpaper to copy it or save it to Photos.",
+                    stats: [ResourceHeroStat("\(wallpapers.count)", "wallpapers")]
+                ))
+                #endif
                 wallpaperSections
             }
             .themedListRowBackground()

@@ -104,9 +104,11 @@ struct ZakatAlFitrView: View {
                     )
                 }
 
+                // The two explaining sections in the article kit, the way the Pillars & Beliefs pages
+                // read (Abu, 2026-10-03): what it is as the lead card, the early-giving allowance as a
+                // callout. The words are unchanged.
                 Section(header: Text("WHAT IT IS")) {
-                    Text(verbatim: "A separate obligation from the zakah on wealth, and it is not worked out on wealth at all. One sa\u{2018} of the staple food people eat, for every person you are responsible for, given before the Eid prayer.")
-                        .font(.subheadline)
+                    ArticleLead("A separate obligation from the zakah on wealth, and it is not worked out on wealth at all. One sa\u{2018} of the staple food people eat, for every person you are responsible for, given before the Eid prayer.")
 
                     ScriptureQuote(hadith: "bukhari:1503", cite: "Sahih al-Bukhari 1503",
                                    arabic: 29...62, english: 0...46)
@@ -114,12 +116,11 @@ struct ZakatAlFitrView: View {
 
                 Section(header: Text("WHEN TO GIVE IT")) {
                     Text(verbatim: "Before the Eid prayer. Ibn \u{2018}Abbas said the Prophet (peace and blessings be upon him) made it obligatory as a purification for the fasting person from idle talk and obscenity, and as food for the poor: whoever gives it before the prayer, it is an accepted zakah, and whoever gives it after the prayer, it is one charity among charities.")
-                        .font(.subheadline)
-
-                    Text(verbatim: "It may be given a day or two early, as Ibn \u{2018}Umar used to do, so that it reaches the poor in time for the day itself.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    ArticleCallout(paragraphs: ["It may be given a day or two early, as Ibn \u{2018}Umar used to do, so that it reaches the poor in time for the day itself."],
+                                   title: "A Day or Two Early", systemImage: "calendar.badge.clock")
                 }
             }
             .themedListRowBackground()

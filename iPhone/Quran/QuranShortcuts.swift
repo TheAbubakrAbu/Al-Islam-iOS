@@ -107,6 +107,26 @@ struct PlayLastListenedSurahAppIntent: AppIntent {
     }
 }
 
+#if os(iOS)
+@available(iOS 17.0, *)
+extension ResumeListeningIntent {
+    /// Playing already: nothing to do. Paused: carry on from the exact spot (an ayah range included).
+    /// Otherwise the Last Listened surah from its saved position, once a background launch has the
+    /// Quran loaded.
+    @MainActor
+    func resumeListening() async {
+        let player = QuranPlayer.shared
+        if player.isPlaying { return }
+        if player.isPaused {
+            player.resume()
+            return
+        }
+        await QuranData.shared.waitUntilCoreLoaded()
+        _ = await QuranPlaybackRouter.playLast()
+    }
+}
+#endif
+
 enum QuranPlaybackRouter {
     private static let data = QuranData.shared
     private static let player = QuranPlayer.shared

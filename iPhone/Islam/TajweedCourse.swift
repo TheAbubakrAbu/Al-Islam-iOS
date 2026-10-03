@@ -1,16 +1,17 @@
 import SwiftUI
 
-// The tajweed course, which IS Tajweed Foundations: the curriculum Jamil Hammoudeh wrote for Tilawa
-// (ported with his permission, see CreditsView) merged lesson by lesson with Al-Islam's own Tajweed
-// Foundations pages (Abu, 2026-09-23: "go one by one and make it joint ... take the best of both
-// worlds, I want all of both in one merged thing", in the course's design).
+// The Tajweed Course: the curriculum Jamil Hammoudeh wrote for Tilawa (ported with his permission, see
+// CreditsView) merged lesson by lesson with Al-Islam's own Tajweed Foundations pages (Abu, 2026-09-23:
+// "go one by one and make it joint ... take the best of both worlds, I want all of both in one merged
+// thing", in the course's design). Since 2026-10-03 the Foundations pages are also back as a resource
+// of their own (TajweedFoundations.swift, TajweedTopics.swift), the reference beside this course.
 //
 // One pack, TajweedLessons.json.xz, built by Scripts/build_tajweed_lessons.py from Tilawa's chapter
 // files plus Scripts/tajweed_foundations.py (whose docstring maps every old Foundations topic to the
 // lessons it went into), gated by Scripts/verify_tajweed_lessons.py.
 //
 // This file is the model, the store and the progress, compiled for the phone AND the watch.
-// TajweedView.swift is the course's index (the Tajweed Foundations screen) on both;
+// TajweedView.swift is the course's index (the Tajweed Course screen) on both;
 // TajweedLessons.swift draws a lesson on the phone, and the watch draws a compact one.
 //
 // A lesson follows the classical four beats, one card each: the definition (what is it), the rule card

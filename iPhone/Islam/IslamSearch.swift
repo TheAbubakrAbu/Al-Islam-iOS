@@ -1046,7 +1046,8 @@ enum IslamArticleSearch {
             guard homes.contains(entry.home), let haystack = IslamArticleCatalog.foldedHaystacks[entry.id] else { return false }
             return terms.allSatisfy { haystack.contains($0) }
         }
-        guard direct.isEmpty else { return direct }
+        // The article titled for the query leads the ones that carry it in a section name or alias.
+        guard direct.isEmpty else { return SearchRank.sorted(direct, by: query) { [$0.title] + $0.aliases } }
         // No row spelled that way: fold the spelling and ask again. A fallback only.
         let candidates = IslamArticleCatalog.all.filter { homes.contains($0.home) }
         return SpellingFold.matches(query, in: candidates) {

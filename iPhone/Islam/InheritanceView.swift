@@ -707,6 +707,21 @@ struct InheritanceCalculatorView: View {
             Group {
                 // The ANSWER first (Abu, 2026-09-19): who inherits and what each gets, before the
                 // estate arithmetic and the five heir groups it is worked out from.
+                #if os(iOS)
+                if shows("shares") {
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "THE SHARES OF AN ESTATE",
+                        systemImage: "divide.circle.fill",
+                        headline: "[This is] an ordinance from Allah, and Allah is Knowing and Forbearing.",
+                        source: "Quran 4:12",
+                        message: "Name the heirs and the estate. The calculator applies the shares of Surah an-Nisa, works out who is excluded by whom, and adjusts when the shares come to more or less than the whole.",
+                        stats: [
+                            ResourceHeroStat("6", "fixed shares"),
+                            ResourceHeroStat("3", "verses of shares"),
+                        ]
+                    ))
+                }
+                #endif
                 if shows("shares") { resultSection }
                 if shows("estate") { estateSection }
                 if shows("heirs") {
@@ -1094,15 +1109,33 @@ struct InheritanceCalculatorView: View {
         }
     }
 
+    /// Before the arithmetic, the four things to know, as an article section rather than one
+    /// caption-sized block (Abu, 2026-10-03: "make it pretty like pillars and beliefs"): where the
+    /// shares come from as the lead card, what bars an heir as prose, the limits of this calculator as
+    /// a callout, and the advice to take a real estate to a scholar as the closing card. The words are
+    /// the old single string's, split at its paragraph breaks.
     private var scopeSection: some View {
         Section(header: Text("BEFORE YOU DIVIDE ANYTHING")) {
-            Text(Self.scopeNote)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            ArticleLead(Self.scopeLead)
+
+            Text(verbatim: Self.scopeBarriers)
+                .font(.body)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ArticleCallout(paragraphs: [Self.scopeCaution], title: "Not a Fatwa",
+                           systemImage: "exclamationmark.triangle.fill")
+
+            ArticleClosing(Self.scopeClosing)
         }
     }
 
-    static let scopeNote = "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَولَـٰدِكُم \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13).\n\nTwo things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth.\n\nThis is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings.\n\nInheritance is the branch of knowledge the Prophet (peace be upon him) singled out for careful learning, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
+    static let scopeLead = "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَولَـٰدِكُم \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13)."
+
+    static let scopeBarriers = "Two things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth."
+
+    static let scopeCaution = "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings."
+
+    static let scopeClosing = "Inheritance is the branch of knowledge the Prophet (peace be upon him) singled out for careful learning, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
 }
 
 #Preview {

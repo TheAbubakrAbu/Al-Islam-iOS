@@ -1511,6 +1511,18 @@ final class QuranPlayer: ObservableObject {
         surahQueue.append(SurahQueueItem(surahNumber: surahNumber, surahName: resolvedName))
     }
 
+    /// Puts surahs at the head of the queue, ahead of anything already waiting: the rest of a recitation
+    /// that spans several surahs (CarPlay's Sunnah Recitations: al-Insan after as-Sajdah). A copy of one
+    /// already queued moves up rather than playing twice.
+    func queueSurahsNext(_ surahNumbers: [Int]) {
+        let numbers = surahNumbers.filter { (1...114).contains($0) }
+        guard !numbers.isEmpty else { return }
+        let items = numbers.map {
+            SurahQueueItem(surahNumber: $0, surahName: quranData.surah($0)?.nameTransliteration ?? "Surah \($0)")
+        }
+        surahQueue = items + surahQueue.filter { !numbers.contains($0.surahNumber) }
+    }
+
     func removeQueuedSurah(id: UUID) {
         surahQueue.removeAll { $0.id == id }
     }

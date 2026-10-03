@@ -6,9 +6,12 @@ import SwiftUI
 #if os(iOS)
 // MARK: - The filter bar
 
-/// The row of buttons over the search results: every filter one tap away, several at once.
+/// The row of buttons over the search results. By default the few most readers reach for (their
+/// collections, Makki and Madani, Best Match) plus any filter that is set; with More, every filter
+/// one tap away, several at once.
 struct QuranSearchFilterBar: View {
     @Environment(\.appearance) private var appearance
+    @AppStorage(SearchFilterBar.everyButtonKey) private var showsEveryButton = false
     @Binding var filters: QuranSearchFilters
     let surahs: [Surah]
     /// Inside one surah or page (the reader's search, page mode's find bar) only the filters that
@@ -27,17 +30,29 @@ struct QuranSearchFilterBar: View {
                     }
                 }
 
-                divider
-                matchMenu
-                combineMenu
-                // Always offered: the symbols that used to say "without" can no longer be typed.
-                chipButton(title: filters.excludedWords.isEmpty ? "Without" : "Without: " + filters.excludedWords.joined(separator: ", "),
-                           systemImage: "minus.circle", isOn: !filters.excludedWords.isEmpty, action: onOpenSheet)
+                // The reader's bar is four buttons, all of them about the words: it shows them all.
+                if inReader || showsEveryButton {
+                    divider
+                    matchMenu
+                    combineMenu
+                    withoutChip
 
-                if inReader {
-                    laneMenu
+                    if inReader {
+                        laneMenu
+                    } else {
+                        scopeAndLayoutChips
+                    }
                 } else {
-                    scopeAndLayoutChips
+                    simpleChips
+                }
+
+                if !inReader {
+                    divider
+                    chipButton(title: showsEveryButton ? "Fewer" : "More",
+                               systemImage: showsEveryButton ? "chevron.left" : "ellipsis", isOn: false) {
+                        showsEveryButton.toggle()
+                    }
+                    .accessibilityHint(showsEveryButton ? "Shows only the common filters" : "Shows every filter as a button")
                 }
             }
             .padding(.horizontal, 16)
@@ -45,14 +60,62 @@ struct QuranSearchFilterBar: View {
         }
     }
 
+    /// Always offered in the full row: the symbols that used to say "without" can no longer be typed.
+    private var withoutChip: some View {
+        chipButton(title: filters.excludedWords.isEmpty ? "Without" : "Without: " + filters.excludedWords.joined(separator: ", "),
+                   systemImage: "minus.circle", isOn: !filters.excludedWords.isEmpty, action: onOpenSheet)
+    }
+
+    /// The short row: the scopes a reader knows at a glance and the one ordering choice, then any
+    /// other filter that is SET (from the sheet), so it can be seen and changed where it acts.
     @ViewBuilder
-    private var scopeAndLayoutChips: some View {
+    private var simpleChips: some View {
         divider
+        libraryChips
+        divider
+        revelationChips
+        divider
+        chipButton(title: "Best Match", systemImage: "arrow.up.arrow.down", isOn: filters.sort == .relevance) {
+            filters.sort = filters.sort == .relevance ? .mushaf : .relevance
+        }
+
+        if filters.match != .contains { matchMenu }
+        if filters.combine != .phrase { combineMenu }
+        if !filters.excludedWords.isEmpty { withoutChip }
+        if !filters.juzs.isEmpty { juzMenu }
+        if !filters.surahs.isEmpty { surahChip }
+        if filters.lane != .all { laneMenu }
+        if filters.goTo != nil { goToMenu }
+    }
+
+    /// The reader's own collections: "search my bookmarks" is the scope people reach for.
+    private var libraryChips: some View {
+        ForEach(QuranSearchFilters.Library.allCases) { library in
+            chipButton(title: library.title, systemImage: library.systemImage, isOn: filters.libraries.contains(library)) {
+                if filters.libraries.contains(library) {
+                    filters.libraries.remove(library)
+                } else {
+                    filters.libraries.insert(library)
+                }
+            }
+        }
+    }
+
+    private var revelationChips: some View {
         ForEach(QuranSearchFilters.Revelation.allCases) { place in
             chipButton(title: place.title, systemImage: nil, isOn: filters.revelation == place) {
                 filters.revelation = filters.revelation == place ? nil : place
             }
         }
+    }
+
+    @ViewBuilder
+    private var scopeAndLayoutChips: some View {
+        divider
+        libraryChips
+
+        divider
+        revelationChips
         juzMenu
         surahChip
         laneMenu
@@ -248,6 +311,8 @@ private extension View {
 /// Every filter on one page, each with a line saying what it does.
 struct QuranSearchFilterSheet: View {
     @Environment(\.appearance) private var appearance
+    @AppStorage(SearchFilterBar.everyButtonKey) private var showsEveryButton = false
+    @AppStorage(SearchFilterBar.aiFirstKey) private var opensOnAI = false
     @Binding var filters: QuranSearchFilters
     let surahs: [Surah]
     var inReader = false
@@ -268,10 +333,13 @@ struct QuranSearchFilterSheet: View {
                     withoutSection
                     laneSection
                     if !inReader {
+                        librarySection
                         revelationSection
                         juzSection
                         surahSection
                         goToSection
+                        openingSection
+                        barSection
                     }
                     resetSection
                 }
@@ -393,6 +461,24 @@ struct QuranSearchFilterSheet: View {
         }
     }
 
+    private var librarySection: some View {
+        Section {
+            ForEach(QuranSearchFilters.Library.allCases) { library in
+                optionRow(title: library.title, detail: library.detail, isOn: filters.libraries.contains(library)) {
+                    if filters.libraries.contains(library) {
+                        filters.libraries.remove(library)
+                    } else {
+                        filters.libraries.insert(library)
+                    }
+                }
+            }
+        } header: {
+            header("YOUR COLLECTIONS")
+        } footer: {
+            Text("With nothing typed, lists everything in them. With both on, a result may come from either.")
+        }
+    }
+
     private var revelationSection: some View {
         Section {
             optionRow(title: "Makki and Madani", detail: "Every surah", isOn: filters.revelation == nil) {
@@ -501,6 +587,33 @@ struct QuranSearchFilterSheet: View {
             header("GO TO")
         } footer: {
             Text("Reads what you type as one kind of place. Counting from the end works everywhere: -1 is the last.")
+        }
+    }
+
+    private var openingSection: some View {
+        Section {
+            optionRow(title: "Keyword Results", detail: "The ayahs carrying your words, closest match first",
+                      isOn: !opensOnAI) { opensOnAI = false }
+            optionRow(title: "AI Results", detail: "The ayahs closest in meaning, found on this device",
+                      isOn: opensOnAI) { opensOnAI = true }
+        } header: {
+            header("OPEN ON")
+        } footer: {
+            Text("When both answer a search, one switch chooses between them. This is the side it starts on. For the Hadith search too.")
+        }
+    }
+
+    private var barSection: some View {
+        Section {
+            optionRow(title: "Every Filter as a Button",
+                      detail: "The row over the results shows all of these, not only the common ones",
+                      isOn: showsEveryButton) {
+                showsEveryButton.toggle()
+            }
+        } header: {
+            header("THE ROW OVER THE RESULTS")
+        } footer: {
+            Text("Off, the row keeps to your collections, Makki and Madani, and Best Match, plus any filter set here. The More button in the row does the same. For the Hadith search too.")
         }
     }
 

@@ -156,6 +156,18 @@ struct AdhanView: View {
         List {
             Group {
                 #if os(iOS)
+                // Traveling mode leads the tab, above the date and the sky: readers who missed the
+                // caption under the list took the four combined prayers for a bug (see
+                // TravelingModeBanner.swift).
+                if settings.travelingMode {
+                    Section {
+                        TravelingModeBanner(openTravelSettings: { settingsSheet = .travelingMode })
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
                 // Date/location and the sky are their own sections again - sharing one made the sky's rounded
                 // card fight the rows above it. `compactListSectionSpacing` below closes the gap between them
                 // so they still read as one stacked header rather than two floating islands.
@@ -197,6 +209,12 @@ struct AdhanView: View {
                 // Watch: the countdown and prayer times come first (that's the whole reason you raised your
                 // wrist), then one compact card holding the date, the city and the Qibla - three separate
                 // full-width rows was most of a screen's worth of scrolling for information you glance at.
+                // Traveling mode leads here too, as a filled accent row: the four combined prayers
+                // below it need their reason in sight.
+                if settings.travelingMode {
+                    watchTravelingRow
+                }
+
                 prayersSection
 
                 Section {
@@ -398,6 +416,35 @@ struct AdhanView: View {
     }
 
     #if os(watchOS)
+    /// The watch's traveling-mode lead: plane, the mode's name and what it does, on a solid accent row.
+    private var watchTravelingRow: some View {
+        Section {
+            HStack(spacing: 8) {
+                Image(systemName: "airplane")
+                    .font(.system(size: 16, weight: .bold))
+                    .rotationEffect(.degrees(-30))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Traveling Mode")
+                        .font(.footnote.weight(.bold))
+                    Text(settings.travelingShowFullPrayers ? "Showing full prayers" : "Qasr: shortened, combined")
+                        .font(.caption2)
+                        .opacity(0.9)
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(settings.accentColor.color)
+            )
+        }
+    }
+
     /// Date, city and Qibla in one row: the date and place stacked on the left, the compass on the right. Tap
     /// the compass to blow it up to the full width of the card, which is the only time it needs the room.
     private var watchPlaceCard: some View {

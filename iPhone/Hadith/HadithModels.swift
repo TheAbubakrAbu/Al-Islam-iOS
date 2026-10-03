@@ -50,6 +50,26 @@ struct HadithCatalogBook: Identifiable, Hashable {
 
     var id: String { slug }
 
+    /// `era` for the catalog's grid tiles and list rows (Abu, 2026-10-03: "mention the date of each
+    /// hadith book for grid and list"): the same date, with the spoken form VoiceOver reads for it.
+    var eraAccessibilityLabel: String {
+        era.replacingOccurrences(of: "d. c. ", with: "Compiler died about ")
+            .replacingOccurrences(of: "d. ", with: "Compiler died ")
+            .replacingOccurrences(of: " / ", with: ", ")
+    }
+
+    /// `era` as a hero figure: the year set large, what it dates under it. "d. 256 AH / 870 CE" ->
+    /// ("256 AH", "died, 870 CE"); "d. c. 741 AH / 1340 CE" -> ("c. 741 AH", "died, 1340 CE");
+    /// "Compiled 1980 CE" -> ("1980 CE", "compiled").
+    var eraStat: (value: String, label: String) {
+        guard era.hasPrefix("d. ") else {
+            let parts = era.split(separator: " ", maxSplits: 1).map(String.init)
+            return parts.count == 2 ? (parts[1], parts[0].lowercased()) : (era, "")
+        }
+        let sides = era.dropFirst(3).components(separatedBy: " / ")
+        return (sides[0], sides.count > 1 ? "died, " + sides[1] : "died")
+    }
+
 
     /// 1-based position in the catalog ("1: Sahih al-Bukhari" ... "10: The Forty Hadith of Imam Nawawi"),
     /// the same numbered style the surah rows use. Memoized - `firstIndex(of:)` compared whole structs
@@ -170,7 +190,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             englishTitle: "Forty Hadith Qudsi", arabicTitle: "الأَحادِيث القُدسِيَّة",
             group: .forties,
             authorEnglish: "Related by the Prophet ﷺ from His Lord", authorArabic: "يَروِيهِ النَّبِيُّ ﷺ عَن رَبِّهِ",
-            era: "Compiled selection",
+            // The Ibrahim and Johnson-Davies selection this book follows, first published in Beirut
+            // in 1980 (The Holy Koran Publishing House); the hadiths themselves are the Prophet's ﷺ.
+            era: "Compiled 1980 CE",
             shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
             longDescription: "A hadith qudsi (حَدِيثٌ قُدسِيٌّ) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording, distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud).",
             aliases: ["qudsi", "qudsi40", "hadithqudsi", "kudsi", "qudsee"],

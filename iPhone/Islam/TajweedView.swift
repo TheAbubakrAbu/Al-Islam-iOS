@@ -1,19 +1,21 @@
 import SwiftUI
 
-// Tajweed Foundations: the tajweed course's home (TajweedCourse.swift).
+// The Tajweed Course: the course's home (TajweedCourse.swift).
 //
-// This screen used to be two things: Al-Islam's fourteen Foundations topic pages, and a card leading
-// to the course Jamil Hammoudeh wrote for Tilawa. Abu, 2026-09-23: merge them one by one into one
-// thing, in the course's design. Every topic page now lives inside the lessons that teach the same
-// rule (Scripts/tajweed_foundations.py maps each one), and this screen is the course's index in
-// Tilawa's layout: what the course is, the quick references, then the four stages, each holding its
-// chapters, each holding its lessons, and the articles it points to at the end.
+// On 2026-09-23 Al-Islam's fourteen Tajweed Foundations pages and the course Jamil Hammoudeh wrote for
+// Tilawa were merged lesson by lesson into one course, in the course's design (Scripts/
+// tajweed_foundations.py maps every topic to its lessons), and for ten days this screen was called
+// Tajweed Foundations. Abu, 2026-10-03, brought the reference back as its own resource
+// (TajweedFoundations.swift) and kept this as the Tajweed Course, with everything the merge put in it.
+// This screen is the course's index in Tilawa's layout: what the course is, the quick references,
+// then the four stages, each holding its chapters, each holding its lessons, and the articles it
+// points to at the end.
 //
 // The phone draws the full index and lessons (TajweedLessons.swift); the watch reads the same pack
 // with a compact index and lesson page, below.
 
 #if os(iOS)
-struct TajweedFoundationsView: View {
+struct TajweedCourseView: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var progress = TajweedLessonProgress.shared
 
@@ -53,7 +55,7 @@ struct TajweedFoundationsView: View {
     }
 
     var body: some View {
-        let _ = RenderCounter.hit("TajweedFoundationsView")
+        let _ = RenderCounter.hit("TajweedCourseView")
         let lessons = course?.lessons ?? []
         let numbers = Dictionary(lessons.enumerated().map { ($1.id, $0 + 1) }, uniquingKeysWith: { first, _ in first })
 
@@ -99,8 +101,8 @@ struct TajweedFoundationsView: View {
             .themedListRowBackground()
         }
         .selectableArticleList()
-        .navigationTitle("Tajweed Foundations")
-        .openScreen(.tajweedFoundations)
+        .navigationTitle("Tajweed Course")
+        .openScreen(.tajweedCourse)
         // Same off-main parse the lessons do: parsing the pack in the body stalled first open.
         .task {
             guard course == nil, TajweedLessonsStore.isBundled else { return }
@@ -131,51 +133,39 @@ struct TajweedFoundationsView: View {
 
     // MARK: What the course is
 
+    /// The course's opening card (`ResourceHero`), then where to pick up once a lesson is done.
+    @ViewBuilder
     private func overviewSection(lessons: [TajweedLesson]) -> some View {
         let doneCount = lessons.filter { progress.isDone($0.id) }.count
         let minutes = lessons.reduce(0) { $0 + $1.minutes }
         // Where to pick up: the first lesson in course order not yet marked done.
         let next = doneCount > 0 ? lessons.first(where: { !progress.isDone($0.id) }) : nil
 
-        return Section {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 12) {
-                    AccentIconChip(systemImage: "graduationcap.fill", size: 36)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Learn Tajweed")
-                            .font(.title3.weight(.heavy))
-                        Text("Hafs an Asim, by the way of ash-Shatibiyyah")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Text("One course for all of tajweed, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12)
-
-                if !lessons.isEmpty {
-                    Text("\(lessons.count) lessons \u{00B7} \(course?.chapters.count ?? 0) chapters \u{00B7} about \(Self.duration(minutes))")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 12)
-                }
-
-                if doneCount > 0, !lessons.isEmpty {
+        ResourceHeroSection(ResourceHero(
+            eyebrow: "LEARN TAJWEED",
+            systemImage: "graduationcap.fill",
+            headline: "Recite the Qur\u{2019}an with measured recitation.",
+            source: "Quran 73:4",
+            message: "One course for all of tajweed, Hafs an Asim by the way of ash-Shatibiyyah, taught in the classical order: read the letters, shape them, apply the rules, then read the mushaf. Every lesson explains its rule, shows it in real ayahs you can play, gives you words and patterns to practise, and ends with a self-check.",
+            stats: lessons.isEmpty ? [] : [
+                ResourceHeroStat("\(lessons.count)", "lessons"),
+                ResourceHeroStat("\(course?.chapters.count ?? 0)", "chapters"),
+                ResourceHeroStat(Self.duration(minutes), "in all"),
+            ]
+        ) {
+            if doneCount > 0, !lessons.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
                     ProgressView(value: Double(doneCount), total: Double(max(1, lessons.count)))
                         .tint(accent)
-                        .padding(.top, 12)
                     Text("\(doneCount) of \(lessons.count) lessons done")
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(accent)
-                        .padding(.top, 6)
                 }
             }
-            .padding(.vertical, 6)
+        })
 
-            if let next {
+        if let next {
+            Section {
                 NavigationLink(destination: LazyDestination { TajweedLessonDetailView(lesson: next) }) {
                     HStack(spacing: 12) {
                         Image(systemName: "play.circle.fill")
@@ -204,10 +194,28 @@ struct TajweedFoundationsView: View {
 
     // MARK: Quick reference
 
-    /// The tools that sit beside the course rather than inside a lesson: the reader's colour legend,
-    /// and the alphabet's two indexes of the letters tajweed is about.
+    /// The tools that sit beside the course rather than inside a lesson: Tajweed Foundations (every
+    /// rule on a page of its own, to look up), the reader's colour legend, and the alphabet's two
+    /// indexes of the letters tajweed is about.
     private var referenceSection: some View {
         Section(header: Text("QUICK REFERENCE")) {
+            // Foundations links back here, so the row greys out when it is already on the stack.
+            OpenScreenLink(screen: .tajweedFoundations) {
+                TajweedFoundationsView()
+            } label: {
+                HStack(spacing: 12) {
+                    AccentIconChip(systemImage: "waveform", size: 30)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tajweed Foundations")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Text("Every rule on a page of its own, to look up")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
             Button {
                 Settings.shared.hapticFeedback()
                 showTajweedLegend = true
@@ -372,7 +380,7 @@ struct TajweedFoundationsView: View {
 
 #if os(watchOS)
 /// The course on the watch: the stages as sections, a row per lesson.
-struct TajweedFoundationsView: View {
+struct TajweedCourseView: View {
     @ObservedObject private var progress = TajweedLessonProgress.shared
     @State private var course: TajweedLessonsStore.Course? = TajweedLessonsStore.shared.courseIfLoaded
 
@@ -414,7 +422,7 @@ struct TajweedFoundationsView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .navigationTitle("Tajweed")
+        .navigationTitle("Tajweed Course")
         .task {
             guard course == nil, TajweedLessonsStore.isBundled else { return }
             course = await Task.detached(priority: .userInitiated) { TajweedLessonsStore.shared.course() }.value

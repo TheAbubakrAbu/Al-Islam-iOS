@@ -8,11 +8,14 @@ import ActivityKit
 /// Every countdown uses the system's self-updating `Text(timerInterval:)` rather than a timer of our own:
 /// a Live Activity's process isn't running most of the time, so anything computed at render is frozen at that
 /// instant. `timerInterval` is the only thing that keeps ticking.
+///
+/// From iOS 18 it also offers the small family, which is what CarPlay's dashboard (iOS 26) and a paired
+/// watch's Smart Stack draw: without it the car shows only the Dynamic Island's two compact ends.
 @available(iOS 16.2, *)
 struct FastingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: FastingAttributes.self) { context in
-            FastingLockScreenView(context: context)
+            FastingActivityView(context: context)
                 .appFontDesign()
                 .activityBackgroundTint(Color.black.opacity(0.55))
                 .activitySystemActionForegroundColor(.white)
@@ -58,6 +61,82 @@ struct FastingLiveActivity: Widget {
             }
             .keylineTint(context.attributes.phase == .suhoor ? .indigo : .orange)
         }
+        .offersSmallActivityFamily()
+    }
+}
+
+private extension WidgetConfiguration {
+    func offersSmallActivityFamily() -> some WidgetConfiguration {
+        if #available(iOSApplicationExtension 18.0, *) {
+            return supplementalActivityFamilies([.small])
+        } else {
+            return self
+        }
+    }
+}
+
+/// The Lock Screen card, or the small one where the system asks for the small family.
+@available(iOS 16.2, *)
+private struct FastingActivityView: View {
+    let context: ActivityViewContext<FastingAttributes>
+
+    var body: some View {
+        if #available(iOSApplicationExtension 18.0, *) {
+            FastingFamilyView(context: context)
+        } else {
+            FastingLockScreenView(context: context)
+        }
+    }
+}
+
+@available(iOSApplicationExtension 18.0, *)
+private struct FastingFamilyView: View {
+    @Environment(\.activityFamily) private var family
+    let context: ActivityViewContext<FastingAttributes>
+
+    var body: some View {
+        if family == .small {
+            FastingSmallView(context: context)
+        } else {
+            FastingLockScreenView(context: context)
+        }
+    }
+}
+
+/// CarPlay's dashboard and the watch's Smart Stack: the phase, the countdown in large type, and the time it
+/// ends at, read at a glance.
+@available(iOS 16.2, *)
+private struct FastingSmallView: View {
+    let context: ActivityViewContext<FastingAttributes>
+
+    private var tint: Color { context.attributes.phase == .suhoor ? .indigo : .orange }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label(context.attributes.phase.title, systemImage: context.attributes.phase.symbol)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+            if context.isStale {
+                Text("\(context.state.prayerName) has begun")
+                    .font(.headline)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+            } else {
+                Text(timerInterval: context.state.startTime...context.state.endTime, countsDown: true)
+                    .font(.system(size: 28, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(context.state.isFinalStretch ? .red : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            Text("\(context.state.prayerName) at \(context.state.endTime, style: .time)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
     }
 }
 

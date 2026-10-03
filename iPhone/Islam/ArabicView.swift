@@ -163,7 +163,11 @@ struct ArabicView: View {
     private var filteredStandard: [LetterData] {
         guard !searchText.isEmpty else { return standardArabicLetters }
         let st = searchText.foldingLatinDiacritics.lowercased()
-        return standardArabicLetters.filter { matchesSearch($0, st) }
+        // The letter NAMED for the query leads the ones that match by a trait ("ba" before every
+        // letter whose family or sound mentions it).
+        return SearchRank.sorted(standardArabicLetters.filter { matchesSearch($0, st) }, by: searchText) {
+            [$0.name, $0.transliteration, $0.letter]
+        }
     }
 
     private var filteredOther: [LetterData] {
@@ -400,6 +404,24 @@ struct ArabicView: View {
     }
     #endif
 
+    #if os(iOS)
+    /// The card the alphabet opens on (`ResourceHero`).
+    private static var hero: ResourceHero<EmptyView> {
+        ResourceHero(
+            eyebrow: "THE LANGUAGE OF THE QURAN",
+            systemImage: "textformat.size.ar",
+            headline: "Indeed, We have sent it down as an Arabic Qur\u{2019}an that you might understand.",
+            source: "Quran 12:2",
+            message: "Start with the letters: how each is written at the start, middle and end of a word, where in the mouth its sound begins, and the marks that give it a vowel. Then test your reading, one tier at a time.",
+            stats: [
+                ResourceHeroStat("\(standardArabicLetters.count)", "letters"),
+                ResourceHeroStat("\(LetterTraits.makharij.count)", "makharij"),
+                ResourceHeroStat("\(ReadingTier.all.count)", "reading tiers"),
+            ]
+        )
+    }
+    #endif
+
     var body: some View {
         // Both result kinds landed: ONE segmented switch decides which list fills the page (the
         // hadith book search's rule). With only one kind present, no picker - it just shows.
@@ -416,6 +438,9 @@ struct ArabicView: View {
             Group {
                 #if os(watchOS)
                 arabicFontPickerSection
+                #endif
+                #if os(iOS)
+                if searchText.isEmpty { ResourceHeroSection(Self.hero) }
                 #endif
                 favoriteLettersSection
                 #if os(iOS)

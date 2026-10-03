@@ -78,3 +78,17 @@ struct Widgets: WidgetBundle {
         #endif
     }
 }
+
+extension WidgetConfiguration {
+    /// Keeps a reading widget (an ayah's Arabic, a paragraph of text) off the CarPlay dashboard's offer.
+    /// From iOS 26 CarPlay can show any small widget, and asks for glanceable, large, legible ones; reading
+    /// is not a glance at the wheel. A driver can still add it from the further widgets: disfavored only
+    /// stops it being offered first. The prayer widgets and Last Listened Surah are left offered.
+    func disfavoredInCarPlay() -> some WidgetConfiguration {
+        if #available(iOSApplicationExtension 26.0, *) {
+            return disfavoredLocations([.carPlay], for: [.systemSmall])
+        } else {
+            return self
+        }
+    }
+}

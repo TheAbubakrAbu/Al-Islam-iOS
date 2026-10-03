@@ -36,14 +36,13 @@ struct ProvingIslamView: View {
             List {
                 Group {
                     if query.isEmpty {
-                        Section {
-                            ProvingIslamHero(chapters: IslamArticleCatalog.provingGroups.reduce(0) { $0 + $1.entries.count })
-                                .articleCardRow()
-                        }
+                        ResourceHeroSection(Self.hero)
 
                         chapterSections
 
                         ProvingIslamProofsSection()
+
+                        librariesSection
 
                         goFurtherSection
                     } else {
@@ -156,6 +155,41 @@ struct ProvingIslamView: View {
         "ProvingClosingView": "Every line of evidence, and the one explanation that fits them all",
     ]
 
+    // MARK: Hero
+
+    /// The library's opening card: the one question the whole case asks, set large. The card every
+    /// resource now opens on started here (`ResourceHero`).
+    static var hero: ResourceHero<EmptyView> {
+        ResourceHero(
+            eyebrow: "THE COMPLETE CASE",
+            systemImage: "checkmark.shield.fill",
+            headline: "If the Quran and the Prophet \u{FDFA} were only human, where are the human fingerprints?",
+            message: "No single proof has to carry the weight. A human author leaves errors, a fraud leaves motives, a borrowed text leaves its sources, and a fragile scripture leaves scars. These chapters look for each, and ask what one explanation accounts for all of them at once.",
+            stats: [
+                ResourceHeroStat("\(IslamArticleCatalog.provingGroups.reduce(0) { $0 + $1.entries.count })", "chapters"),
+                ResourceHeroStat("\(IslamArticleCatalog.provingGroups.count)", "parts"),
+                ResourceHeroStat("1", "question"),
+            ]
+        )
+    }
+
+    // MARK: The signs libraries
+
+    /// The three libraries the chapters draw on (2026-10-02, Abu: "anything in proving islam not in
+    /// the other places ... add it and vice versa"). Every prophecy and every sign of the prophets is
+    /// also a door from the chapter it belongs to; Miracles of the Quran through its strongest readings,
+    /// since the case keeps to what survives scrutiny.
+    private var librariesSection: some View {
+        Section(
+            header: SectionPillHeader(title: "THE SIGNS LIBRARIES", count: 3, icon: "books.vertical"),
+            footer: Text("Every prophecy and every sign of the prophets in these libraries opens from the chapter it belongs to, and the strongest readings in Miracles of the Quran from \u{201C}The Errors It Did Not Make.\u{201D}")
+        ) {
+            ArticleDoorRow(door: .library(.propheciesOfProphet))
+            ArticleDoorRow(door: .library(.miraclesOfQuran))
+            ArticleDoorRow(door: .library(.miraclesOfProphets))
+        }
+    }
+
     // MARK: Further
 
     private var goFurtherSection: some View {
@@ -186,79 +220,6 @@ struct MiracleDoorDestination: View {
         } else {
             MiraclesView()
         }
-    }
-}
-
-// MARK: - Hero
-
-/// The library's opening card: the one question the whole case asks, set large.
-private struct ProvingIslamHero: View {
-    @Environment(\.appearance) private var appearance
-
-    let chapters: Int
-
-    var body: some View {
-        let accent = appearance.accent
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.shield.fill")
-                Text("THE COMPLETE CASE")
-                    .tracking(1.3)
-            }
-            .font(.caption.weight(.bold))
-            .foregroundColor(accent)
-
-            Text("If the Quran and the Prophet \u{FDFA} were only human, where are the human fingerprints?")
-                .font(.title2.weight(.bold))
-                .foregroundColor(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("No single proof has to carry the weight. A human author leaves errors, a fraud leaves motives, a borrowed text leaves its sources, and a fragile scripture leaves scars. These chapters look for each, and ask what one explanation accounts for all of them at once.")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 8) {
-                heroStat("\(chapters)", "chapters")
-                heroStat("\(IslamArticleCatalog.provingGroups.count)", "parts")
-                heroStat("1", "question")
-            }
-            .padding(.top, 2)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(LinearGradient(colors: [accent.opacity(0.24), accent.opacity(0.05)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                .overlay(
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 110, weight: .bold))
-                        .foregroundColor(accent.opacity(0.07))
-                        .offset(x: 24, y: 24),
-                    alignment: .bottomTrailing
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(accent.opacity(0.22), lineWidth: 1))
-        )
-        .accessibilityElement(children: .combine)
-    }
-
-    private func heroStat(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(value)
-                .font(.system(.title3, design: .rounded).weight(.bold))
-                .foregroundColor(appearance.accent)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .padding(.vertical, 7)
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
     }
 }
 

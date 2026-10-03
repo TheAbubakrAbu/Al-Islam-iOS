@@ -46,6 +46,11 @@ struct QuranWidgetEntry: TimelineEntry {
     var arabicColorRuns: [QuranWidgetSnapshot.ColorRun]? = nil
     /// Where a tap lands (`QuranDeepLink.ayah`); nil opens the app where it last was.
     var deepLink: URL? = nil
+    /// Last Listened Surah: how far in and how long, for its progress bar, and whether its play button
+    /// has something to play (not on the sample shown before anything was listened to).
+    var listenedSeconds: Double = 0
+    var surahSeconds: Double = 0
+    var canResume = false
 }
 
 struct QuranWidgetProvider: TimelineProvider {
@@ -104,7 +109,10 @@ struct QuranWidgetProvider: TimelineProvider {
                 primaryText: "Al-Fatihah",
                 secondaryText: "Mishary Alafasy",
                 tertiaryText: "00:42 / 01:30",
-                accentColor: accent
+                accentColor: accent,
+                listenedSeconds: 42,
+                surahSeconds: 90,
+                canResume: true
             )
         case .lastReadAyah, .lastListenedAyah, .ayahOfTheDay, .chosenAyah:
             return QuranWidgetEntry(
@@ -173,7 +181,10 @@ struct QuranWidgetProvider: TimelineProvider {
 
     private func makeLastListenedEntry(accent: AccentColor, card: QuranWidgetSnapshot.ListenCard?) -> QuranWidgetEntry {
         guard let card, !card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return sampleEntry()
+            // Nothing listened to yet: the sample shows the look, and its button would have nothing to play.
+            var sample = sampleEntry()
+            sample.canResume = false
+            return sample
         }
         return QuranWidgetEntry(
             date: Date(),
@@ -183,7 +194,10 @@ struct QuranWidgetProvider: TimelineProvider {
             primaryText: card.name,
             secondaryText: card.reciter,
             tertiaryText: "\(formatDurationMMSS(card.current)) / \(formatDurationMMSS(card.full))",
-            accentColor: accent
+            accentColor: accent,
+            listenedSeconds: card.current,
+            surahSeconds: card.full,
+            canResume: true
         )
     }
 

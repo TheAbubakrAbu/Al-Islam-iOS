@@ -118,9 +118,9 @@ struct CreditItem: Identifiable, Hashable {
         CreditItem(id: "tilawa-word-by-word", title: "Word-by-word reader: Tilawa, by Jamil Hammoudeh",
                    detail: "Credit for the word-by-word reader itself (the idea, and the assembled gloss corpus this app's pack was built from) goes to Tilawa, by my friend Jamil Hammoudeh",
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "gloss word card"),
-        CreditItem(id: "qac-morphology", title: "Roots and dictionary forms: Quranic Arabic Corpus",
-                   detail: "Credit for the root and dictionary form of every word, on the word card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library",
-                   url: "https://corpus.quran.com/", group: .quran, keywords: "root lemma morphology grammar word"),
+        CreditItem(id: "qac-morphology", title: "Roots, dictionary forms and grammar: Quranic Arabic Corpus",
+                   detail: "Credit for the root, dictionary form and grammar of every word (its prefixes, stem and suffixes, part of speech and analysis), on the Word Study card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library and Tilawa; Word Study itself follows Tilawa's, by my friend Jamil Hammoudeh",
+                   url: "https://corpus.quran.com/", group: .quran, keywords: "root lemma morphology grammar word study prefix suffix"),
         CreditItem(id: "tilawa-word-of-day", title: "Word of the Day: Tilawa and Quran.com",
                    detail: "Credit for the Word of the Day curation (149 words, their themes interleaved) goes to my friend Jamil Hammoudeh, who chose them for Tilawa and gave his permission to bring them here; each word's gloss is Quran.com's word-by-word English, and every occurrence is located in this app's own Hafs text",
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "vocabulary word of the day tilawa gloss"),
@@ -350,7 +350,7 @@ struct CreditsView: View {
     @ViewBuilder
     private var searchResults: some View {
         let words = terms
-        let credits = CreditItem.all.filter { $0.matches(words) }
+        let credits = SearchRank.sorted(CreditItem.all.filter { $0.matches(words) }, by: query) { [$0.title] }
         let apps = appsByAbubakr.filter { app in words.allSatisfy { CreditItem.fold(app.title).contains($0) } }
         let bots = botsByAbubakr.filter { bot in words.allSatisfy { CreditItem.fold(bot.title).contains($0) } }
 

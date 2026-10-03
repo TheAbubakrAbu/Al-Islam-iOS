@@ -333,6 +333,30 @@ extension ProphetMiraclesView {
                       .text("The sign did two things at once: it settled a murder no witness would settle, and it showed on a small scale what the verse says it shows, that this is how Allah brings the dead to life. The longest surah of the Quran is named after this cow."),
                   ]),
               ]),
+        // From Proving Islam's "The Quran and Earlier Scripture" (2026-10-02), which sets this sign
+        // beside the Talmud's memory of it.
+        .init(id: "musa-mountain", title: "The mountain raised over them",
+              summary: "As the covenant was taken from the Children of Israel, the mountain was raised over them as if it were a cloud, and they were told to hold firmly to what they had been given.",
+              group: .before,
+              aliases: ["moses", "musa", "mount", "mountain", "sinai", "tur", "at-tur", "covenant", "torah", "bani israel",
+                        "children of israel", "canopy", "cloud", "zullah", "talmud", "exodus 19"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("At the foot of the mountain the Children of Israel were given the Torah and a covenant to keep it. The Quran describes what stood over their heads as the covenant was taken:"),
+                      .quran("7:171"),
+                      .text("Surat al-Baqarah tells the same moment, as part of the covenant itself:"),
+                      .quran("2:63"),
+                      .text("Ibn Kathir reports from Ibn 'Abbas that the mountain was raised when they refused to obey."),
+                  ]),
+                  SignSection("WHAT THEY DID WITH IT", [
+                      .text("They had seen the mountain over them, and still, the very next verse says:"),
+                      .quran("2:64"),
+                      .text("The Quran recalls it again when it lists what they did with the covenant (2:93)."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign did not ask them to believe in Musa; they already followed him. It made the weight of the covenant plain, so that no one could say afterwards that the command had been light. Jewish tradition kept a memory of the same scene: the Babylonian Talmud (Shabbat 88a) reads Exodus 19:17, where the people stood \"at the nether part of the mount\", as \"beneath the mountain\", with the mountain held over them like an upturned tub."),
+                  ]),
+              ]),
         .init(id: "dawud-iron", title: "Iron softened for Dawud",
               summary: "The mountains and the birds praised Allah with him, and iron became pliable in his hands so that he could make armour.",
               group: .before,

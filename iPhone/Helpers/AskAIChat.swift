@@ -225,24 +225,13 @@ struct AskAIChatView: View {
     /// the caution, set the way the rest of the app sets it - glass cards, section labels, glyph rows.
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
-                    .frame(width: 44, height: 44)
-                    .conditionalGlassEffect(circle: true, useColor: 0.25, interactive: false, themeTint: false)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Ask anything about Islam")
-                        .font(.headline)
-                    Text("A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .conditionalGlassEffect(rectangle: true, useColor: 0.12, interactive: false)
+            // The card every Islam resource opens on (`ResourceHero`).
+            ResourceHero(
+                eyebrow: "ASK AI",
+                systemImage: "sparkles",
+                headline: "Ask anything about Islam.",
+                message: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
+            )
 
             VStack(alignment: .leading, spacing: 8) {
                 welcomeLabel("TRY ASKING")

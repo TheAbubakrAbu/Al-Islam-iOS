@@ -38,10 +38,11 @@ enum OpenScreen: String, Hashable, CaseIterable {
     case qiraatExplorer
     case qiraatIsnadIndex
 
-    // The Tajweed pair: the "What is Tajweed?" article offers Foundations, and Foundations' LEARN
-    // MORE section offers the article straight back.
+    // The Tajweed trio: the "What is Tajweed?" article, Tajweed Foundations and the Tajweed Course
+    // each offer the other two, so any two of them make a corridor.
     case tajweedArticle
     case tajweedFoundations
+    case tajweedCourse
 
     // HadeethEnc: a topic lists its hadiths, and a hadith lists its topics - including, almost
     // always, the topic you arrived from.
@@ -78,6 +79,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .qiraatIsnadIndex: return "You are in the chains index"
         case .tajweedArticle:      return "You are reading this article"
         case .tajweedFoundations:  return "You are in Tajweed Foundations"
+        case .tajweedCourse:       return "You are in the Tajweed Course"
         case .hadeethEncCategory:  return "You are in this topic"
         case .hadeethEncHadith:    return "You are reading this hadith"
         case .miracleCategory:     return "You are in this category"

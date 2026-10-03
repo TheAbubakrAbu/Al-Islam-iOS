@@ -543,6 +543,17 @@ struct JournalView: View {
         List {
             Group {
                 if query.isEmpty {
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "YOUR ISLAMIC JOURNAL",
+                        systemImage: "square.and.pencil",
+                        headline: "My Lord, increase me in knowledge.",
+                        source: "Quran 20:114",
+                        message: "Notes from khutbahs, classes and your own reading, with every note you leave on an ayah or a hadith gathered beside them.",
+                        stats: [
+                            ResourceHeroStat("\(store.entries.count)", store.entries.count == 1 ? "entry" : "entries"),
+                            ResourceHeroStat("\(shown.notesCount)", shown.notesCount == 1 ? "margin note" : "margin notes"),
+                        ]
+                    ))
                     writeSection
                 }
 

@@ -1147,6 +1147,8 @@ struct SurahPageReader<Controls: View>: View {
         }
         // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
         .overlay { jumpPickerDismissScrim }
+        // A hardware keyboard's arrows turn the page (iPad, Mac, a keyboard on the phone).
+        .background { arrowKeyPageTurns(pages: pages) }
         // The surah header, PINNED AT THE TOP again (user rule, final position) - but tiny: caption2
         // text (`micro`), clamped dynamic type, and almost no air above or below, so the page loses as
         // little height as possible. One header for the whole pager (it only re-renders when
@@ -1250,7 +1252,8 @@ struct SurahPageReader<Controls: View>: View {
             // "<action>@<seconds>": "+n" / "-n" turn n pages like a swipe (the animated selection write),
             // "=i" turns to page INDEX i through `turnPage` (the picker's path), "picker" opens the page
             // wheel exactly as the jump button does (seeding `pickerBaseGeometry`), "pick=i" moves the
-            // wheel to index i, "confirm" is the wheel's checkmark, "collapse" toggles the bottom chrome.
+            // wheel to index i, "confirm" is the wheel's checkmark, "collapse" toggles the bottom chrome,
+            // and "left" / "right" press that arrow key (`arrowKeyTurn`, the keyboard shortcut's own action).
             if let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "-pageTurnScript"),
                ProcessInfo.processInfo.arguments.indices.contains(flag + 1) {
                 for step in ProcessInfo.processInfo.arguments[flag + 1].split(separator: ",") {
@@ -1270,6 +1273,8 @@ struct SurahPageReader<Controls: View>: View {
                             withAnimation(.easeInOut) { activePicker = nil }
                         } else if action == "collapse" {
                             applyBarsCollapsed(!barsFaded)
+                        } else if action == "left" || action == "right" {
+                            arrowKeyTurn(forward: action == "left", in: pages)
                         } else if action.hasPrefix("="), let i = Int(action.dropFirst()) {
                             turnPage(to: i, in: pages, suppressClear: false)
                         } else if let n = Int(action) {
@@ -1557,6 +1562,39 @@ struct SurahPageReader<Controls: View>: View {
                 withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
             }
         }
+    }
+
+    /// Left and right arrow keys turn the page (Abu, 2026-10-02: "allow me to use arrow keys left and
+    /// right to skip pages"). A mushaf is bound on the right and read leftward, so the next page lies to
+    /// the LEFT: left arrow goes forward, right arrow goes back, the way the key points being the way the
+    /// page you land on lies, exactly as a swipe would carry you. In an open book it moves a whole spread.
+    ///
+    /// Zero-size, transparent buttons, because a keyboard shortcut needs a control to hang on (a
+    /// `.hidden()` one does not receive it). They stand down while the find field is typing (the arrows
+    /// move its caret), while the page or juz wheel is up, and while a turn is still sliding.
+    private func arrowKeyPageTurns(pages: [MushafPage]) -> some View {
+        ZStack {
+            Button("Next Page") { arrowKeyTurn(forward: true, in: pages) }
+                .keyboardShortcut(.leftArrow, modifiers: [])
+            Button("Previous Page") { arrowKeyTurn(forward: false, in: pages) }
+                .keyboardShortcut(.rightArrow, modifiers: [])
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func arrowKeyTurn(forward: Bool, in pages: [MushafPage]) {
+        guard !pages.isEmpty, activePicker == nil, !pageSearchFocused,
+              !MushafPagerProbe.shared.isTurning else { return }
+        let onScreen = visiblePageIndices(around: pageIndex, in: pages)
+        guard let first = onScreen.first, let last = onScreen.last else { return }
+        // Back lands on the previous spread's FIRST page, where a swipe back lands.
+        let target = forward ? last + 1 : spreadLeading(first - 1, in: pages)
+        guard pages.indices.contains(target) else { return }
+        // A deliberate turn, as a swipe is: the page's selections clear as they would after one.
+        turnPage(to: target, in: pages, suppressClear: false)
     }
 
     /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
@@ -7141,6 +7179,8 @@ enum QuranLaunchWarmup {
             guard !AppPerformance.shouldAvoidBroadPrewarm else { return }
             QuranTopicsStore.prewarm()
             MorphologyStore.prewarm()
+            // The word card's Grammar page (a double tap away in either reader).
+            WordGrammarStore.prewarm()
         }
     }
 

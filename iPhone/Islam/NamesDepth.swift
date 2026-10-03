@@ -218,17 +218,13 @@ struct NameDetailView: View {
                         }
                     }
                     if !depth.living.isEmpty {
-                        Section(header: Text("LIVING BY IT")) {
-                            HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: "figure.walk")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(accent)
-                                    .padding(.top, 2)
-                                Text.islamText(depth.living, highlightAllah: appearance.highlightAllahIslam)
-                                    .font(.subheadline.weight(.medium))
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(.vertical, 4)
+                        // The article kit's callout (Abu, 2026-10-03), its title standing in for the
+                        // section header it replaced. `paragraphs:` draws the text verbatim through
+                        // `Text.islamText`, so Highlight Allah still paints it (the plain init reads
+                        // markdown).
+                        Section {
+                            ArticleCallout(paragraphs: [depth.living], title: "Living by It", systemImage: "figure.walk")
+                                .articleCardRow()
                         }
                     }
                 }

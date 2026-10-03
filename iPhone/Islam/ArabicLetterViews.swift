@@ -1148,29 +1148,26 @@ struct ArabicLetterPage: View {
                 // the hamzah that sits on it.
                 let isAlif = letterData.transliteration == "alif"
 
+                // The opening line is the section's article lead and the "- **Waw**" lines are article
+                // bullets (2026-10-03); the madd paragraphs stay prose.
                 Section(header: Text(isAlif ? "ALIF IS ALWAYS A VOWEL" : "SPECIAL ROLE OF VOWEL LETTERS")) {
                     if isAlif {
-                        Text("Alif is always a vowel letter. Unlike Waw and Yaa, it never acts as a consonant.")
-                            .font(.body)
+                        ArticleLead("Alif is always a vowel letter. Unlike Waw and Yaa, it never acts as a consonant.")
 
-                        Text("- **Alif (ا)**: The long vowel \"aa\", used after a letter with a fatha. For example, كِتَاب (kitaab, book).")
-                            .font(.body)
+                        ArticleBullet("- **Alif (ا)**: The long vowel \"aa\", used after a letter with a fatha. For example, كِتَاب (kitaab, book).")
 
                         Text("Do not confuse Alif with Hamza on Alif (أ or إ). The hamzah is the consonant there; the alif is only its seat.")
                             .font(.body)
                     } else {
-                        Text("Two letters (Waw and Yaa) have a dual role, acting as a vowel in some words and a consonant in others:")
-                            .font(.body)
+                        ArticleLead("Two letters (Waw and Yaa) have a dual role, acting as a vowel in some words and a consonant in others:")
                     }
 
                     if letterData.transliteration == "waaw" {
-                        Text("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood).")
-                            .font(.body)
+                        ArticleBullet("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood).")
                     }
 
                     if letterData.transliteration == "yaa" {
-                        Text("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand).")
-                            .font(.body)
+                        ArticleBullet("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand).")
                     }
 
                     Text("When these letters have no tashkeel, or have sukoon, and the letter before them has the matching harakah, they are treated as Madd Tabee (مَدّ طَبِيعِيّ), or natural Madd: Alif after fatha, Waw after damma, and Yaa after kasra. This is held for 2 harakaat (2 counts).")
@@ -1309,12 +1306,14 @@ struct ArabicLetterPage: View {
             }
 
             if letterData.transliteration == "alif madd" {
-                Section(header: Text("OUTSIDE OF THE QURAN")) {
-                    Text("In modern Arabic outside of the Quran, Alif Madd usually does not mean a 4, 5, or 6 count Tajweed elongation by itself. It normally represents ءا, so آ is a shortened spelling of ءا.")
-                        .font(.body)
-
-                    Text("For example, قُرۡءَان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قُرآن. Likewise, ءَامِين is commonly written آمِين.")
-                        .font(.body)
+                // A note beside the Quran's rule, so a callout card titled with the old header's words
+                // (2026-10-03).
+                Section {
+                    ArticleCallout(paragraphs: [
+                        "In modern Arabic outside of the Quran, Alif Madd usually does not mean a 4, 5, or 6 count Tajweed elongation by itself. It normally represents ءا, so آ is a shortened spelling of ءا.",
+                        "For example, قُرۡءَان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قُرآن. Likewise, ءَامِين is commonly written آمِين.",
+                    ], title: "Outside of the Quran", systemImage: "info.circle.fill")
+                    .articleCardRow()
                 }
             }
             }
@@ -1571,16 +1570,19 @@ struct ArabicLetterPage: View {
         #endif
     }
 
+    /// Each letter's first paragraph is its article lead, and a list of forms or cases is article bullets
+    /// in one row (2026-10-03). Yaa's one line stays prose: its page already opened on a lead in SPECIAL
+    /// ROLE OF VOWEL LETTERS above.
     @ViewBuilder
     private func purposeSection(for data: LetterData) -> some View {
         if data.isNonArabicScriptLetter {
             Group {
                 // Which languages, by name - "non-Arabic languages" told the reader nothing (user rule).
                 if let origin = nonArabicLetterOrigins[data.transliteration] {
-                    Text("Used in \(origin.languages), for \(origin.sound).")
+                    ArticleLead("Used in \(origin.languages), for \(origin.sound).")
                     Text("It is not one of the 28 Arabic letters: those languages added it to the Arabic script for a sound Arabic lacks, so it never appears in the Quran.")
                 } else {
-                    Text("This letter is used in non-Arabic languages that use Arabic script.")
+                    ArticleLead("This letter is used in non-Arabic languages that use Arabic script.")
                     Text("It is not one of the 28 standard Arabic alphabet letters.")
                 }
             }
@@ -1592,7 +1594,7 @@ struct ArabicLetterPage: View {
                     .font(.body)
             case "taa marbuuTah":
                 Group {
-                    Text("\"Taa marbuuTah\" means \"tied/knotted taa.\" It is written as a haa (ه) with the two dots of taa (ت) above it, and it is used to indicate the feminine gender in Arabic.")
+                    ArticleLead("\"Taa marbuuTah\" means \"tied/knotted taa.\" It is written as a haa (ه) with the two dots of taa (ت) above it, and it is used to indicate the feminine gender in Arabic.")
                     Text("It is typically added to the end of a noun to show that the noun is feminine. For example, the Arabic word for teacher is \"مُعَلِّم\" (mu'allim) for a male and \"مُعَلِّمَة\" (mu'allimah) for a female.")
                     Text("Its pronunciation depends on whether you stop or keep going: if you continue reading past the word, it is pronounced as a taa (\"t\"), as in \"مُعَلِّمَةُ ٱلۡفَصۡلِ\" (mu'allimatul-faSl). If you stop on the word, it is pronounced as a haa (\"h\"), as in \"mu'allimah.\"")
                     Text("When a singular feminine word is made plural, the taa marbuuTah is unknotted: it is removed and an alif and a regular taa (ـات) are added in its place. For example, \"مُعَلِّمَة\" (mu'allimah) becomes \"مُعَلِّمَات\" (mu'allimaat).")
@@ -1601,7 +1603,7 @@ struct ArabicLetterPage: View {
                 .font(.body)
             case "hamzatul waSl":
                 Group {
-                    Text("The term \"hamzatul waSl\" translates to \"connecting hamza\" or \"hamza of connection.\"")
+                    ArticleLead("The term \"hamzatul waSl\" translates to \"connecting hamza\" or \"hamza of connection.\"")
                     Text("Hamzatul waSl is always written as an Alif (ا) and is pronounced only if it begins a word at the start of speech. When the word follows another in a sentence, the hamzatul waSl is not pronounced, creating a smooth connection between words.")
                     Text("If a word starts with hamzatul waSl, its pronunciation depends on the third letter of the word. For verbs: if the third letter has a damma, pronounce it with a damma (أُ); if it has a kasra or fatha, pronounce it with a kasra (إِ).")
                     Text("In the Quran, there are seven nouns that start with hamzatul waSl. These nouns always begin with a kasra when pronounced in isolation.")
@@ -1611,27 +1613,31 @@ struct ArabicLetterPage: View {
             default:
                 if data.transliteration.contains("hamza") {
                     Group {
-                        Text("The letter Hamza has multiple forms, depending on its position and the surrounding vowels or diacritics (tashkeel):")
-                        Text("Hamza on its own (ء): Used when Hamza appears in the middle or end of a word without a preceding vowel.")
-                        Text("Hamza on an Alif (أ or إ): When Hamza begins a word, it is written on an Alif. A fatha or damma places it above (أ), while a kasra places it below (إ).")
-                        Text("Hamza on a Waw (ؤ): Appears after a damma or following a Waw.")
-                        Text("Hamza on a Yaa (ئ): Appears after a kasra or following a Yaa.")
+                        ArticleLead("The letter Hamza has multiple forms, depending on its position and the surrounding vowels or diacritics (tashkeel):")
+                        VStack(alignment: .leading, spacing: 6) {
+                            ArticleBullet("Hamza on its own (ء): Used when Hamza appears in the middle or end of a word without a preceding vowel.")
+                            ArticleBullet("Hamza on an Alif (أ or إ): When Hamza begins a word, it is written on an Alif. A fatha or damma places it above (أ), while a kasra places it below (إ).")
+                            ArticleBullet("Hamza on a Waw (ؤ): Appears after a damma or following a Waw.")
+                            ArticleBullet("Hamza on a Yaa (ئ): Appears after a kasra or following a Yaa.")
+                        }
                         Text("Although Hamza takes different forms, it represents the same sound ('ah'). These forms are based on Arabic orthography (spelling conventions) rather than phonetics.")
                     }
                     .font(.body)
                 } else if data.transliteration.contains("mad") {
                     Group {
-                        Text("The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark.")
+                        ArticleLead("The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark.")
                         Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.")
-                        Text("Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts.")
-                        Text("Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
-                        Text("Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts.")
+                        VStack(alignment: .leading, spacing: 6) {
+                            ArticleBullet("Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts.")
+                            ArticleBullet("Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
+                            ArticleBullet("Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts.")
+                        }
                         Text("These are special mudood (مُدُود), the plural of Madd. They happen when natural Madd is no longer just 2 counts because hamzah, sukoon, or shaddah changes the rule.")
                     }
                     .font(.body)
                 } else if data.transliteration == "alif maqSoorah" {
                     Group {
-                        Text("Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif, a 2-count \"aa\".")
+                        ArticleLead("Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif, a 2-count \"aa\".")
                         Text("In the Quran it usually carries a small dagger alif above it (ىٰ), as in عَلَىٰ and مُوسَىٰ. That tiny mark IS the alif sound, written small. The examples below practise it.")
                         Text("Telling it apart from yaa: the mushaf writes the final yaa without dots too, so the shape alone cannot decide. Read the vowel before the letter: a fatha before it means alif maqSoorah (\"aa\", as in ٱهۡتَدَىٰ); a kasra before it means yaa (\"ee\", as in فِي and ٱلَّذِي).")
                     }
@@ -1640,7 +1646,7 @@ struct ArabicLetterPage: View {
                     // The case used to check "laa", which is not this letter's transliteration - so the
                     // PURPOSE section rendered empty for the one ligature letter (user report).
                     Group {
-                        Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
+                        ArticleLead("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
                         Text("The sound does not change: read it simply as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there.")
                         Text.islamText("You meet it constantly in the Quran, most familiarly as the word of negation لَا (\"no\" / \"not\") and in لَآ إِلَٰهَ إِلَّا ٱللَّهُ.",
                                        highlightAllah: settings.highlightAllahNamesIslam)
@@ -2661,7 +2667,7 @@ struct ArabicExampleRow: View {
     let note: String
     /// A face to draw the Arabic in whatever the reader's setting: the Baa on Haa page hands its
     /// Quran words the mushaf's own Uthmani face, because the stack is what they demonstrate and
-    /// the app's faces write the pair side by side (2026-09-22).
+    /// Kufi and the system face write the pair side by side (2026-09-22).
     var fontName: String? = nil
     /// One of the alphabet's letters to tint in the accent where it first occurs in `arabic`, so a
     /// letter page's SEE IT IN WORDS rows show WHERE the letter sits in the word. The tint is a

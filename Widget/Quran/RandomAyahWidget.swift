@@ -12,5 +12,6 @@ struct AyahOfTheDayWidget: Widget {
         .supportedFamilies(quranWidgetFamilies())
         .configurationDisplayName("Ayah of the Day")
         .description("Shows a different safe ayah from the Quran each day")
+        .disfavoredInCarPlay()
     }
 }

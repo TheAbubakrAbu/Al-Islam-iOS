@@ -24,7 +24,7 @@ import SwiftUI
 /// The card ground every piece here shares with `ScriptureQuoteBody`: the accent falling away corner to
 /// corner and a hairline in the same colour. `strength` scales the wash (the lead is the loudest card on
 /// a page, a callout the quietest).
-private struct ArticleCardGround: View {
+struct ArticleCardGround: View {
     let accent: Color
     var strength: Double = 1
     var radius: CGFloat = 16
@@ -83,13 +83,16 @@ private struct ArticleBadge: View {
 
 extension View {
     /// A card that IS its List row: no row ground behind it, edge to edge with the section cards above
-    /// and below, instead of a card framed inside a white row. iOS only: on the watch a row background
-    /// replaces the native rounded cells.
+    /// and below, instead of a card framed inside a white row. No separator either: between two
+    /// stacked cards (the Dhikr screen's callouts and closing, 2026-10-03) it drew a hairline across
+    /// the gap that belonged to neither. iOS only: on the watch a row background replaces the native
+    /// rounded cells.
     func articleCardRow() -> some View {
         #if os(iOS)
         self
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+            .listRowSeparator(.hidden)
         #else
         self
         #endif
@@ -347,6 +350,8 @@ struct ArticleCallout: View {
     /// sections are one to three paragraphs). `text` is the first of them.
     var more: [String] = []
     var markdown: Bool = true
+    /// Each paragraph behind the bullet mark (`init(bullets:)`): a card of short quoted lines.
+    var bulleted: Bool = false
 
     init(_ text: String, title: String, systemImage: String = "lightbulb.fill") {
         self.text = text
@@ -362,6 +367,13 @@ struct ArticleCallout: View {
         self.markdown = markdown
     }
 
+    /// Short lines under one title, each with the bullet mark: the "Quranic Reminders" and
+    /// "Prophetic Guidance" cards of the Dhikr and Dua screens (2026-10-03), one ayah or hadith a line.
+    init(bullets: [String], title: String, systemImage: String, markdown: Bool = false) {
+        self.init(paragraphs: bullets, title: title, systemImage: systemImage, markdown: markdown)
+        self.bulleted = true
+    }
+
     var body: some View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 8) {
@@ -375,7 +387,11 @@ struct ArticleCallout: View {
             }
 
             ForEach(Array(([text] + more).enumerated()), id: \.offset) { _, paragraph in
-                ArticleProse(text: paragraph, markdown: markdown)
+                if bulleted {
+                    ArticleBullet(source: paragraph, markdown: markdown)
+                } else {
+                    ArticleProse(text: paragraph, markdown: markdown)
+                }
             }
         }
         .padding(.vertical, 12)
@@ -383,6 +399,101 @@ struct ArticleCallout: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ArticleCardGround(accent: accent, strength: 0.7))
         .padding(.vertical, 3)
+    }
+}
+
+// MARK: - Etymology
+
+/// Where a word comes from, the way the Dhikr and Dua screens open their ETYMOLOGY section
+/// (2026-10-03): the word in English and set large in Arabic, its three root letters in a chip, the
+/// root's core meaning, and what the word has come to mean.
+struct ArticleEtymologyCard: View {
+    @Environment(\.appearance) private var appearance
+
+    let word: String
+    let arabic: String
+    /// The root letters spaced apart ("ذ ك ر") and their Latin spelling ("dh-k-r").
+    let root: String
+    let rootLatin: String
+    /// The root's core meaning ("to remember, to mention, to be mindful").
+    let coreMeaning: String
+    let text: String
+
+    init(_ word: String, arabic: String, root: String, rootLatin: String, coreMeaning: String, text: String) {
+        self.word = word
+        self.arabic = arabic
+        self.root = root
+        self.rootLatin = rootLatin
+        self.coreMeaning = coreMeaning
+        self.text = text
+    }
+
+    var body: some View {
+        let accent = appearance.accent
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                Text(word)
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 8)
+
+                Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
+                    .font(appearance.islamArabicFont(base: 34, relativeTo: .title))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundColor(accent)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+
+            HStack(spacing: 8) {
+                Text("ROOT")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.1)
+                    .foregroundColor(accent)
+
+                Text(root)
+                    .font(appearance.islamArabicFont(base: 18, relativeTo: .subheadline))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundColor(.primary)
+
+                Text(rootLatin)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .background(Capsule().fill(accent.opacity(0.12)))
+            .accessibilityElement(children: .combine)
+
+            Text(coreMeaning)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text.islamText(text, highlightAllah: appearance.highlightAllahIslam)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            ArticleCardGround(accent: accent, strength: 1.1, radius: 18)
+                .overlay(
+                    Image(systemName: "character.book.closed.fill")
+                        .font(.system(size: 58, weight: .bold))
+                        .foregroundColor(accent.opacity(0.06))
+                        .offset(x: 8, y: 12),
+                    alignment: .bottomTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        )
+        .padding(.vertical, 3)
+        .articleCardRow()
     }
 }
 
@@ -867,5 +978,235 @@ struct HadithGradeLadder: View {
                 .fill(grade.color.opacity(0.07))
         )
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Resource hero
+
+/// One figure on a resource hero: the value set large over its label ("17" over "chapters").
+struct ResourceHeroStat: Hashable {
+    let value: String
+    let label: String
+
+    init(_ value: String, _ label: String) {
+        self.value = value
+        self.label = label
+    }
+}
+
+/// The card every Islam resource opens on (Abu, 2026-10-02: Proving Islam's header "looks beautiful,
+/// can we add that to every islamic resource/tool"). Proving Islam's opening card, generalised: tracked
+/// capitals with the resource's symbol, one large line saying what the screen is for, the sentence under
+/// it, and up to three figures. The accent wash falls away corner to corner, the symbol sits large and
+/// faint in the bottom corner, and a hairline frames it.
+///
+/// A resource puts it in its List through `ResourceHeroSection`, which draws nothing on the watch: the
+/// watch compiles every resource that carries one, and a card this size would be the whole screen there.
+struct ResourceHero<Footer: View>: View {
+    @Environment(\.appearance) private var appearance
+
+    let eyebrow: String
+    let systemImage: String
+    let headline: String
+    /// The headline's Arabic name, set large in the accent beside it (or under it when the two do not
+    /// fit one line): a hadith book's title, a lesson's term.
+    var arabic: String?
+    /// Where the headline comes from, when it is a quotation ("Quran 40:60"): set under it, small.
+    var source: String?
+    /// The sentence under the headline; empty draws nothing (a hero whose words sit in its footer).
+    let message: String
+    var stats: [ResourceHeroStat] = []
+    /// Anything the resource adds under the figures: a progress bar, a diagram that opens articles.
+    let footer: Footer
+
+    init(eyebrow: String, systemImage: String, headline: String, arabic: String? = nil, source: String? = nil,
+         message: String, stats: [ResourceHeroStat] = [], @ViewBuilder footer: () -> Footer) {
+        self.eyebrow = eyebrow
+        self.systemImage = systemImage
+        self.headline = headline
+        self.arabic = arabic
+        self.source = source
+        self.message = message
+        self.stats = stats
+        self.footer = footer()
+    }
+
+    private var headlineText: some View {
+        Text(headline)
+            .font(.title2.weight(.bold))
+            .foregroundColor(.primary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// The headline and its Arabic side by side while both fit; the Arabic on its own line, trailing,
+    /// when not, and always on the watch and before iOS 16 (`ViewThatFits` is iOS 16+).
+    @ViewBuilder
+    private func headlineWithArabic(_ arabic: String, accent: Color) -> some View {
+        let stacked = VStack(alignment: .leading, spacing: 4) {
+            headlineText
+            arabicText(arabic, accent: accent)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 12) {
+                    headlineText.fixedSize()
+                    Spacer(minLength: 8)
+                    arabicText(arabic, accent: accent).fixedSize()
+                }
+                stacked
+            }
+        } else {
+            stacked
+        }
+        #else
+        stacked
+        #endif
+    }
+
+    @ViewBuilder
+    private func arabicText(_ arabic: String, accent: Color) -> some View {
+        Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
+            .font(appearance.islamArabicFont(base: 26, relativeTo: .title2))
+            .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+            .foregroundColor(accent)
+            .multilineTextAlignment(.trailing)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+    }
+
+    var body: some View {
+        let accent = appearance.accent
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                Text(eyebrow)
+                    .tracking(1.3)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundColor(accent)
+
+            VStack(alignment: .leading, spacing: 4) {
+                if let arabic, !arabic.isEmpty {
+                    headlineWithArabic(arabic, accent: accent)
+                } else {
+                    headlineText
+                }
+
+                if let source {
+                    Text(source)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(accent)
+                }
+            }
+
+            if !message.isEmpty {
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !stats.isEmpty {
+                ResourceHeroStats(stats)
+                    .padding(.top, 2)
+            }
+
+            footer
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(LinearGradient(colors: [accent.opacity(0.24), accent.opacity(0.05)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .overlay(
+                    Image(systemName: systemImage)
+                        .font(.system(size: 110, weight: .bold))
+                        .foregroundColor(accent.opacity(0.07))
+                        .offset(x: 24, y: 24),
+                    alignment: .bottomTrailing
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(accent.opacity(0.22), lineWidth: 1))
+        )
+        // One element when it is all words; a container when the footer holds buttons (the pillars,
+        // the How-to steps), which VoiceOver must still reach one by one.
+        .accessibilityElement(children: Footer.self == EmptyView.self ? .combine : .contain)
+    }
+}
+
+/// A hero's figures as chips, side by side: `ResourceHero`'s own row, and the one a hero's footer
+/// draws when its figures belong below other lines (a hadith book's, under its compiler).
+struct ResourceHeroStats: View {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    let stats: [ResourceHeroStat]
+
+    init(_ stats: [ResourceHeroStat]) {
+        self.stats = stats
+    }
+
+    var body: some View {
+        // One column at the accessibility sizes, where three figures to a row shrank their labels
+        // past reading.
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                 count: dynamicTypeSize.isAccessibilitySize ? 1 : max(stats.count, 1)),
+                  spacing: 8) {
+            ForEach(stats, id: \.self) { stat in
+                statChip(stat, accent: appearance.accent)
+            }
+        }
+    }
+
+    private func statChip(_ stat: ResourceHeroStat, accent: Color) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(stat.value)
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundColor(accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(stat.label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.primary.opacity(0.05)))
+    }
+}
+
+extension ResourceHero where Footer == EmptyView {
+    init(eyebrow: String, systemImage: String, headline: String, arabic: String? = nil, source: String? = nil,
+         message: String, stats: [ResourceHeroStat] = []) {
+        self.init(eyebrow: eyebrow, systemImage: systemImage, headline: headline, arabic: arabic, source: source,
+                  message: message, stats: stats) {
+            EmptyView()
+        }
+    }
+}
+
+/// A resource's hero as the first section of its List: the card is its own row, edge to edge
+/// (`articleCardRow`). Nothing on the watch (see `ResourceHero`).
+struct ResourceHeroSection<Footer: View>: View {
+    let hero: ResourceHero<Footer>
+
+    init(_ hero: ResourceHero<Footer>) {
+        self.hero = hero
+    }
+
+    var body: some View {
+        #if os(iOS)
+        Section {
+            hero.articleCardRow()
+        }
+        #endif
     }
 }

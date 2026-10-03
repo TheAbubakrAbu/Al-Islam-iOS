@@ -159,20 +159,14 @@ struct HadithTopicsView: View {
         let _ = RenderCounter.hit("HadithTopicsView")
         List {
             Group {
-                Section {
-                    HStack(alignment: .top, spacing: 12) {
-                        AccentIconChip(systemImage: "square.grid.2x2.fill", size: 34)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("The same subject across the books")
-                                .font(.subheadline.weight(.semibold))
-                            Text("\(store.entries.count) narrations from Bukhari, Muslim, Abu Dawud and at-Tirmidhi, each with a title, filed under \(store.topics.count) subjects. Open one to read how each collection words it.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
+                // The library's front as the Islam resources' hero card (Abu, 2026-10-03: "make it
+                // pretty like pillars and beliefs"), from the words the old icon card carried.
+                ResourceHeroSection(ResourceHero(
+                    eyebrow: "BROWSE BY TOPIC",
+                    systemImage: "square.grid.2x2.fill",
+                    headline: "The same subject across the books",
+                    message: "\(store.entries.count) narrations from Bukhari, Muslim, Abu Dawud and at-Tirmidhi, each with a title, filed under \(store.topics.count) subjects. Open one to read how each collection words it."
+                ))
 
                 ForEach(store.lanes) { lane in
                     Section(header: laneHeader(lane)) {
@@ -253,6 +247,11 @@ struct HadithTopicView: View {
     @State private var resolved: [Resolved] = []
     @State private var loading = true
 
+    /// The lane this subject is filed under, as the index's section header names it.
+    private var laneLabel: String {
+        (HadithTopicsStore.shared.lanes.first(where: { $0.id == topic.lane })?.label ?? "Browse by Topic").uppercased()
+    }
+
     private static let bookOrder = ["bukhari", "muslim", "abudawud", "tirmidhi"]
 
     private var groups: [(book: HadithCatalogBook, rows: [Resolved])] {
@@ -268,17 +267,13 @@ struct HadithTopicView: View {
         let _ = RenderCounter.hit("HadithTopicView")
         List {
             Group {
-                Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(topic.label)
-                            .font(.title3.weight(.bold))
-                        Text(topic.subtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 4)
-                }
+                // The subject's own hero, its lane over it the way the index groups it (2026-10-03).
+                ResourceHeroSection(ResourceHero(
+                    eyebrow: laneLabel,
+                    systemImage: "square.grid.2x2.fill",
+                    headline: topic.label,
+                    message: topic.subtitle
+                ))
 
                 if loading {
                     Section {
@@ -434,11 +429,10 @@ struct HadithHistoryView: View {
         List {
             Group {
                 // What the screen is, said here rather than as a caption on the door that opens it
-                // (Abu, 2026-09-07).
+                // (Abu, 2026-09-07). The article kit's lead card since 2026-10-03, the way the Pillars
+                // & Beliefs pages open.
                 Section {
-                    Text("Everything this tab remembers: the hadiths you opened, the daily hadith of earlier days, where you left each book, and your recent searches. Tap any of them to open it. It never leaves this device.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    ArticleLead("Everything this tab remembers: the hadiths you opened, the daily hadith of earlier days, where you left each book, and your recent searches. Tap any of them to open it. It never leaves this device.")
                 }
 
                 if derived.isEmpty, searches.isEmpty {

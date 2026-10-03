@@ -143,61 +143,43 @@ struct TajweedLessonDetailView: View {
 
     // MARK: Hero
 
+    /// The lesson's `ResourceHero` (Abu, 2026-10-03: overviews "pretty like pillars and beliefs"): the
+    /// chapter as the eyebrow, the title with its Arabic beside it, the transliteration under the title
+    /// (the hero's small accent line), the summary, and Done and the reading time as the footer. Worn in
+    /// the lesson's colour like every other card on the page.
     private var heroSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text((TajweedLessonsStore.shared.chapter(of: lesson.id)?.title ?? "Tajweed").uppercased())
-                        .font(.caption2.weight(.heavy))
-                        .tracking(0.7)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+        let tint = accent
+        let done = progress.isDone(lesson.id)
+        return Section {
+            ResourceHero(
+                eyebrow: (TajweedLessonsStore.shared.chapter(of: lesson.id)?.title ?? "Tajweed").uppercased(),
+                systemImage: "graduationcap.fill",
+                headline: lesson.titleEn,
+                arabic: lesson.titleAr.isEmpty ? nil : lesson.titleAr,
+                source: lesson.translit.isEmpty ? nil : lesson.translit,
+                message: lesson.summary
+            ) {
+                if done || lesson.minutes > 0 {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        if done {
+                            Label("Done", systemImage: "checkmark.circle.fill")
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(tint)
+                        }
 
-                    Spacer(minLength: 8)
+                        Spacer(minLength: 8)
 
-                    if progress.isDone(lesson.id) {
-                        Label("Done", systemImage: "checkmark.circle.fill")
-                            .font(.caption2.weight(.bold))
-                            .foregroundColor(accent)
+                        if lesson.minutes > 0 {
+                            Text("\(lesson.minutes) min")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.secondary)
+                        }
                     }
-
-                    if lesson.minutes > 0 {
-                        Text("\(lesson.minutes) min")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Text(lesson.titleEn)
-                    .font(.title2.weight(.heavy))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 10)
-
-                if !lesson.titleAr.isEmpty {
-                    Text(lesson.titleAr)
-                        .font(Font.arabic(appearance.quranDisplayFace, size: 24))
-                        .arabicFontDesign(custom: appearance.quranUsesCustomArabicFace)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
-                }
-
-                if !lesson.translit.isEmpty {
-                    Text(lesson.translit)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
-                }
-
-                if !lesson.summary.isEmpty {
-                    Text(lesson.summary)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, 12)
                 }
             }
-            .padding(.vertical, 6)
+            .transformEnvironment(\.appearance) { $0.accent = tint }
             .id(Self.topID)
+            .articleCardRow()
         }
     }
 
@@ -1032,7 +1014,7 @@ struct TajweedDoorRow: View {
             }
             .buttonStyle(.plain)
         case .tajweedArticle:
-            // The article links back to Tajweed Foundations: the pair is a corridor.
+            // The article links back to the Tajweed Course: the pair is a corridor.
             OpenScreenLink(screen: .tajweedArticle) {
                 TajweedView()
             } label: {

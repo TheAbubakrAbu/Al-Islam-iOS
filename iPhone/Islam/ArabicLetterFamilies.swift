@@ -475,17 +475,12 @@ struct LetterFamiliesView: View {
         .onDisappear { ArabicSpeech.shared.stop() }
     }
 
+    /// The article lead, with the how-to line under it as the section's footer (2026-10-03).
     private var introSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Every letter has a place it is made (its makhraj) and qualities it is said with (its sifaat). Letters that share one are a family, and the tajweed books give every family an Arabic name.")
-                    .font(.body)
-
-                Text("Open a family to see its letters, how to hear what they share, and the phrase that gathers them.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 2)
+            ArticleLead("Every letter has a place it is made (its makhraj) and qualities it is said with (its sifaat). Letters that share one are a family, and the tajweed books give every family an Arabic name.")
+        } footer: {
+            Text("Open a family to see its letters, how to hear what they share, and the phrase that gathers them.")
         }
     }
 
@@ -627,7 +622,27 @@ struct LetterFamilyView: View {
         .onDisappear { ArabicSpeech.shared.stop() }
     }
 
+    /// The family's `ResourceHero` (2026-10-03), worn in the reader's colour for its rule where it has
+    /// one, as the old centred card's Arabic was. The watch keeps the centred card: the hero draws
+    /// nothing there.
+    @ViewBuilder
     private var heroSection: some View {
+        #if os(iOS)
+        let tint = family.legendColor ?? appearance.accent
+        Section {
+            ResourceHero(
+                eyebrow: (axis?.title ?? "Letter Families").uppercased(),
+                systemImage: family.systemImage,
+                headline: family.title,
+                arabic: family.arabic,
+                message: family.summary
+            )
+            .transformEnvironment(\.appearance) { $0.accent = tint }
+            .articleCardRow()
+        } footer: {
+            if let axis { Text(axis.question) }
+        }
+        #else
         Section {
             VStack(spacing: 6) {
                 TraitArabicText(text: family.arabic, base: 40, style: .largeTitle)
@@ -651,6 +666,7 @@ struct LetterFamilyView: View {
         } footer: {
             if let axis { Text(axis.question) }
         }
+        #endif
     }
 
     private var lettersSection: some View {
@@ -752,7 +768,7 @@ struct LetterFamilyView: View {
     @ViewBuilder
     private var lessonSection: some View {
         if let lessonID = family.lessonID, TajweedLessonsStore.isBundled {
-            Section(header: Text("IN TAJWEED FOUNDATIONS")) {
+            Section(header: Text("IN THE TAJWEED COURSE")) {
                 TajweedLessonLink(lessonID: lessonID) {
                     Label("Study the Full Lesson", systemImage: "graduationcap")
                         .font(.body)
@@ -1047,13 +1063,11 @@ struct SoundAlikeLettersView: View {
     var body: some View {
         List {
             Group {
+                // The article lead, the advice under it as the footer (2026-10-03).
                 Section {
-                    Text("Most mistakes in recitation are one letter said as its neighbour. Each pair below shares almost everything, which is why the ear confuses them, and differs in the one or two things listed.")
-                        .font(.body)
-
+                    ArticleLead("Most mistakes in recitation are one letter said as its neighbour. Each pair below shares almost everything, which is why the ear confuses them, and differs in the one or two things listed.")
+                } footer: {
                     Text("Listen to a pair back to back, then say it yourself. Alternating the two is what trains the difference: drilling one letter alone only repeats what you already do.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
 
                 ForEach(LetterTraits.soundAlikes) { pair in

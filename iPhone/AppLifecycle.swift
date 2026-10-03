@@ -255,6 +255,8 @@ enum MemoryTrim {
         QiraatPlacesStore.shared.purgeComputed()
         // The mushaf fit's fonts (bounded, but a page fit's probes fill it; rebuilt on the next fit).
         QuranFontCache.purge()
+        // The word card's grammar table (re-parsed on the next card).
+        WordGrammarStore.shared.unload()
         #if DEBUG
         MemoryFootprint.logLater("memory warning trim", delay: 2)
         #endif

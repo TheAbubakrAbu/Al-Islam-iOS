@@ -20,6 +20,20 @@ import Foundation
 // empty on a multi-word query, a relaxed pass ranks the rows carrying the most of it instead of
 // showing a blank screen.
 //
+// Past Tilawa's engine (2026-10-02, each measured on the shelf first):
+//
+//   - A chapter's name lifts its rows only when it carries the WHOLE query, which is what "this
+//     chapter is about it" means. One word of several in a name ("actions" in Riyad as-Salihin's
+//     "The Book of the Prohibited Actions", some hundreds of narrations) used to outrank the
+//     hadith "Actions are but by intentions" itself.
+//   - Rows of EQUAL worth used to come out in book order, so "patience" led with a 748-letter
+//     narration that mentions it once, ahead of "The real patience is at the first stroke of a
+//     calamity." They are now ordered by how short the narration is, how early the word comes,
+//     how often it comes, and how near each other the words sit. These only break ties: how a
+//     word matched is scaled clear of them.
+//   - The phrase bonus looks for the query as TYPED. It used to look for the query with its
+//     small words removed ("actions intentions"), which no narration says.
+//
 // Ported from the Tilawa app's hadithSearchEngine.ts (Jamil Hammoudeh), with permission, onto the
 // packs' prebuilt folds: the query is folded by the same `HadithFold` rules the packs were built
 // with, and every test below is a byte compare inside a decompressed block.
@@ -62,7 +76,7 @@ enum HadithRankedSearch {
 
     /// What a relaxed row (fewer than every word of a multi-word query) adds per matched word, on
     /// top of `Hit.score`, when the relaxed rows are the ones shown.
-    static func relaxedBonus(matched: Int) -> Int { matched * relaxedTokenWeight }
+    static func relaxedBonus(matched: Int) -> Int { matched * relaxedTokenWeight * qualityScale }
 
     /// The names a search scores besides the narration: across the shelf both, inside one book only
     /// the chapter names (the book's own is every row's), inside one chapter neither.
@@ -85,6 +99,26 @@ enum HadithRankedSearch {
     private static let stemPenalty = 2
     private static let fuzzyPenalty = 5
     private static let relaxedTokenWeight = 40
+    /// A word that only a name in reach carries, when that name does not carry the whole query: it
+    /// counts toward covering the query and for little else.
+    private static let partialTitleWeight = 1
+    /// A row with nothing of the query in its own text and this little text is a stub ("A variant of
+    /// the previous hadith."): its chapter's name must not lift it into the list.
+    private static let stubLength = 48
+
+    // The tie-breakers, at most 35 together, under a match quality scaled by `qualityScale`: they
+    // order rows of equal worth and can never lift a row over a better match.
+    private static let qualityScale = 40
+    private static let brevityWeight = 12
+    private static let brevityLettersPerPoint = 120
+    private static let positionWeight = 8
+    private static let positionLettersPerPoint = 80
+    private static let densityWeight = 2
+    private static let densityCap = 3
+    private static let proximityWeight = 6
+    private static let proximityLettersPerPoint = 40
+    /// The two collections that are sahih throughout lead a tie (Tilawa's rule).
+    private static let authorityWeight = 3
 
     static let stopwords: Set<String> = [
         "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "he", "his", "in", "is", "it",
@@ -108,26 +142,22 @@ enum HadithRankedSearch {
         let tokens: [Token] = used.map { word in
             let stem = isArabic ? nil : stemWord(word)
             let variant = isArabic ? nil : variantSpelling(word)
-            let fuzzy = isArabic ? nil : vocabulary?.nearestWord(to: word)
+            let fuzzy = isArabic ? nil : vocabulary?.nearestWord(to: word, stem: stem)
             if let fuzzy { corrections.append(Correction(from: word, to: fuzzy)) }
             highlight.append(fuzzy ?? word)
             return Token(text: Array(word.utf8), stem: stem.map { Array($0.utf8) },
                          variant: variant.map { Array($0.utf8) }, fuzzy: fuzzy.map { Array($0.utf8) })
         }
-        return Query(isArabic: isArabic, phrase: Array(used.joined(separator: " ").utf8), tokens: tokens,
+        // The phrase is the query as typed, small words and all: that is what a narration says.
+        return Query(isArabic: isArabic, phrase: Array(words.joined(separator: " ").utf8), tokens: tokens,
                      corrections: corrections, highlightQuery: highlight.joined(separator: " "))
     }
 
-    private static let suffixes = ["ing", "ed", "es", "s", "ly"]
-
     /// Deliberately not a real stemmer: ASCII only, length-guarded so short words are never truncated
-    /// into noise, and always discounted so an exact match outranks it.
+    /// into noise, and always discounted so an exact match outranks it. The Quran lane's, so both
+    /// lanes stem alike ("kindness" reaches "kind", "mercies" reaches "mercy").
     static func stemWord(_ word: String) -> String? {
-        guard word.count >= 5, isLatinWord(word) else { return nil }
-        for suffix in suffixes where word.hasSuffix(suffix) && word.count - suffix.count >= 4 {
-            return QuranRankedSearch.undoubled(String(word.dropLast(suffix.count)))
-        }
-        return nil
+        QuranRankedSearch.stemEnglish(word)
     }
 
     /// The other side of the Atlantic's spelling: the translations come from several hands, so the
@@ -152,46 +182,64 @@ enum HadithRankedSearch {
         byte == 0x20 || byte == 0x0A || byte == 0x09 || byte == 0x0D
     }
 
-    /// Whether `needle` occurs in `haystack`, and whether one occurrence stands alone as a whole word.
+    /// Whether `needle` occurs in `haystack`, whether one occurrence stands alone as a whole word,
+    /// where the first occurrence starts, and how many there are (counted up to `countingTo`).
     /// A word-START hit (stems) needs only the leading boundary.
     private static func find(_ needle: [UInt8], in haystack: UnsafeBufferPointer<UInt8>,
-                             wholeWord: Bool, wordStart: Bool) -> (found: Bool, whole: Bool) {
-        guard !needle.isEmpty, haystack.count >= needle.count, let base = haystack.baseAddress else { return (false, false) }
+                             wholeWord: Bool, wordStart: Bool, countingTo cap: Int = 1)
+        -> (found: Bool, whole: Bool, at: Int, count: Int) {
+        guard !needle.isEmpty, haystack.count >= needle.count, let base = haystack.baseAddress else { return (false, false, 0, 0) }
         var found = false
+        var first = 0
+        var count = 0
+        var whole = false
         var offset = 0
-        return needle.withUnsafeBufferPointer { needlePointer -> (Bool, Bool) in
-            guard let needleBase = needlePointer.baseAddress else { return (false, false) }
+        return needle.withUnsafeBufferPointer { needlePointer -> (Bool, Bool, Int, Int) in
+            guard let needleBase = needlePointer.baseAddress else { return (false, false, 0, 0) }
             while offset + needle.count <= haystack.count {
                 guard let hit = memmem(base + offset, haystack.count - offset, needleBase, needle.count) else { break }
                 let start = UnsafeRawPointer(hit).assumingMemoryBound(to: UInt8.self) - base
+                if !found { first = start }
                 found = true
+                count += 1
                 let leading = start == 0 || isBoundary(haystack[start - 1])
                 let end = start + needle.count
                 let trailing = end >= haystack.count || isBoundary(haystack[end])
-                if wordStart, leading { return (true, true) }
-                if wholeWord, leading, trailing { return (true, true) }
-                if !wholeWord, !wordStart { return (true, false) }
+                if wordStart, leading { whole = true }
+                if wholeWord, leading, trailing { whole = true }
+                // Done once the question asked is answered and the count has reached its cap.
+                let settled = whole || (!wholeWord && !wordStart)
+                if settled, count >= cap { break }
                 offset = start + 1
             }
-            return (found, false)
+            return (found, whole, first, count)
         }
+    }
+
+    /// What one query word is worth against one fold, where it first lands and how many times the
+    /// typed word occurs (up to `densityCap`), or nil.
+    private static func tokenLanding(_ token: Token, in fold: UnsafeBufferPointer<UInt8>, weight: Int,
+                                     counting: Bool = false) -> (score: Int, at: Int, count: Int)? {
+        let direct = find(token.text, in: fold, wholeWord: true, wordStart: false, countingTo: counting ? densityCap : 1)
+        if direct.found { return (weight + (direct.whole ? wholeWordBonus : 0), direct.at, direct.count) }
+        if let variant = token.variant {
+            let hit = find(variant, in: fold, wholeWord: true, wordStart: false)
+            if hit.found { return (weight + (hit.whole ? wholeWordBonus : 0), hit.at, 1) }
+        }
+        if let stem = token.stem {
+            let hit = find(stem, in: fold, wholeWord: false, wordStart: true)
+            if hit.whole { return (max(1, weight - stemPenalty), hit.at, 1) }
+        }
+        if let fuzzy = token.fuzzy {
+            let hit = find(fuzzy, in: fold, wholeWord: false, wordStart: true)
+            if hit.whole { return (max(1, weight - fuzzyPenalty), hit.at, 1) }
+        }
+        return nil
     }
 
     /// What one query word is worth against one fold, or 0.
     static func tokenHit(_ token: Token, in fold: UnsafeBufferPointer<UInt8>, weight: Int) -> Int {
-        let direct = find(token.text, in: fold, wholeWord: true, wordStart: false)
-        if direct.found { return weight + (direct.whole ? wholeWordBonus : 0) }
-        if let variant = token.variant {
-            let hit = find(variant, in: fold, wholeWord: true, wordStart: false)
-            if hit.found { return weight + (hit.whole ? wholeWordBonus : 0) }
-        }
-        if let stem = token.stem, find(stem, in: fold, wholeWord: false, wordStart: true).found {
-            return max(1, weight - stemPenalty)
-        }
-        if let fuzzy = token.fuzzy, find(fuzzy, in: fold, wholeWord: false, wordStart: true).found {
-            return max(1, weight - fuzzyPenalty)
-        }
-        return 0
+        tokenLanding(token, in: fold, weight: weight)?.score ?? 0
     }
 
     private static func tokenHit(_ token: Token, in text: String, weight: Int) -> Int {
@@ -225,34 +273,45 @@ enum HadithRankedSearch {
         let pack = data.pack
         // The chapter and citation buckets are the same for every row of a chapter, so they are
         // scored once per chapter, not once per narration.
-        struct Bucket { let score: Int; let matched: Set<Int> }
+        //
+        // `worth` is what each word earns a row from the names above it; `matched` the words those
+        // names carry at all. A chapter's name pays in full only when the names in reach carry the
+        // WHOLE query (the chapter is ABOUT it); otherwise a word in it merely counts as covered,
+        // while the book's own name keeps its worth either way ("bukhari anger" still leads with
+        // al-Bukhari's narrations).
+        struct Bucket { let worth: [Int]; let bonus: Int; let matched: Set<Int> }
+        let tokenCount = query.tokens.count
         let bookFold = query.isArabic ? HadithFold.arabic(book.arabicTitle) : HadithFold.english(book.englishTitle)
-        var citationHits: [Int: Int] = [:]
+        var citationHits = [Int](repeating: 0, count: tokenCount)
         for (index, token) in query.tokens.enumerated() where titles == .bookAndChapters {
-            let hit = tokenHit(token, in: bookFold, weight: citationWeight)
-            if hit > 0 { citationHits[index] = hit }
+            citationHits[index] = tokenHit(token, in: bookFold, weight: citationWeight)
         }
         var buckets: [Int: Bucket] = [:]
         for chapter in data.chapters where titles != .none {
             let fold = query.isArabic ? chapter.foldArabic : chapter.foldEnglish
-            var score = 0
+            var primary = [Int](repeating: 0, count: tokenCount)
             var matched = Set<Int>()
             for (index, token) in query.tokens.enumerated() {
-                let primary = tokenHit(token, in: fold, weight: primaryWeight)
-                let best = max(primary, citationHits[index] ?? 0)
-                if best > 0 {
-                    score += best
-                    matched.insert(index)
-                }
+                primary[index] = tokenHit(token, in: fold, weight: primaryWeight)
+                if primary[index] > 0 || citationHits[index] > 0 { matched.insert(index) }
             }
-            if query.tokens.count > 1, contains(query.phrase, in: fold) { score += phraseBonusPrimary }
-            buckets[chapter.id] = Bucket(score: score, matched: matched)
+            let about = matched.count == tokenCount && primary.contains { $0 > 0 }
+            var worth = [Int](repeating: 0, count: tokenCount)
+            for index in matched {
+                worth[index] = about ? max(primary[index], citationHits[index])
+                    : (citationHits[index] > 0 ? citationHits[index] : partialTitleWeight)
+            }
+            let bonus = about && tokenCount > 1 && contains(query.phrase, in: fold) ? phraseBonusPrimary : 0
+            buckets[chapter.id] = Bucket(worth: worth, bonus: bonus, matched: matched)
         }
         // Chapters where a word landed in the title or the citation: a block whose folds carry no
         // word at all can still hold rows that match through their chapter, so those blocks scan.
         let matchedChapters = Set(buckets.filter { !$0.value.matched.isEmpty }.map(\.key))
         let rows = data.hadiths
         var hits: [Hit] = []
+        let authority = book.slug == "bukhari" || book.slug == "muslim" ? authorityWeight : 0
+        // The folds are UTF-8: Arabic letters are two bytes each, so its lengths are halved.
+        let bytesPerLetter = query.isArabic ? 2 : 1
         pack.scanSearchFolds(in: within ?? 0..<rows.count, isArabic: query.isArabic, blockFilter: { blockRows, span in
             if !matchedChapters.isEmpty,
                blockRows.contains(where: { rows.indices.contains($0) && matchedChapters.contains(rows[$0].chapterId) }) {
@@ -262,23 +321,93 @@ enum HadithRankedSearch {
         }) { row, fold in
             let chapterId = rows.indices.contains(row) ? rows[row].chapterId : -1
             let bucket = buckets[chapterId]
-            var score = 0
+            var quality = 0
             var matched = 0
+            var inText = 0
+            var first = Int.max
+            var last = 0
+            var repeats = 0
             for (index, token) in query.tokens.enumerated() {
-                let body = tokenHit(token, in: fold, weight: bodyWeight)
-                let above = (bucket?.matched.contains(index) ?? false)
-                if body == 0, !above { continue }
+                let body = tokenLanding(token, in: fold, weight: bodyWeight, counting: true)
+                let above = bucket?.matched.contains(index) ?? false
+                if body == nil, !above { continue }
                 matched += 1
-                score += body
+                quality += bucket?.worth[index] ?? 0
+                if let body {
+                    quality += body.score
+                    inText += 1
+                    first = min(first, body.at)
+                    last = max(last, body.at)
+                    repeats += body.count - 1
+                }
             }
             guard matched > 0 else { return }
-            score += bucket?.score ?? 0
-            if query.tokens.count > 1, find(query.phrase, in: fold, wholeWord: false, wordStart: false).found {
-                score += phraseBonusBody
+            // Carried by its chapter's name alone, with next to no text of its own: a stub.
+            if inText == 0, fold.count / bytesPerLetter < stubLength { return }
+            quality += bucket?.bonus ?? 0
+            if tokenCount > 1, find(query.phrase, in: fold, wholeWord: false, wordStart: false).found {
+                quality += phraseBonusBody
+            }
+            var score = quality * qualityScale + authority
+            score += max(0, brevityWeight - fold.count / bytesPerLetter / brevityLettersPerPoint)
+            if inText > 0 {
+                score += max(0, positionWeight - first / bytesPerLetter / positionLettersPerPoint)
+                score += min(densityCap, repeats) * densityWeight
+                if inText > 1 { score += max(0, proximityWeight - (last - first) / bytesPerLetter / proximityLettersPerPoint) }
             }
             hits.append(Hit(row: row, score: score, matched: matched))
         }
         return hits
+    }
+
+    // MARK: - The whole shelf
+
+    struct ShelfHit {
+        let bookIndex: Int
+        let row: Int
+        let score: Int
+    }
+
+    struct ShelfOutcome {
+        /// The best rows, best first.
+        var top: [ShelfHit] = []
+        /// How many rows qualified before the cap.
+        var total = 0
+        /// No hadith carried every word, so these carry the most of them.
+        var relaxed = false
+        var strictCount = 0
+        var partialCount = 0
+    }
+
+    /// One pass over `books`, every row with how many words it carries: the strict list is the rows
+    /// carrying every word; the relaxed one (multi-word queries, only when nothing is strict) the
+    /// rows carrying the most of it. Each list keeps its best `cap` in a bounded heap instead of
+    /// sorting every hit of a common word. Ties go to the earlier book, then the earlier row.
+    /// Runs on the caller's thread (a detached task) and stops between books when it is cancelled.
+    static func rankShelf(books: [(book: HadithCatalogBook, data: HadithBookData)], query: Query, cap: Int) -> ShelfOutcome {
+        let tokenCount = query.tokens.count
+        let outranks: (ShelfHit, ShelfHit) -> Bool = { a, b in
+            if a.score != b.score { return a.score > b.score }
+            if a.bookIndex != b.bookIndex { return a.bookIndex < b.bookIndex }
+            return a.row < b.row
+        }
+        var strict = TopK<ShelfHit>(capacity: cap, outranks: outranks)
+        var partial = TopK<ShelfHit>(capacity: cap, outranks: outranks)
+        for (index, entry) in books.enumerated() {
+            if Task.isCancelled { break }
+            for hit in rank(book: entry.book, data: entry.data, query: query) {
+                if hit.matched == tokenCount {
+                    strict.offer(ShelfHit(bookIndex: index, row: hit.row, score: hit.score))
+                } else if tokenCount > 1 {
+                    partial.offer(ShelfHit(bookIndex: index, row: hit.row,
+                                           score: hit.score + relaxedBonus(matched: hit.matched)))
+                }
+            }
+        }
+        let relaxed = strict.offered == 0 && partial.offered > 0
+        let chosen = relaxed ? partial : strict
+        return ShelfOutcome(top: chosen.sorted(), total: chosen.offered, relaxed: relaxed,
+                            strictCount: strict.offered, partialCount: partial.offered)
     }
 
     // MARK: - One book, as a finished list
@@ -641,11 +770,14 @@ final class HadithVocabulary: @unchecked Sendable {
 
     /// The library word a mistyped one most likely meant, or nil to leave it be. Anything the library
     /// already uses ANYWHERE as a substring is left alone: a half-typed "intent" is a prefix, not a typo.
-    func nearestWord(to token: String) -> String? {
+    /// So is a word whose `stem` starts a word of the library: that is an inflection, not a typo
+    /// ("mercies" stems to "mercy", and must not be "corrected" to a word two edits away).
+    func nearestWord(to token: String, stem: String? = nil) -> String? {
         guard token.count >= Self.minLength, HadithRankedSearch.isLatinWord(token) else { return nil }
         lock.lock(); defer { lock.unlock() }
         let bytes = Array(token.utf8)
         guard ready, !Self.occurs(bytes, in: blob) else { return nil }
+        if let stem, Self.occurs(Array(" \(stem)".utf8), in: blob) { return nil }
         let max = token.count >= Self.longWord ? 2 : 1
         let mask = QuranRankedSearch.VocabularyWord.letterMask(of: bytes)
         var best: [UInt8]?

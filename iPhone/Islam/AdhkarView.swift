@@ -548,6 +548,17 @@ struct AdhkarView: View {
         return ScrollViewReader { proxy in
         List {
             Group {
+                #if os(iOS)
+                if !searchActive {
+                    ResourceHeroSection(ResourceHero(
+                        eyebrow: "REMEMBRANCE OF ALLAH",
+                        systemImage: "book.closed.fill",
+                        headline: "Unquestionably, by the remembrance of Allah hearts are assured.",
+                        source: "Quran 13:28",
+                        message: "Words of praise, thanks and glorification from the Quran and the Sunnah, each in Arabic with its transliteration and meaning, to keep on your tongue through the day."
+                    ))
+                }
+                #endif
                 introductionSection
                 #if os(iOS)
                 if searchActive {
@@ -672,43 +683,23 @@ struct AdhkarView: View {
 
             ListenAllPill(texts: commonDhikrItems.map(\.arabicText))
         }) {
-             Text("Short remembrances to keep your heart connected to Allah throughout the day.")
-                 .font(.subheadline)
-                 .foregroundColor(.primary)
-                  
+             ArticleLead("Short remembrances to keep your heart connected to Allah throughout the day.")
+
+             // The phone's hero quotes this ayah above the section (`ResourceHero`); the watch has no hero.
+             #if os(watchOS)
              Text("\"Unquestionably, by the remembrance of Allah hearts are assured.\" (Quran 13:28)")
                  .font(.caption)
                  .foregroundColor(.secondary)
+             #endif
         }
     }
 
+    /// The article kit's etymology card (Abu, 2026-10-03: "make it pretty like pillars and beliefs").
     private var etymologySection: some View {
         Section(header: Text("ETYMOLOGY")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Arabic root: ذ ك ر (dh-k-r)")
-                    .font(
-                        settings.islamUsesCustomArabicFace
-                            ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
-                            : .subheadline.weight(.semibold)
-                    )
-                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                    .foregroundColor(settings.accentColor.color)
-
-                Text("Core meaning: to remember, to mention, to be mindful")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-
-                Text("Dhikr literally means remembrance or mentioning. It includes saying SubhanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.secondary.opacity(0.1))
-            )
-            .padding(-4)
+            ArticleEtymologyCard("Dhikr", arabic: "ذِكْر", root: "ذ ك ر", rootLatin: "dh-k-r",
+                                 coreMeaning: "to remember, to mention, to be mindful",
+                                 text: "Dhikr literally means remembrance or mentioning. It includes saying SubhanAllah, Alhamdulillah, Allahu Akbar, reciting the Quran, and keeping Allah always present in the heart and tongue.")
         }
     }
 
@@ -737,66 +728,36 @@ struct AdhkarView: View {
     }
 
     private var virtuesSection: some View {
+        // A lead, the two quoted callouts, and a closing card: the Pillars & Beliefs page grammar.
         Section(header: Text("VIRTUES OF DHIKR")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Dhikr is a continuous awareness of Allah. It revives the heart, protects the soul, and keeps a believer steady in trials.")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-            }
+            ArticleLead("Dhikr is a continuous awareness of Allah. It revives the heart, protects the soul, and keeps a believer steady in trials.")
 
-            ReflectionCard(
-                title: "Quranic Reminders",
-                lines: [
+            ArticleCallout(
+                bullets: [
                     "So remember Me; I will remember you. And be grateful to Me and do not deny Me. (Quran 2:152)",
                     "Unquestionably, by the remembrance of Allah hearts are assured. (Quran 13:28)",
                     "O you who have believed, remember Allah with much remembrance. (Quran 33:41)",
                     "Indeed, the Muslim men and Muslim women, the believing men and believing women, the obedient men and obedient women, the truthful men and truthful women, the patient men and patient women, the humble men and humble women, the charitable men and charitable women, the fasting men and fasting women, the men who guard their private parts and the women who do so, and the men who remember Allah often and the women who do so: for them Allah has prepared forgiveness and a great reward. (Quran 33:35)"
                 ],
-                accent: settings.accentColor.color
+                title: "Quranic Reminders",
+                systemImage: "book.closed.fill"
             )
+            .articleCardRow()
 
-            ReflectionCard(
-                title: "Prophetic Encouragement",
-                lines: [
+            ArticleCallout(
+                bullets: [
                     "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, sahih)",
                     "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)",
                     "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375, hasan)"
                 ],
-                accent: settings.accentColor.color
+                title: "Prophetic Encouragement",
+                systemImage: "quote.bubble.fill"
             )
+            .articleCardRow()
 
-            Text("Make dhikr a daily rhythm: morning, evening, after salah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty.")
-                .font(.subheadline)
-                .foregroundColor(.primary)
+            ArticleClosing("Make dhikr a daily rhythm: morning, evening, after salah, before sleep, and during ordinary moments. A heart that remembers Allah does not stay empty.")
+                .articleCardRow()
         }
-    }
-}
-
-private struct ReflectionCard: View {
-    let title: String
-    let lines: [String]
-    let accent: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(accent)
-
-            ForEach(lines, id: \.self) { line in
-                Text("• \(line)")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.secondary.opacity(0.1))
-        )
-        .padding(-4)
     }
 }
 

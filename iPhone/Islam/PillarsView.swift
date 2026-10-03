@@ -511,9 +511,24 @@ struct IslamPillarsHero: View {
         Pillar(id: "QadarView", name: "Qadar", arabic: "", systemImage: "scalemass"),
     ]
 
+    /// The resource's card (`ResourceHero`), with the building as its picture: the five columns and
+    /// the six beliefs under them each open their article.
     var body: some View {
+        ResourceHero(
+            eyebrow: "THE FOUNDATIONS",
+            systemImage: "moon.stars.fill",
+            headline: "Indeed, the religion in the sight of Allah is Islam.",
+            source: "Quran 3:19",
+            // No figures: the building under it already counts the five and the six.
+            message: "The five pillars of Islam and the six of iman, then the prophets, the Quran and the hadith, the scholars and the answers to other paths. Tap a pillar to open it."
+        ) {
+            building
+        }
+    }
+
+    private var building: some View {
         let accent = appearance.accent
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             // The roof.
             ZStack {
                 PillarsRoof()

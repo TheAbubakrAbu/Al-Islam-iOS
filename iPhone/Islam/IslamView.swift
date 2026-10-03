@@ -85,11 +85,12 @@ struct IslamView: View {
     private enum IslamDestination: String, Hashable, CaseIterable {
         /// The on-device chat. Listed only where Apple Intelligence can run it (`available`).
         case arabicAlphabet
-        // The Tajweed Course was merged INTO Foundations (Abu, 2026-09-19): one subject, one door. Since
-        // 2026-09-23 the two are one course, merged lesson by lesson, and Foundations IS its index, so
-        // there is no `tajweedCourse` case.
+        // Two tajweed resources again since 2026-10-03 (Abu: "bring back tajweed foundations and tajweed
+        // course"): Foundations is the reference, a rule to a page; the Course teaches the same rules in
+        // order (it kept everything the 2026-09-23 merge put in it). The course is a banner under the
+        // LEARN tiles (`bannerResources`), so that section keeps its row of three.
         case tajweedFoundations
-        case namesOfAllah
+        case tajweedCourse
         case commonAdhkar
         case commonDuas
         case tasbihCounter
@@ -103,6 +104,9 @@ struct IslamView: View {
         case journal
         case pillarsAndBasics
         case howToGuides
+        // With Pillars & Beliefs and How-To since the grid was sectioned (2026-10-02): knowing Allah
+        // by His names is the first thing faith is built on, so it sits in FAITH & PRACTICE.
+        case namesOfAllah
         case islamicWallpapers
         // The three miracle / prophecy screens are one subject, so they are one grid row.
         case miraclesOfQuran
@@ -130,6 +134,7 @@ struct IslamView: View {
             case .askAI: return "Ask AI"
             case .arabicAlphabet: return "Arabic Alphabet"
             case .tajweedFoundations: return "Tajweed Foundations"
+            case .tajweedCourse: return "Tajweed Course"
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
             case .tasbihCounter: return "Tasbih Counter"
@@ -155,6 +160,7 @@ struct IslamView: View {
             case .askAI: return "sparkles"
             case .arabicAlphabet: return "textformat.size.ar"
             case .tajweedFoundations: return "waveform"
+            case .tajweedCourse: return "graduationcap"
             case .commonAdhkar: return "book.closed"
             case .commonDuas: return "text.book.closed"
             case .tasbihCounter: return "circles.hexagonpath.fill"
@@ -180,7 +186,8 @@ struct IslamView: View {
             switch self {
             case .askAI: return "Ask anything about Islam, on device"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
-            case .tajweedFoundations: return "A full course, from the letters to the mushaf"
+            case .tajweedFoundations: return "Every rule of tajweed, one page each"
+            case .tajweedCourse: return "Lesson by lesson, with ayahs to play and a quiz in each"
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
             case .commonDuas: return "Authenticated supplications with sources"
             case .tasbihCounter: return "Count dhikr with a tap"
@@ -209,6 +216,7 @@ struct IslamView: View {
             case .askAI: return "Ask\nAI"
             case .arabicAlphabet: return "Arabic\nAlphabet"
             case .tajweedFoundations: return "Tajweed\nFoundations"
+            case .tajweedCourse: return "Tajweed\nCourse"
             case .commonAdhkar: return "Dhikr &\nRemembrances"
             case .commonDuas: return "Dua &\nSupplications"
             case .tasbihCounter: return "Tasbih\nCounter"
@@ -237,9 +245,10 @@ struct IslamView: View {
                                           "sifaat", "sifat", "makharij", "whistling", "safeer", "hams", "families",
                                           "sound-alike", "quiz", "sun letters", "moon letters",
                                           "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation"]
-            case .tajweedFoundations: return ["recitation", "rules", "makharij", "ghunnah", "qalqalah", "madd",
-                                              // The merged course's own words, so "tajweed course" still lands here.
-                                              "lessons", "course", "learn", "practice", "beginner", "step by step", "tajwid"]
+            case .tajweedFoundations: return ["recitation", "rules", "makharij", "sifaat", "ghunnah", "qalqalah", "madd",
+                                              "noon sakinah", "meem sakinah", "waqf", "hamzatul wasl", "sukoon", "reference", "tajwid"]
+            case .tajweedCourse: return ["lessons", "course", "learn", "practice", "beginner", "step by step", "quiz",
+                                         "recitation", "tajwid", "tilawa"]
             case .commonAdhkar: return ["dhikr", "adhkar", "azkar", "remembrance", "tasbih", "subhanallah"]
             case .commonDuas: return ["dua", "duas", "supplication", "prayer", "invocation"]
             case .tasbihCounter: return ["counter", "beads", "misbaha", "count"]
@@ -270,16 +279,63 @@ struct IslamView: View {
             ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords).joined(separator: " ")))
         })
 
+        /// The section the resource is listed under (`ResourceGroup`).
+        var group: ResourceGroup {
+            switch self {
+            case .arabicAlphabet, .tajweedFoundations, .tajweedCourse, .journal: return .learn
+            case .pillarsAndBasics, .howToGuides, .namesOfAllah: return .faith
+            case .commonAdhkar, .commonDuas, .tasbihCounter: return .remembrance
+            case .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets, .provingIslam: return .signs
+            case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter,
+                 .masjidLocator, .halalFoodLocator, .islamicWallpapers, .askAI: return .tools
+            }
+        }
+
         /// The resources the grid draws as full-width banners under its tiles, in this order.
-        static let bannerResources: [IslamDestination] = [.provingIslam, .askAI]
+        static let bannerResources: [IslamDestination] = [.tajweedCourse, .provingIslam, .askAI]
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
-        /// can't run it (a row that opens onto "not available here" is worse than no row).
+        /// can't run it (a row that opens onto "not available here" is worse than no row), and minus the
+        /// course when its lesson pack is not in the bundle.
         static var available: [IslamDestination] {
             allCases.filter {
                 if $0 == .askAI { return OnDeviceAsk.isAvailable }
+                if $0 == .tajweedCourse { return TajweedLessonsStore.isBundled }
                 return true
             }
+        }
+    }
+
+    /// The subjects the resources are listed under, one section each, in this order (Abu, 2026-10-02:
+    /// "divide islamic resources into section that it relates to"). Each holds three or six tiles, so
+    /// no grid row is left half empty; the two banners (Proving Islam, Ask AI) close their sections.
+    /// A resource's order inside its section is still the enum's case order.
+    private enum ResourceGroup: CaseIterable {
+        case learn, faith, remembrance, signs, tools
+
+        var title: String {
+            switch self {
+            case .learn: return "LEARN"
+            case .faith: return "FAITH & PRACTICE"
+            case .remembrance: return "REMEMBRANCE"
+            case .signs: return "SIGNS & PROOFS"
+            case .tools: return "TOOLS"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .learn: return "graduationcap"
+            case .faith: return "moon.stars"
+            case .remembrance: return "heart.text.square"
+            case .signs: return "checkmark.seal"
+            case .tools: return "wrench.and.screwdriver"
+            }
+        }
+
+        /// This group's resources on this device, in case order.
+        var resources: [IslamDestination] {
+            IslamDestination.available.filter { $0.group == self }
         }
     }
 
@@ -542,10 +598,12 @@ struct IslamView: View {
     private func matchingResources(_ query: String) -> [IslamDestination] {
         let terms = IslamArticleSearch.words(query)
         guard !terms.isEmpty else { return [] }
-        return IslamDestination.available.filter { item in
+        let matched = IslamDestination.available.filter { item in
             let blob = item.searchBlob
             return terms.allSatisfy { blob.contains($0) }
         }
+        // A resource NAMED for the query leads the ones that carry it as a keyword.
+        return SearchRank.sorted(matched, by: query) { [$0.title, $0.subtitle] }
     }
 
     /// The search's list: the Ask AI row, matching RESOURCES, then the article matches from both
@@ -576,7 +634,11 @@ struct IslamView: View {
                 onScrollTo: { entry in
                     // The article's own row is inside its resource; the nearest thing on THIS screen is
                     // the resource row, so that is where the list scrolls.
-                    scrollToResource(entry.home == .pillars ? .pillarsAndBasics : .howToGuides)
+                    switch entry.home {
+                    case .pillars: scrollToResource(.pillarsAndBasics)
+                    case .guides: scrollToResource(.howToGuides)
+                    case .proving: scrollToResource(.provingIslam)
+                    }
                 }
             )
         }
@@ -672,8 +734,13 @@ struct IslamView: View {
             }
         }
 
-        Section(header: SectionPillHeader(title: "ISLAMIC RESOURCES", count: IslamDestination.available.count)) {
-            resourceItems(IslamDestination.available)
+        ForEach(ResourceGroup.allCases, id: \.self) { group in
+            let items = group.resources
+            if !items.isEmpty {
+                Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
+                    resourceItems(items)
+                }
+            }
         }
     }
 
@@ -1020,6 +1087,8 @@ struct IslamView: View {
             #else
             TajweedFoundationsView()
             #endif
+        case .tajweedCourse:
+            TajweedCourseView()
         case .commonAdhkar:
             AdhkarView()
         case .commonDuas:
@@ -1064,9 +1133,14 @@ struct IslamView: View {
                 ArabicView()
             }
 
-            // The tajweed course IS Tajweed Foundations (merged 2026-09-23), so it has one row.
             resourceLink(title: "Tajweed Foundations", systemImage: "waveform") {
                 TajweedFoundationsView()
+            }
+
+            if TajweedLessonsStore.isBundled {
+                resourceLink(title: "Tajweed Course", systemImage: "graduationcap") {
+                    TajweedCourseView()
+                }
             }
 
             resourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed") {
@@ -1146,8 +1220,13 @@ struct IslamView: View {
             }
         }
 
-        Section(header: Text("ISLAMIC RESOURCES")) {
-            splitResourceItems(IslamDestination.available)
+        ForEach(ResourceGroup.allCases, id: \.self) { group in
+            let items = group.resources
+            if !items.isEmpty {
+                Section(header: Text(group.title)) {
+                    splitResourceItems(items)
+                }
+            }
         }
     }
 

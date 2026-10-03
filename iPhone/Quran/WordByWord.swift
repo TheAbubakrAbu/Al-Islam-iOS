@@ -2302,8 +2302,17 @@ enum WordCardTrace {
     }
 }
 
-/// What one word means. Deliberately small: the word, its meaning, where it sits, and the two things
-/// worth doing with it.
+/// The word card a double tap opens: Tilawa's word study, brought over (Abu, 2026-10-01: "double
+/// tapping a word and then being able to switch words and click on the root ... showing the whole
+/// word and highlighting that one part, allowing me to switch to grammar ... roots and theme").
+///
+/// The card MOVES: the strip of the ayah's words, the Root page's occurrences and its other forms
+/// all re-point it (`current`, a raw-token location) without closing, and the tab stays put. Under
+/// the word: its transliteration and meaning, chips for its part of speech, root and verb form (each
+/// opens its page), then pinned tabs: Meaning (the ayah with the word lit), Grammar (the word cut
+/// into prefix / stem / suffix, the chosen part lit in the word above, and the analysis), Root
+/// (every word of the root, a page at a time, and its other dictionary forms), Themes (the passage
+/// and the ayah's topics), Tajweed, and Qiraat when the reader has qiraat on.
 struct WordMeaningSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
@@ -2316,257 +2325,571 @@ struct WordMeaningSheet: View {
     let position: Int
     let total: Int
 
-    private var isSpeakingThis: Bool { speech.currentText == word }
+    /// Where the card is now; nil = the word that was tapped.
+    @State private var current: WordLocation?
+    @State private var tab: WordStudyTab = .meaning
+    /// The Grammar page's lit part (nil = the stem).
+    @State private var selectedSegment: Int?
+
+    enum WordStudyTab: String, CaseIterable, Identifiable {
+        case meaning, grammar, root, themes, tajweed, qiraat
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .meaning: return "Meaning"
+            case .grammar: return "Grammar"
+            case .root: return "Root"
+            case .themes: return "Themes"
+            case .tajweed: return "Tajweed"
+            case .qiraat: return "Qiraat"
+            }
+        }
+
+    }
 
     /// The word located in the RAW (uncleaned) ayah text: the raw text is what the tajweed engine
-    /// annotates, so both the colored word and its rules list resolve against it.
-    ///
-    /// `position` counts DISPLAY tokens, and clean mode deletes ornament-only tokens (the ۞ mark)
-    /// outright - so the display index is walked over the raw tokens, skipping any token that
-    /// vanishes under cleaning, exactly the rule `WordByWordStore` aligns glosses with.
+    /// annotates and every word pack is aligned to.
     private typealias LocatedWord = (text: String, tokenIndex: Int, range: NSRange)
 
-    private var rawWord: LocatedWord? {
+    /// The tapped word's raw token. `position` counts DISPLAY tokens, and clean mode deletes
+    /// ornament-only tokens (the ۞ mark) outright, so the display index is walked over the raw
+    /// tokens, skipping any token that vanishes under cleaning (the rule `WordByWordStore` aligns by).
+    private var tappedLocation: WordLocation? {
         let rawText = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
-        let ranges = WordTokens.ranges(in: rawText)
         let tokens = WordTokens.tokens(in: rawText)
-        guard ranges.count == tokens.count else { return nil }
-
         var displayIndex = 0
         for (index, token) in tokens.enumerated() {
-            let visible = !token.removingArabicDiacriticsAndSigns
-                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            // A token clean mode would delete only counts toward the display index when the reader
-            // is NOT in clean mode (where display == raw and every token counts).
-            if !visible && settings.cleanArabicText { continue }
+            if Self.isOrnament(token) && settings.cleanArabicText { continue }
             displayIndex += 1
             if displayIndex == position {
-                return (rawText, index, ranges[index])
+                return WordLocation(surah: surah.id, ayah: ayah.id, token: index)
             }
         }
         return nil
     }
 
-    /// The word painted with its tajweed colors, when tajweed is on and paints anything here.
-    private func tajweedStyledWord(_ located: LocatedWord?) -> AttributedString? {
-        guard settings.showTajweedColors, settings.isHafsDisplay,
-              let located,
-              let styled = TajweedStore.shared.attributedText(
-                  surah: surah.id, ayah: ayah.id, text: located.text
-              ) else { return nil }
-        let ns = NSAttributedString(styled)
-        guard located.range.location + located.range.length <= ns.length else { return nil }
-        return AttributedString(ns.attributedSubstring(from: located.range))
+    private static func isOrnament(_ token: String) -> Bool {
+        token.removingArabicDiacriticsAndSigns.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// The reader's own Quran face for Hafs (Uthmani, Indopak, Hijazi in its mark style, Kufi, or
-    /// Basic), so the sheet matches the page it was opened from instead of always showing Uthmani.
-    private var hafsFontName: String { settings.quranArabicFontName(for: nil) }
+    /// Everything the body shows about the word the card is on, resolved once per body.
+    private struct Focus {
+        let location: WordLocation
+        let surah: Surah
+        let ayah: Ayah
+        let rawText: String
+        let rawTokens: [String]
+        let range: NSRange
+        /// The word as the reader shows it (cleaned / dotless when the reader is).
+        let shown: String
+        let meaning: String
+        let isTapped: Bool
 
-    /// The word's Latin transliteration, from the same pack the meaning came from.
-    ///
-    /// Resolved here rather than threaded through the tap payload: `rawWord` already maps the display
-    /// position onto the RAW token index, and the raw tokens are exactly what the pack is built on, so
-    /// the two layers index identically.
-    private func transliteration(_ located: LocatedWord?) -> String {
-        guard let located,
-              let latin = WordByWordStore.shared.transliterations(surah: surah.id, ayah: ayah.id),
-              latin.indices.contains(located.tokenIndex) else { return "" }
-        return latin[located.tokenIndex]
+        var located: LocatedWord { (rawText, location.token, range) }
+        var rawToken: String { rawTokens[location.token] }
     }
 
-    /// The visible tajweed rules inside this word, in legend order.
-    private func wordRules(_ located: LocatedWord?) -> [TajweedLegendCategory] {
-        guard settings.showTajweedColors, settings.isHafsDisplay, let located else { return [] }
-        return TajweedStore.shared.ruleCategories(
-            surah: surah.id, ayah: ayah.id, text: located.text, wordRange: located.range
+    private func focus(at location: WordLocation, tapped: Bool) -> Focus? {
+        let hereSurah = location.surah == surah.id ? surah : QuranData.shared.surah(location.surah)
+        let hereAyah = (location.surah == surah.id && location.ayah == ayah.id)
+            ? ayah : QuranData.shared.ayah(surah: location.surah, ayah: location.ayah)
+        guard let hereSurah, let hereAyah else { return nil }
+        let rawText = hereAyah.rawArabicText(surahId: hereSurah.id, qiraahOverride: "")
+        let ranges = WordTokens.ranges(in: rawText)
+        let tokens = WordTokens.tokens(in: rawText)
+        guard ranges.count == tokens.count, tokens.indices.contains(location.token) else { return nil }
+        let glosses = WordByWordStore.shared.glosses(surah: hereSurah.id, ayah: hereAyah.id)
+        let gloss = (glosses?.indices.contains(location.token) ?? false) ? glosses![location.token] : ""
+        return Focus(
+            location: location, surah: hereSurah, ayah: hereAyah, rawText: rawText, rawTokens: tokens,
+            range: ranges[location.token],
+            shown: tapped ? word : displayForm(of: tokens[location.token]),
+            meaning: tapped && !meaning.isEmpty ? meaning : gloss,
+            isTapped: tapped
         )
     }
 
+    /// A raw token as the reader draws it: without tashkeel in clean mode, without dots when dotless.
+    private func displayForm(of token: String) -> String {
+        settings.cleanedQuranArabic(token)
+    }
+
+    /// The word painted with its tajweed colors, when tajweed is on and paints anything here.
+    private func tajweedStyledWord(_ focus: Focus) -> AttributedString? {
+        guard settings.showTajweedColors, settings.isHafsDisplay,
+              let styled = TajweedStore.shared.attributedText(
+                  surah: focus.surah.id, ayah: focus.ayah.id, text: focus.rawText
+              ) else { return nil }
+        let ns = NSAttributedString(styled)
+        guard focus.range.location + focus.range.length <= ns.length else { return nil }
+        return AttributedString(ns.attributedSubstring(from: focus.range))
+    }
+
+    /// The word with ONE part in the accent (the Grammar page's choice), the rest in the label color.
+    private func segmentStyledWord(_ grammar: WordGrammar?, selected: Int?) -> AttributedString? {
+        guard let grammar, grammar.isCutFromToken, grammar.segments.count > 1 else { return nil }
+        let lit = selected ?? grammar.stem?.index
+        let accent = UIColor(settings.accentColor.color)
+        let out = NSMutableAttributedString()
+        for segment in grammar.segments where !segment.form.isEmpty {
+            out.append(NSAttributedString(string: segment.form, attributes: [
+                .foregroundColor: segment.index == lit ? accent : UIColor.label.withAlphaComponent(0.55)
+            ]))
+        }
+        return out.length > 0 ? AttributedString(out) : nil
+    }
+
+    /// The reader's own Quran face for Hafs, so the card matches the page it was opened from.
+    private var hafsFontName: String { settings.quranArabicFontName(for: nil) }
+
+    private func transliteration(_ focus: Focus) -> String {
+        guard let latin = WordByWordStore.shared.transliterations(surah: focus.surah.id, ayah: focus.ayah.id),
+              latin.indices.contains(focus.location.token) else { return "" }
+        return latin[focus.location.token]
+    }
+
+    private func wordRules(_ focus: Focus) -> [TajweedLegendCategory] {
+        guard settings.showTajweedColors, settings.isHafsDisplay else { return [] }
+        return TajweedStore.shared.ruleCategories(
+            surah: focus.surah.id, ayah: focus.ayah.id, text: focus.rawText, wordRange: focus.range
+        )
+    }
+
+    private var tabs: [WordStudyTab] {
+        WordStudyTab.allCases.filter { $0 != .qiraat || settings.showQiraahDetails }
+    }
+
     var body: some View {
-        // Each piece resolved ONCE per body: `rawWord` used to be re-walked by every property that
-        // needed it (the styled word, the transliteration, the rules, the morphology, the riwayat).
-        let located = WordCardTrace.measure("body.rawWord") { rawWord }
-        let styledWord = WordCardTrace.measure("body.tajweedStyledWord") { tajweedStyledWord(located) }
-        let latin = WordCardTrace.measure("body.transliteration") { transliteration(located) }
-        let rules = WordCardTrace.measure("body.wordRules") { wordRules(located) }
-        let speechAvailable = WordCardTrace.measure("body.speechAvailable") { ArabicSpeech.shared.isAvailable }
+        let tapped = WordCardTrace.measure("body.rawWord") { tappedLocation }
+        let here = current ?? tapped
+        let focus = here.flatMap { self.focus(at: $0, tapped: $0 == tapped) }
 
         return NavigationView {
-            ScrollView {
-                ScrollViewReader { proxy in
-                VStack(spacing: 20) {
-                    SelectableWordText(
-                        styled: styledWord,
-                        plain: word,
-                        font: UIFont(name: hafsFontName, size: CGFloat(settings.fontArabicSize) + 16)
-                            ?? .roundedSystemFont(ofSize: CGFloat(settings.fontArabicSize) + 16),
-                        lineSpacing: 6
-                    )
-                    .padding(.top, 8)
-
-                    // How the word is SAID, between the Arabic and what it means - the order a reader
-                    // works in. Silent when the pack has no transliteration for this token (the ۞ mark,
-                    // the tail of a merged word), never a placeholder.
-                    if !latin.isEmpty {
-                        Text(latin)
-                            .font(.headline.italic())
-                            .foregroundColor(settings.accentColor.color)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .textSelection(.enabled)
+            Group {
+                if let focus {
+                    studyBody(focus)
+                } else {
+                    // The tap could not be placed in the raw text (it never should): the word and its
+                    // meaning, as the card always showed them.
+                    VStack(spacing: 16) {
+                        Text(word)
+                            .font(.custom(hafsFontName, size: CGFloat(settings.fontArabicSize) + 16))
+                        Text(meaning.isEmpty ? "No meaning recorded for this word." : meaning)
+                            .font(.title3)
                     }
-
-                    // Centered under the centered Arabic word (user rule, 2026-08: reversed the earlier
-                    // lead-align rule) - the gloss belongs to the word above it, not the block below.
-                    Text(meaning.isEmpty ? "No meaning recorded for this word." : meaning)
-                        .font(.title3)
-                        .foregroundColor(meaning.isEmpty ? .secondary : .primary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, alignment: .center)
-
-                    Text("Word \(position) of \(total) · \(surah.nameTransliteration) \(surah.id):\(ayah.id)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    HStack(spacing: 12) {
-                        if speechAvailable {
-                            actionButton(
-                                isSpeakingThis ? "Stop" : "Listen",
-                                system: isSpeakingThis ? "stop.fill" : "speaker.wave.2.fill"
-                            ) {
-                                settings.hapticFeedback()
-                                if isSpeakingThis {
-                                    ArabicSpeech.shared.stop()
-                                } else {
-                                    ArabicSpeech.shared.speak(word)
-                                }
-                            }
-                        }
-
-                        actionButton("Copy", system: "doc.on.doc") {
-                            settings.hapticFeedback()
-                            UIPasteboard.general.string = meaning.isEmpty
-                                ? word
-                                : "\(word) - \(meaning)\n\(surah.nameTransliteration) \(surah.id):\(ayah.id)"
-                        }
-                    }
-                    .padding(.top, 4)
-
-                    // The tajweed rules this word carries, matching the colors painted on it above -
-                    // the card doubles as a per-word legend. Only rules the reader has visible are
-                    // listed, so the list never names a color that isn't on screen.
-                    if !rules.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Divider()
-                                .padding(.bottom, 4)
-                            Text("TAJWEED IN THIS WORD")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.secondary)
-                            ForEach(rules) { rule in
-                                HStack(spacing: 10) {
-                                    Circle()
-                                        .fill(rule.color)
-                                        .frame(width: 12, height: 12)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(rule.englishTitle)
-                                            .font(.subheadline)
-                                            .fontWeight(.medium)
-                                        Text(rule.transliteration)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(rule.arabicTitle)
-                                        .font(.subheadline)
-                                        .foregroundColor(rule.color)
-                                }
-                            }
-                        }
-                        .padding(.top, 4)
-                    }
-
-                    // The word's root and dictionary form, and the way to every other word of the root.
-                    if let located {
-                        WordMorphologySection(surah: surah, ayah: ayah, tokenIndex: located.tokenIndex)
-                    }
-
-                    // The whole ayah underneath, so the word is never read out of its sentence. Named,
-                    // because it is a DIFFERENT source than the word above it - a reader comparing the
-                    // two should know the gloss is not simply the translation chopped up.
-                    VStack(alignment: .leading, spacing: 4) {
-                        Divider()
-                            .padding(.bottom, 4)
-                        Text(ayah.textEnglishSaheeh)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Text("- Saheeh International")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, 8)
-
-                    // Where the word's own meaning comes from. Word-by-word glosses are their own
-                    // scholarly work - a literal, grammatical rendering of each word in place - not an
-                    // excerpt of any full translation, so they carry their own attribution.
-                    VStack(alignment: .leading, spacing: 4) {
-                        Divider()
-                            .padding(.bottom, 4)
-                        Text("Word-by-word meanings from the Quranic Arabic Corpus, via Quran.com. They render each word literally and in place, so they read differently from the flowing translation above.")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .padding(.top, 4)
-
-                    BeginnerLettersSection(
-                        styled: styledWord,
-                        word: word,
-                        fontName: hafsFontName,
-                        fontSize: CGFloat(settings.fontArabicSize) + 8
-                    )
-
-                    // The same word in the other readings - only for a reader who has qiraat on,
-                    // since for everyone else Hafs is the whole Quran there is.
-                    if settings.showQiraahDetails, let located {
-                        WordAcrossRiwayatSection(
-                            surah: surah,
-                            ayah: ayah,
-                            tag: Settings.Riwayah.hafsTag,
-                            word: word,
-                            tokenIndex: located.tokenIndex,
-                            sourceTokens: WordTokens.tokens(in: located.text)
-                        )
-                    }
-                    Color.clear.frame(height: 1).id(wordCardEndAnchorID)
-                }
-                .padding()
-                .scrollsToWordCardEnd(proxy)
+                    .padding()
                 }
             }
-            .navigationTitle("Word Meaning")
+            .navigationTitle("Word Study")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
-        .smallMediumSheetPresentation()
-        .onAppear { WordCardTrace.stamp("appear") }
+        // Full height from the start: the pages sit under the word, the strip and the tabs, and a
+        // medium detent left them below the fold.
+        .smallMediumSheetPresentation(startLarge: true)
+        .onAppear {
+            WordCardTrace.stamp("appear")
+            #if DEBUG
+            // "-wordStudyTab grammar|root|themes|tajweed|qiraat": the card opens on that page.
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-wordStudyTab"), args.indices.contains(i + 1),
+               let target = WordStudyTab(rawValue: args[i + 1]) {
+                tab = target
+            }
+            #endif
+        }
         .onDisappear { ArabicSpeech.shared.stop() }
+        .onChange(of: current) { _ in selectedSegment = nil }
+    }
+
+    @ViewBuilder
+    private func studyBody(_ focus: Focus) -> some View {
+        let grammar = WordCardTrace.measure("body.grammar") {
+            WordGrammarStore.shared.grammar(surah: focus.surah.id, ayah: focus.ayah.id,
+                                            token: focus.location.token, tokenText: focus.rawToken)
+        }
+        let rootInfo = MorphologyStore.shared.root(surah: focus.surah.id, ayah: focus.ayah.id, token: focus.location.token)
+        let lemmaInfo = MorphologyStore.shared.lemma(surah: focus.surah.id, ayah: focus.ayah.id, token: focus.location.token)
+        let rules = WordCardTrace.measure("body.wordRules") { wordRules(focus) }
+        let tajweedStyled = WordCardTrace.measure("body.tajweedStyledWord") { tajweedStyledWord(focus) }
+        let heroStyled = tab == .grammar ? (segmentStyledWord(grammar, selected: selectedSegment) ?? tajweedStyled) : tajweedStyled
+        let heroPlain = tab == .grammar && grammar?.isCutFromToken == true ? focus.rawToken : focus.shown
+        let latin = transliteration(focus)
+        let strip = stripWords(focus)
+        let place = strip.firstIndex { $0.token == focus.location.token }.map { $0 + 1 } ?? position
+
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 14, pinnedViews: [.sectionHeaders]) {
+                    VStack(spacing: 12) {
+                        heading(focus, place: place, total: strip.count)
+
+                        SelectableWordText(
+                            styled: heroStyled,
+                            plain: heroPlain,
+                            font: UIFont(name: hafsFontName, size: CGFloat(settings.fontArabicSize) + 18)
+                                ?? .roundedSystemFont(ofSize: CGFloat(settings.fontArabicSize) + 18),
+                            lineSpacing: 6
+                        )
+                        .id("hero-\(focus.location.id)-\(tab == .grammar ? (selectedSegment ?? -1) : -2)")
+
+                        // How the word is SAID, then what it means: the order a reader works in.
+                        if !latin.isEmpty {
+                            Text(latin)
+                                .font(.headline.italic())
+                                .foregroundColor(settings.accentColor.color)
+                                .multilineTextAlignment(.center)
+                                .textSelection(.enabled)
+                        }
+                        Text(focus.meaning.isEmpty ? "No meaning recorded for this word." : focus.meaning)
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(focus.meaning.isEmpty ? .secondary : .primary)
+                            .multilineTextAlignment(.center)
+
+                        factChips(grammar: grammar, root: rootInfo?.root)
+                        actionRow(focus)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
+
+                    wordStrip(strip, focus: focus)
+
+                    Section(header: tabBar) {
+                        page(focus, grammar: grammar, rules: rules, styled: tajweedStyled,
+                             root: rootInfo?.root.letters, lemma: lemmaInfo?.lemma.text)
+                            .padding(.horizontal)
+                    }
+
+                    Color.clear.frame(height: 1).id(wordCardEndAnchorID)
+                }
+                .padding(.vertical, 8)
+                .scrollsToWordCardEnd(proxy)
+            }
+        }
+    }
+
+    // MARK: Pieces
+
+    private func heading(_ focus: Focus, place: Int, total: Int) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)")
+                .font(.headline)
+                .foregroundColor(settings.accentColor.color)
+            Spacer()
+            Text("Word \(place) of \(total)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Part of speech, root and verb form under the word: the answers a reader looks for first,
+    /// each a door into the page that explains it.
+    @ViewBuilder
+    private func factChips(grammar: WordGrammar?, root: MorphologyStore.Root?) -> some View {
+        let chips: (pos: String?, form: String?) = grammar.map(WordGrammarText.chips) ?? (pos: nil, form: nil)
+        if chips.pos != nil || root != nil || chips.form != nil {
+            HStack(spacing: 8) {
+                if let pos = chips.pos {
+                    factChip(title: pos, arabic: nil, target: .grammar)
+                }
+                if let root {
+                    factChip(title: "Root", arabic: root.letters, target: .root)
+                }
+                if let form = chips.form {
+                    factChip(title: form, arabic: nil, target: .grammar)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+        }
+    }
+
+    private func factChip(title: String, arabic: String?, target: WordStudyTab) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) { tab = target }
+        } label: {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                if let arabic {
+                    Text(arabic)
+                        .font(.custom(hafsFontName, size: 16))
+                        .arabicFontDesign(custom: true)
+                }
+            }
+            .foregroundColor(tab == target ? .white : settings.accentColor.color)
+            .padding(.horizontal, 12)
+            .frame(minHeight: 32)
+            .background(
+                Capsule().fill(tab == target ? settings.accentColor.color : settings.accentColor.color.opacity(0.12))
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens the \(target.title) page")
+    }
+
+    private func actionRow(_ focus: Focus) -> some View {
+        let speechAvailable = ArabicSpeech.shared.isAvailable
+        let speaking = speech.currentText == focus.rawToken || speech.currentText == focus.shown
+        return HStack(spacing: 10) {
+            if speechAvailable {
+                actionButton(speaking ? "Stop" : "Listen", system: speaking ? "stop.fill" : "speaker.wave.2.fill") {
+                    settings.hapticFeedback()
+                    if speaking { ArabicSpeech.shared.stop() } else { ArabicSpeech.shared.speak(focus.shown) }
+                }
+            }
+            actionButton("Copy", system: "doc.on.doc") {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = focus.meaning.isEmpty
+                    ? focus.shown
+                    : "\(focus.shown) - \(focus.meaning)\n\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)"
+            }
+        }
+    }
+
+    /// One chip per word of the ayah (ornaments like ۞ skipped), word 1 on the RIGHT as the line
+    /// reads; the card's word is filled and kept centred.
+    private struct StripWord: Identifiable {
+        let token: Int
+        let text: String
+        var id: Int { token }
+    }
+
+    private func stripWords(_ focus: Focus) -> [StripWord] {
+        focus.rawTokens.enumerated().compactMap { index, token in
+            Self.isOrnament(token) ? nil : StripWord(token: index, text: displayForm(of: token))
+        }
+    }
+
+    private func wordStrip(_ words: [StripWord], focus: Focus) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("WORDS IN THIS AYAH")
+                .font(.caption2.weight(.semibold))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal)
+
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(words) { word in
+                            let isOn = word.token == focus.location.token
+                            Button {
+                                settings.hapticFeedback()
+                                current = WordLocation(surah: focus.surah.id, ayah: focus.ayah.id, token: word.token)
+                            } label: {
+                                Text(word.text)
+                                    .font(.custom(hafsFontName, size: 22))
+                                    .arabicFontDesign(custom: true)
+                                    .foregroundColor(isOn ? .white : .primary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 2)
+                                    .frame(minHeight: 44)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(isOn ? settings.accentColor.color : Color.primary.opacity(0.07))
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .id(word.token)
+                            .accessibilityLabel(word.text)
+                            .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .environment(\.layoutDirection, .rightToLeft)
+                .onAppear { proxy.scrollTo(focus.location.token, anchor: .center) }
+                .onChange(of: focus.location) { location in
+                    withAnimation(.easeInOut(duration: 0.25)) { proxy.scrollTo(location.token, anchor: .center) }
+                }
+            }
+        }
+    }
+
+    /// The pinned tab pills, on the bar material so the pages scroll cleanly under them. Titles only
+    /// (icons pushed the fifth tab off the edge), and the chosen one is scrolled into view.
+    private var tabBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(tabs) { item in
+                        let isOn = item == tab
+                        Button {
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut(duration: 0.2)) { tab = item }
+                        } label: {
+                            Text(item.title)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                                .foregroundColor(isOn ? .white : settings.accentColor.color)
+                                .padding(.horizontal, 13)
+                                .frame(minHeight: 36)
+                                .background(
+                                    Capsule().fill(isOn ? settings.accentColor.color : settings.accentColor.color.opacity(0.12))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .id(item)
+                        .accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+            }
+            .onAppear { proxy.scrollTo(tab, anchor: .center) }
+            .onChange(of: tab) { item in
+                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(item, anchor: .center) }
+            }
+        }
+        .background(.bar)
+    }
+
+    // MARK: Pages
+
+    @ViewBuilder
+    private func page(_ focus: Focus, grammar: WordGrammar?, rules: [TajweedLegendCategory],
+                      styled: AttributedString?, root: String?, lemma: String?) -> some View {
+        switch tab {
+        case .meaning:
+            meaningPage(focus, styled: styled)
+        case .grammar:
+            WordGrammarPage(grammar: grammar, root: root, lemma: lemma, fontName: hafsFontName,
+                            selected: $selectedSegment)
+        case .root:
+            if MorphologyStore.isBundled {
+                WordRootPage(location: focus.location, fontName: hafsFontName) { location in
+                    withAnimation(.easeInOut(duration: 0.2)) { current = location }
+                }
+            }
+        case .themes:
+            themesPage(focus)
+        case .tajweed:
+            tajweedPage(rules)
+        case .qiraat:
+            if settings.showQiraahDetails {
+                WordAcrossRiwayatSection(
+                    surah: focus.surah,
+                    ayah: focus.ayah,
+                    tag: Settings.Riwayah.hafsTag,
+                    word: focus.shown,
+                    tokenIndex: focus.location.token,
+                    sourceTokens: focus.rawTokens
+                )
+            }
+        }
+    }
+
+    private func meaningPage(_ focus: Focus, styled: AttributedString?) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // The whole ayah, the word lit inside it, so the word is never read out of its sentence.
+            StudyCard(title: "IN THIS AYAH") {
+                WordOccurrenceRow(surah: focus.surah, ayah: focus.ayah, tokens: [focus.location.token])
+                    .equatable()
+            }
+
+            // Word-by-word glosses are their own scholarly work (a literal rendering of each word in
+            // place), not an excerpt of the flowing translation, so they carry their own attribution.
+            Text("Word-by-word meanings from the Quranic Arabic Corpus, via Quran.com. They render each word literally and in place, so they read differently from the flowing translation.")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            BeginnerLettersSection(
+                styled: styled,
+                word: focus.shown,
+                fontName: hafsFontName,
+                fontSize: CGFloat(settings.fontArabicSize) + 8
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func themesPage(_ focus: Focus) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            AyahInsightsCard(surah: focus.surah, ayah: focus.ayah)
+
+            NavigationLink {
+                ThemesBrowseView(onOpenAyah: { _, _ in })
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.grid.2x2")
+                    Text("Browse Every Theme of the Quran")
+                        .fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .font(.subheadline)
+                .foregroundColor(settings.accentColor.color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(settings.accentColor.color.opacity(0.10))
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text("Themes belong to the ayah and its passage: every word of this ayah shares them.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func tajweedPage(_ rules: [TajweedLegendCategory]) -> some View {
+        if !settings.showTajweedColors || !settings.isHafsDisplay {
+            StudyCard(title: "TAJWEED IN THIS WORD") {
+                Text("Turn on tajweed colors in Quran Settings to see the rules on each word.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else if rules.isEmpty {
+            StudyCard(title: "TAJWEED IN THIS WORD") {
+                Text("No tajweed rule falls on this word.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            // The rules this word carries, matching the colors painted on it: a per-word legend.
+            StudyCard(title: "TAJWEED IN THIS WORD") {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(rules) { rule in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(rule.color)
+                                .frame(width: 12, height: 12)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(rule.englishTitle)
+                                    .font(.subheadline.weight(.medium))
+                                Text(rule.transliteration)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Text(rule.arabicTitle)
+                                .font(.subheadline)
+                                .foregroundColor(rule.color)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func actionButton(_ title: String, system: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(title, systemImage: system)
-                .font(.subheadline)
+                .font(.subheadline.weight(.semibold))
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .frame(minHeight: 40)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(settings.accentColor.color.opacity(0.15))
+                    Capsule().fill(settings.accentColor.color.opacity(0.15))
                 )
                 .foregroundColor(settings.accentColor.color)
         }

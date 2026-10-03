@@ -149,21 +149,19 @@ struct QiraatTextAnalysisView: View {
 
     // MARK: - Sections
 
+    /// The caveat as a callout card titled with the old header's words, and its "Above all" line as the
+    /// sealed card under it, which keeps that line's weight (2026-10-03).
     private var disclaimerSection: some View {
-        Section(header: Text("READ THIS FIRST")) {
-            Text("This page is not a work of scholarship. It is the output of a program that read the printed mushaf of each riwayah, letter by letter, and compared it against Hafs an Asim. It may not be one hundred percent accurate.")
-                .font(.body)
-                .foregroundColor(settings.accentColor.color)
+        Section {
+            ArticleCallout(paragraphs: [
+                "This page is not a work of scholarship. It is the output of a program that read the printed mushaf of each riwayah, letter by letter, and compared it against Hafs an Asim. It may not be one hundred percent accurate.",
+                "Everywhere else in this guide reports the settled record of the qurra: names, chains, dates, what each reading is known for. This page does not. It reports measurements, and a measurement can be wrong in ways a biography cannot: a mark misread off the page, two words joined where the print separated them, a rule applied one letter too wide.",
+                "Nothing here is a ruling, and none of it replaces a qualified teacher or the classical works. Where a scholar disagrees with a number on this page, the scholar is right and the number is wrong.",
+            ], title: "Read This First", systemImage: "exclamationmark.triangle.fill")
+            .articleCardRow()
 
-            Text("Everywhere else in this guide reports the settled record of the qurra: names, chains, dates, what each reading is known for. This page does not. It reports measurements, and a measurement can be wrong in ways a biography cannot: a mark misread off the page, two words joined where the print separated them, a rule applied one letter too wide.")
-                .font(.body)
-
-            Text("Nothing here is a ruling, and none of it replaces a qualified teacher or the classical works. Where a scholar disagrees with a number on this page, the scholar is right and the number is wrong.")
-                .font(.body)
-
-            Text("Above all: not one of these figures suggests any disagreement about what the Quran is. Every one of the twenty is the Quran, complete, and every difference between them was received by transmission, never invented.")
-                .font(.body)
-                .fontWeight(.medium)
+            ArticleClosing("Above all: not one of these figures suggests any disagreement about what the Quran is. Every one of the twenty is the Quran, complete, and every difference between them was received by transmission, never invented.")
+                .articleCardRow()
         }
     }
 

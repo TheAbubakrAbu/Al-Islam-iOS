@@ -2922,20 +2922,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         /// books alone); every Arabic string is handed through `decomposingAlefMadda` first, so the
         /// face draws it from its own parts instead of falling back mid-word.
         ///
-        /// Uthmani and Hijazi resolve to their "NoStack" TWINS (Abu, 2026-09-22: "have it where no
-        /// stack is used"): the same fonts with the rule that rides a letter above a following ج ح خ
-        /// switched off, so بحـ is written ب then ح, side by side, on every learning screen. The Quran
-        /// reader keeps the originals, which stack the way the printed mushaf does; the Baa on Haa
-        /// page draws its shapes in the original on purpose. IndoPak has the stacking drawn into its
-        /// haa glyphs and cannot be unstacked; Kufi never stacks.
+        /// Uthmani and Hijazi are the Quran reader's own fonts, letter-over-haa stacking (بحـ) and
+        /// all. The "NoStack" twins that once wrote the pair side by side here were removed on
+        /// 2026-10-03 (Abu: "remove the no nuun baa shapes font just keep it to normal").
         var fontName: String {
             switch self {
-            case .uthmani: return Settings.hafsUthmaniNoStackFontName
+            case .uthmani: return Settings.hafsUthmaniFontName
             case .indopak: return Settings.indopakFontName
             case .kufi: return Settings.kufiFontName
             // "Hijazi" follows whichever mark style the Quran font picker is on (light, bold or dot
             // vowels), so the 99 Names / Duas screens match the reader instead of needing a second picker.
-            case .hijazi: return Settings.currentHijaziNoStackFontName
+            case .hijazi: return Settings.currentHijaziFontName
             case .basic: return Settings.systemArabicFontName
             }
         }
@@ -2945,7 +2942,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         var historyCaption: String {
             switch self {
             case .uthmani:
-                return "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it. Outside the Quran the app writes it without the mushaf's stacking, so a letter before ج ح خ sits beside it rather than riding above; the Baa on Haa page shows the stacked form."
+                return "Uthmani is the Naskh of the Madinah Mushaf, the hand of the calligrapher Uthman Taha as digitized by the King Fahd Complex. Naskh was systematized in Baghdad by Ibn Muqla in the 4th century AH (10th century CE), became the main script of the mushaf from about the 5th century AH (11th century CE), and was perfected by the Ottoman masters of Istanbul; nearly every printed mushaf today, from Cairo to Madinah, uses it."
             case .indopak:
                 return "Indopak is the mushaf hand of the Indian subcontinent: a Naskh shaped by Nastaliq, the Persian script developed in Iran in the 8th and 9th centuries AH (14th and 15th centuries CE) and credited to Mir Ali Tabrizi. It came east with the Mughals and became the standard printed mushaf of India, Pakistan and Bangladesh, and of South Asian communities everywhere."
             case .hijazi:
@@ -2998,22 +2995,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     
     static let randomReciterName = "Random Reciter"
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
-    /// The Hafs face with the mushaf's letter-over-haa stacking switched off (بحـ written as ب then
-    /// ح, side by side): `Resources/Fonts/Uthmani-NoStack.ttf`, built from `Uthmani.ttf` by
-    /// `Scripts/build_nostack_fonts.py` (rerun it after any change to the source font). The
-    /// NON-Quran Arabic screens read in it (`IslamArabicFace.uthmani`); the Quran reader keeps
-    /// `hafsUthmaniFontName`, the mushaf's own stacking hand.
-    static let hafsUthmaniNoStackFontName = "KFGQPCHAFSUthmanicScript-Regula-NoStack"
 
     #if canImport(UIKit)
     private static var drawableFontMemo: [String: String] = [:]
     private static let drawableFontLock = NSLock()
 
     /// A face THIS process can draw: one its bundle does not ship falls back to the Hafs Uthmani face
-    /// instead of the system font. The widget bundles only Uthmani, Indopak and QuranCommon, so the
-    /// Name of Allah widget's default face (the NoStack twin) and a Hijazi or Kufi Quran face drew
-    /// in the system font; the watch lists Kufi and Hijazi in its Info.plist without the files
-    /// (Quality Guide A9, decision D7: mapped, not bundled, so no size cost).
+    /// instead of the system font. The widget bundles only Uthmani, Indopak and QuranCommon, so a
+    /// Hijazi or Kufi face drew in the system font; the watch lists Kufi and Hijazi in its
+    /// Info.plist without the files (Quality Guide A9, decision D7: mapped, not bundled, so no size cost).
     static func drawableArabicFontName(_ name: String) -> String {
         guard !name.isEmpty, name != systemArabicFontName else { return name }
         drawableFontLock.lock()
@@ -3065,9 +3055,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         var id: String { rawValue }
         var fontName: String { rawValue }
-        /// The style's twin without the letter-over-haa stacking (`Hijazi*-NoStack.ttf`, see
-        /// `hafsUthmaniNoStackFontName`): what the non-Quran screens read Hijazi in.
-        var noStackFontName: String { rawValue + "-NoStack" }
 
         var label: String {
             switch self {
@@ -3085,10 +3072,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static var currentHijaziFontName: String {
         let name = Settings.shared.fontArabic
         return isHijaziFontName(name) ? name : hijaziFontName
-    }
-    /// `currentHijaziFontName`'s no-stacking twin: the Islam tab's Hijazi (`IslamArabicFace.hijazi`).
-    static var currentHijaziNoStackFontName: String {
-        (HijaziMarkStyle(rawValue: Settings.shared.fontArabic) ?? .light).noStackFontName
     }
     /// Migration sentinels: names the IndoPak face briefly shipped under during testing. A stored
     /// value matching one is rewritten at launch, or the reader keeps a name no font answers to.

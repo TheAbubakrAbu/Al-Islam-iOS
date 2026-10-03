@@ -174,6 +174,7 @@ struct DailyReminderWidget: Widget {
         .supportedFamilies(quranWidgetFamilies())
         .configurationDisplayName("Reminder of the Day")
         .description("A verse, a hadith, a Sunnah, a dua, a dhikr or a Name of Allah, one each day")
+        .disfavoredInCarPlay()
     }
 }
 

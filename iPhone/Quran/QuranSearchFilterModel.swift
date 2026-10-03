@@ -19,6 +19,25 @@ import SwiftUI
 // This file is the MODEL and compiles wherever `QuranData` does (its scan takes a `QuranSearchScope`);
 // the bar and the sheet are in QuranSearchFilters.swift, app only.
 
+/// How much of the filter row a search screen shows (Abu, 2026-10-02: search should be "simple and
+/// not overwhelming, unless one wants it to be that way"). Off, the default, the row over the results
+/// keeps to the few buttons most readers reach for, plus any filter that is set; on, every filter is
+/// a button, as the row was before. One preference for the Quran and the Hadith searches; the All
+/// Filters sheet always holds everything either way.
+enum SearchFilterBar {
+    static let everyButtonKey = "searchFilterBarEveryButton"
+
+    /// Which list a search opens on when BOTH the words and the AI (meaning) lane answered. The
+    /// words lead by default: they are what was typed, ranked best match first, and the AI's
+    /// matches are related by meaning, one tap away (Tilawa's order, where a meaning match joins
+    /// the list and never leads it). On, the AI list leads, as it did before 2026-10-02.
+    static let aiFirstKey = "searchOpensOnAIResults"
+
+    static var opensOnKeywordResults: Bool {
+        !UserDefaults.standard.bool(forKey: aiFirstKey)
+    }
+}
+
 struct QuranSearchFilters: Equatable {
     /// The result sections, each of which can be switched off.
     enum Kind: String, CaseIterable, Identifiable, Codable {
@@ -138,6 +157,21 @@ struct QuranSearchFilters: Equatable {
         var title: String { self == .makkan ? "Makki" : "Madani" }
     }
 
+    /// The reader's own collections a search can be held to (Abu, 2026-10-01: "search bookmarks and
+    /// favorites explicitly"). Both on = either one.
+    enum Library: String, CaseIterable, Identifiable {
+        case bookmarks, favorites
+        var id: String { rawValue }
+        var title: String { self == .bookmarks ? "Bookmarks" : "Favorites" }
+        var systemImage: String { self == .bookmarks ? "bookmark.fill" : "star.fill" }
+        var detail: String {
+            switch self {
+            case .bookmarks: return "Only your bookmarked ayahs, and the notes you wrote on them"
+            case .favorites: return "Only your favorite surahs"
+            }
+        }
+    }
+
     /// Which text a Latin-script query is read against. (Arabic script always searches the Arabic.)
     enum Lane: String, CaseIterable, Identifiable {
         case all, translation, transliteration
@@ -184,6 +218,7 @@ struct QuranSearchFilters: Equatable {
     var surahs: Set<Int> = []
     var juzs: Set<Int> = []
     var lane: Lane = .all
+    var libraries: Set<Library> = []
 
     // Preferences: how results are laid out for EVERY search. Persisted (see `Stored`).
     var hiddenKinds: Set<Kind> = []
@@ -202,12 +237,12 @@ struct QuranSearchFilters: Equatable {
     /// on screen when the field is empty and unfocused).
     var hasSessionFilters: Bool {
         match != .contains || combine != .phrase || !excludedWords.isEmpty || goTo != nil
-            || revelation != nil || !surahs.isEmpty || !juzs.isEmpty || lane != .all
+            || revelation != nil || !surahs.isEmpty || !juzs.isEmpty || lane != .all || !libraries.isEmpty
     }
 
     /// Filters that narrow the SURAH LIST on their own, so they show results with nothing typed.
     var narrowsSurahList: Bool {
-        revelation != nil || !surahs.isEmpty || !juzs.isEmpty
+        revelation != nil || !surahs.isEmpty || !juzs.isEmpty || !libraries.isEmpty
     }
 
     var activeCount: Int {
@@ -220,6 +255,7 @@ struct QuranSearchFilters: Equatable {
         if !surahs.isEmpty { count += 1 }
         if !juzs.isEmpty { count += 1 }
         if lane != .all { count += 1 }
+        if !libraries.isEmpty { count += 1 }
         if !hiddenKinds.isEmpty { count += 1 }
         if sort != .mushaf { count += 1 }
         return count
@@ -267,7 +303,7 @@ struct QuranSearchFilters: Equatable {
 
     #if DEBUG
     /// "-quranSearchFilters match=wholeWord,combine=allWords,revelation=makkan,juz=29+30,surah=2+18,
-    /// lane=translation,sort=relevance,goTo=page,without=fire,hide=ai+topics": the buttons, pressed
+    /// lane=translation,sort=relevance,goTo=page,without=fire,hide=ai+topics,library=bookmarks+favorites": the buttons, pressed
     /// headlessly (pair with "-quranSearch <term>"). DEBUG builds only.
     private mutating func applyDebugSeed() {
         let arguments = ProcessInfo.processInfo.arguments
@@ -287,6 +323,7 @@ struct QuranSearchFilters: Equatable {
             case "goTo": goTo = GoTo(rawValue: parts[1])
             case "without": excluded = values.joined(separator: " ")
             case "hide": hiddenKinds = Set(values.compactMap(Kind.init(rawValue:)))
+            case "library": libraries = Set(values.compactMap(Library.init(rawValue:)))
             default: break
             }
         }
@@ -431,8 +468,9 @@ struct QuranSearchFilters: Equatable {
 
     // MARK: Scope
 
-    /// The scoping filters, resolved against the juz table. Nil when nothing narrows the search.
-    func scope(surahs quran: [Surah]) -> QuranSearchScope? {
+    /// The scoping filters, resolved against the juz table and the reader's collections (bookmark ayah
+    /// keys, favorite surah numbers). Nil when nothing narrows the search.
+    func scope(surahs quran: [Surah], bookmarkKeys: Set<Int> = [], favoriteSurahs: Set<Int> = []) -> QuranSearchScope? {
         guard narrowsSurahList || lane != .all else { return nil }
 
         var allowed: Set<Int>? = nil
@@ -445,7 +483,16 @@ struct QuranSearchFilters: Equatable {
         let ranges: [ClosedRange<Int>] = QuranData.juzList
             .filter { juzs.contains($0.id) }
             .map { QuranSearchScope.key(surah: $0.startSurah, ayah: $0.startAyah)...QuranSearchScope.key(surah: $0.endSurah, ayah: $0.endAyah) }
-        return QuranSearchScope(surahs: allowed, ranges: ranges, lane: lane)
+        var library: QuranSearchScope.Library?
+        if !libraries.isEmpty {
+            let keys = libraries.contains(.bookmarks) ? bookmarkKeys : []
+            library = QuranSearchScope.Library(
+                ayahKeys: keys,
+                surahs: libraries.contains(.favorites) ? favoriteSurahs : [],
+                bookmarkSurahs: Set(keys.map { $0 / 1000 })
+            )
+        }
+        return QuranSearchScope(surahs: allowed, ranges: ranges, lane: lane, library: library)
     }
 }
 
@@ -456,11 +503,23 @@ struct QuranSearchScope: Equatable, Sendable {
     /// Ayah-key ranges (the chosen juz). Empty = no range limit.
     let ranges: [ClosedRange<Int>]
     let lane: QuranSearchFilters.Lane
+    /// The Bookmarks / Favorites chips. Nil = no collection limit.
+    var library: Library? = nil
+
+    /// What the collection chips allow: a bookmarked ayah, or any ayah of a favorite surah.
+    struct Library: Equatable, Sendable {
+        let ayahKeys: Set<Int>
+        let surahs: Set<Int>
+        /// Surahs holding at least one bookmark (the surah list's test).
+        let bookmarkSurahs: Set<Int>
+    }
 
     static func key(surah: Int, ayah: Int) -> Int { surah * 1000 + ayah }
 
     func contains(surah: Int, ayah: Int) -> Bool {
         if let surahs, !surahs.contains(surah) { return false }
+        if let library, !library.surahs.contains(surah),
+           !library.ayahKeys.contains(Self.key(surah: surah, ayah: ayah)) { return false }
         guard !ranges.isEmpty else { return true }
         let key = Self.key(surah: surah, ayah: ayah)
         return ranges.contains { $0.contains(key) }
@@ -469,6 +528,7 @@ struct QuranSearchScope: Equatable, Sendable {
     /// Whether any ayah of the surah is in scope (the surah list's test).
     func contains(surah: Int, ayahCount: Int) -> Bool {
         if let surahs, !surahs.contains(surah) { return false }
+        if let library, !library.surahs.contains(surah), !library.bookmarkSurahs.contains(surah) { return false }
         guard !ranges.isEmpty else { return true }
         let span = Self.key(surah: surah, ayah: 1)...Self.key(surah: surah, ayah: max(1, ayahCount))
         return ranges.contains { $0.overlaps(span) }
