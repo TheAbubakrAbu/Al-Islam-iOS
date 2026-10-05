@@ -725,7 +725,7 @@ private struct SunnahHadithSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .smallMediumSheetPresentation(startLarge: true)
+        .smallMediumSheetPresentation()
         .task {
             guard let found = HadithCatalogBook.all.first(where: { $0.slug == link.slug }) else {
                 failed = true

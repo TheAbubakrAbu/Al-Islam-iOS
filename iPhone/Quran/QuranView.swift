@@ -1357,6 +1357,10 @@ struct QuranView: View {
         // the list and STAYING there is a deliberate act, and it survives until the tab is left.
         // `openMushafWhereLeftOff` can't make that call itself: on iPad it deliberately re-points the
         // detail column whatever is in it, which would throw an iPad user off whatever they had open.
+        // The page reader hides the SHARED root tab bar, so it has to know whether this tab is the one
+        // on screen - see `MushafRootTabBarHidden`. Published here because `isActiveTab` is what
+        // `MainTabView` already hands this view.
+        .environment(\.isQuranTabActive, isActiveTab)
         .onChange(of: isActiveTab) { active in
             #if os(iOS)
             guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
@@ -2054,7 +2058,7 @@ struct QuranView: View {
         }
         .sheet(isPresented: $showSearchFilterSheet) {
             QuranSearchFilterSheet(filters: $searchFilters, surahs: quranData.quran)
-                .smallMediumSheetPresentation(startLarge: true)
+                .smallMediumSheetPresentation()
         }
         // The result rows paint by the Match button's rule, not only filter by it.
         .environment(\.searchWordRule, searchFilters.highlightWordRule)

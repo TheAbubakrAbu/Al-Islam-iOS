@@ -483,6 +483,10 @@ struct SummaryAyahTile: View {
             // Tight on purpose (Abu, 2026-09-16: the summary took too much of the tab): 4 pt between
             // lines, 10 pt of padding, one line of each script, and a small chip for the icon so the
             // tile still has a spot of colour.
+            // LEADING, unlike the short-label tiles elsewhere, which centre (Abu, 2026-10-05:
+            // "summary tiles and hadiths/ayahs should be leading everything else centered"): an ayah
+            // and its translation are prose, and prose is read down a straight left edge. The Arabic
+            // line below keeps its own RTL side.
             VStack(alignment: .leading, spacing: 4) {
                 if !title.isEmpty {
                     HStack(spacing: 6) {
@@ -666,6 +670,8 @@ struct SummarySurahTile: View {
             settings.hapticFeedback()
             onTap()
         } label: {
+            // Leading, like its twin beside it (`SummaryAyahTile`): both are summary tiles, so they
+            // share an edge (Abu, 2026-10-05).
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     AccentIconChip(systemImage: icon, size: 18)

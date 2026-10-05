@@ -388,6 +388,7 @@ struct NameDetailLink: View {
             SheetNavigationContainer {
                 NameDetailView(name: name, isSheet: true)
             }
+            .smallMediumSheetPresentation()
         }
     }
 }

@@ -880,7 +880,7 @@ private struct CustomReminderEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .smallMediumSheetPresentation(startLarge: true)
+        .smallMediumSheetPresentation()
     }
 }
 #endif

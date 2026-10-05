@@ -1416,7 +1416,7 @@ struct JournalAttachSheet: View {
             .sheetDismissToolbar()
             .accentWashedBackground()
         }
-        .smallMediumSheetPresentation(startLarge: true)
+        .smallMediumSheetPresentation()
     }
 }
 #endif

@@ -122,6 +122,9 @@ struct SummarizeSheet: View {
             .accentWashedBackground()
         }
         .navigationViewStyle(.stack)
+        // Sized here, not at each call site: the ayah, surah, tafsir, riwayah and hadith screens all
+        // present this one type.
+        .smallMediumSheetPresentation()
         .task {
             // Gather first when the caller fetches sources on demand (the tafsir sheet loading the
             // editions it hasn't yet) - the note card shows a gathering state meanwhile.

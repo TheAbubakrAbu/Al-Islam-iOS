@@ -2783,9 +2783,9 @@ struct WordMeaningSheet: View {
             .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
-        // Full height from the start: the pages sit under the word, the strip and the tabs, and a
-        // medium detent left them below the fold.
-        .smallMediumSheetPresentation(startLarge: true)
+        // Opens halfway like every other viewer (Abu, 2026-10-04: a double tap should not take over
+        // the screen). The strip and the tabs sit below a medium fold, so drag up for the full card.
+        .smallMediumSheetPresentation()
         .onAppear {
             WordCardTrace.stamp("appear")
             #if DEBUG

@@ -2053,6 +2053,7 @@ struct QiraatPlacePickerSheet: View {
             .accentWashedBackground()
         }
         .navigationViewStyle(.stack)
+        .smallMediumSheetPresentation()
     }
 
     private var thisSurahSection: some View {

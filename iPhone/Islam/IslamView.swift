@@ -87,10 +87,14 @@ struct IslamView: View {
         case arabicAlphabet
         // Two tajweed resources again since 2026-10-03 (Abu: "bring back tajweed foundations and tajweed
         // course"): Foundations is the reference, a rule to a page; the Course teaches the same rules in
-        // order (it kept everything the 2026-09-23 merge put in it). The course is a banner under the
-        // LEARN tiles (`bannerResources`), so that section keeps its row of three.
+        // order (it kept everything the 2026-09-23 merge put in it). Both are TILES, which with the
+        // alphabet fills LEARN's row of three; the journal is that section's banner.
         case tajweedFoundations
         case tajweedCourse
+        // Listed here, with the resources it belongs to: a section draws its items in CASE ORDER, so
+        // the journal has to sit inside LEARN's run to be LEARN's banner. It was down with the two
+        // locators while it was a TOOLS tile (Abu, 2026-09-23: the tab's "things you do").
+        case journal
         case commonAdhkar
         case commonDuas
         case tasbihCounter
@@ -99,9 +103,6 @@ struct IslamView: View {
         case hijriCalendarConverter
         case masjidLocator
         case halalFoodLocator
-        // The journal sits with the two locators (Abu, 2026-09-23): those three are the tab's
-        // "things you do", as against the reference screens under them.
-        case journal
         case pillarsAndBasics
         case howToGuides
         // With Pillars & Beliefs and How-To since the grid was sectioned (2026-10-02): knowing Allah
@@ -282,17 +283,28 @@ struct IslamView: View {
         /// The section the resource is listed under (`ResourceGroup`).
         var group: ResourceGroup {
             switch self {
+            // LEARN in the order the resources are taken up: the letters, the rules as a reference,
+            // then the course that teaches them, with the journal as the banner UNDER them (Abu,
+            // 2026-10-04: "islamic journal as the full row for learn ... and then tajweed foundations
+            // and tajweed course"). Writing down what you studied belongs with the studying.
             case .arabicAlphabet, .tajweedFoundations, .tajweedCourse, .journal: return .learn
             case .pillarsAndBasics, .howToGuides, .namesOfAllah: return .faith
             case .commonAdhkar, .commonDuas, .tasbihCounter: return .remembrance
             case .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets, .provingIslam: return .signs
             case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter,
-                 .masjidLocator, .halalFoodLocator, .islamicWallpapers, .askAI: return .tools
+                 .masjidLocator, .halalFoodLocator, .islamicWallpapers: return .tools
+            // Ask AI is last, alone (Abu, 2026-10-04): it is a conversation, not a reference page,
+            // so it closes the resources rather than sitting inside TOOLS where its banner split
+            // that section's tiles in two.
+            case .askAI: return .assistant
             }
         }
 
         /// The resources the grid draws as full-width banners under its tiles, in this order.
-        static let bannerResources: [IslamDestination] = [.tajweedCourse, .provingIslam, .askAI]
+        /// LEARN's banner is the JOURNAL, not the course (Abu, 2026-10-04): that leaves the three
+        /// study resources as a full row of tiles above it, and the journal - the one you WRITE in
+        /// rather than read - reads as the thing you do with what they taught you.
+        static let bannerResources: [IslamDestination] = [.journal, .provingIslam, .askAI]
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row), and minus the
@@ -311,7 +323,7 @@ struct IslamView: View {
     /// no grid row is left half empty; the two banners (Proving Islam, Ask AI) close their sections.
     /// A resource's order inside its section is still the enum's case order.
     private enum ResourceGroup: CaseIterable {
-        case learn, faith, remembrance, signs, tools
+        case learn, faith, remembrance, signs, tools, assistant
 
         var title: String {
             switch self {
@@ -320,6 +332,7 @@ struct IslamView: View {
             case .remembrance: return "REMEMBRANCE"
             case .signs: return "SIGNS & PROOFS"
             case .tools: return "TOOLS"
+            case .assistant: return "ASK AI"
             }
         }
 
@@ -330,6 +343,7 @@ struct IslamView: View {
             case .remembrance: return "heart.text.square"
             case .signs: return "checkmark.seal"
             case .tools: return "wrench.and.screwdriver"
+            case .assistant: return "sparkles"
             }
         }
 
@@ -484,21 +498,29 @@ struct IslamView: View {
                 #endif
             }
 
+            // Everything past the resources is reading, not doing: the day's reminder, the quote,
+            // the help doors, the other apps. They all sit at the FOOT of the tab, after Ask AI
+            // closes the resources (Abu, 2026-10-04) - the tab opens on what it is for, and the
+            // informational cards are what you scroll down to.
+            //
             // The Reminder of the Day lives in the Islam tab (Abu, 2026-09-12: "keep it in Islam,
-            // don't have it be a sheet"), directly UNDER the resources rather than above them
-            // (2026-09-18) - the tab opens on what it is for, and the card is the first thing past
-            // it. It renders only once the corpus has parsed, so the resource grid never waits on it.
+            // don't have it be a sheet"). It renders only once the corpus has parsed, so the
+            // resource grid never waits on it.
             #if os(iOS)
-            // Need a Hand?: getting started (while the Start Here guide is not on the tab), the
-            // tab's own text size, and when its day turns over. Under the resources, like the
-            // Reminder: the tab opens on what it is for (see HelpDoors.swift).
-            HelpDoorsSection(area: .islam)
-
             ReminderOfTheDaySection(openDoor: $reminderDoor)
                 .id("reminder")
             #endif
 
             ProphetQuote()
+
+            #if os(iOS)
+            // Need a Hand?: getting started (while the Start Here guide is not on the tab), the tab's
+            // own text size, and when its day turns over. Above the other apps (Abu, 2026-10-04):
+            // it is still about THIS tab, where the apps card is about leaving it, so the card that
+            // sends you elsewhere closes the screen.
+            HelpDoorsSection(area: .islam)
+            #endif
+
             AlIslamAppsSection()
                 .id("apps")
         }
@@ -517,6 +539,10 @@ struct IslamView: View {
                 }
             }
             .applyConditionalListStyle()
+            // The same tight section rhythm the Quran tab and every Islam resource screen use: the
+            // tab is a stack of short sections (five resource groups, then the cards), and the
+            // default spacing put a full gap of empty list between each one.
+            .compactListSectionSpacing()
             .reminderCardDestination($reminderDoor)
             .navigationTitle("Al-Islam")
             #if DEBUG
@@ -589,6 +615,7 @@ struct IslamView: View {
             islamListEntries(split: false)
         }
         .applyConditionalListStyle()
+        .compactListSectionSpacing()
         .navigationTitle("Al-Islam")
         #endif
     }
@@ -752,9 +779,12 @@ struct IslamView: View {
             // of a row its label had to shrink to "Ask AI" with no room to say what it does. It spans
             // the full width, with the caption the tiles cannot carry, and sits BELOW the grid
             // (Abu, 2026-09-19: the references are what the tab is for; the assistant is the thing
-            // you reach for when they have not answered you). Pulled OUT of `items` so it never
-            // draws twice. Proving Islam joins it (2026-09-29): a whole library with a sentence to
-            // say, and the nineteenth resource, which as a tile would leave a row of one.
+            // you reach for when they have not answered you). As of 2026-10-04 it has a section of
+            // its own at the foot of the resources, so here it is the only thing in `items` and the
+            // `tiles.isEmpty` guard below draws the banner with no grid above it. Pulled OUT of
+            // `items` so it never draws twice. Proving Islam and the Tajweed Course are banners too
+            // (2026-09-29): a whole library with a sentence to say, which as a tile would leave a
+            // row of one - they still close their own sections, above the tiles' rows.
             let banners = IslamDestination.bannerResources.filter { items.contains($0) }
             let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
 
@@ -1023,6 +1053,7 @@ struct IslamView: View {
         // The detail column's screens show the Now Playing bar; suppress the sidebar's copy or
         // recitation puts one identical bar in EACH column (the Quran tab's rule).
         .applyConditionalListStyle(disableNowPlayingInset: true)
+        .compactListSectionSpacing()
         .reminderCardDestination($reminderDoor)
         .navigationTitle("Al-Islam")
         // The same control, on the same setting, as the iPhone list's - the iPad simply never had it,

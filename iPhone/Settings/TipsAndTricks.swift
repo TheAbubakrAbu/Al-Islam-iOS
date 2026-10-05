@@ -931,6 +931,7 @@ struct TipsView: View {
         .navigationTitle(area.listTitle)
         .sheet(isPresented: $showTour) {
             TipsTourView(area: area)
+                .smallMediumSheetPresentation()
         }
         #if DEBUG
         // "-tipsTour": open the tour a moment after the list appears (a sheet cannot be tapped open

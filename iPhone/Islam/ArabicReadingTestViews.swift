@@ -116,7 +116,7 @@ struct ReadingTestView: View {
         .pushDestination(isPresented: sessionBinding) {
             if let session { ReadingSessionView(mode: session) }
         }
-        .sheet(isPresented: $showKey) { ReadingKeySheet() }
+        .sheet(isPresented: $showKey) { ReadingKeySheet().smallMediumSheetPresentation() }
         .confirmationDialog("Reset your Reading Test progress?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Reset Progress", role: .destructive) {
                 Settings.shared.hapticFeedback()

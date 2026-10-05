@@ -772,7 +772,7 @@ struct HadithView: View {
             }
             .sheet(isPresented: $showSearchFilterSheet) {
                 HadithSearchFilterSheet(filters: $searchFilters)
-                    .smallMediumSheetPresentation(startLarge: true)
+                    .smallMediumSheetPresentation()
             }
             // Apple Music-style: the bottom search bar minimizes while scrolling down.
             .collapseBarsOnScroll($barsCollapsed)
@@ -1165,6 +1165,11 @@ struct HadithView: View {
     private func summaryTileLabel(title: String, icon: String, reference: String, arabic: String, english: String) -> some View {
             // Tight on purpose (Abu, 2026-09-16), the Quran tab's tiles' exact grammar: 4 pt between
             // lines, 10 pt of padding, one line of each script, a small chip for the icon.
+            // LEADING, unlike the short-label tiles elsewhere in the app, which centre (Abu,
+            // 2026-10-05: "summary tiles and hadiths/ayahs should be leading everything else
+            // centered"). These tiles carry PROSE - a narration's opening, a translation - and a
+            // straight left edge is what you read down; a centred paragraph ragged on both sides is
+            // not. The Arabic keeps its own RTL side.
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     AccentIconChip(systemImage: icon, size: 18)

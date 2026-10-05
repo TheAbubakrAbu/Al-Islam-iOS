@@ -956,50 +956,15 @@ struct ReminderOfTheDayCard: View {
         let kept = reflections.has(entry.reflectionKey)
 
         VStack(alignment: .leading, spacing: 10) {
+            // "REMINDER OF THE DAY" and the two pills are the SECTION HEADER now
+            // (`ReminderOfTheDayHeader`); what stays here is which KIND of reminder today's is,
+            // which the header does not say.
             HStack(spacing: 8) {
                 AccentIconChip(systemImage: entry.kind.symbol, size: 26)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("REMINDER OF THE DAY")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.secondary)
-                    Text(entry.kind.label)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(accent)
-                }
+                Text(entry.kind.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(accent)
                 Spacer(minLength: 8)
-                // BUTTONS, not chevron-less links. Both pills sit in the same List row (the whole
-                // card is one row), and two NavigationLinks in a row activate TOGETHER - tapping
-                // either pushed Saved Reflections AND the Today screen (2026-09-19 audit). A plain
-                // NavigationLink is also wrong here: it drags a disclosure chevron to the card's
-                // edge, which is why they were chevron-less in the first place.
-                if !reflections.items.isEmpty {
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        openDoor = .reflections
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "bookmark.fill")
-                            Text("\(reflections.items.count)")
-                                .monospacedDigit()
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(accent)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 5)
-                        .background(Capsule().fill(accent.opacity(0.12)))
-                    }
-                    .buttonStyle(.plain)
-                }
-                if showsHubDoor {
-                    // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        openDoor = .hub
-                    } label: {
-                        DailyHubDoorLabel()
-                    }
-                    .buttonStyle(.plain)
-                }
             }
 
             // A step smaller all round (Abu, 2026-09-16: the Arabic "a little smaller", the English
@@ -1141,8 +1106,69 @@ struct ReminderOfTheDaySection: View {
 
     var body: some View {
         if let entry = resolver.card, !(hidesAppPicks && resolver.isAppPick) {
-            Section {
+            // The title and its pills are the SECTION HEADER, not a row inside the card (Abu,
+            // 2026-10-04): every other section on the Islam tab announces itself that way, and the
+            // card carried its own heading only because it was dropped into a headerless Section.
+            // `AdaptiveSectionHeader` rather than `SectionPillHeader` for the Hadith tab's reason:
+            // the pills are stateful buttons, which the pill header has no slot for.
+            Section(header:
+                ReminderOfTheDayHeader(entry: entry, showsHubDoor: showsHubDoor, openDoor: $openDoor)
+            ) {
                 ReminderOfTheDayCard(entry: entry, showsHubDoor: showsHubDoor, openDoor: $openDoor)
+            }
+        }
+    }
+}
+
+/// "REMINDER OF THE DAY" and its two pills, as the host Section's header. Lifted out of
+/// `ReminderOfTheDayCard` so the card is only the reminder itself; the pills still write the host
+/// List's `openDoor` (see the note on `ReminderOfTheDayCard.openDoor` for why the destination
+/// cannot live down here).
+private struct ReminderOfTheDayHeader: View {
+    @Environment(\.appearance) private var appearance
+    @ObservedObject private var reflections = SavedReflectionsStore.shared
+
+    let entry: DailyReminderEntry
+    let showsHubDoor: Bool
+    @Binding var openDoor: ReminderOfTheDayCard.HeaderDoor?
+
+    var body: some View {
+        AdaptiveSectionHeader {
+            HStack(spacing: 8) {
+                Image(systemName: entry.kind.symbol)
+                    .foregroundStyle(appearance.accent)
+                    .accessibilityHidden(true)
+
+                Text("REMINDER OF THE DAY")
+                    .accessibilityAddTraits(.isHeader)
+            }
+        } controls: {
+            if !reflections.items.isEmpty {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    openDoor = .reflections
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "bookmark.fill")
+                        Text("\(reflections.items.count)")
+                            .monospacedDigit()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(appearance.accent)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(appearance.accent.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+            }
+            if showsHubDoor {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    openDoor = .hub
+                } label: {
+                    DailyHubDoorLabel()
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -1299,7 +1325,7 @@ struct ReminderHadithSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
-        .smallMediumSheetPresentation(startLarge: true)
+        .smallMediumSheetPresentation()
         .task {
             guard let found = HadithCatalogBook.all.first(where: { $0.slug == link.slug }) else {
                 failed = true

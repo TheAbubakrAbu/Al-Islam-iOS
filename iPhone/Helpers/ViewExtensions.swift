@@ -1576,6 +1576,7 @@ struct ReciterPickerSheet: ViewModifier {
                     .environmentObject(settings)
                     .sheetDismissToolbar()
             }
+            .smallMediumSheetPresentation()
         }
     }
 }
@@ -2138,6 +2139,24 @@ struct AccentIconChip: View {
             // Decoration beside a title in every one of its ~60 uses: VoiceOver read the symbol's own
             // name ("Hands With Sparkles, Filled") before the title it illustrates.
             .accessibilityHidden(true)
+    }
+}
+
+/// Whether the Quran tab is the one on screen, as `MainTabView` sees it (`QuranView.isActiveTab`).
+/// Read by the page reader's `MushafRootTabBarHidden`, which must not hide the SHARED root tab bar
+/// while another tab is front - see the note there on the launch warm pass.
+///
+/// Declared here rather than beside its one reader because `QuranView.swift`, which PUBLISHES it,
+/// compiles into the Watch target too, and MushafReader.swift does not.
+struct QuranTabActiveKey: EnvironmentKey {
+    /// True so a reader hosted outside the tab (a sheet, a preview) behaves as it always has.
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    var isQuranTabActive: Bool {
+        get { self[QuranTabActiveKey.self] }
+        set { self[QuranTabActiveKey.self] = newValue }
     }
 }
 

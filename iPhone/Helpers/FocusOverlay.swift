@@ -138,6 +138,7 @@ struct FocusNameDetails: View {
             SheetNavigationContainer {
                 NameDetailView(name: name, isSheet: true)
             }
+            .smallMediumSheetPresentation()
         }
     }
 

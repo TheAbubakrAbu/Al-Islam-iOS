@@ -584,7 +584,7 @@ struct HadithBookView: View {
         }
         .sheet(isPresented: $showSearchFilterSheet) {
             HadithSearchFilterSheet(filters: $searchFilters, scope: .oneBook)
-                .smallMediumSheetPresentation(startLarge: true)
+                .smallMediumSheetPresentation()
         }
     }
 
@@ -2263,7 +2263,7 @@ struct HadithChapterView: View {
         #endif
         .sheet(isPresented: $showSearchFilterSheet) {
             HadithSearchFilterSheet(filters: $searchFilters, scope: .oneChapter)
-                .smallMediumSheetPresentation(startLarge: true)
+                .smallMediumSheetPresentation()
         }
         .sheet(isPresented: $showChapterSettings) {
             SettingsHadithView()

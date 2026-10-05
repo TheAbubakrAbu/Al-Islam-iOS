@@ -436,6 +436,9 @@ struct AskAIChatSheet: View {
         NavigationStack {
             AskAIChatView(initialQuestion: initialQuestion, presentedAsSheet: true)
         }
+        // Sized here, not at the six call sites: every screen that offers Ask AI presents this one
+        // type, so the half-height opening belongs with the sheet itself.
+        .smallMediumSheetPresentation()
     }
 }
 
