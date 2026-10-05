@@ -46,6 +46,20 @@ struct PrayerCalculationMethod: Identifiable, Equatable {
     /// When set, `Adhan` gets to apply the method's own seasonal behavior instead of plain angles. Only used
     /// for Moonsighting Committee, whose rule is not expressible as a fixed angle.
     var adhanMethod: CalculationMethod? = nil
+    /// The whole minutes the publishing body adds to the astronomical instant, part of its definition
+    /// as much as the angles are: Diyanet's precaution minutes, the UAE's three, the one minute after
+    /// the sun's transit that MWL, ISNA, Egypt, Karachi and MUIS give Dhuhr.
+    ///
+    /// These lived in Adhan's `methodAdjustments`, which is internal to the package. When the catalog
+    /// replaced `CalculationMethod.params` with plain angles (4.6.0) they were dropped without a word,
+    /// and Maghrib under Diyanet came out seven minutes before the timetable's (found 2026-10-04 by a
+    /// comparison against the package's own method table). They ride in the public `adjustments`
+    /// field, which the engine adds exactly as it added the internal one.
+    var adjustments = PrayerAdjustments()
+    /// How a computed instant becomes a minute, when the publishing body defines it: MUIS rounds every
+    /// time up, and the engine applies that. `nil` (every other row) hands the engine `.none` and the
+    /// app rounds each time to its safe side (`PrayerMinute`): a start up, sunrise down.
+    var rounding: Rounding? = nil
 
     var angleSummary: String {
         "Fajr: \(IshaRule.format(fajrAngle))° / \(isha.summary)"
@@ -58,7 +72,9 @@ struct PrayerCalculationMethod: Identifiable, Equatable {
     /// public and mutable, which is exactly what a data-driven method needs.
     var parameters: CalculationParameters {
         if let adhanMethod {
-            return adhanMethod.params
+            var params = adhanMethod.params
+            params.rounding = rounding ?? Rounding.none
+            return params
         }
         var params = CalculationMethod.other.params
         params.fajrAngle = fajrAngle
@@ -70,6 +86,8 @@ struct PrayerCalculationMethod: Identifiable, Equatable {
             params.ishaAngle = 0
             params.ishaInterval = mins
         }
+        params.adjustments = adjustments
+        params.rounding = rounding ?? Rounding.none
         return params
     }
 }
@@ -95,14 +113,16 @@ enum PrayerCalculationCatalog {
             name: "Muslim World League",
             region: "Global default",
             fajrAngle: 18, isha: .angle(17),
-            countryCodes: []
+            countryCodes: [],
+            adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Islamic Society of North America (ISNA)",
             name: "Islamic Society of North America (ISNA)",
             region: "United States, Canada",
             fajrAngle: 15, isha: .angle(15),
-            countryCodes: ["US", "CA", "MX", "PR", "VI", "GU", "AS", "MP", "UM"]
+            countryCodes: ["US", "CA", "MX", "PR", "VI", "GU", "AS", "MP", "UM"],
+            adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Britain (Moonsighting Committee)",
@@ -127,7 +147,9 @@ enum PrayerCalculationCatalog {
             name: "UAE General Authority of Islamic Affairs",
             region: "United Arab Emirates",
             fajrAngle: 18.2, isha: .angle(18.2),
-            countryCodes: ["AE"]
+            countryCodes: ["AE"],
+            // The authority's three minutes of precaution on each side of the day.
+            adjustments: PrayerAdjustments(sunrise: -3, dhuhr: 3, asr: 3, maghrib: 3)
         ),
         PrayerCalculationMethod(
             id: "Kuwait",
@@ -147,8 +169,11 @@ enum PrayerCalculationCatalog {
             id: "Jordan (Ministry of Awqaf)",
             name: "Jordan, Ministry of Awqaf",
             region: "Jordan, Palestine",
-            fajrAngle: 18, isha: .angle(17),
-            countryCodes: ["JO", "PS"]
+            // 18 and 18 with Maghrib five minutes after sunset, as the ministry's method is published
+            // (Aladhan's method 23). The row said Isha 17 with no Maghrib margin until 2026-10-04.
+            fajrAngle: 18, isha: .angle(18),
+            countryCodes: ["JO", "PS"],
+            adjustments: PrayerAdjustments(maghrib: 5)
         ),
 
         // MARK: Africa
@@ -157,7 +182,8 @@ enum PrayerCalculationCatalog {
             name: "Egyptian General Authority of Survey",
             region: "Egypt",
             fajrAngle: 19.5, isha: .angle(17.5),
-            countryCodes: ["EG", "LY", "SD", "SS", "DJ", "ER", "SO", "LB", "SY", "IQ"]
+            countryCodes: ["EG", "LY", "SD", "SS", "DJ", "ER", "SO", "LB", "SY", "IQ"],
+            adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Morocco (Ministry of Endowments)",
@@ -194,7 +220,9 @@ enum PrayerCalculationCatalog {
             name: "Diyanet İşleri Başkanlığı",
             region: "Turkey",
             fajrAngle: 18, isha: .angle(17),
-            countryCodes: ["TR", "CY", "AL", "XK", "BA", "MK"]
+            countryCodes: ["TR", "CY", "AL", "XK", "BA", "MK"],
+            // Diyanet's temkin: sunrise seven minutes early, Dhuhr five, Asr four and Maghrib seven late.
+            adjustments: PrayerAdjustments(sunrise: -7, dhuhr: 5, asr: 4, maghrib: 7)
         ),
         PrayerCalculationMethod(
             id: "France (Musulmans de France)",
@@ -224,21 +252,37 @@ enum PrayerCalculationCatalog {
             name: "University of Islamic Sciences, Karachi",
             region: "Pakistan, India, Bangladesh",
             fajrAngle: 18, isha: .angle(18),
-            countryCodes: ["PK", "IN", "BD", "AF", "NP", "LK"]
+            countryCodes: ["PK", "IN", "BD", "AF", "NP", "LK"],
+            adjustments: PrayerAdjustments(dhuhr: 1)
         ),
         PrayerCalculationMethod(
             id: "Malaysia (JAKIM)",
             name: "JAKIM (Jabatan Kemajuan Islam Malaysia)",
             region: "Malaysia",
+            // Subuh at 18 degrees since November 2019, when the national council moved it from 20 (the
+            // states followed: Selangor's Subuh came eight minutes later that week). e-solat's Kuala Lumpur
+            // timetable agrees within its zone margin (05:52 on 2026-10-05; 18 degrees gives 05:50:34, 20
+            // gave 05:42:32). The row said 20 until 2026-10-04, as Aladhan's still does.
+            fajrAngle: 18, isha: .angle(18),
+            countryCodes: ["MY"]
+        ),
+        PrayerCalculationMethod(
+            id: "Brunei (Ministry of Religious Affairs)",
+            name: "Brunei, Ministry of Religious Affairs",
+            region: "Brunei",
+            // Brunei kept Subuh at 20 degrees (Brunei-Muara on 2026-10-05: Subuh 04:50, 20 degrees gives
+            // 04:49:57, 18 would give 04:58). It rode the Malaysia row until that row moved to 18.
             fajrAngle: 20, isha: .angle(18),
-            countryCodes: ["MY", "BN"]
+            countryCodes: ["BN"]
         ),
         PrayerCalculationMethod(
             id: "Singapore (MUIS)",
             name: "MUIS (Majlis Ugama Islam Singapura)",
             region: "Singapore",
             fajrAngle: 20, isha: .angle(18),
-            countryCodes: ["SG"]
+            countryCodes: ["SG"],
+            adjustments: PrayerAdjustments(dhuhr: 1),
+            rounding: .up
         ),
         PrayerCalculationMethod(
             id: "Indonesia (Kemenag)",

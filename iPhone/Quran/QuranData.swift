@@ -171,7 +171,34 @@ struct Surah: Codable, Identifiable, Equatable {
         guard let qIn = displayQiraah, !qIn.isEmpty else { return numberOfAyahs }
         let q = Settings.normalizeLegacyRiwayahTag(qIn)
         guard !q.isEmpty, q != Settings.Riwayah.hafsTag, q != "Hafs" else { return numberOfAyahs }
-        return ayahs.filter { $0.existsInQiraah(displayQiraah, surahID: id) }.count
+        let key = "\(id)|\(q)"
+        if let cached = QiraahAyahCountCache.count(for: key) { return cached }
+        let count = ayahs.filter { $0.existsInQiraah(displayQiraah, surahID: id) }.count
+        QiraahAyahCountCache.store(count, for: key)
+        return count
+    }
+}
+
+/// `Surah.numberOfAyahs(for:)` memo (Phase 10.8). The answer depends on the loaded texts (purged when
+/// the Quran reloads with or without the riwayat overlays) and on the beta switch (purged from its
+/// `didSet`), and on nothing else.
+enum QiraahAyahCountCache {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var counts: [String: Int] = [:]
+
+    static func count(for key: String) -> Int? {
+        lock.lock(); defer { lock.unlock() }
+        return counts[key]
+    }
+
+    static func store(_ count: Int, for key: String) {
+        lock.lock(); defer { lock.unlock() }
+        counts[key] = count
+    }
+
+    static func purge() {
+        lock.lock(); defer { lock.unlock() }
+        counts.removeAll()
     }
 }
 
@@ -301,6 +328,17 @@ struct Ayah: Codable, Identifiable, Equatable {
         return result
     }
 
+    /// `removingArabicSukoon` through the clean-text cache under its own prefix (Phase 10.5): the
+    /// non-Hafs display text ran the scalar filter per row per pass and 2-3 times per ayah per page
+    /// compose, where the Hafs branch returns its stored string.
+    private static func withoutSukoon(_ raw: String) -> String {
+        let key = ("S1:" + raw) as NSString
+        if let cached = CleanArabicTextCache.cache.object(forKey: key) { return cached as String }
+        let result = raw.removingArabicSukoon
+        CleanArabicTextCache.cache.setObject(result as NSString, forKey: key)
+        return result
+    }
+
     /// True if this ayah exists as its own verse in the given qiraah. In Hafs every ayah exists; in Warsh/Qaloon/etc. some Hafs ayahs are merged, so we only show ayahs that have qiraah-specific text (e.g. Baqarah has 286 in Hafs but 285 in Warsh).
     func existsInQiraah(_ displayQiraah: String?, surahID: Int? = nil) -> Bool {
         guard let qIn = displayQiraah, !qIn.isEmpty, qIn != "Hafs" else {
@@ -362,7 +400,7 @@ struct Ayah: Codable, Identifiable, Equatable {
         } else if clean {
             textCleanArabic(for: qiraah, surahID: surahId, removeDots: removeDots)
         } else {
-            vocalized(textArabic(for: qiraah, surahID: surahId).removingArabicSukoon, removeDots: removeDots)
+            vocalized(Self.withoutSukoon(textArabic(for: qiraah, surahID: surahId)), removeDots: removeDots)
         }
         // Al-Fatihah 1:1 in clean mode: only a ta'awwudh gives way to the basmala, tested on the RAW
         // text with the signs stripped (the composer's own check). "Does not start with بسم" also
@@ -551,12 +589,14 @@ final class TajweedStore {
     /// colors (`TajweedColorOverrides`). The paint ops and the painted strings both bake the colors
     /// in, so a recolored rule has to miss both caches the way a hidden one does.
     private func snapshotVisibility() -> String {
-        let visible = Set(TajweedLegendCategory.allCases.filter { settings.isTajweedCategoryVisible($0) })
+        // The memoized signature carries the same 17 flags (Phase 10.3): read it once instead of the
+        // 17 toggles per ayah per paint (and per row lookup on main).
+        let signature = settings.tajweedCategoryVisibilitySignature
+        let visible = settings.tajweedVisibleCategories(fromSignature: signature)
         visibilityLock.lock()
         visibleCategories = visible
         visibilityLock.unlock()
-        return TajweedLegendCategory.allCases.map { visible.contains($0) ? "1" : "0" }.joined()
-            + "#" + TajweedColorOverrides.shared.signature
+        return signature
     }
 
 
@@ -565,12 +605,16 @@ final class TajweedStore {
         let priority: Int
         let category: TajweedLegendCategory
         let color: Color?
+        /// The rule's own name when it is painted in another rule's color (`TajweedRuleAlias`).
+        let alias: TajweedRuleAlias?
 
-        init(range: NSRange, priority: Int, category: TajweedLegendCategory, color: Color? = nil) {
+        init(range: NSRange, priority: Int, category: TajweedLegendCategory, color: Color? = nil,
+             alias: TajweedRuleAlias? = nil) {
             self.range = range
             self.priority = priority
             self.category = category
             self.color = color
+            self.alias = alias
         }
     }
 
@@ -825,16 +869,33 @@ final class TajweedStore {
         }
         for (_, op) in orderedOps {
             let targetIndices = projectedPaintIndices(for: op.range, projection: projection, rawWaqfUTF16Skip: rawWaqfUTF16Skip)
+            // The colour resolves once per op, not once per code unit (Phase 10.8): `op.category.color`
+            // takes the overrides lock, builds a `Color` and bridges it to `UIColor` each time, and this
+            // ran per unit of every painted ayah on every prewarm. Consecutive accepted units take one
+            // `addAttribute`: an attribute over a run is the same attributed string as one per unit.
+            var color: AnyObject?
+            var runStart = -1
+            var runEnd = -1
             for i in targetIndices {
                 guard i >= 0, i < utf16Count else { continue }
                 if waqfUTF16Skip.contains(i) { continue }
                 guard op.priority >= priorityPerUTF16[i] else { continue }
                 priorityPerUTF16[i] = op.priority
-                attributed.addAttribute(
-                    .foregroundColor,
-                    value: platformTajweedColor(op.color ?? op.category.color),
-                    range: NSRange(location: i, length: 1)
-                )
+                if runStart >= 0, i == runEnd + 1 {
+                    runEnd = i
+                    continue
+                }
+                if runStart >= 0, let color {
+                    attributed.addAttribute(.foregroundColor, value: color,
+                                            range: NSRange(location: runStart, length: runEnd - runStart + 1))
+                }
+                if color == nil { color = platformTajweedColor(op.color ?? op.category.color) }
+                runStart = i
+                runEnd = i
+            }
+            if runStart >= 0, let color {
+                attributed.addAttribute(.foregroundColor, value: color,
+                                        range: NSRange(location: runStart, length: runEnd - runStart + 1))
             }
         }
 
@@ -853,6 +914,15 @@ final class TajweedStore {
     /// in legend order. Runs the same pipeline as `attributedText` (and warms the same caches),
     /// so the list always agrees with the colors on screen. Empty when tajweed can't paint here.
     func ruleCategories(surah: Int, ayah: Int, text: String, wordRange: NSRange) -> [TajweedLegendCategory] {
+        var seen = Set<TajweedLegendCategory>()
+        return wordRules(surah: surah, ayah: ayah, text: text, wordRange: wordRange)
+            .map(\.category)
+            .filter { seen.insert($0).inserted }
+    }
+
+    /// The same rules as `ruleCategories`, each under its own name: a rule painted in another
+    /// rule's color by design (`TajweedRuleAlias`) is listed as itself, in the color it is painted.
+    func wordRules(surah: Int, ayah: Int, text: String, wordRange: NSRange) -> [TajweedWordRule] {
         let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):0:0:0:0:\(tajweedVisibilitySignature())" as NSString
         if opsCache.object(forKey: cacheKey) == nil {
             _ = attributedText(surah: surah, ayah: ayah, text: text)
@@ -864,7 +934,7 @@ final class TajweedStore {
         // both claim (the bare wasl alef of ٱللَّهِ, which the dropped-letter pass also marks before
         // the wasl rule outpaints it) reports only the color the reader sees.
         guard wordRange.location >= 0, wordRange.length > 0 else { return [] }
-        var winner = [(priority: Int, category: TajweedLegendCategory)?](repeating: nil, count: wordRange.length)
+        var winner = [(priority: Int, rule: TajweedWordRule)?](repeating: nil, count: wordRange.length)
         let ordered = box.ops.enumerated().sorted {
             if $0.element.priority == $1.element.priority { return $0.offset < $1.offset }
             return $0.element.priority < $1.element.priority
@@ -875,11 +945,15 @@ final class TajweedStore {
             for i in hit.location ..< hit.location + hit.length {
                 let slot = i - wordRange.location
                 if let current = winner[slot], op.priority < current.priority { continue }
-                winner[slot] = (op.priority, op.category)
+                winner[slot] = (op.priority, TajweedWordRule(category: op.category, alias: op.alias))
             }
         }
-        let present = Set(winner.compactMap { $0?.category })
-        return TajweedLegendCategory.allCases.filter { present.contains($0) }
+        let present = Set(winner.compactMap { $0?.rule })
+        let legendOrder = Dictionary(uniqueKeysWithValues: TajweedLegendCategory.allCases.enumerated().map { ($1, $0) })
+        return present.sorted {
+            let (a, b) = (legendOrder[$0.category] ?? 0, legendOrder[$1.category] ?? 0)
+            return a != b ? a < b : $0.id < $1.id
+        }
     }
 
     private struct TajweedProjection {
@@ -1111,9 +1185,23 @@ final class TajweedStore {
         if isVisible(.maddNaturalMiniature) {
             appendScalarPaintOps(
                 text: text,
-                scalars: [Self.smallWaw.value, Self.smallYeh.value, Self.daggerAlif.value],
+                scalars: [Self.daggerAlif.value],
                 priority: PaintPriority.maddNatural2MiniatureScalars,
                 category: .maddNaturalMiniature,
+                into: &ops
+            )
+            // The silah ۥ / ۦ on an ayah's LAST letter (عِظَامَهُۥ 75:3, بِيَمِينِهِۦ 84:7) is not read at the
+            // stop, and every ayah end is painted as a stop; those 26 were painted as a two-count madd
+            // (2026-10-04). Anywhere else in the ayah it is read, and painted. Both marks are modifier
+            // letters, so each is a cluster of its own AFTER that letter: the range runs to the end.
+            appendScalarPaintOps(
+                text: text,
+                scalars: [Self.smallWaw.value, Self.smallYeh.value],
+                priority: PaintPriority.maddNatural2MiniatureScalars,
+                category: .maddNaturalMiniature,
+                outside: indexOfFinalArabicLetterCluster(clusters: clusters).map {
+                    clusters[$0].utf16Range.lowerBound..<text.utf16.count
+                },
                 into: &ops
             )
 
@@ -1141,37 +1229,14 @@ final class TajweedStore {
                 if strongerMaddRuleCovers(range: nsRange(for: clusters[index]), ops: ops) { continue }
                 ops.append(PaintOp(range: nsRange(for: clusters[index]), priority: PaintPriority.maddNecessary6, category: .maddNecessary))
             }
-            // Alif + maddah (ٓ) after an istila letter, without ٓاْ on one cluster - e.g. ٱلضَّآلِّينَ (lazim-style coloring).
-            for i in clusters.indices where i > 0 {
-                let cur = clusters[i]
-                if i == finalAaridCarrier { continue }
-                if hasMiniatureMaddScalar(cur) { continue }
-                guard isBareAlifForMadd(cur), hasMaddah(cur) else { continue }
-                if isLazimCombinedAlifCluster(cur) { continue }
-                if strongerMaddRuleCovers(range: nsRange(for: cur), ops: ops) { continue }
-                let prev = clusters[i - 1]
-                guard let pl = prev.primaryArabicLetter, TajweedRules.heavyBaseLetters.contains(pl) else { continue }
-                ops.append(PaintOp(range: nsRange(for: cur), priority: PaintPriority.maddNecessary6, category: .maddNecessary))
-            }
-            for i in clusters.indices where isLazimWawThenAlifSukoon(clusters: clusters, wawIndex: i) {
-                guard i + 1 < clusters.count else { continue }
-                if i == finalAaridCarrier || i + 1 == finalAaridCarrier { continue }
-                if hasMiniatureMaddScalar(clusters[i]) || hasMiniatureMaddScalar(clusters[i + 1]) { continue }
-                if strongerMaddRuleCovers(range: nsRange(for: clusters[i]), ops: ops) { continue }
-                ops.append(PaintOp(range: nsRange(for: clusters[i]), priority: PaintPriority.maddNecessary6, category: .maddNecessary))
-                ops.append(PaintOp(range: nsRange(for: clusters[i + 1]), priority: PaintPriority.maddNecessary6, category: .maddNecessary))
-            }
-            if ayah == 1, TajweedRules.surahsOpeningMuqattaat.contains(surah) {
-                for i in clusters.indices {
-                    if i == finalAaridCarrier { continue }
-                    if hasMiniatureMaddScalar(clusters[i]) { continue }
-                    guard hasMaddah(clusters[i]) else { continue }
-                    if isLazimCombinedAlifCluster(clusters[i]) { continue }
-                    if isLazimWawThenAlifSukoon(clusters: clusters, wawIndex: i) { continue }
-                    if strongerMaddRuleCovers(range: nsRange(for: clusters[i]), ops: ops) { continue }
-                    ops.append(PaintOp(range: nsRange(for: clusters[i]), priority: PaintPriority.maddNecessary6, category: .maddNecessary))
-                }
-            }
+            // Three more Lazim loops stood here until 2026-10-04: alif + maddah after an istila letter,
+            // waw + maddah before a silent alif, and any maddah in ayah 1 of a muqatta'at surah. Each
+            // painted whatever maddah the explicit pass above had not covered, so hiding Madd Munfasil
+            // or Madd Muttasil in the legend turned those sites dark red, and the waw loop had no true
+            // site at all: its 522 sites are all munfasil, bar the ayah-final one of 20:92, which is a
+            // two-count madd at the stop. `appendExplicitMaddahPaintOps` and
+            // `appendMuqattaatMaddLazimPaintOps` between them already paint every one of the 148
+            // Lazim sites of the Hafs text.
         }
 
         if isVisible(.maddConnected) {
@@ -1227,23 +1292,11 @@ final class TajweedStore {
             }
         }
 
-        // Fallback: explicit maddah (ٓ) is not madd tabi'i.
-        // If not already covered by connected/separated/necessary logic, color as necessary.
-        if isVisible(.maddNecessary) {
-            for i in clusters.indices where hasMaddah(clusters[i]) {
-                if i == finalAaridCarrier { continue }
-                if i == ayahFinalMaddNaturalIndex { continue }
-                if hasMiniatureMaddScalar(clusters[i]) { continue }
-                if strongerMaddRuleCoversCluster(index: i, ops: ops, clusters: clusters) { continue }
-                appendSpecialMaddPaintOps(
-                    text: text,
-                    range: nsRange(for: clusters[i]),
-                    priority: PaintPriority.maddNecessary6,
-                    category: .maddNecessary,
-                    into: &ops
-                )
-            }
-        }
+        // No fallback here any more (2026-10-04). It painted every maddah the passes above left
+        // uncovered as Madd Lazim, which undid the two-count classes (madd badal, a madd letter at
+        // a stop) and recoloured 2,308 munfasil or 1,567 muttasil sites as Lazim the moment their
+        // own category was hidden. `explicitMaddahCategory` classifies every maddah; a class the
+        // reader has hidden stays unpainted.
 
         if isVisible(.maddSukoon),
            let finalCarrier = finalAaridCarrier,
@@ -1429,7 +1482,42 @@ final class TajweedStore {
             return (.maddNaturalMiniature, PaintPriority.maddNatural2MiniatureScalars)
         }
 
-        return (.maddNecessary, PaintPriority.explicitMaddNecessary)
+        // No hamza and no shadda right after it. This used to return Madd Lazim for everything
+        // that got here, which painted the madd badal أٓ (ٱلۡأٓخِرَةِ 2:4, لِأٓدَمَ 2:34, 277 sites) and
+        // ضَلُّوٓاْ at 20:92 as a six-count madd (2026-10-04). Only a sukoon after the madd makes it
+        // lazim; the rest are two counts.
+        if maddahIsLazim(clusters: clusters, index: index) {
+            return (.maddNecessary, PaintPriority.explicitMaddNecessary)
+        }
+        return (.maddNatural, PaintPriority.maddNatural2)
+    }
+
+    /// Whether a maddah that no hamza and no immediate shadda follows is still Madd Lazim: it rides
+    /// a muqatta'at letter (any base other than a madd letter or the badal أ), or the first marked
+    /// letter after it in the same word carries a shadda or a sukoon. The walk steps over unmarked
+    /// letters, which is the silent lam of ٱل in ءَآللَّهُ (10:59, 27:59) and ءَآلذَّكَرَيۡنِ (6:143, 6:144);
+    /// the sukoon case is ءَآلۡـَٰٔنَ (10:51, 10:91).
+    private func maddahIsLazim(clusters: [CharacterClusterInfo], index: Int) -> Bool {
+        if let base = clusters[index].primaryArabicLetter,
+           !(base == "ا" || base == "و" || base == "ي" || base == "ى" || base == "أ") {
+            return true
+        }
+        var next = index + 1
+        while next < clusters.count {
+            let cluster = clusters[next]
+            if isWhitespaceOnly(cluster) { return false }
+            guard cluster.primaryArabicLetter != nil else {
+                next += 1
+                continue
+            }
+            if hasShadda(cluster) || hasUthmaniSukoon(cluster) { return true }
+            if !hasAnyTashkeel(cluster) {
+                next += 1
+                continue
+            }
+            return false
+        }
+        return false
     }
 
     private func hasMiniatureMaddMark(_ cluster: CharacterClusterInfo) -> Bool {
@@ -1572,13 +1660,14 @@ final class TajweedStore {
         scalars: [UInt32],
         priority: Int,
         category: TajweedLegendCategory,
+        outside excluded: Range<Int>? = nil,
         into ops: inout [PaintOp]
     ) {
         let want = Set(scalars)
         var u16 = 0
         for s in text.unicodeScalars {
             let w = utf16Length(of: s)
-            if want.contains(s.value) {
+            if want.contains(s.value), !(excluded?.contains(u16) ?? false) {
                 ops.append(PaintOp(range: NSRange(location: u16, length: w), priority: priority, category: category))
             }
             u16 += w
@@ -1832,6 +1921,11 @@ final class TajweedStore {
         // Check for clusters with miniature madd marks (dagger alif, small waw, small yeh)
         // These should also be recognized as madd arid carriers
         if hasMiniatureMaddScalar(cluster) {
+            // A dagger alef rides the consonant it lengthens (مَٰ in ٱلرَّحۡمَٰنُ), so the base test below never
+            // passed for it: 55 ayahs ending like 55:1, 2:197 ٱلۡأَلۡبَٰبِ and 3:13 ٱلۡأَبۡصَٰرِ kept the two-count
+            // Tiny Madd while ٱلۡعَذَابِ got Ending Madd (2026-10-04). The fatha on that consonant is the
+            // vowel the madd extends.
+            if cluster.contains(Self.daggerAlif), hasFathaFamily(cluster), !hasFathatayn(cluster) { return true }
             guard let base = cluster.primaryArabicLetter else { return false }
             // Miniature marks should be on actual letter bases
             if base == "ا" || base == "و" || base == "ي" || base == "ى" {
@@ -2029,7 +2123,23 @@ final class TajweedStore {
             if muqattaatProtectedIndices.contains(index) { continue }
             let cluster = clusters[index]
             guard let base = cluster.primaryArabicLetter else { continue }
-            guard !hasAnyArabicMark(cluster) else { continue }
+            // The alif under the small upright zero (U+06E0) is dropped in connected reading:
+            // أَنَا۠ and its وَ / فَ forms, and لَّٰكِنَّا۠ at 18:38, 62 sites. The mark made the guard below
+            // skip every one of them, so they stayed in the default colour (2026-10-04). The four
+            // that END an ayah (33:10, 33:66, 33:67, 76:15) are recited at the stop and are left alone.
+            if base == "ا", cluster.contains(Self.smallHighUprightRectangularZero), index != ayahFinalLetterIndex,
+               let letterRange = primaryArabicLetterScalarRange(in: cluster) {
+                ops.append(PaintOp(range: letterRange, priority: PaintPriority.droppedLetter, category: .droppedLetter))
+                continue
+            }
+            // A stop sign riding the letter is punctuation, not a vowel: يَلۡهَثۚ ذَّٰلِكَ (7:176) kept its
+            // merged ث in the default colour because the ۚ counted as a mark, and so did the silent
+            // alif after a tanween at 334 pause marks (مَرَضٗاۖ 2:10), whose tanween was already painted
+            // merging into the next word (2026-10-04). Pause marks are painted for reading on, like
+            // every other rule here. Only the letter is painted below, never the sign.
+            guard !cluster.text.unicodeScalars.contains(where: {
+                isArabicMarkScalar($0) && !TajweedRules.stopSignScalars.contains($0.value)
+            }) else { continue }
             if hasDetachedArabicMarkAfter(clusters, index: index) { continue }
             if cluster.contains(Self.hamzatWasl),
                rangeIncludesFirstAyahLetterHamzatWasl(nsRange(for: cluster), clusters: clusters) {
@@ -2189,10 +2299,11 @@ final class TajweedStore {
         range: NSRange,
         priority: Int,
         category: TajweedLegendCategory,
+        alias: TajweedRuleAlias? = nil,
         into ops: inout [PaintOp]
     ) {
         guard isVisible(category) else { return }
-        ops.append(PaintOp(range: range, priority: priority, category: category, color: category.color))
+        ops.append(PaintOp(range: range, priority: priority, category: category, color: category.color, alias: alias))
     }
 
     /// Noon/tanween behavior where next-letter coloring is allowed only for idgham variants.
@@ -2209,8 +2320,10 @@ final class TajweedStore {
         }
 
         if TajweedRules.noonTanweenSplitIdghamLetters.contains(nextLetter) {
-            // Noon/tanween before meem/yaa/waw: source is bilaa ghunnah, target gets ghunnah color.
-            appendPaintOpIfVisible(range: sourceRange, priority: PaintPriority.idghamBilaGhunnah, category: .idghamBilaGhunnah, into: &ops)
+            // Noon/tanween before meem/yaa/waw: a merge WITH ghunnah. The noon itself is not heard, so
+            // it is drawn in the silent grey, under its own name; the ghunnah is drawn on the target.
+            appendPaintOpIfVisible(range: sourceRange, priority: PaintPriority.idghamBilaGhunnah, category: .idghamBilaGhunnah,
+                                   alias: .idghamWithGhunnah, into: &ops)
             appendPaintOpIfVisible(range: targetRange, priority: PaintPriority.generalGhunnah, category: .generalGhunnah, into: &ops)
             return
         }
@@ -2252,12 +2365,21 @@ final class TajweedStore {
             return
         }
         let priority = category == .iqlaab ? PaintPriority.iqlaab : PaintPriority.ikhfaa
-        appendPaintOpIfVisible(range: sourceRange, priority: priority, category: category, into: &ops)
+        // Meem before baa is ikhfaa shafawi, drawn in iqlab's color (the same lip-closed nasal).
+        appendPaintOpIfVisible(range: sourceRange, priority: priority, category: category,
+                               alias: category == .iqlaab ? .ikhfaaShafawi : nil, into: &ops)
     }
 
     /// Madd before ٱ merges (e.g. بِٱلله); not a stand-alone two-count madd.
     private func nextClusterIsHamzatWasl(clusters: [CharacterClusterInfo], after i: Int) -> Bool {
-        guard let nextIndex = nextMeaningfulClusterIndex(clusters: clusters, after: i) else { return false }
+        guard var nextIndex = nextMeaningfulClusterIndex(clusters: clusters, after: i) else { return false }
+        // The plural waw is followed by its silent alif before the next word (وَعَمِلُواْ ٱلصَّٰلِحَٰتِ 2:25).
+        // The test stopped at that alif, so the waw kept its two-count madd colour at 495 sites
+        // where it is dropped exactly like the ya of فِي ٱلۡأَرۡضِ (2026-10-04). Look past it.
+        if isBareAlifForMadd(clusters[nextIndex]), hasStandardSukoon(clusters[nextIndex]), !hasMaddah(clusters[nextIndex]),
+           let afterSilentAlif = nextMeaningfulClusterIndex(clusters: clusters, after: nextIndex) {
+            nextIndex = afterSilentAlif
+        }
         return clusters[nextIndex].contains(Self.hamzatWasl)
     }
 
@@ -2748,12 +2870,21 @@ final class TajweedStore {
             // baa) still colors its tanween source as iqlaab - the tiny-meem mark above is painted separately.
             if tanweenScalarRange(in: cluster) != nil {
                 let skipFollower = hasFathatayn(cluster)
-                guard let nextIndex = nextArabicLetterClusterIndex(
+                guard var nextIndex = nextArabicLetterClusterIndex(
                     clusters: clusters,
                     after: idx,
                     skipFathataynCarrier: skipFollower
-                ),
-                let nextBase = clusters[nextIndex].primaryArabicLetter else {
+                ) else {
+                    continue
+                }
+                // A silent alif written after a dammatayn (بَلَٰٓؤٞاْ مُّبِينٌ 44:33) is not the next sound
+                // either; the lookup stopped on it and the idgham went unpainted (2026-10-04).
+                if !skipFollower, isBareAlifForMadd(clusters[nextIndex]), hasStandardSukoon(clusters[nextIndex]),
+                   !hasMaddah(clusters[nextIndex]),
+                   let afterSilentAlif = nextArabicLetterClusterIndex(clusters: clusters, after: nextIndex) {
+                    nextIndex = afterSilentAlif
+                }
+                guard let nextBase = clusters[nextIndex].primaryArabicLetter else {
                     continue
                 }
                 appendNoonSoundPaintOps(
@@ -3068,10 +3199,14 @@ final class TajweedStore {
             switch saakinRaaVowelContext(clusters: clusters, index: index) {
             case .none:
                 return false
-            case .startingHamzatWasl(let takesDamma):
-                return takesDamma
+            case .hamzatWasl:
+                return true
             case .letter(let previous):
-                if hasKasraFamily(previous) { return false }
+                // After a kasra a saakin raa is light, unless an isti'la letter that carries no kasra
+                // follows it in the same word: قِرۡطَاسٖ 6:7, وَإِرۡصَادٗا 9:107, فِرۡقَةٖ 9:122, مِرۡصَادٗا 78:21,
+                // لَبِٱلۡمِرۡصَادِ 89:14 were painted light until 2026-10-04. فِرۡقٖ at 26:63 (the qaf has a
+                // kasra) may be read either way and stays light.
+                if hasKasraFamily(previous) { return isFollowedInWordByOpenIstilaLetter(clusters: clusters, index: index) }
                 if hasFathaFamily(previous) || hasDammaFamily(previous) { return true }
                 if previous.primaryArabicLetter == "و" {
                     return !hasAnyTashkeel(previous)
@@ -3093,19 +3228,21 @@ final class TajweedStore {
     private enum SaakinRaaVowelContext {
         /// The pronounced letter before it; its vowel decides.
         case letter(CharacterClusterInfo)
-        /// A hamzatul-wasl that actually opens the recitation, so its own assumed vowel decides.
-        case startingHamzatWasl(takesDamma: Bool)
+        /// Hamzatul-wasl comes right before it: always heavy.
+        case hamzatWasl
         case none
     }
 
-    /// A saakin raa preceded by hamzatul-wasl (`وَٱرۡتَبۡتُمۡ` 57:14, `قَالُوا۟ ٱرۡجِعُوا۟`) has no vowel of its own to
-    /// lean on, and the wasl hamza is dropped in connected reading, so the weight is decided by whatever comes
-    /// before the hamza, reaching back across the word boundary if need be (in 57:14 that's the fatha on the
-    /// و of وَ, which makes the raa heavy; the old code stopped at the vowel-less hamza and called it light).
+    /// A saakin raa right after hamzatul-wasl is heavy wherever it stands. Only an original kasra in
+    /// the raa's own word thins a saakin raa, and a hamzatul-wasl never supplies one: read on from
+    /// the word before, any kasra there is incidental (إِنِ ٱرۡتَبۡتُمۡ 5:106, أَمِ ٱرۡتَابُوٓاْ 24:50) or belongs to
+    /// another word (رَبِّ ٱرۡجِعُونِ 23:99, ٱلَّذِي ٱرۡتَضَىٰ 24:55); started on, the hamza's own kasra is
+    /// incidental too (ٱرۡجِعُوٓاْ 12:81, ٱرۡجِعۡ 27:37, ٱرۡجِعِيٓ 89:28).
     ///
-    /// Only when the hamza opens the ayah is it actually pronounced, and then it carries its own assumed vowel:
-    /// the classic rule is that it takes a damma when the word's third letter has one, and a kasra otherwise,
-    /// so damma → heavy, anything else → light.
+    /// Until 2026-10-04 this reached back across the word boundary for a vowel and, at an ayah
+    /// start, asked the third-letter rule for the hamza's own. A kasra found either way made the
+    /// raa light, which was wrong at 12 of the 51 sites: the seven above, 17:24, 21:28, 65:4,
+    /// 72:27, and 22:77, where the lookup landed on a silent alif.
     private func saakinRaaVowelContext(clusters: [CharacterClusterInfo], index: Int) -> SaakinRaaVowelContext {
         // Stops at the word boundary, so this only ever finds a hamzatul-wasl that sits in the raa's own word.
         guard let previousIndex = previousPronouncedArabicLetterClusterIndex(clusters: clusters, before: index) else {
@@ -3114,49 +3251,21 @@ final class TajweedStore {
         guard clusters[previousIndex].contains(Self.hamzatWasl) else {
             return .letter(clusters[previousIndex])
         }
-        if let beforeHamzaIndex = previousPronouncedArabicLetterClusterIndexCrossingWords(clusters: clusters, before: previousIndex) {
-            return .letter(clusters[beforeHamzaIndex])
-        }
-        return .startingHamzatWasl(takesDamma: hamzatWaslStartTakesDamma(clusters: clusters, hamzaIndex: previousIndex))
+        return .hamzatWasl
     }
 
-    /// Like `previousPronouncedArabicLetterClusterIndex`, but steps over word boundaries instead of stopping at
-    /// them; needed only where a letter is dropped in connected reading and the sound carries over from the
-    /// previous word.
-    private func previousPronouncedArabicLetterClusterIndexCrossingWords(clusters: [CharacterClusterInfo], before index: Int) -> Int? {
-        var i = index - 1
-        while i >= 0 {
-            let cluster = clusters[i]
-            guard cluster.primaryArabicLetter != nil, !isAyahEndOrDecorativeCluster(cluster) else {
-                i -= 1
+    /// True when the next letter of the same word is one of the seven isti'la letters and carries no
+    /// kasra. An isti'la letter in the NEXT word does not count (فَٱصۡبِرۡ صَبۡرٗا 70:5 stays light).
+    private func isFollowedInWordByOpenIstilaLetter(clusters: [CharacterClusterInfo], index: Int) -> Bool {
+        var next = index + 1
+        while next < clusters.count {
+            let cluster = clusters[next]
+            if isWhitespaceOnly(cluster) { return false }
+            guard let base = cluster.primaryArabicLetter else {
+                next += 1
                 continue
             }
-            if isSilentFinalLetter(clusters: clusters, index: i) {
-                i -= 1
-                continue
-            }
-            return i
-        }
-        return nil
-    }
-
-    /// The hamzatul-wasl "third letter" rule: counting the hamza itself as the first letter of its word, a damma
-    /// on the third letter means the hamza is started with a damma (heavy), anything else means a kasra (light).
-    private func hamzatWaslStartTakesDamma(clusters: [CharacterClusterInfo], hamzaIndex: Int) -> Bool {
-        var letterCount = 1 // the hamza
-        var i = hamzaIndex + 1
-        while i < clusters.count {
-            let cluster = clusters[i]
-            if isWhitespaceOnly(cluster) { return false } // word ended before a third letter
-            guard cluster.primaryArabicLetter != nil else {
-                i += 1
-                continue
-            }
-            letterCount += 1
-            if letterCount == 3 {
-                return hasDammaFamily(cluster)
-            }
-            i += 1
+            return TajweedRules.heavyBaseLetters.contains(base) && !hasKasraFamily(cluster)
         }
         return false
     }
@@ -3461,7 +3570,7 @@ final class QuranData: ObservableObject {
             let silentQuery = useArabic
                 ? Settings.shared.cleanSearchIgnoringSilentArabicLetters(raw, whitespace: true)
                 : nil
-            return regularSearchResults(
+            let typed = regularSearchResults(
                 for: q,
                 rawQuery: raw,
                 silentQuery: silentQuery,
@@ -3470,6 +3579,26 @@ final class QuranData: ObservableObject {
                 offset: offset,
                 scope: scope
             )
+            guard useArabic, typed.isEmpty else { return typed }
+            // The typed spelling found nothing (on a later page: possibly just ran out, so ask once
+            // more from the top). Then the spellings the mushaf uses for it, the first that occurs:
+            // شيئا found none of the 76 ayahs with شَيۡـًٔا, موسي none of موسى's (2026-10-04, see
+            // `SearchFoldTables.arabicQuerySpellings`). A spelling that occurs keeps its own rows only.
+            if offset > 0, !regularSearchResults(for: q, rawQuery: raw, silentQuery: silentQuery, useArabic: true,
+                                                 limit: 1, offset: 0, scope: scope).isEmpty {
+                return typed
+            }
+            let settings = Settings.shared
+            for spelling in SearchFoldTables.arabicQuerySpellings(of: raw) {
+                let folded = settings.cleanSearch(spelling, whitespace: true)
+                guard !folded.isEmpty, folded != q else { continue }
+                let silent = settings.cleanSearchIgnoringSilentArabicLetters(spelling, whitespace: true)
+                guard !regularSearchResults(for: folded, rawQuery: spelling, silentQuery: silent, useArabic: true,
+                                            limit: 1, offset: 0, scope: scope).isEmpty else { continue }
+                return regularSearchResults(for: folded, rawQuery: spelling, silentQuery: silent, useArabic: true,
+                                            limit: limit, offset: offset, scope: scope)
+            }
+            return typed
         }
 
         /// The typed query plus its vocative-joined twin ("يا نساء" → "يانساء"), or nil when joining
@@ -3672,19 +3801,56 @@ final class QuranData: ObservableObject {
         #endif
     }
 
-    /// The entries, or nil if cancelled part-way.
-    private func buildVerseIndexEntries(qiraahKey: String, surahs: [Surah]) async -> [VerseIndexEntry]? {
+    /// The entries, or nil if cancelled part-way. Read out of the precomputed pack for this qiraah key
+    /// when there is one (`VerseSearchPack`, Phase 10.14: the shipped Hafs pack, or the one this build
+    /// wrote to Caches for another riwayah); an ayah the pack has no record for (one only another
+    /// riwayah numbers, whose Hafs text is empty) is folded live, exactly as every ayah used to be.
+    private func buildVerseIndexEntries(qiraahKey: String, surahs: [Surah], allowPack: Bool = true) async -> [VerseIndexEntry]? {
         let displayQiraah = qiraahKey.isEmpty ? nil : qiraahKey
         var vIndex: [VerseIndexEntry] = []
         vIndex.reserveCapacity(surahs.reduce(0) { $0 + $1.ayahs.count })
+        let pack = allowPack ? VerseSearchPack.pack(for: qiraahKey, surahs: surahs) : nil
+        #if DEBUG
+        let started = DispatchTime.now().uptimeNanoseconds
+        var computed = 0
+        #endif
 
         for (surahOffset, surah) in surahs.enumerated() {
+            // Another riwayah's rows are ITS ayahs, numbered its own way, while the translations and
+            // the transliteration are Hafs's. Each row was given the Latin of the Hafs ayah with the same
+            // NUMBER (2026-10-04): under Warsh, "no doubt" listed 2:2, whose Arabic there is Hafs 2:3,
+            // and the matching ayah, Warsh 2:1, was not found. The Latin now comes from the Hafs
+            // ayah(s) the alignment pairs the row with, and none when it pairs it with none.
+            let alignment = displayQiraah.flatMap { QiraahComparison.alignment(surahID: surah.id, tag: $0, quranData: self) }
             for (ayahOffset, ayah) in surah.ayahs.enumerated() {
                 if Task.isCancelled { return nil }
+                // Only the ayahs the riwayah numbers: a row past its count holds Hafs's text, and
+                // Warsh's index offered a "2:286" (2026-10-04).
+                if let displayQiraah, !ayah.existsInQiraah(displayQiraah, surahID: surah.id) { continue }
+                if let pack, let index = pack.recordIndex(surah: surah.id, ayah: ayah.id) {
+                    vIndex.append(Self.verseIndexEntry(from: pack, record: pack.record(at: index),
+                                                       surahOffset: surahOffset, ayahOffset: ayahOffset))
+                    continue
+                }
+                #if DEBUG
+                computed += 1
+                #endif
                 // surahID is REQUIRED for beta riwayat - without it both reads silently fall
                 // back to Hafs and the index desyncs from what the reader displays.
                 let raw = ayah.textArabic(for: displayQiraah, surahID: surah.id)
-                let clean = ayah.textCleanArabic(for: displayQiraah, surahID: surah.id)
+                // `removeDots: false`: the default follows the Hide Arabic Dots switch, and a dotless
+                // clean lane is not what a typed query folds to (and not what the shipped pack holds).
+                let clean = ayah.textCleanArabic(for: displayQiraah, surahID: surah.id, removeDots: false)
+                let latin: [Ayah]
+                if let alignment {
+                    let span = alignment.hafsRangeForRiwayah[ayah.id].map(Array.init) ?? []
+                    latin = span.compactMap { number in
+                        surah.ayahs.indices.contains(number - 1) && surah.ayahs[number - 1].id == number
+                            ? surah.ayahs[number - 1] : surah.ayahs.first { $0.id == number }
+                    }
+                } else {
+                    latin = [ayah]
+                }
                 vIndex.append(
                     makeVerseIndexEntry(
                         surahID: surah.id,
@@ -3693,16 +3859,48 @@ final class QuranData: ObservableObject {
                         ayahOffset: ayahOffset,
                         rawArabic: raw,
                         cleanArabic: clean,
-                        englishSaheeh: ayah.textEnglishSaheeh,
-                        englishMustafa: ayah.textEnglishMustafa,
-                        transliteration: ayah.textTransliteration
+                        englishSaheeh: latin.map(\.textEnglishSaheeh).joined(separator: " "),
+                        englishMustafa: latin.map(\.textEnglishMustafa).joined(separator: " "),
+                        transliteration: latin.map(\.textTransliteration).joined(separator: " ")
                     )
                 )
             }
             await Task.yield()
         }
+        #if DEBUG
+        if RenderCounter.enabled {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+            NSLog("VERSE INDEX %@ %d entries %.1f ms (%d folded live)", pack == nil ? "built" : "from pack", vIndex.count, ms, computed)
+        }
+        #endif
         return Task.isCancelled ? nil : vIndex
     }
+
+    /// The index entry a pack record stands for: the same four blobs the fold produced, the ids and the
+    /// positions into the live texts filled in here.
+    private static func verseIndexEntry(from pack: VerseSearchPack.Pack, record: VerseSearchPack.Pack.Record,
+                                        surahOffset: Int, ayahOffset: Int) -> VerseIndexEntry {
+        VerseIndexEntry(
+            id: "\(record.surah):\(record.ayah)",
+            surah: record.surah,
+            ayah: record.ayah,
+            surahOffset: Int32(surahOffset),
+            ayahOffset: Int32(ayahOffset),
+            arabicBlob: pack.string(record, field: VerseSearchPack.Field.arabic),
+            silentArabicBlob: pack.string(record, field: VerseSearchPack.Field.silent),
+            hamzaArabicBlob: record.flags & VerseSearchPack.Flag.hamzaPresent != 0
+                ? pack.string(record, field: VerseSearchPack.Field.hamza) : nil,
+            englishBlob: pack.string(record, field: VerseSearchPack.Field.english)
+        )
+    }
+
+    #if DEBUG
+    /// `PrecomputedPackTests`: the index built the slow way and the index read out of the pack, so the
+    /// two can be compared entry by entry.
+    func buildVerseIndexEntriesForTests(qiraahKey: String, surahs: [Surah], allowPack: Bool) async -> [VerseIndexEntry]? {
+        await buildVerseIndexEntries(qiraahKey: qiraahKey, surahs: surahs, allowPack: allowPack)
+    }
+    #endif
 
     #if !os(watchOS)
     /// The missed-invalidation escape hatch for `verseSearchSnapshot()`: the index's qiraah didn't match the
@@ -3784,19 +3982,19 @@ final class QuranData: ObservableObject {
         let arabicBlob = ([rawArabicFold, settings.cleanSearch(cleanArabic)]
             + (daggerlessFold == rawArabicFold ? [] : [daggerlessFold]))
             .joined(separator: " ")
-        let silentArabicBlob = [rawArabic, cleanArabic]
-            .map { settings.cleanSearchIgnoringSilentArabicLetters($0) }
-            .joined(separator: " ")
+        // Each text's silent fold once, for this lane and the hamza lane below (Phase 10.1).
+        let rawSilent = rawArabic.removingSilentArabicLettersForSearch
+        let cleanSilent = cleanArabic.removingSilentArabicLettersForSearch
+        let silentArabicBlob = [
+            settings.cleanSearchIgnoringSilentArabicLetters(silentFold: rawSilent),
+            settings.cleanSearchIgnoringSilentArabicLetters(silentFold: cleanSilent)
+        ].joined(separator: " ")
         // The transliteration rides twice: as typed in the pack, and vowel-folded (see
         // `Settings.foldedTransliterationForSearch`), so "rahmaan" and "rahman" both land.
         let englishBlob = ([englishSaheeh, englishMustafa, transliteration]
             .map { settings.cleanSearch($0) }
             + [settings.foldedTransliterationForSearch(transliteration)])
             .joined(separator: " ")
-        let arabicTokens = searchTokens(from: arabicBlob)
-        let silentArabicTokens = searchTokens(from: silentArabicBlob)
-        let englishTokens = searchTokens(from: englishBlob)
-
         return VerseIndexEntry(
             id: "\(surahID):\(ayahID)",
             surah: surahID,
@@ -3805,11 +4003,9 @@ final class QuranData: ObservableObject {
             ayahOffset: Int32(ayahOffset),
             arabicBlob: arabicBlob,
             silentArabicBlob: silentArabicBlob,
-            hamzaArabicBlob: Settings.HamzaPrecisionFilter.corpusLanes(for: [rawArabic, cleanArabic]),
-            englishBlob: englishBlob,
-            arabicTokens: arabicTokens,
-            silentArabicTokens: silentArabicTokens,
-            englishTokens: englishTokens
+            hamzaArabicBlob: Settings.HamzaPrecisionFilter.corpusLanes(for: [rawArabic, cleanArabic],
+                                                                       silentFolds: [rawSilent, cleanSilent]),
+            englishBlob: englishBlob
         )
     }
 
@@ -3908,6 +4104,8 @@ final class QuranData: ObservableObject {
     }
 
     private func loadAttempt() async throws {
+        // A reload changes which riwayah texts the ayahs carry (see `includeQiraat` below).
+        QiraahAyahCountCache.purge()
         // Most users never look at other qiraat, so decoding the 7 overlay columns on every launch is
         // wasted work. Only include them when the user actually shows qiraah (or has a non-Hafs display
         // selected). When they later enable it, `reloadForQiraahAvailabilityChange()` re-runs this in the
@@ -3935,6 +4133,10 @@ final class QuranData: ObservableObject {
         // index batch separately triggered two heavy first builds in a row).
         await MainActor.run {
             self.quran = surahsToPublish
+            // Again, at the publish: the purge at the top of this function ran while the OLD surahs
+            // were still on screen, and a row rendered during the pack read re-filled the cache from
+            // texts without the overlays (Warsh al-Baqarah counted 286 until the next relaunch).
+            QiraahAyahCountCache.purge()
             self.invalidateDerivedResultCaches()
             self.lookupLock.lock()
             self.lookupStorage = Lookup(quran: surahsToPublish, surahIndex: sIndex, ayahIndex: aIndex)

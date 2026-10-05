@@ -4,7 +4,10 @@
 Checks the packs ON DISK against the app's own Quran text:
   1. each decodes (xz, or plain JSON for the metadata) and carries its version;
   2. Morphology: every surah present, every ayah's root and lemma arrays exactly as long as
-     the ayah's whitespace token count, every index inside the root/lemma tables;
+     the ayah's whitespace token count, every index inside the root/lemma tables; no lemma
+     left beside the word it belongs to (a word carrying a lemma whose dominant root is not
+     its own while a lemma-less word within three tokens has that root, the QUL slip the
+     builder repairs), and 4:106's كَانَ carrying كَانَ (not the غَفُورٗا after it);
   3. Mutashabihat: every phrase's source span and every occurrence span inside its ayah's
      tokens, the index consistent with the occurrences;
   4. QuranTopics: every ayah key a real ayah, every parent and related id a real topic;
@@ -71,6 +74,60 @@ def main() -> None:
                 problems.append(f"Morphology {layer}: {key} index out of range")
     filled_roots = sum(1 for key in order for v in morphology["r"][key.split(":")[0]][int(key.split(":")[1]) - 1] if v)
     filled_lemmas = sum(1 for key in order for v in morphology["l"][key.split(":")[0]][int(key.split(":")[1]) - 1] if v)
+
+    # Slipped lemmas (build_qul_packs.repair_displaced_lemmas), re-derived from the pack alone.
+    # A lemma's dominant root is the one a strict plurality of its occurrences carry (none on a
+    # tie); a real homograph (عَصَا on ع ص و) passes because no lemma-less neighbour has the root.
+    morph_rows = {key: (morphology["r"][key.split(":")[0]][int(key.split(":")[1]) - 1],
+                        morphology["l"][key.split(":")[0]][int(key.split(":")[1]) - 1]) for key in order}
+    tally: dict[int, dict[int, int]] = {}
+    for root_row, lemma_row in morph_rows.values():
+        for root, lemma in zip(root_row, lemma_row):
+            if lemma:
+                counts = tally.setdefault(lemma, {})
+                counts[root] = counts.get(root, 0) + 1
+    dominant = {}
+    for lemma, counts in tally.items():
+        ranked = sorted(counts.values(), reverse=True)
+        if len(ranked) == 1 or ranked[0] > ranked[1]:
+            dominant[lemma] = max(counts, key=counts.get)
+    reach = _qul.LEMMA_REACH
+    displaced = []
+    for key in order:
+        root_row, lemma_row = morph_rows[key]
+        for index, lemma in enumerate(lemma_row):
+            wanted = dominant.get(lemma, 0)
+            if not wanted or root_row[index] == wanted:
+                continue
+            nearby = range(max(0, index - reach), min(len(root_row), index + reach + 1))
+            if any(root_row[other] == wanted and not lemma_row[other] for other in nearby):
+                displaced.append(f"{key} token {index}")
+    if displaced:
+        problems.append(f"Morphology: {len(displaced)} lemmas sit beside the lemma-less word they belong to: {displaced[:10]}")
+    # Spot checks: (ayah, lemma, the word that must carry it, the word QUL slipped it onto). 4:106
+    # is the repaired pattern; the other three are build_qul_packs.LEMMA_ERRATA, spelled out again
+    # here so an edited table cannot quietly pass. شُحَّ is escaped: its shadda precedes the fatha.
+    shuhha = "شُحَّ"
+    for key, lemma_text, home, slipped in (("4:106", "كَانَ", "كَانَ", "غَفُورٗا"),
+                                           ("59:9", "شُحّ", shuhha, "نَفۡسِهِۦ"),
+                                           ("64:16", "شُحّ", shuhha, "نَفۡسِهِۦ"),
+                                           ("4:129", "مَيْل", "ٱلۡمَيۡلِ", "فَتَذَرُوهَا")):
+        ids = [i + 1 for i, row in enumerate(lemmas) if row[0] == lemma_text]
+        words = texts[key].split()
+        if len(ids) != 1 or words.count(home) != 1 or words.count(slipped) != 1:
+            problems.append(f"Morphology: the {key} spot check cannot find its lemma or words")
+            continue
+        lemma_row = morph_rows[key][1]
+        if lemma_row[words.index(home)] != ids[0] or lemma_row[words.index(slipped)] == ids[0]:
+            problems.append(f"Morphology: {key} {lemma_text} is not on its own word")
+    # The reason the errata run before the dominant roots are counted: 33:19 أَشِحَّةً keeps شُحّ
+    # and is no longer the odd one out (ن ف س had been its dominant root).
+    ids = [i + 1 for i, row in enumerate(lemmas) if row[0] == "شُحّ"]
+    first_root = morph_rows["33:19"][0][0]
+    if len(ids) != 1 or not first_root or roots[first_root - 1][0] != "ش ح ح":
+        problems.append("Morphology: the 33:19 spot check cannot find its lemma or word")
+    elif morph_rows["33:19"][1][0] != ids[0] or dominant.get(ids[0]) != morph_rows["33:19"][0][0]:
+        problems.append("Morphology: 33:19 أَشِحَّةً does not carry شُحّ under its own dominant root")
 
     mutashabihat, _ = load("Mutashabihat.json.xz")
     phrases = mutashabihat["phrases"]

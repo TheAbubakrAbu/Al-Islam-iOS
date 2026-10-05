@@ -52,6 +52,29 @@ struct Prayer: Identifiable, Codable, Equatable {
     }
 }
 
+/// The whole minute a prayer time is shown and scheduled at, from the instant the sun reaches it.
+///
+/// Rounding to the nearest minute (the engine's default until 2026-10-04) could show a prayer up to
+/// thirty seconds before it came in. Each time now rounds to the side that is safe for what it marks:
+/// a prayer's start rounds UP, so nobody is told a prayer is in before it is; a time that ENDS
+/// something (sunrise, the end of Fajr; Islamic Midnight, the end of Isha's chosen time) rounds DOWN.
+/// Fajr is both a prayer's start and the end of suhoor, which pull opposite ways: it rounds up like
+/// every start, and the fasting countdowns stop a minute before it (`suhoorEnd(forFajr:)`).
+enum PrayerMinute {
+    static func rounded(_ instant: Date, endsATime: Bool) -> Date {
+        // The reference date is a whole minute in UTC, and every time zone is a whole number of
+        // minutes from UTC, so a whole minute here is a whole minute on every clock.
+        let minutes = instant.timeIntervalSinceReferenceDate / 60
+        return Date(timeIntervalSinceReferenceDate: (endsATime ? minutes.rounded(.down) : minutes.rounded(.up)) * 60)
+    }
+
+    /// When eating has to stop for the dawn whose Fajr minute is `fajr`. That minute is dawn rounded
+    /// up, so it can be up to 59 seconds after dawn; a minute before it is always before dawn.
+    static func suhoorEnd(forFajr fajr: Date) -> Date {
+        fajr.addingTimeInterval(-60)
+    }
+}
+
 /// How a prayer was recorded in the tracker: the three answers to "did you pray it?". On time and
 /// late both mean it WAS prayed (late = made up after its window passed, still an answered
 /// obligation); missed records honestly that it was not, instead of leaving the slot blank. The raw

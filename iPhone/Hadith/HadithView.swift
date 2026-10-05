@@ -1871,15 +1871,17 @@ struct HadithView: View {
             for book in HadithCatalogBook.all {
                 if Task.isCancelled { return }
                 guard let data = HadithStore.shared.book(book) else { continue }
-                // Chapter.id IS the chapter number - but "8a" can only mean a citation, never a chapter.
-                if suffix == nil, let chapter = data.chapters.first(where: { $0.id == number }) {
+                // The chapter at that POSITION, the reading "bukhari 1:4" and the in-book search use
+                // (five books carry an id-0 chapter, so id and position part ways there). "8a" can
+                // only mean a citation, never a chapter.
+                if suffix == nil, let chapter = data.chapter(atPosition: number) {
                     chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
                 }
                 // Citation-first: all the variants a base owns; a typed suffix narrows to that one.
                 var cited = data.hadiths(citing: number)
                 if let suffix {
                     cited = cited.filter { $0.citation == "\(number)\(suffix)" }
-                } else if cited.isEmpty, let fallback = data.hadith(numbered: number) {
+                } else if cited.isEmpty, let fallback = data.hadith(uncitedRow: number) {
                     // No citations under this number (Muwatta Malik, most of Bulugh): the internal
                     // row number is what these books show, exactly as before.
                     cited = [fallback]

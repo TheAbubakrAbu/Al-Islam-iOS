@@ -257,6 +257,14 @@ enum MemoryTrim {
         QuranFontCache.purge()
         // The word card's grammar table (re-parsed on the next card).
         WordGrammarStore.shared.unload()
+        // The rest of the study packs (Phase 10.7): roots and lemmas with every occurrence, the
+        // topic and passage-theme tables, the qiraat variants table, the riwayah tajweed paints. Each
+        // reloads on its next use; none is read by a body that cannot wait a frame.
+        MorphologyStore.shared.unload()
+        QuranTopicsStore.shared.unload()
+        AyahThemesStore.shared.unload()
+        QiraatVariantsStore.shared.unload()
+        QiraahTajweedStore.shared.purgePaintCache()
         #if DEBUG
         MemoryFootprint.logLater("memory warning trim", delay: 2)
         #endif

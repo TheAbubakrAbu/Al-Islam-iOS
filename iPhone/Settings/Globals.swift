@@ -186,13 +186,16 @@ enum TypedAmount {
 ///
 /// Noon maps to U+06BA (not U+066E like ba/ta/tha): in the early rasm a FINAL noon keeps its deep
 /// bowl while ba/ta/tha finals stay flat, and U+06BA is exactly that skeleton, a bowl in isolated
-/// and final position and a tooth elsewhere. The seated hamzas lose their seat's hamza, the alef
-/// forms (hamza above or below, madda, wasla) become a bare alef, ta marbuta becomes ha.
+/// and final position and a tooth elsewhere. The seated hamzas keep their seat and lose the hamza
+/// (the early rasm wrote no hamza): ؤ becomes و and ئ a dotless ى. They mapped to a detached ء
+/// until 2026-10-05, which dropped the seat's letter from the skeleton 1,613 times in the Hafs text.
+/// The alef forms (hamza above or below, madda, wasla) become a bare alef, ta marbuta becomes ha.
 enum ArabicRasm {
     static func dotless(_ scalar: Unicode.Scalar) -> Unicode.Scalar {
         switch scalar.value {
         case 0x0623, 0x0625, 0x0622, 0x0671: return "\u{0627}"
-        case 0x0624, 0x0626: return "\u{0621}"
+        case 0x0624: return "\u{0648}"
+        case 0x0626: return "\u{0649}"
         case 0x0628, 0x062A, 0x062B: return "\u{066E}"
         case 0x0646: return "\u{06BA}"
         case 0x064A: return "\u{0649}"
@@ -777,8 +780,87 @@ extension String {
     ///
     /// Canonical equivalence, so search, copy and share are unaffected; the other faces (IndoPak,
     /// system) draw the decomposed form the same way they draw the composed one.
+    ///
+    /// Same output as the Foundation form this replaced (`contains` + `replacingOccurrences`, both
+    /// non-literal), which is pinned by `AlefMaddaEquivalenceTests` over every hadith display string in
+    /// the 17 packs and the Fortress of the Muslim. Those two Foundation calls compared composed
+    /// character sequences with NFC normalization on every string, and they were 88% of the hadith
+    /// text-block inflate in the profiler (the Reminder of the Day's pack parse alone spent 2 s of CPU
+    /// in them; Phase 10.11). Their rule, kept here: a bare آ is swapped; an آ that is followed by a
+    /// combining mark (a fatha, a shadda, a superscript alef) is one composed sequence with it and the
+    /// needle never matched it, so it stays as written.
     var decomposingAlefMadda: String {
-        contains("\u{0622}") ? replacingOccurrences(of: "\u{0622}", with: "\u{0627}\u{0653}") : self
+        // U+0622 is the two UTF-8 bytes D8 A2; a lead byte is never a continuation byte, so the pair
+        // cannot occur inside any other scalar. Most strings leave here without an allocation.
+        //
+        // The search and the copying are libc's (memmem, then whole runs appended at once), not a
+        // byte-at-a-time Swift loop (10.16): walking `unicodeScalars` and appending to a
+        // `UnicodeScalarView` was still 58% of a hadith block's inflate once the Foundation search was
+        // gone, and a byte loop of the app's own costs the same in a Debug build. Only the scalar AFTER
+        // an آ is decoded, to ask whether it extends it.
+        var text = self
+        return text.withUTF8 { bytes -> String in
+            guard let base = bytes.baseAddress, bytes.count >= 2,
+                  memmem(base, bytes.count, Self.alefMaddaBytes, 2) != nil else { return self }
+            var out: [UInt8] = []
+            out.reserveCapacity(bytes.count + 8)
+            var copied = 0                         // bytes[..<copied] are in `out` already
+            var changed = false
+            while copied + 2 <= bytes.count,
+                  let hit = memmem(base + copied, bytes.count - copied, Self.alefMaddaBytes, 2) {
+                let index = UnsafeRawPointer(hit) - UnsafeRawPointer(base)
+                out.append(contentsOf: UnsafeBufferPointer(rebasing: bytes[copied..<index]))
+                if Self.extendsComposedSequence(Self.scalar(in: bytes, at: index + 2)) {
+                    out.append(0xD8); out.append(0xA2)
+                } else {
+                    out.append(0xD8); out.append(0xA7)   // ا
+                    out.append(0xD9); out.append(0x93)   // U+0653
+                    changed = true
+                }
+                copied = index + 2
+            }
+            guard changed else { return self }
+            out.append(contentsOf: UnsafeBufferPointer(rebasing: bytes[copied...]))
+            return String(decoding: out, as: UTF8.self)
+        }
+    }
+
+    private static let alefMaddaBytes: [UInt8] = [0xD8, 0xA2]
+
+    /// The scalar whose UTF-8 sequence starts at `index`, or nil at the end. The bytes come from a
+    /// Swift string, so they are well formed; a malformed lead byte still answers nil rather than trap.
+    private static func scalar(in bytes: UnsafeBufferPointer<UInt8>, at index: Int) -> Unicode.Scalar? {
+        guard index < bytes.count else { return nil }
+        let lead = bytes[index]
+        var value: UInt32
+        var continuationCount: Int
+        switch lead {
+        case 0x00...0x7F: return Unicode.Scalar(lead)
+        case 0xC0...0xDF: value = UInt32(lead & 0x1F); continuationCount = 1
+        case 0xE0...0xEF: value = UInt32(lead & 0x0F); continuationCount = 2
+        case 0xF0...0xF7: value = UInt32(lead & 0x07); continuationCount = 3
+        default: return nil
+        }
+        guard index + continuationCount < bytes.count else { return nil }
+        for offset in 1...continuationCount {
+            let continuation = bytes[index + offset]
+            guard continuation & 0xC0 == 0x80 else { return nil }
+            value = value << 6 | UInt32(continuation & 0x3F)
+        }
+        return Unicode.Scalar(value)
+    }
+
+    /// Whether `scalar` continues the composed character sequence of the base before it, the way
+    /// Foundation's non-literal search groups them: the Grapheme_Extend scalars (every combining
+    /// mark, the zero-width non-joiner, the variation selectors), the zero-width joiner and the emoji
+    /// skin-tone modifiers. Nil (end of string) extends nothing.
+    private static func extendsComposedSequence(_ scalar: Unicode.Scalar?) -> Bool {
+        guard let scalar else { return false }
+        if scalar.properties.isGraphemeExtend { return true }
+        switch scalar.value {
+        case 0x200D, 0x1F3FB...0x1F3FF: return true
+        default: return false
+        }
     }
 }
 
@@ -990,23 +1072,58 @@ extension String {
     /// (or highlighted within) ayah content - otherwise a query like `#الله` keeps the `#`, never matches
     /// the source, and nothing highlights. Operators become spaces (not deleted) to preserve word breaks.
     var removingAyahSearchOperators: String {
-        let operators = Set("#^%$&|!=".unicodeScalars)
+        // The operators are all ASCII, so one byte scan decides whether anything changes; the source
+        // texts this folds (ayah and hadith tokens, gloss words) almost never carry one, and the old
+        // form allocated a Set and rebuilt every string regardless (13% of the lexicon build).
+        guard utf8.contains(where: Self.isAyahSearchOperatorByte) else { return self }
         var out = String.UnicodeScalarView()
         out.reserveCapacity(unicodeScalars.count)
         for scalar in unicodeScalars {
-            out.append(operators.contains(scalar) ? " " : scalar)
+            out.append(scalar.isASCII && Self.isAyahSearchOperatorByte(UInt8(scalar.value)) ? " " : scalar)
         }
         return String(out)
     }
 
+    /// `# ^ % $ & | ! =`, the ayah search operators.
+    private static func isAyahSearchOperatorByte(_ byte: UInt8) -> Bool {
+        switch byte {
+        case 0x23, 0x5E, 0x25, 0x24, 0x26, 0x7C, 0x21, 0x3D: return true
+        default: return false
+        }
+    }
+
     var removingSilentArabicLettersForSearch: String {
-        var out = ""
-        out.reserveCapacity(count)
+        // The same grapheme walk and the same per-cluster decisions as before (2026-10-03, Phase 10.1):
+        // only the bookkeeping changed. Each cluster used to become a `String` and an `Array` of its
+        // scalars and then take six `contains` passes; the index build ran this four times per ayah,
+        // and it was the single largest slice of that build in the profiler. The cluster's scalars are
+        // read in place, once, and appended as scalars (the same string: `String.append(Character)`
+        // and appending the character's scalars produce identical contents).
+        var out = String.UnicodeScalarView()
+        out.reserveCapacity(unicodeScalars.count)
 
         for cluster in self {
-            let scalars = Array(String(cluster).unicodeScalars)
-            guard let base = scalars.first(where: { (0x0621...0x064A).contains($0.value) || $0.value == 0x0671 }) else {
-                out.append(cluster)
+            let scalars = cluster.unicodeScalars
+            var base: UInt32 = 0
+            var hasStandardSukoon = false
+            var hasDaggerAlif = false
+            var hasShadda = false
+            var hasUthmaniSukoon = false
+            var hasArabicVowel = false
+            for scalar in scalars {
+                let v = scalar.value
+                if base == 0, (0x0621...0x064A).contains(v) || v == 0x0671 { base = v }
+                switch v {
+                case 0x0652: hasStandardSukoon = true
+                case 0x0670: hasDaggerAlif = true
+                case 0x0651: hasShadda = true
+                case 0x06E1: hasUthmaniSukoon = true
+                case 0x064E, 0x064F, 0x0650, 0x064B, 0x064C, 0x064D, 0x0656, 0x0657, 0x065A: hasArabicVowel = true
+                default: break
+                }
+            }
+            guard base != 0 else {
+                out.append(contentsOf: scalars)
                 continue
             }
 
@@ -1014,17 +1131,7 @@ extension String {
             // whole cluster here made the silent-lane blob start "لذين" instead of "الذين", so every
             // silent-letter query beginning with ال missed for a reason users could never see.
 
-            let hasStandardSukoon = scalars.contains { $0.value == 0x0652 }
-            let hasDaggerAlif = scalars.contains { $0.value == 0x0670 }
-            let hasShadda = scalars.contains { $0.value == 0x0651 }
-            let hasUthmaniSukoon = scalars.contains { $0.value == 0x06E1 }
-            let hasArabicVowel = scalars.contains {
-                $0.value == 0x064E || $0.value == 0x064F || $0.value == 0x0650 ||
-                $0.value == 0x064B || $0.value == 0x064C || $0.value == 0x064D ||
-                $0.value == 0x0656 || $0.value == 0x0657 || $0.value == 0x065A
-            }
-
-            switch base.value {
+            switch base {
             case 0x0627, 0x0648, 0x064A, 0x0649:
                 if hasStandardSukoon && !hasUthmaniSukoon {
                     continue
@@ -1037,14 +1144,14 @@ extension String {
                 break
             }
 
-            if base.value == 0x0648, hasDaggerAlif, !hasArabicVowel, !hasShadda, !hasStandardSukoon, !hasUthmaniSukoon {
+            if base == 0x0648, hasDaggerAlif, !hasArabicVowel, !hasShadda, !hasStandardSukoon, !hasUthmaniSukoon {
                 continue
             }
 
-            out.append(cluster)
+            out.append(contentsOf: scalars)
         }
 
-        return out
+        return String(out)
     }
 
     /// Search twin of the mushaf's alif al-wiqaya: every whitespace-delimited token ending in "وا"

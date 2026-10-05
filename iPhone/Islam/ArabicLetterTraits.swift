@@ -1030,11 +1030,21 @@ enum LetterTraits {
     /// letter that follows one. The families themselves are still found by name, in the search's
     /// LETTER FAMILIES section.
     static func searchTerms(for letter: String) -> [String] {
-        families(containing: letter)
+        // Once per letter (Phase 10.8): the alphabet search called this per letter per body pass, each
+        // call a filter over the 40 families and ~50 split/join/filter passes.
+        searchTermsLock.lock()
+        if let hit = searchTermsCache[letter] { searchTermsLock.unlock(); return hit }
+        searchTermsLock.unlock()
+        let terms = families(containing: letter)
             .filter { $0.letters.count <= searchableFamilySize }
             .flatMap { [$0.name.lowercased(), $0.meaning.lowercased()] + $0.keywords }
             .compactMap(withoutLetterNames)
+        searchTermsLock.lock(); searchTermsCache[letter] = terms; searchTermsLock.unlock()
+        return terms
     }
+
+    nonisolated(unsafe) private static var searchTermsCache: [String: [String]] = [:]
+    private static let searchTermsLock = NSLock()
 
     /// A family's name can carry a LETTER's name ("Laam Shamsiyyah", "Noon into Meem"), and a search
     /// for that letter must not come back with the whole family: "noon" returned baa, through iqlaab,

@@ -65,6 +65,12 @@ enum OpenScreen: String, Hashable, CaseIterable {
     /// letters as tiles and its letter families as rows, and a letter's or a family's page links back
     /// to the lesson that explains its rule.
     case tajweedLesson
+    /// Any article of the Islam tab's catalog, by its catalog id (always used with `id:`): the
+    /// `door` rows at the foot of one article open another, and eighteen pairs point at each other.
+    case islamArticle
+    case miraclesLibrary
+    case propheciesLibrary
+    case prophetMiraclesLibrary
 
     /// What a disabled row says in place of its caption, when the row itself does not supply one.
     var alreadyHereCaption: String {
@@ -88,6 +94,10 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .letterFamilies:      return "You are in Letter Families"
         case .soundAlikes:         return "You are in Sound-Alike Letters"
         case .tajweedLesson:       return "You came here from this lesson"
+        case .islamArticle:           return "You came here from this article"
+        case .miraclesLibrary:        return "You came here from Miracles of the Quran"
+        case .propheciesLibrary:      return "You came here from Prophecies of the Prophet"
+        case .prophetMiraclesLibrary: return "You came here from Miracles of the Prophets"
         }
     }
 }

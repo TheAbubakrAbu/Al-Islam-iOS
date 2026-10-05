@@ -20,11 +20,12 @@ struct ChosenAyahProvider: AppIntentTimelineProvider {
     typealias Entry = QuranWidgetEntry
     typealias Intent = ChosenAyahConfigurationIntent
 
-    /// The accent, from the App Group mirror (the same read as `QuranWidgetProvider`).
-    private static let accent: AccentColor = {
+    /// The accent, from the App Group mirror (the same read as `QuranWidgetProvider`). Read per
+    /// timeline, not once per process: a reused extension kept painting the previous accent.
+    private static var accent: AccentColor {
         let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
         return AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
-    }()
+    }
 
     func placeholder(in context: Context) -> QuranWidgetEntry { Self.sample }
 

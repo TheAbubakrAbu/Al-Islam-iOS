@@ -130,12 +130,14 @@ struct ContentCategory: Identifiable {
         ContentCategory(
             id: "calculators", title: "Zakah and Inheritance Figures", systemImage: "function",
             keys: ["zakahCash", "zakahGold", "zakahSilver", "zakahBusiness", "zakahTradeShares", "zakahLongShares",
-                   "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahNisab", "zakahFitrPeople", "zakahFitrCost",
+                   "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahGoldPrice", "zakahSilverPrice", "zakahNisab",
+                   "zakahFitrPeople", "zakahFitrCost",
                    "faraidEstate", "faraidDebts", "faraidFuneral", "faraidBequest", "faraidCounts"],
             files: [], summaryRank: nil,
             measure: { snapshot in
                 let typed = ["zakahCash", "zakahGold", "zakahSilver", "zakahBusiness", "zakahTradeShares", "zakahLongShares",
-                             "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahNisab", "zakahFitrPeople", "zakahFitrCost",
+                             "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahGoldPrice", "zakahSilverPrice", "zakahNisab",
+                   "zakahFitrPeople", "zakahFitrCost",
                              "faraidEstate", "faraidDebts", "faraidFuneral", "faraidBequest", "faraidCounts"]
                     .filter { key in
                         guard let value = snapshot.defaults[key] else { return false }

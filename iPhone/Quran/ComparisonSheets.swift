@@ -67,14 +67,14 @@ struct AyahQiraahComparisonSheet: View {
         }
     }
 
-    private var favoriteOptions: [QiraahDisplay] {
-        filteredOptions.filter { settings.isQiraahFavorite(tag: $0.tag) }
+    private func favoriteOptions(from filtered: [QiraahDisplay]) -> [QiraahDisplay] {
+        filtered.filter { settings.isQiraahFavorite(tag: $0.tag) }
             .sorted { $0.order < $1.order }
     }
 
-    private var groupedOptions: [(teacher: String, teacherArabic: String, options: [QiraahDisplay])] {
+    private func groupedOptions(from filtered: [QiraahDisplay]) -> [(teacher: String, teacherArabic: String, options: [QiraahDisplay])] {
         Settings.Riwayah.groups.compactMap { group in
-            let rows = filteredOptions
+            let rows = filtered
                 .filter { $0.teacher == group.teacher && !settings.isQiraahFavorite(tag: $0.tag) }
                 .sorted { $0.order < $1.order }
             guard !rows.isEmpty else { return nil }
@@ -223,15 +223,20 @@ struct AyahQiraahComparisonSheet: View {
                         }
 
                         if !duelMode {
-                            if !favoriteOptions.isEmpty {
+                            // Derived ONCE per pass (Phase 10.8): `filteredOptions` resolves every riwayah's
+                            // text while a query is typed, and the three lists below read it ~13 times.
+                            let filtered = filteredOptions
+                            let favorites = favoriteOptions(from: filtered)
+                            let grouped = groupedOptions(from: filtered)
+                            if !favorites.isEmpty {
                                 Section(header: Text("FAVORITES")) {
-                                    ForEach(favoriteOptions) { option in
+                                    ForEach(favorites) { option in
                                         qiraahRow(option)
                                     }
                                 }
                             }
 
-                            ForEach(groupedOptions, id: \.teacher) { group in
+                            ForEach(grouped, id: \.teacher) { group in
                                 Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
                                     ForEach(group.options) { option in
                                         qiraahRow(option)
@@ -239,7 +244,7 @@ struct AyahQiraahComparisonSheet: View {
                                 }
                             }
 
-                            if filteredOptions.isEmpty {
+                            if filtered.isEmpty {
                                 Section {
                                     Text("No riwayat found.")
                                         .font(.subheadline)
@@ -297,7 +302,7 @@ struct AyahQiraahComparisonSheet: View {
                 // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
                 // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
                 ToolbarItem(placement: .primaryAction) {
-                    if OnDeviceAsk.isAvailable, !qiraahSummarizeSource.isEmpty {
+                    if OnDeviceAsk.isAvailable, AyahAISources.qiraahComparisonHasText(surahNumber: surahNumber, ayahNumber: ayahNumber) {
                         SummarizeToolbarButton { showSummarize = true }
                     }
                 }
@@ -414,6 +419,16 @@ struct AyahQiraahComparisonSheet: View {
         QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originTag, quranData: quranData)
     }
 
+    /// The Hafs ayah a row's words belong to, which is what the variant clips are keyed by. The
+    /// buttons were handed the sheet's own `ayahNumber`, the ORIGIN riwayah's number: opened from
+    /// Warsh 2:9 (Hafs 2:10) they played Hafs 2:9 under ayah 10's words. With Smart Comparison off
+    /// a row shows that riwayah's ayah under the tapped number, so its own anchor applies.
+    private func audioHafsAyah(for option: QiraahDisplay) -> Int {
+        smartComparison
+            ? anchorHafsAyah
+            : QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: option.tag, quranData: quranData)
+    }
+
     /// The caption under the Hide Tashkeel / Hide Dots toggles. With either on it also REPORTS the
     /// result - how many riwayat now read identically to the current one - because seeing the
     /// shared Uthmani rasm emerge is the whole point of the toggles.
@@ -447,10 +462,13 @@ struct AyahQiraahComparisonSheet: View {
     private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
         guard let resolved = resolvedBase(for: option) else { return nil }
         guard compareHideTashkeel || compareHideDots else { return resolved }
+        // Every field but the text carries over. The split span did not, so with a Hide toggle on
+        // Warsh's two pieces of Hafs 1:7 sat under "Ayah 6 in this riwayah" (2026-10-04).
         return ResolvedQiraahText(
             text: compareTransformed(resolved.text),
             ownNumber: resolved.ownNumber,
-            mergedSpan: resolved.mergedSpan
+            mergedSpan: resolved.mergedSpan,
+            splitSpan: resolved.splitSpan
         )
     }
 
@@ -572,7 +590,9 @@ struct AyahQiraahComparisonSheet: View {
     private var duelTextsIdentical: Bool {
         guard let a = duelOptionA, let b = duelOptionB,
               let aText = qiraahText(for: a), let bText = qiraahText(for: b) else { return false }
-        return aText == bText
+        // Under the shared spelling key, not byte for byte: Hafs's text alone keeps the silent
+        // letter ring (U+0652), so Hafs against a riwayah that reads the ayah alike never said so.
+        return QiraahSpelling.key(aText) == QiraahSpelling.key(bText)
     }
 
     /// The caption under the two picked riwayat. Two riwayat agreeing on ONE ayah is ordinary and the
@@ -778,7 +798,7 @@ struct AyahQiraahComparisonSheet: View {
 
             // Hearing the difference: the same reciter, both readings, where a pair exists.
             if text != nil, QiraatVariantAudioStore.isBundled {
-                QiraatVariantAudioButtons(tag: option.tag, surah: surahNumber, ayah: ayahNumber)
+                QiraatVariantAudioButtons(tag: option.tag, surah: surahNumber, ayah: audioHafsAyah(for: option))
             }
         }
         .padding(.vertical, 4)
@@ -1236,6 +1256,32 @@ struct AyahEnglishComparisonSheet: View {
     }
 }
 
+/// The one key two printed spellings (a word, a phrase or a whole ayah) are compared under: the
+/// word card's riwayat block, the explorer's Head-to-Head and this sheet's own all ask "do these
+/// two read the same" through it. Marks are kept, because a vowel is a reading; what goes is what
+/// is not one:
+/// * U+0652, the ring the prints set on a silent letter (كَفَرُواْ). The reader strips it from every
+///   riwayah's text but Hafs's (`Ayah.displayArabicText`), so an exact comparison called 3,970 Hafs
+///   words different from riwayat that print them identically (Shu'bah: 565 real differences shown
+///   as 4,517);
+/// * the stop signs and ornaments, which belong to a print's editing, not to the reading;
+/// * the tatweel and the zero-width characters, and the order the packs happen to write marks in
+///   (canonical composition).
+/// A sign that stood as a word of its own leaves only its spaces, so the spacing is evened out too.
+enum QiraahSpelling {
+    static func key(_ text: String) -> String {
+        var scalars = String.UnicodeScalarView()
+        for scalar in text.precomposedStringWithCanonicalMapping.unicodeScalars {
+            switch scalar.value {
+            case 0x0640, 0x0652, 0x200B...0x200F, 0x2060, 0xFEFF: continue
+            default:
+                if !TajweedRules.stopSignScalars.contains(scalar.value) { scalars.append(scalar) }
+            }
+        }
+        return String(scalars).split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+    }
+}
+
 struct ResolvedQiraahText {
     let text: String
     /// The riwayah's OWN number for this ayah, when it differs from the number the sheet was
@@ -1271,10 +1317,20 @@ enum QiraahAyahResolver {
         let tag = Settings.Riwayah.canonicalTag(optionTag)
         let anchor = anchorHafsAyah
 
+        // `clean: false` asks for the FULL text, which is `rawArabicText`. It read
+        // `displayArabicText(clean: false)`, which has followed the reader's Hide Dots since
+        // 2026-09-11: with that switch on, the comparison rows came out dotless while the sheet's
+        // own Hide Dots was off, and the word card compared dotless riwayat against dotted Hafs.
+        func text(of ayah: Ayah, in override: String) -> String {
+            clean
+                ? ayah.displayArabicText(surahId: surahNumber, clean: true, qiraahOverride: override)
+                : ayah.rawArabicText(surahId: surahNumber, qiraahOverride: override)
+        }
+
         if tag.isEmpty {
             guard let ayah = quranData.ayah(surah: surahNumber, ayah: anchor) else { return nil }
             return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: ""),
+                text: text(of: ayah, in: ""),
                 ownNumber: anchor == ayahNumber ? nil : anchor,
                 mergedSpan: nil
             )
@@ -1290,16 +1346,16 @@ enum QiraahAyahResolver {
             let span = alignment.hafsRangeForRiwayah[ownNumber]
             // A split: `ownNumber` is only the piece that STARTS this Hafs ayah. Every following
             // riwayah ayah that maps to exactly this Hafs ayah is the rest of it.
-            var text = ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag)
+            var joined = text(of: ayah, in: tag)
             var lastPiece = ownNumber
             while alignment.hafsRangeForRiwayah[lastPiece + 1] == anchor...anchor,
                   let piece = quranData.ayah(surah: surahNumber, ayah: lastPiece + 1),
                   piece.existsInQiraah(tag, surahID: surahNumber) {
                 lastPiece += 1
-                text += " " + piece.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag)
+                joined += " " + text(of: piece, in: tag)
             }
             return ResolvedQiraahText(
-                text: text,
+                text: joined,
                 ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
                 mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil,
                 splitSpan: lastPiece > ownNumber ? ownNumber...lastPiece : nil
@@ -1311,7 +1367,7 @@ enum QiraahAyahResolver {
         guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
               ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
         return ResolvedQiraahText(
-            text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag),
+            text: text(of: ayah, in: tag),
             ownNumber: nil,
             mergedSpan: nil
         )
@@ -1406,6 +1462,24 @@ enum AyahAISources {
 
     /// The riwayat block: the current riwayah's reading first, then every other riwayah's aligned text
     /// with the same numbering/difference notes the comparison rows render.
+    /// Whether `qiraahComparisonText` would be non-empty, without resolving every riwayah (Phase 10.8):
+    /// the sheet's toolbar asked for the whole text on every body pass (every keystroke, every slider
+    /// tick) only to test `.isEmpty`. The text is a line per option other than the current one, plus
+    /// the current one's line when it resolves, so it is empty only with no options, or with a single
+    /// option that is the current riwayah and does not resolve.
+    static func qiraahComparisonHasText(surahNumber: Int, ayahNumber: Int) -> Bool {
+        let options = Settings.Riwayah.textOptions
+        guard let only = options.first else { return false }
+        if options.count > 1 { return true }
+        let currentTag = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+        if only.tag != currentTag { return true }
+        return QiraahAyahResolver.resolve(
+            surahNumber: surahNumber, ayahNumber: ayahNumber,
+            anchorHafsAyah: hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber),
+            optionTag: only.tag, clean: Settings.shared.cleanArabicText
+        ) != nil
+    }
+
     static func qiraahComparisonText(surahNumber: Int, ayahNumber: Int) -> String {
         let anchor = hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
         let currentTag = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)

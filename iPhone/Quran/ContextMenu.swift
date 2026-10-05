@@ -168,7 +168,9 @@ func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
 struct SurahContextMenu: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// Playback state from the coalesced snapshot, actions on the player (Phase 10.4).
+    @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    private var quranPlayer: QuranPlayer { .shared }
 
     let surahID: Int
     let surahName: String
@@ -185,7 +187,7 @@ struct SurahContextMenu: View {
     }
 
     private var canAddToQueue: Bool {
-        quranPlayer.isPlaying || quranPlayer.isPaused
+        nowPlaying.isPlaying || nowPlaying.isPaused
     }
 
     var body: some View {
@@ -454,7 +456,9 @@ final class TafsirStore {
 
 struct AyahContextMenuModifier: ViewModifier {
     @ObservedObject var settings = Settings.shared
-    @ObservedObject var quranData = QuranData.shared
+    /// NOT @ObservedObject (Phase 10.8): the body only calls `surah(_:)`, an index lookup; observing
+    /// re-ran this modifier on every realized search/bookmark/grid row for each QuranData publish.
+    private var quranData: QuranData { .shared }
     /// NOT @ObservedObject: the player is only ever touched inside button-action closures here, never
     /// in the render path - but observing it re-ran this modifier's body on every visible ayah row
     /// each time the player published (it publishes `currentAyahNumber` once per ayah while a surah

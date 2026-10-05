@@ -152,6 +152,8 @@ struct AyahTafsirSheet: View {
                        endAyah: tafsirAyahRange.upperBound == tafsirAyahRange.lowerBound ? nil : tafsirAyahRange.upperBound)
     }
 
+    /// Compiled once (Phase 10.8): the parse ran on every body pass of the tafsir sheet, several times.
+    private static let groupVerseRegex = try? NSRegularExpression(pattern: #"(\d{1,3})\s*:\s*(\d{1,3})"#)
     private func parsedAyahRange(from groupVerse: String?) -> ClosedRange<Int>? {
         guard let groupVerse else { return nil }
         let trimmed = groupVerse.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -162,7 +164,7 @@ struct AyahTafsirSheet: View {
         // five-ayah group to one and mistitled the card ("27:19" for a tap on 16). Pull every
         // surah:ayah pair instead and span their AYAH numbers.
         var ayahNumbers: [Int] = []
-        if let regex = try? NSRegularExpression(pattern: #"(\d{1,3})\s*:\s*(\d{1,3})"#) {
+        if let regex = Self.groupVerseRegex {
             let matches = regex.matches(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed))
             for match in matches {
                 if let range = Range(match.range(at: 2), in: trimmed), let ayah = Int(trimmed[range]) {
@@ -945,7 +947,9 @@ struct SurahInfoSheet: View {
 /// struct so the player's per-ayah ticks only re-render this card, not the whole markdown sheet.
 private struct SurahInfoPlaybackCard: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// Playback state from the coalesced snapshot, actions on the player (Phase 10.4).
+    @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    private var quranPlayer: QuranPlayer { .shared }
 
     let surahNumber: Int
     let surahName: String
@@ -956,7 +960,7 @@ private struct SurahInfoPlaybackCard: View {
     @State private var showReciterPicker = false
 
     private var isPlayingThisSurah: Bool {
-        (quranPlayer.isPlaying || quranPlayer.isPaused) && quranPlayer.currentSurahNumber == surahNumber
+        (nowPlaying.isPlaying || nowPlaying.isPaused) && nowPlaying.currentSurahNumber == surahNumber
     }
 
     var body: some View {

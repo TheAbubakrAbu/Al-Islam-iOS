@@ -138,7 +138,7 @@ struct HighlightedSnippet: View {
                                 preStyled: AttributedString?, beginner: Bool, allah: Bool,
                                 guarantee: Bool, extra: [NSRange], wordRule: SearchWordRule) -> NSString {
         var parts: [String] = [
-            source, term, "\(font)", "\(accent)", "\(fg)",
+            source, term, DescriptionMemo.describe(font), DescriptionMemo.describe(accent), DescriptionMemo.describe(fg),
             beginner ? "b" : "-", allah ? "a" : "-", guarantee ? "g" : "-", wordRule.rawValue,
             extra.map { "\($0.location):\($0.length)" }.joined(separator: ","),
         ]
@@ -286,9 +286,13 @@ struct HighlightedSnippet: View {
 
     nonisolated static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
         // Accents fold like every search fold does, so a typed "sahih" paints "Ṣaḥīḥ" in a narration.
-        var cleaned = String(text.foldingLatinDiacritics.unicodeScalars
-            .filter { !Self.englishHighlightStripSet.contains($0) }
-        ).lowercased()
+        // An en or em dash is a word break here as in the search fold (`SearchFoldTables.fold`):
+        // stripped like other punctuation it glued "forefathers\u{2014}Abraham" into one word, and
+        // "sabr" was painted across the join.
+        var cleaned = String(String.UnicodeScalarView(text.foldingLatinDiacritics.unicodeScalars.compactMap { scalar -> Unicode.Scalar? in
+            if scalar.value == 0x2013 || scalar.value == 0x2014 { return " " }
+            return Self.englishHighlightStripSet.contains(scalar) ? nil : scalar
+        })).lowercased()
 
         if trimWhitespace {
             cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1265,6 +1269,21 @@ extension Text {
     /// other run keeps whatever color the call site gives the `Text`.
     static func islamText(_ source: String, highlightAllah: Bool) -> Text {
         guard highlightAllah else { return Text(source) }
+        // Cached per source (Phase 10.8): every verbatim article paragraph, dua line and name tile runs
+        // this on each body pass, with a diacritic-insensitive `range(of:)` scan over the whole string.
+        let key = source as NSString
+        if let hit = IslamTextCache.cache.object(forKey: key) {
+            if let attributed = hit.value { return Text(attributed) }
+            return Text(source)
+        }
+        let attributed = islamAttributed(source)
+        IslamTextCache.cache.setObject(IslamTextCache.Box(attributed), forKey: key)
+        if let attributed { return Text(attributed) }
+        return Text(source)
+    }
+
+    /// The highlighted form, or nil when the text names Allah nowhere.
+    private static func islamAttributed(_ source: String) -> AttributedString? {
         var ranges = HighlightedSnippet.arabicAllahRanges(in: source)
         var searchStart = source.startIndex
         while searchStart < source.endIndex,
@@ -1273,7 +1292,7 @@ extension Text {
             ranges.append(match)
             searchStart = match.upperBound
         }
-        guard !ranges.isEmpty else { return Text(source) }
+        guard !ranges.isEmpty else { return nil }
         var attributed = AttributedString(source)
         for range in ranges {
             if let start = AttributedString.Index(range.lowerBound, within: attributed),
@@ -1281,7 +1300,7 @@ extension Text {
                 attributed[start..<end].foregroundColor = .red
             }
         }
-        return Text(attributed)
+        return attributed
     }
 
     /// `islamText` under the name the Arabic-only call sites read best with.
@@ -1324,14 +1343,38 @@ extension AttributedString {
             // recolored in place (custom tajweed colors, 2026-09-20): same runs, new colors, same
             // digest, and the memo served the old paint. Hashed by component, not by object: the riwayah
             // palette builds a fresh dynamic UIColor per call, equal only to itself.
-            if let color = run.uiKit.foregroundColor { Self.combineComponents(of: color, into: &hasher) }
+            if let color = run.uiKit.foregroundColor { hasher.combine(ColorComponentMemo.hash(of: color)) }
             #endif
         }
         return hasher.finalize()
     }
 
     #if canImport(UIKit)
-    private static func combineComponents(of color: UIColor, into hasher: inout Hasher) {
+    /// The component hash of one colour, by object (Phase 10.8): the tajweed painters hand the same
+    /// `UIColor` objects out of their caches on every pass, and resolving each run's colour against
+    /// the light appearance plus `getRed` was the cost of every row body with a pre-styled source.
+    /// The colour object itself is kept beside its hash, so an identifier can never be reused by a
+    /// new colour while its entry is alive; a full table starts over.
+    enum ColorComponentMemo {
+        private static let lock = NSLock()
+        nonisolated(unsafe) private static var table: [ObjectIdentifier: (color: UIColor, hash: Int)] = [:]
+        static func hash(of color: UIColor) -> Int {
+            let id = ObjectIdentifier(color)
+            lock.lock()
+            if let entry = table[id], entry.color === color { lock.unlock(); return entry.hash }
+            lock.unlock()
+            var hasher = Hasher()
+            AttributedString.combineComponents(of: color, into: &hasher)
+            let value = hasher.finalize()
+            lock.lock()
+            if table.count >= 4096 { table.removeAll(keepingCapacity: true) }
+            table[id] = (color, value)
+            lock.unlock()
+            return value
+        }
+    }
+
+    fileprivate static func combineComponents(of color: UIColor, into hasher: inout Hasher) {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         #if os(watchOS)
         color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
@@ -1349,4 +1392,50 @@ extension AttributedString {
     private static let lightTraits = UITraitCollection(userInterfaceStyle: .light)
     #endif
     #endif
+}
+
+/// `Text.islamText`'s per-source memo (Phase 10.8). A nil value remembers "nothing to highlight".
+enum IslamTextCache {
+    final class Box {
+        let value: AttributedString?
+        init(_ value: AttributedString?) { self.value = value }
+    }
+    static let cache: NSCache<NSString, Box> = {
+        let cache = NSCache<NSString, Box>()
+        cache.countLimit = 800
+        return cache
+    }()
+}
+
+/// `String(describing:)` of a `Font` or `Color` is reflection (a `Mirror` walk) and the snippet memo key
+/// needed three per body pass per snippet. The descriptions are stable for equal values, so they are
+/// looked up by the Hashable value instead (Phase 10.8); the key's bytes are unchanged.
+enum DescriptionMemo {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var fonts: [Font: String] = [:]
+    nonisolated(unsafe) private static var colors: [Color: String] = [:]
+
+    static func describe(_ font: Font) -> String {
+        lock.lock()
+        if let hit = fonts[font] { lock.unlock(); return hit }
+        lock.unlock()
+        let text = "\(font)"
+        lock.lock()
+        if fonts.count >= 256 { fonts.removeAll(keepingCapacity: true) }
+        fonts[font] = text
+        lock.unlock()
+        return text
+    }
+
+    static func describe(_ color: Color) -> String {
+        lock.lock()
+        if let hit = colors[color] { lock.unlock(); return hit }
+        lock.unlock()
+        let text = "\(color)"
+        lock.lock()
+        if colors.count >= 256 { colors.removeAll(keepingCapacity: true) }
+        colors[color] = text
+        lock.unlock()
+        return text
+    }
 }

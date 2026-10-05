@@ -101,7 +101,10 @@ struct PrayerTrackerStats: Equatable {
             }
 
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-            day = next
+            // Re-anchored every step, like `dayRecords`: where the clocks skip midnight (Cairo,
+            // Beirut, Santiago) the running date sat at 01:00 from the change onward, was never
+            // `<= today` on the last step, and today dropped out of every total and the streak.
+            day = calendar.startOfDay(for: next)
         }
         stats.currentStreak = run
         return stats
@@ -279,10 +282,12 @@ struct PrayerMarkChooser: View {
     @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
+    /// The day of the list the prayer is on. Not `prayer.time`'s day: an Isha after midnight is
+    /// still the Isha of the day before, and marked under its own time it was filed a day late.
+    let day: Date
 
     var body: some View {
         let name = prayer.nameTransliteration
-        let day = prayer.time
         let mark = settings.prayerMark(for: name, on: day)
 
         VStack(alignment: .leading, spacing: 6) {
@@ -1151,8 +1156,11 @@ struct PrayerTrackerView: View {
 
         init() {}
 
-        init(records: [DayRecord]) {
-            for record in records where !record.isFuture {
+        /// `since` is the first day with anything recorded ("tracking since"): the days before it
+        /// are not days the user failed to pray, and counting them put a first week at 5 of 35.
+        init(records: [DayRecord], since earliestKey: String?) {
+            guard let earliestKey else { return }
+            for record in records where !record.isFuture && record.key >= earliestKey {
                 if record.exempt {
                     exempt += 1
                     continue
@@ -1207,7 +1215,7 @@ struct PrayerTrackerView: View {
             .padding(.vertical, 6)
             .listRowSeparator(.hidden)
 
-            summaryLine(PeriodTotals(records: records))
+            summaryLine(PeriodTotals(records: records, since: settings.trackerEarliestDayKey()))
         }
     }
 
@@ -1289,8 +1297,13 @@ struct PrayerTrackerView: View {
     private func hasPrayerBegun(_ prayerName: String, on date: Date) -> Bool {
         guard settings.trackerRequiresPrayerTime else { return true }
         guard calendar.isDateInToday(date) else { return true }
+        // By coverage: on a Friday the Dhuhr row's slot is "Jumuah", and while traveling it is
+        // "Dhuhr/Asr". Matched by name, neither was found and the row could be marked before its time.
         guard let slot = settings.trackableSlots(for: date)
-            .first(where: { $0.nameTransliteration == prayerName })
+            .first(where: {
+                $0.nameTransliteration == prayerName
+                    || Settings.canonicalCoverage(of: $0.nameTransliteration).contains(prayerName)
+            })
         else { return true }
         return settings.canMarkPrayer(startingAt: slot.time, on: date)
     }
@@ -1347,7 +1360,7 @@ struct PrayerTrackerView: View {
             .padding(.vertical, 6)
             .listRowSeparator(.hidden)
 
-            summaryLine(PeriodTotals(records: records))
+            summaryLine(PeriodTotals(records: records, since: settings.trackerEarliestDayKey()))
         }
     }
 
@@ -1533,13 +1546,14 @@ struct PrayerTrackerView: View {
     }
 
     private func yearMonthSummaries(year: Int, today: Date) -> [MonthSummary] {
-        (1...12).compactMap { month in
+        let earliestKey = settings.trackerEarliestDayKey()
+        return (1...12).compactMap { month in
             guard let start = calendar.date(from: DateComponents(year: year, month: month, day: 1)) else { return nil }
             guard start <= today else {
                 return MonthSummary(month: month, totals: PeriodTotals())
             }
             let dayCount = calendar.range(of: .day, in: .month, for: start)?.count ?? 30
-            return MonthSummary(month: month, totals: PeriodTotals(records: dayRecords(from: start, count: dayCount)))
+            return MonthSummary(month: month, totals: PeriodTotals(records: dayRecords(from: start, count: dayCount), since: earliestKey))
         }
     }
 

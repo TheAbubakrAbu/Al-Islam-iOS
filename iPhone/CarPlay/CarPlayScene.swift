@@ -291,35 +291,28 @@ final class CarPlayController {
 
     func perform(_ action: CarPlayAction) {
         switch action {
+        // Now Playing goes up only for a play that started: one that failed on the spot (offline with
+        // nothing downloaded, a reciter who never recorded the surah) is raising its explanation.
         case .resumeLastSurah:
             guard let last = settings.lastListenedSurah else { return }
-            player.playSurah(surahNumber: last.surahNumber, surahName: last.surahName, certainReciter: true)
-            showNowPlaying()
+            if player.playSurah(surahNumber: last.surahNumber, surahName: last.surahName, certainReciter: true) { showNowPlaying() }
         case .resumeLastAyah:
             guard let last = settings.lastListenedAyah else { return }
-            player.playAyah(surahNumber: last.surahNumber, ayahNumber: last.ayahNumber, continueRecitation: true)
-            showNowPlaying()
+            if player.playAyah(surahNumber: last.surahNumber, ayahNumber: last.ayahNumber, continueRecitation: true) { showNowPlaying() }
         case .playSurah(let number):
-            player.playSurah(surahNumber: number, surahName: quranData.surah(number)?.nameTransliteration ?? "Surah \(number)")
-            showNowPlaying()
+            if player.playSurah(surahNumber: number, surahName: quranData.surah(number)?.nameTransliteration ?? "Surah \(number)") {
+                showNowPlaying()
+            }
         case .playAyah(let surah, let ayah):
-            player.playAyah(surahNumber: surah, ayahNumber: ayah, continueRecitation: true)
-            showNowPlaying()
+            if player.playAyah(surahNumber: surah, ayahNumber: ayah, continueRecitation: true) { showNowPlaying() }
         case .resumeHistory(let id):
             guard let item = player.listeningHistory.first(where: { $0.id == id }) else { return }
-            settings.lastListenedSurah = LastListenedSurah(
-                surahNumber: item.surahNumber,
-                surahName: item.surahName,
-                reciter: item.reciter,
-                currentDuration: item.currentDuration ?? 0,
-                fullDuration: item.fullDuration ?? 0
-            )
-            player.playSurah(surahNumber: item.surahNumber, surahName: item.surahName, certainReciter: true)
-            showNowPlaying()
+            // Files the surah it displaces first (see `resumeHistoryItem`).
+            if player.resumeHistoryItem(item) { showNowPlaying() }
         case .playRandomSurah:
-            guard let surah = quranData.quran.randomElement() else { return }
-            player.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
-            showNowPlaying()
+            // One the selected reciter recorded (see `randomRecordedSurah`).
+            guard let surah = player.randomRecordedSurah() else { return }
+            if player.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration) { showNowPlaying() }
         case .openSurahGroup(let range):
             pushLiveList(title: CarPlayContent.groupTitle(range)) { surahs, playback in
                 CarPlayContent.surahGroupSections(range, surahs: surahs, playback: playback)
@@ -358,15 +351,20 @@ final class CarPlayController {
             }
         case .playSunnah(let id):
             guard let recitation = sunnahRecitations.first(where: { $0.id == id }) else { return }
+            let started: Bool
             switch recitation.start {
             case .surah(let number):
-                player.playSurah(surahNumber: number, surahName: quranData.surah(number)?.nameTransliteration ?? "Surah \(number)")
+                started = player.playSurah(surahNumber: number, surahName: quranData.surah(number)?.nameTransliteration ?? "Surah \(number)")
             case .ayah(let surah, let ayah):
-                player.playAyah(surahNumber: surah, ayahNumber: ayah, continueRecitation: true)
+                started = player.playAyah(surahNumber: surah, ayahNumber: ayah, continueRecitation: true)
             }
+            // A start that failed on the spot queues nothing: its explanation is on its way instead.
+            // (This read `showInternetAlert`, which the failure only raises a main-queue turn later,
+            // so a reciter without as-Sajdah still queued al-Insan for Friday Fajr, 2026-10-04.)
+            guard started else { return }
             // The rest of the recitation waits at the head of Up Next, ahead of anything queued on the
-            // phone. A start that failed on the spot queues nothing: its explanation is up instead.
-            if !recitation.followedBy.isEmpty, !player.showInternetAlert {
+            // phone.
+            if !recitation.followedBy.isEmpty {
                 player.queueSurahsNext(recitation.followedBy)
             }
             showNowPlaying()
@@ -408,10 +406,10 @@ final class CarPlayController {
         interface.pushTemplate(template, animated: true, completion: nil)
     }
 
+    /// Callers push it only for a play that started (`playSurah` and `playAyah` say so). It used to
+    /// check `showInternetAlert` here instead, which a failure raises a turn too late, and which an
+    /// alert left unanswered on the phone kept set, so a good play never opened Now Playing.
     private func showNowPlaying() {
-        // A play that failed on the spot (offline with nothing downloaded, a reciter who never recorded
-        // the surah) has raised its explanation instead; Now Playing would only sit silent behind it.
-        guard !player.showInternetAlert else { return }
         let nowPlaying = CPNowPlayingTemplate.shared
         guard interface.topTemplate !== nowPlaying else { return }
         interface.pushTemplate(nowPlaying, animated: true, completion: nil)

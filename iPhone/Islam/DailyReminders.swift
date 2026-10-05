@@ -50,6 +50,23 @@ struct DailyReminderEntry: Identifiable, Equatable {
 
         /// "1923" -> (1923, nil); "35a" -> (35, "a"); "1211aa" -> (1211, "aa").
         var parts: (number: Int, suffix: String?) { HadithCitation.parts(citation) }
+
+        /// A link by row ("#7393", the shelf's own convention in `HadithQuoteReference`): what the
+        /// Hadith of the Day writes, because a citation does not always name one row (Tirmidhi and
+        /// Bulugh repeat some; Muslim's Introduction shares its numbers with Book 1). Reopened by
+        /// citation, 120 of the 12,043 daily rows opened a different narration (found 2026-10-04).
+        static func row(_ hadith: HadithBookData.Hadith, in book: HadithCatalogBook) -> HadithLink {
+            HadithLink(slug: book.slug, citation: "#\(hadith.idInBook)")
+        }
+
+        /// The hadith this link names: the row itself for a "#" link, the citation's reading otherwise.
+        func resolve(in data: HadithBookData) -> HadithBookData.Hadith? {
+            if citation.hasPrefix("#") {
+                return Int(citation.dropFirst()).flatMap { data.hadith(numbered: $0) }
+            }
+            let parts = self.parts
+            return data.hadith(referenced: parts.number, suffix: parts.suffix)
+        }
     }
 
     let id: String
@@ -512,8 +529,7 @@ final class DailyReminderStore: ObservableObject {
             var arabic = entry.arabic
             var english = entry.english
             if let link = entry.hadith, entry.arabicWords != nil || entry.englishWords != nil {
-                let parts = link.parts
-                if let data = book(link.slug), let hadith = data.hadith(referenced: parts.number, suffix: parts.suffix) {
+                if let data = book(link.slug), let hadith = link.resolve(in: data) {
                     let text = hadith.allText
                     if let span = entry.arabicWords { arabic = words(text.arabic, span) }
                     if let span = entry.englishWords { english = words(text.text, span) }
@@ -683,7 +699,14 @@ final class DailyReminderResolver: ObservableObject {
     /// The Hadith tab's Hadith of the Day (shuffle included), once its text has been read off-main.
     private func hadithOfTheDayCard() -> Pick {
         let store = HadithStore.shared
-        guard let pick = store.daily else { return store.isDailyResolved ? .unavailable : .pending }
+        // A pick resolved for an earlier day is not today's: with the app left open across the
+        // rollover the store still held yesterday's hadith, and the card showed it as today's until
+        // the Hadith tab was next opened. Ask for today's and wait (the store's publish re-resolves).
+        guard store.isDailyResolved else {
+            store.prepareDailyHadith()
+            return .pending
+        }
+        guard let pick = store.daily else { return .unavailable }
         let key = "\(pick.book.slug)|\(pick.hadith.idInBook)"
         guard let text = hadithText, text.key == key else {
             fetchHadithText(pick, key: key)
@@ -695,8 +718,7 @@ final class DailyReminderResolver: ObservableObject {
             short: text.english, english: text.english,
             source: "\(pick.book.englishTitle) \(pick.hadith.displayNumber)", target: "hadith",
             surah: nil, ayah: nil, repeatCount: nil,
-            hadith: DailyReminderEntry.HadithLink(slug: pick.book.slug,
-                                                  citation: pick.hadith.citation ?? String(pick.hadith.idInBook))))
+            hadith: DailyReminderEntry.HadithLink.row(pick.hadith, in: pick.book)))
     }
 
     private func fetchHadithText(_ pick: HadithStore.DailyPick, key: String) {
@@ -1284,9 +1306,8 @@ struct ReminderHadithSheet: View {
                 return
             }
             book = found
-            let parts = link.parts
             guard let data = await HadithStore.shared.openOffMain(found),
-                  let resolved = data.hadith(referenced: parts.number, suffix: parts.suffix) else {
+                  let resolved = link.resolve(in: data) else {
                 failed = true
                 return
             }
@@ -1295,3 +1316,14 @@ struct ReminderHadithSheet: View {
     }
 }
 #endif
+
+extension Settings {
+    /// What follows the "Turn Over at Fajr" switch, from whichever screen flipped it: the Ayah of
+    /// the Day card and the daily widgets' blob are both stamped with the day they were built for,
+    /// and the day just changed its boundary. (Only the Quran settings page did this; flipped from
+    /// the Islam settings or a help door, the widgets kept the old boundary until the next day.)
+    func dailyRolloverSwitchChanged() {
+        refreshQuranWidgets(.ayahOfTheDay)
+        DailyReminderStore.shared.refreshWidgets(force: true)
+    }
+}

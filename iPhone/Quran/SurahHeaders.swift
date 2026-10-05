@@ -335,7 +335,9 @@ struct SurahSectionHeader: View {
 
 struct HeaderRow: View {
     @ObservedObject var settings = Settings.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// Actions only (`playBismillah`): observing the player re-ran this row's three highlighted
+    /// snippets on every ayah advance while a surah played from its start (Phase 10.4).
+    private var quranPlayer: QuranPlayer { .shared }
 
     let arabicText: String
     let englishTransliteration: String

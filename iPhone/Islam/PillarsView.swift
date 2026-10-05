@@ -5,7 +5,6 @@ import SwiftUI
 /// index for two kinds of match: ARTICLES (row titles) and IN THE ARTICLES (a section of prose,
 /// labelled with the article and the heading it sits under, which opens scrolled to that heading).
 struct PillarsView: View {
-    @ObservedObject var settings = Settings.shared
     /// An article to push on top of the index as it appears: a result on the Islam tab's root. Nil opens
     /// the plain index (a DEBUG build may still take one from `-pillarsArticle`, see `ArticleAutoOpen`).
     var openArticle: IslamArticleOpenRequest?

@@ -51,6 +51,16 @@ final class ArabicDotsTests: XCTestCase {
                        [0x066E, 0x0650, 0x06BA, 0x064E, 0x066F, 0x064F, 0x0649, 0x0652])
     }
 
+    /// J8: a seated hamza keeps its seat and loses the hamza, as the early rasm wrote it: يُؤۡمِنُونَ keeps
+    /// its waw, سُئِلَ its tooth. Both used to become a detached ء.
+    func testSeatedHamzaKeepsItsSeat() {
+        XCTAssertEqual(ArabicRasm.dotless("\u{0624}"), "\u{0648}")
+        XCTAssertEqual(ArabicRasm.dotless("\u{0626}"), "\u{0649}")
+        XCTAssertEqual(ArabicRasm.dotless("\u{0621}"), "\u{0621}")
+        let out = "\u{0633}\u{064F}\u{0626}\u{0650}\u{0644}\u{064E}".removingArabicDots
+        XCTAssertEqual(Array(out.unicodeScalars.map(\.value)), [0x0633, 0x064F, 0x0649, 0x0650, 0x0644, 0x064E])
+    }
+
     /// A1: the table is one scalar to one scalar, never outputs a dotted letter, and is idempotent.
     func testTableIsClosedAndIdempotent() {
         for value in UInt32(0x0600)...UInt32(0x06FF) {

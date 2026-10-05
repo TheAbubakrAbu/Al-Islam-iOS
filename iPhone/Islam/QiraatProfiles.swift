@@ -700,7 +700,6 @@ enum QiraatProfiles {
 // MARK: - Detail views
 
 struct QiraahMasterDetailView: View {
-    @ObservedObject var settings = Settings.shared
     let profile: QiraahMasterProfile
 
     var body: some View {
@@ -784,7 +783,6 @@ struct QiraahMasterDetailView: View {
 }
 
 struct RiwayahNarratorDetailView: View {
-    @ObservedObject var settings = Settings.shared
     let profile: RiwayahNarratorProfile
 
     var body: some View {

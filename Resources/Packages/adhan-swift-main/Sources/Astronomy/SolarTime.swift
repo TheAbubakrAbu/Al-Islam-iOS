@@ -87,7 +87,12 @@ struct SolarTime {
     // hours from transit
     func afternoon(shadowLength: Double) -> DateComponents? {
         // TODO source shadow angle calculation
-        let tangent = Angle(fabs(observer.latitude - solar.declination.degrees))
+        // The noon shadow is cast at the transit, so it takes the declination of that moment. The
+        // 0h UT value stood here, as much as a day's quarter of drift away from it: Asr came out up
+        // to 17 seconds off near the equinoxes, enough to tip the rounded minute (2026-10-04).
+        let declinationAtTransit = Astronomical.interpolate(value: solar.declination.degrees, previousValue: prevSolar.declination.degrees,
+                                                            nextValue: nextSolar.declination.degrees, factor: approxTransit)
+        let tangent = Angle(fabs(observer.latitude - declinationAtTransit))
         let inverse = shadowLength + tan(tangent.radians)
         let angle = Angle(radians: atan(1.0 / inverse))
 

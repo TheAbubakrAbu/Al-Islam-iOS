@@ -89,7 +89,9 @@ struct PrayerList: View {
     private func trackerMark(for prayer: Prayer) -> PrayerMark? {
         #if os(iOS)
         guard Settings.trackablePrayerNames.contains(prayer.nameTransliteration) else { return nil }
-        return settings.prayerMark(for: prayer.nameTransliteration, on: prayer.time)
+        // The day the list is showing, not the civil day of the prayer's time: a summer Isha past
+        // midnight belongs to the list it is on, which is where the tracker's Day view files it.
+        return settings.prayerMark(for: prayer.nameTransliteration, on: selectedDate)
         #else
         return nil
         #endif
@@ -816,7 +818,7 @@ struct PrayerList: View {
             // tracker's Day view gives, for this prayer on the day the list is showing.
             #if os(iOS)
             if Settings.trackablePrayerNames.contains(prayer.nameTransliteration) {
-                PrayerMarkChooser(prayer: prayer)
+                PrayerMarkChooser(prayer: prayer, day: selectedDate)
             }
             #endif
         }

@@ -51,6 +51,45 @@ final class FaraidTests: XCTestCase {
         XCTAssertEqual(share[.father], Fraction(1, 2))
     }
 
+    /// Phase 8: the 'Umariyyah holds with ONE sibling present. The father shuts the sibling out and
+    /// one sibling leaves the mother her third (4:11), so she still takes a third of what remains;
+    /// she used to take a third of the whole estate, twice the father's share.
+    func testUmariyyahWithOneSibling() {
+        for sibling in [FaraidHeir.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings] {
+            let (husbandCase, withHusband) = run([.husband: 1, .mother: 1, .father: 1, sibling: 1])
+            XCTAssertEqual(withHusband[.husband], Fraction(1, 2), sibling.rawValue)
+            XCTAssertEqual(withHusband[.mother], Fraction(1, 6), sibling.rawValue)
+            XCTAssertEqual(withHusband[.father], Fraction(1, 3), sibling.rawValue)
+            XCTAssertNil(withHusband[sibling], sibling.rawValue)
+            XCTAssertEqual(total(husbandCase), .one, sibling.rawValue)
+
+            let (_, withWife) = run([.wives: 1, .mother: 1, .father: 1, sibling: 1])
+            XCTAssertEqual(withWife[.wives], Fraction(1, 4), sibling.rawValue)
+            XCTAssertEqual(withWife[.mother], Fraction(1, 4), sibling.rawValue)
+            XCTAssertEqual(withWife[.father], Fraction(1, 2), sibling.rawValue)
+        }
+    }
+
+    /// Phase 8: two siblings cut the mother to a sixth of the whole (4:11), which is no longer the 'Umariyyah.
+    func testTwoSiblingsAreNotTheUmariyyah() {
+        let (result, share) = run([.wives: 1, .mother: 1, .father: 1, .fullBrothers: 2])
+        XCTAssertEqual(share[.wives], Fraction(1, 4))
+        XCTAssertEqual(share[.mother], Fraction(1, 6))
+        XCTAssertEqual(share[.father], Fraction(7, 12))
+        XCTAssertEqual(total(result), .one)
+    }
+
+    /// Phase 8: al-Mushtarakah needs a full brother left with nothing. Full sisters alone hold fixed
+    /// shares, so the same family with sisters is an ordinary 'awl and must not carry the note.
+    func testMushtarakahNoteNeedsAFullBrother() {
+        let (withBrother, _) = run([.husband: 1, .mother: 1, .maternalSiblings: 2, .fullBrothers: 1])
+        XCTAssertTrue(withBrother.notes.contains { $0.contains("al-Mushtarakah") })
+
+        let (withSisters, _) = run([.husband: 1, .mother: 1, .maternalSiblings: 2, .fullSisters: 2])
+        XCTAssertTrue(withSisters.didAwl)
+        XCTAssertFalse(withSisters.notes.contains { $0.contains("al-Mushtarakah") })
+    }
+
     /// A12: the guide's case: daughter 1/2, full sister 1/2 as residuary with her, paternal half-brother excluded by the sister.
     func testDaughterFullSisterPaternalBrother() throws {
         let (result, share) = run([.daughters: 1, .fullSisters: 1, .paternalBrothers: 1])

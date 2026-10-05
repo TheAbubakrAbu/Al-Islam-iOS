@@ -56,6 +56,10 @@ final class WordByWordStore: @unchecked Sendable {
     /// settings toggle) without paying for the parse.
     static let isBundled: Bool = packURL() != nil
 
+    /// The pack file itself, for the cross-language lexicon's cache signature (its size and date
+    /// stamp the lexicon that was derived from it).
+    static var bundledPackURL: URL? { packURL() }
+
     /// Raw entries for one ayah, in the app's Hafs token order. Prefer `entries(_:surah:ayah:rawText:displayText:)`,
     /// which reconciles this with what the reader is actually showing.
     func entries(_ layer: Layer, surah: Int, ayah: Int) -> [String]? {
@@ -110,6 +114,18 @@ final class WordByWordStore: @unchecked Sendable {
     /// Per-word transliteration lined up with the tokens of `displayText`, or nil when they cannot be.
     func transliterations(surah: Int, ayah: Int, rawText: String, displayText: String) -> [String]? {
         entries(.transliteration, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText)
+    }
+
+    /// Parses the pack off-main ahead of the first glossed row (Phase 10.5). `loadedTable()` runs on the
+    /// CALLER's thread, and the first caller used to be an `AyahRow` body: ~2 MB of JSON inflated and
+    /// bridged on the main thread, in the launch window for a reader opened at launch. The Quran load
+    /// kicks this when a word switch is on, and the switches kick it when they turn on.
+    func prewarm() {
+        lock.lock()
+        let needed = table == nil && !loadFailed
+        lock.unlock()
+        guard needed, Self.isBundled else { return }
+        Task.detached(priority: .utility) { [self] in _ = self.loadedTable() }
     }
 
     /// Drops the parsed table (the setting was switched off). The pack reloads on next use.
@@ -201,12 +217,17 @@ enum WordTokens {
         return ranges
     }
 
+    /// Cut from `ranges(in:)`, so a token index means the same thing on both sides. They were a
+    /// `split` on `Character.isWhitespace`, which reads a grapheme's FIRST scalar: a space carrying
+    /// a combining mark (" ۚ" in ad-Duri's and as-Susi's 4:44) was one whitespace Character there and
+    /// a token of its own here, and every tap after it opened the next word's card (2026-10-04).
     static func tokens(in text: String) -> [String] {
-        text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let ns = text as NSString
+        return ranges(in: text).map { ns.substring(with: $0) }
     }
 
     static func count(in text: String) -> Int {
-        text.split(whereSeparator: { $0.isWhitespace }).count
+        ranges(in: text).count
     }
 
     /// Which token contains `utf16Offset`, or nil when the offset is in whitespace / past the tokens.
@@ -504,7 +525,7 @@ enum CrossLanguageWordHighlight {
             if Thread.isMainThread {
                 // Snapshot the (value-type) surah array here; the fold work moves off main.
                 let surahs = quranSnapshot()
-                DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+                DispatchQueue.global(qos: .utility).async { loadOrBuildLexicon(surahs: surahs) }
             } else {
                 // Asked first from a background task (a hadith search row's detached highlight):
                 // `QuranData.quran` belongs to the main thread, which reassigns it at load and on a
@@ -512,11 +533,30 @@ enum CrossLanguageWordHighlight {
                 // 2026-09-21 heap corruption, Quality Guide C5). The snapshot is taken on main.
                 DispatchQueue.main.async {
                     let surahs = QuranData.shared.quran
-                    DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+                    DispatchQueue.global(qos: .utility).async { loadOrBuildLexicon(surahs: surahs) }
                 }
             }
         }
         return nil
+    }
+
+    /// The lexicon from disk when one applies: the file this build of the app wrote to Caches, else
+    /// the one shipped in the bundle (Phase 10.17, built by the UnitTests export from these same texts
+    /// and stamped with them), else a fresh build, which is then written to Caches for the next launch.
+    /// Off-main.
+    private static func loadOrBuildLexicon(surahs: [Surah]) {
+        if let ready = LexiconCache.load() ?? LexiconCache.loadBundled() {
+            lexiconLock.lock()
+            if lexicon == nil { lexicon = ready }
+            lexiconLock.unlock()
+            // The build parsed the gloss pack as a side effect, and the per-ayah alignment the
+            // search rows read (`englishTermsForArabicMatch`) parses it on the CALLER's thread when
+            // nothing has: keep that table warm here too, off-main, so the first result row after a
+            // cache hit finds it ready exactly as it did after a build.
+            WordByWordStore.shared.prewarm()
+            return
+        }
+        buildLexicon(surahs: surahs)
     }
 
     /// Start the lexicon build now (off-main, once), so the first hadith rows a query produces find it
@@ -544,33 +584,282 @@ enum CrossLanguageWordHighlight {
     private static let glossNoiseCap = 12
 
     private static func buildLexicon(surahs: [Surah]) {
+        #if DEBUG
+        let started = DispatchTime.now().uptimeNanoseconds
+        #endif
+        let table = makeLexicon(surahs: surahs)
+
+        lexiconLock.lock()
+        let accepted = table.count >= minimumLexiconEntries
+        if accepted {
+            lexicon = table
+        } else {
+            lexiconBuildStarted = false
+        }
+        lexiconLock.unlock()
+        #if DEBUG
+        if RenderCounter.enabled {
+            let ms = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+            NSLog("LEXICON built %d keys %.1f ms %@", table.count, ms, accepted ? "accepted" : "discarded")
+        }
+        #endif
+        if accepted { LexiconCache.save(table) }
+    }
+
+    /// The lexicon as a pure function of the texts and the gloss pack: what the export writes and what
+    /// `buildLexicon` installs.
+    private static func makeLexicon(surahs: [Surah]) -> [String: Set<String>] {
         var table: [String: Set<String>] = [:]
         table.reserveCapacity(24_000)
+        // The three per-token steps are pure functions of their string, and the 77k tokens repeat
+        // heavily (about one distinct spelled form in four, fewer glosses), so each distinct input is
+        // folded once. The table that comes out is the same one the unmemoized loop produced.
+        var keysByToken: [String: [String]] = [:]
+        keysByToken.reserveCapacity(20_000)
+        var wordsByGloss: [String: [String]] = [:]
+        wordsByGloss.reserveCapacity(20_000)
         for surah in surahs {
             for ayah in surah.ayahs {
                 guard let glosses = WordByWordStore.shared.glosses(surah: surah.id, ayah: ayah.id) else { continue }
                 let tokens = WordTokens.tokens(in: ayah.textHafs.trimmingCharacters(in: .whitespacesAndNewlines))
                 guard tokens.count == glosses.count else { continue }
                 for (token, gloss) in zip(tokens, glosses) {
-                    let words = contentWords(of: gloss)
+                    let words: [String]
+                    if let memo = wordsByGloss[gloss] {
+                        words = memo
+                    } else {
+                        words = contentWords(of: gloss)
+                        wordsByGloss[gloss] = words
+                    }
                     guard !words.isEmpty else { continue }
                     // Indexed under EVERY variant, exactly the set the lookups ask for, so a hadith's
                     // والصبر and the Quran's ٱلصَّبْر meet at the same key.
-                    for key in lookupKeys(for: HighlightedSnippet.normalizeForSearchText(token, trimWhitespace: true)) {
+                    let keys: [String]
+                    if let memo = keysByToken[token] {
+                        keys = memo
+                    } else {
+                        keys = lookupKeys(for: HighlightedSnippet.normalizeForSearchText(token, trimWhitespace: true))
+                        keysByToken[token] = keys
+                    }
+                    for key in keys {
                         table[key, default: []].formUnion(words)
                     }
                 }
             }
         }
-        table = table.filter { $0.value.count <= glossNoiseCap }
+        return table.filter { $0.value.count <= glossNoiseCap }
+    }
 
-        lexiconLock.lock()
-        if table.count >= minimumLexiconEntries {
-            lexicon = table
-        } else {
-            lexiconBuildStarted = false
+    #if DEBUG
+    /// Test hooks (`LexiconCacheTests`): the cache file's encoder and decoder, round-tripped on a
+    /// synthetic table so a format slip cannot ship a lexicon that differs from the built one.
+    static func encodeLexiconForTests(_ table: [String: Set<String>]) -> Data {
+        LexiconCache.encode(table, stamps: LexiconCache.currentStamps ?? LexiconCache.Stamps(quranFingerprint: 0, glossSize: 0, glossFingerprint: 0))
+    }
+    static func decodeLexiconForTests(_ data: Data) -> [String: Set<String>]? { LexiconCache.decode(data) }
+    /// `PrecomputedPackTests`: a live build of the table, the shipped file's table (nil when it is
+    /// missing or stamped with other texts), and the shipped file's bytes for a fresh export.
+    static func buildLexiconTableForTests(surahs: [Surah]) -> [String: Set<String>] { makeLexicon(surahs: surahs) }
+    static func bundledLexiconForTests() -> [String: Set<String>]? { LexiconCache.loadBundled() }
+    static func exportLexiconForTests(_ table: [String: Set<String>]) -> Data? {
+        LexiconCache.currentStamps.map { LexiconCache.encode(table, stamps: $0) }
+    }
+    #endif
+
+    /// The built lexicon, kept in Caches between launches (Phase 10.11). Building it meant parsing the
+    /// 2 MB gloss pack and folding 77k tokens, about 2 s of CPU after every reveal on the full tier;
+    /// its inputs are two bundled files and this binary's code, none of which changes between
+    /// launches of one build, so the result is written once and read back in a few milliseconds.
+    /// The file name carries the signature of those inputs (the app executable's and both packs'
+    /// size and date), so a new build, a rebuilt pack or a reinstalled app misses and rebuilds; a
+    /// file that fails to decode, or decodes to fewer keys than a real build yields, is a miss too.
+    private enum LexiconCache {
+        private static let magic: UInt32 = 0x4C455831   // "LEX1"
+        /// Bumped by hand when `makeLexicon`'s rules change: the Caches file of a hot-reloaded dev loop
+        /// (a release build always changes the executable's date) and the SHIPPED file, which only its
+        /// stamps and the equivalence test otherwise guard, are then refused.
+        private static let format = 2
+
+        /// What the shipped file was built from (Phase 10.17): quran.qpk's own fingerprint, and the
+        /// size and content hash of the gloss pack. A file stamped with other texts is not used.
+        struct Stamps: Equatable {
+            let quranFingerprint: UInt64
+            let glossSize: UInt32
+            let glossFingerprint: UInt64
         }
-        lexiconLock.unlock()
+
+        static let currentStamps: Stamps? = {
+            guard let quran = VerseSearchPack.quranFingerprint, let glossURL = WordByWordStore.bundledPackURL,
+                  let gloss = try? Data(contentsOf: glossURL, options: .mappedIfSafe) else { return nil }
+            return Stamps(quranFingerprint: quran, glossSize: UInt32(truncatingIfNeeded: gloss.count),
+                          glossFingerprint: VerseSearchPack.fnv1a(gloss))
+        }()
+
+        private static func bundledURL() -> URL? {
+            Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin", subdirectory: "Quran")
+                ?? Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin", subdirectory: "Data/Quran")
+                ?? Bundle.main.url(forResource: "CrossLanguageLexicon", withExtension: "bin")
+        }
+
+        /// The lexicon shipped in the bundle, when its stamps are this bundle's texts.
+        static func loadBundled() -> [String: Set<String>]? {
+            guard let url = bundledURL(), let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+                  let expected = currentStamps, stamps(in: data) == expected else { return nil }
+            #if DEBUG
+            let started = DispatchTime.now().uptimeNanoseconds
+            #endif
+            guard let table = decode(data), table.count >= minimumLexiconEntries else { return nil }
+            #if DEBUG
+            if RenderCounter.enabled {
+                let ms = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+                NSLog("LEXICON bundled %d keys %d KB %.1f ms", table.count, data.count / 1024, ms)
+            }
+            #endif
+            return table
+        }
+
+        private static func stamp(_ url: URL?) -> String? {
+            guard let url, let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  let size = attributes[.size] as? NSNumber,
+                  let date = attributes[.modificationDate] as? Date else { return nil }
+            return "\(size.int64Value)-\(Int64(date.timeIntervalSince1970))"
+        }
+
+        private static func fileURL() -> URL? {
+            guard let app = stamp(Bundle.main.executableURL),
+                  let gloss = stamp(WordByWordStore.bundledPackURL),
+                  let quran = stamp(QuranPackLoader.url("quran")),
+                  let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            else { return nil }
+            let directory = caches.appendingPathComponent("CrossLanguageLexicon", isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory.appendingPathComponent("lexicon-v\(format)-\(app)-\(gloss)-\(quran).bin")
+        }
+
+        static func load() -> [String: Set<String>]? {
+            guard let url = fileURL(), let data = try? Data(contentsOf: url, options: .mappedIfSafe) else { return nil }
+            #if DEBUG
+            let started = DispatchTime.now().uptimeNanoseconds
+            #endif
+            guard let table = decode(data), table.count >= minimumLexiconEntries else {
+                try? FileManager.default.removeItem(at: url)
+                return nil
+            }
+            #if DEBUG
+            if RenderCounter.enabled {
+                let ms = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
+                NSLog("LEXICON cache hit %d keys %d KB %.1f ms", table.count, data.count / 1024, ms)
+            }
+            #endif
+            return table
+        }
+
+        static func save(_ table: [String: Set<String>]) {
+            guard let url = fileURL(), let stamps = currentStamps else { return }
+            // Older builds' files are dead weight: the signature in the name never matches again.
+            let directory = url.deletingLastPathComponent()
+            if let siblings = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+                for sibling in siblings where sibling.lastPathComponent != url.lastPathComponent {
+                    try? FileManager.default.removeItem(at: sibling)
+                }
+            }
+            try? encode(table, stamps: stamps).write(to: url, options: .atomic)
+        }
+
+        // [magic][format][quran fingerprint u64][gloss size u32][gloss fingerprint u64][key count] then
+        // per key: [u16 key bytes][key][u8 word count] per word: [u8 word bytes][word]. Keys are folded
+        // Arabic (a few dozen bytes), words are gloss content words (ASCII); anything that does not fit
+        // the width is a build change and fails the write.
+        static func encode(_ table: [String: Set<String>], stamps: Stamps) -> Data {
+            var data = Data()
+            data.reserveCapacity(table.count * 48)
+            func appendU32(_ value: UInt32) {
+                withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+            }
+            func appendU64(_ value: UInt64) {
+                withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+            }
+            appendU32(magic)
+            appendU32(UInt32(format))
+            appendU64(stamps.quranFingerprint)
+            appendU32(stamps.glossSize)
+            appendU64(stamps.glossFingerprint)
+            appendU32(UInt32(table.count))
+            // Sorted so the file is byte-stable for one table (Set iteration order is not).
+            for key in table.keys.sorted() {
+                let words = table[key]!.sorted()
+                let keyBytes = Array(key.utf8)
+                guard keyBytes.count <= Int(UInt16.max), words.count <= Int(UInt8.max) else { return Data() }
+                data.append(UInt8(keyBytes.count & 0xFF))
+                data.append(UInt8(keyBytes.count >> 8))
+                data.append(contentsOf: keyBytes)
+                data.append(UInt8(words.count))
+                for word in words {
+                    let wordBytes = Array(word.utf8)
+                    guard wordBytes.count <= Int(UInt8.max) else { return Data() }
+                    data.append(UInt8(wordBytes.count))
+                    data.append(contentsOf: wordBytes)
+                }
+            }
+            return data
+        }
+
+        /// The stamps a file carries, or nil when it is not a lexicon file of this format.
+        static func stamps(in data: Data) -> Stamps? {
+            guard data.count >= 32 else { return nil }
+            var reader = QuranPackReader(data: data, cursor: 0)
+            guard reader.u32() == Int(magic), reader.u32() == format else { return nil }
+            let quran = reader.u64()
+            let size = UInt32(truncatingIfNeeded: reader.u32())
+            let gloss = reader.u64()
+            return Stamps(quranFingerprint: quran, glossSize: size, glossFingerprint: gloss)
+        }
+
+        static func decode(_ data: Data) -> [String: Set<String>]? {
+            return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> [String: Set<String>]? in
+                guard let base = raw.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return nil }
+                let count = raw.count
+                var cursor = 0
+                func u32() -> UInt32? {
+                    guard cursor + 4 <= count else { return nil }
+                    defer { cursor += 4 }
+                    return UInt32(base[cursor]) | UInt32(base[cursor + 1]) << 8
+                        | UInt32(base[cursor + 2]) << 16 | UInt32(base[cursor + 3]) << 24
+                }
+                func string(_ length: Int) -> String? {
+                    guard cursor + length <= count else { return nil }
+                    defer { cursor += length }
+                    return String(decoding: UnsafeBufferPointer(start: base + cursor, count: length), as: UTF8.self)
+                }
+                guard u32() == magic, u32() == UInt32(format) else { return nil }
+                // The stamps (quran u64, gloss size u32, gloss u64): the callers that care read them
+                // through `stamps(in:)`; the Caches file is validated by its name.
+                guard u32() != nil, u32() != nil, u32() != nil, u32() != nil, u32() != nil, let keyCount = u32() else { return nil }
+                var table: [String: Set<String>] = [:]
+                // The count is read from the file: bounded by what the bytes can hold (a record is at
+                // least 3 bytes), so a corrupt or truncated cache cannot reserve gigabytes first.
+                table.reserveCapacity(min(Int(keyCount), count / 3))
+                for _ in 0..<keyCount {
+                    guard cursor + 2 <= count else { return nil }
+                    let keyLength = Int(base[cursor]) | Int(base[cursor + 1]) << 8
+                    cursor += 2
+                    guard let key = string(keyLength), cursor < count else { return nil }
+                    let wordCount = Int(base[cursor])
+                    cursor += 1
+                    var words = Set<String>()
+                    words.reserveCapacity(wordCount)
+                    for _ in 0..<wordCount {
+                        guard cursor < count else { return nil }
+                        let wordLength = Int(base[cursor])
+                        cursor += 1
+                        guard let word = string(wordLength) else { return nil }
+                        words.insert(word)
+                    }
+                    table[key] = words
+                }
+                return cursor == count ? table : nil
+            }
+        }
     }
 
     /// Every key one folded Arabic word should be findable under: itself, plus the forms left after
@@ -1929,34 +2218,37 @@ private enum WordAcrossRiwayat {
     /// which case nothing is marked as differing - there is nothing to differ from).
     private static func group(_ pairs: [(option: Settings.Riwayah.Option, spelling: String)],
                               currentTag: String, hafsSpelling: String?) -> [WordRiwayahReading] {
+        // Grouped by the spelling KEY, the same one the Hafs comparison below uses. The groups
+        // were keyed on the printed bytes, so Hafs's كَفَرُواْ and every other riwayah's كَفَرُوا (the
+        // same word, its silent letter ring stripped from all texts but Hafs's) made two rows
+        // and "2 spellings". A group shows the first spelling seen for it.
         var order: [String] = []
-        var byWord: [String: [Settings.Riwayah.Option]] = [:]
-        var currentSpelling: String?
+        var shown: [String: String] = [:]
+        var byKey: [String: [Settings.Riwayah.Option]] = [:]
+        var currentKey: String?
         for (option, spelling) in pairs {
-            if byWord[spelling] == nil { order.append(spelling) }
-            byWord[spelling, default: []].append(option)
-            if Settings.Riwayah.canonicalTag(option.tag) == currentTag { currentSpelling = spelling }
+            let key = spellingKey(spelling)
+            if byKey[key] == nil {
+                order.append(key)
+                shown[key] = spelling
+            }
+            byKey[key, default: []].append(option)
+            if Settings.Riwayah.canonicalTag(option.tag) == currentTag { currentKey = key }
         }
         let hafsKey = hafsSpelling.map(spellingKey)
-        return order.map { spelling in
-            WordRiwayahReading(word: spelling, options: byWord[spelling] ?? [],
-                               includesCurrent: spelling == currentSpelling,
-                               differsFromHafs: hafsKey.map { spellingKey(spelling) != $0 } ?? false)
+        return order.map { key in
+            WordRiwayahReading(word: shown[key] ?? "", options: byKey[key] ?? [],
+                               includesCurrent: key == currentKey,
+                               differsFromHafs: hafsKey.map { key != $0 } ?? false)
         }
     }
 
-    /// Two spellings are the same reading when they match after canonical composition with the
-    /// tatweel and the zero-width characters dropped: the packs agree on the marks they print, not
-    /// always on the byte order they print them in. Marks are otherwise kept - a vowel is a reading.
+    /// Two spellings are the same reading when their shared keys match (`QiraahSpelling.key`, the
+    /// one the explorer and the comparison sheet compare under): marks are kept, a vowel being a
+    /// reading, while the silent letter ring, the stop signs, the tatweel and the byte order of
+    /// the marks are not.
     static func spellingKey(_ word: String) -> String {
-        var scalars = String.UnicodeScalarView()
-        for scalar in word.precomposedStringWithCanonicalMapping.unicodeScalars {
-            switch scalar.value {
-            case 0x0640, 0x200B...0x200F, 0x2060, 0xFEFF: continue
-            default: scalars.append(scalar)
-            }
-        }
-        return String(scalars)
+        QiraahSpelling.key(word)
     }
 
     /// One riwayah's own words for the Hafs span, resolved ayah by ayah through
@@ -2358,9 +2650,14 @@ struct WordMeaningSheet: View {
     private var tappedLocation: WordLocation? {
         let rawText = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
         let tokens = WordTokens.tokens(in: rawText)
+        // Whether the text the tap landed on had lost its ornaments is read off the tap itself
+        // (`total` counts the DISPLAY tokens), not off the app's Hide Tashkeel: an ayah's own pin
+        // and a preview card's plain text both draw the ayah against that setting, and the walk
+        // then landed one word off in every ayah that opens with ۞.
+        let ornamentsDropped = total < tokens.count
         var displayIndex = 0
         for (index, token) in tokens.enumerated() {
-            if Self.isOrnament(token) && settings.cleanArabicText { continue }
+            if ornamentsDropped && Self.isOrnament(token) { continue }
             displayIndex += 1
             if displayIndex == position {
                 return WordLocation(surah: surah.id, ayah: ayah.id, token: index)
@@ -2449,9 +2746,9 @@ struct WordMeaningSheet: View {
         return latin[focus.location.token]
     }
 
-    private func wordRules(_ focus: Focus) -> [TajweedLegendCategory] {
+    private func wordRules(_ focus: Focus) -> [TajweedWordRule] {
         guard settings.showTajweedColors, settings.isHafsDisplay else { return [] }
-        return TajweedStore.shared.ruleCategories(
+        return TajweedStore.shared.wordRules(
             surah: focus.surah.id, ayah: focus.ayah.id, text: focus.rawText, wordRange: focus.range
         )
     }
@@ -2645,7 +2942,7 @@ struct WordMeaningSheet: View {
                 settings.hapticFeedback()
                 UIPasteboard.general.string = focus.meaning.isEmpty
                     ? focus.shown
-                    : "\(focus.shown) - \(focus.meaning)\n\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)"
+                    : "\(focus.shown): \(focus.meaning)\n\(focus.surah.nameTransliteration) \(focus.surah.id):\(focus.ayah.id)"
             }
         }
     }
@@ -2751,7 +3048,7 @@ struct WordMeaningSheet: View {
     // MARK: Pages
 
     @ViewBuilder
-    private func page(_ focus: Focus, grammar: WordGrammar?, rules: [TajweedLegendCategory],
+    private func page(_ focus: Focus, grammar: WordGrammar?, rules: [TajweedWordRule],
                       styled: AttributedString?, root: String?, lemma: String?) -> some View {
         switch tab {
         case .meaning:
@@ -2775,10 +3072,18 @@ struct WordMeaningSheet: View {
                     surah: focus.surah,
                     ayah: focus.ayah,
                     tag: Settings.Riwayah.hafsTag,
-                    word: focus.shown,
+                    // The RAW token, like every other riwayah's spelling in the block: the
+                    // displayed form loses its tashkeel under Hide Tashkeel, and Hafs's own row
+                    // then stood apart from the riwayat that print the word identically, tinted
+                    // as "differs from Hafs".
+                    word: focus.rawToken,
                     tokenIndex: focus.location.token,
                     sourceTokens: focus.rawTokens
                 )
+                // One identity per word. The block compares on appear and keeps the result in its
+                // own state, so when the strip moved the card to another word it went on showing
+                // the first word's readings.
+                .id(focus.location)
             }
         }
     }
@@ -2842,7 +3147,7 @@ struct WordMeaningSheet: View {
     }
 
     @ViewBuilder
-    private func tajweedPage(_ rules: [TajweedLegendCategory]) -> some View {
+    private func tajweedPage(_ rules: [TajweedWordRule]) -> some View {
         if !settings.showTajweedColors || !settings.isHafsDisplay {
             StudyCard(title: "TAJWEED IN THIS WORD") {
                 Text("Turn on tajweed colors in Quran Settings to see the rules on each word.")
@@ -2935,11 +3240,15 @@ struct RiwayahWordSheet: View {
         let tokens = WordTokens.tokens(in: rawText)
         guard ranges.count == tokens.count else { return nil }
 
+        // Same rule as the Hafs card: `total` counts the DISPLAY tokens, so it says whether the
+        // tapped text had dropped its ornaments; the app's Hide Tashkeel does not (an ayah's own
+        // pin, or a preview card's plain text, draws against it).
+        let ornamentsDropped = total < tokens.count
         var displayIndex = -1
         for (rawIndex, token) in tokens.enumerated() {
             let visible = !token.removingArabicDiacriticsAndSigns
                 .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            if !visible && settings.cleanArabicText { continue }
+            if !visible && ornamentsDropped { continue }
             displayIndex += 1
             if displayIndex == index {
                 return (rawText, rawIndex, ranges[rawIndex])
@@ -3116,13 +3425,17 @@ struct RiwayahWordSheet: View {
 
                     // And the same word in every OTHER riwayah, under the Hafs one.
                     if settings.showQiraahDetails, let located = rawWord {
+                        // The RAW token, not the tapped display form: under Hide Tashkeel the
+                        // reader's own riwayah was compared stripped against every other text's
+                        // full spelling, and always came out as differing from Hafs.
+                        let rawTokens = WordTokens.tokens(in: located.text)
                         WordAcrossRiwayatSection(
                             surah: surah,
                             ayah: ayah,
                             tag: tag,
-                            word: word,
+                            word: rawTokens.indices.contains(located.tokenIndex) ? rawTokens[located.tokenIndex] : word,
                             tokenIndex: located.tokenIndex,
-                            sourceTokens: WordTokens.tokens(in: located.text)
+                            sourceTokens: rawTokens
                         )
                     }
                     Color.clear.frame(height: 1).id(wordCardEndAnchorID)

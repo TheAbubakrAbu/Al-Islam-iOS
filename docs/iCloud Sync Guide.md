@@ -14,7 +14,7 @@ The standing rules from the Tilawa Guide apply unchanged: no commit or push unle
 
 **Restore always asks how.** Replace makes this device match the backup exactly, settings included (the new-phone choice). Merge adds the backup's things to what is already here and leaves this device's settings alone (the second-device choice). Nothing is ever restored without the user asking.
 
-**What never leaves the device.** Location, in any form. The app promises "your location stays on your device" in its permission prompt, so the saved home city, favourite locations and cached prayer times are not backed up; a restored device finds its own location. Downloaded audio and Ask AI chats are not backed up either (the first is re-downloadable, the second is never saved at all).
+**What never leaves the device.** Location, in any form. The app promises "your location stays on your device" in its permission prompt, so the saved home city, favourite locations and cached prayer times are not backed up; a restored device finds its own location. Downloaded audio and the Ask AI chat are not backed up either: the first is re-downloadable, and the second is kept on this device only (`Documents/askai-conversation.json`), so Erase Everything deletes it with the rest (`Settings.deviceOnlyDocumentFiles`).
 
 **Privacy.** The backup lives in the user's private iCloud database. Abu cannot read it, no server of ours exists, and the App Store privacy label does not change.
 

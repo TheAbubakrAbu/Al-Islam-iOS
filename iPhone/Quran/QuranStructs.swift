@@ -120,9 +120,22 @@ struct VerseIndexEntry: Identifiable, Hashable, Codable {
     /// such a query, so there is nothing worth storing.
     let hamzaArabicBlob: String?
     let englishBlob: String
-    let arabicTokens: [String]
-    let silentArabicTokens: [String]
-    let englishTokens: [String]
+
+    /// The blob's words, split on the single spaces the fold joined them with. Computed, not stored
+    /// (2026-10-03): the stored copies were ~20 MB of per-ayah arrays for 6,236 entries, and the two
+    /// readers (the operator query's `tokens:` and the ranked lanes' one-time vocabulary) split in
+    /// microseconds. The old `silentArabicTokens` had no reader and is gone.
+    var arabicTokens: [String] { Self.tokens(of: arabicBlob) }
+    var englishTokens: [String] { Self.tokens(of: englishBlob) }
+
+    /// `QuranData.searchTokens(from:)`'s rule: split on " ", keep the non-empty pieces.
+    static func tokens(of blob: String) -> [String] {
+        var out: [String] = []
+        for piece in blob.utf8.split(separator: UInt8(ascii: " "), omittingEmptySubsequences: true) {
+            out.append(String(decoding: piece, as: UTF8.self))
+        }
+        return out
+    }
 }
 
 enum BoundaryDividerStyle: Codable, Equatable {

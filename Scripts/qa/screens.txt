@@ -18,6 +18,7 @@ quran-page|10|-launchTabQuran -quranPageMode -lastRead 2:255
 quran-page-arabic|10|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -lastRead 18:1
 quran-page-pdf|10|-launchTabQuran -quranPageMode -mushafPageLanguage pdf -lastRead 36:1
 quran-page-warsh|10|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -displayQiraah "Warsh an Nafi" -lastRead 2:1
+quran-search-warsh|14|-launchTabQuran -quranListMode -noAutoOpenMushaf -displayQiraah "Warsh an Nafi" -quranSearch "no doubt"
 reset-hafs|8|-launchTabQuran -quranListMode -lastRead 1:1 -displayQiraah "" -seedBool removeArabicDots=0,cleanArabicText=0
 # The C1 crash repro (Hafs, dots removed, tashkeel on); fixed 2026-09-28, so this must stay alive:
 quran-page-dotless|15|-launchTabQuran -quranPageMode -mushafPageLanguage arabic -displayQiraah "" -lastRead 2:11 -seedBool removeArabicDots=1,cleanArabicText=0
@@ -33,6 +34,10 @@ quran-search|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "me
 quran-search-arabic|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "الرحمن"
 quran-search-ref|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "2:255"
 quran-surah-search|8|-launchTabQuran -quranListMode -noAutoOpenMushaf -surahSearch "yaseen"
+quran-search-seatless|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "شيئا"
+quran-search-maa|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "ماء"
+quran-search-salah|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "الصلاة"
+quran-search-ref-words|9|-launchTabQuran -quranListMode -noAutoOpenMushaf -quranSearch "baqarah 255"
 quran-settings|8|-launchQuranSettings
 quran-reader-settings|9|-launchTabQuran -quranListMode -lastRead 2:1 -launchReaderSettings
 quran-history|8|-openQuranHistory

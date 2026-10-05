@@ -565,9 +565,11 @@ extension Settings {
             let reading = (metres: loc.altitude, accuracy: loc.verticalAccuracy)
             Task { @MainActor in
                 let live = LiveState.shared
-                // Guarded: this runs on every fix, and an unchanged publish re-renders the tab.
-                if live.currentAltitude?.metres != reading.metres
-                    || live.currentAltitude?.accuracy != reading.accuracy {
+                // Guarded: this runs on every fix, and an unchanged publish re-renders the tab. The
+                // only reader prints whole metres (`formatElevation`) and never the accuracy, so a fix
+                // that would print the same number does not publish (Phase 10.8: the GPS burst's
+                // sub-metre jitter re-rendered every LiveState observer on the tab once a second).
+                if live.currentAltitude.map({ $0.metres.rounded() }) != reading.metres.rounded() {
                     live.currentAltitude = reading
                 }
             }
@@ -1090,8 +1092,9 @@ extension Settings {
 
     static let automaticHighLatitudeRule = "Automatic"
 
-    /// Picker labels, in the order they read best. `Automatic` uses Adhan's own recommendation, which is
-    /// `seventhOfTheNight` above 48° latitude and `middleOfTheNight` below it.
+    /// Picker labels, in the order they read best. `Automatic` is `seventhOfTheNight` past the latitude
+    /// where the method's own angles stop being reached in summer, `middleOfTheNight` short of it
+    /// (`highLatitudeRuleUnderAutomatic(latitude:parameters:)`).
     static let highLatitudeRuleOptions: [String] = [
         automaticHighLatitudeRule,
         "Middle of the Night",
@@ -1111,15 +1114,38 @@ extension Settings {
         .twilightAngle: "Twilight Angle"
     ]
 
-    /// The rule actually applied at a coordinate. `Automatic` resolves per-location, so viewing another city's
-    /// times in the map picker uses the rule appropriate to *that* latitude rather than the user's.
-    func resolvedHighLatitudeRule(at coordinates: Coordinates) -> HighLatitudeRule {
-        Self.highLatitudeRuleValues[highLatitudeRule] ?? HighLatitudeRule.recommended(for: coordinates)
+    /// The rule actually applied at a latitude under a method. `Automatic` resolves per location and per
+    /// method, so viewing another city's times in the map picker uses the rule for *that* latitude.
+    func resolvedHighLatitudeRule(latitude: Double, parameters: CalculationParameters) -> HighLatitudeRule {
+        Self.highLatitudeRuleValues[highLatitudeRule]
+            ?? Self.highLatitudeRuleUnderAutomatic(latitude: latitude, parameters: parameters)
     }
 
-    /// Label for the rule `Automatic` would pick here - shown under the picker so the choice isn't opaque.
-    func recommendedHighLatitudeRuleLabel(at coordinates: Coordinates) -> String {
-        Self.highLatitudeRuleLabels[.recommended(for: coordinates)] ?? "Middle of the Night"
+    /// What `Automatic` applies: Seventh of the Night past the latitude where the method's deeper
+    /// twilight angle stops being reached around the summer solstice, Middle of the Night short of it.
+    ///
+    /// The rules are clamps: Seventh of the Night moves Fajr later and Isha earlier whenever the angle's
+    /// time falls outside the night's last and first sevenths, on EVERY night, reached or not. Adhan's
+    /// own recommendation applies it past a fixed 48 degrees, which is where an 18 degree angle stops
+    /// being reached (90 - 23.44 - 18 = 48.56, less half a degree). Under a 12 degree method that clamp
+    /// overrode times the sun gives: Paris, Musulmans de France, late June, Fajr 36 minutes after the
+    /// method's own dawn (found 2026-10-04). The same margin on the method's own angle, 66 minus the
+    /// angle, keeps 48 for every 18 degree method and gives 54 for 12, 51 for 15, 46 for 20. Short of
+    /// it the angle is reached every night of the year and its times stand; past it the clamp holds
+    /// all year, so no night jumps when the angle first fails (Berlin under MWL in May would otherwise
+    /// see Fajr move by hours overnight). An Isha set as minutes after Maghrib has no angle to lose.
+    static func highLatitudeRuleUnderAutomatic(latitude: Double, parameters: CalculationParameters) -> HighLatitudeRule {
+        let ishaAngle = parameters.ishaInterval > 0 ? 0 : parameters.ishaAngle
+        let deepest = max(parameters.fajrAngle, ishaAngle)
+        return abs(latitude) > 66 - deepest ? .seventhOfTheNight : .middleOfTheNight
+    }
+
+    /// Label for the rule `Automatic` would pick here under the current method, shown under the picker
+    /// so the choice isn't opaque.
+    func recommendedHighLatitudeRuleLabel(atLatitude latitude: Double) -> String {
+        let rule = Self.highLatitudeRuleUnderAutomatic(
+            latitude: latitude, parameters: calculationParameters(forStoredLabel: prayerCalculation))
+        return Self.highLatitudeRuleLabels[rule] ?? "Middle of the Night"
     }
 
     // MARK: - Custom prayer names
@@ -1639,6 +1665,28 @@ extension Settings {
         return PrayerTimes(coordinates: nearest, date: date, calculationParameters: parameters)
     }
 
+    /// Whether a day's six times run in the order a day runs.
+    ///
+    /// In the weeks on either side of polar night the sun still clears the horizon, so the solar
+    /// math answers, but its noon is too low for the Asr shadow to ever be reached and Asr comes
+    /// back as nonsense: before Dhuhr, after Maghrib, once two days early (Tromso, 9 January 2026;
+    /// 44 such days there across 2026 and 2027, found 2026-10-04).
+    static func isChronological(_ times: PrayerTimes) -> Bool {
+        times.fajr <= times.sunrise && times.sunrise < times.dhuhr && times.dhuhr < times.asr
+            && times.asr <= times.maghrib && times.maghrib <= times.isha
+    }
+
+    /// A day's times at a place: its own when the sun gives a usable day there, otherwise the
+    /// nearest latitude's (`polarFallbackTimes`). A day that is out of order below 65 degrees has no
+    /// stand-in and keeps its own times.
+    static func resolvedPrayerTimes(latitude: Double, longitude: Double, date: DateComponents,
+                                    parameters: CalculationParameters) -> PrayerTimes? {
+        let own = PrayerTimes(coordinates: Coordinates(latitude: latitude, longitude: longitude),
+                              date: date, calculationParameters: parameters)
+        if let own, isChronological(own) { return own }
+        return polarFallbackTimes(latitude: latitude, longitude: longitude, date: date, parameters: parameters) ?? own
+    }
+
     private func _computeRawPrayers(for date: Date) -> [Prayer] {
         guard let here = currentLocation else { return [] }
         return _computeRawPrayers(for: date, at: here)
@@ -1672,11 +1720,9 @@ extension Settings {
             return cached
         }
 
-        let coordinates = Coordinates(latitude: here.latitude, longitude: here.longitude)
-
         var params = calculationParameters(forStoredLabel: method)
         params.madhab = hanafiMadhab ? Madhab.hanafi : Madhab.shafi
-        params.highLatitudeRule = resolvedHighLatitudeRule(at: coordinates)
+        params.highLatitudeRule = resolvedHighLatitudeRule(latitude: here.latitude, parameters: params)
 
         // Umm Al-Qura delays Isha by 30 minutes throughout Ramadan. The reference date is pushed a day forward
         // because taraweeh on the night *before* 1 Ramadan already follows the Ramadan timing. The user's
@@ -1696,8 +1742,9 @@ extension Settings {
         // why. The times of the nearest latitude where day and night are still told apart (65 degrees,
         // same meridian and clock) stand in: the "nearest land" approach the scholars give for such
         // regions (Quality Guide P6, decision D5 taken this way; see Decisions).
-        guard let raw = PrayerTimes(coordinates: coordinates, date: comps, calculationParameters: params)
-                ?? Self.polarFallbackTimes(latitude: here.latitude, longitude: here.longitude, date: comps, parameters: params)
+        // The weeks beside polar night answer too, but out of order: those take the stand-in as well.
+        guard let raw = Self.resolvedPrayerTimes(latitude: here.latitude, longitude: here.longitude,
+                                                 date: comps, parameters: params)
         else {
             // Cached too (and in the eviction order): the failure used to rerun the solar math on every call.
             Self.rawPrayerCache[cacheKey] = []
@@ -1709,12 +1756,19 @@ extension Settings {
             d.addingTimeInterval(Double(m) * 60)
         }
 
-        let fajr     = off(raw.fajr,     by: offsetFajr)
-        let sunrise  = off(raw.sunrise,  by: offsetSunrise)
-        let dhuhr    = off(raw.dhuhr,    by: offsetDhuhr)
-        let asr      = off(raw.asr,      by: offsetAsr)
-        let maghrib  = off(raw.maghrib,  by: offsetMaghrib)
-        let isha     = off(raw.isha,     by: offsetIsha)
+        // `.none` is every row whose publisher sets no rounding of its own: each time goes to its safe
+        // side here (a start up, sunrise down). MUIS's rows come back already rounded up by the engine.
+        let roundsToSafeSide = params.rounding == Rounding.none
+        @inline(__always) func minute(_ d: Date, endsATime: Bool = false) -> Date {
+            roundsToSafeSide ? PrayerMinute.rounded(d, endsATime: endsATime) : d
+        }
+
+        let fajr     = off(minute(raw.fajr),                      by: offsetFajr)
+        let sunrise  = off(minute(raw.sunrise, endsATime: true),  by: offsetSunrise)
+        let dhuhr    = off(minute(raw.dhuhr),                     by: offsetDhuhr)
+        let asr      = off(minute(raw.asr),                       by: offsetAsr)
+        let maghrib  = off(minute(raw.maghrib),                   by: offsetMaghrib)
+        let isha     = off(minute(raw.isha),                      by: offsetIsha)
 
         let isFriday = Self.gregorian.component(.weekday, from: date) == 6
 
@@ -1778,12 +1832,13 @@ extension Settings {
         var params = calculationParameters(forStoredLabel: prayerCalculation)
         params.madhab = hanafiMadhab ? Madhab.shafi : Madhab.hanafi
         let comps = Self.gregorian.dateComponents([.year, .month, .day], from: referenceTime)
-        guard let raw = PrayerTimes(
-            coordinates: Coordinates(latitude: loc.latitude, longitude: loc.longitude),
+        guard let raw = Self.resolvedPrayerTimes(
+            latitude: loc.latitude, longitude: loc.longitude,
             date: comps,
-            calculationParameters: params
+            parameters: params
         ) else { return nil }
-        return raw.asr.addingTimeInterval(Double(offsetAsr) * 60)
+        let asr = params.rounding == Rounding.none ? PrayerMinute.rounded(raw.asr, endsATime: false) : raw.asr
+        return asr.addingTimeInterval(Double(offsetAsr) * 60)
     }
 
     /// Computes the enabled optional prayer times (Duhaa, Islamic Midnight, Last Third) for a given date.
@@ -1832,7 +1887,9 @@ extension Settings {
                 nameArabic: "صَلَاةُ الضُّحَى",
                 nameTransliteration: "Duhaa",
                 nameEnglish: "Forenoon Prayer",
-                time: sunrise.addingTimeInterval(15 * 60),
+                // Fifteen minutes after the sun is up, counted from the END of sunrise's shown minute:
+                // that minute is rounded down, so counting from its start could open Duha early.
+                time: sunrise.addingTimeInterval(16 * 60),
                 image: "sun.haze.fill",
                 rakah: "2–8",
                 sunnahBefore: "0",
@@ -1855,7 +1912,9 @@ extension Settings {
                 nameArabic: "نِصفُ اللَّيلِ الشَّرعِيُّ",
                 nameTransliteration: "Islamic Midnight",
                 nameEnglish: "Islamic Middle of Night",
-                time: maghrib.addingTimeInterval(nightDuration / 2),
+                // It ENDS Isha's chosen time, so it rounds down, and a minute comes off first: Maghrib and
+                // Fajr are shown rounded up, which can put their midpoint up to a minute late.
+                time: PrayerMinute.rounded(maghrib.addingTimeInterval(nightDuration / 2 - 60), endsATime: true),
                 image: "moon.fill",
                 rakah: "0",
                 sunnahBefore: "0",
@@ -1868,7 +1927,7 @@ extension Settings {
                 nameArabic: "الثُّلُثُ الأَخِيرُ مِنَ اللَّيلِ",
                 nameTransliteration: "Last Third",
                 nameEnglish: "Last Third of Night",
-                time: fajrNext.addingTimeInterval(-nightDuration / 3),
+                time: PrayerMinute.rounded(fajrNext.addingTimeInterval(-nightDuration / 3), endsATime: false),
                 image: "moon.stars.fill",
                 rakah: "0",
                 sunnahBefore: "0",
@@ -2529,10 +2588,15 @@ extension Settings {
     private func offsets(for prefs: NotifPrefs, before prayer: Prayer, includeNags: Bool = true) -> [Int] {
         var result: Set<Int> = []
 
-        if self[keyPath: prefs.enabled] { result.insert(0) }
+        // Islamic Midnight can be in the list only as the Isha deadline (`prayersIncludingNaggedTimes`),
+        // not as a time the user asked to see. Then it carries its cascade and nothing else: its own
+        // alert is on by default, and "Time for Islamic Midnight" arrived for a time never switched on.
+        let announces = self[keyPath: prefs.enabled]
+            && (prayer.nameTransliteration != "Islamic Midnight" || showIslamicMidnight)
+        if announces { result.insert(0) }
 
         let minutes = self[keyPath: prefs.preMinutes]
-        if self[keyPath: prefs.enabled], minutes > 0 {
+        if announces, minutes > 0 {
             result.insert(minutes)
         }
 
@@ -2872,7 +2936,12 @@ extension Settings {
             // reschedules everything anyway. No cascades out there: a cascade's premise (yesterday's
             // tracker answer) is unknowable that far ahead.
             let extendedHorizonDays = Self.adhanHorizonDays - 1
-            for dayOffset in 1...extendedHorizonDays {
+            // Yesterday's list first. Its tail belongs to this morning: the Islamic Midnight and Last
+            // Third of the night that began yesterday evening, a summer Isha past 00:00 in the north,
+            // and the nags leading up to them. A pass run after midnight (the app opened for qiyam)
+            // never collected them, so the prune below deleted every one that was still to come.
+            // What has already passed drops out in `makePrayerNotificationRequest`.
+            for dayOffset in [-1] + Array(1...extendedHorizonDays) {
                 let extended = dayOffset > futureDays
                 let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
                 guard let list = getPrayerTimes(for: date) else { continue }
@@ -3096,6 +3165,13 @@ extension Settings {
         for prayer in prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day) {
             candidates.append((prayer.time, prayer.nameTransliteration))
         }
+        // Yesterday's list too: in a northern summer its Isha falls after midnight, on today's clock.
+        if let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: prayerObj.day),
+           let list = getPrayerTimes(for: yesterday) {
+            for prayer in list where prayer.time > now {
+                candidates.append((prayer.time, prayer.nameTransliteration))
+            }
+        }
         // Include tomorrow so the Isha → next-Fajr gap is covered.
         if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: prayerObj.day),
            let list = getPrayerTimes(for: tomorrow) {
@@ -3228,7 +3304,10 @@ extension Settings {
                  + " [\(formatDate(prayer.time))]"
         } else if prayer.nameTransliteration == "Fajr",
                   // Fajr ends at sunrise - found by name, because a manual offset can move Sunrise off index 1.
-                  let sunrise = prayers?.prayers.first(where: { $0.nameTransliteration == "Shurooq" })?.time,
+                  // The sunrise of the Fajr's OWN day: read from the stored (today's) list, it was
+                  // before every later day's Fajr, so only today's notification ever said when it ends.
+                  let sunrise = (getPrayerTimes(for: prayer.time, fullPrayers: true) ?? prayers?.prayers)?
+                    .first(where: { $0.nameTransliteration == "Shurooq" })?.time,
                   sunrise > prayer.time {
             return "Time for \(prayer.displayName)\(englishPart)"
                  + " at \(formatDate(prayer.time)) in \(city)"
@@ -3282,9 +3361,18 @@ extension Settings {
     }
 
     /// Every canonical prayer recorded on the day, with its mark. See `canonicalMarks(of:)`.
+    /// The last day asked for is memoized until the next tracker write (`trackerGeneration` bumps on
+    /// every save): the tracker card and the prayer list resolve the same day a dozen times per pass
+    /// (Phase 10.8). Main-thread memo; other threads compute directly.
+    private static var canonicalMarksMemo: (key: String, generation: Int, marks: [String: PrayerMark])?
     func canonicalMarks(forDayKey key: String) -> [String: PrayerMark] {
-        guard let day = loadPrayerTracker()[key] else { return [:] }
-        return Self.canonicalMarks(of: day)
+        let generation = trackerGeneration
+        if Thread.isMainThread, let memo = Self.canonicalMarksMemo, memo.key == key, memo.generation == generation {
+            return memo.marks
+        }
+        let marks = loadPrayerTracker()[key].map(Self.canonicalMarks(of:)) ?? [:]
+        if Thread.isMainThread { Self.canonicalMarksMemo = (key, generation, marks) }
+        return marks
     }
 
     /// Resolves one stored day (recorded name → mark) to canonical prayer → mark: a traveling-day
@@ -3481,6 +3569,12 @@ extension Settings {
             if affectsLiveNags {
                 cancelNagFollowUps(about: prayerName, on: date)
             }
+            // A nag that shares its minute with the next prayer's pre-notification is spared above
+            // (the reminder is still wanted) but was written as the question. The rebuild rewrites
+            // it as the plain reminder; everything else it would schedule is already as it should be.
+            if naggingMode, affectsLiveNags {
+                scheduleNotifications(deferred: true)
+            }
         } else if naggingMode, affectsLiveNags {
             // Clearing re-arms them: the schedule is rebuilt, and the builder re-adds any nag
             // cascade that is no longer answered (see `nagCascadeIsAnswered`).
@@ -3548,7 +3642,9 @@ extension Settings {
             while day <= today {
                 days.insert(prayerTrackerKey(for: day))
                 guard let next = Calendar.current.date(byAdding: .day, value: 1, to: day) else { break }
-                day = next
+                // Re-anchored: where the clocks skip midnight the running date drifts to 01:00 and
+                // the last day (today) was never reached, so it was left out of the exempt range.
+                day = Calendar.current.startOfDay(for: next)
             }
             saveExemptDays(days)
             mensesPauseActive = false
@@ -3848,7 +3944,9 @@ extension Settings {
         let prefix = "\(cascadePrayerName)-"
 
         var cancellableMinutes = naggingCascade(forCascadeBefore: cascadePrayerName)
-        if let prefs = Self.notifTable[cascadePrayerName] {
+        // The pre-notification's minute is spared only if there is a pre-notification: with the
+        // prayer's alerts off, that minute is a nag like the rest, and it kept asking after the mark.
+        if let prefs = Self.notifTable[cascadePrayerName], self[keyPath: prefs.enabled] {
             cancellableMinutes.remove(self[keyPath: prefs.preMinutes])
         }
         cancellableMinutes.remove(0)
@@ -4170,9 +4268,14 @@ extension Settings {
 
     /// `dayBefore` builds the evening-before heads-up instead: it fires at 6 PM on the previous day
     /// ("X begins tomorrow"), rather than pre-dawn on the day itself.
-    private func makeEventNotificationRequest(for event: (String, DateComponents, String, String),
-                                              dayBefore: Bool = false) -> (spec: PendingNotificationSpec, date: Date)? {
+    func makeEventNotificationRequest(for event: (String, DateComponents, String, String),
+                                      dayBefore: Bool = false) -> (spec: PendingNotificationSpec, date: Date)? {
         let (titleText, hijriComps, eventSubTitle, _) = event
+        // A night opens the Hijri day it is numbered by: the 27th night begins at Maghrib on the 26th
+        // day and is over by Fajr of the 27th. Reminded like a day, these two arrived when the night
+        // was ending (and the heads-up said "tomorrow" on the very evening it began); they are
+        // anchored on the civil day whose evening starts them (found 2026-10-04).
+        let isNight = Self.nightEventTitles.contains(titleText)
 
         let gregorianCalendar = Calendar(identifier: .gregorian)
 
@@ -4190,7 +4293,8 @@ extension Settings {
             // reverses the manual offset, exactly like the calendar screens. Without this the
             // "First Day of Ramadan" suhoor reminder fired on the unadjusted Umm al-Qura day.
             let offsetCorrected = hijriCalendar.date(byAdding: .day, value: -hijriOffset, to: hijriDate) ?? hijriDate
-            let eventDay = gregorianCalendar.startOfDay(for: offsetCorrected)
+            let hijriDay = gregorianCalendar.startOfDay(for: offsetCorrected)
+            let eventDay = isNight ? (gregorianCalendar.date(byAdding: .day, value: -1, to: hijriDay) ?? hijriDay) : hijriDay
             let candidate: Date?
             if dayBefore {
                 // The heads-up lands the EVENING before, when there is still time to plan (intend the
@@ -4224,9 +4328,21 @@ extension Settings {
         // Pinned to the scheduling zone + stamped with its intended instant, same as the prayer
         // requests - see `makePrayerNotificationRequest`.
         gregorianComps.timeZone = gregorianCalendar.timeZone
+        // And to the calendar they were read in. A trigger with no calendar is matched in the
+        // device's own, so on a Buddhist or Hijri device "2027" named a year centuries away and no
+        // Islamic date reminder ever fired. (The prayer requests read theirs from `Calendar.current`.)
+        gregorianComps.calendar = gregorianCalendar
 
         let body: String
-        if dayBefore {
+        if isNight {
+            if dayBefore {
+                body = "Tomorrow night: \(titleText). \(eventSubTitle)."
+            } else {
+                body = beforeFajr
+                    ? "Tonight at Maghrib: \(titleText). \(eventSubTitle). Sent 30 minutes before Fajr."
+                    : "Tonight at Maghrib: \(titleText). \(eventSubTitle)."
+            }
+        } else if dayBefore {
             body = "\(titleText) is tomorrow: \(eventSubTitle)."
         } else {
             body = beforeFajr

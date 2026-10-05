@@ -378,8 +378,14 @@
 		7A9A000000000000000000C2 /* QuranPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A2 /* QuranPackAdapter.swift */; };
 		7A9A000000000000000000C3 /* QuranPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A2 /* QuranPackAdapter.swift */; };
 		7A9A000000000000000000C4 /* QuranPackAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A2 /* QuranPackAdapter.swift */; };
+		7C5E00000000000000000C01 /* VerseSearchPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A01 /* VerseSearchPack.swift */; };
+		7C5E00000000000000000C02 /* VerseSearchPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A01 /* VerseSearchPack.swift */; };
+		7C5E00000000000000000C03 /* VerseSearchPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A01 /* VerseSearchPack.swift */; };
+		7C5E00000000000000000C04 /* VerseSearchPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A01 /* VerseSearchPack.swift */; };
 		7A9A000000000000000000D1 /* quran.qpk in Resources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A3 /* quran.qpk */; };
 		7A9A000000000000000000D2 /* quran.qpk in Resources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A3 /* quran.qpk */; };
+		7C5E00000000000000000D02 /* quran-search.qsp in Resources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A02 /* quran-search.qsp */; };
+		7C5E00000000000000000D03 /* CrossLanguageLexicon.bin in Resources */ = {isa = PBXBuildFile; fileRef = 7C5E00000000000000000A03 /* CrossLanguageLexicon.bin */; };
 		7A9A000000000000000000D3 /* surahinfos.qpk in Resources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A4 /* surahinfos.qpk */; };
 		7A9A000000000000000000D4 /* surahinfos.qpk in Resources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A4 /* surahinfos.qpk */; };
 		7A9A000000000000000000D5 /* qiraat.qpk in Resources */ = {isa = PBXBuildFile; fileRef = 7A9A000000000000000000A5 /* qiraat.qpk */; };
@@ -902,7 +908,10 @@
 		7A7E5700000000000000000D /* UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A9A000000000000000000A1 /* QuranPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranPack.swift; sourceTree = "<group>"; };
 		7A9A000000000000000000A2 /* QuranPackAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranPackAdapter.swift; sourceTree = "<group>"; };
+		7C5E00000000000000000A01 /* VerseSearchPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerseSearchPack.swift; sourceTree = "<group>"; };
 		7A9A000000000000000000A3 /* quran.qpk */ = {isa = PBXFileReference; lastKnownFileType = file; path = quran.qpk; sourceTree = "<group>"; };
+		7C5E00000000000000000A02 /* quran-search.qsp */ = {isa = PBXFileReference; lastKnownFileType = file; path = "quran-search.qsp"; sourceTree = "<group>"; };
+		7C5E00000000000000000A03 /* CrossLanguageLexicon.bin */ = {isa = PBXFileReference; lastKnownFileType = file; path = CrossLanguageLexicon.bin; sourceTree = "<group>"; };
 		7A9A000000000000000000A4 /* surahinfos.qpk */ = {isa = PBXFileReference; lastKnownFileType = file; path = surahinfos.qpk; sourceTree = "<group>"; };
 		7A9A000000000000000000A5 /* qiraat.qpk */ = {isa = PBXFileReference; lastKnownFileType = file; path = qiraat.qpk; sourceTree = "<group>"; };
 		7A9A000000000000000000A7 /* surah-stats.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "surah-stats.json"; sourceTree = "<group>"; };
@@ -1347,6 +1356,7 @@
 				720CCE042E394375002DD82E /* QuranData.swift */,
 				0885783C9E3B44AF837AA57E /* QuranSearchFilterModel.swift */,
 				7A9A000000000000000000A2 /* QuranPackAdapter.swift */,
+				7C5E00000000000000000A01 /* VerseSearchPack.swift */,
 				7A9A000000000000000000A1 /* QuranPack.swift */,
 				7260D5F62F7CB0E10066FBA9 /* TajweedRules.swift */,
 				FACE00012F7CB0E10066FBA9 /* Muqattaat.swift */,
@@ -1591,6 +1601,8 @@
 			isa = PBXGroup;
 			children = (
 				7A9A000000000000000000A3 /* quran.qpk */,
+				7C5E00000000000000000A02 /* quran-search.qsp */,
+				7C5E00000000000000000A03 /* CrossLanguageLexicon.bin */,
 				7BD0000000000000000000A2 /* WordByWord.json.xz */,
 				7BE0000000000000000000A2 /* SimilarAyahs.json.xz */,
 				7C100000000000000000A011 /* Morphology.json.xz */,
@@ -1959,6 +1971,8 @@
 				7DAF0000000000000000000C /* ar-tafsir-as-saadi.tpk in Resources */,
 				72D492883028643E00BEBF90 /* Mushaf PDFs in Resources */,
 				7A9A000000000000000000D1 /* quran.qpk in Resources */,
+				7C5E00000000000000000D02 /* quran-search.qsp in Resources */,
+				7C5E00000000000000000D03 /* CrossLanguageLexicon.bin in Resources */,
 				7BD0000000000000000000C1 /* WordByWord.json.xz in Resources */,
 				7BE0000000000000000000C1 /* SimilarAyahs.json.xz in Resources */,
 				7C100000000000000000B011 /* Morphology.json.xz in Resources */,
@@ -2077,6 +2091,7 @@
 				C0C3635C522540E7BF8B9535 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B1 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C1 /* QuranPackAdapter.swift in Sources */,
+				7C5E00000000000000000C01 /* VerseSearchPack.swift in Sources */,
 				7260F9722A87168700E8FF87 /* Settings.swift in Sources */,
 				72CA1C032F900000AAB013 /* PrayerCalculationMethods.swift in Sources */,
 				72F7DB6B2F030A2D0037B059 /* QuranStructs.swift in Sources */,
@@ -2131,6 +2146,7 @@
 				9B4A23CE73C84618BDAE7A9C /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B2 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C2 /* QuranPackAdapter.swift in Sources */,
+				7C5E00000000000000000C02 /* VerseSearchPack.swift in Sources */,
 				7205C1EB2D796DFD001D4979 /* LockScreenFirst3Widget.swift in Sources */,
 				72F7DB6F2F030A630037B059 /* AdhanStructs.swift in Sources */,
 				725B42282AA00660009C8C91 /* Widgets.swift in Sources */,
@@ -2339,6 +2355,7 @@
 				30E9D7028EAE4F2D8FB9B1F8 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B3 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C3 /* QuranPackAdapter.swift in Sources */,
+				7C5E00000000000000000C03 /* VerseSearchPack.swift in Sources */,
 				720CCE152E394375002DD82E /* NowPlayingView.swift in Sources */,
 				720CCE162E394375002DD82E /* ShareAyah.swift in Sources */,
 				D7034105D821417DAF0E77C0 /* ShareBackdrop.swift in Sources */,
@@ -2519,6 +2536,7 @@
 				EAA58EE11744419FB0BD8872 /* QuranSearchFilterModel.swift in Sources */,
 				7A9A000000000000000000B4 /* QuranPack.swift in Sources */,
 				7A9A000000000000000000C4 /* QuranPackAdapter.swift in Sources */,
+				7C5E00000000000000000C04 /* VerseSearchPack.swift in Sources */,
 				7260D5FA2F7CB0E10066FBA9 /* TajweedRules.swift in Sources */,
 				FACE00052F7CB0E10066FBA9 /* Muqattaat.swift in Sources */,
 				72574CB62E49E3F000BFF138 /* QuranShortcuts.swift in Sources */,
@@ -2979,7 +2997,6 @@
 				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = "";
 				CODE_SIGN_ENTITLEMENTS = "Resources/Entitlements-Main.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Resources/Entitlements-Main-CarPlay.entitlements";
-				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;

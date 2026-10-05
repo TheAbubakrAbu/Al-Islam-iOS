@@ -95,7 +95,6 @@ struct SettingsSearchEntry: Identifiable {
 
 struct SettingsView: View {
     @ObservedObject var settings = Settings.shared
-    @ObservedObject var quranData = QuranData.shared
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #endif

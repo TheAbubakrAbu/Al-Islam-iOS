@@ -103,6 +103,9 @@ final class QuranTopicsStore: @unchecked Sendable {
     private var table: Table?
     private var sectionsCache: [Family: [Section]] = [:]
     private var loadFailed = false
+    /// `search`'s pre-folded texts (once per load) and its last answer (Phase 10.8).
+    private var foldedTopics: [(name: String, arabic: String, description: String)]?
+    private var searchMemo: (folded: String, limit: Int, hits: [Topic])?
 
     static let isBundled: Bool = ThemesPack.url("QuranTopics") != nil
 
@@ -215,24 +218,40 @@ final class QuranTopicsStore: @unchecked Sendable {
     func search(_ query: String, limit: Int = 12) -> [Topic] {
         let folded = Settings.shared.cleanSearch(query, whitespace: true)
         guard folded.count >= 2, let table = loadedTable() else { return [] }
-        let settings = Settings.shared
-        var hits = table.topics.filter { topic in
-            !topic.ayahs.isEmpty && (
-                settings.cleanSearch(topic.name).contains(folded)
-                || (!topic.arabic.isEmpty && settings.cleanSearch(topic.arabic).contains(folded))
-                || (!topic.description.isEmpty && settings.cleanSearch(topic.description).contains(folded))
-            )
+        // Asked per body pass while the Quran search has a query (Phase 10.8): the folds of 2,512 names,
+        // Arabic names and descriptions are computed once per load, and the last answer is kept.
+        lock.lock()
+        if let memo = searchMemo, memo.folded == folded, memo.limit == limit { lock.unlock(); return memo.hits }
+        if foldedTopics == nil {
+            let settings = Settings.shared
+            foldedTopics = table.topics.map { topic in
+                (name: settings.cleanSearch(topic.name),
+                 arabic: topic.arabic.isEmpty ? "" : settings.cleanSearch(topic.arabic),
+                 description: topic.description.isEmpty ? "" : settings.cleanSearch(topic.description))
+            }
+        }
+        let folds = foldedTopics ?? []
+        lock.unlock()
+        var hits: [(topic: Topic, name: String)] = []
+        for (index, topic) in table.topics.enumerated() where !topic.ayahs.isEmpty && folds.indices.contains(index) {
+            let fold = folds[index]
+            if fold.name.contains(folded) || (!fold.arabic.isEmpty && fold.arabic.contains(folded))
+                || (!fold.description.isEmpty && fold.description.contains(folded)) {
+                hits.append((topic, fold.name))
+            }
         }
         // Exact-name matches first, then the ones that start with the query, then by coverage.
         hits.sort { a, b in
-            let an = settings.cleanSearch(a.name), bn = settings.cleanSearch(b.name)
+            let an = a.name, bn = b.name
             let aExact = an == folded, bExact = bn == folded
             if aExact != bExact { return aExact }
             let aPrefix = an.hasPrefix(folded), bPrefix = bn.hasPrefix(folded)
             if aPrefix != bPrefix { return aPrefix }
-            return a.ayahs.count > b.ayahs.count
+            return a.topic.ayahs.count > b.topic.ayahs.count
         }
-        return Array(hits.prefix(limit))
+        let result = Array(hits.prefix(limit).map(\.topic))
+        lock.lock(); searchMemo = (folded, limit, result); lock.unlock()
+        return result
     }
 
     static func prewarm() {
@@ -245,6 +264,8 @@ final class QuranTopicsStore: @unchecked Sendable {
         table = nil
         sectionsCache = [:]
         loadFailed = false
+        foldedTopics = nil
+        searchMemo = nil
     }
 
     private func loadedTable() -> Table? {
@@ -337,33 +358,64 @@ final class AyahThemesStore: @unchecked Sendable {
     func search(_ query: String, limit: Int = 10) -> [Theme] {
         let folded = Settings.shared.cleanSearch(query, whitespace: true)
         guard folded.count >= 3, let table = loadedTable() else { return [] }
+        // Per body pass while the Quran search has a query (Phase 10.8): the 1,049 titles fold once
+        // per load, and the last answer is kept.
+        lock.lock()
+        if let memo = searchMemo, memo.folded == folded, memo.limit == limit { lock.unlock(); return memo.hits }
+        if foldedTitles == nil {
+            var folds: [Int: [String]] = [:]
+            for (surah, themes) in table { folds[surah] = themes.map { Settings.shared.cleanSearch($0.title) } }
+            foldedTitles = folds
+        }
+        let folds = foldedTitles ?? [:]
+        lock.unlock()
         var hits: [Theme] = []
-        for surah in table.keys.sorted() {
-            for theme in table[surah] ?? [] where Settings.shared.cleanSearch(theme.title).contains(folded) {
+        search: for surah in table.keys.sorted() {
+            let themes = table[surah] ?? []
+            let titles = folds[surah] ?? []
+            for (index, theme) in themes.enumerated() where titles.indices.contains(index) && titles[index].contains(folded) {
                 hits.append(theme)
-                if hits.count >= limit { return hits }
+                if hits.count >= limit { break search }
             }
         }
+        lock.lock(); searchMemo = (folded, limit, hits); lock.unlock()
         return hits
     }
 
     /// The surah's passages as an outline, in the markdown the About this Surah sheet renders.
+    /// Memoized per surah (Phase 10.8): the sheet read it several times per body pass.
     func outlineMarkdown(surah: Int) -> String? {
+        lock.lock()
+        if let cached = outlineCache[surah] { lock.unlock(); return cached }
+        lock.unlock()
         let rows = themes(surah: surah)
-        guard !rows.isEmpty else { return nil }
-        var lines: [String] = []
-        for theme in rows {
-            let range = theme.start == theme.end ? "Ayah \(theme.start)" : "Ayahs \(theme.start)-\(theme.end)"
-            lines.append("**\(range)**: \(theme.title)")
+        let built: String?
+        if rows.isEmpty {
+            built = nil
+        } else {
+            var lines: [String] = []
+            for theme in rows {
+                let range = theme.start == theme.end ? "Ayah \(theme.start)" : "Ayahs \(theme.start)-\(theme.end)"
+                lines.append("**\(range)**: \(theme.title)")
+            }
+            lines.append("")
+            lines.append("_Passage themes from the Quranic Universal Library._")
+            built = lines.joined(separator: "\n\n")
         }
-        lines.append("")
-        lines.append("_Passage themes from the Quranic Universal Library._")
-        return lines.joined(separator: "\n\n")
+        lock.lock(); outlineCache[surah] = .some(built); lock.unlock()
+        return built
     }
+
+    private var foldedTitles: [Int: [String]]?
+    private var searchMemo: (folded: String, limit: Int, hits: [Theme])?
+    private var outlineCache: [Int: String?] = [:]
 
     func unload() {
         lock.lock(); defer { lock.unlock() }
         table = nil
+        foldedTitles = nil
+        searchMemo = nil
+        outlineCache = [:]
         loadFailed = false
     }
 

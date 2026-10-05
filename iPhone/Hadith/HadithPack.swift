@@ -319,6 +319,32 @@ final class HadithPack: @unchecked Sendable {
     let chapters: [Chapter]
     let rows: [Row]
 
+    /// The index in `chapters` of an introduction that opens the book: chapter id 0, which five
+    /// books (Sahih Muslim, Ibn Majah, ad-Darimi, Riyad as-Salihin, Mishkat al-Masabih) store LAST
+    /// upstream although it comes first and its hadiths are numbered first (Ibn Majah 1 to 266).
+    /// Nil when there is none, or when it is the book's only chapter (the forty-hadith books).
+    let introductionChapterIndex: Int?
+    /// Whether any row carries a standard citation. In such a book an uncited row is named by its
+    /// place, "C:N" (`HadithBookData.Hadith.displayNumber`): its row number could be another
+    /// row's citation (197 of Bulugh al-Maram's uncited rows did, 217 rows across five books).
+    let citesAnyRow: Bool
+
+    /// The number a reader calls the chapter at `index` of `chapters`: 1-based in book order, and
+    /// 0 for an introduction that opens the book, so every numbered chapter keeps its position.
+    func chapterPosition(atIndex index: Int) -> Int {
+        guard let introduction = introductionChapterIndex else { return index + 1 }
+        if index == introduction { return 0 }
+        return index < introduction ? index + 1 : index
+    }
+
+    /// A row's place in the book: its chapter's position and its own 1-based position there.
+    func place(ofRow row: Int) -> (chapter: Int, hadith: Int)? {
+        guard let index = chapters.firstIndex(where: { row >= $0.firstRow && row < $0.firstRow + $0.rowCount }) else {
+            return nil
+        }
+        return (chapterPosition(atIndex: index), row - chapters[index].firstRow + 1)
+    }
+
     /// The fingerprint of the fold the packer used, and of the blocked-word list the daily flags came
     /// from. The app compares its own against these before trusting prebuilt work - see
     /// `HadithPack.foldMatchesApp` and `HadithStore.isDailyWorthy`.
@@ -449,6 +475,8 @@ final class HadithPack: @unchecked Sendable {
             }
             return chapter
         }
+        introductionChapterIndex = chapters.count > 1 ? chapters.firstIndex(where: { $0.id == 0 }) : nil
+        citesAnyRow = rowList.contains { $0.citation != nil }
     }
 
     // MARK: Display text
@@ -544,11 +572,30 @@ final class HadithPack: @unchecked Sendable {
             while reader.remaining >= 4 {
                 // Once per block (cached), never per row: the Hafs face has no precomposed آ,
                 // so it is swapped for its canonical parts here - see `decomposingAlefMadda`.
+                // (That pass, not the LZMA inflate, was most of a block's cost until 2026-10-04.)
                 strings.append(reader.string().decomposingAlefMadda)
             }
             return strings
         }
     }
+
+    #if DEBUG
+    /// Test hooks (`AlefMaddaEquivalenceTests`): how many text blocks the pack has, and one block's
+    /// display strings exactly as stored, BEFORE the `decomposingAlefMadda` pass `textBlock(_:)` applies.
+    var textBlockCountForTests: Int { blocks.count }
+
+    func rawTextBlockForTests(_ index: Int) -> [String]? {
+        guard index >= 0, index < blocks.count else { return nil }
+        let block = blocks[index]
+        guard let raw = Self.decompress(data, offset: block.textOffset, length: block.textLength,
+                                        rawLength: block.textRawLength, codec: textCodec) else { return nil }
+        var reader = PackReader(bytes: raw)
+        var strings: [String] = []
+        strings.reserveCapacity(1024)
+        while reader.remaining >= 4 { strings.append(reader.string()) }
+        return strings
+    }
+    #endif
 
     // MARK: Search
 

@@ -523,8 +523,7 @@ struct SettingsQuranView: View {
                     .font(.subheadline)
                     .onChange(of: settings.dailyRolloverAtFajr) { _ in
                         settings.hapticFeedback()
-                        settings.refreshQuranWidgets(.ayahOfTheDay)
-                        DailyReminderStore.shared.refreshWidgets(force: true)
+                        settings.dailyRolloverSwitchChanged()
                     }
 
                 Text("The Ayah, Hadith, Dua, Word, Name and Reminder of the Day change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, they change at midnight.")
@@ -672,6 +671,8 @@ struct SettingsQuranView: View {
                     // A megabyte of glosses has no business staying resident once the mode is off -
                     // unless the study layout below is still reading from it.
                     if !enabled && !settings.wordByWordInline { WordByWordStore.shared.unload() }
+                    // Turning it on parses the pack off-main now, not in the first row's body.
+                    if enabled { WordByWordStore.shared.prewarm() }
                 }
 
             Text(canRenderNow || !settings.showArabicText
@@ -699,6 +700,7 @@ struct SettingsQuranView: View {
                 .onChange(of: settings.wordByWordInline) { enabled in
                     settings.hapticFeedback()
                     if !enabled && !settings.wordByWordMeanings { WordByWordStore.shared.unload() }
+                    if enabled { WordByWordStore.shared.prewarm() }
                 }
 
             Text(canRenderNow || !settings.showArabicText
@@ -1388,7 +1390,7 @@ struct FavoritesView: View {
                     .onDelete(perform: removeLetters)
                 }
             case .khatm:
-                if settings.khatmCompletedAyahs.isEmpty {
+                if settings.khatmCompletedAyahCount == 0 {
                     Text("No khatm progress yet. Open a surah while Khatm mode is selected to mark ayahs as viewed.")
                 } else {
                     ForEach(quranData.quran.filter { settings.khatmCompletedCount(for: $0) > 0 }, id: \.id) { surah in
@@ -1428,7 +1430,7 @@ struct FavoritesView: View {
         case .surah: return settings.favoriteSurahs.isEmpty
         case .ayah: return settings.bookmarkedAyahs.isEmpty
         case .letter: return settings.favoriteLetters.isEmpty
-        case .khatm: return settings.khatmCompletedAyahs.isEmpty
+        case .khatm: return settings.khatmCompletedAyahCount == 0
         }
     }
 

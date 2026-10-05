@@ -557,7 +557,14 @@ private struct MainTabView: View {
             }
             #endif
             // Al-Quran: the reader's font/page prewarm.
-            .task { await QuranLaunchWarmup.prewarmAll() }
+            .task {
+                // The gloss pack parses alongside the Quran text, off-main, so the first glossed row
+                // finds it resident instead of parsing ~2 MB of JSON in its body (Phase 10.5). Rows
+                // cannot render before the Quran load publishes, and the pack is a fraction of its size.
+                // (Here and not in QuranData: the Complication target compiles QuranData without the store.)
+                if settings.wordByWordMeanings || settings.wordByWordInline { WordByWordStore.shared.prewarm() }
+                await QuranLaunchWarmup.prewarmAll()
+            }
             // POST-REVEAL SCHEDULE. Everything below waits for the cover to lift and then takes its own
             // slot, so the sweeps never collide with each other or with the user's first taps (they used
             // to fire at 1.2 / 1.5 / 2.0 / 2.0 s and overlap). Keep the slots apart when adding one:

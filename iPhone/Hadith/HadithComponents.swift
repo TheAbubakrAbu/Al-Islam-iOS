@@ -124,6 +124,15 @@ extension Settings {
     /// `ayahRenderSettingsSignature`. Equatable hadith rows compare it so an appearance change still
     /// re-renders them, while an unrelated invalidation of their parent skips the long-text body.
     var hadithRenderSettingsSignature: String {
+        // Memoized until the next publish (Phase 10.3): nine `@AppStorage` reads per row init, per
+        // parent pass; the Quran twin has had this memo since Phase 1.
+        if Thread.isMainThread, let cached = hadithSignatureCache { return cached }
+        let signature = computeHadithRenderSettingsSignature()
+        if Thread.isMainThread { hadithSignatureCache = signature }
+        return signature
+    }
+
+    private func computeHadithRenderSettingsSignature() -> String {
         [
             showHadithArabic ? "1" : "0",
             showHadithEnglish ? "1" : "0",
@@ -481,7 +490,9 @@ struct HadithRow: View, Equatable {
                 // 3rd hadith of a chapter that starts at #100. Tinted when bookmarked, and tapping it
                 // toggles the bookmark, exactly like the ayah pill.
                 HStack(spacing: 5) {
-                    if let chapterNumber = chapterHadithNumber {
+                    // A "C:N" number already says where in its chapter the hadith sits (an uncited row
+                    // of a book that cites the rest, H4); the position would only repeat it.
+                    if let chapterNumber = chapterHadithNumber, !hadith.displayNumber.contains(":") {
                         Text("\(chapterNumber)")
                             .font((compact ? Font.caption2 : .subheadline).monospacedDigit().weight(.semibold))
 
@@ -1113,7 +1124,10 @@ enum HadithArabicChunks {
 /// The full Arabic of a hadith in the reading surfaces: one `HighlightedSnippet` per chunk (see
 /// `HadithArabicChunks`), all in the chosen face, stacked with the paragraph spacing of a single text.
 struct HadithArabicText: View {
-    @ObservedObject private var settings = Settings.shared
+    /// Read, not observed (Phase 10.4): every field this body reads is in `hadithRenderSettingsSignature`,
+    /// which the Equatable parents compare, and the other parents observe Settings themselves. Observing
+    /// here bypassed those gates and re-rendered every long-narration chunk on every publish.
+    private var settings: Settings { .shared }
 
     let text: String
     let term: String
@@ -1158,7 +1172,8 @@ struct HadithArabicText: View {
 /// a stack of daily rows line up instead of stair-stepping. The English half of each card reserves
 /// its lines the same way (`reservedLineLimit`).
 struct HadithArabicPreview: View {
-    @ObservedObject private var settings = Settings.shared
+    /// Read, not observed: see `HadithArabicText`.
+    private var settings: Settings { .shared }
 
     let text: String
     var size: CGFloat = 15

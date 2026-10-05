@@ -142,9 +142,21 @@ enum QuranWidgetStore {
     /// connection) on every call, and this used to be a computed property hit on every load and save.
     static let defaults: UserDefaults? = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
 
+    /// Decoded once per distinct blob (Phase 10.9): a reload burst decodes the same App Group bytes
+    /// from every Quran-family provider, twice for Ayah of the Day. Thread-safe (the app saves from a
+    /// detached build and the extension reads from its timeline queue).
+    private static let decoder = JSONDecoder()
+    private static let memoLock = NSLock()
+    nonisolated(unsafe) private static var memo: (data: Data, snapshot: QuranWidgetSnapshot?)?
+
     static func load() -> QuranWidgetSnapshot? {
         guard let data = defaults?.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(QuranWidgetSnapshot.self, from: data)
+        memoLock.lock()
+        if let memo, memo.data == data { memoLock.unlock(); return memo.snapshot }
+        memoLock.unlock()
+        let snapshot = try? decoder.decode(QuranWidgetSnapshot.self, from: data)
+        memoLock.lock(); memo = (data, snapshot); memoLock.unlock()
+        return snapshot
     }
 
     static func save(_ snapshot: QuranWidgetSnapshot) {
@@ -213,9 +225,18 @@ struct DailyWidgetSnapshot: Codable {
 enum DailyWidgetStore {
     private static let key = "dailyWidgetSnapshot"
 
+    private static let decoder = JSONDecoder()
+    private static let memoLock = NSLock()
+    nonisolated(unsafe) private static var memo: (data: Data, snapshot: DailyWidgetSnapshot?)?
+
     static func load() -> DailyWidgetSnapshot? {
         guard let data = QuranWidgetStore.defaults?.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(DailyWidgetSnapshot.self, from: data)
+        memoLock.lock()
+        if let memo, memo.data == data { memoLock.unlock(); return memo.snapshot }
+        memoLock.unlock()
+        let snapshot = try? decoder.decode(DailyWidgetSnapshot.self, from: data)
+        memoLock.lock(); memo = (data, snapshot); memoLock.unlock()
+        return snapshot
     }
 
     /// Thread-safe (UserDefaults is); the app calls it from the detached build.

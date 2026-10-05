@@ -433,10 +433,12 @@ enum IslamArticleCatalog {
         guard let view = IslamArticles.destination(for: id) else {
             return AnyView(Text("Article not found").foregroundColor(.secondary))
         }
+        // Declared open by id, so a `door` row further down the stack that leads back here greys
+        // out (`ArticleDoorRow`): articles that cite each other could be pushed without end.
         if let section, !section.isEmpty {
-            return AnyView(view.environment(\.articleScrollTarget, section))
+            return AnyView(view.environment(\.articleScrollTarget, section).openScreen(.islamArticle, id: id))
         }
-        return view
+        return AnyView(view.openScreen(.islamArticle, id: id))
     }
 }
 
@@ -847,11 +849,23 @@ struct ArticleDoorRow: View {
         switch door {
         case .article(let id):
             if let entry = IslamArticleCatalog.byID[id] {
+                #if os(iOS)
+                // Guarded: an article already on the stack is shown greyed instead of pushed again
+                // (the app's no-infinite-chains rule; these rows were plain links until 2026-10-04).
+                OpenScreenLink(screen: .islamArticle, id: id) {
+                    IslamArticleCatalog.destination(entry)
+                } label: {
+                    label(title: entry.title, subtitle: "\(entry.home.title) \u{203A} \(Self.groupTitle(entry.group))",
+                          systemImage: IslamArticleCatalog.groups(for: entry.home).first { $0.title == entry.group }?.systemImage
+                              ?? entry.home.systemImage)
+                }
+                #else
                 NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
                     label(title: entry.title, subtitle: "\(entry.home.title) \u{203A} \(Self.groupTitle(entry.group))",
                           systemImage: IslamArticleCatalog.groups(for: entry.home).first { $0.title == entry.group }?.systemImage
                               ?? entry.home.systemImage)
                 }
+                #endif
             }
         case .prophecy(let id):
             #if os(iOS)
@@ -885,17 +899,23 @@ struct ArticleDoorRow: View {
             #if os(iOS)
             switch library {
             case .miraclesOfQuran:
-                NavigationLink(destination: LazyDestination { MiraclesView() }) {
+                OpenScreenLink(screen: .miraclesLibrary) {
+                    MiraclesView().openScreen(.miraclesLibrary)
+                } label: {
                     label(title: "Miracles of the Quran", subtitle: "Signs in creation, science, and history",
                           systemImage: "sparkle.magnifyingglass")
                 }
             case .propheciesOfProphet:
-                NavigationLink(destination: LazyDestination { PropheciesView() }) {
+                OpenScreenLink(screen: .propheciesLibrary) {
+                    PropheciesView().openScreen(.propheciesLibrary)
+                } label: {
                     label(title: "Prophecies of the Prophet", subtitle: "What he foretold, and what history did",
                           systemImage: "checkmark.seal")
                 }
             case .miraclesOfProphets:
-                NavigationLink(destination: LazyDestination { ProphetMiraclesView() }) {
+                OpenScreenLink(screen: .prophetMiraclesLibrary) {
+                    ProphetMiraclesView().openScreen(.prophetMiraclesLibrary)
+                } label: {
                     label(title: "Miracles of the Prophets", subtitle: "The signs given to the prophets, and to him",
                           systemImage: "staroflife")
                 }
@@ -1039,7 +1059,21 @@ enum IslamArticleSearch {
     }
 
     /// Index rows whose title, section name or aliases carry EVERY word of the query.
+    /// The last answer (Phase 10.8): the sections view asked this on every body pass while a query was
+    /// typed, and the ranking re-folds every title and alias each time.
+    nonisolated(unsafe) private static var titleHitsMemo: (query: String, homes: Set<IslamArticleHome>, hits: [IslamArticleEntry])?
+    private static let titleHitsLock = NSLock()
+
     static func titleHits(_ query: String, homes: Set<IslamArticleHome>) -> [IslamArticleEntry] {
+        titleHitsLock.lock()
+        if let memo = titleHitsMemo, memo.query == query, memo.homes == homes { titleHitsLock.unlock(); return memo.hits }
+        titleHitsLock.unlock()
+        let hits = computeTitleHits(query, homes: homes)
+        titleHitsLock.lock(); titleHitsMemo = (query, homes, hits); titleHitsLock.unlock()
+        return hits
+    }
+
+    private static func computeTitleHits(_ query: String, homes: Set<IslamArticleHome>) -> [IslamArticleEntry] {
         let terms = words(query)
         guard !terms.isEmpty else { return [] }
         let direct = IslamArticleCatalog.all.filter { entry in

@@ -1104,11 +1104,18 @@ func formatCoordinates(latitude: Double, longitude: Double) -> String {
 /// Rounded to whole units - GPS altitude is good to some tens of metres at best, so decimals here
 /// would be invented precision. A negative reading (below sea level, the Dead Sea and the like) is
 /// printed as "below sea level" rather than with a minus sign.
-func formatElevation(metres: Double) -> String {
-    let feet = metres * 3.280839895
+private let elevationNumberFormatter: NumberFormatter = {
     let number = NumberFormatter()
     number.numberStyle = .decimal
     number.maximumFractionDigits = 0
+    return number
+}()
+
+func formatElevation(metres: Double) -> String {
+    let feet = metres * 3.280839895
+    // One formatter (Phase 10.8): this ran per render of the expanded compass's location row, where
+    // the GPS burst publishes a fix about once a second.
+    let number = elevationNumberFormatter
     let feetText = number.string(from: NSNumber(value: abs(feet).rounded())) ?? "0"
     let metresText = number.string(from: NSNumber(value: abs(metres).rounded())) ?? "0"
     let suffix = metres < 0 ? "below sea level" : "above sea level"

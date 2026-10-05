@@ -122,9 +122,19 @@ final class MorphologyStore: @unchecked Sendable {
         let folded = Self.fold(query)
         guard (2...5).contains(folded.count), folded.allSatisfy(\.isArabicLetterForMorphology),
               let table = loadedTable() else { return [] }
-        return table.roots.enumerated().compactMap { index, root in
-            Self.fold(root.joined) == folded ? (index + 1, root) : nil
+        // The Quran search's body asked this per pass while a query was typed; the table is immutable
+        // and the fold pure, so the last answer is kept (Phase 10.8). `foldedRoots` is built once.
+        lock.lock()
+        if let memo = rootsMemo, memo.folded == folded { lock.unlock(); return memo.hits }
+        if foldedRoots == nil { foldedRoots = table.roots.map { Self.fold($0.joined) } }
+        let foldedList = foldedRoots ?? []
+        lock.unlock()
+        var hits: [(id: Int, root: Root)] = []
+        for (index, candidate) in foldedList.enumerated() where candidate == folded {
+            hits.append((index + 1, table.roots[index]))
         }
+        lock.lock(); rootsMemo = (folded, hits); lock.unlock()
+        return hits
     }
 
     /// Lemmas whose bare form is exactly the folded query (كتاب, صلاة).
@@ -132,10 +142,24 @@ final class MorphologyStore: @unchecked Sendable {
         let folded = Self.fold(query)
         guard folded.count >= 2, folded.allSatisfy(\.isArabicLetterForMorphology),
               let table = loadedTable() else { return [] }
-        return table.lemmas.enumerated().compactMap { index, lemma in
-            Self.fold(lemma.clean.isEmpty ? lemma.text : lemma.clean) == folded ? (index + 1, lemma) : nil
+        lock.lock()
+        if let memo = lemmasMemo, memo.folded == folded { lock.unlock(); return memo.hits }
+        if foldedLemmas == nil { foldedLemmas = table.lemmas.map { Self.fold($0.clean.isEmpty ? $0.text : $0.clean) } }
+        let foldedList = foldedLemmas ?? []
+        lock.unlock()
+        var hits: [(id: Int, lemma: Lemma)] = []
+        for (index, candidate) in foldedList.enumerated() where candidate == folded {
+            hits.append((index + 1, table.lemmas[index]))
         }
+        lock.lock(); lemmasMemo = (folded, hits); lock.unlock()
+        return hits
     }
+
+    /// The folded forms the two matchers compare against (built once per load) and their last answers.
+    private var foldedRoots: [String]?
+    private var foldedLemmas: [String]?
+    private var rootsMemo: (folded: String, hits: [(id: Int, root: Root)])?
+    private var lemmasMemo: (folded: String, hits: [(id: Int, lemma: Lemma)])?
 
     /// Warms the parse (and the inverted index) off the calling thread's critical path.
     static func prewarm() {
@@ -150,6 +174,10 @@ final class MorphologyStore: @unchecked Sendable {
         table = nil
         occurrences = nil
         loadFailed = false
+        foldedRoots = nil
+        foldedLemmas = nil
+        rootsMemo = nil
+        lemmasMemo = nil
     }
 
     // MARK: Loading

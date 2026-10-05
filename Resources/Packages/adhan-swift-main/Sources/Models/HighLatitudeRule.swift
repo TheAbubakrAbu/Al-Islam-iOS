@@ -52,7 +52,9 @@ public enum HighLatitudeRule: String, Codable, CaseIterable {
 
     /// Returns the recommended High Latitude Rule for the specified location.
     public static func recommended(for coordinates: Coordinates) -> HighLatitudeRule {
-        if coordinates.latitude > 48 {
+        // Either hemisphere: Ushuaia and Punta Arenas sit past 48 degrees south, and the bare
+        // comparison left them on the rule meant for the mid-latitudes.
+        if abs(coordinates.latitude) > 48 {
             return .seventhOfTheNight
         } else {
             return .middleOfTheNight

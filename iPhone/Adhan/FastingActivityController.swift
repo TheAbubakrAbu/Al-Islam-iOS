@@ -23,6 +23,8 @@ enum FastingActivityController {
         let phase: FastingAttributes.Phase
         let deadline: Date
         let prayerName: String
+        /// Fajr's own minute for suhoor, which ends a minute before it; nil for iftar.
+        let prayerTime: Date?
     }
 
     static func refresh() {
@@ -38,7 +40,8 @@ enum FastingActivityController {
         let state = FastingAttributes.ContentState(
             startTime: window.deadline.addingTimeInterval(-leadTime),
             endTime: window.deadline,
-            prayerName: window.prayerName
+            prayerName: window.prayerName,
+            prayerTime: window.prayerTime
         )
         let staleDate = window.deadline.addingTimeInterval(60)
 
@@ -58,6 +61,10 @@ enum FastingActivityController {
 
         // Anything else on screen belongs to a phase that has finished, or to a previous day.
         endAll()
+
+        // The minutes after the deadline are for a card already up to show its "0:00", never for a
+        // new one: opening the app just after Maghrib used to raise a countdown that had ended.
+        guard window.deadline > Date() else { return }
 
         do {
             _ = try Activity.request(
@@ -121,13 +128,16 @@ enum FastingActivityController {
             else { continue }
 
             for (phase, name) in phases {
-                guard let deadline = prayers.first(where: { $0.nameTransliteration == name })?.time else { continue }
+                guard let prayerTime = prayers.first(where: { $0.nameTransliteration == name })?.time else { continue }
+                // Fajr's minute is dawn rounded up, so eating stops a minute before it (`PrayerMinute`).
+                let deadline = phase == .suhoor ? PrayerMinute.suhoorEnd(forFajr: prayerTime) : prayerTime
                 let remaining = deadline.timeIntervalSince(now)
                 guard remaining > -lingerAfterDeadline, remaining <= leadTime else { continue }
                 return Window(
                     phase: phase,
                     deadline: deadline,
-                    prayerName: settings.customPrayerName(for: name) ?? name
+                    prayerName: settings.customPrayerName(for: name) ?? name,
+                    prayerTime: phase == .suhoor ? prayerTime : nil
                 )
             }
         }

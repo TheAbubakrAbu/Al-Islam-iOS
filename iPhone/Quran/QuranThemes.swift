@@ -103,21 +103,41 @@ final class ThematicTopicsStore: @unchecked Sendable {
         let settings = Settings.shared
         let folded = settings.cleanSearch(query, whitespace: true)
         guard folded.count >= 2 else { return [] }
-        var hits = topics().filter { topic in
-            settings.cleanSearch(topic.name).contains(folded)
-                || settings.cleanSearch(topic.category).contains(folded)
-                || settings.cleanSearch(topic.description).contains(folded)
+        let all = topics()
+        // Per body pass while the Quran search has a query (Phase 10.8): the three folds per topic are
+        // computed once per load, and the last answer is kept.
+        lock.lock()
+        if let memo = searchMemo, memo.folded == folded, memo.limit == limit { lock.unlock(); return memo.hits }
+        if foldedTopics == nil || foldedTopics?.count != all.count {
+            foldedTopics = all.map { (name: settings.cleanSearch($0.name), category: settings.cleanSearch($0.category),
+                                     description: settings.cleanSearch($0.description)) }
+        }
+        let folds = foldedTopics ?? []
+        lock.unlock()
+        var hits: [(topic: ThemeTopic, name: String)] = []
+        for (index, topic) in all.enumerated() where folds.indices.contains(index) {
+            let fold = folds[index]
+            if fold.name.contains(folded) || fold.category.contains(folded) || fold.description.contains(folded) {
+                hits.append((topic, fold.name))
+            }
         }
         hits.sort { a, b in
-            let an = settings.cleanSearch(a.name), bn = settings.cleanSearch(b.name)
+            let an = a.name, bn = b.name
             let aExact = an == folded, bExact = bn == folded
             if aExact != bExact { return aExact }
             let aPrefix = an.hasPrefix(folded), bPrefix = bn.hasPrefix(folded)
             if aPrefix != bPrefix { return aPrefix }
-            return a.ayahs.count > b.ayahs.count
+            return a.topic.ayahs.count > b.topic.ayahs.count
         }
-        return Array(hits.prefix(limit))
+        let result = Array(hits.prefix(limit).map(\.topic))
+        lock.lock()
+        if !all.isEmpty { searchMemo = (folded, limit, result) }
+        lock.unlock()
+        return result
     }
+
+    private var foldedTopics: [(name: String, category: String, description: String)]?
+    private var searchMemo: (folded: String, limit: Int, hits: [ThemeTopic])?
 
     private static func load() -> [ThemeTopic]? {
         guard let root = ThemesPack.json("ThematicTopics") as? [String: Any],
@@ -245,6 +265,18 @@ final class SurahSectionsStore: @unchecked Sendable {
     /// Markdown because the consumer is the About this Surah sheet's existing markdown view -
     /// the outline behaves exactly like the bundled prose sources there.
     func outlineMarkdown(surah: Int) -> String? {
+        // Memoized per surah (Phase 10.8): the About this Surah sheet read it several times per pass.
+        lock.lock()
+        if let cached = outlineCache[surah] { lock.unlock(); return cached }
+        lock.unlock()
+        let built = buildOutlineMarkdown(surah: surah)
+        lock.lock(); outlineCache[surah] = .some(built); lock.unlock()
+        return built
+    }
+
+    private var outlineCache: [Int: String?] = [:]
+
+    private func buildOutlineMarkdown(surah: Int) -> String? {
         guard let entry = loadedTable()?["\(surah)"] as? [String: Any] else { return nil }
         let overview = (entry["overview"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let sections = entry["sections"] as? [[Any]] ?? []

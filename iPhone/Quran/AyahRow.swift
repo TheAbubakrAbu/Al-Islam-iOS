@@ -26,11 +26,36 @@ final class AyahSheetPresence: ObservableObject {
     func sheetClosed() { openCount = max(0, openCount - 1) }
 }
 
+/// The key suffix that keeps a BETA riwayah's locked and unlocked texts apart in the list reader's
+/// caches (`AyahRow.arabicDisplayCache` and `matchSourcesCache`, `SurahView`'s prepared row set and
+/// search blobs): "|beta" or "|locked" for a beta tag, empty for every other riwayah and for Hafs.
+///
+/// Locked, every reader of a beta riwayah's text gets the Hafs fallback and every row id "exists";
+/// unlocked, the riwayah's own words and its own ayah count. Those caches keyed on the tag alone, and
+/// the launch prewarm fills them while the riwayah is still locked (it reads as its printed mushaf
+/// until "Use Beta Text"), so after the consent the list drew Hafs words under the riwayah's name for
+/// the first screenfuls of the warmed surahs, al-Fatihah always, with rows past the riwayah's own
+/// count, until the next launch (2026-10-04; Quality Guide A7 fixed the same thing for the page
+/// caches, `MushafPagination.betaMark`). In the key, so no purge has to be remembered anywhere.
+///
+/// A plain enum, so it is callable from the off-main prewarms. The tag is already canonical
+/// (`displayQiraahForArabic`, a comparison override), so this is one set lookup, and the defaults
+/// read happens for a beta tag only.
+enum RiwayahTextCacheMark {
+    static func mark(for qiraah: String?) -> String {
+        guard let qiraah, !qiraah.isEmpty, Settings.Riwayah.betaTags.contains(qiraah) else { return "" }
+        return UserDefaults.standard.bool(forKey: "betaQiraatEnabled") ? "|beta" : "|locked"
+    }
+}
+
 struct AyahRow: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
-    @ObservedObject var quranData = QuranData.shared
+    /// NOT @ObservedObject (Phase 10.4): the body never reads a published field of it (the diff lane and
+    /// the Copy action call its O(1) lookups), so observing it only re-ran every visible row on each
+    /// QuranData publish (the load batch, the verse index, the surah search index), past `.equatable()`.
+    private var quranData: QuranData { .shared }
     /// Only the highlighter's wash reads this: the same hue needs a heavier alpha on the dark page to
     /// register at all, so the tint is resolved per scheme rather than baked into the palette.
     @Environment(\.colorScheme) private var colorScheme
@@ -253,10 +278,13 @@ struct AyahRow: View, Equatable {
     private func arabicDisplayText() -> String {
         let choices = displayChoices
         let clean = choices.hideTashkeel
-        let qiraahKey = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "Hafs")
+        let qiraah = comparisonQiraahOverride ?? settings.displayQiraahForArabic
+        let qiraahKey = qiraah ?? "Hafs"
         // The dots flag must be in the key: it changes the text `textCleanArabic` returns for the
-        // same `clean` bit, and nothing purges this cache when the toggle flips.
+        // same `clean` bit, and nothing purges this cache when the toggle flips. The beta mark for
+        // the same reason (`RiwayahTextCacheMark`).
         let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(choices.hideDots ? 1 : 0)|\(choices.beginner ? 1 : 0)|\(qiraahKey)"
+            + RiwayahTextCacheMark.mark(for: qiraah)
 
         if let cached = Self.arabicDisplayCache.object(forKey: key as NSString) {
             return cached as String
@@ -278,10 +306,11 @@ struct AyahRow: View, Equatable {
         let beginner = settings.beginnerMode
         let qiraah = settings.displayQiraahForArabic
         let qiraahKey = qiraah ?? "Hafs"
+        let betaMark = RiwayahTextCacheMark.mark(for: qiraah)
         let ayahs = limit.map { Array(surah.ayahs.prefix($0)) } ?? surah.ayahs
 
         for ayah in ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
-            let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
+            let key = ("\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" + betaMark) as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
             let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: dots, qiraahOverride: qiraah)
@@ -291,8 +320,8 @@ struct AyahRow: View, Equatable {
     }
 
     private func normalizedMatchSources() -> MatchSources {
-        let qiraahKey = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "Hafs")
-        let key = "\(surah.id):\(ayah.id)|\(qiraahKey)" as NSString
+        let qiraah = comparisonQiraahOverride ?? settings.displayQiraahForArabic
+        let key = ("\(surah.id):\(ayah.id)|\(qiraah ?? "Hafs")" + RiwayahTextCacheMark.mark(for: qiraah)) as NSString
 
         if let cached = Self.matchSourcesCache.object(forKey: key) {
             return cached

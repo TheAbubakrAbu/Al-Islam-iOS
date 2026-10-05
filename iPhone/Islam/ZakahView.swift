@@ -56,7 +56,13 @@ struct ZakahCalculatorView: View {
     @AppStorage("zakahDebts") private var debts = ""
 
     @AppStorage("zakahNisabBasis") private var nisabBasisRaw = NisabBasis.silver.rawValue
-    @AppStorage("zakahMetalPrice") private var metalPrice = ""
+    /// One price per metal. A single field (`zakahMetalPrice`) used to serve both: the gold price
+    /// typed for a gold nisab was multiplied by silver's 595 grams the moment the basis changed,
+    /// and a threshold seven times too high said "Nothing due". The old key is read once more, by
+    /// `migrateMetalPrice`.
+    @AppStorage("zakahGoldPrice") private var goldPrice = ""
+    @AppStorage("zakahSilverPrice") private var silverPrice = ""
+    @AppStorage("zakahMetalPrice") private var legacyMetalPrice = ""
     @AppStorage("zakahNisab") private var customNisab = ""
     @AppStorage("zakahYearBasis") private var yearBasisRaw = YearBasis.lunar.rawValue
 
@@ -95,7 +101,24 @@ struct ZakahCalculatorView: View {
     /// The threshold in the user's own currency: grams of metal times the price they looked up, or
     /// a figure they entered themselves.
     private var nisabValue: Double {
-        nisabBasis == .custom ? amount(customNisab) : amount(metalPrice) * nisabBasis.grams
+        switch nisabBasis {
+        case .custom: return amount(customNisab)
+        case .gold: return amount(goldPrice) * nisabBasis.grams
+        case .silver: return amount(silverPrice) * nisabBasis.grams
+        }
+    }
+
+    /// The single old price belonged to whichever metal was chosen when it was typed, so it goes to
+    /// that metal (never over a price already there) and the old key is emptied. Under a custom
+    /// threshold nothing says which metal it was, and it is dropped rather than guessed.
+    private func migrateMetalPrice() {
+        guard !legacyMetalPrice.isEmpty else { return }
+        switch nisabBasis {
+        case .gold: if goldPrice.isEmpty { goldPrice = legacyMetalPrice }
+        case .silver: if silverPrice.isEmpty { silverPrice = legacyMetalPrice }
+        case .custom: break
+        }
+        legacyMetalPrice = ""
     }
 
     /// Below-nisab only when the threshold is actually known; with the price field empty the
@@ -186,6 +209,7 @@ struct ZakahCalculatorView: View {
         #endif
         .navigationTitle("Zakah Calculator")
         .applyConditionalListStyle()
+        .onAppear { migrateMetalPrice() }
         #if DEBUG
         // "-focusAmount": focus the amount fields after appear (keyboard toolbar screenshot runs).
         // "-zakahSeed": a worked example, for screenshot runs.
@@ -195,7 +219,7 @@ struct ZakahCalculatorView: View {
                 cash = "12000"; gold = "4500"; silver = ""; tradeShares = "3000"
                 longShares = ""; business = "1500"; owedToYou = "800"; debts = "2000"
                 nisabBasisRaw = NisabBasis.silver.rawValue
-                metalPrice = "0.95"
+                silverPrice = "0.95"
                 fitrPeople = 4
                 fitrCost = "12"
             }
@@ -288,7 +312,7 @@ struct ZakahCalculatorView: View {
                 amountRow("Nisab threshold", systemImage: "scalemass", text: $customNisab)
             } else {
                 amountRow(nisabBasis == .gold ? "Gold price per gram" : "Silver price per gram",
-                          systemImage: "tag", text: $metalPrice)
+                          systemImage: "tag", text: nisabBasis == .gold ? $goldPrice : $silverPrice)
 
                 HStack {
                     Text("Nisab (\(Int(nisabBasis.grams))g)")
@@ -350,7 +374,7 @@ struct ZakahCalculatorView: View {
         Section {
             CalculatorResultCard(
                 title: isBelowNisab ? "Nothing due" : "Zakah due (\(yearBasis.rateText))",
-                value: isBelowNisab ? "\u{2014}" : formatted(zakahDue)
+                value: isBelowNisab ? formatted(0) : formatted(zakahDue)
             ) {
                 if isBelowNisab {
                     Text("Your wealth is below the nisab, so no zakah is due on it. Give what you like as sadaqah instead.")
@@ -382,6 +406,15 @@ struct ZakahCalculatorView: View {
                 ExplainerButton(
                     title: "Why two figures?",
                     body_: "Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars, so both are worth knowing. Without deducting the debt you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger.",
+                    caption: "Without deducting the debt: \(formatted(zakahBeforeDebts))"
+                )
+            } else if isBelowNisab, debtsDue > 0, totalAssets >= nisabValue {
+                // Only the debt put the wealth under the threshold. On the view that a debt is not
+                // deducted the whole sum is still due, and "Nothing due" alone hid that figure in
+                // exactly the case where the two views differ most.
+                ExplainerButton(
+                    title: "Why might something still be due?",
+                    body_: "What you own reaches the nisab; it is only after your debts that it falls below it. Whether a debt cancels the zakah on wealth already in your hand is a real difference among the scholars. On the view that it does, nothing is due. On the view that it does not, you would owe \(formatted(zakahBeforeDebts)). The safer of the two is the larger.",
                     caption: "Without deducting the debt: \(formatted(zakahBeforeDebts))"
                 )
             }

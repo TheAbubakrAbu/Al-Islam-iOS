@@ -674,7 +674,9 @@ struct AyahPreviewCard: View {
 struct AyahActionsSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// Actions only (`playAyah`): the sheet reads no player state, and observing it rebuilt the whole
+    /// action grid on every ayah advance of a recitation running behind the sheet (Phase 10.4).
+    private var quranPlayer: QuranPlayer { .shared }
     /// The per-ayah pins (beginner spacing, tajweed, tashkeel, dots, ...), shared with the list rows, the
     /// preview card and the page composer - so the "Apply Settings" tile's menu shows the ayah's real
     /// current state and a pin re-composes the page behind the sheet.

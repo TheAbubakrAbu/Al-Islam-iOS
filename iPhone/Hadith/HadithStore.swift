@@ -589,7 +589,8 @@ final class HadithStore: ObservableObject {
     /// actually loaded, so a failed load retries on the next launch. The records' idInBook KEYS are
     /// untouched - only the display strings move to the standard numbering.
     private func refreshCitationReferences() {
-        let flag = "hadithCitationRefresh1"
+        // 2 (2026-10-05): an uncited row of a book that cites the rest is named "C:N" now (H4).
+        let flag = "hadithCitationRefresh2"
         guard !UserDefaults.standard.bool(forKey: flag) else { return }
         var allBooksLoaded = true
 

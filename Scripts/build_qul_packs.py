@@ -23,12 +23,24 @@ against the max position of every ayah in the root and lemma tables).
 Every pack stores 0-based token indices in this app's own order; the Swift stores never
 match, normalize or guess.
 
+LEMMA SLIPS
+-----------
+QUL's lemma_words files some lemmas under the NEIGHBOURING word's location (4:106 puts كَانَ on
+غَفُورًا and leaves the real كَانَ without one; 2:75 puts ءَامَنَ on لَكُمۡ). The root table has
+no such slips, so a lemma whose usual root (the one most of its occurrences carry) is not its
+word's root, while a lemma-less word within three tokens has exactly that root, is moved back
+onto that word (repair_displaced_lemmas). The word it leaves keeps no lemma rather than a guess.
+Real homographs (عَصَا on ع ص و, عَاد on ع د و) stay put: no lemma-less neighbour has the root.
+Three slips that rule cannot see (they skew the lemma's own dominant root) are moved first by
+hand, from LEMMA_ERRATA.
+
 RUN
 ---
     python3 Scripts/build_qul_packs.py [tilawa-root]
 
-Fails, writing nothing, if any ayah cannot be aligned or any reference falls outside this
-app's Quran. Scripts/verify_qul_packs.py re-checks the shipped packs and the rebuild.
+Fails, writing nothing, if any ayah cannot be aligned, any reference falls outside this
+app's Quran, or a lemma erratum no longer finds its words. Scripts/verify_qul_packs.py
+re-checks the shipped packs and the rebuild.
 """
 
 from __future__ import annotations
@@ -239,7 +251,107 @@ def normalize_root(letters: str) -> str:
     return " ".join(letters.split())
 
 
-def build_morphology(order: list[str], positions: PositionMap) -> dict:
+# How far (in tokens, inside one ayah) a slipped lemma may have landed from its own word. Every
+# slip the audit proved sits one to three tokens away; four would start catching coincidences.
+LEMMA_REACH = 3
+
+# (ayah, lemma, the word QUL files it under, the word it belongs to), by exact token text: slips
+# the dominant-root rule cannot see. شُحّ sits on نَفۡسِهِۦ in two of its three occurrences, which
+# makes ن ف س its dominant root (so 33:19's correct شُحّ looked foreign); مَيْل's two occurrences
+# tie on root. Applied before the dominant roots are counted. The text writes شُحَّ with its
+# shadda BEFORE the fatha, an order editors silently normalize away, so it is spelled escaped.
+SHUHHA = "شُحَّ"
+LEMMA_ERRATA = [
+    ("59:9", "شُحّ", "نَفۡسِهِۦ", SHUHHA),
+    ("64:16", "شُحّ", "نَفۡسِهِۦ", SHUHHA),
+    ("4:129", "مَيْل", "فَتَذَرُوهَا", "ٱلۡمَيۡلِ"),
+]
+
+
+def apply_lemma_errata(texts: dict[str, str], lemmas: dict[str, list[int]], lemma_rows: list[tuple]) -> int:
+    """Moves each LEMMA_ERRATA lemma onto its word, in place. Fails loudly when an erratum no
+    longer finds its words (each exactly once in the ayah), the lemma is not where QUL put it, or
+    the word it belongs to already has one: the source changed and the erratum needs a look."""
+    for key, lemma_text, slipped, home in LEMMA_ERRATA:
+        tokens = _bw.tokens_of(texts[key])
+        ids = [index + 1 for index, row in enumerate(lemma_rows) if row[1] == lemma_text]
+        if len(ids) != 1 or tokens.count(slipped) != 1 or tokens.count(home) != 1:
+            raise SystemExit(f"lemma erratum {key} {lemma_text}: cannot find its lemma or words")
+        source, target = tokens.index(slipped), tokens.index(home)
+        if lemmas[key][source] != ids[0] or lemmas[key][target]:
+            raise SystemExit(f"lemma erratum {key} {lemma_text}: the source no longer has this slip")
+        lemmas[key][target] = ids[0]
+        lemmas[key][source] = 0
+    return len(LEMMA_ERRATA)
+
+
+def dominant_roots(order: list[str], roots: dict[str, list[int]], lemmas: dict[str, list[int]]) -> dict[int, int]:
+    """lemma -> the root most of its occurrences carry across the Quran. 0 when that is no root
+    (a particle's lemma) or when two roots tie (no evidence either way)."""
+    tally: dict[int, dict[int, int]] = {}
+    for key in order:
+        for root, lemma in zip(roots[key], lemmas[key]):
+            if lemma:
+                counts = tally.setdefault(lemma, {})
+                counts[root] = counts.get(root, 0) + 1
+    out: dict[int, int] = {}
+    for lemma in sorted(tally):
+        ranked = sorted(tally[lemma].items(), key=lambda item: (-item[1], item[0]))
+        tied = len(ranked) > 1 and ranked[0][1] == ranked[1][1]
+        out[lemma] = 0 if tied else ranked[0][0]
+    return out
+
+
+def repair_displaced_lemmas(order: list[str], roots: dict[str, list[int]], lemmas: dict[str, list[int]]) -> int:
+    """Moves each slipped lemma (see LEMMA SLIPS in the module doc) back onto its own word, in
+    place, and returns how many moved. A carrier qualifies when its lemma's dominant root is a
+    real root and not the carrier's own (the carrier may be rootless: 2:75 لَكُمۡ). The target is
+    the NEAREST lemma-less word within LEMMA_REACH that has that root, and only when it is the one
+    word at that distance. Nothing moves while a word with that root at the same distance or
+    nearer still holds a movable slipped lemma (a chain, 7:134 رِجْز then ءَامَنَ): that word is
+    freed first and the next pass places this one. Two carriers aiming at one word both stay.
+    Passes run in mushaf order until nothing moves, so the build stays byte-identical."""
+    dominant = dominant_roots(order, roots, lemmas)
+    moved = 0
+    while True:
+        planned: dict[tuple[str, int], int] = {}
+        clashes: set[tuple[str, int]] = set()
+        for key in order:
+            row_roots, row_lemmas = roots[key], lemmas[key]
+            for index, lemma in enumerate(row_lemmas):
+                wanted = dominant.get(lemma, 0)
+                if not wanted or row_roots[index] == wanted:
+                    continue
+                free, held = [], []
+                for other in range(max(0, index - LEMMA_REACH), min(len(row_roots), index + LEMMA_REACH + 1)):
+                    if other == index or row_roots[other] != wanted:
+                        continue
+                    if not row_lemmas[other]:
+                        free.append(other)
+                    elif dominant.get(row_lemmas[other], 0) not in (0, wanted):
+                        # Holds a slipped lemma this repair will move. A particle's lemma (no
+                        # dominant root) never moves, so it blocks nothing (3:33 وَءَالَ).
+                        held.append(other)
+                if not free:
+                    continue
+                nearest = min(abs(other - index) for other in free)
+                closest = [other for other in free if abs(other - index) == nearest]
+                if len(closest) != 1 or any(abs(other - index) <= nearest for other in held):
+                    continue
+                target = (key, closest[0])
+                if target in planned:
+                    clashes.add(target)
+                planned[target] = index
+        moves = [(target, carrier) for target, carrier in planned.items() if target not in clashes]
+        if not moves:
+            return moved
+        for (key, target), carrier in moves:
+            lemmas[key][target] = lemmas[key][carrier]
+            lemmas[key][carrier] = 0
+        moved += len(moves)
+
+
+def build_morphology(order: list[str], texts: dict[str, str], positions: PositionMap) -> dict:
     roots_db = open_sqlite(QUL / "word-root.db.zip")
     lemmas_db = open_sqlite(QUL / "word-lemma.db.zip")
 
@@ -280,6 +392,9 @@ def build_morphology(order: list[str], positions: PositionMap) -> dict:
         raise SystemExit(f"{len(unmapped)} word locations name no token: {unmapped[:10]}")
     if phantom:
         print(f"  morphology: ignored {len(phantom)} locations past their ayah's last word: {phantom}")
+    corrected = apply_lemma_errata(texts, per_token_lemma, lemma_rows)
+    moved = repair_displaced_lemmas(order, per_token_root, per_token_lemma)
+    print(f"  morphology: moved {corrected} lemmas by erratum and {moved} filed under a neighbouring word back onto their own word")
 
     def by_surah(table: dict[str, list[int]]) -> dict[str, list[list[int]]]:
         out: dict[str, list[list[int]]] = {}
@@ -470,7 +585,7 @@ def build_all(tilawa_root: pathlib.Path) -> dict[str, bytes]:
         counts[surah] = counts.get(surah, 0) + 1
     positions = PositionMap(order, texts, upstream_words(tilawa_root))
     return {
-        "Morphology.json.xz": dumps(build_morphology(order, positions)),
+        "Morphology.json.xz": dumps(build_morphology(order, texts, positions)),
         "Mutashabihat.json.xz": dumps(build_mutashabihat(positions)),
         "QuranTopics.json.xz": dumps(build_topics(set(order))),
         "AyahThemes.json.xz": dumps(build_themes(counts)),

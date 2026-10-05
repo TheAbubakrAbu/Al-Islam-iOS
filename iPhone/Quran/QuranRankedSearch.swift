@@ -162,7 +162,58 @@ enum QuranRankedSearch {
         private var nearest: [String: String?] = [:]
         private let nearestLock = NSLock()
 
-        init(snapshot: QuranData.VerseSearchSnapshot) {
+        /// Whether a precomputed pack answered for this riwayah (`VerseSearchPack`, Phase 10.14). The
+        /// rows it had no record for were folded live; when there was no pack at all, the build is
+        /// written to Caches for the next launch (see `lanes(for:)`).
+        let readFromPack: Bool
+
+        /// One ayah's rows and its words for the two vocabularies, as `init` computed them inline
+        /// before the pack existed. The pack stores exactly these per record; an entry the pack lacks
+        /// (an ayah only another riwayah numbers) still comes through here.
+        struct Row {
+            var arabicStems: [UInt8]
+            var skeletonWords: [UInt8]
+            var skeletonTight: [UInt8]
+            var romanWords: [UInt8]
+            var romanTight: [UInt8]
+            var wordCount: Int
+            var vocabularyWords: [String]
+            var translationWords: [String]
+        }
+
+        static func row(for entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> Row {
+            // The clean Arabic (the second of the blob's folds) is the one the skeletons and stems
+            // are taken from: one copy of the text, no diacritics, no duplicated lanes.
+            let cleanTokens = Self.cleanArabicTokens(entry, snapshot: snapshot)
+            let arabicStems = Array((" " + cleanTokens.map(stemArabic).joined(separator: " ") + " ").utf8)
+            let skeletons = cleanTokens.map(arabicSkeleton).filter { !$0.isEmpty }
+            let skeletonWords = Array((" " + skeletons.joined(separator: " ") + " ").utf8)
+            let skeletonTight = Array(collapseSkeleton(skeletons.joined()).utf8)
+            var vocabularyWords: [String] = []
+            for word in entry.englishTokens where word.count >= fuzzyMinLength && Self.isLatinWord(word) {
+                vocabularyWords.append(word)
+            }
+            let latin = Self.latinTokens(entry, snapshot: snapshot)
+            var translationWords: [String] = []
+            for word in latin.translation where Self.isLatinWord(word) {
+                translationWords.append(word)
+            }
+            var outlineWords: [UInt8] = [0x20]
+            var outlineTight: [UInt8] = []
+            for word in latin.transliteration {
+                let key = romanKey(word)
+                guard !key.isEmpty else { continue }
+                outlineWords.append(contentsOf: key)
+                outlineWords.append(0x20)
+                appendRun(key, to: &outlineTight)
+            }
+            return Row(arabicStems: arabicStems, skeletonWords: skeletonWords, skeletonTight: skeletonTight,
+                       romanWords: outlineWords, romanTight: outlineTight,
+                       wordCount: Swift.max(1, cleanTokens.count),
+                       vocabularyWords: vocabularyWords, translationWords: translationWords)
+        }
+
+        init(snapshot: QuranData.VerseSearchSnapshot, allowPack: Bool = true) {
             key = Self.key(for: snapshot)
             let entries = snapshot.verseIndex
             // ONE thread on purpose. Building the corpus in stretches on every core was measured
@@ -186,36 +237,40 @@ enum QuranRankedSearch {
             wordCounts.reserveCapacity(entries.count)
             var words = Set<String>()
             var translation = Set<String>()
+            // The precomputed rows for this riwayah's texts, when a pack has them (the shipped Hafs
+            // pack, or the one this build wrote to Caches). The padded english and arabic lanes are
+            // the index's own blobs and are made here either way.
+            let pack = allowPack ? VerseSearchPack.pack(for: snapshot.qiraahKey, surahs: snapshot.surahs) : nil
+            var packRows = 0
             for entry in entries {
                 english.append(Array((" " + entry.englishBlob + " ").utf8))
                 arabic.append(Array((" " + entry.arabicBlob + " ").utf8))
-                // The clean Arabic (the second of the blob's folds) is the one the skeletons and stems
-                // are taken from: one copy of the text, no diacritics, no duplicated lanes.
-                let cleanTokens = Self.cleanArabicTokens(entry, snapshot: snapshot)
-                arabicStems.append(Array((" " + cleanTokens.map(stemArabic).joined(separator: " ") + " ").utf8))
-                let skeletons = cleanTokens.map(arabicSkeleton).filter { !$0.isEmpty }
-                skeletonWords.append(Array((" " + skeletons.joined(separator: " ") + " ").utf8))
-                skeletonTight.append(Array(collapseSkeleton(skeletons.joined()).utf8))
-                wordCounts.append(Swift.max(1, cleanTokens.count))
-                for word in entry.englishTokens where word.count >= fuzzyMinLength && Self.isLatinWord(word) {
-                    words.insert(word)
+                if let pack, let index = pack.recordIndex(surah: entry.surah, ayah: entry.ayah) {
+                    let record = pack.record(at: index)
+                    arabicStems.append(pack.bytes(record, field: VerseSearchPack.Field.arabicStems))
+                    skeletonWords.append(pack.bytes(record, field: VerseSearchPack.Field.skeletonWords))
+                    skeletonTight.append(pack.bytes(record, field: VerseSearchPack.Field.skeletonTight))
+                    romanWords.append(pack.bytes(record, field: VerseSearchPack.Field.romanWords))
+                    romanTight.append(pack.bytes(record, field: VerseSearchPack.Field.romanTight))
+                    wordCounts.append(record.wordCount)
+                    packRows += 1
+                    continue
                 }
-                let latin = Self.latinTokens(entry, snapshot: snapshot)
-                for word in latin.translation where Self.isLatinWord(word) {
-                    translation.insert(word)
-                }
-                var outlineWords: [UInt8] = [0x20]
-                var outlineTight: [UInt8] = []
-                for word in latin.transliteration {
-                    let key = romanKey(word)
-                    guard !key.isEmpty else { continue }
-                    outlineWords.append(contentsOf: key)
-                    outlineWords.append(0x20)
-                    appendRun(key, to: &outlineTight)
-                }
-                romanWords.append(outlineWords)
-                romanTight.append(outlineTight)
+                let row = Self.row(for: entry, snapshot: snapshot)
+                arabicStems.append(row.arabicStems)
+                skeletonWords.append(row.skeletonWords)
+                skeletonTight.append(row.skeletonTight)
+                wordCounts.append(row.wordCount)
+                words.formUnion(row.vocabularyWords)
+                translation.formUnion(row.translationWords)
+                romanWords.append(row.romanWords)
+                romanTight.append(row.romanTight)
             }
+            if let pack, packRows > 0 {
+                words.formUnion(pack.vocabulary)
+                translation.formUnion(pack.translationWords)
+            }
+            readFromPack = pack != nil
             // No translation text to read (a snapshot whose offsets do not resolve): fall back to
             // the mixed list, which is what both decisions used before.
             if translation.isEmpty { translation = words }
@@ -236,6 +291,30 @@ enum QuranRankedSearch {
                 byLength[word.utf8.count, default: []].append(VocabularyWord(Array(word.utf8)))
             }
             correctionsByLength = byLength
+        }
+
+        /// These lanes as pack records (`VerseSearchPack.RecordInput`): what the index stores for each
+        /// ayah beside what was derived from it here, with the daily-card flags of its text. Written to
+        /// Caches after a live build, and exported for the shipped Hafs pack. `hafsOnly` leaves out the
+        /// ayahs only another riwayah numbers (their Hafs text is empty), so the shipped file is the
+        /// same whether or not the exporting host had the riwayah overlays loaded.
+        func recordInputs(snapshot: QuranData.VerseSearchSnapshot, hafsOnly: Bool) -> [VerseSearchPack.RecordInput] {
+            var inputs: [VerseSearchPack.RecordInput] = []
+            inputs.reserveCapacity(snapshot.verseIndex.count)
+            for (index, entry) in snapshot.verseIndex.enumerated() {
+                let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+                guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { continue }
+                let ayah = snapshot.surahs[si].ayahs[ai]
+                if hafsOnly, ayah.textHafs.isEmpty { continue }
+                inputs.append(VerseSearchPack.RecordInput(
+                    surah: entry.surah, ayah: entry.ayah,
+                    flags: Settings.dailyCardFlags(for: ayah), wordCount: wordCounts[index],
+                    arabic: Array(entry.arabicBlob.utf8), silent: Array(entry.silentArabicBlob.utf8),
+                    hamza: entry.hamzaArabicBlob.map { Array($0.utf8) }, english: Array(entry.englishBlob.utf8),
+                    arabicStems: arabicStems[index], skeletonWords: skeletonWords[index], skeletonTight: skeletonTight[index],
+                    romanWords: romanWords[index], romanTight: romanTight[index]))
+            }
+            return inputs
         }
 
         /// The folded words of the translations and of the transliteration (its pause hints left out),
@@ -383,7 +462,10 @@ enum QuranRankedSearch {
                 return entry.arabicTokens
             }
             let surah = snapshot.surahs[si]
-            let clean = surah.ayahs[ai].textCleanArabic(for: snapshot.displayQiraah, surahID: surah.id)
+            // `removeDots: false`: the default follows the Hide Arabic Dots switch, and with it on the
+            // stems and skeletons were taken from the dotless rasm (ب ت ث one letter), so the lanes no
+            // longer met a typed query and no longer equalled the shipped pack.
+            let clean = surah.ayahs[ai].textCleanArabic(for: snapshot.displayQiraah, surahID: surah.id, removeDots: false)
             return Settings.shared.cleanSearch(clean, whitespace: true)
                 .split(separator: " ").map(String.init).filter { !$0.isEmpty }
         }
@@ -429,6 +511,17 @@ enum QuranRankedSearch {
         lanesLock.unlock()
         QuranData.adoptTranslationVocabulary(built.vocabulary)
         lanesBuilt.leave()
+        #if DEBUG
+        if RenderCounter.enabled { NSLog("RANKED quran lanes %@ %.1f ms", built.readFromPack ? "from pack" : "built", ms) }
+        #endif
+        if !built.readFromPack {
+            // Nothing precomputed served this riwayah: keep what was just built for the next launch
+            // (Phase 10.14; the shipped file covers Hafs, this covers the riwayah on display).
+            VerseSearchPack.saveToCaches(qiraahKey: snapshot.qiraahKey, surahs: snapshot.surahs,
+                                         records: built.recordInputs(snapshot: snapshot, hafsOnly: false),
+                                         vocabulary: Array(built.vocabulary),
+                                         translationWords: Array(built.translationWords))
+        }
         return (built, ms)
     }
 
@@ -436,6 +529,42 @@ enum QuranRankedSearch {
     /// For the unit test: ayahs whose Latin tokens the shortcut reads differently from the folds.
     static func verifyLatinTokenShortcut(snapshot: QuranData.VerseSearchSnapshot) -> Int {
         Lanes.verifyLatinTokens(snapshot: snapshot)
+    }
+
+    /// `PrecomputedPackTests`: everything the lanes hold, built live or read out of the pack, so the
+    /// two can be compared field by field. Nothing is cached.
+    struct LanesForTests: Equatable {
+        let english: [[UInt8]]
+        let arabic: [[UInt8]]
+        let arabicStems: [[UInt8]]
+        let skeletonWords: [[UInt8]]
+        let skeletonTight: [[UInt8]]
+        let romanWords: [[UInt8]]
+        let romanTight: [[UInt8]]
+        let wordCounts: [Int]
+        let vocabulary: Set<String>
+        let translationWords: Set<String>
+        let correctionsByLength: [Int: Set<[UInt8]>]
+        let readFromPack: Bool
+    }
+
+    static func lanesForTests(snapshot: QuranData.VerseSearchSnapshot, allowPack: Bool) -> LanesForTests {
+        let lanes = Lanes(snapshot: snapshot, allowPack: allowPack)
+        return LanesForTests(
+            english: lanes.english, arabic: lanes.arabic, arabicStems: lanes.arabicStems,
+            skeletonWords: lanes.skeletonWords, skeletonTight: lanes.skeletonTight,
+            romanWords: lanes.romanWords, romanTight: lanes.romanTight, wordCounts: lanes.wordCounts,
+            vocabulary: lanes.vocabulary, translationWords: lanes.translationWords,
+            correctionsByLength: lanes.correctionsByLength.mapValues { Set($0.map(\.bytes)) },
+            readFromPack: lanes.readFromPack)
+    }
+
+    /// `PrecomputedPackTests`: the records and word lists of a live build, for the export of the shipped
+    /// Hafs pack.
+    static func packInputsForTests(snapshot: QuranData.VerseSearchSnapshot)
+        -> (records: [VerseSearchPack.RecordInput], vocabulary: [String], translationWords: [String]) {
+        let lanes = Lanes(snapshot: snapshot, allowPack: false)
+        return (lanes.recordInputs(snapshot: snapshot, hafsOnly: true), Array(lanes.vocabulary), Array(lanes.translationWords))
     }
 
     /// "-rankedBench": what one build of the lanes costs away from the launch's own work, and what
@@ -514,10 +643,22 @@ enum QuranRankedSearch {
         /// What a result row should paint for this word: the correction, else the typed word, else
         /// (when only its stem is a word of the corpus) the stem.
         let highlight: String
+        /// Other spellings of an Arabic word, tried only when the word as typed stands whole nowhere
+        /// in the Quran (`SearchFoldTables.arabicQueryVariants`): "شيئا" as the mushaf's seatless
+        /// "شيا", "موسي" as "موسا". Bare and space-padded, like the text.
+        let alternateBytes: [[UInt8]]
+        let alternatePadded: [[UInt8]]
+        /// Set when the word was typed with a bare ء: a row counts for it only when its hamza lane
+        /// carries the word with the hamza kept (the exact scan's own rule).
+        let hamza: Settings.HamzaPrecisionFilter?
 
         init(text: String, stems: [String], fuzzy: String?, skeleton: String?, rawSkeleton: String,
-             isArabic: Bool, romanised: Bool, highlight: String) {
+             isArabic: Bool, romanised: Bool, highlight: String,
+             alternates: [String] = [], hamza: Settings.HamzaPrecisionFilter? = nil) {
             self.text = text
+            alternateBytes = alternates.map { Array($0.utf8) }
+            alternatePadded = alternates.map { Array(" \($0) ".utf8) }
+            self.hamza = hamza
             self.romanised = romanised
             self.stems = stems
             self.fuzzy = fuzzy
@@ -595,8 +736,11 @@ enum QuranRankedSearch {
         let joinedSkeleton: [UInt8]
         /// The tokens' sound outlines as one run, one per reading of the query's spelling.
         let joinedRoman: [[UInt8]]
+        /// A word of the query was typed with a bare ء (see `Token.hamza`).
+        let filtersHamza: Bool
 
         init(isArabic: Bool, phrase: String, required: [String], tokens: [Token], corrections: [Correction], terms: [String]) {
+            filtersHamza = tokens.contains { $0.hamza != nil }
             self.isArabic = isArabic
             self.phrase = phrase
             self.required = required
@@ -783,6 +927,23 @@ enum QuranRankedSearch {
         let normalized = Settings.shared.cleanSearch(rest, whitespace: true)
         let phrase = Settings.shared.cleanSearch(raw, whitespace: true)
         let words = normalized.split(separator: " ").map(String.init).filter { !$0.isEmpty }
+        // What the fold erases from an Arabic word and the lane still has to know, read off the RAW
+        // words and keyed by their fold: the other spellings to try ("شيئا" found nothing, in either
+        // lane, because the mushaf writes that hamza without a seat), and whether a bare ء was typed
+        // ("ماء" folded to "ما" and led with ayahs of the particle).
+        var spellings: [String: [String]] = [:]
+        var hamzaFilters: [String: Settings.HamzaPrecisionFilter] = [:]
+        if isArabic {
+            for piece in rest.split(whereSeparator: { $0.isWhitespace }) {
+                let word = String(piece)
+                let folded = Settings.shared.cleanSearch(word, whitespace: true)
+                guard !folded.isEmpty else { continue }
+                if spellings[folded] == nil { spellings[folded] = SearchFoldTables.arabicQueryVariants(of: word) }
+                if hamzaFilters[folded] == nil, let filter = Settings.HamzaPrecisionFilter(query: word) {
+                    hamzaFilters[folded] = filter
+                }
+            }
+        }
         let stopwords = isArabic ? arabicStopwords : englishStopwords
         let meaningful = words.filter { !stopwords.contains($0) }
         var used = meaningful.isEmpty ? words : meaningful
@@ -832,11 +993,25 @@ enum QuranRankedSearch {
                contains(Array(" \(stem)".utf8), in: lanes.vocabularyBlob) {
                 paint = stem
             }
+            // The other spellings are a FALLBACK: a word that stands whole somewhere as typed keeps
+            // exactly the rows it had ("في" must not also mean "فا"), and only the spellings the
+            // text really carries are kept, the first of them being what a row paints.
+            var alternates: [String] = []
+            if isArabic, let variants = spellings[text], !variants.isEmpty {
+                let padded = Array(" \(text) ".utf8)
+                if !lanes.arabic.contains(where: { contains(padded, in: $0) }) {
+                    alternates = variants.filter { variant in
+                        let bytes = Array(variant.utf8)
+                        return lanes.arabic.contains { contains(bytes, in: $0) }
+                    }
+                    if let first = alternates.first { paint = first }
+                }
+            }
             return Token(text: text, stems: stems, fuzzy: fuzzy,
                          skeleton: skeleton.count >= minimum ? skeleton : nil, rawSkeleton: skeleton,
                          isArabic: isArabic,
                          romanised: !isArabic && !contains(Array(text.utf8), in: lanes.translationBlob),
-                         highlight: paint)
+                         highlight: paint, alternates: alternates, hamza: hamzaFilters[text])
         }
         required.forEach(remember)
         return Query(isArabic: isArabic, phrase: phrase, required: required, tokens: tokens,
@@ -856,6 +1031,9 @@ enum QuranRankedSearch {
         var fuzzy = false
         /// Skeleton tier only: a skeleton matched a WHOLE Arabic word, not a run inside one.
         var whole = false
+        /// A word was reached only through its stem (for Arabic that is a run of letters, which may
+        /// sit inside an unrelated word).
+        var stem = false
     }
 
     /// The byte offset of the first occurrence of `needle` in `haystack`, or nil.
@@ -902,9 +1080,18 @@ enum QuranRankedSearch {
             return FieldScore(score: weight - (latin && token.romanised ? romanisedInsidePenalty : 0), matched: 1,
                               position: units(before: at, in: text))
         }
+        // Another spelling of the word (Arabic only, and only when the typed one stands whole
+        // nowhere): worth what the typed word would have been.
+        for (index, alternate) in token.alternateBytes.enumerated() {
+            guard let at = find(alternate, in: text) else { continue }
+            if let whole = find(token.alternatePadded[index], in: text) {
+                return FieldScore(score: weight + wholeWordBonus, matched: 1, position: units(before: whole, in: text))
+            }
+            return FieldScore(score: weight, matched: 1, position: units(before: at, in: text))
+        }
         for stem in token.stemBytes {
             if let at = find(stem, in: text) {
-                return FieldScore(score: weight - stemPenalty, matched: 1, position: units(before: at, in: text))
+                return FieldScore(score: weight - stemPenalty, matched: 1, position: units(before: at, in: text), stem: true)
             }
         }
         if let fuzzy = token.fuzzyBytes, let at = find(fuzzy, in: text) {
@@ -915,37 +1102,47 @@ enum QuranRankedSearch {
         return nil
     }
 
-    private static func scoreField(_ text: [UInt8], query: Query, weight: Int, latin: Bool = false) -> FieldScore? {
+    /// `blocked` marks the words this row may not count (one per token, see `Token.hamza`).
+    private static func scoreField(_ text: [UInt8], query: Query, weight: Int, latin: Bool = false,
+                                   blocked: [Bool]? = nil) -> FieldScore? {
         var score = 0
         var matched = 0
         var fuzzy = false
+        var stem = false
         var position = Int.max
         var last = 0
-        for token in query.tokens {
+        for (index, token) in query.tokens.enumerated() {
+            if let blocked, blocked[index] { continue }
             guard let hit = tokenHit(text, token: token, weight: weight, latin: latin) else { continue }
             score += hit.score
             matched += 1
             if hit.fuzzy { fuzzy = true }
+            if hit.stem { stem = true }
             position = Swift.min(position, hit.position)
             last = Swift.max(last, hit.position)
         }
         guard matched > 0 else { return nil }
-        if query.tokens.count > 1, !query.phraseBytes.isEmpty, contains(query.phraseBytes, in: text) {
+        // The folded phrase has lost its hamza, so a row that was refused a word cannot earn it.
+        let anyBlocked = blocked?.contains(true) ?? false
+        if query.tokens.count > 1, !anyBlocked, !query.phraseBytes.isEmpty, contains(query.phraseBytes, in: text) {
             score += phraseBonus
             if contains(query.phrasePadded, in: text) { score += wholePhraseBonus }
         }
         let first = position == Int.max ? 0 : position
-        return FieldScore(score: score, matched: matched, position: first, span: matched > 1 ? last - first : 0, fuzzy: fuzzy)
+        return FieldScore(score: score, matched: matched, position: first, span: matched > 1 ? last - first : 0,
+                          fuzzy: fuzzy, stem: stem)
     }
 
     /// `whole` is what a skeleton standing as a whole Arabic word is worth, `inside` a run inside one;
     /// `phrase` is added when a several-word query is found as ONE run.
     private static func scoreSkeleton(words: [UInt8], tight: [UInt8], query: Query,
-                                      whole wholeScore: Int, inside insideScore: Int, phrase: Int) -> FieldScore? {
+                                      whole wholeScore: Int, inside insideScore: Int, phrase: Int,
+                                      blocked: [Bool]? = nil) -> FieldScore? {
         // Adjacency is the whole precision story for a multi-word query, so it is matched as ONE run
         // against the tight view: "qul huwa allahu" must not be satisfied by three fragments.
         let joined = query.joinedSkeleton
-        if query.tokens.count > 1, joined.count >= minSkeletonLength, let at = find(joined, in: tight) {
+        let anyBlocked = blocked?.contains(true) ?? false
+        if query.tokens.count > 1, !anyBlocked, joined.count >= minSkeletonLength, let at = find(joined, in: tight) {
             return FieldScore(score: wholeScore * query.tokens.count + phrase, matched: query.tokens.count,
                               position: units(before: at, in: tight), whole: true)
         }
@@ -953,7 +1150,8 @@ enum QuranRankedSearch {
         var matched = 0
         var whole = false
         var position = Int.max
-        for token in query.tokens {
+        for (index, token) in query.tokens.enumerated() {
+            if let blocked, blocked[index] { continue }
             if !token.shortSkeletonNeedles.isEmpty {
                 var found: Int?
                 for needle in token.shortSkeletonNeedles {
@@ -1059,6 +1257,10 @@ enum QuranRankedSearch {
         var echo = false
         /// ...and matched a whole word (or the start of one), not a run inside one.
         var echoWhole = false
+        /// Arabic: the row carries the query only as a stem's run of letters, maybe inside another word.
+        var viaStem = false
+        /// Arabic: the skeleton tier won the row with a WHOLE word.
+        var skeletonWhole = false
     }
 
     // MARK: - Search
@@ -1129,18 +1331,32 @@ enum QuranRankedSearch {
             var echo = false
             var echoWhole = false
             var worded = 0
+            var viaStem = false
+            var skeletonWhole = false
 
             if query.isArabic {
-                var field = scoreField(arabicText, query: query, weight: arabicWeight)
+                // A word typed with a bare ء counts only where this row's hamza lane carries it, the
+                // exact scan's own rule: "ماء" folds to "ما", and the particle's ayahs led the list
+                // above the 177 with water in them (2026-10-04; سوء, جاء, نساء alike).
+                var blocked: [Bool]?
+                if query.filtersHamza {
+                    let lane = entries[index].hamzaArabicBlob
+                    let refused = query.tokens.map { token in token.hamza.map { !$0.matches(lanes: lane) } ?? false }
+                    if !refused.contains(false) { continue }
+                    blocked = refused
+                }
+                var field = scoreField(arabicText, query: query, weight: arabicWeight, blocked: blocked)
                 if field == nil || field!.matched < query.tokens.count {
-                    if let stemmed = scoreField(lanes.arabicStems[index], query: query, weight: arabicWeight - stemPenalty),
+                    if let stemmed = scoreField(lanes.arabicStems[index], query: query, weight: arabicWeight - stemPenalty,
+                                                blocked: blocked),
                        stemmed.matched > (field?.matched ?? 0) {
                         field = stemmed
                     }
                     let base = Swift.max(1, arabicWeight - skeletonPenalty)
                     if useSkeleton, (field?.matched ?? 0) < query.tokens.count,
                        let skeleton = scoreSkeleton(words: lanes.skeletonWords[index], tight: lanes.skeletonTight[index],
-                                                    query: query, whole: base + wholeWordBonus, inside: base, phrase: 0),
+                                                    query: query, whole: base + wholeWordBonus, inside: base, phrase: 0,
+                                                    blocked: blocked),
                        skeleton.matched > (field?.matched ?? 0) {
                         field = skeleton
                         viaSkeleton = true
@@ -1151,6 +1367,8 @@ enum QuranRankedSearch {
                     matched = field.matched
                     position = field.position
                     span = field.span
+                    viaStem = field.stem && !viaSkeleton
+                    skeletonWhole = viaSkeleton && field.whole
                 }
             } else {
                 if let direct = scoreField(englishText, query: query, weight: englishWeight, latin: true) {
@@ -1213,7 +1431,8 @@ enum QuranRankedSearch {
             candidates.append(Candidate(index: index, score: score, matched: matched, viaSkeleton: viaSkeleton,
                                         viaRoman: viaRoman, viaFuzzy: viaFuzzy,
                                         guessed: (viaRoman || viaSkeleton) && worded < matched,
-                                        echo: echo, echoWhole: echoWhole))
+                                        echo: echo, echoWhole: echoWhole,
+                                        viaStem: viaStem, skeletonWhole: skeletonWhole))
         }
 
         // Everything carrying the WHOLE query, or, when nothing does, the rows covering the most of it.
@@ -1226,8 +1445,17 @@ enum QuranRankedSearch {
         var corrections = query.corrections
         var romanised = false
         if query.isArabic {
+            // ...but only rows that carry a typed WORD count as the words. A stem is a run of letters
+            // and may sit inside another word: "الصلاة" found صلاه inside يَصۡلَىٰهَا ("burn in it",
+            // 92:15 and 17:18), and those two rows threw out the 61 ayahs whose ٱلصَّلَوٰةَ the skeleton
+            // matched whole (2026-10-04; الزكاة, الحياة, السموات alike). With stems alone, whole-word
+            // skeleton rows stay beside them, and outscore them.
             let direct = kept.filter { !$0.viaSkeleton }
-            if !direct.isEmpty { kept = direct }
+            if direct.contains(where: { !$0.viaStem }) {
+                kept = direct
+            } else if !direct.isEmpty {
+                kept = kept.filter { !$0.viaSkeleton || $0.skeletonWhole }
+            }
         } else if useSkeleton {
             // A one-word query the corrector "fixed" that is also a whole Arabic word in a few ayahs
             // was a romanisation, not a typo. The correction goes, and with it the rows only the

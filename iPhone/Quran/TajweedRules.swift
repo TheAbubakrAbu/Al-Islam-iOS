@@ -162,7 +162,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .hamzatWaslSilent:
             return "Hamzat al-wasl is heard only when starting a word and dropped when reading continuously from before it."
         case .idghamBilaGhunnah:
-            return "Idgham bilaa ghunnah merges noon/tanween directly into the next letter without nasalization."
+            return "Idgham bilaa ghunnah merges noon/tanween directly into the next letter without nasalization. The same grey marks a noon or tanween merged WITH ghunnah into م، ي، و: the noon itself is not heard, and its ghunnah is colored on the next letter."
             
         case .idghamGhunnah:
             return "Idgham with ghunnah merges noon or tanween into the next letter with a nasal sound."
@@ -173,7 +173,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .ikhfaaHeavy:
             return "Heavy Ikhfaa partially hides noon or tanween before heavy letters with a stronger, fuller nasal ghunnah."
         case .iqlaab:
-            return "Iqlaab changes noon/tanween to a meem-like sound before baa, with ghunnah."
+            return "Iqlaab changes noon/tanween to a meem-like sound before baa, with ghunnah. The same color marks a meem sakin hidden before baa (ikhfaa shafawi), the same lip-closed nasal."
             
         case .qalqalah:
             return "Qalqalah is a brief bounce on the Qutb Jad letters when they are sakin or when stopping on them."
@@ -218,7 +218,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
     var applicableLettersDetail: String? {
         switch self {
         case .idghamBilaGhunnah:
-            return "When noon (ن) or tanween comes before: ل، ر"
+            return "When noon (ن) or tanween comes before: ل، ر. Also the noon or tanween before م، ي، و, a merge with ghunnah whose ghunnah is colored on the next letter"
             
         case .idghamGhunnah:
             return "When a noon sound (ن or tanween) comes before: ي، ن، م، و"
@@ -229,7 +229,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .ikhfaaHeavy:
             return "When a noon sound (ن or tanween) comes before heavier letters: ص، ض، ط، ظ، ق"
         case .iqlaab:
-            return "When noon (ن) or tanween comes before: ب (changes to meem sound)"
+            return "When noon (ن) or tanween comes before: ب (changes to meem sound). Also meem sakin before ب (ikhfaa shafawi)"
             
         case .qalqalah:
             return "Letters that bounce when they have sukoon or are stopped on: ق، ط، ب، ج، د"
@@ -388,7 +388,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .generalGhunnah:
             return "Use this for explicit noon or meem with shaddah. It is also reused for a few helper target highlights in idgham-style nasal merges, so those targets stay visually connected to the same ghunnah family."
         case .ikhfaaLight:
-            return "This is a light concealment, where the noon or tanween is partially hidden with a soft nasal ghunnah. The sound remains subtle, balancing clarity and smooth transition without fully merging. In shafawi contexts, meem before baa follows this same light-hidden nasal pattern."
+            return "This is a light concealment, where the noon or tanween is partially hidden with a soft nasal ghunnah. The sound remains subtle, balancing clarity and smooth transition without fully merging. A meem sakin before baa (ikhfaa shafawi) is hidden in a similar way; it takes iqlab's color, the same lip-closed nasal."
         case .ikhfaaHeavy:
             return "This is a heavier concealment, where the noon or tanween is partially hidden with a stronger nasal ghunnah. The tongue prepares for the next letter while the ghunnah carries the sound, requiring careful control and balance."
         case .iqlaab:
@@ -416,6 +416,55 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
             return "Tajweed rule"
         }
     }
+}
+
+// MARK: - Rules painted in another rule's color
+
+/// A rule that is painted in another rule's color by design, under its own name.
+///
+/// Two rules borrow a color. A noon or tanween merged WITH ghunnah into م ي و is not itself heard,
+/// so it is drawn grey like a merge without ghunnah, and its ghunnah is drawn on the next letter.
+/// A meem sakin hidden before ب (ikhfa shafawi) is the same lip-closed nasal as iqlab, and takes
+/// iqlab's color. The colors were right; the word card named them by the color, calling 3,664
+/// merges with ghunnah "Merge Without Ghunnah" and 496 hidden meems "Noon into Meem" (2026-10-05).
+enum TajweedRuleAlias: String, CaseIterable {
+    case idghamWithGhunnah
+    case ikhfaaShafawi
+
+    var englishTitle: String {
+        switch self {
+        case .idghamWithGhunnah: return TajweedLegendCategory.idghamGhunnah.englishTitle
+        case .ikhfaaShafawi: return "Hidden Meem"
+        }
+    }
+
+    var arabicTitle: String {
+        switch self {
+        case .idghamWithGhunnah: return TajweedLegendCategory.idghamGhunnah.arabicTitle
+        case .ikhfaaShafawi: return "إِخفَاءٌ شَفَوِيّ"
+        }
+    }
+
+    var transliteration: String {
+        switch self {
+        case .idghamWithGhunnah: return TajweedLegendCategory.idghamGhunnah.transliteration
+        case .ikhfaaShafawi: return "Ikhfaa Shafawi"
+        }
+    }
+}
+
+/// One rule as the word card lists it: the color painted on the letters, under the rule's own name.
+struct TajweedWordRule: Identifiable, Hashable {
+    /// The legend category whose color is painted (and whose switch hides it).
+    let category: TajweedLegendCategory
+    /// Set when the rule is not the one the color is named for.
+    let alias: TajweedRuleAlias?
+
+    var id: String { alias.map { "\(category.rawValue).\($0.rawValue)" } ?? category.rawValue }
+    var color: Color { category.color }
+    var englishTitle: String { alias?.englishTitle ?? category.englishTitle }
+    var arabicTitle: String { alias?.arabicTitle ?? category.arabicTitle }
+    var transliteration: String { alias?.transliteration ?? category.transliteration }
 }
 
 // MARK: - Custom rule colors

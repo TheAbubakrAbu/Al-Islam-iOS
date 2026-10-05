@@ -255,7 +255,10 @@ struct PrayersProvider: TimelineProvider {
         // .atEnd also asks for a rebuild once the last pre-built entry is showing, so the chain never
         // stalls; the pre-built boundary entries below are what keep the widget exact when WidgetKit
         // defers that reload (background refresh budget, Low Power Mode).
-        completion(Timeline(entries: entries, policy: entries.count > 1 ? .atEnd : .after(Date().addingTimeInterval(30 * 60))))
+        // Without prayers (no location yet) the timeline is only the date turning at midnight: keep
+        // asking every half hour until there is a location to build the day from.
+        let hasPrayers = entries.first?.fullPrayers.isEmpty == false
+        completion(Timeline(entries: entries, policy: hasPrayers && entries.count > 1 ? .atEnd : .after(Date().addingTimeInterval(30 * 60))))
     }
 
     /// The memoized timeline (see `Inputs`). The whole build runs on the main queue: WidgetKit calls
@@ -286,7 +289,13 @@ struct PrayersProvider: TimelineProvider {
     /// Pre-built entries flip on time with no reload at all - reloads only refresh the underlying data.
     private func makeTimelineEntriesOnMain() -> [PrayersEntry] {
         let first = makeEntryOnMain()
-        guard !first.fullPrayers.isEmpty else { return [first] }
+        guard !first.fullPrayers.isEmpty else {
+            // No prayers to flip on, but the Hijri date widgets read `entry.date`: one more entry at
+            // midnight, or they showed yesterday until WidgetKit next granted a reload.
+            let calendar = Calendar.current
+            guard let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: first.date)) else { return [first] }
+            return [first, emptyEntry(accent: first.accentColor, date: midnight)]
+        }
 
         let now = first.date
         let horizon = now.addingTimeInterval(30 * 60 * 60)
@@ -498,14 +507,16 @@ struct PrayersProvider: TimelineProvider {
         )
     }
 
-    private func emptyEntry(accent: AccentColor) -> PrayersEntry {
-        .init(date: Date(),
+    private func emptyEntry(accent: AccentColor, date: Date = Date()) -> PrayersEntry {
+        // The user's Hijri day adjustment still applies with no location: the date widgets are the
+        // one thing an entry without prayers can show, and a zero here put them a day off.
+        .init(date: date,
               accentColor: accent,
               currentCity: "",
               prayers: [], fullPrayers: [],
               currentPrayer: nil, nextPrayer: nil,
-              hijriOffset: 0,
-              switchHijriDateAtMaghrib: false,
+              hijriOffset: settings.hijriOffset,
+              switchHijriDateAtMaghrib: settings.switchHijriDateAtMaghrib,
               skyPeriod: nil,
               skyColors: settings.skyGradientColors(forPrayer: nil))
     }

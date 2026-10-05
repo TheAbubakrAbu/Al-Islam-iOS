@@ -1084,6 +1084,9 @@ struct ResourceHero<Footer: View>: View {
                 Text(eyebrow)
                     .tracking(1.3)
                     .lineLimit(2)
+                    // A single word wider than the card cannot wrap: at the largest accessibility
+                    // sizes "THE FOUNDATIONS" read "THE FOUNDATI..." (2026-10-04). It shrinks first.
+                    .minimumScaleFactor(0.6)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .font(.caption.weight(.bold))

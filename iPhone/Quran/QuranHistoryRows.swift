@@ -385,23 +385,12 @@ struct LastListenedSurahRow: View {
                 Text("Surah \(item.surahNumber): \(item.surahName)")
                     .foregroundStyle(.secondary)
 
-                if let current = item.currentDuration, let full = item.fullDuration, current > 1 {
+                if let current = item.currentDuration, item.fullDuration != nil, current > 1 {
                     Button {
                         settings.hapticFeedback()
-                        // Resuming makes this entry the Last Listened again - with its own reciter and
-                        // position - then plays through the standard certain-reciter resume path.
-                        settings.lastListenedSurah = LastListenedSurah(
-                            surahNumber: item.surahNumber,
-                            surahName: item.surahName,
-                            reciter: item.reciter,
-                            currentDuration: current,
-                            fullDuration: full
-                        )
-                        quranPlayer.playSurah(
-                            surahNumber: item.surahNumber,
-                            surahName: item.surahName,
-                            certainReciter: true
-                        )
+                        // Resuming makes this entry the Last Listened again, with its own reciter and
+                        // position, after filing the surah it displaces (`resumeHistoryItem`).
+                        quranPlayer.resumeHistoryItem(item)
                     } label: {
                         Label("Resume from \(formatMMSS(current))", systemImage: "play.fill")
                     }

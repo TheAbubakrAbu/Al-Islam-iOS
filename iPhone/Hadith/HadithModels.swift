@@ -368,11 +368,16 @@ struct HadithBookData: @unchecked Sendable {
         fileprivate let storage: Storage
 
         /// The number every user-facing surface prints beside this hadith: the standard citation
-        /// when one exists, the internal row number when none does (which is also what those books
-        /// showed before citations existed, so nothing regresses).
+        /// when one exists. A row without one, in a book that cites its other rows, is named by its
+        /// place, "C:N" (sunnah.com's "Book C, Hadith N"), since its row number could be another
+        /// row's citation (H4, 2026-10-05); "C:N" is also what the search resolves. A book that
+        /// cites nothing (Muwatta Malik) keeps the row number it always showed.
         var displayNumber: String {
-            guard let citation else { return String(idInBook) }
-            return isIntroduction ? "Introduction \(citation)" : citation
+            if let citation { return isIntroduction ? "Introduction \(citation)" : citation }
+            if case let .packed(pack, row) = storage, pack.citesAnyRow, let place = pack.place(ofRow: row) {
+                return "\(place.chapter):\(place.hadith)"
+            }
+            return String(idInBook)
         }
 
         /// Whether this row is in Sahih Muslim's muqaddimah, whose 91 rows carry the Introduction's
@@ -456,14 +461,26 @@ struct HadithBookData: @unchecked Sendable {
             arabic: Metadata.Titles(title: pack.arabicTitle, author: pack.arabicAuthor),
             english: Metadata.Titles(title: pack.englishTitle, author: pack.englishAuthor)
         )
-        chapters = pack.chapters.map {
+        let packed = pack.chapters.map {
             Chapter(id: $0.id, arabic: $0.arabic, english: $0.english,
                     foldArabic: $0.foldArabic, foldEnglish: $0.foldEnglish,
                     firstRow: $0.firstRow, rowCount: $0.rowCount)
         }
+        // The introduction the pack stores last (`HadithPack.introductionChapterIndex`) leads the
+        // list, at position 0, so every numbered chapter keeps the position it always had (H7,
+        // 2026-10-05). `HadithPack.chapterPosition(atIndex:)` is the same numbering by pack index.
+        if let introductionIndex = pack.introductionChapterIndex, packed.indices.contains(introductionIndex) {
+            var ordered = packed
+            ordered.insert(ordered.remove(at: introductionIndex), at: 0)
+            chapters = ordered
+            opensWithIntroduction = true
+        } else {
+            chapters = packed
+            opensWithIntroduction = false
+        }
         hadiths = (0..<pack.rows.count).map { Hadith(pack: pack, row: $0) }
         chapterIndexByID = Dictionary(
-            pack.chapters.enumerated().map { ($0.element.id, $0.offset) },
+            chapters.enumerated().map { ($0.element.id, $0.offset) },
             uniquingKeysWith: { first, _ in first }
         )
         // First row per base as a flat Int32 map; the rare bases that own several rows (Sahih
@@ -515,6 +532,16 @@ struct HadithBookData: @unchecked Sendable {
     /// Chapter id -> its position in `chapters`, so the "which chapter is this?" lookups the rows do
     /// per render are a hash hit rather than a linear search.
     private let chapterIndexByID: [Int: Int]
+
+    /// Whether `chapters` starts with the book's unnumbered introduction (chapter id 0, position 0).
+    let opensWithIntroduction: Bool
+
+    /// The number a reader calls this chapter: 1-based among the numbered chapters, 0 for an
+    /// introduction that opens the book. What every badge, header and "C:N" reference uses.
+    func position(of chapter: Chapter) -> Int {
+        let index = chapterIndexByID[chapter.id] ?? 0
+        return opensWithIntroduction ? index : index + 1
+    }
 
     /// This chapter's hadiths - a SLICE of `hadiths`, in O(1). The packer proved the run is unbroken
     /// when it built the pack, so no filter over the book is needed (and Bukhari's chapter rows used
@@ -599,7 +626,8 @@ struct HadithBookData: @unchecked Sendable {
     /// The chapter a reader calls "chapter N": its POSITION in the book, which is the number every
     /// chapter row and tile shows.
     func chapter(atPosition position: Int) -> Chapter? {
-        chapters.indices.contains(position - 1) ? chapters[position - 1] : nil
+        let index = opensWithIntroduction ? position : position - 1
+        return chapters.indices.contains(index) ? chapters[index] : nil
     }
 
     /// "C:N": the Nth hadith of the chapter at position C. The one rule behind "bukhari 1:4" in the
@@ -654,7 +682,16 @@ struct HadithBookData: @unchecked Sendable {
             return cited.first { $0.citation == "\(number)\(suffix)" }
         }
         if let first = cited.first { return first }
-        return introduction ? nil : hadith(numbered: number)
+        return introduction ? nil : hadith(uncitedRow: number)
+    }
+
+    /// The row-number reading of a number nothing is cited under, for the rows that SHOW their row
+    /// number (no citation of their own). A row that has a citation is known by it: "tirmidhi 3033"
+    /// used to open the row at index 3033, which every screen prints as Jami` at-Tirmidhi 2950, an
+    /// unrelated hadith under a number the reader never typed (found 2026-10-04).
+    func hadith(uncitedRow number: Int) -> Hadith? {
+        guard let row = hadith(numbered: number), row.citation == nil else { return nil }
+        return row
     }
 
     /// Whether this hadith matches the folded query. The comparison runs as a byte search inside the
@@ -1014,8 +1051,14 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
 
     /// The number on the bookmark's badge: the standard citation, or the row number for the books
     /// (and old saves) that have none. Sahih Muslim's Introduction is qualified the way the row is.
+    /// An uncited row of a book that cites the rest is named by its place, "C:N", which the saved
+    /// reference line carries (`HadithBookData.Hadith.displayNumber`; rewritten for old saves by the
+    /// store's reference refresh).
     var displayNumber: String {
-        guard let citation else { return String(idInBook) }
+        guard let citation else {
+            if let last = reference.split(separator: " ").last, last.contains(":") { return String(last) }
+            return String(idInBook)
+        }
         return slug == "muslim" && chapterId == 0 ? "Introduction \(citation)" : citation
     }
 }

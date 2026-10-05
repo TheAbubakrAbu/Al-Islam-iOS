@@ -140,7 +140,7 @@ struct RiwayatDifferencesView: View {
 
                     RiwayahBarChart(title: "Imalah and taqlil marks in each text", [
                         RiwayahBar("ad-Duri (al-Kisa’i)", filled: 1956, hollow: 0),
-                        RiwayahBar("Khalaf", filled: 1922, hollow: 4),
+                        RiwayahBar("Khalaf", filled: 1922, hollow: 0),
                         RiwayahBar("Khallad", filled: 1911, hollow: 0),
                         RiwayahBar("Warsh", filled: 0, hollow: 1877),
                         RiwayahBar("Idris", filled: 1871, hollow: 0),

@@ -25,6 +25,19 @@ struct MushafPage: Identifiable {
     /// was walked from). The render cache composes pages of the DISPLAYED riwayah's pagination only.
     let paginationKey: String
 
+    init(page: Int, segments: [Segment], paginationKey: String, juz: Int? = nil) {
+        self.page = page
+        self.segments = segments
+        self.paginationKey = paginationKey
+        self.juz = juz ?? segments.first?.ayahs.first?.juz
+        if let first = segments.first, let a = first.ayahs.first,
+           let last = segments.last, let z = last.ayahs.last {
+            contentSpan = "\(first.surah.id):\(a.id)-\(last.surah.id):\(z.id)"
+        } else {
+            contentSpan = ""
+        }
+    }
+
     var id: Int { page }
 
     /// The ayahs this page carries, "surah:first-surah:last": the page's CONTENT identity, which its
@@ -35,15 +48,17 @@ struct MushafPage: Identifiable {
     /// never be served for, or sized by, another's. (2026-09-15, "different sizes and widths": after a
     /// riwayah switch back to Hafs, a ring composed Warsh's page boundaries with Hafs text under the Hafs
     /// keys, and the persisted numbers for Hafs's 84-88 sized a page holding 83-87.)
-    var contentSpan: String {
-        guard let first = segments.first, let a = first.ayahs.first,
-              let last = segments.last, let z = last.ayahs.last else { return "" }
-        return "\(first.surah.id):\(a.id)-\(last.surah.id):\(z.id)"
-    }
+    /// Stored (Phase 10.8): every render-cache key, fit key and fallback-map write built this string
+    /// on every body pass of every mounted page.
+    let contentSpan: String
 
     var firstSurah: Surah? { segments.first?.surah }
     var firstAyah: Ayah? { segments.first?.ayahs.first }
-    var juz: Int? { firstAyah?.juz }
+    /// The juz the page opens in, by page NUMBER (`MushafPagination.build`). It was the first row's
+    /// `juz`, which is the HAFS juz of that row's id: under the Madani and Makki counts the id names
+    /// another verse, so Warsh's page 22 said "Juz 1" and Go to Juz 2 landed a page late, and a page
+    /// opening with an id only the riwayah has (13:44 on page 255) had no juz at all (2026-10-04).
+    let juz: Int?
 
     /// The surah a page is labelled with (toolbar title, pinned header, footer meter): always the **top**
     /// surah on the page - the one the page opens with. On a page holding Al-Ikhlas, Al-Falaq and An-Nas,
@@ -165,6 +180,14 @@ enum MushafPagination {
     nonisolated private static func build(quran: [Surah], qiraah: String?,
                                           pageTable: [Int: [Int: Int]]? = nil) -> [MushafPage] {
         let paginationKey = paginationKey(qiraah: qiraah, quranCount: quran.count)
+        // Every riwayah shares the Madinah pages, so a page's juz is the juz of the first HAFS ayah
+        // printed on it, whatever riwayah fills the page (see `MushafPage.juz`).
+        var juzByPage: [Int: Int] = [:]
+        for surah in quran {
+            for ayah in surah.ayahs where !ayah.textHafs.isEmpty {
+                if let page = ayah.page, let juz = ayah.juz, juzByPage[page] == nil { juzByPage[page] = juz }
+            }
+        }
         var pages: [MushafPage] = []
         var currentPage: Int?
         var currentSegments: [MushafPage.Segment] = []
@@ -183,7 +206,8 @@ enum MushafPagination {
         func flushPage() {
             flushSegment()
             if let page = currentPage, !currentSegments.isEmpty {
-                pages.append(MushafPage(page: page, segments: currentSegments, paginationKey: paginationKey))
+                pages.append(MushafPage(page: page, segments: currentSegments, paginationKey: paginationKey,
+                                        juz: juzByPage[page]))
             }
             currentSegments = []
         }
@@ -355,7 +379,11 @@ private var mushafStillTransaction: Transaction {
 struct SurahPageReader<Controls: View>: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// Playback STATE comes from the coalesced `NowPlayingState` (one publish per main-queue turn, only
+    /// when a read field changed); the raw player published five or six times per ayah advance and each
+    /// re-ran this reader and every mounted page (Phase 10.4). Actions stay on the un-observed player.
+    @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    private var quranPlayer: QuranPlayer { .shared }
 
     /// The surah the reader was opened from, and the ayah within it (a bookmark, a search hit, last-read).
     /// Together they decide the starting page; after that the reader is no longer bound to this surah.
@@ -480,6 +508,8 @@ struct SurahPageReader<Controls: View>: View {
     @State private var headerInfoSurah: Surah?
     /// The first (surah, ayah) of the page on screen - the reading position a repagination re-seeds to.
     @State private var currentAnchor: (surahID: Int, ayahID: Int)?
+    /// That page's NUMBER, which a repagination re-seeds to first (see `reseedAfterRepagination`).
+    @State private var currentAnchorPage: Int?
     /// Set when `pageIndex` is about to be moved PROGRAMMATICALLY (initial seed, in-place surah swap),
     /// consumed by the next `.onChange(of: pageIndex)`. The `didSetInitialPage` flag alone can't tell the
     /// seed from a real page turn - `.onAppear` finishes (flag already true) before the seed's `onChange`
@@ -1399,10 +1429,10 @@ struct SurahPageReader<Controls: View>: View {
         // No hold while a sheet is up (this used to consult the shared sheet-presence counter): the host
         // presents every page-mode sheet now, so a turn under one no longer dismisses it, and the reader
         // keeps following the recitation behind an open tafsir the way the feature promises.
-        .onChange(of: quranPlayer.currentAyahNumber) { ayahID in
+        .onChange(of: nowPlaying.currentAyahNumber) { ayahID in
             guard didSetInitialPage,
                   let ayahID,
-                  let surahID = quranPlayer.currentSurahNumber,
+                  let surahID = nowPlaying.currentSurahNumber,
                   pages.indices.contains(pageIndex) else { return }
             func contains(_ page: MushafPage) -> Bool {
                 page.segments.contains { segment in
@@ -1428,10 +1458,10 @@ struct SurahPageReader<Controls: View>: View {
         // when the new surah starts on another page, turn to it, under the same natural-progression
         // guard (the next/previous physical page, or a page already showing it) so listening to some
         // far-away surah from the mini player never yanks the reader across the book.
-        .onChange(of: quranPlayer.currentSurahNumber) { surahID in
+        .onChange(of: nowPlaying.currentSurahNumber) { surahID in
             guard didSetInitialPage,
                   let surahID,
-                  quranPlayer.isPlayingSurah,
+                  nowPlaying.isPlayingSurah,
                   pages.indices.contains(pageIndex) else { return }
             func containsStart(_ page: MushafPage) -> Bool {
                 page.segments.contains { $0.surah.id == surahID && $0.ayahs.contains { $0.id == 1 } }
@@ -1626,8 +1656,15 @@ struct SurahPageReader<Controls: View>: View {
         // wrong book. The lookup is free: the body pass that fired this handler just built it.
         let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
         guard !pages.isEmpty else { return }
-        if let anchor = currentAnchor,
-           let target = MushafPagination.pageIndex(surahID: anchor.surahID, ayahID: anchor.ayahID, in: pages),
+        // The page NUMBER first. Every riwayah sets the same 604 Madinah pages, while the first row's id
+        // names another verse in another count: Hafs page 107 (which opens with 5:3) became Warsh's 106,
+        // whose 5:3 is Hafs's 5:2 (2026-10-04; 92 of 604 pages moved from Hafs to Warsh, 166 back). The
+        // ayah anchor stays the fallback, for a page the new pagination does not have.
+        let byNumber = currentAnchorPage.flatMap { number in pages.firstIndex { $0.page == number } }
+        let byAnchor = currentAnchor.flatMap {
+            MushafPagination.pageIndex(surahID: $0.surahID, ayahID: $0.ayahID, in: pages)
+        }
+        if let target = byNumber ?? byAnchor,
            pages.indices.contains(target), target != pageIndex {
             // A re-seed is not a user page turn - don't wipe the mark/selections. The pageIndex change
             // reports + prewarms via its own onChange.
@@ -2024,7 +2061,7 @@ struct SurahPageReader<Controls: View>: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(headerInfoSurah?.id == surah.id
                               ? Color.secondary.opacity(0.18)
-                              : quranPlayer.currentSurahNumber == surah.id
+                              : nowPlaying.currentSurahNumber == surah.id
                                 ? settings.accentColor.color.opacity(0.18)
                                 : .clear)
                 )
@@ -2092,6 +2129,7 @@ struct SurahPageReader<Controls: View>: View {
               let surah = pages[index].firstSurah,
               let ayah = pages[index].firstAyah else { return }
         currentAnchor = (surah.id, ayah.id)
+        currentAnchorPage = pages[index].page
         onPageAnchor?(surah.id, ayah.id)
     }
 
@@ -2552,7 +2590,7 @@ struct SurahPageReader<Controls: View>: View {
     /// reciter, repeat), ayah-by-ayah, last listened, and Play Surah nearest the thumb. It acts on the surah
     /// the FOOTER is showing, which in page mode is wherever the reader has paged to.
     private func pageFooterPlayButton(surah: Surah) -> some View {
-        let idle = !quranPlayer.isLoading && !quranPlayer.isPlaying && !quranPlayer.isPaused
+        let idle = !nowPlaying.isLoading && !nowPlaying.isPlaying && !nowPlaying.isPaused
         let canResumeLast = settings.lastListenedSurah?.surahNumber == surah.id
         let repeatCounts = [20, 15, 10, 5, 3, 2]
 
@@ -2699,18 +2737,18 @@ struct SurahPageReader<Controls: View>: View {
                 }
             }
         }
-        .animation(.easeInOut, value: quranPlayer.isPlaying)
+        .animation(.easeInOut, value: nowPlaying.isPlaying)
         // Animate the swap into the loading spinner too (isLoading flips before isPlaying on play).
-        .animation(.easeInOut, value: quranPlayer.isLoading)
+        .animation(.easeInOut, value: nowPlaying.isLoading)
     }
 
     private var playControlLabel: some View {
         Group {
-            if quranPlayer.isLoading {
+            if nowPlaying.isLoading {
                 RotatingGearView()
                     .transition(.opacity)
             } else {
-                Image(systemName: quranPlayer.isPlaying || quranPlayer.isPaused ? "xmark.circle.fill" : "play.fill")
+                Image(systemName: nowPlaying.isPlaying || nowPlaying.isPaused ? "xmark.circle.fill" : "play.fill")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .foregroundColor(settings.accentColor.accent2)
@@ -2743,7 +2781,9 @@ private struct MushafPageContent: View {
     // Deliberately NOT @ObservedObject: this page only hands quranData to its secondary sheets as an
     // environment object. Observing it made every mounted page re-render on every QuranData publish.
     private let quranData = QuranData.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// The coalesced playback snapshot (see `SurahPageReader`), not the raw player (Phase 10.4).
+    @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    private var quranPlayer: QuranPlayer { .shared }
     /// Observed so pinning an ayah's display choices (beginner spacing, tajweed, tashkeel, dots, ...)
     /// re-evaluates this page: the composed text changes, and the render cache key (which folds in this
     /// page's pins) has to be recomputed to pick it up.
@@ -2826,8 +2866,8 @@ private struct MushafPageContent: View {
 
     /// The ayah being recited right now, if it's on this page - it gets an accent-tinted background.
     private var playingAyah: (surahID: Int, ayahID: Int)? {
-        guard let surahID = quranPlayer.currentSurahNumber,
-              let ayahID = quranPlayer.currentAyahNumber,
+        guard let surahID = nowPlaying.currentSurahNumber,
+              let ayahID = nowPlaying.currentAyahNumber,
               ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return nil }
         return (surahID, ayahID)
     }
@@ -2939,7 +2979,11 @@ private struct MushafPageContent: View {
                     // one - it must restart with the page actually on screen.
                     Color.clear
                         .allowsHitTesting(false)
-                        .task(id: "\(width)|\(textHeight)|\(page.contentSpan)") {
+                        // And the settings signature with the page's pins (`renderToken`): keyed on the
+                        // geometry and content alone, a second settings change that arrived while the
+                        // first fit was in flight (a font size slider drag) was never requested, and the
+                        // page sat on a spinner or on the first change's render (2026-10-04).
+                        .task(id: "\(width)|\(textHeight)|\(MushafPageRenderCache.renderToken(page: page, width: width, height: textHeight))") {
                             // Debounced: during a chrome transition (a picker collapsing after a jump, the
                             // mini player mounting) the height SWEEPS through intermediate values frame by
                             // frame, and composing for each transient fitted the page to heights it never
@@ -3079,15 +3123,19 @@ private struct MushafPageContent: View {
     }
 
     private var bookmarkedAyahsOnPage: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] {
-        let onPage = Set(page.ayahRefs)
-        guard !onPage.isEmpty else { return [] }
-        // The highlight rides along on the same walk - it lives on the bookmark record, so carrying it
-        // costs nothing here and saves the page a second scan for the washes.
-        return settings.bookmarkedAyahs.compactMap { bookmark in
-            let ref = HighlightedAyahRef(surahID: bookmark.surah, ayahID: bookmark.ayah)
-            guard onPage.contains(ref) else { return nil }
-            return (surahID: ref.surahID, ayahID: ref.ayahID, highlight: bookmark.highlight)
+        guard !page.ayahRefs.isEmpty else { return [] }
+        // One dictionary hit per ayah on the page (Phase 10.8) instead of a walk of every bookmark per
+        // mounted page per pass (hundreds of bookmarks for a long-time reader, 13-29 pages). Ordered by
+        // bookmark index, which is the order the walk produced. The highlight rides along: it lives on
+        // the bookmark record.
+        var found: [(index: Int, surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] = []
+        for ref in page.ayahRefs {
+            guard let index = settings.bookmarkIndex(surah: ref.surahID, ayah: ref.ayahID),
+                  let bookmark = settings.bookmarkedAyah(surah: ref.surahID, ayah: ref.ayahID) else { continue }
+            found.append((index, ref.surahID, ref.ayahID, bookmark.highlight))
         }
+        found.sort { $0.index < $1.index }
+        return found.map { (surahID: $0.surahID, ayahID: $0.ayahID, highlight: $0.highlight) }
     }
 
     /// Fit-to-page typesets the WHOLE page into the band the reader can see, so there is nothing below the
@@ -3167,7 +3215,7 @@ private struct MushafPageContent: View {
                     height: rendered.height,
                     highlight: recitingAyah,
                     highlightColor: settings.accentColor.color,
-                    playingSurahID: quranPlayer.currentSurahNumber,
+                    playingSurahID: nowPlaying.currentSurahNumber,
                     mark: markedAyah ?? sheetAyahTint,
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
                     searchHighlight: searchHighlight.map { highlight in
@@ -5574,8 +5622,8 @@ enum MushafPageRenderCache {
             let twinNote = job.twin.map { " \($0 == .fold ? "fold" : "find") twin \(Int(job.width.rounded()))x\(Int(job.height.rounded()))" } ?? ""
             fitTrace("RING queue \(traceLabel(page))\(twinNote) gen=\(generation)")
             pendingRenders[key] = []
-            enqueueFit(page: page, width: job.width, height: job.height,
-                       key: key, config: config, generation: generation, notesLatest: job.twin == nil)
+            enqueueFit(page: page, width: job.width, height: job.height, key: key, config: config,
+                       signature: signature, generation: generation, notesLatest: job.twin == nil)
         }
     }
 
@@ -5599,6 +5647,7 @@ enum MushafPageRenderCache {
         height: CGFloat,
         key: NSString,
         config: MushafComposeConfig,
+        signature: String,
         generation: Int?,
         notesLatest: Bool = true
     ) {
@@ -5622,7 +5671,8 @@ enum MushafPageRenderCache {
                         pendingRenders.removeValue(forKey: key)
                         upgradedClaims.remove(key)
                     } else {
-                        enqueueFit(page: page, width: width, height: height, key: key, config: config, generation: nil)
+                        enqueueFit(page: page, width: width, height: height, key: key, config: config,
+                                   signature: signature, generation: nil)
                     }
                 }
                 return
@@ -5642,7 +5692,10 @@ enum MushafPageRenderCache {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width,
                                             justification: justification)
                     cache.setObject(rendered, forKey: key)
-                    if notesLatest { noteLatest(page: page, width: width, budget: height, rendered: rendered) }
+                    // Stamped with the signature it was REQUESTED under, not the one current when it
+                    // lands (2026-10-04): a fit that landed after a second settings change was recorded
+                    // as current, and the page showed the first change's render as the final one.
+                    if notesLatest { noteLatest(page: page, width: width, budget: height, rendered: rendered, signature: signature) }
                 }
                 settledGeometries.insert(geometryToken(width: width, height: height))
                 upgradedClaims.remove(key)
@@ -5974,7 +6027,8 @@ enum MushafPageRenderCache {
             fitTrace("REQ refused \(traceLabel(page)): pagination \(page.paginationKey)")
             return
         }
-        let key = cacheKey(page: page, width: width, height: height, signature: settingsSignature)
+        let signature = settingsSignature
+        let key = cacheKey(page: page, width: width, height: height, signature: signature)
         if cache.object(forKey: key) != nil { onReady(); return }
 
         if pendingRenders[key] != nil {
@@ -5986,8 +6040,8 @@ enum MushafPageRenderCache {
             // cache is still empty and flushing waiters removes the key once - the loser's main-hop is
             // a no-op. `upgradedClaims` bounds it to one duplicate per claim, not one per body pass.
             if upgradedClaims.insert(key).inserted {
-                enqueueFit(page: page, width: width, height: height,
-                           key: key, config: MushafComposeConfig.current(), generation: nil)
+                enqueueFit(page: page, width: width, height: height, key: key,
+                           config: MushafComposeConfig.current(), signature: signature, generation: nil)
             }
             return
         }
@@ -5995,8 +6049,15 @@ enum MushafPageRenderCache {
         fitTrace("REQ \(traceLabel(page)) \(Int(width.rounded()))x\(Int(height.rounded())) claimed sig=\(settingsSignature.hashValue % 10000)")
 
         // generation nil = must-run: the user is looking at this page.
-        enqueueFit(page: page, width: width, height: height,
-                   key: key, config: MushafComposeConfig.current(), generation: nil)
+        enqueueFit(page: page, width: width, height: height, key: key,
+                   config: MushafComposeConfig.current(), signature: signature, generation: nil)
+    }
+
+    /// The identity of the render a page needs now: its cache key (page, content, geometry, settings
+    /// signature, the page's own pins). The cold page's request task is keyed on it, so a settings
+    /// change while a fit is in flight requests the new render instead of waiting on the old one.
+    static func renderToken(page: MushafPage, width: CGFloat, height: CGFloat) -> String {
+        cacheKey(page: page, width: width, height: height, signature: settingsSignature) as String
     }
 
     // (The old synchronous `rendered(page:width:height:)` - a cold visible page paying the full fit inline

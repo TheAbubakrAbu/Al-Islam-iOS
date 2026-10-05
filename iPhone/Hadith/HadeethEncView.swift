@@ -923,6 +923,10 @@ struct HadeethEncHadithRow: View, Equatable {
 
 struct HadeethEncHadithView: View {
     @Environment(\.appearance) private var appearance
+    /// Observed for the one hadith-only switch the appearance snapshot does not carry
+    /// (`highlightAllahNamesHadith`, read by `HadithArabicText`, which no longer observes Settings
+    /// itself since Phase 10.4): this leaf screen re-renders on a publish so the toggle stays live.
+    @ObservedObject private var settings = Settings.shared
 
     /// The light row: the title, grade and attribution show at once; the narration itself is
     /// inflated from its block on the screen's task.

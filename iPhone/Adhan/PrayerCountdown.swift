@@ -739,13 +739,30 @@ private struct CountdownDigits: View {
     /// the skyline's ground line (`groundLineOffset`, worked out from 26 pt metrics) stays put.
     @ScaledMetric(relativeTo: .title) private var scaledDigits: CGFloat = 26
     private var digitsSize: CGFloat { max(26, scaledDigits) }
+    @State private var isOnScreen = true
+    /// Re-anchored on every appearance so the first tick after a return never shows a stale second.
+    @State private var clockAnchor = Date()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        digits
+            .onAppear { isOnScreen = true; clockAnchor = Date() }
+            .onDisappear { isOnScreen = false }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active { clockAnchor = Date() }
+            }
+    }
+
+    @ViewBuilder
+    private var digits: some View {
         if appearance.reduceAnimations || appearance.isReducedTier {
             Text(target, style: .timer)
                 .font(.system(size: digitsSize, weight: .bold, design: .rounded).monospacedDigit())
         } else {
-            TimelineView(.periodic(from: Date(), by: 1)) { context in
+            // Off screen (another tab, a pushed screen, a sheet) the schedule stretches to an hour, the
+            // SkyView pattern (Phase 10.8): the 1 Hz tick used to run for as long as the app was open,
+            // re-evaluating this stack and formatting the spoken label every second on any tab.
+            TimelineView(.periodic(from: clockAnchor, by: isOnScreen ? 1 : 3600)) { context in
                 let parts = Self.parts(remaining: target.timeIntervalSince(context.date))
                 HStack(alignment: .lastTextBaseline, spacing: 1) {
                     Text(parts.main)

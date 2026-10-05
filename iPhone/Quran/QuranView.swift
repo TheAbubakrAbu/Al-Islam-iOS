@@ -339,6 +339,10 @@ struct QuranView: View {
     @State private var isListMoving = false
     @State private var listMotionIdleTask: Task<Void, Never>?
     @State private var ayahSearchTask: Task<Void, Never>?
+    /// "Load more" and "Load all" run here, not in `ayahSearchTask`: that task also carries the ranked
+    /// fetch for the query, and a page asked for before it returned cancelled it, so Top Ayah Results
+    /// never came for that query (2026-10-04). A new query cancels both.
+    @State private var ayahLoadMoreTask: Task<Void, Never>?
     @State private var showAyahSearchLearnMore = false
     /// The help card folded to its title + recent chips (persists; the -/+ on the card).
     @AppStorage("quranSearchHelpCollapsed") private var quranSearchHelpCollapsed = false
@@ -385,6 +389,17 @@ struct QuranView: View {
                 : [],
             favoriteSurahs: libraries.contains(.favorites) ? Set(settings.favoriteSurahs) : []
         )
+    }
+    /// The bookmarks and favorites the Library chips scope the search to, empty while neither chip
+    /// is on. Watched so an edit to either list re-runs the search: un-bookmarking a result left it
+    /// listed until the next keystroke (2026-10-04).
+    private var librarySearchKey: [String] {
+        let libraries = searchFilters.libraries
+        guard !libraries.isEmpty else { return [] }
+        var key: [String] = []
+        if libraries.contains(.bookmarks) { key += settings.bookmarkedAyahs.map { "b\($0.surah):\($0.ayah)" }.sorted() }
+        if libraries.contains(.favorites) { key += settings.favoriteSurahs.map { "f\($0)" }.sorted() }
+        return key
     }
     /// Best Match is the ranked lane's list; a query it cannot read (operators, digits) keeps mushaf order.
     private var showsRankedAsMain: Bool {
@@ -553,7 +568,23 @@ struct QuranView: View {
            let ayah = quranData.ayah(surah: named.surah, ayah: named.ayah) {
             return (surah, ayah)
         }
-        let surahAyahPair = searchText.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: ":").map(String.init)
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Each side trimmed: "2: 255" read " 255" as no number.
+        var surahAyahPair = trimmed.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
+        // No colon: the last word is the ayah when it is a number. "baqarah 255" and "2 255", which
+        // the page find bar and the Chosen Ayah picker take, gave an empty screen here (2026-10-04).
+        // The rest must be a surah number or PLAINLY name a surah (`plainlyNames`): the colon form's
+        // resolver matches a run of letters inside any alias, which suits "baq:255" but would turn
+        // "the 5" into a reference.
+        if surahAyahPair.count == 1, let space = trimmed.lastIndex(where: { $0.isWhitespace }) {
+            let last = String(trimmed[trimmed.index(after: space)...])
+            let rest = trimmed[..<space].trimmingCharacters(in: .whitespaces)
+            let restIsNumber = Int(rest) != nil || arabicToEnglishNumber(rest) != nil
+            if !rest.isEmpty, Int(last) != nil || arabicToEnglishNumber(last) != nil,
+               restIsNumber || quranData.resolveSurahIdentifier(rest).map({ quranData.plainlyNames(rest, surah: $0) }) == true {
+                surahAyahPair = [rest, last]
+            }
+        }
         var surahNumber: Int? = nil
         var ayahNumber: Int? = nil
 
@@ -569,10 +600,12 @@ struct QuranView: View {
             ayahNumber = Int(surahAyahPair[1]) ?? arabicToEnglishNumber(surahAyahPair[1])
         }
 
+        // An ayah the displayed riwayah numbers (Warsh has no 2:286; the row is Hafs's text).
         if let sNum = surahNumber,
            let aNum = ayahNumber,
            let surah = quranData.surah(sNum),
-           let ayah = quranData.ayah(surah: sNum, ayah: aNum) {
+           let ayah = quranData.ayah(surah: sNum, ayah: aNum),
+           ayah.existsInQiraah(settings.displayQiraahForArabic, surahID: sNum) {
             return (surah, ayah)
         }
         return (nil, nil)
@@ -1384,6 +1417,7 @@ struct QuranView: View {
         }
         .onDisappear {
             ayahSearchTask?.cancel()
+            ayahLoadMoreTask?.cancel()
             listMotionIdleTask?.cancel()
         }
     }
@@ -1824,6 +1858,10 @@ struct QuranView: View {
             #endif
             .onChange(of: quranData.isVerseSearchReady) { isReady in
                 guard isReady else { return }
+                handleAyahSearchChange(searchText, debounce: false)
+            }
+            .onChange(of: librarySearchKey) { _ in
+                guard !searchFilters.libraries.isEmpty, !searchText.isEmpty else { return }
                 handleAyahSearchChange(searchText, debounce: false)
             }
             .onChange(of: settings.quranSortMode) { mode in
@@ -2458,10 +2496,8 @@ struct QuranView: View {
 
         Button {
             settings.hapticFeedback()
-            // A surah the chosen reciter recorded (R3): Dibirov carries 24, Minshawi 1387 26.
-            let chosen = settings.reciter == Settings.randomReciterName ? nil : settings.resolvedSelectedReciterIgnoringRandom()
-            let recorded = quranData.quran.filter { chosen?.carriesSurah($0.id) ?? true }
-            if let randomSurah = (recorded.isEmpty ? quranData.quran : recorded).randomElement() {
+            // A surah the chosen reciter recorded (R3, `randomRecordedSurah`).
+            if let randomSurah = quranPlayer.randomRecordedSurah() {
                 quranPlayer.playSurah(surahNumber: randomSurah.id, surahName: randomSurah.nameTransliteration)
             } else {
                 let randomID = Int.random(in: 1...114)
@@ -4635,7 +4671,15 @@ struct QuranView: View {
         let ayahs = Set(locations.map(\.ayahKey)).count
         return NavigationLink {
             RootOccurrencesView(title: title, locations: locations) { surahID, ayahID in
-                push(surahID: surahID, ayahID: ayahID)
+                // The morphology numbers ayahs by Hafs and the reader by the displayed riwayah: under
+                // Warsh an al-Baqarah row opened one verse off (2026-10-04). Mapped like the
+                // comparison sheet maps its anchor; an unmapped ayah keeps its number.
+                let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+                let readerAyah = tag.isEmpty
+                    ? ayahID
+                    : QiraahComparison.alignment(surahID: surahID, tag: tag, quranData: quranData)?
+                        .riwayahNumberForHafs[ayahID] ?? ayahID
+                push(surahID: surahID, ayahID: readerAyah)
             }
         } label: {
             HStack(spacing: 12) {
@@ -4842,6 +4886,9 @@ struct QuranView: View {
                     }
                 }
 
+                // Grouped once per pass (Phase 10.8): the emptiness test below and the ForEach after it
+                // each re-grouped every hit, thousands after "Load all".
+                let grouped = verseHitsGroupedBySurah
                 Section(header: ayahSearchHeader(context: context)) {
                     ayahExactMatchRows(context: context)
 
@@ -4851,7 +4898,7 @@ struct QuranView: View {
                     // Keyed on what is SHOWN (`showBest`), not on what exists: hidden best hits used
                     // to switch this line off too, leaving the header and its 0 alone on the page.
                     if context.exactMatch.surah == nil || context.exactMatch.ayah == nil,
-                       verseHitsGroupedBySurah.isEmpty, !showBest {
+                       grouped.isEmpty, !showBest {
                         #if os(iOS)
                         let severalWordsAsPhrase = searchFilters.combine == .phrase
                             && compiledSearch.semantic.split(separator: " ").count > 1
@@ -4886,7 +4933,7 @@ struct QuranView: View {
                     }
                 }
 
-                ForEach(verseHitsGroupedBySurah, id: \.surahId) { group in
+                ForEach(grouped, id: \.surahId) { group in
                     Section {
                         ForEach(group.hits) { hit in
                             ayahHitRow(hit: hit, context: context, section: "grouped")
@@ -5290,10 +5337,10 @@ struct QuranView: View {
     }
 
     private func loadAllAyahMatches() {
-        ayahSearchTask?.cancel()
+        ayahLoadMoreTask?.cancel()
         let query = compiledSearch.exact
         let scope = searchScope
-        ayahSearchTask = Task {
+        ayahLoadMoreTask = Task {
             let allHits = await fetchAllHitsOffMain(query: query, scope: scope)
             guard !Task.isCancelled else { return }
             await MainActor.run {
@@ -5318,12 +5365,12 @@ struct QuranView: View {
     }
 
     private func loadMoreAyahMatches(_ amount: Int) {
-        ayahSearchTask?.cancel()
+        ayahLoadMoreTask?.cancel()
         let query = compiledSearch.exact
         let scope = searchScope
         let offset = verseHits.count
 
-        ayahSearchTask = Task {
+        ayahLoadMoreTask = Task {
             let (moreHits, moreAvail) = await fetchHitsOffMain(query: query, scope: scope, limit: amount, offset: offset)
             guard !Task.isCancelled else { return }
             await MainActor.run {
@@ -5343,6 +5390,7 @@ struct QuranView: View {
 
     private func handleAyahSearchChange(_ txt: String, debounce: Bool) {
         ayahSearchTask?.cancel()
+        ayahLoadMoreTask?.cancel()
 
         // The shaping filters are folded into `query` (the exact scan's grammar); the ranked lane
         // gets the plain words, when it can answer them at all; the scope rides beside both.

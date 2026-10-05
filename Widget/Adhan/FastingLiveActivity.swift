@@ -28,7 +28,7 @@ struct FastingLiveActivity: Widget {
                         .appFontDesign()
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.endTime, style: .time)
+                    Text(context.state.shownPrayerTime, style: .time)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .appFontDesign()
@@ -40,7 +40,7 @@ struct FastingLiveActivity: Widget {
                         .appFontDesign()
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("until \(context.state.prayerName) in \(context.attributes.city)")
+                    Text("\(context.attributes.phase == .suhoor ? "before" : "until") \(context.state.prayerName) in \(context.attributes.city)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .appFontDesign()
@@ -129,7 +129,7 @@ private struct FastingSmallView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
-            Text("\(context.state.prayerName) at \(context.state.endTime, style: .time)")
+            Text("\(context.state.prayerName) at \(context.state.shownPrayerTime, style: .time)")
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -164,7 +164,7 @@ private struct FastingLockScreenView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(context.state.prayerName) has begun")
                     .font(.headline)
-                Text("at \(context.state.endTime, style: .time)\(context.attributes.city.isEmpty ? "" : " in \(context.attributes.city)")")
+                Text("at \(context.state.shownPrayerTime, style: .time)\(context.attributes.city.isEmpty ? "" : " in \(context.attributes.city)")")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -179,7 +179,7 @@ private struct FastingLockScreenView: View {
                 Label(context.attributes.phase.title, systemImage: context.attributes.phase.symbol)
                     .font(.caption.weight(.semibold))
                 Spacer()
-                Text("\(context.state.prayerName) at \(context.state.endTime, style: .time)")
+                Text("\(context.state.prayerName) at \(context.state.shownPrayerTime, style: .time)")
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }

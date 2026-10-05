@@ -224,24 +224,31 @@ struct AdhkarRow: View, Equatable {
                 .multilineTextAlignment(trailing ? .trailing : .leading)
                 .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
                 .padding(.vertical, useQuranicFont ? -8 : 0)
-                .background(
-                    GeometryReader { geo in
-                        Color.clear.preference(key: ArabicBlockHeightKey.self, value: geo.size.height)
+                // The two measurements exist to decide `arabicWraps`; a row that is trailing regardless
+                // (every dua screen) never reads it, so it skips the two GeometryReaders, the yardstick and
+                // the extra body pass their preferences cost (Phase 10.8).
+                .background {
+                    if !alwaysTrailing {
+                        GeometryReader { geo in
+                            Color.clear.preference(key: ArabicBlockHeightKey.self, value: geo.size.height)
+                        }
                     }
-                )
+                }
                 // An invisible single line in the same face - the yardstick the block is measured against.
-                .background(
-                    Text("ب")
-                        .font(arabicFont)
-                        .arabicFontDesign(custom: usesCustomArabicFace)
-                        .hidden()
-                        .fixedSize()
-                        .background(
-                            GeometryReader { geo in
-                                Color.clear.preference(key: ArabicLineHeightKey.self, value: geo.size.height)
-                            }
-                        )
-                )
+                .background {
+                    if !alwaysTrailing {
+                        Text("ب")
+                            .font(arabicFont)
+                            .arabicFontDesign(custom: usesCustomArabicFace)
+                            .hidden()
+                            .fixedSize()
+                            .background(
+                                GeometryReader { geo in
+                                    Color.clear.preference(key: ArabicLineHeightKey.self, value: geo.size.height)
+                                }
+                            )
+                    }
+                }
                 .onPreferenceChange(ArabicBlockHeightKey.self) { arabicHeight = $0 }
                 .onPreferenceChange(ArabicLineHeightKey.self) { arabicLineHeight = $0 }
 

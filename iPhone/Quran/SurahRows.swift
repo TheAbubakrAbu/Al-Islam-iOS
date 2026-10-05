@@ -1292,6 +1292,12 @@ struct AyahSearchRow: View, Equatable {
 
         let queryTokens = normalizedQuery.split(separator: " ").map(String.init).filter { !$0.isEmpty }
         guard queryTokens.count >= 1 else { return false }
+        // Words apart, the highlighter's own rung (`HighlightedSnippet.matchRanges`): every word of the
+        // query, short Latin ones aside, somewhere in the field. A ranked hit's words are seldom side by
+        // side ("lord of the worlds" arrives as "lord worlds"), and its translation lines never reached
+        // the highlighter: 1:2 showed "Lord of the worlds" unpainted (2026-10-04).
+        let words = queryTokens.filter { $0.count >= ($0.containsArabicLetters ? 2 : 3) }
+        if words.count > 1, words.allSatisfy({ source.contains($0) }) { return true }
         let sourceTokens = source.split(separator: " ").map(String.init)
         guard sourceTokens.count >= queryTokens.count else { return false }
 

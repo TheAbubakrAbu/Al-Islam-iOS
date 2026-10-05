@@ -338,10 +338,12 @@ enum HelpDoorCatalog {
                                 HelpDoorAction(id: "fajr", title: "At Fajr", systemImage: "sunrise",
                                                isChosen: atFajr) {
                                     withAnimation(.easeInOut) { settings.dailyRolloverAtFajr = true }
+                                    settings.dailyRolloverSwitchChanged()
                                 },
                                 HelpDoorAction(id: "midnight", title: "At Midnight", systemImage: "moon",
                                                isChosen: !atFajr) {
                                     withAnimation(.easeInOut) { settings.dailyRolloverAtFajr = false }
+                                    settings.dailyRolloverSwitchChanged()
                                 },
                               ]))
         return doors
@@ -733,7 +735,10 @@ private struct DayBeginsAnswer: View {
         VStack(alignment: .leading) {
             Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
                 .font(.subheadline)
-                .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.hapticFeedback() }
+                .onChange(of: settings.dailyRolloverAtFajr) { _ in
+                    settings.hapticFeedback()
+                    settings.dailyRolloverSwitchChanged()
+                }
 
             Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
                 .font(.caption)

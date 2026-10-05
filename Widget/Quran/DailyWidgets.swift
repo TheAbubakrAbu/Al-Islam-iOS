@@ -149,7 +149,9 @@ struct DailyReminderWidgetView: View {
     @ViewBuilder
     private var arabicText: some View {
         let size: CGFloat = family == .systemSmall ? 17 : 21
-        if let fontName = entry.fontName, !fontName.isEmpty {
+        // A face this process cannot draw falls back to the mushaf's own, as in the Quran widgets:
+        // asked for by name alone, a missing face came out in the system font with its marks adrift.
+        if let fontName = entry.fontName.map(Settings.drawableArabicFontName), !fontName.isEmpty {
             Text(entry.arabic)
                 .font(.custom(fontName, size: size))
                 .arabicFontDesign(custom: fontName != Settings.systemArabicFontName)

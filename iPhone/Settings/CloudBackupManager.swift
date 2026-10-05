@@ -571,12 +571,14 @@ final class CloudBackupManager: ObservableObject {
             // any network call (every leaving-foreground pass now gets this far, see C9).
             let snapshot = CloudSnapshot.capture(deviceID: deviceID)
             let digest = snapshot.contentDigest
+            // The account first (a local question, no network): signed out of iCloud, an unchanged
+            // pass used to stamp "Saved just now" over a backup nobody could reach.
+            guard await refreshAccountStatus() else { throw Failure.noAccount }
             if !force, digest == defaults.string(forKey: Key.lastSavedDigest) {
                 markSaved(digest: digest, bytes: lastSavedBytes, automatic: automatic)
                 record(.unchanged, "Checked, nothing new since the last backup")
                 return
             }
-            guard await refreshAccountStatus() else { throw Failure.noAccount }
             try await ensureZone()
             let payload = try snapshot.encoded()
 

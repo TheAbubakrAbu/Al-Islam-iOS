@@ -98,7 +98,10 @@ final class LaunchWarmup: ObservableObject {
 }
 
 struct LaunchScreen: View {
-    @ObservedObject var settings = Settings.shared
+    /// The accent and colour scheme come from the appearance environment (injected at the root, so the
+    /// cover has them on its first frame); observing Settings re-evaluated the cover's blurred gradient
+    /// tree on every publish of the launch window (the first fetch writes several) (Phase 10.4).
+    @Environment(\.appearance) private var appearance
     // Note: QuranData / QuranPlayer / NamesViewModel are intentionally NOT observed here. They publish
     // frequently while loading (load-state changes, the 6k-entry verse index, player/names state), and
     // observing them would re-render the launch screen mid-animation - the source of the startup chop.
@@ -136,7 +139,7 @@ struct LaunchScreen: View {
             ZStack {
                 LaunchScreenBackground(
                     backgroundColor: backgroundColor,
-                    accentColor: settings.accentColor.color,
+                    accentColor: appearance.accent,
                     isDarkMode: currentColorScheme == .dark,
                     gradientSize: gradientSize,
                     glowOpacity: glowOpacity,
@@ -167,7 +170,7 @@ struct LaunchScreen: View {
     }
 
     private var currentColorScheme: ColorScheme {
-        settings.colorScheme ?? systemColorScheme
+        appearance.colorScheme ?? systemColorScheme
     }
 
     private var backgroundColor: Color {
@@ -189,7 +192,7 @@ struct LaunchScreen: View {
             
             LaunchCompanionCard(
                 imageName: "Al-Adhan",
-                accentColor: settings.accentColor.color,
+                accentColor: appearance.accent,
                 isDarkMode: currentColorScheme == .dark,
                 width: card,
                 height: card,
@@ -202,7 +205,7 @@ struct LaunchScreen: View {
 
             LaunchCompanionCard(
                 imageName: "Al-Quran",
-                accentColor: settings.accentColor.color,
+                accentColor: appearance.accent,
                 isDarkMode: currentColorScheme == .dark,
                 width: card,
                 height: card,
@@ -220,7 +223,7 @@ struct LaunchScreen: View {
             VStack {
                 LaunchLogoCard(
                     title: "Al-Islam",
-                    accentColor: settings.accentColor.color,
+                    accentColor: appearance.accent,
                     isDarkMode: currentColorScheme == .dark,
                     shimmerOffset: shimmerOffset,
                     layoutScale: layoutScale
@@ -234,7 +237,7 @@ struct LaunchScreen: View {
                 .offset(y: logoYOffset)
                 .padding(16 * layoutScale)
             }
-            .foregroundColor(settings.accentColor.color)
+            .foregroundColor(appearance.accent)
             .scaleEffect(size)
             .opacity(opacity)
         }
@@ -317,7 +320,7 @@ struct LaunchScreen: View {
     }
 
     private func triggerHapticFeedback(_ feedbackType: HapticFeedbackType) {
-        guard settings.hapticOn else { return }
+        guard Settings.shared.hapticOn else { return }
 
         #if os(iOS)
         switch feedbackType {

@@ -530,13 +530,23 @@ struct FastingCountdownView: View {
         let now = entry.date
         if now < fajr {
             let lastMaghrib = Calendar.current.date(byAdding: .day, value: -1, to: maghrib) ?? maghrib
-            return ("Suhoor ends in", fajr, lastMaghrib)
+            return ("Suhoor ends in", PrayerMinute.suhoorEnd(forFajr: fajr), lastMaghrib)
         }
         if now < maghrib {
             return ("Iftar in", maghrib, fajr)
         }
         let nextFajr = Calendar.current.date(byAdding: .day, value: 1, to: fajr) ?? fajr
-        return ("Suhoor ends in", nextFajr, maghrib)
+        return ("Suhoor ends in", PrayerMinute.suhoorEnd(forFajr: nextFajr), maghrib)
+    }
+
+    /// A countdown that holds at 0:00 once the deadline passes. Suhoor ends a minute before Fajr and
+    /// the timeline's next entry is at Fajr, so for that minute the suhoor entry is still on screen,
+    /// and the plain `.timer` style would count back up from zero.
+    private func countdown(to deadline: Date) -> Text {
+        if #available(iOS 16.0, *) {
+            return Text(timerInterval: min(entry.date, deadline)...deadline, countsDown: true)
+        }
+        return Text(deadline, style: .timer)
     }
 
     var body: some View {
@@ -547,7 +557,7 @@ struct FastingCountdownView: View {
                         Image(systemName: phase.label == "Iftar in" ? "sunset.fill" : "sunrise.fill")
                             .font(.subheadline)
 
-                        Text("\(phase.label) \(Text(phase.deadline, style: .timer))")
+                        Text("\(phase.label) \(countdown(to: phase.deadline))")
                             .font(.headline)
                     }
                     .foregroundColor(accent)

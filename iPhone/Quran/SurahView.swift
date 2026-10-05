@@ -472,7 +472,10 @@ struct SurahView: View {
     #endif
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// Playback STATE from the coalesced `NowPlayingState`; actions on the un-observed player
+    /// (Phase 10.4: the raw player published 5-6 times per ayah advance, each a full reader pass).
+    @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
+    private var quranPlayer: QuranPlayer { .shared }
     /// The failure dialog publishes on `alerts`, not the player (see `PlaybackAlerts`).
     @ObservedObject private var playbackAlerts = QuranPlayer.shared.alerts
 
@@ -498,7 +501,10 @@ struct SurahView: View {
     /// True while the reader's finger is on the list (or a flick is still coasting) - see
     /// `trackUserScrollTouch`. Playback's follow-scroll defers to it: holding an ayah to read it must
     /// not be yanked away when the reciter moves on.
-    @State private var userTouchingReader = false
+    /// Whether the reader is under the user's finger (the follow-the-recitation scroll yields to it).
+    /// A reference box, not @State: nothing in the view tree renders from it, yet as @State each flip
+    /// (two per flick) re-ran the whole reader and re-inited every row (Phase 10.4).
+    @State private var userTouching = TouchFlag()
 
     // Multi-select mode (list reader): pick several ayahs, then act on all of them at once.
     @State private var isSelectingAyahs = false
@@ -632,6 +638,9 @@ struct SurahView: View {
     @State private var showTitleMenu = false
     /// Counts one "surah opened" per view instance (re-appearing after a pushed sub-view doesn't re-count).
     @State private var didRecordOpen = false
+    /// The route (the surah and ayah this view was opened with) whose arrival highlight `onAppear` has
+    /// already applied; an ayah of 0 stands for "no ayah named". See the note in `onAppear`.
+    @State private var arrivalHighlightRoute: HighlightedAyahRef?
     @State private var khatmOverviewPercent: Int = 0
     @State private var khatmOverviewLastSignature: Int = 0
     /// The surah this view was opened with. `surah` below may differ once the user moves to another surah.
@@ -1030,6 +1039,10 @@ struct SurahView: View {
     }
 
     static func prewarm(surah: Surah, settings: Settings, includeSearchBlobs: Bool = false) {
+        // A beta riwayah whose text is not accepted yet reads as its printed mushaf: the list these
+        // caches serve is never drawn, and warming them only filed the Hafs fallback under the
+        // riwayah's name (see `RiwayahTextCacheMark`).
+        guard !settings.displayBetaTextConsentNeeded else { return }
         _ = preparedCache(for: surah, settings: settings)
         AyahRow.prewarmArabicDisplay(
             surah: surah,
@@ -1043,7 +1056,7 @@ struct SurahView: View {
         // first keystroke stutter in long surahs. Off-main, into the same static cache body reads.
         if includeSearchBlobs {
             let qiraah = settings.displayQiraahForArabic
-            let cacheKey = "\(surah.id)|\(qiraah ?? "")|s1" as NSString
+            let cacheKey = "\(surah.id)|\(qiraahCacheKey(settings))|s1" as NSString
             if preparedSurahSearchCache.object(forKey: cacheKey) == nil {
                 let ayahs = preparedCache(for: surah, settings: settings).ayahs
                 let surahID = surah.id
@@ -1063,6 +1076,8 @@ struct SurahView: View {
     /// simply builds its own copy and the cache keeps one. Tajweed is deliberately NOT here (the store
     /// is main-confined; `prewarm` warms an opened surah's first screenful on main).
     static func prewarmOffMain(surahs: [Surah], settings: Settings) async {
+        // Not for a beta riwayah still read as its print (see `prewarm`).
+        guard !settings.displayBetaTextConsentNeeded else { return }
         let tajweed = !AppPerformance.shouldAvoidBroadPrewarm
         await Task.detached(priority: .utility) {
             for surah in surahs {
@@ -1113,8 +1128,16 @@ struct SurahView: View {
         }
     }
 
+    /// The riwayah part of every list-cache key here: the displayed tag (empty for Hafs) plus, for a
+    /// beta riwayah, whether its text is unlocked (`RiwayahTextCacheMark`). The row set, the search
+    /// blobs and this view's own copies of both are different things in the two states.
+    nonisolated private static func qiraahCacheKey(_ settings: Settings) -> String {
+        let qiraah = settings.displayQiraahForArabic
+        return (qiraah ?? "") + RiwayahTextCacheMark.mark(for: qiraah)
+    }
+
     nonisolated private static func preparedCache(for surah: Surah, settings: Settings) -> PreparedSurahCache {
-        let qiraahKey = settings.displayQiraahForArabic ?? ""
+        let qiraahKey = qiraahCacheKey(settings)
         let cacheKey = "\(surah.id)|\(qiraahKey)" as NSString
         if let cached = preparedSurahCache.object(forKey: cacheKey) {
             return cached
@@ -1168,7 +1191,7 @@ struct SurahView: View {
         settings: Settings,
         ayahs: [Ayah]
     ) -> PreparedSurahSearchCache {
-        let qiraahKey = settings.displayQiraahForArabic ?? ""
+        let qiraahKey = qiraahCacheKey(settings)
         let cacheKey = "\(surah.id)|\(qiraahKey)|s1" as NSString
         if let cached = preparedSurahSearchCache.object(forKey: cacheKey) {
             return cached
@@ -1194,7 +1217,7 @@ struct SurahView: View {
     }
 
     private func rebuildQiraahCaches() {
-        let key = settings.displayQiraahForArabic ?? ""
+        let key = Self.qiraahCacheKey(settings)
         if qiraahCacheSurahID == surah.id, key == cacheQiraahKey, !cachedAyahsForQiraah.isEmpty {
             return
         }
@@ -1228,7 +1251,7 @@ struct SurahView: View {
     /// (thousands of `cleanSearch` calls) off the main thread so the first ayah-search keystroke
     /// never has to build the blob map synchronously while the user is typing.
     private func prewarmSearchBlobs() {
-        let qiraahKey = settings.displayQiraahForArabic ?? ""
+        let qiraahKey = Self.qiraahCacheKey(settings)
         let key = "\(surah.id)|\(qiraahKey)|s1"
         if searchBlobPrewarmKey == key, !cachedSearchBlobByAyahID.isEmpty { return }
 
@@ -1243,7 +1266,7 @@ struct SurahView: View {
             let blobMap = Self.buildSearchBlobMap(ayahs: ayahs, displayQiraah: displayQiraah, surahID: surah.id)
             await MainActor.run {
                 // Discard if the user moved to another surah/qiraah mid-build.
-                let currentKey = "\(self.surah.id)|\(self.settings.displayQiraahForArabic ?? "")|s1"
+                let currentKey = "\(self.surah.id)|\(Self.qiraahCacheKey(self.settings))|s1"
                 guard currentKey == key else { return }
                 self.cachedSearchBlobByAyahID = blobMap
                 self.searchBlobPrewarmKey = key
@@ -1398,7 +1421,7 @@ struct SurahView: View {
     /// `AyahRow` init tipped the type-checker over its budget ("unable to type-check this expression
     /// in reasonable time"), and every added input made it worse.
     @ViewBuilder
-    private func ayahRowGroup(_ ayah: Ayah) -> some View {
+    private func ayahRowGroup(_ ayah: Ayah, lastListened: LastListenedAyah?) -> some View {
                         #if os(iOS)
                         Section {
                             AyahRow(
@@ -1423,7 +1446,7 @@ struct SurahView: View {
                                     visibility.visibleAyahIDs.remove(ayah.id)
                                 },
                                 isPlayingThis: isPlayingAyah(ayah.id),
-                                isLastListened: isLastListenedAyah(ayah.id),
+                                isLastListened: lastListened?.surahNumber == surah.id && lastListened?.ayahNumber == ayah.id,
                                 themeWash: themeWash(for: ayah.id),
                                 onRequestSheet: { kind in presentRowSheet(kind, surah: surah, ayah: ayah) },
                                 openSheet: openRowSheet(surahID: surah.id, ayahID: ayah.id)
@@ -1460,7 +1483,7 @@ struct SurahView: View {
     // Three of the row's inputs as plain calls: inline, the twenty-argument `AyahRow` init tipped
     // the type-checker over its budget ("unable to type-check this expression in reasonable time").
     private func isPlayingAyah(_ ayahID: Int) -> Bool {
-        quranPlayer.currentSurahNumber == surah.id && quranPlayer.currentAyahNumber == ayahID
+        nowPlaying.currentSurahNumber == surah.id && nowPlaying.currentAyahNumber == ayahID
     }
 
     private func arrivalTerm(for ayahID: Int) -> String {
@@ -1825,7 +1848,7 @@ struct SurahView: View {
             )
             .background(AccentGlowOverlay())
             .themedReaderBackground()
-            .onAppear { pageSurah = nil }
+            .onAppear { pageReaderLeft() }
         } else if settings.displayBetaTextConsentNeeded {
             // Comparison mode is off, so the beta text is never even mentioned: a beta riwayah
             // simply reads as its printed mushaf. Landing here in list mode (a riwayah switch)
@@ -1835,7 +1858,7 @@ struct SurahView: View {
                 .background(AccentGlowOverlay())
                 .themedReaderBackground()
                 .onAppear {
-                    pageSurah = nil
+                    pageReaderLeft()
                     withAnimation(.easeInOut) { settings.quranPageMode = true }
                 }
         } else {
@@ -1846,7 +1869,7 @@ struct SurahView: View {
                 // wasted space on iPad/Mac"). iPhone pushes the reader, which was already inline.
                 .navigationBarTitleDisplayMode(.inline)
                 // Back in list mode the title is fixed to this view's own surah again.
-                .onAppear { pageSurah = nil }
+                .onAppear { pageReaderLeft() }
         }
         #else
         surahCoreBody
@@ -1901,8 +1924,19 @@ struct SurahView: View {
             // Opening to a specific ayah SELECTS it, in page AND list mode alike - a bookmark, a
             // "5:6"-style search, or a widget can land mid-surah, and the selection is what shows you
             // where you landed. It stays until tapped.
-            if let target = ayah {
-                highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
+            //
+            // ONCE per route, not on every appear (2026-10-04). This runs again whenever the reader
+            // comes back on screen (a tab switch, a pushed view popping), and it put the mark back on
+            // the ayah the reader was OPENED at: a mark the reader had moved or cleared came back, and
+            // in page mode, where a page turn clears it, the next "Read as List" landed on that old
+            // ayah instead of the page on screen (the mode switch follows the mark). Every later move
+            // inside this view (`goTo`, the mode switch, a search hit) sets its own mark.
+            let arrivalRoute = HighlightedAyahRef(surahID: initialSurah.id, ayahID: initialAyah ?? 0)
+            if arrivalHighlightRoute != arrivalRoute {
+                arrivalHighlightRoute = arrivalRoute
+                if let target = ayah {
+                    highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
+                }
             }
             #if DEBUG
             // Headless verification: `-showCustomRangeSheet` opens the custom-range sheet a beat
@@ -2233,6 +2267,9 @@ struct SurahView: View {
         // at), so always show it then - regardless of the user's normal show-page/juz-dividers preference,
         // which only governs reading (searchText empty).
         let showBoundaryDividers = isPageOrJuzSearch || isDividerKeywordSearch || (settings.showPageJuzDividers && searchText.isEmpty)
+        // Once per pass (Phase 10.8): each row asked `settings.lastListenedAyah` itself, a defaults read
+        // and a `Data` compare per row on every reader body.
+        let lastListened = settings.lastListenedAyah
         let prepared = cachedAyahsForQiraah.isEmpty ? Self.preparedCache(for: surah, settings: settings) : nil
         let ayahsForQiraah = cachedAyahsForQiraah.isEmpty
             ? (prepared?.ayahs ?? [])
@@ -2477,8 +2514,12 @@ struct SurahView: View {
                         // for beta riwayat): whether al-Fatihah's first NUMBERED ayah is the
                         // bismillah differs by counting tradition, and this check decides which
                         // header to show above it.
+                        // `removeDots: false`, always (2026-10-04): left to the setting, Hide Arabic
+                        // Dots turned the ب into its dotless form, "بسم" never matched, and
+                        // al-Fatihah got the basmala header above an ayah 1 that IS the basmala.
+                        // The page composer makes the same test on the dotted text.
                         let firstAyahClean = ayahsForQiraah.first
-                            .map { $0.textCleanArabic(for: settings.displayQiraahForArabic, surahID: surah.id).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
+                            .map { $0.textCleanArabic(for: settings.displayQiraahForArabic, surahID: surah.id, removeDots: false).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
                         let showTaawwudh = (surah.id == 9) || (surah.id == 1 && firstAyahClean.hasPrefix("بسم"))
                         if showTaawwudh {
                             HeaderRow(
@@ -2569,7 +2610,7 @@ struct SurahView: View {
                             }
                         }
 
-                        ayahRowGroup(ayah)
+                        ayahRowGroup(ayah, lastListened: lastListened)
                         .id(ayah.id)
                         #if os(watchOS)
                         .padding(.vertical)
@@ -2610,7 +2651,7 @@ struct SurahView: View {
             .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11, readingWidth: true)
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
-            .trackUserScrollTouch($userTouchingReader)
+            .trackUserScrollTouch(userTouching.binding)
             // Feeds the pinned header's progress bar its true scroll position. `visibility` is
             // deliberately unobserved by this view, so these writes re-render only the header strip.
             .trackScrollFraction { visibility.setScrollFraction($0) }
@@ -2680,7 +2721,7 @@ struct SurahView: View {
                     visibility.setAnchor(ayahsForQiraah.first?.id)
                 }
             }
-            .onChange(of: quranPlayer.currentAyahNumber) { newVal in
+            .onChange(of: nowPlaying.currentAyahNumber) { newVal in
                 // Follow the reciter - unless the reader's finger is on the list (holding an ayah to
                 // read along, or mid-scroll). Their touch wins; following resumes on the next ayah
                 // after they let go.
@@ -2689,7 +2730,7 @@ struct SurahView: View {
                 // is presented FROM its List row, and scrolling that row out of the visible window
                 // tears the row down - which dismissed the open sheet (and could take the presentation
                 // stack down with it) on every ayah advance. See `AyahSheetPresence`.
-                if let id = newVal, surah.id == quranPlayer.currentSurahNumber, !userTouchingReader,
+                if let id = newVal, surah.id == nowPlaying.currentSurahNumber, !userTouching.value,
                    !AyahSheetPresence.shared.anySheetOpen {
                     withAnimation { proxy.scrollTo(id, anchor: .top) }
                 }
@@ -2797,7 +2838,7 @@ struct SurahView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                let active = quranPlayer.isPlaying || quranPlayer.isPaused
+                let active = nowPlaying.isPlaying || nowPlaying.isPaused
                 // Insert/remove the bar on isPlaying||isPaused with `.animation` so SwiftUI animates BOTH the
                 // fade (the bar's `.transition`) and the height collapse natively. The bar keeps its content
                 // while fading out via `retainedContext`, and "Stop Playing" defers `stop()`, so closing works.
@@ -3354,7 +3395,7 @@ struct SurahView: View {
     /// stacked on a narrow reader, or the mini player across a wide reader's width and the bar beside
     /// its footer.
     private func pageReaderControls(_ part: PageReaderControlsPart) -> some View {
-        let active = quranPlayer.isPlaying || quranPlayer.isPaused
+        let active = nowPlaying.isPlaying || nowPlaying.isPaused
         let showsPlayer = active && part != .bar
         let showsBar = part != .nowPlaying
         return VStack(spacing: 0) {
@@ -3565,10 +3606,10 @@ struct SurahView: View {
             QuranSearchFilterSheet(filters: $searchFilters, surahs: [], inReader: true)
                 .smallMediumSheetPresentation(startLarge: false)
         }
-        .animation(.easeInOut, value: quranPlayer.isPlaying)
+        .animation(.easeInOut, value: nowPlaying.isPlaying)
         // Also animate the swap INTO the loading spinner: tapping play flips isLoading before isPlaying, so
         // without this the play icon jumped to the spinner with no transition.
-        .animation(.easeInOut, value: quranPlayer.isLoading)
+        .animation(.easeInOut, value: nowPlaying.isLoading)
     }
     #endif
 
@@ -3584,7 +3625,7 @@ struct SurahView: View {
     #if os(iOS)
     @ViewBuilder
     private func playButton(proxy: ScrollViewProxy) -> some View {
-        let playerIdle = !quranPlayer.isLoading && !quranPlayer.isPlaying && !quranPlayer.isPaused
+        let playerIdle = !nowPlaying.isLoading && !nowPlaying.isPlaying && !nowPlaying.isPaused
         let canResumeLast = settings.lastListenedSurah?.surahNumber == surah.id
         let repeatCounts  = [20, 15, 10, 5, 3, 2]
 
@@ -3766,9 +3807,9 @@ struct SurahView: View {
 
     @ViewBuilder
     private func playIcon() -> some View {
-        if quranPlayer.isLoading {
+        if nowPlaying.isLoading {
             RotatingGearView().transition(.opacity)
-        } else if quranPlayer.isPlaying || quranPlayer.isPaused {
+        } else if nowPlaying.isPlaying || nowPlaying.isPaused {
             Image(systemName: "xmark.circle.fill")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
@@ -4053,11 +4094,18 @@ struct SurahView: View {
     /// Cheap, in-memory only: records where the user is so a re-appear (e.g. after Control Center) can
     /// restore the spot without the expensive `settings` write that `saveLastRead()` performs.
     private func rememberCurrentVisibleAyah() {
+        // Search results are not the reading position (see `saveLastRead`).
+        guard !isSearchingAyahs else { return }
         guard let targetAyah = currentReadingAyahID() else { return }
         rememberVisibleAyahID(targetAyah)
     }
 
     private func saveLastRead() {
+        // While a search is typed the visible rows are its HITS, and the topmost hit was being saved
+        // as the last-read ayah (2026-10-04: reading 2:200, search, background the app, and Last Read
+        // said 2:45). Nothing is recorded until the search clears, the rule
+        // `markKhatmViewedIfNeeded` already follows.
+        guard !isSearchingAyahs else { return }
         guard let targetAyah = currentReadingAyahID() else { return }
         rememberVisibleAyahID(targetAyah)
 
@@ -4081,6 +4129,20 @@ struct SurahView: View {
         return quranData.quran[index + 1]
     }
 
+    /// Whatever stands in the page reader's place has appeared (the list, or a beta riwayah's consent
+    /// card): the title is this view's own surah again, and the page find is closed.
+    ///
+    /// The find flag has to go with the reader (2026-10-04). It is this view's state, the bar is the
+    /// reader's, and the reader only opens its bar when the flag CHANGES: leaving page mode with the
+    /// find open left the flag true, the next page reader mounted with no bar, and the Search button
+    /// (true written over true) did nothing until the whole view was rebuilt. Here rather than in the
+    /// reader's own `onDisappear`, which also runs on a tab switch and would close a find the reader
+    /// comes back to.
+    private func pageReaderLeft() {
+        pageSurah = nil
+        if pageSearchActive { pageSearchActive = false }
+    }
+
     /// Flips between the ayah list and the mushaf, landing on the same place in the text rather than at the
     /// top of the surah:
     ///
@@ -4100,6 +4162,8 @@ struct SurahView: View {
         // Multi-select is a list-mode feature; leaving the list ends it.
         isSelectingAyahs = false
         selectedAyahs = []
+        // The find belongs to the page reader that is about to go (see `pageReaderLeft`).
+        if pageSearchActive { pageSearchActive = false }
 
         if settings.quranPageMode {
             // The ayah the reader MARKED wins outright - whichever of the page's surahs it belongs to.
@@ -4152,10 +4216,10 @@ struct SurahView: View {
     /// What the Now Playing bar's tap should open: the ayah being recited, or - when a WHOLE surah is
     /// playing (one audio file, no per-ayah position) - that surah from its start.
     private var nowPlayingTarget: (surah: Surah, ayah: Int?)? {
-        guard let surahID = quranPlayer.currentSurahNumber,
+        guard let surahID = nowPlaying.currentSurahNumber,
               let target = quranData.surah(surahID),
-              quranPlayer.isPlaying || quranPlayer.isPaused else { return nil }
-        let ayahID = quranPlayer.isPlayingSurah ? nil : quranPlayer.currentAyahNumber
+              nowPlaying.isPlaying || nowPlaying.isPaused else { return nil }
+        let ayahID = nowPlaying.isPlayingSurah ? nil : nowPlaying.currentAyahNumber
         return (target, ayahID)
     }
 
@@ -4754,3 +4818,8 @@ private struct ReaderLegendSheet: View {
     }
 }
 
+/// A Bool the view can write from a scroll callback without invalidating itself (see `SurahView`).
+final class TouchFlag {
+    var value = false
+    var binding: Binding<Bool> { Binding(get: { self.value }, set: { self.value = $0 }) }
+}

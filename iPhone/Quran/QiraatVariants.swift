@@ -111,6 +111,33 @@ final class QiraatVariantsStore: @unchecked Sendable {
         !junctures(surah: surah, ayah: ayah).isEmpty
     }
 
+    /// The Hafs ayah(s) a READER row stands for. The pack is keyed by Hafs numbers, while a row's
+    /// `ayah.id` is the displayed riwayah's OWN number, which names another verse wherever the two
+    /// counts have drifted apart (Warsh 1:4 is Hafs 1:5, and the block showed 1:4's مَٰلِكِ under
+    /// it). Hafs, or a riwayah with no alignment for the surah, keeps the number; a riwayah ayah
+    /// the alignment maps to no Hafs ayah has no span, so it shows nothing rather than a neighbor.
+    static func hafsSpan(surah: Int, readerAyah: Int) -> ClosedRange<Int>? {
+        let tag = Settings.Riwayah.canonicalTag(Settings.shared.displayQiraahForArabic ?? "")
+        guard !tag.isEmpty,
+              let alignment = QiraahComparison.alignment(surahID: surah, tag: tag, quranData: QuranData.shared)
+        else { return readerAyah...readerAyah }
+        return alignment.hafsRangeForRiwayah[readerAyah]
+    }
+
+    /// The junctures of every Hafs ayah in `span`, in order. A riwayah ayah that joins two Hafs
+    /// ayahs carries both ayahs' junctures; they are renumbered so their ids stay unique in one list.
+    func junctures(surah: Int, hafsAyahs span: ClosedRange<Int>) -> [Juncture] {
+        guard span.count > 1 else { return junctures(surah: surah, ayah: span.lowerBound) }
+        var out: [Juncture] = []
+        for ayah in span {
+            for juncture in junctures(surah: surah, ayah: ayah) {
+                out.append(Juncture(id: out.count, text: juncture.text, category: juncture.category,
+                                    segments: juncture.segments, readings: juncture.readings, note: juncture.note))
+            }
+        }
+        return out
+    }
+
     func reader(id: Int) -> Reader? { loadedTable()?.readers[id] }
 
     func transmitter(id: Int) -> Transmitter? { loadedTable()?.transmitters[id] }
@@ -269,10 +296,17 @@ struct AyahQiraatVariantsSection: View {
     @ObservedObject private var settings = Settings.shared
 
     let surah: Surah
+    /// The reader's row: its id is the DISPLAYED riwayah's own ayah number.
     let ayah: Ayah
 
+    /// The Hafs ayah(s) this row spans: the pack's key (see `QiraatVariantsStore.hafsSpan`).
+    private var hafsAyahs: ClosedRange<Int>? {
+        QiraatVariantsStore.hafsSpan(surah: surah.id, readerAyah: ayah.id)
+    }
+
     private var junctures: [QiraatVariantsStore.Juncture] {
-        QiraatVariantsStore.shared.junctures(surah: surah.id, ayah: ayah.id)
+        guard let span = hafsAyahs else { return [] }
+        return QiraatVariantsStore.shared.junctures(surah: surah.id, hafsAyahs: span)
     }
 
     private var currentTag: String { Settings.Riwayah.canonicalTag(settings.displayQiraah) }
@@ -302,7 +336,7 @@ struct AyahQiraatVariantsSection: View {
                 }
 
                 NavigationLink {
-                    AyahQiraatVariantsView(surah: surah, ayah: ayah)
+                    AyahQiraatVariantsView(surah: surah, ayah: ayah, hafsAyahs: hafsAyahs)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "text.book.closed")
@@ -398,10 +432,16 @@ struct AyahQiraatVariantsView: View {
     @ObservedObject private var settings = Settings.shared
 
     let surah: Surah
+    /// The ayah as the READER numbers it (the preview card draws it in the displayed riwayah).
     let ayah: Ayah
+    /// The Hafs ayah(s) the readings are keyed under, from the caller, which knows which numbering
+    /// it holds: the pack is Hafs-numbered and `ayah.id` is not once another riwayah is displayed.
+    /// Nil when the displayed riwayah's ayah answers to no Hafs ayah.
+    let hafsAyahs: ClosedRange<Int>?
 
     private var junctures: [QiraatVariantsStore.Juncture] {
-        QiraatVariantsStore.shared.junctures(surah: surah.id, ayah: ayah.id)
+        guard let span = hafsAyahs else { return [] }
+        return QiraatVariantsStore.shared.junctures(surah: surah.id, hafsAyahs: span)
     }
 
     private var currentTag: String { Settings.Riwayah.canonicalTag(settings.displayQiraah) }

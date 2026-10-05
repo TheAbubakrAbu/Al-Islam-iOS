@@ -272,7 +272,10 @@ struct SettingsIslamView: View {
                     if settings.advanced(.islamLibraries) {
                     VStack(alignment: .leading) {
                         Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
-                            .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.hapticFeedback() }
+                            .onChange(of: settings.dailyRolloverAtFajr) { _ in
+                                settings.hapticFeedback()
+                                settings.dailyRolloverSwitchChanged()
+                            }
 
                         Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
                             .font(.caption)

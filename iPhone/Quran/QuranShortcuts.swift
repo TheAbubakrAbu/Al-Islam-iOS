@@ -189,7 +189,8 @@ enum QuranPlaybackRouter {
 
     @MainActor
     static func playRandom() async -> (id: Int, name: String, ok: Bool)? {
-        guard let surah = data.quran.randomElement() else {
+        // One the selected reciter recorded (see `QuranPlayer.randomRecordedSurah`).
+        guard let surah = player.randomRecordedSurah() else {
             return nil
         }
 

@@ -47,7 +47,7 @@ struct ZakatAlFitrView: View {
                     CalculatorResultCard(title: "Food to give",
                                          value: "\(fitrPeople) sa\u{2018}") {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("About \(totalKilos) kg of the staple your household eats \u{2014} rice, dates, flour.")
+                            Text("About \(totalKilos) kg of the staple your household eats: rice, dates, flour.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -99,7 +99,7 @@ struct ZakatAlFitrView: View {
 
                     ExplainerButton(
                         title: "Why the cost is only a guide",
-                        body_: "Ibn Baz, Ibn \u{2018}Uthaymin and the Permanent Committee all held that zakat al-Fitr must be given as FOOD and not as its price; Abu Hanifa allowed the money. This app follows the first view, so the amount here is only to tell you what the food will run to \u{2014} it is not the thing you give.",
+                        body_: "Ibn Baz, Ibn \u{2018}Uthaymin and the Permanent Committee all held that zakat al-Fitr must be given as FOOD and not as its price; Abu Hanifa allowed the money. This app follows the first view, so the amount here is only to tell you what the food will run to; it is not the thing you give.",
                         caption: "Given as food, not money. The cost is only so you can budget for it."
                     )
                 }

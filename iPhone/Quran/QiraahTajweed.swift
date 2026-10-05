@@ -122,6 +122,35 @@ final class QiraahTajweedStore: @unchecked Sendable {
     private var loaded: [String: Pack] = [:]
     private var missing: Set<String> = []
 
+    /// Finished paints (and the "nothing painted" answer) by every input that changes them (Phase 10.5).
+    /// Without it a non-Hafs reader with tajweed on re-ran the whole paint (token spans, per-rule
+    /// extents, a dynamic `UIColor` per run, the `AttributedString` bridge) for every visible row on
+    /// every body pass; the Hafs store caches exactly this. The custom-colour signature and the hidden
+    /// rules ride in the key, so a recolour or a legend toggle misses it the way a text change does.
+    private final class PaintBox {
+        let value: AttributedString?
+        init(_ value: AttributedString?) { self.value = value }
+    }
+    private let paintCache: NSCache<NSString, PaintBox> = {
+        let cache = NSCache<NSString, PaintBox>()
+        cache.countLimit = 1500
+        return cache
+    }()
+
+    /// Drops the painted strings (a memory warning); the rule packs stay.
+    func purgePaintCache() {
+        paintCache.removeAllObjects()
+    }
+
+    private static func textDigest(_ string: String) -> UInt64 {
+        var hash: UInt64 = 1469598103934665603
+        for byte in string.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 1099511628211
+        }
+        return hash
+    }
+
     /// File base name for a riwayah tag; nil when the tag has no tajweed pack.
     static func fileName(for tag: String) -> String? {
         switch Settings.Riwayah.canonicalTag(tag) {
@@ -250,6 +279,19 @@ final class QiraahTajweedStore: @unchecked Sendable {
                         beginnerSpacing: Bool = false,
                         hiddenRules: Set<String> = [],
                         fullText: String? = nil) -> AttributedString? {
+        let hidden = hiddenRules.isEmpty ? "" : hiddenRules.sorted().joined(separator: ",")
+        let key = "\(tag)|\(surah)|\(ayah)|\(Self.textDigest(displayText))|\(fullText.map(Self.textDigest) ?? 0)|\(beginnerSpacing ? 1 : 0)|\(hidden)|\(TajweedColorOverrides.shared.signature)" as NSString
+        if let hit = paintCache.object(forKey: key) { return hit.value }
+        let painted = computeAttributedText(tag: tag, surah: surah, ayah: ayah, displayText: displayText,
+                                            beginnerSpacing: beginnerSpacing, hiddenRules: hiddenRules,
+                                            fullText: fullText)
+        paintCache.setObject(PaintBox(painted), forKey: key)
+        return painted
+    }
+
+    private func computeAttributedText(tag: String, surah: Int, ayah: Int, displayText: String,
+                                       beginnerSpacing: Bool, hiddenRules: Set<String>,
+                                       fullText: String?) -> AttributedString? {
         // A display string with combining marks IS the full text - paint it directly. Without
         // marks it can only be the "Hide Tashkeel and Signs" rendering, whose token indices and
         // letter offsets no longer match the pack (stripping deletes the standalone ۞ token and

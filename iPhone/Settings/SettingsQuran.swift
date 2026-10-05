@@ -505,9 +505,23 @@ extension Settings {
     /// reader's custom rule colors (Hafs and riwayah alike) ride along: a recolored rule has to repaint
     /// every equatable row and every composed page exactly as a hidden one does.
     var tajweedCategoryVisibilitySignature: String {
-        TajweedLegendCategory.allCases
+        // Memoized until the next publish like `ayahRenderSettingsSignature` (Phase 10.3): 17 `@AppStorage`
+        // reads plus a UserDefaults read per call, and every ayah row's body read it twice per pass.
+        if Thread.isMainThread, let cached = tajweedSignatureCache { return cached }
+        let signature = TajweedLegendCategory.allCases
             .map { isTajweedCategoryVisible($0) ? "1" : "0" }
             .joined() + "#" + TajweedColorOverrides.shared.signature
+        if Thread.isMainThread { tajweedSignatureCache = signature }
+        return signature
+    }
+
+    /// The categories the memoized signature says are visible, without re-reading the 17 toggles.
+    func tajweedVisibleCategories(fromSignature signature: String) -> Set<TajweedLegendCategory> {
+        var visible = Set<TajweedLegendCategory>()
+        for (category, flag) in zip(TajweedLegendCategory.allCases, signature.utf8) where flag == UInt8(ascii: "1") {
+            visible.insert(category)
+        }
+        return visible
     }
 
     // MARK: - Last listened (typed accessors)
@@ -586,6 +600,9 @@ extension Settings {
             } else {
                 lastListenedSurahData = nil
                 appGroupUserDefaults?.removeObject(forKey: "lastListenedSurahData")
+                // The widget's card goes with it: cleared from the history list, the Last Listened
+                // widget kept showing the surah (and resuming it) until something else was played.
+                refreshQuranWidgets(.lastListenedSurah)
             }
         }
     }
@@ -1419,13 +1436,38 @@ extension Settings {
 
     private static var gentleAyahRefsCache: [(surahID: Int, ayahID: Int)]? = nil
 
+    /// The two daily-card decisions for one ayah as the search pack's flag bits (`VerseSearchPack.Flag`),
+    /// for the export and the Caches write; `gentleAyahRefs` reads them back.
+    static func dailyCardFlags(for ayah: Ayah) -> UInt16 {
+        (isAyahGentle(ayah) ? VerseSearchPack.Flag.gentle : 0) | (isAyahShort(ayah) ? VerseSearchPack.Flag.short : 0)
+    }
+
     /// All (surahID, ayahID) pairs eligible for Ayah of the Day, filtered to gentle ayahs. Built once.
+    ///
+    /// The decision for each ayah comes out of the shipped search pack when that pack was stamped with
+    /// this build's blocked-word list (Phase 10.15): lower-casing and word-splitting both translations
+    /// of 6,236 ayahs ran on the MAIN thread inside the Quran tab's first body, 200 ms of the launch.
+    /// An ayah the pack has no record for (one only another riwayah numbers) is still read live, so
+    /// the list is the one the texts give in every case.
     private static func gentleAyahRefs(_ data: QuranData) -> [(surahID: Int, ayahID: Int)] {
         if let cached = gentleAyahRefsCache { return cached }
+        let pack = VerseSearchPack.dailyFlagsPack()
+        let both = VerseSearchPack.Flag.gentle | VerseSearchPack.Flag.short
         var refs: [(surahID: Int, ayahID: Int)] = []
         for surah in data.quran {
-            for ayah in surah.ayahs where isAyahGentle(ayah) && isAyahShort(ayah) {
-                refs.append((surah.id, ayah.id))
+            for ayah in surah.ayahs {
+                // A row only another riwayah numbers has no Hafs text and no translation: empty, it
+                // passed both tests ("short", no blocked word) and could be the day's ayah, a blank
+                // card. Leaving it out also keeps the pool the same size whether or not the riwayah
+                // overlay is loaded, which is what makes the day's pick the same everywhere.
+                guard !ayah.textHafs.isEmpty else { continue }
+                let eligible: Bool
+                if let pack, let index = pack.recordIndex(surah: surah.id, ayah: ayah.id) {
+                    eligible = pack.record(at: index).flags & both == both
+                } else {
+                    eligible = isAyahGentle(ayah) && isAyahShort(ayah)
+                }
+                if eligible { refs.append((surah.id, ayah.id)) }
             }
         }
         guard !refs.isEmpty else { return [] }   // don't cache before Quran data is loaded
@@ -1569,6 +1611,7 @@ extension Settings {
         }
 
         if everyCard || reason == .lastListenedSurah {
+            snapshot.lastListened = nil
             if let listened = lastListenedSurah {
                 snapshot.lastListened = QuranWidgetSnapshot.ListenCard(
                     name: listened.surahName,
@@ -1625,7 +1668,8 @@ extension Settings {
         }
         #if os(iOS)
         if rebuildsCards || reason == .bookmarks || reason == .chosenAyahs {
-            snapshot.chosenAyahs = quranWidgetChosenCards(from: data, bookmarks: snapshot.bookmarks)
+            snapshot.chosenAyahs = quranWidgetChosenCards(from: data, bookmarks: snapshot.bookmarks,
+                                                          previous: snapshot.chosenAyahs)
             kinds.append(Self.chosenAyahWidgetKind)
             Self.lastWidgetCardsSignature = cardsSignature
         }
@@ -1702,8 +1746,16 @@ extension Settings {
     /// The cards of the ayahs the placed Chosen Ayah widgets show: every explicit choice WidgetKit
     /// reported, plus the newest bookmark whenever a copy has no choice (or nothing has been reported
     /// yet). Capped: a card is a typeset ayah with its tajweed runs, and no home screen holds more.
-    private func quranWidgetChosenCards(from data: QuranData, bookmarks: [QuranWidgetSnapshot.BookmarkCard]?) -> [QuranWidgetSnapshot.ChosenCard] {
+    private func quranWidgetChosenCards(from data: QuranData, bookmarks: [QuranWidgetSnapshot.BookmarkCard]?,
+                                        previous: [QuranWidgetSnapshot.ChosenCard]?) -> [QuranWidgetSnapshot.ChosenCard] {
         var requests = Self.chosenAyahRequests
+        // Until WidgetKit has said which ayahs are placed (it answers a beat after launch, and not
+        // at all when the query fails), the ayahs already carded are the best answer there is: a
+        // write in that window used to keep only the default, and every chosen widget dropped to
+        // the pack's plain text.
+        if !Self.chosenAyahRequestsKnown {
+            requests += (previous ?? []).map { ChosenAyahRequest(surah: $0.surah, ayah: $0.ayah) }
+        }
         if Self.chosenAyahWantsDefault || !Self.chosenAyahRequestsKnown {
             let fallback = ChosenAyahDefault.resolve(bookmarks: bookmarks)
             requests.append(ChosenAyahRequest(surah: fallback.surah, ayah: fallback.ayah))
@@ -1836,7 +1888,7 @@ extension Settings {
             attempts += 1
             // Same gentle + short filter as the in-app Ayah of the Day pool, so the widget's fallback matches.
             guard let surah = data.quran.randomElement(),
-                  let ayah = surah.ayahs.filter({ Self.isAyahGentle($0) && Self.isAyahShort($0) }).randomElement()
+                  let ayah = surah.ayahs.filter({ !$0.textHafs.isEmpty && Self.isAyahGentle($0) && Self.isAyahShort($0) }).randomElement()
             else { continue }
             cards.append(quranWidgetAyahCard(surah: surah, ayah: ayah))
         }

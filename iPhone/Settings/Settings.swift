@@ -245,6 +245,28 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var renderSignatureCache: String?
     /// The mushaf page cache's settings signature, memoized the same way (Phase 5 step 5).
     var mushafSignatureCache: String?
+    /// 2026-10-03 (Phase 10.3): the other per-row Settings reads, memoized the same way and cleared by
+    /// the same publish sink. Each was recomputed from `@AppStorage` on every row body pass.
+    var tajweedSignatureCache: String?
+    var hadithSignatureCache: String?
+    /// `displayQiraahForArabic` (a trim + a switch per read, 12-15 reads per ayah row).
+    var displayQiraahCache: (resolved: String?, valid: Bool) = (nil, false)
+    /// `riwayahTajweedHiddenRuleSet`, keyed on the raw string it is split from.
+    var hiddenRuleSetCache: (raw: String, set: Set<String>)?
+    /// `specialEvents`, keyed on the Hijri year it was built for.
+    var specialEventsCache: (year: Int, events: [(String, DateComponents, String, String)])?
+    /// `isIslamResourceFavorite`, keyed on the raw comma-joined string.
+    var favoriteResourcesCache: (raw: String, ids: Set<String>)?
+
+    /// Every main-thread memo above, in one place: the publish sink clears them twice per publish
+    /// (before and after the store commits, see `init`).
+    func clearRenderMemos() {
+        renderSignatureCache = nil
+        mushafSignatureCache = nil
+        tajweedSignatureCache = nil
+        hadithSignatureCache = nil
+        displayQiraahCache = (nil, false)
+    }
 
     private var selfObservation: AnyCancellable?
 
@@ -338,18 +360,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         selfObservation = objectWillChange.sink { [weak self] _ in
             guard let self else { return }
             if Thread.isMainThread {
-                self.renderSignatureCache = nil
-                self.mushafSignatureCache = nil
+                self.clearRenderMemos()
                 // After the store commits, before SwiftUI renders.
-                DispatchQueue.main.async {
-                    self.renderSignatureCache = nil
-                    self.mushafSignatureCache = nil
-                }
+                DispatchQueue.main.async { self.clearRenderMemos() }
             } else {
-                DispatchQueue.main.async {
-                    self.renderSignatureCache = nil
-                    self.mushafSignatureCache = nil
-                }
+                DispatchQueue.main.async { self.clearRenderMemos() }
             }
             #if DEBUG
             if Self.debugPublishCounterEnabled { self.debugNotePublish() }
@@ -885,6 +900,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // The presence-checked caches (the byte-keyed memos heal themselves).
         loadKhatmProgressCacheFromStorage()
         Self.invalidateTrackerCaches()
+        // And the generation-keyed memos (the day's canonical marks, the tracker's stats, the profile
+        // totals): a restore or an erase writes the tracker's bytes without going through a setter,
+        // so the counter never moved and the memos kept serving the marks that were just replaced.
+        bumpTrackerGeneration()
         Self.invalidatePrayerComputationCache()
         Self.invalidateAdhanSoundResourceCache()
 
@@ -1121,7 +1140,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "surahOpenCountsData", "surahPlayCountsData",
         // The calculators' figures: the user's own numbers, typed in.
         "zakahCash", "zakahGold", "zakahSilver", "zakahBusiness", "zakahTradeShares", "zakahLongShares",
-        "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahNisab", "zakahFitrPeople", "zakahFitrCost",
+        "zakahOwedToYou", "zakahDebts", "zakahMetalPrice", "zakahGoldPrice", "zakahSilverPrice", "zakahNisab",
+        "zakahFitrPeople", "zakahFitrCost",
         "faraidEstate", "faraidDebts", "faraidFuneral", "faraidBequest", "faraidCounts",
     ]
 
@@ -1157,7 +1177,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // cannot see a key declared as a `let flag` constant or passed as an argument. The locator
         // caches are LOCATION (the masjids and halal places around the home city).
         "halalLocatorHomeCacheData", "masjidLocatorHomeCacheData",
-        "didPurgeLegacyQuranCaches", "hadithBookCorporaPurged1", "hadithCitationRefresh1",
+        "didPurgeLegacyQuranCaches", "hadithBookCorporaPurged1", "hadithCitationRefresh1", "hadithCitationRefresh2",
         "hadithLegacyCachePurged", "tafsirLegacyCachePurged",
         "appReviewAskDates", "appReviewSessionCount", "timeSpent",
         // Retired keys an older build left in the domain; nothing reads them now (`arabicGridMode`: the
@@ -1192,6 +1212,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let contentDocumentFiles: [String] = [
         "journal.json", "reflections.json", "activity-log.json", "activity-log-watch.json",
     ]
+
+    /// Documents files a full erase deletes but the backup never carries: the Ask AI transcript
+    /// stays on the device it was written on. (It survived "Erase Everything" until 2026-10-04, and
+    /// the conversation was back on the next launch.)
+    static let deviceOnlyDocumentFiles: [String] = ["askai-conversation.json"]
 
     @MainActor
     func resetAllSettings(keepingContent: Bool = true) {
@@ -1239,7 +1264,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             NotificationCenter.default.post(name: Self.contentErasedNotification, object: nil)
             appGroupUserDefaults?.removePersistentDomain(forName: AppIdentifiers.appGroupSuiteName)
             if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                for name in Self.contentDocumentFiles {
+                for name in Self.contentDocumentFiles + Self.deviceOnlyDocumentFiles {
                     try? FileManager.default.removeItem(at: documents.appendingPathComponent(name, isDirectory: false))
                 }
             }
@@ -1609,6 +1634,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         let effective = effectiveHijriReferenceDate()
         let adjusted = hijriCalendar.date(byAdding: .day, value: hijriOffset, to: effective) ?? effective
         let currentHijriYear = hijriCalendar.component(.year, from: adjusted)
+        // The list is a pure function of the year: the Hijri calendar screen read it once per month
+        // cell (~30 per render) and rebuilt the 24 tuples each time (Phase 10.3).
+        if Thread.isMainThread, let cached = specialEventsCache, cached.year == currentHijriYear { return cached.events }
+        let events = Self.specialEvents(inHijriYear: currentHijriYear)
+        if Thread.isMainThread { specialEventsCache = (currentHijriYear, events) }
+        return events
+    }
+
+    /// The events that are nights, not days: each begins at Maghrib on the civil day BEFORE the Hijri
+    /// date it is listed under, which is where its reminder has to be anchored.
+    static let nightEventTitles: Set<String> = ["Last 10 Nights of Ramadan", "27th Night of Ramadan"]
+
+    static func specialEvents(inHijriYear currentHijriYear: Int) -> [(String, DateComponents, String, String)] {
         return [
             ("Islamic New Year", DateComponents(year: currentHijriYear, month: 1, day: 1), "Start of Hijri year", "The first day of the Islamic calendar; no special acts of worship or celebration are prescribed."),
             ("Day Before Ashura", DateComponents(year: currentHijriYear, month: 1, day: 9), "Recommended to fast", "The Prophet ﷺ intended to fast the 9th to differ from the Jews, making it Sunnah to do so before Ashura."),
@@ -1830,6 +1868,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(skyGradientsJSON, forKey: "skyGradients")
+            // The gradient widgets paint from the mirror, and nothing told them it moved: an edited
+            // palette reached the home screen at the next prayer boundary. Coalesced, so a drag
+            // through the colour picker is one reload.
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -2376,7 +2418,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     func noteLastRead(surah: Int, ayah: Int) {
         guard saveLastReadAyah else { return }
-        guard lastReadSurah != surah || lastReadAyah != ayah else { return }
+        guard lastReadSurah != surah || lastReadAyah != ayah else {
+            // Back on the stored ayah before the debounce fired: the position waiting to be written
+            // is the one just left, and it used to land 0.8 s later as the "last read".
+            pendingLastReadWorkItem?.cancel()
+            pendingLastReadWorkItem = nil
+            pendingLastRead = nil
+            return
+        }
         pendingLastRead = (surah, ayah)
 
         pendingLastReadWorkItem?.cancel()
@@ -2425,23 +2474,25 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Two-slot memo (open counts, play counts) keyed on the bytes, so a surah header's two reads and
     /// the profile's two whole-map reads decode once per change instead of once per call.
     private static var surahCountsCache: [Data: [Int: Int]] = [:]
-    private func decodeSurahCounts(_ data: Data) -> [Int: Int] {
+    private func decodeSurahCounts(_ data: Data, key: String) -> [Int: Int] {
         if data.isEmpty { return [:] }
         if let cached = Self.surahCountsCache[data] { return cached }
-        let decoded = (try? Self.decoder.decode([Int: Int].self, from: data)) ?? [:]
+        // Through the rescue: a blob this build cannot read is kept under "<key>.corrupt" before the
+        // next open or play writes a fresh map over it (the rule every other content store follows).
+        let decoded = UserDataRescue.decode([Int: Int].self, from: data, key: key, decoder: Self.decoder) ?? [:]
         if Self.surahCountsCache.count > 4 { Self.surahCountsCache.removeAll(keepingCapacity: true) }
         Self.surahCountsCache[data] = decoded
         return decoded
     }
 
-    func surahOpenCount(_ surahID: Int) -> Int { decodeSurahCounts(surahOpenCountsData)[surahID] ?? 0 }
-    func surahPlayCount(_ surahID: Int) -> Int { decodeSurahCounts(surahPlayCountsData)[surahID] ?? 0 }
+    func surahOpenCount(_ surahID: Int) -> Int { allSurahOpenCounts[surahID] ?? 0 }
+    func surahPlayCount(_ surahID: Int) -> Int { allSurahPlayCounts[surahID] ?? 0 }
 
     // The whole map at once. The per-surah accessors above decode the JSON on EVERY call, which is fine
     // for a surah header (one call, one surah on screen) and quadratic-feeling for anything that wants
     // all 114 - the profile's totals asked for 228 decodes per pass before these existed.
-    var allSurahOpenCounts: [Int: Int] { decodeSurahCounts(surahOpenCountsData) }
-    var allSurahPlayCounts: [Int: Int] { decodeSurahCounts(surahPlayCountsData) }
+    var allSurahOpenCounts: [Int: Int] { decodeSurahCounts(surahOpenCountsData, key: "surahOpenCountsData") }
+    var allSurahPlayCounts: [Int: Int] { decodeSurahCounts(surahPlayCountsData, key: "surahPlayCountsData") }
 
     /// A cheap stamp of everything `ProfileStats` derives from, so the profile can skip recomputing when
     /// nothing it reads has changed. Kept next to the storage it hashes: a new counted thing must be
@@ -2459,7 +2510,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     func recordSurahOpened(_ surahID: Int) {
         guard (1...114).contains(surahID) else { return }
-        var counts = decodeSurahCounts(surahOpenCountsData)
+        var counts = allSurahOpenCounts
         counts[surahID, default: 0] += 1
         if let data = try? Self.encoder.encode(counts) { surahOpenCountsData = data }
     }
@@ -2467,7 +2518,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func recordSurahPlayed(_ surahID: Int) {
         guard (1...114).contains(surahID) else { return }
         ActivityLog.shared.record(.listen)
-        var counts = decodeSurahCounts(surahPlayCountsData)
+        var counts = allSurahPlayCounts
         counts[surahID, default: 0] += 1
         if let data = try? Self.encoder.encode(counts) { surahPlayCountsData = data }
     }
@@ -2584,6 +2635,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("betaQiraatEnabled") var betaQiraatEnabled: Bool = false {
         didSet {
             guard oldValue != betaQiraatEnabled else { return }
+            // The beta switch changes which ayahs "exist" in a beta riwayah (`existsInQiraah`).
+            QiraahAyahCountCache.purge()
             if !betaQiraatEnabled {
                 if Self.Riwayah.isBeta(displayQiraah) {
                     displayQiraah = Self.Riwayah.hafsTag
@@ -2614,7 +2667,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     /// Pass to Ayah.displayArabicText(surahId:clean:qiraahOverride:). Nil means Hafs.
+    /// Memoized on the main thread until the next publish (Phase 10.3): an ayah row read this 12-15
+    /// times per body pass, each a `@AppStorage` read, a trim and a switch.
     var displayQiraahForArabic: String? {
+        if Thread.isMainThread, displayQiraahCache.valid { return displayQiraahCache.resolved }
+        let resolved = computeDisplayQiraahForArabic()
+        if Thread.isMainThread { displayQiraahCache = (resolved, true) }
+        return resolved
+    }
+
+    private func computeDisplayQiraahForArabic() -> String? {
         let normalized = Self.normalizeLegacyRiwayahTag(displayQiraah)
         #if os(watchOS)
         // The watch ships no beta text: a beta tag held from an older sync would show Hafs under the
@@ -2661,7 +2723,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("riwayahTajweedHiddenRules") var riwayahTajweedHiddenRules: String = ""
 
     var riwayahTajweedHiddenRuleSet: Set<String> {
-        Set(riwayahTajweedHiddenRules.split(separator: ",").map(String.init))
+        // Keyed on the raw string (one short compare) instead of re-splitting per ayah row and per
+        // composed page; off-main callers (the riwayah tajweed store) compute directly.
+        let raw = riwayahTajweedHiddenRules
+        if Thread.isMainThread, let cached = hiddenRuleSetCache, cached.raw == raw { return cached.set }
+        let set = Set(raw.split(separator: ",").map(String.init))
+        if Thread.isMainThread { hiddenRuleSetCache = (raw, set) }
+        return set
     }
 
     func isRiwayahTajweedRuleVisible(_ key: String) -> Bool {
@@ -3140,7 +3208,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("favoriteIslamResources") private var favoriteIslamResourcesRaw = ""
 
     func isIslamResourceFavorite(_ id: String) -> Bool {
-        favoriteIslamResourcesRaw.components(separatedBy: ",").contains(id)
+        // The Islam root asks this for every one of ~170 destinations per body pass, several times per
+        // tile; one split per raw-string change instead of one per call (Phase 10.3).
+        let raw = favoriteIslamResourcesRaw
+        if Thread.isMainThread, let cached = favoriteResourcesCache, cached.raw == raw { return cached.ids.contains(id) }
+        let ids = Set(raw.components(separatedBy: ",").filter { !$0.isEmpty })
+        if Thread.isMainThread { favoriteResourcesCache = (raw, ids) }
+        return ids.contains(id)
     }
 
     func toggleIslamResourceFavorite(_ id: String) {
@@ -3195,25 +3269,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // allocation) plus a separate filter pass - this runs on every keystroke query and ~7×/ayah during
         // index build, so collapsing 23 passes into 1 is a real win. Behavior is identical: all map keys are
         // single scalars, normalization still happens before the unwanted-char filter, lowercasing after.
-        var built = ""
-        built.unicodeScalars.reserveCapacity(text.unicodeScalars.count)
-        for scalar in text.unicodeScalars {
-            if let mapped = Self.canonicalArabicSearchScalarMap[scalar] {
-                guard let replacement = mapped else { continue }   // map → nil means "drop" (e.g. bare hamza)
-                if Self.unwantedCharSet.contains(replacement) { continue }
-                built.unicodeScalars.append(replacement)
-            } else {
-                if Self.unwantedCharSet.contains(scalar) { continue }
-                built.unicodeScalars.append(scalar)
-            }
-        }
-        var cleaned = collapsingWhitespace(built.lowercased())
-
-        if whitespace {
-            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        return cleaned
+        //
+        // 2026-10-03: the pass itself is table-driven (`SearchFoldTables`): the two `CharacterSet.contains`
+        // calls and the dictionary lookup per scalar were ~150 ns each, and the index build alone ran this
+        // 44,000 times (3.5-4.9 s of CPU per launch in the profiler). The whitespace collapse and the
+        // lowercasing now happen in the same walk; see `SearchFoldTables.fold` for why that is the same string.
+        SearchFoldTables.fold(text, map: SearchFoldTables.canonical, trim: whitespace)
     }
 
     /// The silent-letter search lane: the mushaf-sukoon fold (drops letters the recitation skips,
@@ -3224,6 +3285,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func cleanSearchIgnoringSilentArabicLetters(_ text: String, whitespace: Bool = false) -> String {
         cleanSearch(text.removingSilentArabicLettersForSearch, whitespace: whitespace)
             .removingAlifWiqayaForSearch
+    }
+
+    /// `cleanSearchIgnoringSilentArabicLetters` for a caller that already holds the text's silent fold
+    /// (the index build computes it once per text for this lane and the hamza lane, Phase 10.1).
+    func cleanSearchIgnoringSilentArabicLetters(silentFold: String, whitespace: Bool = false) -> String {
+        cleanSearch(silentFold, whitespace: whitespace).removingAlifWiqayaForSearch
     }
 
     /// The transliteration's search twin. The natural-reading scheme the ayahs carry doubles long
@@ -3252,23 +3319,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// نِسَآؤُكُمۡ are one word - so a typed نساء has to reach all three. Alif-seated أ إ آ are deliberately
     /// NOT folded here: they keep mapping to ا exactly as before, so word-initial spellings are untouched.
     func cleanSearchKeepingHamza(_ text: String, whitespace: Bool = false) -> String {
-        var built = ""
-        built.unicodeScalars.reserveCapacity(text.unicodeScalars.count)
-        for scalar in text.unicodeScalars {
-            if let mapped = Self.hamzaPreservingArabicSearchScalarMap[scalar] {
-                guard let replacement = mapped else { continue }
-                if Self.unwantedCharSet.contains(replacement) { continue }
-                built.unicodeScalars.append(replacement)
-            } else {
-                if Self.unwantedCharSet.contains(scalar) { continue }
-                built.unicodeScalars.append(scalar)
-            }
-        }
-        var cleaned = collapsingWhitespace(built.lowercased())
-        if whitespace {
-            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return cleaned
+        SearchFoldTables.fold(text, map: SearchFoldTables.hamzaPreserving, trim: whitespace)
     }
 
     /// The hamza-precision test for one query, or nil when the query carries no bare ء and therefore
@@ -3304,16 +3355,22 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         /// The hamza-preserving haystack for one ayah, in the same lanes the ordinary index builds.
         /// Returns nil when the text carries no hamza at all - such an ayah can never satisfy a query
         /// that has one, so callers can skip storing anything and treat nil as "no match".
-        static func corpusLanes(for arabicTexts: [String]) -> String? {
+        /// `silentFolds[i]`, when given, is `arabicTexts[i].removingSilentArabicLettersForSearch`
+        /// already computed by the caller (the index build has it for its silent lane, Phase 10.1); the
+        /// dagger-dropped variant still folds its own.
+        static func corpusLanes(for arabicTexts: [String], silentFolds: [String]? = nil) -> String? {
             let settings = Settings.shared
             var lanes: [String] = []
-            for text in arabicTexts {
+            for (index, text) in arabicTexts.enumerated() {
                 for variant in text.arabicDaggerVariantsForSearch {
                     lanes.append(settings.cleanSearchKeepingHamza(variant))
-                    lanes.append(
-                        settings.cleanSearchKeepingHamza(variant.removingSilentArabicLettersForSearch)
-                            .removingAlifWiqayaForSearch
-                    )
+                    let silent: String
+                    if variant == text, let given = silentFolds, given.indices.contains(index) {
+                        silent = given[index]
+                    } else {
+                        silent = variant.removingSilentArabicLettersForSearch
+                    }
+                    lanes.append(settings.cleanSearchKeepingHamza(silent).removingAlifWiqayaForSearch)
                 }
             }
             let joined = lanes.joined(separator: " ")
@@ -3333,7 +3390,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     /// `canonicalArabicSearchScalarMap` with every hamza form redirected to a surviving ء.
-    private static let hamzaPreservingArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
+    fileprivate static let hamzaPreservingArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
         var out = canonicalArabicSearchScalarMap
         let hamza = UnicodeScalar(0x0621)!
         // Bare hamza and its variants, plus the waw/ya-seated forms. The seat is not a letter here.
@@ -3348,7 +3405,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// (All `canonicalArabicSearchMap` keys are single scalars and values are one scalar or empty.)
     /// The Latin accents ride in the same table (`LatinFold`), so "Mūsā" and "ʿImrān" in a query or a
     /// translation fold to "musa" and "imran" in that same pass.
-    private static let canonicalArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
+    fileprivate static let canonicalArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
         var out: [UnicodeScalar: UnicodeScalar?] = LatinFold.scalarMap
         for (key, value) in canonicalArabicSearchMap {
             let keyScalars = Array(key.unicodeScalars)
@@ -3396,7 +3453,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "\u{0640}": ""
     ]
 
-    private static let unwantedCharSet: CharacterSet = {
+    fileprivate static let unwantedCharSet: CharacterSet = {
         var set = CharacterSet.punctuationCharacters
             .union(.symbols)
             .union(.nonBaseCharacters)
@@ -3405,13 +3462,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return set
     }()
 
-    private func collapsingWhitespace(_ text: String) -> String {
-        text
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-    }
-    
     // MARK: - [Shared] App-wide appearance & misc @AppStorage
 
     @AppStorage("THEfirstLaunch") var firstLaunch = true
@@ -3740,5 +3790,229 @@ extension UserDefaults {
         }
         traced_set(value, forKey: key)
     }
+}
+#endif
+
+// MARK: - Search fold tables (2026-10-03)
+
+/// The table-driven body of `Settings.cleanSearch` and `cleanSearchKeepingHamza`. Built once per map from
+/// the same `CharacterSet`s and scalar dictionaries the old loop consulted per scalar, so the output is
+/// the same string by construction:
+/// - `replacement[scalar]` is the folded scalar (itself when the map has no entry), or `drop` when the
+///   map says "" (bare hamza, tatweel). Scalars outside the BMP fall back to the dictionary.
+/// - `unwanted` is `Settings.unwantedCharSet` flattened to one bit per BMP scalar; the fold skips a
+///   replacement that is unwanted exactly as before.
+/// - Whitespace collapse: the old code ran `components(separatedBy: .whitespacesAndNewlines)`, dropped the
+///   empty pieces and joined with one space, which is "every maximal run of whitespace scalars becomes one
+///   space, none at either end". The walk does the same with a pending-space flag.
+/// - Lowercasing: the old code lowercased the whole string before the collapse. Lowercasing never maps a
+///   scalar to or from whitespace, so collapsing first is the same. ASCII A-Z are lowered in the walk;
+///   Arabic has no case (the fold's input is Arabic, digits and ASCII almost always); any OTHER non-ASCII
+///   scalar that survives sends the built string through `String.lowercased()` once, the old path exactly
+///   (full Unicode case mapping, final sigma and all).
+/// - `trim`: the collapse already leaves no edge whitespace, so the trim the callers asked for is a no-op;
+///   kept as a cheap check so the contract reads the same.
+enum SearchFoldTables {
+    /// 0xFFFF_FFFF in the replacement table means "drop this scalar".
+    private static let drop: UInt32 = 0xFFFF_FFFF
+    private static let bmp = 0x10000
+
+    struct Map {
+        /// Indexed by BMP scalar value: the replacement scalar's value, or `drop`.
+        let replacement: [UInt32]
+        /// Scalars outside the BMP, the dictionary way.
+        let dictionary: [UnicodeScalar: UnicodeScalar?]
+    }
+
+    static let canonical = Map(dictionary: Settings.canonicalArabicSearchScalarMap)
+    static let hamzaPreserving = Map(dictionary: Settings.hamzaPreservingArabicSearchScalarMap)
+
+    /// One bit per BMP scalar for the two character sets the walk tests.
+    private static let unwanted: [Bool] = bitmap(of: Settings.unwantedCharSet)
+    private static let whitespace: [Bool] = bitmap(of: .whitespacesAndNewlines)
+    private static let unwantedSet = Settings.unwantedCharSet
+    private static let whitespaceSet = CharacterSet.whitespacesAndNewlines
+
+    private static func bitmap(of set: CharacterSet) -> [Bool] {
+        var bits = [Bool](repeating: false, count: bmp)
+        for value in 0..<bmp {
+            // Surrogate code points are not scalars; they never appear in a String's scalar view.
+            guard let scalar = UnicodeScalar(UInt32(value)) else { continue }
+            bits[value] = set.contains(scalar)
+        }
+        return bits
+    }
+
+    @inline(__always)
+    private static func isUnwanted(_ value: UInt32, _ scalar: UnicodeScalar) -> Bool {
+        value < UInt32(bmp) ? unwanted[Int(value)] : unwantedSet.contains(scalar)
+    }
+
+    @inline(__always)
+    private static func isWhitespace(_ value: UInt32, _ scalar: UnicodeScalar) -> Bool {
+        value < UInt32(bmp) ? whitespace[Int(value)] : whitespaceSet.contains(scalar)
+    }
+
+    /// True for the scalar ranges whose `lowercased()` is the identity: ASCII handled inline, digits,
+    /// and the Arabic blocks (Arabic, Arabic Supplement, Arabic Extended-A/B, Presentation Forms A/B).
+    @inline(__always)
+    private static func lowercaseIsIdentity(_ v: UInt32) -> Bool {
+        (0x0600...0x06FF).contains(v) || (0x0750...0x077F).contains(v) || (0x0870...0x08FF).contains(v)
+            || (0xFB50...0xFDFF).contains(v) || (0xFE70...0xFEFF).contains(v)
+    }
+
+    static func fold(_ text: String, map: Map, trim: Bool) -> String {
+        var out = String.UnicodeScalarView()
+        out.reserveCapacity(text.unicodeScalars.count)
+        var pendingSpace = false
+        var needsFullLowercase = false
+        for scalar in text.unicodeScalars {
+            var value = scalar.value
+            var replaced = scalar
+            if value < UInt32(bmp) {
+                let mapped = map.replacement[Int(value)]
+                if mapped == drop { continue }
+                if mapped != value {
+                    value = mapped
+                    replaced = UnicodeScalar(mapped) ?? scalar
+                }
+            } else if let entry = map.dictionary[scalar] {
+                guard let replacement = entry else { continue }
+                replaced = replacement
+                value = replacement.value
+            }
+            // An en or em dash joins two words with no space around it, so dropping it like other
+            // punctuation glued them: "forefathers\u{2014}Abraham" folded to "forefathersabraham", and
+            // a search for "sabr" listed 2:133. It is a word break. (The hyphen stays punctuation:
+            // "All-Knowing" is one word, and "wa-laa" one word of the transliteration.)
+            if value == 0x2013 || value == 0x2014 {
+                if !out.isEmpty { pendingSpace = true }
+                continue
+            }
+            if isUnwanted(value, replaced) { continue }
+            if isWhitespace(value, replaced) {
+                if !out.isEmpty { pendingSpace = true }
+                continue
+            }
+            if pendingSpace {
+                out.append(" ")
+                pendingSpace = false
+            }
+            if value < 0x80 {
+                if value >= 0x41, value <= 0x5A {       // A-Z
+                    out.append(UnicodeScalar(value + 0x20)!)
+                } else {
+                    out.append(replaced)
+                }
+            } else {
+                if !lowercaseIsIdentity(value) { needsFullLowercase = true }
+                out.append(replaced)
+            }
+        }
+        var built = String(out)
+        if needsFullLowercase {
+            // The old order, for any script with case: lowercase, then collapse again (a full case
+            // mapping never produces whitespace, so the collapse is a no-op, but the trim contract holds).
+            built = built.lowercased()
+        }
+        if trim, let first = built.unicodeScalars.first, let last = built.unicodeScalars.last,
+           isWhitespace(first.value, first) || isWhitespace(last.value, last) {
+            built = built.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return built
+    }
+
+    /// Other ways the mushaf may spell an Arabic query that is typed the modern way, as RAW text
+    /// (each caller folds it the way its lane does). Never the query itself; empty when there is no
+    /// other spelling. Callers try these only when the typed spelling is found nowhere, so a word
+    /// that does occur keeps exactly the rows it had.
+    ///
+    /// * The fold gives a seated hamza its seat (ئ to ي, ؤ to و, أ to ا), but the mushaf often seats
+    ///   that hamza on a tatweel or on nothing, which folds away: شَيۡـًٔا folds to "شيا" while a typed
+    ///   شيئا folded to "شييا", and the 76 ayahs with it found nothing; likewise إسرائيل (41),
+    ///   يسألونك, مسؤولا, رؤوف (2026-10-04). So: every ئ and ؤ dropped, and an أ or إ that is not
+    ///   the first letter of its word.
+    /// * A final ي and ى are typed for each other, and the fold keeps them apart (ى folds to ا):
+    ///   موسي and عيسي found nothing. So: the last letter of each word swapped between the two.
+    static func arabicQuerySpellings(of text: String) -> [String] {
+        let words = text.split(whereSeparator: { $0.isWhitespace }).map { Array($0.unicodeScalars) }
+        guard words.contains(where: { $0.contains { (0x0621...0x064A).contains($0.value) } }) else { return [] }
+
+        func seatsDropped(_ word: [UnicodeScalar]) -> [UnicodeScalar] {
+            let firstLetter = word.firstIndex { (0x0621...0x064A).contains($0.value) }
+            return word.enumerated().compactMap { index, scalar in
+                switch scalar.value {
+                case 0x0624, 0x0626: return nil
+                case 0x0623, 0x0625: return index == firstLetter ? scalar : nil
+                default: return scalar
+                }
+            }
+        }
+        func finalYaSwapped(_ word: [UnicodeScalar]) -> [UnicodeScalar] {
+            guard let last = word.lastIndex(where: { (0x0621...0x064A).contains($0.value) }) else { return word }
+            var out = word
+            switch word[last].value {
+            case 0x064A: out[last] = UnicodeScalar(0x0649)!
+            case 0x0649: out[last] = UnicodeScalar(0x064A)!
+            default: break
+            }
+            return out
+        }
+        func joined(_ words: [[UnicodeScalar]]) -> String {
+            words.map { String(String.UnicodeScalarView($0)) }.joined(separator: " ")
+        }
+
+        let original = joined(words)
+        var out: [String] = []
+        for candidate in [joined(words.map(seatsDropped)),
+                          joined(words.map(finalYaSwapped)),
+                          joined(words.map { finalYaSwapped(seatsDropped($0)) })]
+        where candidate != original && !out.contains(candidate) {
+            out.append(candidate)
+        }
+        return out
+    }
+
+    /// `arabicQuerySpellings` folded as the ranked lane folds a word (`cleanSearch`), without the
+    /// ones that fold back to the word's own key.
+    static func arabicQueryVariants(of word: String) -> [String] {
+        let settings = Settings.shared
+        let own = settings.cleanSearch(word, whitespace: true)
+        var out: [String] = []
+        for spelling in arabicQuerySpellings(of: word) {
+            let folded = settings.cleanSearch(spelling, whitespace: true)
+            if !folded.isEmpty, folded != own, !out.contains(folded) { out.append(folded) }
+        }
+        return out
+    }
+}
+
+extension SearchFoldTables.Map {
+    init(dictionary: [UnicodeScalar: UnicodeScalar?]) {
+        var table = [UInt32](repeating: 0, count: 0x10000)
+        for value in 0..<0x10000 { table[value] = UInt32(value) }
+        var high: [UnicodeScalar: UnicodeScalar?] = [:]
+        for (key, mapped) in dictionary {
+            if key.value < 0x10000 {
+                if let replacement = mapped {
+                    table[Int(key.value)] = replacement.value
+                } else {
+                    table[Int(key.value)] = 0xFFFF_FFFF
+                }
+            } else {
+                high[key] = mapped
+            }
+        }
+        self.replacement = table
+        self.dictionary = high
+    }
+}
+
+#if DEBUG
+extension Settings {
+    /// Test-only views of the fold inputs (`SearchFoldEquivalenceTests`).
+    static var canonicalArabicSearchScalarMapForTests: [UnicodeScalar: UnicodeScalar?] { canonicalArabicSearchScalarMap }
+    static var hamzaPreservingArabicSearchScalarMapForTests: [UnicodeScalar: UnicodeScalar?] { hamzaPreservingArabicSearchScalarMap }
+    static var unwantedCharSetForTests: CharacterSet { unwantedCharSet }
 }
 #endif

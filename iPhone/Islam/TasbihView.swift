@@ -90,7 +90,9 @@ final class TasbihCounters: ObservableObject {
             Int(key).map { ($0, value) }
         })
         presetCounts = presets
-        countsByDay = UserDefaults.standard.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        let loadedDays = UserDefaults.standard.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        let migratedDays = Self.gregorianDayKeys(loadedDays)
+        countsByDay = migratedDays ?? loadedDays
         if let saved = UserDefaults.standard.object(forKey: "tasbihLifetimeCount") as? Int {
             lifetimeCount = saved
         } else {
@@ -98,6 +100,10 @@ final class TasbihCounters: ObservableObject {
             // user has ever counted, so history begins there rather than at zero.
             lifetimeCount = UserDefaults.standard.integer(forKey: "tasbihFreeCount") + presets.values.reduce(0, +)
             dirty.insert(.lifetime)
+            persist()
+        }
+        if migratedDays != nil {
+            dirty.insert(.days)
             persist()
         }
         ObjectPublishCounter.attach(self, label: "TasbihCounters")
@@ -128,13 +134,16 @@ final class TasbihCounters: ObservableObject {
         objectWillChange.send()
         presetCounts = presets
         freeCount = defaults.integer(forKey: "tasbihFreeCount")
-        countsByDay = defaults.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        let loadedDays = defaults.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        let migratedDays = Self.gregorianDayKeys(loadedDays)
+        countsByDay = migratedDays ?? loadedDays
         // An erase leaves no total at all: what is on the counters is then the history, as on a
         // first run, and that one key IS written.
         let savedLifetime = defaults.object(forKey: "tasbihLifetimeCount") as? Int
         lifetimeCount = savedLifetime ?? (freeCount + presets.values.reduce(0, +))
         // The assignments above marked every key dirty; nothing here differs from the disk.
         dirty = savedLifetime == nil ? [.lifetime] : []
+        if migratedDays != nil { dirty.insert(.days) }
         if !dirty.isEmpty { persist() }
     }
 
@@ -144,17 +153,46 @@ final class TasbihCounters: ObservableObject {
         freeCount + presetCounts.values.reduce(0, +)
     }
 
-    /// Local calendar day key. The device's calendar and time zone: a dhikr said at 11 pm belongs to
-    /// the day the user was living in, not to UTC's.
+    /// The calendar the day keys are written in: Gregorian, in the device's time zone (a dhikr said
+    /// at 11 pm belongs to the day the user was living in, not to UTC's). It was the device's own
+    /// calendar until 2026-10-05, so a phone set to the Hijri calendar wrote "1448-04-23", and
+    /// changing the calendar, or restoring the backup on another phone, broke the streak.
+    private static let keyCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }()
+
     static func dayKey(_ date: Date = Date()) -> String {
-        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let parts = keyCalendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
     private static func date(fromDayKey key: String) -> Date? {
         let bits = key.split(separator: "-").compactMap { Int($0) }
         guard bits.count == 3 else { return nil }
-        return Calendar.current.date(from: DateComponents(year: bits[0], month: bits[1], day: bits[2]))
+        return keyCalendar.date(from: DateComponents(year: bits[0], month: bits[1], day: bits[2]))
+    }
+
+    /// Keys an older build wrote in a non-Gregorian device calendar, rewritten in Gregorian (counts
+    /// on one day summed). They are read in the device's calendar, the one that wrote them; a key
+    /// whose year a Gregorian key could have (2015 to 2100) is left as it is. Nil when nothing moves.
+    private static func gregorianDayKeys(_ counts: [String: Int]) -> [String: Int]? {
+        let writer = Calendar.current
+        guard writer.identifier != .gregorian else { return nil }
+        var out: [String: Int] = [:]
+        var moved = false
+        for (key, value) in counts {
+            let bits = key.split(separator: "-").compactMap { Int($0) }
+            if bits.count == 3, !(2015...2100).contains(bits[0]),
+               let date = writer.date(from: DateComponents(year: bits[0], month: bits[1], day: bits[2])) {
+                out[dayKey(date), default: 0] += value
+                moved = true
+            } else {
+                out[key, default: 0] += value
+            }
+        }
+        return moved ? out : nil
     }
 
     /// Counts tapped today.
@@ -187,7 +225,7 @@ final class TasbihCounters: ObservableObject {
     var bestStreak: Int { streaks().best }
 
     private func computeCurrentStreak() -> Int {
-        let calendar = Calendar.current
+        let calendar = Self.keyCalendar
         let today = calendar.startOfDay(for: Date())
         var day = today
         if countsByDay[Self.dayKey(day)] == nil {
@@ -205,7 +243,7 @@ final class TasbihCounters: ObservableObject {
     }
 
     private func computeBestStreak(current: Int) -> Int {
-        let calendar = Calendar.current
+        let calendar = Self.keyCalendar
         let days = countsByDay.keys.compactMap(Self.date(fromDayKey:)).map { calendar.startOfDay(for: $0) }.sorted()
         var best = 0, run = 0
         var previous: Date?

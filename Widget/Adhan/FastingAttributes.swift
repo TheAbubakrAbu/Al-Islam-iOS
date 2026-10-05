@@ -37,16 +37,23 @@ struct FastingAttributes: ActivityAttributes {
         /// When the countdown began. Needed to draw a progress bar, since the system's self-updating timer
         /// views take a date *range*, not a remaining duration.
         let startTime: Date
-        /// Fajr for suhoor, Maghrib for iftar.
+        /// The end of suhoor (a minute before Fajr's shown minute, `PrayerMinute.suhoorEnd(forFajr:)`),
+        /// or Maghrib for iftar.
         let endTime: Date
         /// The user's own spelling of the prayer the countdown ends on.
         let prayerName: String
+        /// The prayer's own minute when the countdown ends before it: Fajr, for suhoor. Nil for iftar,
+        /// which ends at Maghrib itself (and in a state written before 2026-10-05).
+        var prayerTime: Date? = nil
     }
 }
 
 @available(iOS 16.1, *)
 extension FastingAttributes.ContentState {
     var secondsRemaining: TimeInterval { max(0, endTime.timeIntervalSinceNow) }
+
+    /// The minute the card names for the prayer: Fajr's own for suhoor, which ends a minute before it.
+    var shownPrayerTime: Date { prayerTime ?? endTime }
 
     /// Fraction of the countdown already elapsed, clamped - for the progress capsule.
     var progress: Double {

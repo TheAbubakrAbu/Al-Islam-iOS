@@ -2034,8 +2034,7 @@ struct PrayerCalculationListView: View {
             + "Fajr and Isha, so they are estimated. This matters most far from the equator, but can shift "
             + "summer times at any latitude."
         if let location = live.currentLocation, location.latitude != 1000, location.longitude != 1000 {
-            let coordinates = Coordinates(latitude: location.latitude, longitude: location.longitude)
-            caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
+            caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(atLatitude: location.latitude)) in \(location.city)."
         }
         return caption
     }
@@ -2067,7 +2066,7 @@ struct PrayerCalculationListView: View {
 // MARK: - Settings-search entries (kept in THIS file, next to the screen they describe)
 extension SettingsSearchEntry {
     static let prayerCalculationEntries: [SettingsSearchEntry] = [
-        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerPage(.prayerCalculation)),
+        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia brunei singapore indonesia turkey diyanet automatic country", destination: .prayerPage(.prayerCalculation)),
         .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerPage(.prayerCalculation), advanced: true),
         .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerPage(.prayerCalculation), advanced: true),
         .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerPage(.prayerCalculation)),

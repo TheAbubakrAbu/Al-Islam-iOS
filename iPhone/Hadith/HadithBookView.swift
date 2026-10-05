@@ -304,14 +304,17 @@ struct HadithBookView: View {
             var counts: [Int: Int] = [:]
             var ranges: [Int: ClosedRange<Int>] = [:]
             var ordinals: [Int: Int] = [:]
-            for (offset, chapter) in data.chapters.enumerated() {
+            for chapter in data.chapters {
                 counts[chapter.id] = chapter.rowCount
-                ordinals[chapter.id] = offset + 1
+                ordinals[chapter.id] = data.position(of: chapter)
                 // Citation BASE numbers - the numbers readers actually cite - with idInBook standing
                 // in per row where no citation exists (so books without citations behave exactly as
                 // before). Min/max over the WHOLE slice, never first/last: Sahih Muslim's citations
                 // are not monotonic within a chapter.
-                let rows = data.hadiths(in: chapter)
+                // In a book that cites some rows, only the cited ones count: an uncited row is named
+                // "C:N" there (H4), and its row number is no citation.
+                let citing = data.pack.citesAnyRow
+                let rows = data.hadiths(in: chapter).filter { !citing || $0.citation != nil }
                 if var low = rows.first?.citedBaseNumber {
                     var high = low
                     for hadith in rows.dropFirst() {
@@ -458,7 +461,7 @@ struct HadithBookView: View {
         var cited = data.hadiths(citing: citation.base)
         if let suffix = citation.suffix {
             cited = cited.filter { $0.citation == "\(citation.base)\(suffix)" }
-        } else if cited.isEmpty, let fallback = data.hadith(numbered: citation.base) {
+        } else if cited.isEmpty, let fallback = data.hadith(uncitedRow: citation.base) {
             cited = [fallback]
         }
         return cited
@@ -1250,7 +1253,8 @@ struct HadithBookView: View {
             && columnSelection.currentChapterID == chapter.id
     }
 
-    /// The chapter's place in the book, 1-based - what the badge and "CHAPTER N" header show.
+    /// The chapter's place in the book, 1-based (0 for an introduction that opens it): what the
+    /// badge and "CHAPTER N" header show.
     private func chapterOrdinal(_ chapter: HadithBookData.Chapter, data: HadithBookData) -> Int {
         chapterStats(data).ordinals[chapter.id] ?? 1
     }
@@ -2418,7 +2422,9 @@ struct HadithChapterView: View {
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
             }
 
-            Text("Chapter \(chapterIndex + 1) of \(bookData.chapters.count)")
+            Text(bookData.position(of: chapter) == 0
+                 ? "Introduction"
+                 : "Chapter \(bookData.position(of: chapter)) of \(bookData.chapters.count - (bookData.opensWithIntroduction ? 1 : 0))")
                 .font(.caption2)
                 .lineLimit(1)
                 // -2, NOT the surah pill's -8: that pull-up is tuned for the Quran faces' contained
@@ -2744,7 +2750,7 @@ struct HadithChapterView: View {
     /// the hadith span trailing. One consistent grammar with the book view's pinned header below.
     private var floatingChapterHeader: some View {
         HStack(alignment: .center, spacing: 10) {
-            Text("\(chapterIndex + 1)")
+            Text("\(bookData.position(of: chapter))")
                 .font(.caption.weight(.bold))
                 .foregroundColor(settings.accentColor.color)
                 .padding(.horizontal, 9)
@@ -2821,7 +2827,7 @@ struct HadithChapterView: View {
     }
 
     private func chapterNavButton(title: String, chapter target: HadithBookData.Chapter, systemImage: String, trailing: Bool) -> some View {
-        let ordinal = (bookData.chapters.firstIndex(where: { $0.id == target.id }) ?? 0) + 1
+        let ordinal = bookData.position(of: target)
         return Button {
             navigateToChapter(target)
         } label: {
@@ -2891,7 +2897,8 @@ struct HadithChapterPickerSheet: View {
         }
         let plain = query.foldingLatinDiacritics
         return all.filter {
-            $0.element.english.foldingLatinDiacritics.localizedCaseInsensitiveContains(plain) || String($0.offset + 1) == query
+            $0.element.english.foldingLatinDiacritics.localizedCaseInsensitiveContains(plain)
+                || String(bookData.position(of: $0.element)) == query
         }
     }
 
@@ -2914,13 +2921,13 @@ struct HadithChapterPickerSheet: View {
             ScrollViewReader { proxy in
             List {
                 let counts = countsByChapter
-                ForEach(filteredChapters, id: \.element.id) { offset, chapter in
+                ForEach(filteredChapters, id: \.element.id) { _, chapter in
                     Button {
                         settings.hapticFeedback()
                         onPick(chapter)
                     } label: {
                         HStack(spacing: 10) {
-                            Text("\(offset + 1)")
+                            Text("\(bookData.position(of: chapter))")
                                 .font(.caption.weight(.bold))
                                 .foregroundColor(settings.accentColor.color)
                                 .frame(minWidth: 30)

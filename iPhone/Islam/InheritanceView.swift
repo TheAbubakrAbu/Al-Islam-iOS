@@ -437,7 +437,10 @@ enum Faraid {
         // The ‘Umariyyatan: spouse + both parents and nobody else. The mother takes a third of what
         // is LEFT after the spouse, not a third of the estate, so the father is never left with less
         // than her. Named for ‘Umar, who judged it, and followed by the four schools.
-        let onlySpouseAndParents = hasMother && hasFather && !hasDescendant && siblingHeadCount == 0
+        // Fewer than two siblings, not none: a lone sibling is shut out by the father and leaves the
+        // mother her third (4:11), so the family is still exactly this case. Tested as "no siblings",
+        // one brother handed the mother a third of the WHOLE estate and the father half of that.
+        let onlySpouseAndParents = hasMother && hasFather && !hasDescendant && siblingHeadCount < 2
             && grandmothers == 0 && (n(.husband) > 0 || n(.wives) > 0)
         if onlySpouseAndParents {
             let spouseShare = (fard[.husband]?.share ?? .zero) + (fard[.wives]?.share ?? .zero)
@@ -446,7 +449,7 @@ enum Faraid {
         }
         // The same family with the grandfather in the father's place is NOT the ‘Umariyyatan: the
         // mother takes a third of the whole estate, because the rule is about the father himself.
-        if hasGrandfather && hasMother && !hasDescendant && siblingHeadCount == 0
+        if hasGrandfather && hasMother && !hasDescendant && siblingHeadCount < 2
             && (n(.husband) > 0 || n(.wives) > 0) {
             notes.append("With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the ‘Umariyyatan rule is about the father himself. Malik, ash-Shafi‘i and Ahmad read it that way; Abu Hanifa applied the rule to the grandfather too.")
         }
@@ -499,7 +502,9 @@ enum Faraid {
 
         // Al-Mushtarakah, the case they argued over in front of ‘Umar: the fixed shares leave the
         // full siblings with nothing while the maternal half-siblings take their third.
-        if maternalSiblings >= 2 && (fullBrothers > 0 || fullSisters > 0) && !(residue > .zero) {
+        // It needs a full BROTHER: he is the residuary left with nothing. Full sisters alone hold
+        // fixed shares of their own, and that estate is an ordinary ‘awl, not this case.
+        if maternalSiblings >= 2 && fullBrothers > 0 && !(residue > .zero) {
             notes.append("This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. ‘Umar first ruled exactly that, and Abu Hanifa and Ahmad kept it, which is what is shown here. ‘Umar later shared the third among them all, and Malik and ash-Shafi‘i followed that. Take a real case to a scholar.")
         }
 

@@ -107,6 +107,7 @@ enum CloudMergeRules {
         "zakahCash": .fillIfMissing, "zakahGold": .fillIfMissing, "zakahSilver": .fillIfMissing,
         "zakahBusiness": .fillIfMissing, "zakahTradeShares": .fillIfMissing, "zakahLongShares": .fillIfMissing,
         "zakahOwedToYou": .fillIfMissing, "zakahDebts": .fillIfMissing, "zakahMetalPrice": .fillIfMissing,
+        "zakahGoldPrice": .fillIfMissing, "zakahSilverPrice": .fillIfMissing,
         "zakahNisab": .fillIfMissing, "zakahFitrPeople": .fillIfMissing, "zakahFitrCost": .fillIfMissing,
         "faraidEstate": .fillIfMissing, "faraidDebts": .fillIfMissing, "faraidFuneral": .fillIfMissing,
         "faraidBequest": .fillIfMissing, "faraidCounts": .fillIfMissing,
@@ -149,7 +150,10 @@ enum CloudMergeRules {
             guard let theirs = incoming[key] else { continue }
             let rule = rules[key] ?? .keepLocal
             if case .keepLocal = rule { continue }
-            guard let ours = local[key] else {
+            // An empty blob is a key that was touched and never filled (a store's first write, a
+            // cleared list): it says nothing, and as "ours" it could not be parsed, so the merge
+            // gave up and the backup's whole list was dropped.
+            guard let ours = local[key], !((ours as? Data)?.isEmpty ?? false) else {
                 result[key] = theirs
                 continue
             }

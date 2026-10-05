@@ -378,7 +378,9 @@ final class ActivityLog: ObservableObject {
                 }
                 best = max(best, run)
                 guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-                day = next
+                // Re-anchored, so a day whose midnight the clocks skip cannot leave the walk an hour
+                // past the start of every later day (and short of the last one).
+                day = calendar.startOfDay(for: next)
             }
             result.longest = max(best, current)
         } else {

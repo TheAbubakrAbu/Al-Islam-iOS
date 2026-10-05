@@ -435,13 +435,13 @@ final class QiraatPlacesStore {
             for own in ownsUnsorted.sorted() {
                 guard let ayah = quranData.ayah(surah: surah, ayah: own),
                       ayah.existsInQiraah(tag, surahID: surah) else { continue }
-                riwayahPieces.append((own, ayah.displayArabicText(surahId: surah, clean: false, qiraahOverride: tag)))
+                riwayahPieces.append((own, ayah.rawArabicText(surahId: surah, qiraahOverride: tag)))
             }
             guard !riwayahPieces.isEmpty else { continue }
             var hafsPieces: [(ayah: Int, text: String)] = []
             for number in span {
                 guard let ayah = quranData.ayah(surah: surah, ayah: number) else { continue }
-                hafsPieces.append((number, ayah.displayArabicText(surahId: surah, clean: false, qiraahOverride: "")))
+                hafsPieces.append((number, ayah.rawArabicText(surahId: surah, qiraahOverride: "")))
             }
             guard !hafsPieces.isEmpty else { continue }
             let change = QiraatChange.analyze(hafsPieces: hafsPieces, riwayahPieces: riwayahPieces, tag: tag, surah: surah)
@@ -726,6 +726,17 @@ struct QiraatExplorerView: View {
     private var accent: Color { settings.accentColor.color }
     private var surahObject: Surah? { quranData.surah(surahID) }
     private var ayahObject: Ayah? { surahObject?.ayahs.first { $0.id == hafsAyah } }
+    /// The explorer's ayah as the READER numbers it. A page that draws the ayah in the displayed
+    /// riwayah (the readings page's preview card) needs that riwayah's own row: under the Hafs
+    /// number it drew another verse wherever the two counts have drifted apart. Nil when the
+    /// displayed riwayah numbers no such ayah.
+    private var readerAyahObject: Ayah? {
+        let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+        guard !tag.isEmpty,
+              let alignment = QiraahComparison.alignment(surahID: surahID, tag: tag, quranData: quranData)
+        else { return ayahObject }
+        return alignment.riwayahNumberForHafs[hafsAyah].flatMap { quranData.ayah(surah: surahID, ayah: $0) }
+    }
     private var surahName: String { surahObject?.nameTransliteration ?? "Surah \(surahID)" }
     private var compareTag: String {
         let tag = Settings.Riwayah.canonicalTag(compareTagRaw)
@@ -1051,7 +1062,7 @@ struct QiraatExplorerView: View {
     private var identicalRows: [QiraatRiwayahRow] { rows.filter { !$0.differs } }
 
     private var hafsText: String {
-        ayahObject?.displayArabicText(surahId: surahID, clean: false, qiraahOverride: "") ?? ""
+        ayahObject?.rawArabicText(surahId: surahID, qiraahOverride: "") ?? ""
     }
 
     /// The Hafs text with every word any riwayah changes tinted (set in `refreshRows`).
@@ -1188,8 +1199,12 @@ struct QiraatExplorerView: View {
                     junctureRow(juncture)
                 }
 
-                if let surah = surahObject, let ayah = ayahObject {
-                    NavigationLink(destination: LazyDestination { AyahQiraatVariantsView(surah: surah, ayah: ayah) }) {
+                // The explorer holds the Hafs number, which is the readings pack's key; the page's
+                // preview card gets the reader's own row for it (see `readerAyahObject`).
+                if let surah = surahObject, let ayah = readerAyahObject {
+                    NavigationLink(destination: LazyDestination {
+                        AyahQiraatVariantsView(surah: surah, ayah: ayah, hafsAyahs: hafsAyah...hafsAyah)
+                    }) {
                         Label("All Readings and Notes", systemImage: "text.book.closed")
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(accent)
@@ -1400,8 +1415,10 @@ struct QiraatExplorerView: View {
         if a != b, !QiraatProfiles.shareOneText(a, b) {
             let tags = [a, b].filter { !$0.isEmpty }
             for ayah in store.variantAyahs(surah: surah, tags: tags, everyDifference: everyDifference) {
-                let x = duelText(a, surah: surah, ayah: ayah).map { QiraatTint.withoutStopSigns($0.text) }
-                let y = duelText(b, surah: surah, ayah: ayah).map { QiraatTint.withoutStopSigns($0.text) }
+                // The shared spelling key (see `refreshDuel`), so a place is listed exactly when
+                // the two sides will show a differing word there.
+                let x = duelText(a, surah: surah, ayah: ayah).map { QiraahSpelling.key($0.text) }
+                let y = duelText(b, surah: surah, ayah: ayah).map { QiraahSpelling.key($0.text) }
                 if x != y { out.append(ayah) }
             }
         }
@@ -1435,9 +1452,12 @@ struct QiraatExplorerView: View {
         var aWords = Set(diff.hafsOnly)
         var bWords = Set(diff.riwayahOnly)
         // Paired words that fold alike but are written differently (other vowels, a dagger alef,
-        // a hamzah): the folded diff is blind to them, the exact text is not.
+        // a hamzah): the folded diff is blind to them, the exact text is not. Compared under the
+        // shared spelling key rather than byte for byte: only Hafs's text keeps the silent letter
+        // ring (U+0652), so with Hafs as a side every ءَامَنُواْ was tinted as a difference (at 2:67
+        // three words against Shu'bah, where one differs).
         for (h, r) in diff.pairs
-        where QiraatTint.withoutStopSigns(diff.hafs[h].text) != QiraatTint.withoutStopSigns(diff.riwayah[r].text) {
+        where QiraahSpelling.key(diff.hafs[h].text) != QiraahSpelling.key(diff.riwayah[r].text) {
             aWords.insert(h)
             bWords.insert(r)
         }
@@ -1828,16 +1848,19 @@ struct QiraatExplorerView: View {
     }
 
     /// The Hafs side is the ayah itself or the whole span the riwayah joins; the riwayah side is its
-    /// own ayah or every piece a split divides this ayah into.
+    /// own ayah or every piece a split divides this ayah into. Both sides are the RAW texts here and
+    /// everywhere else in the explorer (`rawArabicText`, as the resolver hands them back): they were
+    /// `displayArabicText(clean: false)`, which follows the reader's Hide Dots, and a comparison of
+    /// readings made on dotless text cannot see a difference that is only a letter's dots.
     static func change(for tag: String, surah: Int, hafsAyah: Int, resolved: ResolvedQiraahText, quranData: QuranData) -> QiraatChange {
         let span = resolved.mergedSpan ?? (hafsAyah...hafsAyah)
         let hafsPieces: [(ayah: Int, text: String)] = span.compactMap { number in
-            quranData.ayah(surah: surah, ayah: number).map { (number, $0.displayArabicText(surahId: surah, clean: false, qiraahOverride: "")) }
+            quranData.ayah(surah: surah, ayah: number).map { (number, $0.rawArabicText(surahId: surah, qiraahOverride: "")) }
         }
         let own = resolved.ownNumber ?? hafsAyah
         let owns = resolved.splitSpan.map { Array($0) } ?? [own]
         let riwayahPieces: [(own: Int, text: String)] = owns.compactMap { number in
-            quranData.ayah(surah: surah, ayah: number).map { (number, $0.displayArabicText(surahId: surah, clean: false, qiraahOverride: tag)) }
+            quranData.ayah(surah: surah, ayah: number).map { (number, $0.rawArabicText(surahId: surah, qiraahOverride: tag)) }
         }
         return QiraatChange.analyze(hafsPieces: hafsPieces, riwayahPieces: riwayahPieces, tag: tag, surah: surah)
     }
@@ -1873,7 +1896,7 @@ struct QiraatSurahRowModel {
 
     @MainActor
     static func make(surah: Int, hafsAyah: Int, tag: String, quranData: QuranData, accent: Color) -> QiraatSurahRowModel {
-        let hafsText = quranData.ayah(surah: surah, ayah: hafsAyah)?.displayArabicText(surahId: surah, clean: false, qiraahOverride: "") ?? ""
+        let hafsText = quranData.ayah(surah: surah, ayah: hafsAyah)?.rawArabicText(surahId: surah, qiraahOverride: "") ?? ""
         guard let resolved = QiraahAyahResolver.resolve(surahNumber: surah, ayahNumber: hafsAyah, anchorHafsAyah: hafsAyah,
                                                         optionTag: tag, clean: false) else {
             return QiraatSurahRowModel(hafs: AttributedString(hafsText), riwayah: nil, note: nil, differs: false, wordCount: 0)
@@ -2059,7 +2082,7 @@ struct QiraatPlacePickerSheet: View {
     }
 
     private func placeRow(_ ayah: Int) -> some View {
-        let text = quranData.ayah(surah: surahID, ayah: ayah)?.displayArabicText(surahId: surahID, clean: false, qiraahOverride: "") ?? ""
+        let text = quranData.ayah(surah: surahID, ayah: ayah)?.rawArabicText(surahId: surahID, qiraahOverride: "") ?? ""
         let tokens = QiraatWordDiff.tokens(of: text)
         let differing = store.differing(surah: surahID, ayah: ayah, tags: tags, everyDifference: everyDifference)
         var words = Set<Int>()

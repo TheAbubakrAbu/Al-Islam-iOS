@@ -91,6 +91,15 @@ final class AskAIConversation: ObservableObject {
         }
         #endif
         load()
+        // "Erase Everything" deletes the saved transcript (`Settings.deviceOnlyDocumentFiles`); the
+        // one in memory goes with it, or the next answer would write the erased conversation back.
+        NotificationCenter.default.addObserver(
+            forName: Settings.contentErasedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reset() }
+        }
     }
 
     // MARK: - Turns
