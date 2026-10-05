@@ -29,9 +29,14 @@ final class ArabicSpeech: NSObject, ObservableObject {
     /// the robotic compact voice - even when the user had downloaded a vastly better Enhanced/Premium
     /// voice. Cached per resolution, re-resolved on each queue START (not per phrase): the user can
     /// download a better voice in Settings mid-session, and the next tap should get it.
-    private var arabicVoice: AVSpeechSynthesisVoice?
+    /// Published: it resolves asynchronously now (see `resolveVoice`), and `isAvailable` /
+    /// `onlyCompactVoiceAvailable` gate the Listen buttons and the voice-quality hint. Without a
+    /// publish those rows would keep the answer from before the voice was known.
+    @Published private var arabicVoice: AVSpeechSynthesisVoice?
 
-    private static func bestArabicVoice() -> AVSpeechSynthesisVoice? {
+    /// `nonisolated`: this runs on `voiceQueue`, never on main (see `resolveVoice`). It touches no
+    /// instance state, only the AVFoundation voice catalog, so it carries no actor isolation.
+    nonisolated private static func bestArabicVoice() -> AVSpeechSynthesisVoice? {
         let arabic = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("ar") }
         guard !arabic.isEmpty else { return nil }
 
@@ -47,30 +52,59 @@ final class ArabicSpeech: NSObject, ObservableObject {
         }
     }
 
-    /// Resolved once and kept; `speechVoices()` enumerates every installed voice (5-30 ms) and
-    /// used to run on every tap. A voice downloaded mid-session arrives through
-    /// `availableVoicesDidChangeNotification`, which re-resolves (Performance Guide, Phase 6 step 11).
+    /// Resolved once and kept, and resolved OFF the main thread.
+    ///
+    /// `speechVoices()` is documented above as 5-30 ms, which is what it costs on a phone. On a Mac it
+    /// is an XPC round trip into `TextToSpeech` that lands in `axUnsafeForcedSync` on a semaphore, and
+    /// a 2026-09-28 hang report caught it holding the main thread for **22 seconds** (the app was
+    /// frozen the whole time). So nothing on the main thread may wait for it.
+    ///
+    /// Returns the voice when one is already resolved; otherwise it returns nil and resolves in the
+    /// background, calling `then` on main when it lands. A tap that arrives before the first
+    /// resolution therefore speaks as soon as the voice is known instead of being dropped.
     @discardableResult
-    private func resolveVoice() -> AVSpeechSynthesisVoice? {
-        if voiceResolved { return arabicVoice }
-        arabicVoice = Self.bestArabicVoice()
-        voiceResolved = true
-        return arabicVoice
+    private func resolveVoice(then: (@MainActor (AVSpeechSynthesisVoice?) -> Void)? = nil) -> AVSpeechSynthesisVoice? {
+        if voiceResolved {
+            if let then { then(arabicVoice) }
+            return arabicVoice
+        }
+        guard !voiceResolving else { return nil }
+        voiceResolving = true
+        Self.voiceQueue.async {
+            let resolved = Self.bestArabicVoice()
+            Task { @MainActor in
+                let speech = ArabicSpeech.shared
+                speech.arabicVoice = resolved
+                speech.voiceResolved = true
+                speech.voiceResolving = false
+                if let then { then(resolved) }
+            }
+        }
+        return nil
     }
 
     private var voiceResolved = false
+    private var voiceResolving = false
     private var voicesObserver: NSObjectProtocol?
+
+    /// The lane `speechVoices()` runs on, so the main thread never waits on the TextToSpeech XPC reply.
+    private static let voiceQueue = DispatchQueue(label: "arabic.speech.voices", qos: .userInitiated)
 
     override private init() {
         super.init()
         synthesizer.delegate = self
-        arabicVoice = Self.bestArabicVoice()
-        voiceResolved = true
+        // Not resolved here: this initializer runs on the main thread (the `shared` singleton is first
+        // touched from a view), and the enumeration is the 22-second hang above. The first `speak`
+        // resolves it in the background and then speaks.
+        resolveVoice()
         if #available(iOS 17.0, watchOS 10.0, *) {
+            // `queue: nil` deliberately: a `queue: .main` observer runs the handler as an NSOperation on
+            // main, which is exactly how the enumeration below froze the app. The handler only flips
+            // flags, and `resolveVoice` hops to main itself for the write.
             voicesObserver = NotificationCenter.default.addObserver(
-                forName: AVSpeechSynthesizer.availableVoicesDidChangeNotification, object: nil, queue: .main
+                forName: AVSpeechSynthesizer.availableVoicesDidChangeNotification, object: nil, queue: nil
             ) { _ in
-                MainActor.assumeIsolated {
+                Task { @MainActor in
                     let speech = ArabicSpeech.shared
                     speech.voiceResolved = false
                     speech.resolveVoice()
@@ -199,7 +233,12 @@ final class ArabicSpeech: NSObject, ObservableObject {
     /// should say the mark you last tapped, not queue up a backlog of every one you passed.
     func speak(_ text: String, rate: Float = 0.35) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard resolveVoice() != nil else { return }
+        // The voice may not be resolved yet (it resolves off-main; see `resolveVoice`). Speak as soon
+        // as it lands rather than dropping this tap. Still silent when the device has no Arabic voice.
+        guard resolveVoice(then: { [weak self] voice in
+            guard voice != nil, self != nil else { return }
+            ArabicSpeech.shared.speak(text, rate: rate)
+        }) != nil else { return }
 
         stop()
         currentText = text
@@ -212,7 +251,11 @@ final class ArabicSpeech: NSObject, ObservableObject {
     /// queues utterances natively, so each item is its own phrase run with a longer breath between items.
     func speakAll(_ texts: [String], rate: Float = 0.4) {
         let cleaned = texts.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        guard !cleaned.isEmpty, resolveVoice() != nil else { return }
+        guard !cleaned.isEmpty else { return }
+        guard resolveVoice(then: { voice in
+            guard voice != nil else { return }
+            ArabicSpeech.shared.speakAll(cleaned, rate: rate)
+        }) != nil else { return }
 
         stop()
         isSpeakingQueue = true

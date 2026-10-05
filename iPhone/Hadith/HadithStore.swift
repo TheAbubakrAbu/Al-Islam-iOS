@@ -446,8 +446,28 @@ final class HadithStore: ObservableObject {
         }
 
         /// `flush()`, and the log is in the defaults when it returns.
+        ///
+        /// The write happens HERE, on the caller's thread, instead of being handed to `ioQueue` and
+        /// waited for. `UserDefaults.set` posts `didChangeNotification`, and any main-queue observer
+        /// of it turns that post into a blocking hop to the main thread; doing the write on `ioQueue`
+        /// and then sitting in `ioQueue.sync {}` meant the main thread waited for the queue while the
+        /// queue waited for the main thread. That deadlock froze the app and got it killed on Mac
+        /// (2026-10-05, iPhone-2026-10-05-004500.ips, via `CloudSnapshot.capture` ->
+        /// `Settings.flushAllPendingWrites`). Writing on the caller keeps the notification on the
+        /// caller's thread, where it cannot block anything this function is waiting for.
+        ///
+        /// `ioQueue.sync {}` still runs, AFTER the write and with nothing of ours left on the queue:
+        /// it drains any write already in flight (a `scheduleSave` debounce that fired just before
+        /// this call) so the ordering guarantee - the log is on disk when this returns - still holds.
         func flushSynchronously() {
-            flush()
+            // Take the pending work off the queue without running it there: the snapshot it holds is
+            // the same one this function is about to write.
+            saveWork?.cancel()
+            saveWork = nil
+            let snapshot = entries
+            if let data = try? JSONEncoder().encode(snapshot) {
+                UserDefaults.standard.set(data, forKey: Self.key)
+            }
             Self.ioQueue.sync {}
         }
 

@@ -203,6 +203,46 @@ enum AppLifecycle {
         ) { _ in
             Task { @MainActor in purgeQuranSessionCaches() }
         }
+        installFootprintPurge()
+    }
+
+    /// The Mac's own purge trigger. On iOS the caches above are shed by a memory warning; on a Mac
+    /// (an iOS app on Apple Silicon, 32 GB of RAM and swap) that warning effectively NEVER arrives,
+    /// so every one of them grew for the whole session and nothing ever dropped it - the alignment
+    /// and diff tables are plain dictionaries documented as living "for the app's lifetime", keyed
+    /// per surah PER RIWAYAH, so a reading session that compares qiraat accumulates up to 114 x 19
+    /// of them. Measured on Abu's Mac (2026-10-05, 4.6.5 b236): 405 MB resident / 308 MB dirty in
+    /// `Malloc Small` with a 553 MB peak footprint, against 226 MB a moment after launch, while
+    /// system memory sat at 65% free and no warning had fired in two hours.
+    ///
+    /// So the footprint is watched directly instead of waited for: while the app is frontmost, one
+    /// check a minute, and the same purge runs when it crosses the ceiling. Cheap (`task_info`, no
+    /// allocation) and self-limiting - the purge drops the caches, the footprint falls back under
+    /// the ceiling, and the next check does nothing. Every target rebuilds on demand.
+    ///
+    /// The timer runs ONLY on Mac: on a real iPhone or iPad the memory warning is the right signal
+    /// (it arrives while there is still time to act, and it accounts for the rest of the system),
+    /// and a repeating timer there would be a wake-up the device does not need.
+    private static var footprintTimer: Timer?
+    /// Purge above this. Well over a heavy reading session's working set (the mushaf's own fallback
+    /// renders are bounded at 12 pages), so a reader never pays for a purge it did not need; far
+    /// enough under the footprint where an iOS process on a Mac starts being squeezed.
+    private static let footprintCeilingMB: Double = 420
+
+    @MainActor
+    private static func installFootprintPurge() {
+        guard ProcessInfo.processInfo.isiOSAppOnMac, footprintTimer == nil else { return }
+        let timer = Timer(timeInterval: 60, repeats: true) { _ in
+            Task { @MainActor in
+                guard AppFootprint.megabytes > footprintCeilingMB else { return }
+                purgeQuranSessionCaches()
+            }
+        }
+        // `.common` so the check still happens while a menu or a scroll is tracking; tolerance lets
+        // the system coalesce it with other timers rather than waking for this alone.
+        timer.tolerance = 15
+        RunLoop.main.add(timer, forMode: .common)
+        footprintTimer = timer
     }
 
     @MainActor
@@ -235,6 +275,24 @@ enum AppLifecycle {
         // Send any just-made setting change before the app is suspended, so it can't be lost (and
         // can't be reverted by a stale synced value on the next launch).
         WatchConnectivityManager.shared.flushPendingSync()
+    }
+}
+
+/// The process's own physical footprint, in MB - the number Activity Monitor and `vmmap` call
+/// "physical footprint", and the one an iOS process is judged by. `MemoryFootprint` reads the same
+/// field but is DEBUG-only (a `-renderCounter` companion); this one ships, because the Mac's
+/// footprint purge in `AppLifecycle` needs it in Release, where the memory warning never comes.
+enum AppFootprint {
+    static var megabytes: Double {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return 0 }
+        return Double(info.phys_footprint) / 1_048_576
     }
 }
 

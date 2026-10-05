@@ -353,11 +353,24 @@ private struct MushafFoldedChrome: ViewModifier {
 /// branching the whole reader on an availability check would give the two branches different view
 /// identities, remounting the pager (and so re-reading every page) on any change that crossed the branch.
 private struct MushafRootTabBarHidden: ViewModifier {
-    @Environment(\.isQuranTabActive) private var isQuranTabActive
-
     func body(content: Content) -> some View {
+        // ALWAYS `.visible` (Abu, 2026-10-05: "bring back the bottom bar always cause it gets stuck
+        // and i cant switch outside of quran"). Hiding the SHARED tab bar can strand the user in the
+        // Quran tab: the bar came back only while `isQuranTabActive` said this tab was front, and
+        // both that flag (`QuranView.isActiveTab`) and its environment key default to TRUE, so any
+        // path that mounts the reader without MainTabView feeding it a live value kept the bar
+        // hidden with no way out. On Mac/iPad it is worse: NavigationSplitView keeps this column
+        // mounted while another tab is on screen.
+        //
+        // Chevron-folding the reader's own bar still gives a full-screen page, which is the
+        // supported way to get to no chrome. A visible tab bar can never trap anyone; a hidden one
+        // can, so the trade is not symmetric.
+        //
+        // Kept as a modifier (not deleted at the call site) so the reader's view identity is
+        // unchanged: an inline availability branch would give the two branches different identities
+        // and remount the pager, re-reading every page.
         if #available(iOS 16.0, *) {
-            content.toolbar(isQuranTabActive ? .hidden : .visible, for: .tabBar)
+            content.toolbar(.visible, for: .tabBar)
         } else {
             content
         }

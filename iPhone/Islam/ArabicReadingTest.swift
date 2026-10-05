@@ -1636,15 +1636,30 @@ final class ReadingTestProgress: ObservableObject {
         // "Erase Everything" removes the whole defaults domain while this object still holds the
         // ladder. Settings.swift compiles into targets this file is not in, so it cannot call in
         // here: notice the keys going instead.
+        // `queue: nil` (deliver on the posting thread), NOT `queue: .main`. A main-queue observer
+        // of an app-wide notification makes every background post BLOCK on the main thread:
+        // NotificationCenter delivers through an NSOperation and waits for it. `UserDefaults.set`
+        // posts this notification, and the stores write defaults on their own io queues, so a
+        // main-queue observer here put a main-thread hop inside every one of those writes - one
+        // half of a deadlock that froze and then killed the app on Mac (2026-10-05,
+        // iPhone-2026-10-05-004500.ips: the main thread sat in `ViewedLog.flushSynchronously`'s
+        // `ioQueue.sync` while that queue's `UserDefaults.set` waited for main to drain THIS
+        // observer). The work below is a few defaults reads and a decision; it needs no main
+        // thread, and the two published properties are set on main explicitly.
         defaultsObserver = NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: nil, queue: .main
+            forName: UserDefaults.didChangeNotification, object: nil, queue: nil
         ) { [weak self] _ in
             guard let self, self.hasSaved,
                   UserDefaults.standard.data(forKey: Self.key) == nil,
                   UserDefaults.standard.string(forKey: Self.placementKey) == nil else { return }
-            self.hasSaved = false
-            if !self.records.isEmpty { self.records = [:] }
-            if self.placement != nil { self.placement = nil }
+            // `records`/`placement` are observed by views, so they change on main - asynchronously,
+            // because the poster may BE the main thread (an erase runs there) and a sync hop would
+            // deadlock on itself.
+            DispatchQueue.main.async {
+                self.hasSaved = false
+                if !self.records.isEmpty { self.records = [:] }
+                if self.placement != nil { self.placement = nil }
+            }
         }
         // The observer above only notices the keys GOING (an erase). A restore writes them, which
         // it cannot tell from this object's own save, so that case is announced instead.
