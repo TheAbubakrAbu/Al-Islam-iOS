@@ -1666,6 +1666,18 @@ struct QuranView: View {
     ) -> some View {
         #if os(iOS)
         if usesColumnNavigation || isPicker {
+            // The row the detail column is showing stays marked (Abu, 2026-10-05: "when i tap on a
+            // column it stays highlighted ... sometimes it doesnt highlight at all"). These rows are
+            // plain Buttons - a Button so that re-tapping the OPEN row still answers - and
+            // `.buttonStyle(.plain)` draws no selection, so without this a tap opened the detail with
+            // nothing to say which row it came from. The grid tiles beside these rows already ringed
+            // (`gridSelectionRing`); this is the same promise for list mode.
+            //
+            // Not in the picker sheet: it has one column, dismisses on a pick, and already tints the
+            // surah being read (`pickerCurrentSurahTint`).
+            let isOpenInDetail = !isPicker && usesColumnNavigation
+                && (selectedRoute ?? defaultDetailRoute) == route
+
             Button {
                 settings.hapticFeedback()
                 selectQuranRoute(route)
@@ -1685,6 +1697,7 @@ struct QuranView: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
+            .rowSelectionHighlight(isOpenInDetail)
         } else if #available(iOS 16.0, *) {
             NavigationLink(value: route) {
                 label()
@@ -2957,7 +2970,9 @@ struct QuranView: View {
                     if usesGrid {
                         LazyVGrid(
                             columns: quranGridColumns,
-                            alignment: .leading,
+                            // Centered like every short tile label (Abu, 2026-10-05); only the summary
+                            // grid above and the ayah/hadith prose tiles stay leading.
+                            alignment: .center,
                             spacing: 10
                         ) {
                             ForEach(sortedBookmarks, id: \.id) { bookmarkedAyah in
@@ -3149,7 +3164,9 @@ struct QuranView: View {
                     if usesGrid {
                         LazyVGrid(
                             columns: quranGridColumns,
-                            alignment: .leading,
+                            // Centered like every short tile label (Abu, 2026-10-05); only the summary
+                            // grid above and the ayah/hadith prose tiles stay leading.
+                            alignment: .center,
                             spacing: 10
                         ) {
                             ForEach(sortedFavorites, id: \.self) { surahID in
@@ -3499,7 +3516,9 @@ struct QuranView: View {
         if usesGrid {
             LazyVGrid(
                 columns: quranGridColumns,
-                alignment: .leading,
+                // Centered like every short tile label (Abu, 2026-10-05); only the summary
+                // grid above and the ayah/hadith prose tiles stay leading.
+                alignment: .center,
                 spacing: 10
             ) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
@@ -3852,7 +3871,7 @@ struct QuranView: View {
 
     @ViewBuilder
     private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext) -> some View {
-        LazyVGrid(columns: surahGridColumns, alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: surahGridColumns, alignment: .center, spacing: 10) {
             ForEach(surahs, id: \.id) { surah in
                 surahGridTile(surah: surah, context: context)
             }
@@ -4070,7 +4089,7 @@ struct QuranView: View {
                 #if os(iOS)
                 if usesGrid {
                     let openRowID = openJuzRowID(in: sectionData, context: context)
-                    LazyVGrid(columns: surahGridColumns, alignment: .leading, spacing: 10) {
+                    LazyVGrid(columns: surahGridColumns, alignment: .center, spacing: 10) {
                         ForEach(sectionData.rows) { row in
                             juzGridTile(row: row, isOpen: row.id == openRowID, context: context)
                         }

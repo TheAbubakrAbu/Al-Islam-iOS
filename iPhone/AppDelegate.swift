@@ -305,6 +305,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             }
         }
     }
+
+    #if DEBUG
+    /// `-forceLandscape` / `-forcePortrait`: pins the whole app to one orientation for the run.
+    ///
+    /// The headless route into landscape. `requestGeometryUpdate` is a REQUEST: it only resolves to a
+    /// rotation the scene's supported set already allows AND the shell agrees to, and on a simulator
+    /// booted without Simulator.app (Xcode 27 ships no GUI simulator here) nothing ever agrees - the
+    /// call reports no error and the band stays portrait, so `-rotateScript` silently rotates nothing.
+    /// Narrowing the SUPPORTED set is not a request: UIKit has nowhere else to put the interface, so
+    /// the scene comes up landscape on the first frame and every size class, safe area and band is the
+    /// real one. That is what the padding/list/perf work in landscape has to be measured against.
+    func application(_ application: UIApplication,
+                     supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-forceLandscape") { return .landscape }
+        if args.contains("-forcePortrait") { return .portrait }
+        return window?.traitCollection.userInterfaceIdiom == .pad ? .all : .allButUpsideDown
+    }
+    #endif
 }
 
 // MARK: - "Did you pray X?" after a notification tap

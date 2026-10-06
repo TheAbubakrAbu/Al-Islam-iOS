@@ -331,46 +331,48 @@ private struct MushafFoldedChrome: ViewModifier {
     }
 }
 
-/// Hides the root tab bar (Adhan / Quran / Hadith / Islam / Settings) while the page reader is on screen
-/// AND the Quran tab is the one being shown, so a page has exactly ONE bar at the bottom: its own
-/// (Abu, 2026-10-04: "i want one of both to show"). Two stacked bars cost ~49pt that other apps spend on
-/// bigger text.
+/// Hides the root tab bar (Adhan / Quran / Hadith / Islam / Settings) while the page reader is FOLDED,
+/// and shows it the rest of the time. Collapsing is the one gesture that asks for the whole screen, so it
+/// takes every bar with it: the reader's own controls, the top bar, and this one (Abu, 2026-10-05: "it
+/// gets rid of the top bar and the liquid glass tab bar"). Unfolded, a page shows the tab bar and its own
+/// footer both.
 ///
-/// The reader's bar wins over the tab bar because it is the one a page is read with (Search, the riwayah
-/// picker, play, and the surah/juz footer); switching tabs mid-ayah is rare, and `Back` in the top left
-/// leaves the reader. Folding the reader's own bar away with the chevron is unchanged, and is the way to
-/// get to NO bars when you want the whole screen.
+/// WHY THE FOLD IS THE ONLY SAFE KEY. Two things have gone wrong here before, and both were about the bar
+/// being hidden with no way to get it back:
+/// - Abu, 2026-10-05: "bring back the bottom bar always cause it gets stuck and i cant switch outside of
+///   quran". Hiding it for the reader's whole lifetime stranded the user in the Quran tab. It was keyed to
+///   `isQuranTabActive`, and both that flag (`QuranView.isActiveTab`) and its environment key default to
+///   TRUE, so any path that mounted the reader without `MainTabView` feeding a live value hid the bar with
+///   no way out. On Mac/iPad it is worse: `NavigationSplitView` keeps this column mounted while another
+///   tab is on screen.
+/// - Abu, 2026-10-04: "tab bar keeps randomly hiding its hidden in adhan i just opened the app". The
+///   launch warm (`MainTabView.warmUnderCover`) selects the Quran tab for a few frames and settles on the
+///   landing tab; in page mode that mounted this reader, which hid the shared bar, and the app revealed on
+///   Adhan with no tab bar.
 ///
-/// THE TAB GATE IS LOAD-BEARING (Abu, 2026-10-04: "tab bar keeps randomly hiding its hidden in adhan i
-/// just opened the app"). `.toolbar(.hidden, for: .tabBar)` addresses the ENCLOSING TabView, which all
-/// five tabs share; it is scoped to this stack only for as long as SwiftUI keeps it so. The launch warm
-/// (`MainTabView.warmUnderCover`) selects the Quran tab for a few frames to build its view tree and then
-/// settles on the landing tab - in page mode that mounts this reader, which hid the shared bar, and the
-/// app revealed on Adhan with no tab bar. Reading the tab means the hidden value is only ever asked for
-/// while the Quran tab is actually front, so the warm pass mounts the reader with the bar VISIBLE.
+/// The FOLD is immune to both, which is why it replaces the tab gate rather than joining it.
+/// `.toolbar(.hidden, for: .tabBar)` addresses the ENCLOSING TabView that all five tabs share, so the
+/// danger was always a stale `true` leaking out of this reader. `folded` is the reader's own `barsFaded`,
+/// which is false unless the user tapped the chevron, is reset by the chevron itself, and is mirrored by
+/// the chevron on screen: the control that hid the bar is always visible to bring it back. The warm pass
+/// mounts the reader unfolded, so it hides nothing.
+///
+/// Not a band change for the page: the tab bar is the ENCLOSING TabView's, outside this reader's safe
+/// area, so hiding it never re-fits the page's Arabic. That is what the older rule against keying it to
+/// the fold was guarding ("a second band change half a beat after the fold's") - the reader's own inset is
+/// the one that must not move twice, and it does not.
 ///
 /// Its own modifier rather than an inline `if`: `.toolbar(.hidden, for: .tabBar)` is iOS 16+, and
 /// branching the whole reader on an availability check would give the two branches different view
 /// identities, remounting the pager (and so re-reading every page) on any change that crossed the branch.
 private struct MushafRootTabBarHidden: ViewModifier {
+    /// The reader's fold INTENT (`barsFaded`), not its room: the bar leaves on the same frame the rest of
+    /// the chrome starts fading.
+    let folded: Bool
+
     func body(content: Content) -> some View {
-        // ALWAYS `.visible` (Abu, 2026-10-05: "bring back the bottom bar always cause it gets stuck
-        // and i cant switch outside of quran"). Hiding the SHARED tab bar can strand the user in the
-        // Quran tab: the bar came back only while `isQuranTabActive` said this tab was front, and
-        // both that flag (`QuranView.isActiveTab`) and its environment key default to TRUE, so any
-        // path that mounts the reader without MainTabView feeding it a live value kept the bar
-        // hidden with no way out. On Mac/iPad it is worse: NavigationSplitView keeps this column
-        // mounted while another tab is on screen.
-        //
-        // Chevron-folding the reader's own bar still gives a full-screen page, which is the
-        // supported way to get to no chrome. A visible tab bar can never trap anyone; a hidden one
-        // can, so the trade is not symmetric.
-        //
-        // Kept as a modifier (not deleted at the call site) so the reader's view identity is
-        // unchanged: an inline availability branch would give the two branches different identities
-        // and remount the pager, re-reading every page.
         if #available(iOS 16.0, *) {
-            content.toolbar(.visible, for: .tabBar)
+            content.toolbar(folded ? .hidden : .visible, for: .tabBar)
         } else {
             content
         }
@@ -470,6 +472,20 @@ struct SurahPageReader<Controls: View>: View {
     @Binding var highlightedAyah: HighlightedAyahRef?
     /// Whether the in-page find bar is open (toggled by the search button in the parent's bottom bar).
     @Binding var searchActive: Bool
+    /// Mirrors the fold out to the host, which owns the navigation bar.
+    ///
+    /// HELD FALSE since 2026-10-05: the navigation bar NEVER folds. It carries the surah name, the
+    /// settings gear and - the reason this changed - the BACK BUTTON, which folded was the only way out
+    /// of the reader ("also show the top wht the surah name and the butotns and the back button cause
+    /// tahts the only way to get out"). Folding it left unfolding as the single escape from a screen whose
+    /// only other gesture, a tap on the page, is already the ayah mark. That is the same stranding the
+    /// root tab bar was fixed for twice (see `MushafRootTabBarHidden`), one layer up.
+    ///
+    /// Kept as a binding rather than deleted: the host still owns the bar, and the reader's `.onDisappear`
+    /// safety net that clears it is what stops the bars arriving "chopped" on a swipe-back. Supersedes the
+    /// same morning's "it gets rid of the top bar and the liquid glass tab bar" for the TOP bar only; the
+    /// tab bar still folds, because the chevron that hid it stays on screen to bring it back.
+    @Binding var chromeCollapsed: Bool
     /// The search-arrival snippet: the ayah the navigation targeted plus the term that matched it. The
     /// page colors the matched substring in accent until the reader's first touch clears it.
     var arrivalHighlight: (ref: HighlightedAyahRef, term: String)? = nil
@@ -1088,6 +1104,10 @@ struct SurahPageReader<Controls: View>: View {
         guard collapsed != barsFaded else { return }
         pagerBand.foldGeneration &+= 1
         let generation = pagerBand.foldGeneration
+        // The navigation bar does NOT fold (see `chromeCollapsed`): it carries the Back button, the only
+        // way out of the reader. Held false so a reader that opened folded from a previous session, or
+        // one whose host still has a stale true, gets its bar back on the first fold either way.
+        if chromeCollapsed { chromeCollapsed = false }
         if collapsed {
             withAnimation(.easeIn(duration: mushafChromeFadeOut)) {
                 barsFaded = true
@@ -1238,6 +1258,13 @@ struct SurahPageReader<Controls: View>: View {
                 .animation(nil, value: findBarRoom)
             }
         }
+        // A phone in LANDSCAPE reads the page across the sensor housing's safe area. Measured
+        // 2026-10-05: the pager's band came out 750x169 on an 874 pt screen, so 62 pt of each side
+        // went to the housing - 124 pt, 14% of the width, on the axis a landscape mushaf has least of
+        // (Abu, 2026-10-05: "it just takes up horizontal padding"). The pager takes the full width and
+        // re-applies the REAL per-side clearance itself, so the notch side still keeps its room and
+        // the other side reads to the edge. Portrait and the iPad/Mac are untouched.
+        .readerLandscapeWidth(verticalSizeClass == .compact)
         // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
         .overlay { jumpPickerDismissScrim }
         // A hardware keyboard's arrows turn the page (iPad, Mac, a keyboard on the phone).
@@ -1250,10 +1277,11 @@ struct SurahPageReader<Controls: View>: View {
             topSurahHeader
                 .modifier(MushafFoldedChrome(folded: bottomBarsCollapsed, faded: barsFaded))
         }
-        // The fold is INSIDE this band now (`bottomBars`), on the controls alone: the footer row - the
-        // surah/juz pill, the play button, the collapse chevron - stays mounted and visible when the
-        // reader is folded, which is the one row a collapsed page keeps. The page does not ride the
-        // fold: it is already at its new band, underneath (`applyBarsCollapsed`).
+        // The fold is INSIDE this band (`bottomBars`), on the controls row only: what a folded page keeps
+        // at the bottom is the surah/juz pill, the PLAY button and the chevron (Abu, 2026-10-05: "for
+        // collapse it shouldnt collapse the play button").
+        // The page does not ride the fold: it is already at its new band, underneath
+        // (`applyBarsCollapsed`).
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomBars(pages: pages)
                 // The page / juz wheel floats up from the footer instead of sitting in this inset,
@@ -1275,11 +1303,12 @@ struct SurahPageReader<Controls: View>: View {
         // that put it at the bottom edge ("put collapse at the bottom rather than at the right"): that
         // rule kept the chevron in one place across the fold, and it still is - the footer row no longer
         // folds, so the control does not move either (Abu, 2026-10-04).
-        // ONE bar on a page, and it is the reader's own: the root tab bar stays hidden for the whole
-        // time the reader is up. Not keyed to the fold - a tab bar appearing and disappearing under the
-        // chevron would be a second band change half a beat after the fold's, re-fitting the page's
-        // Arabic twice, which is the sweep `applyBarsCollapsed` is ordered to prevent.
-        .modifier(MushafRootTabBarHidden())
+        // The root tab bar folds WITH the chevron (2026-10-05): unfolded a page shows it and its own
+        // footer both, folded it shows neither. It is the enclosing TabView's bar, outside this reader's
+        // safe area, so taking it away is not a band change and never re-fits the page's Arabic - the
+        // older rule here feared exactly that. See `MushafRootTabBarHidden` for why the fold is the only
+        // state this may be keyed to.
+        .modifier(MushafRootTabBarHidden(folded: barsFaded))
         .safeAreaInset(edge: .top, spacing: 0) {
             // Mounted with its room and faded on its own (`showFindBar`, `hideFindBar`): no insertion
             // transition, which would slide it in over a page already sitting in its new band.
@@ -1317,6 +1346,10 @@ struct SurahPageReader<Controls: View>: View {
             // Page mode's launch readiness: the Quran tab auto-pushes this reader behind the launch cover,
             // and the under-cover warm waits for the pager to exist rather than for a fixed settle.
             LaunchWarmup.shared.markQuranTabLaidOut()
+            // The fold is a STANDING preference, so a reader opened while it is on starts folded - but
+            // the navigation bar is NOT part of the fold any more (see `chromeCollapsed`): it carries the
+            // Back button. Seeded false so a reader opening folded still shows its bar.
+            if chromeCollapsed { chromeCollapsed = false }
             #if DEBUG
             // "-mushafCollapseBars": start collapsed for a headless screenshot. Applied here rather than
             // as the @AppStorage default, so a screenshot run cannot leave the flag written into a real
@@ -1324,6 +1357,7 @@ struct SurahPageReader<Controls: View>: View {
             if ProcessInfo.processInfo.arguments.contains("-mushafCollapseBars"), !bottomBarsCollapsed {
                 bottomBarsCollapsed = true
                 barsFaded = true
+                // Not `chromeCollapsed`: the navigation bar no longer folds.
             }
             // "-pageTurns <n>": n animated forward turns 0.25 s apart, starting 3 s in - faster than
             // the 0.35 s slide, so turns overlap the way quick swipes do. The screenshot afterwards
@@ -2146,9 +2180,24 @@ struct SurahPageReader<Controls: View>: View {
         }
     }
 
-    /// The collapse/restore strip: a full-width chevron row at the very bottom of the screen, below
-    /// everything - ordinary layout, nothing floating over the page. One control for both directions, so
-    /// collapsing and restoring happen in the same place (the chevron just turns over).
+    /// The home indicator's bottom inset for the window this reader is in, or 0 where there is none
+    /// (an older phone, the iPad in some presentations).
+    ///
+    /// Read off the scene rather than a `GeometryReader`: the value is needed by `pageFooter`, deep in the
+    /// bottom inset, and threading a proxy down to it would re-measure on every page turn. It only
+    /// changes with the device and the orientation, both of which re-run this body anyway.
+    private var bottomSafeAreaInset: CGFloat {
+        #if os(iOS)
+        (UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }?
+            .windows.first { $0.isKeyWindow }?
+            .safeAreaInsets.bottom) ?? 0
+        #else
+        0
+        #endif
+    }
+
     /// The collapse / restore control, in the footer row at the right of the surah/juz pill and the play
     /// button. One control for both directions (the chevron turns over), and it never folds: collapsed,
     /// those three ARE the bottom bar, so there is always a way back to the controls.
@@ -2248,11 +2297,11 @@ struct SurahPageReader<Controls: View>: View {
     /// pt of a 1,000 pt spread, where its title cut to "Surah 2: Al..." and the big player stacked three
     /// rows high.
     @ViewBuilder
-    /// The bottom band. Collapsing folds the CONTROLS only: the footer row (the surah/juz pill, the play
-    /// button and the collapse chevron) stays, so a folded page still shows where you are and still plays
-    /// (Abu, 2026-10-04: "the bottom tab bar collapses so it goes to just one left thing so it goes to the
-    /// right of the surah/juz thing so they both go together"). Expanding puts the controls back ABOVE
-    /// that row rather than over it, so the pill is never hidden while you are navigating by it.
+    /// The bottom band. Collapsing folds the controls row, leaving the footer: the surah/juz pill, the
+    /// play button and the chevron ("for collapse it shouldnt collapse the play button", Abu, 2026-10-05,
+    /// superseding the same morning's "everything except for the surah/juz thing"). Expanding puts the
+    /// controls back ABOVE that row rather than over it, so the pill is never hidden while you are
+    /// navigating by it.
     ///
     /// The fold lives on the controls here rather than on the whole band in the `safeAreaInset`, which is
     /// what used to take the footer with it.
@@ -2308,16 +2357,37 @@ struct SurahPageReader<Controls: View>: View {
                              surahPosition: surahPosition, surahTotal: surahTotal,
                              juzPosition: juzPosition, juzTotal: juzTotal)
 
+                // NEVER folded (Abu, 2026-10-05, superseding the same morning's "get rid of
+                // everything except for the surah/juz thing": "for collapse it shouldnt collapse the
+                // play button"). A folded page is where you are, play, and the way back - the two
+                // things you still reach for while reading with the chrome out of the way.
+                //
+                // Costs the band nothing: this row's height is set by the pill and the chevron, which
+                // never fold, so the play button rides in space the row already occupies and the fold
+                // stays ONE band change.
                 if let footerSurah {
                     pageFooterPlayButton(surah: footerSurah)
                 }
 
+                // NEVER folded: it is the only way back from a collapsed page (Abu, 2026-10-05:
+                // "if you dont do chevron how do i bring it back??"). A tap on the page itself is
+                // already the ayah gesture, so it cannot double as the restore.
                 bottomBarsToggleButton
             }
             // 16, not the old 24: the collapse control now rides in this row, so the row needs the
             // side margins back that the full-width strip below it used to make up for.
             .padding(.horizontal, 16)
             .padding(.bottom, BottomBarCushion.standard)
+            // FOLDED the root tab bar is hidden, so the home indicator's safe area - which the tab bar
+            // normally absorbs - comes back to this view and floats the footer ~42pt off the screen edge
+            // instead of the app's usual 25.5pt (Abu, 2026-10-05: "the ground from the surah/juz to
+            // bototm is 43 and for the noraml iquidi glass is 25.5"). Reaching back DOWN into that inset
+            // is what lands it on the standard; a smaller `.padding(.bottom)` cannot, because the bar is
+            // laid out above the inset and padding only ever adds to it.
+            //
+            // Unfolded the tab bar is back and absorbs the inset again, so the plain cushion is already
+            // right and the offset is 0.
+            .offset(y: barsFaded ? BottomBarCushion.groundedOffset(safeArea: bottomSafeAreaInset) : 0)
         }
     }
 

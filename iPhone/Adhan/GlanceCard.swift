@@ -31,19 +31,49 @@ struct GlanceCard: View {
     var body: some View {
         let _ = RenderCounter.hit("GlanceCard")
         let accent = settings.accentColor.color
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+        // One VStack of per-group blocks rather than one grid with Sections: a group with an ODD
+        // number of tiles has to end in a full-width tile, and a LazyVGrid cell cannot span columns
+        // (Abu, 2026-10-05: "it shouldnt be like that thats not how it is on iphone theres full
+        // rows"). Each group lays its even tiles out in the grid and draws a lone last one beneath
+        // it at full width, so no row is ever left half empty.
+        VStack(alignment: .leading, spacing: 10) {
             ForEach(groups) { group in
-                Section {
-                    ForEach(group.tiles) { tile in
-                        GlanceTile(tile: tile, accent: accent, onSelect: onSelect)
-                            .equatable()
+                groupHeader(group)
+
+                let paired = pairedTiles(group.tiles)
+                if !paired.isEmpty {
+                    LazyVGrid(columns: columns, alignment: .center, spacing: 10) {
+                        ForEach(paired) { tile in
+                            GlanceTile(tile: tile, accent: accent, onSelect: onSelect)
+                                .equatable()
+                        }
                     }
-                } header: {
-                    groupHeader(group)
+                }
+
+                if let lone = loneTile(group.tiles) {
+                    // Full width: nothing to stay level with, so the value takes the lines it needs
+                    // instead of always reserving two (which left this tile visibly over-tall).
+                    GlanceTile(tile: lone, accent: accent, onSelect: onSelect, fullWidth: true)
+                        .equatable()
                 }
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// The tiles that fill complete rows: everything but a trailing odd one.
+    ///
+    /// At the accessibility sizes the grid is ONE column, so every tile is already a full row and
+    /// nothing is left over - the split only applies to the two-column layout.
+    private func pairedTiles(_ tiles: [GlanceItem]) -> [GlanceItem] {
+        guard !dynamicTypeSize.isAccessibilitySize, tiles.count % 2 == 1 else { return tiles }
+        return Array(tiles.dropLast())
+    }
+
+    /// The trailing tile that would otherwise sit alone in the left column, drawn full width instead.
+    private func loneTile(_ tiles: [GlanceItem]) -> GlanceItem? {
+        guard !dynamicTypeSize.isAccessibilitySize, tiles.count % 2 == 1 else { return nil }
+        return tiles.last
     }
 
     /// A group's name over its tiles: a step below the section's "AT A GLANCE", and a heading for
@@ -381,12 +411,15 @@ private struct GlanceTile: View, Equatable {
     let tile: GlanceItem
     let accent: Color
     let onSelect: (GlanceAction) -> Void
+    /// true = this tile spans the whole row (a group's odd last one), so it has no sibling to keep a
+    /// matching height with and reserves no second line.
+    var fullWidth: Bool = false
     /// Read from the environment, so `==` need not fold it: a text-size change re-renders the tile
     /// through its environment, not through its inputs.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     static func == (lhs: GlanceTile, rhs: GlanceTile) -> Bool {
-        lhs.tile == rhs.tile && lhs.accent == rhs.accent
+        lhs.tile == rhs.tile && lhs.accent == rhs.accent && lhs.fullWidth == rhs.fullWidth
     }
 
     var body: some View {
@@ -410,7 +443,9 @@ private struct GlanceTile: View, Equatable {
         let headline = lines.first ?? tile.value
         let detail = lines.count > 1 ? lines[1] : nil
 
-        return VStack(alignment: .leading, spacing: 5) {
+        // CENTERED (Abu, 2026-10-05: everything but ayah/hadith prose and the summary tiles).
+        // A glance tile is an eyebrow over a short value, so both lines centre on the tile's middle.
+        return VStack(alignment: .center, spacing: 5) {
             HStack(spacing: 6) {
                 Group {
                     if tile.showsMoonPhase {
@@ -441,7 +476,7 @@ private struct GlanceTile: View, Equatable {
             // cases, so the grid never staggers. At the accessibility sizes the grid is one column
             // (nothing to stagger against), so the value takes the lines it needs instead.
             Group {
-                if dynamicTypeSize.isAccessibilitySize {
+                if dynamicTypeSize.isAccessibilitySize || fullWidth {
                     styledValue(headline: headline, detail: detail)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if #available(iOS 16.0, *) {
@@ -452,10 +487,10 @@ private struct GlanceTile: View, Equatable {
                         .lineLimit(2)
                 }
             }
-            .multilineTextAlignment(.leading)
+            .multilineTextAlignment(.center)
             .minimumScaleFactor(0.75)
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .top)
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))

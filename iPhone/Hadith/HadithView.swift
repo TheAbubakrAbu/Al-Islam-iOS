@@ -2356,7 +2356,9 @@ struct HadithView: View {
         if isExpanded?.wrappedValue ?? true {
             if hadithGridMode {
                 Section {
-                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
+                    // Centered: a book tile is short labels (Abu, 2026-10-05). The BOOKMARK grid above
+                    // keeps .leading - those tiles carry hadith prose.
+                    LazyVGrid(columns: gridColumns, alignment: .center, spacing: 10) {
                         ForEach(books) { book in
                             bookGridTile(book)
                         }
@@ -2368,6 +2370,13 @@ struct HadithView: View {
                     Section {
                         bookLink(book) {
                             bookRow(book)
+                                // iPad/Mac: the book the detail column is reading keeps its bed, the
+                                // same promise the grid tiles' ring makes (2026-10-05). Behind the
+                                // row, as its own observing view, so a chapter pick never re-renders
+                                // the catalog (see `HadithReadingRowHighlight`).
+                                .background { 
+                                    if usesColumnNavigation { HadithReadingRowHighlight(slug: book.slug) }
+                                }
                         }
                         .contextMenu { bookContextMenu(book) }
                         // The surah rows' swipe language: icon-only. Favorite on the leading edge,

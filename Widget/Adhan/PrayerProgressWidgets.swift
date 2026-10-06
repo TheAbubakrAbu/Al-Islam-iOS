@@ -141,6 +141,46 @@ func prayerTierColor(for prayer: Prayer, in prayers: [Prayer], entry: PrayersPro
     return skyStyle ? .white.opacity(0.8) : .primary
 }
 
+/// True when this prayer is the one the day is currently in - the same name match the app's own
+/// grid and split use (`currentPrayerName`), so a widget highlights exactly the row the tab does.
+func isCurrentPrayer(_ prayer: Prayer, entry: PrayersProvider.Entry) -> Bool {
+    guard let current = entry.currentPrayer?.nameTransliteration else { return false }
+    return current == prayer.nameTransliteration
+}
+
+/// The rounded well under a prayer cell, ported from the app's `PrayerCellWell` (iPhone/Adhan/
+/// PrayerList.swift) so the widgets' Prayer Grid and Prayer Split read as the same design as the
+/// Adhan tab's own Grid and Split layouts (Abu, 2026-10-05: "you see the updated grid and split we
+/// did for adhan? do the same thing for widgets").
+///
+/// The current prayer's cell fills with the accent at 20% behind a 45% border; every other cell gets
+/// a bare 5% neutral so the grid still reads as cells. Over a sky gradient the accent is unreadable,
+/// so there the fill is white and the neutral drops out entirely - the gradient IS the background.
+///
+/// No `softShadow` (the app's well carries one): a widget is a still archived image and the shadow
+/// cost a visible halo on the gradient without adding depth.
+struct PrayerWidgetCellWell: View {
+    let isCurrent: Bool
+    let accent: Color
+    var cornerRadius: CGFloat = 10
+    /// 0 for the split rows, which sit close enough that a neutral fill on each read as banding.
+    var neutralOpacity: Double = 0.05
+    var skyStyle: Bool = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        let fill: Color = isCurrent
+            ? (skyStyle ? Color.white.opacity(0.22) : accent.opacity(0.2))
+            : (skyStyle ? .clear : Color.primary.opacity(neutralOpacity))
+        let border: Color = isCurrent
+            ? (skyStyle ? Color.white.opacity(0.55) : accent.opacity(0.45))
+            : .clear
+        shape
+            .fill(fill)
+            .overlay(shape.strokeBorder(border, lineWidth: 1))
+    }
+}
+
 /// Three-ish letters so a prayer name survives tiny lock-screen surfaces; combined traveling rows keep
 /// only their first member's abbreviation.
 func prayerAbbreviation(_ prayer: Prayer) -> String {

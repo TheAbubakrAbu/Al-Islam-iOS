@@ -314,7 +314,7 @@ struct SettingsQuranView: View {
             // The first four are in `quranTabViewSection`, which is iOS-only: naming them on the
             // watch would promise options that screen never had.
             #if os(iOS)
-            AdvancedSettingsSection(screen: .quranReadingView, hides: "the full surah details, the daily cards turning over at Fajr, the last listened and last read cards, the page and juz dividers and Keep Sheet Open")
+            AdvancedSettingsSection(screen: .quranReadingView, hides: "the daily cards turning over at Fajr, the last listened and last read cards, the page and juz dividers and Keep Sheet Open")
             #else
             AdvancedSettingsSection(screen: .quranReadingView, hides: "the page and juz dividers and Keep Sheet Open")
             #endif
@@ -442,18 +442,19 @@ struct SettingsQuranView: View {
     // Options that affect the main Quran tab / surah list screen.
     private var quranTabViewSection: some View {
         Section(header: Text("QURAN TAB")) {
-            if settings.advanced(.quranReadingView) {
-                VStack(alignment: .leading) {
-                    Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
+            // NOT behind Advanced (Abu, 2026-10-05: "show full surah details should not be in
+            // advanced settings"): it changes what every row of the main surah list shows, which is
+            // the first screen of the tab, so it belongs with the ordinary options.
+            VStack(alignment: .leading) {
+                Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
 
-                    Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
+                Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
             }
 
             lastReadAndListenedGroup
@@ -1038,7 +1039,14 @@ struct SettingsQuranView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
-            Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread.animation(.easeInOut))
+            // NOT `.animation(.easeInOut)` on the binding, unlike its neighbours here. This one is an
+            // @AppStorage flip that changes the READER's page layout behind this sheet: animating the
+            // binding puts the defaults write inside the transaction, so Settings republishes and every
+            // mounted mushaf page re-evaluates INSIDE the animation (the trap recorded in
+            // `page-mode-chrome-bands`: animated reader state must be @State, never an @AppStorage
+            // flipped inside a transaction). The other toggles in this file animate harmlessly because
+            // they only move rows inside this sheet. The reader animates its own spread change.
+            Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread)
                 .font(.subheadline)
                 .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
 
@@ -1498,7 +1506,7 @@ extension SettingsSearchEntry {
         .init(title: "Recitation Type & Random Reciter", path: "Quran Settings → Recitation", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranPage(.recitation)),
         .init(title: "After Surah Recitation Ends", path: "Quran Settings → Recitation", keywords: "next surah previous end stop continue autoplay recitation end", destination: .quranPage(.recitation), advanced: true),
         .init(title: "Reading View (List / Pages)", path: "Quran Settings → Reading View", keywords: "page mode mushaf list mode grid last read", destination: .quranPage(.readingView)),
-        .init(title: "Show Full Surah Details", path: "Quran Settings → Reading View", keywords: "revelation type ayah count page count surah list details", destination: .quranPage(.readingView), advanced: true),
+        .init(title: "Show Full Surah Details", path: "Quran Settings → Reading View", keywords: "revelation type ayah count page count surah list details", destination: .quranPage(.readingView)),
         .init(title: "Ayah of the Day & Word of the Day", path: "Quran Settings → Reading View", keywords: "daily ayah word vocabulary quran tab summary tiles", destination: .quranPage(.readingView)),
         .init(title: "Daily Cards Turn Over at Fajr", path: "Quran Settings → Reading View", keywords: "midnight fajr rollover day change hadith dua reminder name", destination: .quranPage(.readingView), advanced: true),
         .init(title: "Last Read & Last Listened", path: "Quran Settings → Reading View", keywords: "remember position history last read ayah listened surah summary", destination: .quranPage(.readingView), advanced: true),

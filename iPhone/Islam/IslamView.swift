@@ -322,8 +322,13 @@ struct IslamView: View {
     /// "divide islamic resources into section that it relates to"). Each holds three or six tiles, so
     /// no grid row is left half empty; the two banners (Proving Islam, Ask AI) close their sections.
     /// A resource's order inside its section is still the enum's case order.
+    ///
+    /// The ORDER here is the section order on screen, and it is the one Abu gave on 2026-10-05:
+    /// Learn, Remembrance, Tools, Faith & Practice, Signs & Proofs - the daily things first (study,
+    /// dhikr, the calculators and locators you open mid-errand), then the two reading libraries that
+    /// you sit down with. Ask AI stays last, alone.
     private enum ResourceGroup: CaseIterable {
-        case learn, faith, remembrance, signs, tools, assistant
+        case learn, remembrance, tools, faith, signs, assistant
 
         var title: String {
             switch self {
@@ -997,9 +1002,17 @@ struct IslamView: View {
         let label = startHereLabel(step, done: done)
         if let resource = step.resource.flatMap(IslamDestination.init(rawValue:)) {
             if split {
-                Button { selectSplitResource(resource) } label: { label }
-                    .buttonStyle(.plain)
-                    .contentShape(Rectangle())
+                // Tagged AND highlighted (2026-10-05). Untagged, this row cleared the sidebar's
+                // selection on every tap - so opening a Start Here step wiped the highlight off the
+                // resource row it had just selected further down the list.
+                Button {
+                    selectSplitResource(resource)
+                } label: {
+                    label.rowSelectionHighlight(selectedResource == resource)
+                }
+                .buttonStyle(.plain)
+                .contentShape(Rectangle())
+                .tag(resource)
             } else {
                 NavigationLink(value: resource) { label }
             }
@@ -1240,8 +1253,11 @@ struct IslamView: View {
     private var resourcesSectionSplit: some View {
         // The sidebar answers to the SAME grid toggle the iPhone list does (Abu, 2026-09-14: "Islam
         // view doesn't have grid mode top right on iPad"). It was list-only on the reasoning that a
-        // grid crammed into a sidebar column reads worse than rows - true at three columns, which is
-        // why this one is two.
+        // grid crammed into a sidebar column reads worse than rows, and then two columns on the
+        // reasoning that three read worse still - but the sidebar on an iPad is WIDER than a whole
+        // iPhone, so two columns made each tile oversized and the section twice as long to scroll.
+        // Three, like the iPhone (Abu, 2026-10-05: "on ipad make it 3 per grid instead of 2 like how
+        // it is on iphone").
         startHereSection(split: true)
 
         let favorites = favoriteResources
@@ -1280,7 +1296,8 @@ struct IslamView: View {
             // section's only item (Favorites).
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                             count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 selectSplitResource(item)
@@ -1332,7 +1349,14 @@ struct IslamView: View {
             // Re-tapping the selected row must still LAND - see `selectSplitResource`.
             selectSplitResource(value)
         } label: {
+            // The highlight is DRAWN here rather than left to `List(selection:)` - see the same fix
+            // on the Settings sidebar (`SettingsView.splitResourceLink`) for why the native bed was
+            // unreliable: a plain-styled Button never drives it, `themedListRowBackground()` paints
+            // over it on Sepia/Gray/Custom, and `.listStyle(.plain)` draws none. The grid tiles
+            // beside these rows already ringed (`gridSelectionRing`), which is why grid mode looked
+            // right and list mode did not.
             toolLabel(value.title, systemImage: value.systemImage)
+                .rowSelectionHighlight(selectedResource == value)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())

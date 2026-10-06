@@ -737,14 +737,18 @@ struct AyahRow: View, Equatable {
     /// a band rather than a strip, and justified Arabic then filled the full 24pt-inset width - so
     /// the visible margin was the wash's 12pt and glyph ink came within about 20pt of the screen.
     ///
-    /// 12pt here puts the text at 36pt and the wash at 24pt, which is the inset-grouped gutter the
-    /// rest of the app reads at. The watch keeps its own margins: 12pt of a 40mm screen is a line
-    /// of text.
-    #if os(iOS)
-    private static let readingGutter: CGFloat = 12
-    #else
+    /// 2026-10-05: back to 0 on the phone. The 12pt was measured against a 24pt row inset, but the
+    /// reader's list is inset-grouped whenever `defaultView` is on, where the system's own row inset
+    /// is already ~20pt - so the two stacked and the text column lost ~32pt a side, about 16% of a
+    /// 402pt screen, on the axis justified Arabic needs most (Abu, 2026-10-05: "why is there
+    /// horizontal padding bruv"). The system inset IS the natural padding the original request asked
+    /// for; this constant only ever added a second one on top of it. The washes keep their own
+    /// `washOutset`, so a highlighted ayah still reads as a band rather than a strip.
+    ///
+    /// Kept as a named constant rather than deleted: the select-mode checkmark and the wash outset
+    /// are both positioned relative to it, and a future idiom (a wider phone, a different list style)
+    /// may want it back. The watch keeps 0 for its own reason - 12pt of a 40mm screen is a line of text.
     private static let readingGutter: CGFloat = 0
-    #endif
 
     /// How far each wash expands past the text. It stays 12pt WIDER than the text column - that is
     /// what makes a highlighted ayah read as a band - but it is no longer wider than the row.

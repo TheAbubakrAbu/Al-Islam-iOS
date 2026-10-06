@@ -434,12 +434,21 @@ struct SurahRow: View, Equatable {
 
     /// Custom grid tile: the same information as the list row, re-laid out vertically so it reads
     /// well in a narrow 2-column grid cell.
+    ///
+    /// CENTERED, every line (Abu, 2026-10-05: "everything that isnt a long thing like an AYAH or a
+    /// HADITH ... everything else center"). These are short labels - a name, a number, a count - not
+    /// prose, and down a narrow cell a ragged left edge under a centered icon read as misaligned.
+    /// Only the summary tiles and the ayah/hadith text tiles stay leading, where the text is prose.
     private var gridBody: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .center, spacing: 2) {
             // Arabic id ornament + name on the top row. The favorite star is the tappable corner overlay
             // (`.gridFavoriteStar`) applied by the enclosing grid tile - NOT a second inline star here, which
-            // is what produced the double star on a favorited surah. The trailing Spacer leaves the corner
-            // clear for that overlay. The id now prefixes the transliteration below (e.g. "1: Al-Fatihah").
+            // is what produced the double star on a favorited surah. The id now prefixes the
+            // transliteration below (e.g. "1: Al-Fatihah").
+            //
+            // Symmetric 20pt insets, not one trailing Spacer: the star overlay still needs its corner
+            // kept clear, but a centered line has to be inset the SAME amount on both sides or the
+            // text centers off the tile's true middle.
             HStack(spacing: 4) {
                 Text(surah.idArabic)
                     .font(.custom(Settings.hafsUthmaniFontName, size: textStyleSize(.title3)))
@@ -456,11 +465,14 @@ struct SurahRow: View, Equatable {
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
-                // Leaves room at the trailing edge for the corner star overlay.
-                Spacer(minLength: 20)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            // The star overlay sits in the trailing corner, so this line alone needs room for it.
+            // Taking that room from BOTH edges keeps it on the tile's true centre - the same centre
+            // the transliteration and English lines below use, which carry no inset. An inset on the
+            // trailing side only would clear the star but shift this line left of the other two.
+            .padding(.horizontal, 20)
 
             if let context = positionContextLine {
                 Text(context)
@@ -530,7 +542,8 @@ struct SurahRow: View, Equatable {
 
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         // Favorites are tinted, everything else is clear - see the 99 Names grid for the same reasoning.
@@ -807,24 +820,29 @@ struct SurahAyahRow: View, Equatable {
     /// Custom grid tile: the same ayah information as the list row, laid out vertically for a 2-column cell.
     /// Styled to match a favorited `SurahRow` grid tile - accent-tinted conditional glass when bookmarked -
     /// with a tappable bookmark in the corner (the counterpart of SurahRow's corner favorite star).
+    ///
+    /// The REFERENCE line centres like every other short tile label; `ayahContent` below it stays
+    /// leading, because that is the ayah itself (Abu, 2026-10-05: everything centres except "a long
+    /// thing like an AYAH or a HADITH"). So this one tile is deliberately mixed: a centered heading
+    /// over left-aligned prose.
     private var gridBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+        VStack(alignment: .center, spacing: 6) {
+            Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .multilineTextAlignment(.center)
+                // Both edges, so the centered reference clears the corner bookmark symmetrically.
+                .padding(.horizontal, 20)
 
-                // Leaves the corner clear for the tappable bookmark overlay below.
-                Spacer(minLength: 20)
-            }
-
+            // The ayah stays prose: left edge straight, full width of the cell.
             ayahContent
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(12)
         // Always CLEAR glass, even when bookmarked - the accent-filled bookmark icon in the corner carries
         // the state; a tinted card here read as too loud next to the surah grid.

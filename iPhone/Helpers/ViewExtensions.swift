@@ -901,6 +901,54 @@ enum SafeAreaInsetVStackSpacing {
     static var standard: CGFloat { 8 }
 }
 
+#if os(iOS)
+/// A reading list on a phone in LANDSCAPE, given its full width back.
+///
+/// Measured 2026-10-05 on an iPhone 17 Pro in landscape: the ayah list's own frame came out
+/// 750 x 119 pt inside an 874 x 289 pt band, because the sensor housing's safe area insets the
+/// scroll view 62 pt on BOTH sides. That is 124 pt (14% of the screen) spent on nothing, on the axis
+/// a landscape reader has least to spare, and it makes every line of Arabic and translation wrap
+/// harder than it needs to (Abu, 2026-10-05: "it just takes up horizontal padding").
+///
+/// Taking it back is two halves, and both are needed:
+/// 1. the SCROLL VIEW ignores the horizontal container safe area, so the list is the full 874 pt and
+///    its backgrounds, dividers and row cards reach both edges;
+/// 2. the ROWS re-apply the clearance themselves through `safeAreaPadding`, which (unlike the inset
+///    it replaces) is the REAL per-side value - so the notch side keeps its 62 pt and the other side,
+///    which never had anything to clear, reads edge to edge.
+///
+/// Net on the measured band: the text column goes from 750 pt to ~812 pt and nothing moves under the
+/// housing. Portrait and the iPad/Mac are untouched: `enabled` is only ever true for a compact
+/// height, and the modifier is structurally constant in both states so the List is never rebuilt
+/// (flipping between two branches here would reset its scroll position, Quality Guide G3).
+private struct ReaderLandscapeWidth: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 17.0, *) {
+            content
+                .ignoresSafeArea(enabled ? .container : [], edges: .horizontal)
+                .safeAreaPadding(enabled ? .horizontal : [])
+        } else {
+            content
+        }
+    }
+}
+#endif
+
+extension View {
+    /// Gives a reading list its full width back on a phone in landscape - see `ReaderLandscapeWidth`.
+    /// Pass `verticalSizeClass == .compact`; it is inert everywhere else.
+    @ViewBuilder
+    func readerLandscapeWidth(_ enabled: Bool) -> some View {
+        #if os(iOS)
+        modifier(ReaderLandscapeWidth(enabled: enabled))
+        #else
+        self
+        #endif
+    }
+}
+
 /// The cushion UNDER a floating bottom bar (above the tab bar / home indicator). On iOS 26 the bar
 /// floats over content and 8pt reads right. Pre-26 this has swung both ways: 8pt read as dead space
 /// when the bars were built on UISearchBar, whose own fat internal padding stacked onto it ("a lot
@@ -909,6 +957,27 @@ enum SafeAreaInsetVStackSpacing {
 /// bad"). With the compact field the same 8pt now reads right on both, so the cushion is uniform.
 enum BottomBarCushion {
     static var standard: CGFloat { 8 }
+
+    /// What a floating glass bar leaves between its own bottom edge and the screen's, measured off the
+    /// app's ordinary chrome: 25.5pt.
+    ///
+    /// Only needed where a bar sits over a HIDDEN tab bar. Normally the tab bar absorbs the home
+    /// indicator's safe area and `standard` rides on top of it, which lands right. Hide the tab bar and
+    /// that safe area comes back as bottom inset, so the same 8pt floats the bar ~42pt up - measured on
+    /// the folded mushaf page, 2026-10-05 ("the ground from the surah/juz to bototm is 43 and for the
+    /// noraml iquidi glass is 25.5"). Subtract the live safe area from this to get the padding that puts
+    /// a bar back on the standard, and never let the result go below `standard`.
+    static var floatingGlassGround: CGFloat { 25.5 }
+
+    /// How much of the home indicator's safe area a bar must reach back DOWN into to sit
+    /// `floatingGlassGround` off the screen edge.
+    ///
+    /// The bar is laid out above `safeArea`, so its own edge starts at `safeArea` + `standard`; pulling
+    /// back by this much lands it on the standard. Never negative: where the inset is already smaller
+    /// than the target (no home indicator), the bar stays where it is.
+    static func groundedOffset(safeArea: CGFloat) -> CGFloat {
+        max((safeArea + standard) - floatingGlassGround, 0)
+    }
 }
 
 /// The now-playing bar's narrow seam between shared chrome and whichever module owns playback.
@@ -2017,6 +2086,42 @@ extension View {
     /// (Abu, 2026-09-19).
     func gridSelectionRing(_ isSelected: Bool, cornerRadius: CGFloat = GlassCorner.rectangle) -> some View {
         modifier(GridSelectionRing(isSelected: isSelected, cornerRadius: cornerRadius))
+    }
+
+    /// The highlight a LIST ROW wears while its screen fills the iPad/Mac detail column - the row
+    /// counterpart of `gridSelectionRing`.
+    ///
+    /// Rows beside a detail column are plain `Button`s (a Button, not a NavigationLink, so re-tapping
+    /// the open row still answers by popping its section back to the root), and `.buttonStyle(.plain)`
+    /// draws no selection of its own. Where the sidebar is a `List(selection:)` the tag handles it;
+    /// where it is not - the Quran and Hadith tabs drive their columns off a route instead - nothing
+    /// was drawn at all, so a tap opened the detail with no sign of which row it came from
+    /// (Abu, 2026-10-05: "sometimes it doesnt highlight at all").
+    ///
+    /// A filled bed rather than the tiles' ring: that is how a system sidebar marks a selected row,
+    /// and a 2 pt ring around a full-width row reads as a box, not a selection.
+    func rowSelectionHighlight(_ isSelected: Bool) -> some View {
+        modifier(RowSelectionHighlight(isSelected: isSelected))
+    }
+}
+
+/// See `rowSelectionHighlight`.
+private struct RowSelectionHighlight: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        content.background {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(appearance.accent.opacity(isSelected ? 0.15 : 0))
+                // Out past the row's own inset, so the bed spans the full row the way a system
+                // sidebar's does instead of stopping at the label.
+                .padding(.horizontal, -8)
+                .padding(.vertical, -4)
+                // Decoration only: never between a finger and the row.
+                .allowsHitTesting(false)
+        }
     }
 }
 

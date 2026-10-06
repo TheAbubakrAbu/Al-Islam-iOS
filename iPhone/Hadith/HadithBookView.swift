@@ -1212,12 +1212,13 @@ struct HadithBookView: View {
         return chapterLink(chapter, data: data) {
             chapterRow(chapter, data: data)
                 // Column mode only: the left list stays truthful about what fills the right, including
-                // after the reader swaps chapters from inside the reader itself.
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(settings.accentColor.color.opacity(isCurrent ? 0.18 : 0))
-                        .padding(-6)
-                )
+                // after the reader swaps chapters from inside the reader itself. The SHARED row
+                // highlight (2026-10-05), not a hand-rolled fill: this one was accent at 0.18 behind a
+                // 12 pt corner while the Quran rows drew nothing and the Settings sidebar used the
+                // system tint, which is how the three tabs came to mark a selected row three different
+                // ways (Abu: "sometimes it gets highlighted then it stops sometimes it doesnt
+                // highlight at all").
+                .rowSelectionHighlight(isCurrent)
         }
         .contextMenu { chapterContextMenu(chapter, data: data) }
         // The surah rows' swipe language, icon-only: favorite leading, scroll-to trailing.
@@ -1633,6 +1634,29 @@ struct HadithReadingRing: View {
     var body: some View {
         Color.clear
             .gridSelectionRing(isReading)
+            .allowsHitTesting(false)
+    }
+}
+
+/// The list-row counterpart of `HadithReadingRing`: the filled bed a CATALOG ROW wears while the
+/// detail column is reading that book. Its own view observing the selection for the same reason the
+/// ring is - nothing above the detail column may observe it, so a chapter pick re-renders these few
+/// beds and never the catalog behind them.
+///
+/// Grid mode ringed its tiles and list mode drew nothing at all, so on iPad the same screen marked
+/// the open book in one shape and not the other (Abu, 2026-10-05).
+struct HadithReadingRowHighlight: View {
+    @ObservedObject private var selection = HadithColumnSelection.shared
+
+    let slug: String
+
+    private var isReading: Bool {
+        selection.target?.book.slug == slug
+    }
+
+    var body: some View {
+        Color.clear
+            .rowSelectionHighlight(isReading)
             .allowsHitTesting(false)
     }
 }

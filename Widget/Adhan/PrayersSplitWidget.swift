@@ -36,6 +36,43 @@ struct PrayersEntryView: View {
     /// size, so the medium size runs tight and the large keeps the defaults.
     private var isMedium: Bool { widgetFamily == .systemMedium }
 
+    /// One cell of the Prayer Grid, matching the Adhan tab's `PrayerGridTile`: the symbol, the name
+    /// and the time stacked and centered, on the rounded well that fills for the current prayer
+    /// (Abu, 2026-10-05: the widgets get the tab's updated grid and split). The tier color still
+    /// comes from `prayerTierColor`, so past prayers recede exactly as before.
+    private func gridCell(_ prayer: Prayer) -> some View {
+        let tint = prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle)
+        let current = isCurrentPrayer(prayer, entry: entry)
+        return VStack(alignment: .center, spacing: isMedium ? 2 : nil) {
+            HStack {
+                Image(systemName: prayer.image)
+                    .font(.subheadline)
+                    .foregroundColor(tint)
+                    .padding(.trailing, -5)
+
+                Text(prayer.displayName)
+                    .font(.subheadline)
+                    // The current prayer's name is heavy, as in the app's tile.
+                    .fontWeight(current ? .heavy : .bold)
+                    .foregroundColor(tint)
+            }
+
+            Text(prayer.time, style: .time)
+                .font(.subheadline.monospacedDigit())
+                .foregroundColor(tint)
+        }
+        .frame(maxWidth: .infinity)
+        // Tighter on the medium tile, which has only 126pt for two rows plus the context line.
+        .padding(.vertical, isMedium ? 4 : 8)
+        .padding(.horizontal, 4)
+        .background(PrayerWidgetCellWell(
+            isCurrent: current,
+            accent: entry.accentColor.color,
+            cornerRadius: isMedium ? 8 : 12,
+            skyStyle: skyStyle
+        ))
+    }
+
     var body: some View {
         VStack(spacing: isMedium ? 2 : nil) {
             if entry.prayers.isEmpty {
@@ -64,23 +101,7 @@ struct PrayersEntryView: View {
                         GridItem(.flexible(), spacing: 12),
                     ], spacing: isMedium ? 6 : 12) {
                         ForEach(entry.prayers) { prayer in
-                            VStack(alignment: .center, spacing: isMedium ? 2 : nil) {
-                                HStack {
-                                    Image(systemName: prayer.image)
-                                        .font(.subheadline)
-                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                                        .padding(.trailing, -5)
-                                    
-                                    Text(prayer.displayName)
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                                }
-                                
-                                Text(prayer.time, style: .time)
-                                    .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                            }
+                            gridCell(prayer)
                         }
                     }
                     .padding(.horizontal, 4)
@@ -91,23 +112,7 @@ struct PrayersEntryView: View {
                         GridItem(.flexible(), spacing: 12),
                     ], spacing: isMedium ? 6 : 12) {
                         ForEach(entry.prayers) { prayer in
-                            VStack(alignment: .center, spacing: isMedium ? 2 : nil) {
-                                HStack {
-                                    Image(systemName: prayer.image)
-                                        .font(.subheadline)
-                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                                        .padding(.trailing, -5)
-                                    
-                                    Text(prayer.displayName)
-                                        .font(.subheadline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                                }
-                                
-                                Text(prayer.time, style: .time)
-                                    .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                            }
+                            gridCell(prayer)
                         }
                     }
                     .padding(.horizontal, 4)

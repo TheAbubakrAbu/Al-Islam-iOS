@@ -243,6 +243,14 @@ final class QuranPlayer: ObservableObject {
     private let ayahBackDoubleTapMinInterval: TimeInterval = 0.25
     private let ayahBackRestartDelay: TimeInterval = 0.4
     private var continueRecitationFromAyah = false
+    /// Which ayah each queued item IS, by item identity, for the continue-from-ayah queue.
+    ///
+    /// The advance used to be a blind `currentAyahNumber + 1` on every `currentItem` KVO. That is not
+    /// idempotent: AVQueuePlayer can publish `currentItem` more than once around a drained-and-
+    /// refilled queue, and two deliveries each added one, so the highlight and the Now Playing title
+    /// ran ahead of the audio. Recorded when the item is queued and looked up by identity - the same
+    /// fix the custom-range twin already carries (`customRangeItemPositions`).
+    private var continueAyahItemNumbers: [ObjectIdentifier: Int] = [:]
     private var didHandleSingleAyahEnd = false
     
     var player: AVPlayer?
@@ -955,7 +963,7 @@ final class QuranPlayer: ObservableObject {
     /// Previous ayah and start playing (used from Control Center where double-tap isn’t possible).
     private func ayahGoToPreviousAndPlay() {
         guard let s = currentSurahNumber, let a = currentAyahNumber else { return }
-        let repeatCountToKeep = ayahRepeatCount
+        let repeatCountToKeep = carriedAyahRepeatCount(continueRecitation: continueRecitationFromAyah)
         if a > 1 {
             playAyah(
                 surahNumber: s,
@@ -1070,6 +1078,12 @@ final class QuranPlayer: ObservableObject {
         repeatRemaining = 1
         ayahRepeatCount = 1
         ayahRepeatRemaining = 1
+        continueAyahItemNumbers.removeAll()
+        // Cleared here too, not only in playSurah/playCustomRange (Abu, 2026-10-05: "play ayah was
+        // acting a little glitched"). skipForward/skipBackward feed this flag straight back into a
+        // fresh playAyah, so a value left over from a finished recitation decided how the NEXT one
+        // behaved: a Play This Ayah after a Play From Ayah could keep going, and vice versa.
+        continueRecitationFromAyah = false
 
         // Persist position OUTSIDE withAnimation: these write @AppStorage-backed settings, which republish
         // observing screens (e.g. SurahView). Animating that republish mid-scroll makes the reading view
@@ -2233,7 +2247,19 @@ final class QuranPlayer: ObservableObject {
             return
         }
 
-        if ayahRepeatCount > 1 || !continueRecitation {
+        // The SINGLE-AYAH engine (one AVPlayer parked at the item's end) is for a lone ayah and for
+        // a repeat; the queue engine below is for carrying on through the surah.
+        //
+        // `continueRecitation` wins the tie (Abu, 2026-10-05: "play ayah was acting a little
+        // glitched"). This used to be `ayahRepeatCount > 1 || !continueRecitation`, which let a
+        // REPEAT concern decide a CONTINUE question: the skip handlers carry the repeat count
+        // forward, so after a "Repeat Forever" the count stays Int.max, and the next Play From Ayah
+        // - or just tapping Next - took the single-ayah branch and repeated ONE ayah forever instead
+        // of continuing. Only stop() clears the count, and the repeat-forever path never reaches it.
+        //
+        // A repeat is still honoured whenever the user did not ask to continue, which is every way
+        // the repeat menu is actually invoked (it never passes continueRecitation).
+        if !continueRecitation {
             // Retire the outgoing players via locals (see stop()).
             let retiringPlayer = player
             let retiringQueue = queuePlayer
@@ -2340,9 +2366,11 @@ final class QuranPlayer: ObservableObject {
         q.automaticallyWaitsToMinimizeStalling = false
 
         q.insert(firstItem, after: nil)
+        continueAyahItemNumbers = [ObjectIdentifier(firstItem): ayahNumber]
 
         if let ni = nextItem {
             q.insert(ni, after: firstItem)
+            continueAyahItemNumbers[ObjectIdentifier(ni)] = ayahNumber + 1
         }
 
         // Retire the outgoing players via locals (see stop()).
@@ -2387,6 +2415,30 @@ final class QuranPlayer: ObservableObject {
                     // Only while this queue is still the one playing (2026-10-04): a play started
                     // between the KVO delivery and this block was stopped by the old queue's end.
                     guard self.queuePlayer === qPlayer else { return }
+
+                    // A dry queue is the END of the recitation only when the ayah that just played
+                    // was the surah's last one. Mid-surah it means the next item is not ready yet
+                    // (a slow network, or `makeItem` returning nil), and ending there is what made
+                    // "Play From Ayah" stop dead after an ayah or two on a poor connection. Hold
+                    // instead and let the pending insert resume it - the same way the custom-range
+                    // twin waits on `customRangeAwaitedPosition`.
+                    if self.continueRecitationFromAyah,
+                       let s = self.currentSurahNumber,
+                       let a = self.currentAyahNumber,
+                       let sur = self.quranData.quran.first(where: { $0.id == s }),
+                       a < sur.numberOfAyahs,
+                       let rec = self.playbackReciter ?? self.resolvedSelectedReciter(),
+                       let resume = self.makeItem(forSurah: sur, reciter: rec, ayahNumber: a + 1) {
+                        // Re-enqueue the ayah that should have followed and carry on. Holding
+                        // without this would leave the recitation stalled with no path back.
+                        resume.preferredForwardBufferDuration = self.ayahStartupBuffer
+                        self.continueAyahItemNumbers[ObjectIdentifier(resume)] = a + 1
+                        qPlayer.insert(resume, after: nil)
+                        self.isLoading = true
+                        qPlayer.play()
+                        return
+                    }
+
                     self.stop()
                 }
                 return
@@ -2402,16 +2454,24 @@ final class QuranPlayer: ObservableObject {
                 // highlight and the title ran an ayah ahead of the audio.
                 guard self.queuePlayer === qPlayer else { return }
                 guard let s = self.currentSurahNumber,
-                      let a = self.currentAyahNumber,
                       let sur = self.quranData.quran.first(where: { $0.id == s }) else { return }
 
-                guard a < sur.numberOfAyahs else {
+                // The ayah this item IS, not one more than the last one we published: a repeated
+                // KVO for the same item now resolves to the same number instead of advancing twice.
+                guard let newAyah = self.continueAyahItemNumbers[ObjectIdentifier(newItem)] else { return }
+
+                // Already published (a duplicate delivery for the item that is still current).
+                guard newAyah != self.currentAyahNumber else { return }
+
+                guard newAyah <= sur.numberOfAyahs else {
                     self.stop()
                     return
                 }
 
-                let newAyah = a + 1
                 self.currentAyahNumber = newAyah
+                // The items left behind can never come back, so their entries go with them.
+                let live = Set(qPlayer.items().map { ObjectIdentifier($0) })
+                self.continueAyahItemNumbers = self.continueAyahItemNumbers.filter { live.contains($0.key) }
                 if let recNow = self.playbackReciter ?? self.resolvedSelectedReciter() {
                     self.nowPlayingTitle = "\(sur.nameTransliteration) \(s):\(newAyah)"
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: recNow)
@@ -2432,6 +2492,7 @@ final class QuranPlayer: ObservableObject {
                         // like the custom-range twin does.
                         let anchor = qPlayer.items().contains(newItem) ? newItem : qPlayer.currentItem
                         qPlayer.insert(upcoming, after: anchor)
+                        self.continueAyahItemNumbers[ObjectIdentifier(upcoming)] = nextAyah
                     }
                 }
             }
@@ -2510,7 +2571,7 @@ final class QuranPlayer: ObservableObject {
     
     private func ayahSkipBackward() {
         guard let s = currentSurahNumber, let a = currentAyahNumber else { return }
-        let repeatCountToKeep = ayahRepeatCount
+        let repeatCountToKeep = carriedAyahRepeatCount(continueRecitation: continueRecitationFromAyah)
         let now = Date()
 
         if let scheduledAt = ayahBackPendingRestartScheduledAt,
@@ -2549,13 +2610,23 @@ final class QuranPlayer: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + ayahBackRestartDelay, execute: work)
     }
     
+    /// The repeat count a skip should carry into the next ayah.
+    ///
+    /// Repeating N times then tapping Next should keep repeating N times - but NOT when the user is
+    /// in "continue through the surah" mode, where a carried repeat would stall the recitation on
+    /// the ayah it just advanced to (with Repeat Forever, permanently). In continue mode the skip
+    /// resets to a single pass and the queue engine takes it from there.
+    private func carriedAyahRepeatCount(continueRecitation: Bool) -> Int {
+        continueRecitation ? 1 : ayahRepeatCount
+    }
+
     private func ayahSkipForward(continueRecitation: Bool) {
         guard
             let s = currentSurahNumber,
             let a = currentAyahNumber,
             let sur = quranData.quran.first(where: { $0.id == s })
         else { return }
-        let repeatCountToKeep = ayahRepeatCount
+        let repeatCountToKeep = carriedAyahRepeatCount(continueRecitation: continueRecitation)
         if (a + 1) <= sur.numberOfAyahs {
             playAyah(
                 surahNumber: s,

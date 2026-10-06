@@ -470,6 +470,17 @@ struct SurahView: View {
     /// Compact height (a phone in landscape): the title pill drops to one line (`surahTitleLabel`).
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
+
+    /// A phone in landscape, as one Bool the watch build can read too (`verticalSizeClass` is iOS
+    /// only). The reading list uses it to take the sensor housing's width back - see
+    /// `readerLandscapeWidth`.
+    private var isCompactHeight: Bool {
+        #if os(iOS)
+        return verticalSizeClass == .compact
+        #else
+        return false
+        #endif
+    }
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     /// Playback STATE from the coalesced `NowPlayingState`; actions on the un-observed player
@@ -494,6 +505,10 @@ struct SurahView: View {
     /// Whether the in-page find bar (page mode only) is open. Owned here because the search button lives in
     /// this view's bottom bar; the search itself runs inside `SurahPageReader`, which owns the pages.
     @State private var pageSearchActive = false
+    /// True while the page reader is folded (its chevron). The reader owns the fold; this view owns the
+    /// navigation bar, so the reader mirrors its intent out here and the top bar goes with the rest of the
+    /// chrome (Abu, 2026-10-05: "it gets rid of the top bar and the liquid glass tab bar"). Page mode only.
+    @State private var pageChromeCollapsed = false
     /// Apple Music-style bar minimization for the LIST reader: true while scrolling down. Page mode is
     /// deliberately exempt - its bottom inset height feeds the page-fit geometry, and a shrinking bar there
     /// would re-fit every cached page mid-scroll.
@@ -1417,6 +1432,26 @@ struct SurahView: View {
 
     /// True when the shared attention-highlight lands on this surah's given ayah.
 
+    /// An ayah paired with a SURAH-QUALIFIED identity for the reading list's `ForEach`.
+    ///
+    /// `Ayah.id` is the ayah's number within its own surah, so every surah supplies the identities
+    /// 1...n. That is fine while a reader only ever shows one surah - but this reader swaps the surah
+    /// IN PLACE (`swappedSurah`) instead of pushing a new `SurahView`, so one `ForEach` outlives the
+    /// swap and diffs the old surah's ids against the new surah's identical ones: zero insertions,
+    /// zero deletions, and the existing rows are REUSED rather than rebuilt. Rows that were off-screen
+    /// across the swap were never re-evaluated and kept their previous surah's Arabic under the new
+    /// surah's numbering (reported 2026-10-05: An-Nas 114:5's header and translation sitting over
+    /// Al-Falaq 113:5's text). Folding the surah into the key makes a swap a full replacement.
+    private struct SurahScopedAyah {
+        let key: String
+        let ayah: Ayah
+    }
+
+    private func surahScopedAyahs(_ ayahs: [Ayah]) -> [SurahScopedAyah] {
+        let surah = self.surah
+        return ayahs.map { SurahScopedAyah(key: surah.ayahKey($0.id), ayah: $0) }
+    }
+
     /// The row itself, built in its own function: inside the List's expression the twenty-argument
     /// `AyahRow` init tipped the type-checker over its budget ("unable to type-check this expression
     /// in reasonable time"), and every added input made it worse.
@@ -1758,6 +1793,7 @@ struct SurahView: View {
                 },
                 highlightedAyah: $highlightedAyah,
                 searchActive: $pageSearchActive,
+                chromeCollapsed: $pageChromeCollapsed,
                 arrivalHighlight: {
                     guard let term = arrivalTerm, let target = arrivalAyahID else { return nil }
                     return (ref: HighlightedAyahRef(surahID: surah.id, ayahID: target), term: term)
@@ -1882,7 +1918,30 @@ struct SurahView: View {
         // The centered title is now a Menu (Surah List / Surah Info / Revelation Info), so the toolbar
         // only carries the principal title and the trailing settings gear.
         applySurahToolbar(to: surahReadingBody)
-        // The reader is the one screen that keeps the display awake (Phase 5 step 12): reading or
+            // A FOLDED page keeps nothing but the page, its surah/juz pill and the chevron: the top bar
+            // goes with the bottom chrome (Abu, 2026-10-05). Page mode only - the list reader's bar never
+            // folds, and `pageChromeCollapsed` can only be true while the page reader is mounted.
+            //
+            // `.navigationBarHidden` and not `.toolbar(.hidden, for: .navigationBar)`: this stack's OWN bar
+            // is what folds, and unlike the shared tab bar (see `MushafRootTabBarHidden`) it cannot strand
+            // anyone - the chevron is always on screen to bring it back, and a swipe-back still works with
+            // the bar hidden.
+            .navigationBarHidden(pageChromeCollapsed)
+            // Leaving the reader gives the chrome back FIRST (Abu, 2026-10-05: "when it comes back in
+            // quranview make it come back with animation and faster cause its chopped"). The nav bar and
+            // the shared tab bar are the ENCLOSING containers' - they outlive this view - so if the fold
+            // is still on when the pop starts, both reappear during the pop's own slide and the list
+            // arrives with its bars snapping in on top of it. Clearing it here means they are already
+            // back, and animated, before QuranView is on screen.
+            //
+            // `pageChromeCollapsed` only: the reader's OWN fold preference is untouched, so coming back to
+            // a page still opens it folded the way it was left.
+            .onDisappear {
+                if pageChromeCollapsed {
+                    withAnimation(.easeOut(duration: 0.22)) { pageChromeCollapsed = false }
+                }
+            }
+            // The reader is the one screen that keeps the display awake (Phase 5 step 12): reading or
         // following a recitation here, the screen stays on; listening from any other tab it sleeps.
         // Never on the reduced tier, and re-applied when the tier flips mid-session.
         .onAppear { ScreenAwake.readerVisible = true }
@@ -2591,7 +2650,16 @@ struct SurahView: View {
                         }
                     }
 
-                    ForEach(filteredAyahs, id: \.id) { ayah in
+                    // Keyed by SURAH:AYAH, never by `ayah.id` alone. `Ayah.id` is the number
+                    // WITHIN its surah, so every surah hands this ForEach the identities 1...n.
+                    // The surah swaps IN PLACE (`swappedSurah`) rather than pushing a new reader,
+                    // so this same ForEach survives the swap: against identical old/new ids SwiftUI
+                    // diffs zero insertions and zero deletions and REUSES the existing rows, which
+                    // left off-screen rows painting the previous surah's Arabic under the new
+                    // surah's numbering (reported 2026-10-05: An-Nas 114:5 captioned over
+                    // Al-Falaq 113:5's text). Qualifying the key makes a swap a full replacement.
+                    ForEach(surahScopedAyahs(filteredAyahs), id: \.key) { entry in
+                        let ayah = entry.ayah
                         let dividerBefore = showBoundaryDividers ? boundaryModel?.dividerBeforeAyah[ayah.id] : nil
 
                         if let dividerBefore {
@@ -2649,6 +2717,13 @@ struct SurahView: View {
                 .themedListRowBackground()
             }
             .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11, readingWidth: true)
+            // A phone in landscape: the sensor housing's safe area insets the list 62 pt on EACH side
+            // (measured, 874 pt band -> 750 pt of list), which is 14% of the screen spent on nothing
+            // while the ayah text wraps harder for it. The scroll view takes the full width back and
+            // the ROWS carry the housing's clearance themselves (`landscapeReadingGutter`), so text
+            // still never runs under the notch - but only on the side the notch is actually on, and
+            // the other side reads edge to edge.
+            .readerLandscapeWidth(isCompactHeight)
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .trackUserScrollTouch(userTouching.binding)
@@ -3070,7 +3145,14 @@ struct SurahView: View {
         floatingDividerAnimationKey: String
     ) -> some View {
         VStack(spacing: 2) {
-            SurahSectionHeader(surah: surah)
+            // A phone in LANDSCAPE drops the surah card: the pinned header costs 144.7 pt of a 402 pt
+            // screen (measured 2026-10-05), and this card is the biggest piece of it while saying only
+            // what the navigation title pill already says - the surah's name and number sit two lines
+            // above it. The page/juz line below is kept: that one changes as you read and is the whole
+            // reason the header is pinned. Portrait keeps both.
+            if !isCompactHeight {
+                SurahSectionHeader(surah: surah)
+            }
 
             if let floatingDividerModel {
                 boundaryDivider(model: floatingDividerModel, isOverlay: true)
@@ -4143,6 +4225,39 @@ struct SurahView: View {
         if pageSearchActive { pageSearchActive = false }
     }
 
+    /// Whether leaving page mode has to re-seat `swappedSurah` for the list to open on the right surah.
+    ///
+    /// Kept pure and static so it can be tested without a live view (see `ReadingModeLandingTests`). Two
+    /// reasons to swap, and missing either one reopens the wrong surah:
+    ///
+    /// * the landing surah is not the one on SCREEN (`displayed`) - the ordinary "paged into another surah"
+    ///   case. This must NOT be judged against the surah the view was opened with: in page mode the reader
+    ///   roams and `surah` stays put.
+    /// * the landing surah IS on screen but no swap is seated for it (`swapped`). `SurahView.surah` reads
+    ///   `swappedSurah ?? initialSurah`, so paging away from the opened surah and back to it leaves
+    ///   `swappedSurah` nil or stale; without a write, `ayah` falls back to `initialAyah` and the list
+    ///   opens at the route's original ayah instead of the page being read.
+    static func leavingPageModeNeedsSurahSwap(landing: Int, displayed: Int, swapped: Int?) -> Bool {
+        landing != displayed || swapped != landing
+    }
+
+    /// The ayah the LIST hands the page reader when leaving list mode: the marked ayah when it belongs to
+    /// this surah, else the ayah at the top of the screen.
+    ///
+    /// The mirror of `leavingPageModeNeedsSurahSwap`, and deliberately WITHOUT a surah term: in list mode
+    /// every row belongs to `surah`, so the destination surah cannot move and there is no `pageSurah` to
+    /// disagree with. That asymmetry is the whole reason only the page -> list direction could land on the
+    /// wrong surah. A mark left over from another surah (set while paging, then carried into the list) must
+    /// still be ignored, or the reader would open a page of a surah the list was never showing.
+    ///
+    /// Pure and static so it is testable without a live view (see `ReadingModeLandingTests`).
+    static func leavingListModeLandingAyah(marked: (surahID: Int, ayahID: Int)?,
+                                           surahID: Int,
+                                           topVisible: Int?) -> Int? {
+        if let marked, marked.surahID == surahID { return marked.ayahID }
+        return topVisible
+    }
+
     /// Flips between the ayah list and the mushaf, landing on the same place in the text rather than at the
     /// top of the surah:
     ///
@@ -4176,12 +4291,29 @@ struct SurahView: View {
             }()
 
             if let landing {
-                if landing.surahID != surah.id, let landingSurah = quranData.surah(landing.surahID) {
+                // `displayedSurah`, not `surah`: the page reader roams across surah boundaries and the
+                // surah it is ON lives in `pageSurah`, while `surah` stays whatever this view was OPENED
+                // with. The swap also has to be written when the landing surah is already the one on
+                // screen but no swap is SEATED for it, because `surah` resolves through `swappedSurah`.
+                // Both gaps had the same symptom: open al-Ma'idah, page to al-Ikhlas, switch to list view,
+                // and the list came back on al-Ma'idah (reported 2026-10-05, "went to Ikhlas then list
+                // mode and it didn't change").
+                // Same rule, same reason as the "Choose Surah" sheet above.
+                let swapsSurah = Self.leavingPageModeNeedsSurahSwap(
+                    landing: landing.surahID,
+                    displayed: displayedSurah.id,
+                    swapped: swappedSurah?.id
+                )
+                if swapsSurah, let landingSurah = quranData.surah(landing.surahID) {
                     searchText = ""
                     pendingScrollAfterSearchClear = nil
                     scrollDown = nil
                     visibility.resetScrollTracking()
                     settings.recordSurahOpened(landingSurah.id)
+                    // Written even when it EQUALS `initialSurah`: `surah` is `swappedSurah ?? initialSurah`,
+                    // so paging away from the opened surah and coming back to it still has to re-seat the
+                    // swap, or `ayah` falls back to `initialAyah` and the list opens at the original route's
+                    // ayah instead of the page you were reading.
                     swappedSurah = landingSurah
                 }
                 visibility.setAnchor(landing.ayahID)
@@ -4197,12 +4329,11 @@ struct SurahView: View {
             // does the ayah at the top of the screen. (In the list every row belongs to `surah`, so the
             // destination surah never moves here - but the ayah must still be the marked one, or page mode
             // opened the page under the scroll position instead of the page holding the selection.)
-            let top: Int? = {
-                if let selected = highlightedAyah, selected.surahID == surah.id {
-                    return selected.ayahID
-                }
-                return currentReadingAyahID()
-            }()
+            let top = Self.leavingListModeLandingAyah(
+                marked: highlightedAyah.map { ($0.surahID, $0.ayahID) },
+                surahID: surah.id,
+                topVisible: currentReadingAyahID()
+            )
             modeSwitchAyah = top
             // Highlight the ayah that decided the landing page so it's easy to find once you're there.
             if let top {

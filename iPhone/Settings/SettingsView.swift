@@ -122,6 +122,32 @@ struct SettingsView: View {
     @State private var gridDoor: SettingsGridDoor?
     @State private var openGridDoor = false
 
+    /// True while ANY of the three programmatic doors above is pushing or pushed.
+    ///
+    /// The three `pushDestination`s are three `navigationDestination(isPresented:)` on ONE stack. Each
+    /// tap handler used to set only its own flag, so tapping a second tile before the first push had
+    /// settled left TWO of them true at once and asked the stack to push two destinations in one
+    /// frame. That is the hazard this file's neighbours already document: the presentation stack does
+    /// not recover, the screen goes blank, and the next push can crash inside SwiftUI's navigation
+    /// rules (Abu, 2026-10-05: "i go to settings and tap on a bunch and keep switching then it turns
+    /// blank for some reason then it just crashes"; same class as the `NavigationLink(isActive:)`
+    /// EXC_BAD_ACCESS noted on `PushDestination` in Globals.swift, and the "from then on NOTHING
+    /// would present" report on SurahView's picker).
+    ///
+    /// `openDoor` below is the only way these flags are raised, and it refuses while this is true, so
+    /// at most one door is ever open. The second tap is dropped rather than queued: the user is
+    /// already travelling to the screen they asked for first, and a queued push would arrive on top
+    /// of it as an unexplained extra screen.
+    private var anyDoorOpen: Bool {
+        openSpotlight || openProfileDoor || openGridDoor
+    }
+
+    /// Raises one door, and only if no other is in flight - see `anyDoorOpen`.
+    private func openDoor(_ raise: () -> Void) {
+        guard !anyDoorOpen else { return }
+        raise()
+    }
+
     /// `pushDestination` is `navigationDestination(isPresented:)`, which needs iOS 16.
     private static var canPushProgrammatically: Bool {
         if #available(iOS 16.0, *) { return true }
@@ -147,8 +173,10 @@ struct SettingsView: View {
     }
 
     private func openGrid(_ door: SettingsGridDoor) {
-        gridDoor = door
-        openGridDoor = true
+        openDoor {
+            gridDoor = door
+            openGridDoor = true
+        }
     }
 
     /// Grid mode as a shape draws it: the iPhone stack on iOS 16 and later (the Islam tab's rule). The
@@ -377,16 +405,31 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
+            // Each door's flag and its target are raised together (`openDoor`) and the flag is lowered
+            // again when the target is missing: an `if let` that fails here would push a page with
+            // NOTHING on it, which is the blank screen half of the same report. A door can only lose
+            // its target by being torn down, so clearing the flag just closes a push that has no
+            // content to show, rather than leaving an empty screen on the stack.
             .pushDestination(isPresented: $openProfileDoor) {
-                if let profileDoor { profileDoor.destination }
+                if let profileDoor {
+                    profileDoor.destination
+                } else {
+                    EmptyDoor { openProfileDoor = false }
+                }
             }
             .pushDestination(isPresented: $openGridDoor) {
-                if let gridDoor { gridDestination(gridDoor) }
+                if let gridDoor {
+                    gridDestination(gridDoor)
+                } else {
+                    EmptyDoor { openGridDoor = false }
+                }
             }
             .pushDestination(isPresented: $openSpotlight) {
                 if let tip = spotlightTarget, let destination = tip.destination {
                     searchDestinationView(destination)
                         .revealsAdvancedSettings(tip.advanced)
+                } else {
+                    EmptyDoor { openSpotlight = false }
                 }
             }
             #if DEBUG
@@ -523,8 +566,10 @@ struct SettingsView: View {
         // fire on any tap (see `one-link-per-list-row`), so the tiles are Buttons writing ONE door
         // and the list owns the push; the iPad sidebar and iOS 15 fall back to three rows.
         ProfileTilesSection(rows: split || !Self.canPushProgrammatically) { door in
-            profileDoor = door
-            openProfileDoor = true
+            openDoor {
+                profileDoor = door
+                openProfileDoor = true
+            }
         }
         #endif
 
@@ -558,10 +603,14 @@ struct SettingsView: View {
             selectedTipID: split ? splitSpotlightID : nil
         ) { tip in
             if split {
+                // The split's detail column is a SELECTION, not a push: swapping it cannot stack two
+                // destinations, so it needs no door guard.
                 selectSplitDestination(.spotlight(tip.id))
             } else {
-                spotlightTarget = tip
-                openSpotlight = true
+                openDoor {
+                    spotlightTarget = tip
+                    openSpotlight = true
+                }
             }
         }
         #endif
@@ -729,12 +778,24 @@ struct SettingsView: View {
     ) -> some View {
         // A Button (not `NavigationLink(value:)`) so a re-tap of the ALREADY-selected row still
         // responds - it pops that section back to its root via the refresh token. The `.tag` keeps
-        // the sidebar highlight driven by `List(selection:)`, the Islam sidebar's exact pattern.
+        // the row addressable by the selection (keyboard and pointer), the Islam sidebar's pattern.
+        //
+        // The HIGHLIGHT is drawn here, not left to `List(selection:)` (Abu, 2026-10-05: "sometimes
+        // it gets highlighted then it stops sometimes it doesnt highlight at all"). Three separate
+        // things were destroying the native selection bed, which is why it looked intermittent:
+        //   1. `.buttonStyle(.plain)` consumes the tap, so the List never routes a selection gesture
+        //      and never draws a bed - the `.tag` makes the row addressable, not highlighted.
+        //   2. `themedListRowBackground()` (applied to this whole list) sets `.listRowBackground`,
+        //      which REPLACES the cell background - including the bed - on Sepia, Gray and Custom.
+        //   3. "Default List View" off makes every list `.listStyle(.plain)`, which draws no bed at
+        //      all, and the style is latched at first appear, so it changes only after a relaunch.
+        // Drawing it inside the row's own content survives all three.
         Button {
             settings.hapticFeedback()
             selectSplitDestination(value)
         } label: {
             toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint, chipSecondaryTint: secondaryTint)
+                .rowSelectionHighlight(selectedDestination == value)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())

@@ -147,6 +147,24 @@ enum TipCatalog {
         return order.map { group in (group, SearchRank.sorted(byGroup[group] ?? [], by: query) { [$0.title] }) }
     }
 
+    /// Every area's matching tips, grouped BY AREA, for the hub's own search bar. The hub lists the
+    /// six areas as doors; searching it looks inside all six at once, so a half-remembered tip is
+    /// found without first guessing which settings page owns it. Empty query = no sections, and the
+    /// hub shows its ordinary six rows instead.
+    static func areaMatches(matching query: String) -> [(area: TipArea, tips: [AppTip])] {
+        let terms = query
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .split(separator: " ").map(String.init)
+        guard !terms.isEmpty else { return [] }
+        return TipArea.allCases.compactMap { area in
+            let hits = tips(in: area).filter { tip in terms.allSatisfy { tip.searchBlob.contains($0) } }
+            guard !hits.isEmpty else { return nil }
+            // Same rule as a single area's list: the tip TITLED for the query leads the ones that
+            // only mention it.
+            return (area, SearchRank.sorted(hits, by: query) { [$0.title] })
+        }
+    }
+
     static func tour(in area: TipArea) -> [AppTip] {
         tips(in: area).filter(\.tour)
     }
@@ -1161,24 +1179,66 @@ private struct TipTourCard: View {
 struct TipsHubView: View {
     @ObservedObject private var settings = Settings.shared
 
+    @State private var query = ""
+    @State private var barsCollapsed = false
+
+    private var trimmedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     var body: some View {
+        // Searching the hub looks inside all six areas at once (`TipCatalog.areaMatches`): this screen
+        // is the door everyone arrives at from the Settings tab, and a half-remembered tip should not
+        // need you to guess which page owns it first. With the field empty the hub is unchanged - the
+        // six area rows, as before.
+        let matches = TipCatalog.areaMatches(matching: trimmedQuery)
         List {
             Group {
-                Section(footer: Text("Each settings page opens with its own list too, and every list has a tour.")) {
-                    ForEach(TipArea.allCases) { area in
-                        NavigationLink(destination: LazyDestination { TipsView(area: area) }) {
-                            SettingsRowLabel(title: area.title, systemImage: area.systemImage,
-                                             subtitle: TipCatalog.tips(in: area).first?.title,
-                                             tint: area.tint, secondaryTint: area.secondaryTint,
-                                             value: "\(TipCatalog.tips(in: area).count)")
+                if trimmedQuery.isEmpty {
+                    Section(footer: Text("Each settings page opens with its own list too, and every list has a tour.")) {
+                        ForEach(TipArea.allCases) { area in
+                            NavigationLink(destination: LazyDestination { TipsView(area: area) }) {
+                                SettingsRowLabel(title: area.title, systemImage: area.systemImage,
+                                                 subtitle: TipCatalog.tips(in: area).first?.title,
+                                                 tint: area.tint, secondaryTint: area.secondaryTint,
+                                                 value: "\(TipCatalog.tips(in: area).count)")
+                            }
+                            .tint(settings.accentColor.color)
                         }
-                        .tint(settings.accentColor.color)
+                    }
+                } else if matches.isEmpty {
+                    Section {
+                        Text("No tip matches. Try a word from what you are looking for, like \"adhan\", \"tajweed\" or \"widget\".")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    // A section per area, so a result always says WHICH settings page it belongs to -
+                    // the header is the only thing that places it, since the rows come from all six.
+                    ForEach(matches, id: \.area.id) { match in
+                        Section(header: Text(match.area.title.uppercased())) {
+                            ForEach(match.tips) { tip in
+                                TipRow(tip: tip)
+                            }
+                        }
                     }
                 }
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        .collapseBarsOnScroll($barsCollapsed)
+        .dismissKeyboardOnScroll()
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $query : $query.animation(.easeInOut),
+                          placeholder: "Search every tip")
+                    .minimizedBarStyle(barsCollapsed)
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
+        }
         .navigationTitle("Tips & Tricks")
     }
 }

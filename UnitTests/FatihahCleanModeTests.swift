@@ -72,7 +72,35 @@ final class FatihahCleanModeTests: XCTestCase {
     @MainActor
     func testShippedRiwayatKeepTheirFirstAyah() async throws {
         let data = QuranData.shared
+
+        // The overlay riwayah columns are SKIPPED at load unless the user shows qiraah details or has
+        // a non-Hafs display selected (`loadAttempt`'s `includeQiraat`, a launch-speed optimization).
+        // Without this the test read Hafs-only ayahs: every `textWarsh`/`textQaloon`/... was nil, so
+        // `numberOfAyahs(for:)` counted 0 for all seven and Warsh's 1:1 fell back to the basmala.
+        //
+        // It used to "pass" only because a previous run had left `displayQiraah` in the simulator's
+        // defaults; clearing them (which the UnitTests run does) made it fail. The precondition is
+        // the test's own job, so set it here and restore it afterwards.
+        let settings = Settings.shared
+        let previousShowQiraah = settings.showQiraahDetails
+        settings.showQiraahDetails = true
+
         await data.waitUntilLoaded()
+
+        // The first load may have finished before the flag was set, in which case it holds Hafs-only
+        // ayahs. Re-merge WITH the overlays. `waitUntilLoaded()` cannot be used to wait for this one:
+        // it returns at once while `loadState` is still `.ready` from the first pass, so wait on the
+        // observable OUTCOME instead - Warsh's text arriving on al-Fatihah's first ayah.
+        if data.surah(1)?.ayahs.first?.textWarsh == nil {
+            data.reloadForQiraahAvailabilityChange()
+            let deadline = Date().addingTimeInterval(20)
+            while data.surah(1)?.ayahs.first?.textWarsh == nil, Date() < deadline {
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+        }
+        try XCTSkipIf(data.surah(1)?.ayahs.first?.textWarsh == nil,
+                      "Qiraat overlays unavailable in this build; nothing to check.")
+
         let surah = try XCTUnwrap(data.surah(1))
         let first = try XCTUnwrap(surah.ayahs.first)
         let tags = [Settings.Riwayah.hafsTag, Settings.Riwayah.warsh, Settings.Riwayah.qaloon, Settings.Riwayah.duri,
@@ -92,5 +120,18 @@ final class FatihahCleanModeTests: XCTestCase {
         // Warsh counts al-hamd as 1:1; clean mode must show it, not a second basmala.
         let warsh = first.displayArabicText(surahId: 1, clean: true, removeDots: false, qiraahOverride: Settings.Riwayah.warsh)
         XCTAssertTrue(warsh.hasPrefix("\u{0627}\u{0644}\u{062D}\u{0645}\u{062F}"), warsh)
+
+        // Put the setting back, then re-merge WITHOUT the overlays and wait for that to land, so the
+        // store the next test sees is the one it would have seen had this test never run. Both halves
+        // matter: leaving the flag set changes later behaviour, and leaving the reload in flight
+        // republishes the whole Quran underneath whichever test is already running.
+        settings.showQiraahDetails = previousShowQiraah
+        if previousShowQiraah != true {
+            data.reloadForQiraahAvailabilityChange()
+            let settle = Date().addingTimeInterval(10)
+            while data.surah(1)?.ayahs.first?.textWarsh != nil, Date() < settle {
+                try await Task.sleep(nanoseconds: 20_000_000)
+            }
+        }
     }
 }

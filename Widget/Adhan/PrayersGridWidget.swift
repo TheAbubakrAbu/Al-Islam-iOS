@@ -130,12 +130,15 @@ struct Prayers2EntryView: View {
             ForEach(Array(prayers.enumerated()), id: \.element.id) { index, prayer in
                 if spread, index > 0 { Spacer(minLength: 2) }
 
+                let current = isCurrentPrayer(prayer, entry: entry)
+
                 HStack {
                     Image(systemName: prayer.image)
                         .frame(width: 10, alignment: .center)
 
                     Text(prayer.displayName)
-                        .fontWeight(.bold)
+                        // Heavy for the current prayer, as in the app's split row.
+                        .fontWeight(current ? .heavy : .bold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
 
@@ -147,6 +150,22 @@ struct Prayers2EntryView: View {
                 }
                 .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                 .font(.caption)
+                // The current row fills, matching the Adhan tab's Split layout (Abu, 2026-10-05).
+                // `neutralOpacity: 0` like the app's own split rows: at this row pitch a fill on
+                // every row read as banding, so only the current one is drawn.
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(PrayerWidgetCellWell(
+                    isCurrent: current,
+                    accent: entry.accentColor.color,
+                    cornerRadius: 8,
+                    neutralOpacity: 0,
+                    skyStyle: skyStyle
+                ))
+                // Pulled back out by what the well's inset added, so the names and times keep the
+                // column width they had before the fill existed: the medium tile has no spare
+                // horizontal room, and insetting the text is what made "Maghrib" start to shrink.
+                .padding(.horizontal, -6)
             }
         }
         .frame(maxHeight: spread ? .infinity : nil)

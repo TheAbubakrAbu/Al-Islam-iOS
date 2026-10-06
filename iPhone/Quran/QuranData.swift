@@ -10,6 +10,14 @@ struct Surah: Codable, Identifiable, Equatable {
     let id: Int
     let idArabic: String
 
+    /// A globally unique identity for one of this surah's ayahs, for use as a SwiftUI view identity.
+    ///
+    /// `Ayah.id` is the ayah's number WITHIN its surah, so on its own it repeats across all 114
+    /// surahs. Any list that can change which surah it shows without being rebuilt must key its rows
+    /// on this instead - see `SurahView`'s reading list, where reusing bare ayah numbers across an
+    /// in-place surah swap left rows painting the previous surah's text.
+    func ayahKey(_ ayahID: Int) -> String { "\(id):\(ayahID)" }
+
     let nameArabic: String
     let nameTransliteration: String
     let nameEnglish: String

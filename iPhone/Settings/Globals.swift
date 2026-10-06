@@ -1556,6 +1556,23 @@ enum SpellingFold {
 /// Defers building a `NavigationLink` destination until navigation actually presents it. Constructing a view
 /// struct is usually cheap, but it is not free (stored-property and `@State` default expressions run), and a
 /// list of eager links pays that cost for every destination on every body pass.
+/// A pushed screen whose content turned out to be missing: it shows nothing and immediately closes
+/// itself, instead of leaving a blank page on the navigation stack.
+///
+/// The programmatic doors in Settings pair a flag (`isPresented`) with an optional target. The two are
+/// always raised together, but a teardown can clear the target while the flag is still true, and
+/// `navigationDestination` then builds a destination with no content - a blank screen the user has to
+/// back out of. Closing the push is the honest response: there is nothing to show.
+struct EmptyDoor: View {
+    let close: () -> Void
+
+    var body: some View {
+        Color.clear
+            .onAppear(perform: close)
+            .accessibilityHidden(true)
+    }
+}
+
 struct LazyDestination<Content: View>: View {
     let build: () -> Content
     var body: Content { build() }

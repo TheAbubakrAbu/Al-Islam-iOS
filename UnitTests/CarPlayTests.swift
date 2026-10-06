@@ -436,13 +436,13 @@ final class CarPlayTests: XCTestCase {
         let controller = CarPlayController(interface: car)
         controller.start()
         defer { controller.stop() }
-        try await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertFalse(CPNowPlayingTemplate.shared.isUpNextButtonEnabled)
+        try await waitUntil({ !CPNowPlayingTemplate.shared.isUpNextButtonEnabled },
+                            "Up Next should start disabled with an empty queue")
 
         player.addSurahToQueue(surahNumber: 36, surahName: "Ya-Sin")
         player.addSurahToQueue(surahNumber: 67, surahName: "Al-Mulk")
-        try await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertTrue(CPNowPlayingTemplate.shared.isUpNextButtonEnabled)
+        try await waitUntil({ CPNowPlayingTemplate.shared.isUpNextButtonEnabled },
+                            "Up Next should enable once the phone queues a surah")
 
         controller.showUpNext()
         let list = try XCTUnwrap(car.stack.last as? CPListTemplate)
@@ -455,11 +455,28 @@ final class CarPlayTests: XCTestCase {
         tap(clear)
         XCTAssertTrue(player.surahQueue.isEmpty)
         XCTAssertTrue(car.stack.isEmpty, "back on Now Playing")
-        try await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertFalse(CPNowPlayingTemplate.shared.isUpNextButtonEnabled)
+        try await waitUntil({ !CPNowPlayingTemplate.shared.isUpNextButtonEnabled },
+                            "Up Next should disable again once the queue is cleared")
     }
 
     // MARK: Helpers
+
+    /// Wait until `condition` holds, polling instead of sleeping a fixed span.
+    ///
+    /// The Up Next button is driven by `nowPlaying.$snapshot`, which `scheduleRefresh` COALESCES onto
+    /// a later main-queue turn, so there is no duration that is both fast and safe: a flat 200 ms was
+    /// usually enough and occasionally not, which is what made `testUpNextFollowsThePhonesQueue` flake
+    /// (it failed roughly one suite run in three, on whichever assertion the coalescing missed).
+    private func waitUntil(_ condition: @escaping () -> Bool,
+                           timeout: TimeInterval = 5,
+                           _ message: @autoclosure () -> String = "condition never held",
+                           file: StaticString = #filePath, line: UInt = #line) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(condition(), message(), file: file, line: line)
+    }
 
     private func tap(_ item: CPListItem) {
         item.handler?(item, {})
