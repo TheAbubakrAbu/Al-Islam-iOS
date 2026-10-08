@@ -14,8 +14,9 @@ import WidgetKit
 
 // MARK: - Hijri date alone
 
-/// Circular: the day number under the month. Rectangular: weekday, day and month, year. Inline: weekday,
-/// day and month, the shape of the lock screen's own date line, which the inline family replaces.
+/// Circular: the day number under the month. Rectangular: weekday, day and month, year. Inline: the
+/// day, month and year, with no weekday - the inline slot sits BESIDE the lock screen's own date line
+/// rather than replacing it, so the weekday there would be the second one on that row.
 @available(iOS 16.0, *)
 struct HijriDateLockView: View {
     @Environment(\.widgetFamily) private var systemWidgetFamily
@@ -34,7 +35,11 @@ struct HijriDateLockView: View {
             case .accessoryCircular:
                 circular(parts)
             case .accessoryInline:
-                Label(parts.weekdayDayMonth, systemImage: "calendar")
+                // Day, month and year, with no weekday and no symbol: the lock screen's own date line
+                // sits beside this slot and already names the weekday, so repeating it ("Wed" +
+                // "Wednesday, ...") spent the width that then clipped the month (Abu, 2026-10-07). The
+                // year is what earns the room instead - it is the piece the system line never shows.
+                Text(parts.dayMonthYear)
             default:
                 rectangular(parts)
             }
@@ -89,7 +94,7 @@ struct HijriDateLockWidget: Widget {
         }
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
         .configurationDisplayName("Hijri Date")
-        .description("Today's Hijri date on its own; the inline size sits above the clock")
+        .description("Today's Hijri date on its own; the inline size sits beside the date above the clock")
     }
 }
 
@@ -104,14 +109,15 @@ struct HijriDateArabicLockWidget: Widget {
         }
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
         .configurationDisplayName("Hijri Date (Arabic)")
-        .description("Today's Hijri date in Arabic script and numerals; the inline size sits above the clock")
+        .description("Today's Hijri date in Arabic script and numerals; the inline size sits beside the date above the clock")
     }
 }
 
 // MARK: - Hijri and Gregorian together
 
-/// Rectangular: the clock's weekday, the Hijri date, the Gregorian date. Inline: the Hijri day and month
-/// with the short Gregorian date ("23 Rabi al-Awwal · Sep 5").
+/// Rectangular: the clock's weekday, the Hijri date, the Gregorian date. Inline: the Hijri date alone
+/// ("23 Rabi al-Awwal 1448 AH") - the civil date it is paired with is already on the lock screen's own
+/// date line, immediately beside this slot.
 @available(iOS 16.0, *)
 struct DualCalendarLockView: View {
     @Environment(\.widgetFamily) private var systemWidgetFamily
@@ -124,8 +130,14 @@ struct DualCalendarLockView: View {
         let hijri = AdhanWidgetDateFormatting.hijriParts(for: entry, language: .english)
 
         if widgetFamily == .accessoryInline {
-            let gregorian = AdhanWidgetDateFormatting.gregorianShortDayFormatter.string(from: entry.date)
-            Label("\(hijri.dayMonth) · \(gregorian)" as String, systemImage: "calendar")
+            // The Hijri date ALONE, and no symbol. The inline slot does not stand on its own: it sits
+            // beside the lock screen's own date line, which is already showing the civil date ("Wed 7").
+            // Printing a Gregorian date here said it twice ("Wed 7  26 Rabi al-Thani · Oct 7", Abu
+            // 2026-10-07) and the extra width is what clips the line - the system truncates the pair from
+            // the leading edge, so the duplicate pushed the part worth reading off the screen. The Hijri
+            // date is the only thing in this widget the system line cannot say, so it gets the whole slot;
+            // a symbol would spend 1-2 characters of that width restating "date" next to a visible date.
+            Text(hijri.dayMonthYear)
         } else {
             VStack(alignment: .leading, spacing: 1) {
                 // The weekday the clock is on (`entry.date`): the Hijri day may already have turned at
@@ -158,7 +170,7 @@ struct DualCalendarLockWidget: Widget {
         }
         .supportedFamilies([.accessoryRectangular, .accessoryInline])
         .configurationDisplayName("Hijri & Gregorian")
-        .description("Today's date in both calendars; the inline size sits above the clock")
+        .description("Today's date in both calendars; the inline size shows the Hijri date beside the date above the clock")
     }
 }
 

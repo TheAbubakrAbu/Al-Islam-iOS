@@ -271,6 +271,13 @@ enum AppLifecycle {
             CloudBackupManager.shared.automaticSaveIfDue(reason: .background)
         }
         #endif
+        // iOS clears `isIdleTimerDisabled` across a background trip, so a reader that was holding the
+        // screen up for a moving recitation highlight gets its hold back on return. A no-op when nothing
+        // is holding it. See `ScreenWakeLock`.
+        if phase == .active {
+            ScreenWakeLock.shared.reassert()
+        }
+
         guard phase != .active else { return }
         // Send any just-made setting change before the app is suspended, so it can't be lost (and
         // can't be reverted by a stale synced value on the next launch).

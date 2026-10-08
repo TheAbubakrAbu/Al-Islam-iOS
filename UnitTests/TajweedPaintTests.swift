@@ -149,4 +149,70 @@ final class TajweedPaintTests: XCTestCase {
         let atStop = try await rules(at: silah)
         XCTAssertEqual(atStop, [], "\(silah.reference): found \(atStop.map(\.rawValue))")
     }
+
+    // MARK: - The laam of the name of Allah (heavy / light)
+
+    /// The laam of ٱللَّه is heavy after a fatha or a damma. The letter asserted is the SECOND laam,
+    /// the pronounced one carrying the shadda, so the scalar is U+0644 occurrence 1.
+    func testLaamOfAllahIsHeavyAfterFathaOrDamma() async throws {
+        // خَتَمَ ٱللَّهُ - after the fatha of خَتَمَ
+        try await assertRule(Site(surah: 2, ayah: 7, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}", scalar: 0x0644, occurrence: 1), is: .tafkhim)
+        // قُلۡ هُوَ ٱللَّهُ أَحَدٌ - after the fatha of هُوَ
+        try await assertRule(Site(surah: 112, ayah: 1, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}", scalar: 0x0644, occurrence: 1), is: .tafkhim)
+        // وَمَا ٱللَّهُ - the fatha of وَمَا sits before a SILENT alif, which the scan walks past
+        try await assertRule(Site(surah: 2, ayah: 74, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}", scalar: 0x0644, occurrence: 1), is: .tafkhim)
+    }
+
+    /// ... and light after a kasra. This is the whole point of the rule: the same four letters,
+    /// painted differently by the sound BEFORE them.
+    func testLaamOfAllahIsLightAfterKasra() async throws {
+        // بِسۡمِ ٱللَّهِ - after the kasra of بِسۡمِ
+        let basmala = Site(surah: 1, ayah: 1, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650}", scalar: 0x0644, occurrence: 1)
+        let onBasmala = try await rules(at: basmala)
+        XCTAssertFalse(onBasmala.contains(.tafkhim), "1:1: the laam after a kasra must not be heavy")
+        // فِي ٱللَّهِ - the kasra sits before a silent ya
+        let afterFi = Site(surah: 2, ayah: 139, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650}", scalar: 0x0644, occurrence: 1)
+        let onAfterFi = try await rules(at: afterFi)
+        XCTAssertFalse(onAfterFi.contains(.tafkhim), "2:139: the laam after a kasra must not be heavy")
+    }
+
+    /// The alif-less spelling لِلَّه / وَلِلَّه is the name too - 500+ sites. Its first laam carries the
+    /// preposition's own kasra, so a predicate demanding a BARE first laam drops every one of them.
+    func testAlifLessSpellingIsStillTheName() async throws {
+        // وَلِلَّهِ - the laam is light, the kasra of لِ governs it
+        let walillaahi = Site(surah: 5, ayah: 18, word: "\u{0648}\u{064E}\u{0644}\u{0650}\u{0644}\u{0651}\u{064E}\u{0647}\u{0650}", scalar: 0x0644, occurrence: 1)
+        let found = try await rules(at: walillaahi)
+        XCTAssertFalse(found.contains(.tafkhim), "5:18: لِ's kasra makes it light")
+    }
+
+    /// The two look-alikes whose letters also run ل + ل + ه but which are NOT the name: the heavy
+    /// laam must not touch them. The same pair the red Highlight Allah guards against.
+    func testTheLookAlikesAreNotTheName() async throws {
+        // ٱللَّهۡوِ (62:11, the amusement)
+        let amusement = Site(surah: 62, ayah: 11, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{06E1}\u{0648}\u{0650}", scalar: 0x0644, occurrence: 1)
+        let onAmusement = try await rules(at: amusement)
+        XCTAssertFalse(onAmusement.contains(.tafkhim), "62:11: ٱللَّهۡوِ is not the name")
+        // ٱللَّهَبِ (77:31, the flame)
+        let flame = Site(surah: 77, ayah: 31, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064E}\u{0628}\u{0650}", scalar: 0x0644, occurrence: 1)
+        let onFlame = try await rules(at: flame)
+        XCTAssertFalse(onFlame.contains(.tafkhim), "77:31: ٱللَّهَبِ is not the name")
+    }
+
+    /// When the name OPENS the ayah there is no preceding sound to read. Begun there, the hamzat
+    /// wasl takes a fatha, so the laam is heavy: 31 sites, 2:255 among them.
+    func testAyahInitialNameIsHeavy() async throws {
+        // ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ (Ayat al-Kursi)
+        try await assertRule(Site(surah: 2, ayah: 255, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}", scalar: 0x0644, occurrence: 1), is: .tafkhim)
+        // ٱللَّهُ يَسۡتَهۡزِئُ بِهِمۡ
+        try await assertRule(Site(surah: 2, ayah: 15, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}", scalar: 0x0644, occurrence: 1), is: .tafkhim)
+    }
+
+    /// The vocative ٱللَّهُمَّ IS the name, and keeps the rule (heavy, after the damma of its own heh is
+    /// irrelevant - the governing sound precedes the laam).
+    func testAllahummaIsStillTheName() async throws {
+        // 3:26 قُلِ ٱللَّهُمَّ - after the kasra of قُلِ, so LIGHT
+        let allahumma = Site(surah: 3, ayah: 26, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}\u{0645}\u{0651}\u{064E}", scalar: 0x0644, occurrence: 1)
+        let found = try await rules(at: allahumma)
+        XCTAssertFalse(found.contains(.tafkhim), "3:26: قُلِ's kasra makes it light")
+    }
 }

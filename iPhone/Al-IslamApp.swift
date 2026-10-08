@@ -108,6 +108,9 @@ struct AlIslamApp: App {
                 // here - it lives in its own window above the app (see `AchievementBannerPresenter`)
                 // so it can still be seen when the thing that earned it happened inside a sheet.
                 .achievementTracking()
+                // The same shape for the playing adhan: its banner is its own window too, so the
+                // recording can be stopped from any tab and from on top of any sheet.
+                .adhanBannerHost()
                 // No `.onAppear { settings.fetchPrayerTimes() }` here: `AdhanView.onAppear` runs the launch
                 // fetch a frame later (it is the initial tab), so this was a second full recompute on
                 // the first-paint path.
@@ -298,6 +301,14 @@ private struct MainTabView: View {
             .onOpenURL { url in
                 guard let target = QuranDeepLink.parseAyah(url) else { return }
                 AppNavigation.shared.open(.ayah(target.surah, target.ayah))
+            }
+            // A Control Center control lands on the Adhan tab; the glance card's own `.onReceive`
+            // raises the Qibla sheet from there (it is what computes the bearing). `.tab` has nothing
+            // to push, so it clears itself here.
+            .onReceive(AppNavigation.shared.$pendingAdhan) { target in
+                guard let target else { return }
+                selectedTab = .adhan
+                if case .tab = target { AppNavigation.shared.pendingAdhan = nil }
             }
             // A Reminder of the Day card's "Open" lands on the Islam tab (or the Hadith tab); the
             // Islam tab's own `.onReceive` pushes the resource from there.

@@ -152,13 +152,6 @@ enum AdhanWidgetDateFormatting {
         return formatter
     }()
 
-    /// "Sep 5", for the inline family.
-    static let gregorianShortDayFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("dMMM")
-        return formatter
-    }()
-
     /// "3:45 PM" (or 15:45 under a 24-hour clock).
     static let shortTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()

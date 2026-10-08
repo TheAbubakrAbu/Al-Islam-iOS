@@ -1,0 +1,1696 @@
+import SwiftUI
+
+struct NameOfAllah: Identifiable, Equatable {
+    let number: Int
+    let id: String
+    let name: String
+    let transliteration: String
+    let found: String
+    let meaning: String
+    let otherNames: [String]
+    let desc: String
+    let numberArabic: String
+    let displayArabicName: String
+    let searchTokens: [String]
+    /// The transliteration folded for spelling (`SpellingFold`): "rahmaan", "rehman" and "rahman"
+    /// are one name, and so are "kareem" and the "Al-Karim" the data happens to carry.
+    let spelling: SpellingFold.Entry
+    let firstFoundSurah: Int?
+    let firstFoundAyah: Int?
+
+    /// Every stored property that isn't a raw source field is derived here, in the one init.
+    init(number: Int, name: String, transliteration: String, found: String,
+         meaning: String, otherNames: [String], desc: String) {
+        self.number = number
+        self.name = name
+        self.transliteration = transliteration
+        self.found = found
+        self.meaning = meaning
+        self.otherNames = otherNames
+        self.desc = desc
+
+        id = "\(number)"
+        numberArabic = arabicNumberString(from: number)
+        let deacriticizedName = name.removeDiacriticsFromLastLetter()
+        displayArabicName = deacriticizedName.contains(" ")
+            ? deacriticizedName.split(separator: " ").joined(separator: "\n")
+            : deacriticizedName
+        // No Quran references in an app without the Quran domain (`HAS_QURAN` is defined by the
+        // projects that ship it; companions define nothing and all of this compiles out): the
+        // first-found ayah would be a link to nowhere, so it is never derived - which is also what
+        // hides every "First Found" line and "View First Found" button downstream (they key off
+        // these). The found string is likewise dropped from search - "(2:255)" should match nothing
+        // in an app with no Quran to resolve it in; the empty token keeps the array's index contract.
+        #if HAS_QURAN
+        let firstFound = Self.parseFirstFound(found)
+        let foundToken = Self.clean(found)
+        #else
+        let firstFound: (surah: Int, ayah: Int)? = nil
+        let foundToken = ""
+        #endif
+        firstFoundSurah = firstFound?.surah
+        firstFoundAyah = firstFound?.ayah
+
+        spelling = SpellingFold.Entry(names: [transliteration])
+        searchTokens = [
+            Self.clean(name),
+            Self.clean(transliteration),
+            Self.clean(meaning),
+            otherNames.map(Self.clean).joined(separator: " "),
+            Self.clean(desc),
+            foundToken,
+            "\(number)",
+            numberArabic
+        ]
+    }
+
+    private static func clean(_ s: String) -> String {
+        let unwanted: Set<Character> = ["[", "]", "(", ")", "-", "'", "\""]
+        let stripped = s
+            .normalizingArabicIndicDigitsToWestern
+            .filter { !unwanted.contains($0) }
+        return (stripped.applyingTransform(.stripDiacritics, reverse: false) ?? stripped).lowercased()
+    }
+
+    private static func parseFirstFound(_ found: String) -> (surah: Int, ayah: Int)? {
+        let pattern = #"\((\d+)\s*:\s*(\d+)\)"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let fullRange = NSRange(found.startIndex..<found.endIndex, in: found)
+        guard let match = regex.firstMatch(in: found, range: fullRange), match.numberOfRanges >= 3,
+              let surahRange = Range(match.range(at: 1), in: found),
+              let ayahRange = Range(match.range(at: 2), in: found),
+              let surah = Int(found[surahRange]),
+              let ayah = Int(found[ayahRange]) else {
+            return nil
+        }
+        return (surah, ayah)
+    }
+
+    var firstFoundShort: String {
+        guard let closingParen = found.firstIndex(of: ")") else { return found }
+        return String(found[...closingParen])
+    }
+
+    /// Which of the three *displayed* fields (Arabic name, transliteration, meaning) actually contain the
+    /// query. A name can also match on hidden fields (`desc`, `otherNames`, `found`), in which case all three
+    /// are false and the collapsed row shows no highlight - correct, since the match isn't visible. When a
+    /// displayed field does match, its flag drives `guaranteeMatch` so that field always shows at least one
+    /// highlight even if the highlighter's normalization differs from this search's (e.g. `ḥ` vs `h`).
+    /// Indices mirror `searchTokens`: [0] = Arabic name, [1] = transliteration, [2] = meaning.
+    /// One-entry memo for the cleaned query: during a search, every visible row cleans the SAME raw
+    /// query per keystroke - up to ~99 identical diacritic-strips per character typed. Main-thread only,
+    /// like the row bodies that call it.
+    private static var cleanedQueryMemo: (raw: String, cleaned: String) = ("", "")
+
+    private static func cleanedQuery(_ raw: String) -> String {
+        if cleanedQueryMemo.raw == raw { return cleanedQueryMemo.cleaned }
+        let cleaned = clean(raw)
+        cleanedQueryMemo = (raw, cleaned)
+        return cleaned
+    }
+
+    func displayedFieldMatches(query rawQuery: String) -> (arabic: Bool, transliteration: Bool, meaning: Bool) {
+        let q = Self.cleanedQuery(rawQuery)
+        guard !q.isEmpty, searchTokens.count >= 3 else { return (false, false, false) }
+        return (
+            arabic: searchTokens[0].contains(q),
+            transliteration: searchTokens[1].contains(q),
+            meaning: searchTokens[2].contains(q)
+        )
+    }
+}
+
+/// The NamesOfAllah.json shapes: the data path for apps without the Quran domain's pack reader,
+/// and the fallback for the ones with it (`NamesOfAllahFallback.json` is this shape). Handles both
+/// historical layouts: a bare array or the {code, status, data} wrapper, with the translation flat
+/// or nested under "en".
+private struct JSONNamesRoot: Decodable {
+    let code: Int
+    let status: String
+    let data: [JSONNameRecord]
+}
+
+private struct JSONNameRecord: Decodable {
+    let number: Int
+    let name: String
+    let transliteration: String
+    let found: String
+    let meaning: String
+    let desc: String
+    let otherNames: [String]
+
+    private struct Translation: Decodable {
+        let meaning: String
+        let desc: String
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, transliteration, number, found, meaning, desc, en, otherNames
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        name = try c.decode(String.self, forKey: .name)
+        transliteration = try c.decode(String.self, forKey: .transliteration)
+        found = try c.decode(String.self, forKey: .found)
+        otherNames = try c.decodeIfPresent([String].self, forKey: .otherNames) ?? []
+
+        if let flatMeaning = try c.decodeIfPresent(String.self, forKey: .meaning),
+           let flatDesc = try c.decodeIfPresent(String.self, forKey: .desc) {
+            meaning = flatMeaning
+            desc = flatDesc
+        } else {
+            let en = try c.decode(Translation.self, forKey: .en)
+            meaning = en.meaning
+            desc = en.desc
+        }
+    }
+}
+
+final class NamesViewModel: ObservableObject {
+    enum LoadState: Equatable {
+        case idle
+        case loading
+        case ready
+        case failed
+    }
+
+    static let shared: NamesViewModel = {
+        let model = NamesViewModel()
+        // The watch loads the names when the page is first opened (`retryIfNeeded` handles `.idle`),
+        // not at launch: the pack parse was on the cold-launch path of an app opened for prayer times.
+        #if !os(watchOS)
+        model.startLoading()
+        #endif
+        return model
+    }()
+
+    @Published var namesOfAllah: [NameOfAllah] = []
+    /// A name the list should scroll to and open as it appears (a Reminder of the Day card's door).
+    @Published var pendingNameNumber: Int?
+    @Published private(set) var firstFoundTargetsByNameNumber: [Int: (surahID: Int, ayahID: Int)] = [:]
+    @Published private(set) var loadState: LoadState = .idle
+    /// Why the last load failed, for the Try Again row: a user report that says "the pack was not in
+    /// the bundle" or "the pack could not be read" is one that can be acted on.
+    @Published private(set) var failureReason: String?
+    private var filterCache = [String: [NameOfAllah]]()
+    private var loadTask: Task<Void, Never>?
+
+    private init() {}
+
+    private func startLoading() {
+        guard loadTask == nil else { return }
+        // .userInitiated, not .utility: the LAUNCH SCREEN's reveal awaits `waitUntilLoaded`, and
+        // .utility is the QoS tier Low Power Mode throttles hardest - under LPM a tiny 100-entry
+        // parse could ride the throttle toward the 8s cap while the launch sat on it.
+        loadTask = Task(priority: .userInitiated) { [weak self] in
+            await self?.loadNames()
+        }
+    }
+
+    var isReadyForUI: Bool {
+        loadState == .ready
+    }
+
+    /// Re-runs a load that failed (or somehow never ran). Called as the page appears and from its
+    /// Try Again row, so a one-off failure at launch is retried the moment someone actually looks for
+    /// the names, instead of the page opening on its header and description with no names under
+    /// them for the rest of the session. Main thread only (it publishes).
+    func retryIfNeeded() {
+        switch loadState {
+        case .failed:
+            // The finished task's own nil-out hops through the main queue; don't wait for it.
+            loadTask = nil
+            loadState = .loading
+            startLoading()
+        case .idle:
+            startLoading()
+        case .loading, .ready:
+            break
+        }
+    }
+
+    /// Wall-clock capped: this gates the LAUNCH SCREEN reveal (LaunchScreen awaits it with no cap of
+    /// its own), and the uncapped loop had no escape if the load task never ran or wedged before
+    /// setting `.ready`/`.failed` - a permanently stranded launch. Eight seconds is far beyond any
+    /// real parse of a 100-entry JSON; past it, launching with the names still loading beats a hang.
+    func waitUntilLoaded() async {
+        for _ in 0..<320 {
+            let state = await MainActor.run { self.loadState }
+            if state == .ready || state == .failed {
+                return
+            }
+            // Never started (the watch defers the load past the reveal): nothing to wait for.
+            if state == .idle, loadTask == nil {
+                return
+            }
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+    }
+
+    private func loadNames() async {
+        await MainActor.run {
+            loadState = .loading
+        }
+
+        #if DEBUG
+        // `-failNamesLoad`: every attempt fails on purpose while the flag is present, so the page's
+        // failed state and its Try Again row can be screenshotted. (Without the flag, the same
+        // retry path was verified end to end: two forced failures, then the names appeared.)
+        if ProcessInfo.processInfo.arguments.contains("-failNamesLoad") {
+            await MainActor.run { self.loadState = .failed }
+            return
+        }
+        #endif
+
+        defer {
+            Task { @MainActor in
+                self.loadTask = nil
+            }
+        }
+
+        // Three sources, tried in order; the first that yields records wins.
+        //   1. namesofallah.qpk (7 KB against the 25.9 KB JSON it replaced; the Quran packs'
+        //      container, verified field-for-field). Apps without the Quran domain (no `HAS_QURAN`)
+        //      compile no Quran symbol and start at 2.
+        //   2. NamesOfAllah.json, where an app still bundles it.
+        //   3. `NamesOfAllahFallback.json`, compiled into the executable. One install in the wild kept
+        //      failing on the pack (never reproduced here; the reason is now logged and shown on the
+        //      page), and a string literal cannot go missing from a bundle, refuse to map, or fail
+        //      to decode - so the page can no longer come up empty because of one file.
+        var records: [NameRecord] = []
+        var source = ""
+        var packProblem: String?
+
+        #if HAS_QURAN
+        var packURL = QuranPackLoader.url("namesofallah")
+        #if DEBUG
+        // `-namesPackUnreadable`: pretend the pack is gone, so the fallbacks can be exercised.
+        if ProcessInfo.processInfo.arguments.contains("-namesPackUnreadable") { packURL = nil }
+        #endif
+        if let url = packURL {
+            // Mapped first (free), then a plain copy into memory: a file that will not map on some
+            // storage still reads, and a 7 KB pack costs nothing to copy.
+            if let pack = NamesPack(url: url) ?? NamesPack(url: url, mapped: false) {
+                records = pack.records.map {
+                    (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                     found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+                }
+                source = "namesofallah.qpk"
+            } else {
+                packProblem = NamesPack.failureDescription(url: url)
+            }
+        } else {
+            packProblem = "namesofallah.qpk is not in the bundle"
+        }
+        #endif
+
+        if records.isEmpty,
+           let url = Bundle.main.url(forResource: "NamesOfAllah", withExtension: "json"),
+           let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+           let decoded = Self.decodeJSONNames(data) {
+            records = decoded
+            source = "NamesOfAllah.json"
+        }
+        if records.isEmpty, let decoded = Self.decodeJSONNames(Data(NamesOfAllahFallback.json.utf8)) {
+            records = decoded
+            source = "the built-in copy"
+        }
+
+        if let packProblem {
+            // Loud on purpose: the page still works, but this is the line that explains a report.
+            logger.error("⚠️ 99 Names: the pack could not be used (\(packProblem)); loaded \(records.count) names from \(source).")
+        }
+
+        guard !records.isEmpty else {
+            let reason = packProblem ?? "No copy of the names could be read."
+            logger.error("❌ 99 Names: no source produced any names. \(reason)")
+            await MainActor.run {
+                self.failureReason = reason
+                self.loadState = .failed
+            }
+            return
+        }
+
+        let names = records.map {
+            NameOfAllah(number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                        found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+        }
+        var targets = [Int: (surahID: Int, ayahID: Int)]()
+        targets.reserveCapacity(names.count)
+        for name in names {
+            guard let surah = name.firstFoundSurah,
+                  let ayah = name.firstFoundAyah else { continue }
+            targets[name.number] = (surahID: surah, ayahID: ayah)
+        }
+        let finalizedTargets = targets
+
+        await MainActor.run {
+            self.namesOfAllah = names
+            self.firstFoundTargetsByNameNumber = finalizedTargets
+            self.filterCache.removeAll(keepingCapacity: true)
+            self.failureReason = nil
+            self.loadState = .ready
+        }
+    }
+
+    private typealias NameRecord = (number: Int, name: String, transliteration: String, found: String,
+                                    meaning: String, otherNames: [String], desc: String)
+
+    /// Either historical JSON shape: a bare array or the {code, status, data} wrapper.
+    private static func decodeJSONNames(_ data: Data) -> [NameRecord]? {
+        let decoder = JSONDecoder()
+        let decoded: [JSONNameRecord]
+        if let array = try? decoder.decode([JSONNameRecord].self, from: data) {
+            decoded = array
+        } else if let root = try? decoder.decode(JSONNamesRoot.self, from: data) {
+            decoded = root.data
+        } else {
+            return nil
+        }
+        return decoded.map {
+            (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+             found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+        }
+    }
+
+    func filteredNames(cleanedQuery: String) -> [NameOfAllah] {
+        guard !cleanedQuery.isEmpty else { return namesOfAllah }
+
+        if let cached = filterCache[cleanedQuery] {
+            return cached
+        }
+
+        let direct = namesOfAllah.filter { name in
+            if cleanedQuery.allSatisfy(\.isNumber), let n = Int(cleanedQuery) {
+                return name.number == n
+            }
+            return name.searchTokens.contains { $0.contains(cleanedQuery) } || Int(cleanedQuery) == name.number
+        }
+        // Nothing spelled that way: fold the spelling and ask again. A fallback only, so every query
+        // that already finds a name returns exactly what it did before.
+        let found = direct.isEmpty
+            ? SpellingFold.matches(cleanedQuery, in: namesOfAllah, entry: \.spelling)
+            : direct
+        // The name that was typed leads the names whose description merely mentions it ("malik"
+        // listed every name glossed with "king" in number order). A number is not a name.
+        let matches = cleanedQuery.allSatisfy(\.isNumber) ? found
+            : SearchRank.sorted(found, by: cleanedQuery) { [$0.transliteration, $0.name, $0.meaning] + $0.otherNames }
+        // Every distinct prefix a user ever types lands here; without a bound the cache grows for the
+        // app's lifetime. Recomputing a miss is a filter over 99 names, so wholesale eviction is fine.
+        if filterCache.count >= 128 {
+            filterCache.removeAll(keepingCapacity: true)
+        }
+        filterCache[cleanedQuery] = matches
+        return matches
+    }
+}
+
+struct NamesView: View {
+    @ObservedObject var settings = Settings.shared
+    /// Two names across at the accessibility text sizes, where three squeezed each name's line.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var nameGridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 8), count: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
+    }
+    #if HAS_QURAN
+    @ObservedObject var quranData = QuranData.shared
+    #endif
+    @ObservedObject var namesData = NamesViewModel.shared
+
+    @State private var searchText = ""
+    #if os(iOS)
+    /// The "About" card's single open door (one @State + one destination on the List:
+    /// every chip lives in the SAME List row, and two links in one row both fire).
+    @State private var aboutDoor: SignsAboutDoor?
+    #endif
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+    @State private var expandedNameNumbers = Set<Int>()
+    #if os(iOS)
+    /// The theme chip that is lit (NamesDepth): nil is all 99.
+    @State private var activeTheme: String?
+    #if DEBUG
+    /// `-openNameDetail <number>`: that name's page pushed as the list appears, for screenshots.
+    @State private var debugOpenName = false
+    private static var debugNameNumber: Int? {
+        guard let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-openNameDetail"),
+              ProcessInfo.processInfo.arguments.indices.contains(idx + 1) else { return nil }
+        return Int(ProcessInfo.processInfo.arguments[idx + 1])
+    }
+    #endif
+    #endif
+    
+    /// Cached so the diacritic-stripping `clean()` only runs when the query changes - not on every `body`
+    /// re-eval (expand/collapse, favorite toggles, font switches all re-run body but leave the query alone).
+    @State private var cleanedSearch = ""
+
+    private static func clean(_ s: String) -> String {
+        let unwanted: Set<Character> = ["[", "]", "(", ")", "-", "'", "\""]
+        let stripped = s
+            .normalizingArabicIndicDigitsToWestern
+            .filter { !unwanted.contains($0) }
+        return (stripped.applyingTransform(.stripDiacritics, reverse: false) ?? stripped).lowercased()
+    }
+
+    private var filteredNames: [NameOfAllah] {
+        let names = namesData.filteredNames(cleanedQuery: cleanedSearch)
+        #if os(iOS)
+        if let activeTheme {
+            return names.filter { NamesDetailsStore.shared.detail($0.number)?.theme == activeTheme }
+        }
+        #endif
+        return names
+    }
+
+    /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
+    @AppStorage("showFavoriteNames") private var showFavoriteNames = true
+
+    private func favoriteNames(in favoriteSet: Set<Int>) -> [NameOfAllah] {
+        namesData.namesOfAllah
+            .filter { favoriteSet.contains($0.number) }
+            .sorted { $0.number < $1.number }
+    }
+
+    #if os(iOS)
+    // AI (semantic) name search - the hadith book search's exact grammar, over the 99 names:
+    // on-device meaning matching over the transliteration/meaning/description, shown automatically
+    // above the keyword matches. No mode to enter; the section appears (with one-time build
+    // progress the first time) whenever it can help.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var aiHits: [NameOfAllah] = []
+    @State private var aiSearchTask: Task<Void, Never>?
+
+    private static let semanticCorpusID = "names-en"
+
+    /// True when the live query is one the semantic engine can answer (English text, long enough).
+    private var aiQueryEligible: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SemanticSearchEngine.isSupported
+            && trimmed.count >= 3
+            && !trimmed.containsArabicScript
+    }
+
+    private func prepareSemanticCorpus() {
+        guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(Self.semanticCorpusID) else { return }
+        let names = namesData.namesOfAllah
+        guard !names.isEmpty else { return }
+        // Every English-meaning field per name; a tiny corpus, so this is cheap to hand over.
+        let texts = names.map { "\($0.transliteration) \($0.meaning) \($0.otherNames.joined(separator: " ")) \($0.desc)" }
+        // Keyed by the name's number, so index -> name resolution survives any reorder of the source.
+        let keys = names.map { String($0.number) }
+        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+    }
+
+    private func runAISearch(query: String) {
+        aiSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
+              !namesData.namesOfAllah.isEmpty else {
+            if !aiHits.isEmpty { aiHits = [] }
+            return
+        }
+        prepareSemanticCorpus()
+
+        aiSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await semanticEngine.search(corpusID: Self.semanticCorpusID, query: trimmed, limit: 10)
+            guard !Task.isCancelled else { return }
+            // Resolve through the corpus KEYS (the name's number), falling back to position only
+            // for a corpus persisted before keys existed.
+            let keys = await MainActor.run { semanticEngine.corpus(Self.semanticCorpusID)?.itemKeys }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                let names = namesData.namesOfAllah
+                // Plain apply: an animated section insert racing another async apply is the
+                // collection-view assertion crash the Quran search hit.
+                aiHits = results.compactMap { result in
+                    if let keys, keys.indices.contains(result.index), let number = Int(keys[result.index]) {
+                        return names.first(where: { $0.number == number })
+                    }
+                    return names.indices.contains(result.index) ? names[result.index] : nil
+                }
+            }
+        }
+    }
+
+    // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the matches
+    // with the typed query as its first question - the Quran search's rule. Exists only on Apple
+    // Intelligence devices (`OnDeviceAsk.isAvailable`).
+    @State private var showAskAI = false
+    /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist. Reset to the
+    /// AI list on every new query.
+    @State private var showKeywordResults = false
+
+    /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`.
+    private var askAIHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text("ASK AI")
+
+            Spacer()
+        }
+        .foregroundStyle(settings.accentColor.color)
+    }
+
+    private var askPromptRow: some View {
+        Button {
+            settings.hapticFeedback()
+            showAskAI = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+
+                Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                    .font(.caption.weight(.semibold))
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundColor(settings.accentColor.color)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The ASK AI section: the one-tap row that opens the chat with the query as its first question.
+    @ViewBuilder
+    private func askAISection(hasResults: Bool, favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if OnDeviceAsk.isAvailable {
+            Section(header: askAIHeader) { askPromptRow }
+        }
+    }
+
+    private var resultsPickerSection: some View {
+        Section {
+            Picker("Results", selection: $showKeywordResults) {
+                Text("AI Results").tag(false)
+                Text("Keyword Results").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    /// The AI (semantic) matches for the live query, shown automatically: build progress the first
+    /// time, then the ranked matches - the same rows/tiles the keyword results use. Deliberately
+    /// SILENT otherwise (Arabic query, build failed, no semantic matches): an automatic section
+    /// must never nag.
+    @ViewBuilder
+    private func aiMatchesSection(favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if aiQueryEligible {
+            if semanticEngine.isReady(Self.semanticCorpusID) {
+                if !aiHits.isEmpty {
+                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                        if settings.namesGridMode {
+                            LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                                ForEach(aiHits, id: \.id) { name in
+                                    NameGridTile(
+                                        name: name,
+                                        isFavorite: favoriteSet.contains(name.number),
+                                        accentColor: settings.accentColor,
+                                        useFontArabic: settings.useFontArabic,
+                                        fontArabic: settings.nonQuranArabicFontName
+                                    )
+                                    .equatable()
+                                }
+                            }
+                            .padding(.horizontal, -8)
+                        } else {
+                            ForEach(aiHits, id: \.id) { name in
+                                NameRow(
+                                    name: name,
+                                    firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
+                                    showDescription: settings.showDescription,
+                                    isExpanded: expandedNameNumbers.contains(name.number),
+                                    isFavorite: favoriteSet.contains(name.number),
+                                    accentColor: settings.accentColor,
+                                    useFontArabic: settings.useFontArabic,
+                                    fontArabic: settings.nonQuranArabicFontName,
+                                    searchQuery: searchText
+                                ) {
+                                    handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                                }
+                                .equatable()
+                            }
+                        }
+                    }
+                }
+            } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
+                Section { AISearchStatusRow(corpusID: Self.semanticCorpusID, failed: false) }
+            }
+        }
+    }
+    #endif
+
+    var body: some View {
+        let hasActiveSearch = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // One pass per render: the favorite set used to be rebuilt (`Set(...)`) at every row's
+        // contains-check - ~100 allocations per body pass - and the favorites list was
+        // filtered+sorted three times (gate, count, ForEach).
+        let favoriteSet = Set(settings.favoriteNameNumbers)
+        let favorites = favoriteNames(in: favoriteSet)
+        let names = filteredNames
+
+        // Both result kinds landed: ONE segmented switch decides which list fills the page (the
+        // hadith book search's rule). With only one kind present, no picker - it just shows.
+        #if os(iOS)
+        let showResultsPicker = hasActiveSearch && !aiHits.isEmpty && !names.isEmpty
+        let keywordVisible = !showResultsPicker || showKeywordResults
+        #else
+        let keywordVisible = true
+        #endif
+
+        ScrollViewReader { proxy in
+            List {
+                Group {
+                    #if os(iOS)
+                    if !hasActiveSearch {
+                        ResourceHeroSection(ResourceHero(
+                            eyebrow: "ASMA UL-HUSNA",
+                            systemImage: "signature",
+                            headline: "And to Allah belong the best names, so invoke Him by them.",
+                            source: "Quran 7:180",
+                            message: "Each of His names with its meaning, so that you come to know the One you worship, and call on Him by the name that answers your need.",
+                            stats: [
+                                ResourceHeroStat("99", "names"),
+                                ResourceHeroStat("\(favoriteSet.count)", favoriteSet.count == 1 ? "favorite" : "favorites"),
+                            ]
+                        ))
+                    }
+                    #endif
+                    descriptionSection
+                    allahSection(hasActiveSearch: hasActiveSearch)
+                    favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    #if os(iOS)
+                    if !hasActiveSearch, NamesDetailsStore.isBundled {
+                        Section(header: Text("BROWSE BY THEME")) {
+                            NameThemeChips(active: $activeTheme)
+                        }
+                    }
+                    if hasActiveSearch {
+                        askAISection(hasResults: !aiHits.isEmpty || !names.isEmpty, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        if showResultsPicker { resultsPickerSection }
+                        // AI matches appear AUTOMATICALLY above the keyword results - no mode to enter.
+                        if !showResultsPicker || !showKeywordResults {
+                            aiMatchesSection(favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
+                    }
+                    #endif
+                    if keywordVisible {
+                        namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        if names.isEmpty, !namesData.isReadyForUI {
+                            namesLoadStateSection
+                        } else {
+                            namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
+                    }
+                    finalInvocationSection
+                    #if os(iOS)
+                    // The article FIRST: this screen is the names themselves, and the article is the
+                    // half that explains what they are and what the hadith about them actually says.
+                    AboutSignsSection(heading: "About the Names of Allah",
+                                      systemImage: "signature",
+                                      doors: [.namesOfAllahArticle, .allah, .tawhid, .god],
+                                      openDoor: $aboutDoor)
+                    #endif
+                }
+                .themedListRowBackground()
+            }
+        }
+        #if os(watchOS)
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
+        #else
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
+        // Applied BEFORE the bottom bar below it: bottom safe-area insets stack outward, so the inset
+        // added first sits nearest the content and later ones go underneath it. With the bar first, the
+        // Now Playing player landed UNDER it (Abu, 2026-10-07). The Quran tab's order is the same.
+        .applyConditionalListStyle()
+        .adaptiveSafeArea(edge: .bottom) {
+            // The Arabic face picker used to float here, above the search bar. One control on six
+            // screens writing one `settings.islamArabicFace` is a SETTING, not a reading control: it
+            // now lives once, in Settings -> Islam Settings -> Arabic Text (Abu, 2026-09-19).
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
+                    .minimizedBarStyle(barsCollapsed)
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
+        }
+        #endif
+        .compactListSectionSpacing()
+        #if os(iOS)
+        .aboutSignsDestination($aboutDoor)
+        // On the LIST, not on a row: a lazy row's own sheet does not exist until it scrolls on
+        // screen, and the grid puts many tiles in one row (see `NameSharePresenter`).
+        .nameShareHost()
+        #endif
+        .navigationTitle("99 Names of Allah")
+        // A load that failed at launch gets another go the moment the page is actually opened.
+        .onAppear { namesData.retryIfNeeded() }
+        #if os(iOS)
+        // A card's door into one name: open it the way a tap does, once the names are up.
+        .onReceive(namesData.$pendingNameNumber) { number in
+            guard let number, namesData.isReadyForUI else { return }
+            namesData.pendingNameNumber = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                if let name = namesData.namesOfAllah.first(where: { $0.number == number }) {
+                    FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+                }
+            }
+        }
+        #if DEBUG
+        .debugPushDestination(isPresented: $debugOpenName) {
+            if let number = Self.debugNameNumber,
+               let name = namesData.namesOfAllah.first(where: { $0.number == number }) {
+                NameDetailView(name: name)
+            }
+        }
+        .onChange(of: namesData.loadState) { state in
+            if state == .ready, Self.debugNameNumber != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { debugOpenName = true }
+            }
+        }
+        .onAppear {
+            if namesData.loadState == .ready, Self.debugNameNumber != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenName = true }
+            }
+            // `-focusName <number>`: that name opened the way a row's tap opens it (the overlay
+            // with its details), through the same pending-name door a card uses.
+            if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-focusName"),
+               ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
+               let number = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { namesData.pendingNameNumber = number }
+            }
+        }
+        #endif
+        #endif
+        .onChange(of: searchText) { newValue in
+            cleanedSearch = Self.clean(newValue)
+            #if os(iOS)
+            // A new query starts back on the AI list.
+            showKeywordResults = false
+            runAISearch(query: newValue)
+            #endif
+        }
+        #if os(iOS)
+        .sheet(isPresented: $showAskAI) {
+            if #available(iOS 16.0, *) {
+                AskAIChatSheet(initialQuestion: searchText)
+            }
+        }
+        #endif
+        #if os(iOS)
+        // The one-time vector build finishing mid-query: surface the results without another keystroke.
+        .onChange(of: semanticEngine.readyCorpora) { ready in
+            guard ready.contains(Self.semanticCorpusID) else { return }
+            runAISearch(query: searchText)
+        }
+        // The grid toggle, then the Islam Settings gear at the far right, in ONE toolbar (see
+        // `IslamSettingsToolbar` for why this screen places the gear itself).
+        .islamSettingsToolbar {
+            // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
+            Button {
+                settings.hapticFeedback()
+                withAnimation { settings.namesGridMode.toggle() }
+            } label: {
+                Image(systemName: settings.namesGridMode ? "list.bullet" : "square.grid.2x2")
+            }
+            .accessibilityLabel(settings.namesGridMode ? "Show list" : "Show grid")
+            .tint(settings.accentColor.accent2)
+        }
+        #endif
+    }
+
+    private static var namesDisclaimerText: String {
+        var text = "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing."
+        #if HAS_QURAN
+        text += " Names marked as coming from that list do not appear as names in the Quran."
+        #endif
+        return text
+    }
+
+    private var descriptionSection: some View {
+        Section(header: Text("DESCRIPTION")) {
+            // The closing sentence explains the "First Found" labels, which only exist in apps that
+            // ship the Quran, so it goes with them. Set as the screen's opening card, the article kit's
+            // lead (Abu, 2026-10-03); its Highlight Allah is the same `highlightAllahNamesIslam`, read
+            // off the appearance snapshot.
+            ArticleLead(Self.namesDisclaimerText)
+
+            // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
+            if !settings.namesGridMode {
+                Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
+                    .font(.caption)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.showDescription) { _ in settings.hapticFeedback() }
+            }
+        }
+    }
+
+    private var showAllDescriptionsBinding: Binding<Bool> {
+        Binding(
+            get: { settings.showDescription },
+            set: { newValue in
+                withAnimation(.easeInOut) {
+                    settings.showDescription = newValue
+                    if !newValue {
+                        // User requested global OFF to force every manual expansion closed.
+                        expandedNameNumbers.removeAll()
+                    }
+                }
+            }
+        )
+    }
+
+    /// The name itself, above the 99: Allah is the proper name the 99 names all describe, so it gets
+    /// its own row rather than a place in the enumerated list. Hidden while searching - it is not one
+    /// of the searchable names.
+    @ViewBuilder
+    private func allahSection(hasActiveSearch: Bool) -> some View {
+        if !hasActiveSearch {
+            Section(header: Text("ALLAH")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    // The name itself, set large and centred like calligraphy on a wall, with a soft
+                    // accent wash behind it - the one name the ninety-nine describe deserves the room.
+                    // Vowelled, and with no case ending on the final haa - the same treatment every one
+                    // of the 99 names gets (`displayArabicName` strips only the last letter's diacritic).
+                    VStack(spacing: 6) {
+                        Text.islamArabic("اللَّه", highlightAllah: settings.highlightAllahNamesIslam)
+                            .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 56) : .system(size: 48, weight: .semibold))
+                            .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
+                            .foregroundColor(settings.accentColor.color)
+                            .shadow(color: settings.accentColor.color.opacity(0.25), radius: 12)
+                            .padding(.top, 6)
+
+                        Text("Allah")
+                            .font(.headline)
+
+                        Text("The One True God")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        // No "First Found" line here, unlike the 99 name rows: the paragraph below says
+                        // this name opens the Quran and the button under it goes straight to 1:1, so the
+                        // header was stating the same reference a third time.
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [settings.accentColor.color.opacity(0.16), settings.accentColor.color.opacity(0.05)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                    )
+                    .padding(.bottom, 4)
+
+                    // The Quran tail of the paragraph, the 1:1 quote and the link into the mushaf
+                    // only exist where the Quran does.
+                    Text.islamText(Self.allahIntroText, highlightAllah: settings.highlightAllahNamesIslam)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    #if HAS_QURAN
+                    Text.islamText("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)", highlightAllah: settings.highlightAllahNamesIslam)
+                        .font(.footnote.italic())
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("View First Ayah (1:1)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                        .conditionalGlassEffect(useColor: 0.2)
+                        .padding(.top, 2)
+                        .background(
+                            NavigationLink("", destination: LazyDestination { ayahsDestination(for: (surahID: 1, ayahID: 1)) })
+                                .opacity(0)
+                        )
+                    #endif
+                }
+            }
+        }
+    }
+
+    private static var allahIntroText: String {
+        var text = "Allah (اللَّه) is the proper name of the One True God, not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else."
+        #if HAS_QURAN
+        text += " It appears in the Quran more than 2,600 times, beginning with the very first ayah:"
+        #endif
+        return text
+    }
+
+    private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        Section(header: SectionPillHeader(
+            title: hasActiveSearch ? "NAME SEARCH RESULTS" : "NAMES OF ALLAH",
+            count: resultCount,
+            // Shuffle expands and scrolls to a random name - list rows only; grid tiles carry no ids.
+            onShuffle: (hasActiveSearch || settings.namesGridMode) ? nil : { shuffleToRandomName(proxy: proxy) }
+        )) { }
+        .padding(.bottom, -12)
+    }
+
+    /// What the list shows while the model has nothing to list: the load still running, or a load that
+    /// failed, with a way to try again. Before this row existed, both states left the page looking
+    /// finished with no names on it.
+    @ViewBuilder
+    private var namesLoadStateSection: some View {
+        Section {
+            if namesData.loadState == .failed {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("The names could not be loaded.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    if let reason = namesData.failureReason {
+                        Text(reason)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Button {
+                        settings.hapticFeedback()
+                        namesData.retryIfNeeded()
+                    } label: {
+                        Label("Try Again", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 4)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Loading the names…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    /// Scrolls a random name to the top and opens it, the way a tap does (the header's shuffle button).
+    private func shuffleToRandomName(proxy: ScrollViewProxy) {
+        guard let name = namesData.namesOfAllah.randomElement() else { return }
+        withAnimation {
+            proxy.scrollTo("name_\(name.number)", anchor: .top)
+            #if !os(iOS)
+            expandedNameNumbers.insert(name.number)
+            #endif
+        }
+        #if os(iOS)
+        FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+        #endif
+    }
+
+    @ViewBuilder
+    private func favoriteNamesSection(_ favorites: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if !hasActiveSearch && !favorites.isEmpty {
+            Section(header: SectionPillHeader(
+                title: "FAVORITES",
+                count: favorites.count,
+                icon: "star.fill",
+                accentTitle: true,
+                isExpanded: $showFavoriteNames
+            )) {
+                if !showFavoriteNames {
+                    EmptyView()
+                } else if settings.namesGridMode {
+                    LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                        ForEach(favorites, id: \.id) { name in
+                            NameGridTile(
+                                name: name,
+                                isFavorite: true,
+                                accentColor: settings.accentColor,
+                                useFontArabic: settings.useFontArabic,
+                                fontArabic: settings.nonQuranArabicFontName
+                            )
+                            .equatable()
+                        }
+                    }
+                    .padding(.horizontal, -8)
+                } else {
+                    ForEach(favorites, id: \.id) { name in
+                        NameRow(
+                            name: name,
+                            firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
+                            showDescription: settings.showDescription,
+                            isExpanded: expandedNameNumbers.contains(name.number),
+                            isFavorite: true,
+                            accentColor: settings.accentColor,
+                            useFontArabic: settings.useFontArabic,
+                            fontArabic: settings.nonQuranArabicFontName,
+                            searchQuery: searchText
+                        ) {
+                            handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
+                        .equatable()
+                        .id("favorite_name_\(name.number)")
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func namesSections(filteredNames: [NameOfAllah], favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if settings.namesGridMode {
+            Section {
+                LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                    ForEach(filteredNames, id: \.id) { name in
+                        NameGridTile(
+                            name: name,
+                            isFavorite: favoriteSet.contains(name.number),
+                            accentColor: settings.accentColor,
+                            useFontArabic: settings.useFontArabic,
+                            fontArabic: settings.nonQuranArabicFontName
+                        )
+                        .equatable()
+                    }
+                }
+                .padding(.horizontal, -8)
+            }
+        } else if filteredNames.isEmpty, hasActiveSearch {
+            Section {
+                #if os(iOS)
+                Text(aiHits.isEmpty
+                     ? "No names match your search."
+                     : "No keyword matches; see the AI results above.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                #else
+                Text("No names match your search.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                #endif
+            }
+        } else {
+        ForEach(filteredNames, id: \.id) { name in
+            Section {
+                NameRow(
+                    name: name,
+                    firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
+                    showDescription: settings.showDescription,
+                    isExpanded: expandedNameNumbers.contains(name.number),
+                    isFavorite: favoriteSet.contains(name.number),
+                    accentColor: settings.accentColor,
+                    useFontArabic: settings.useFontArabic,
+                    fontArabic: settings.nonQuranArabicFontName,
+                    searchQuery: searchText
+                ) {
+                    handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                }
+                .equatable()
+            }
+            .id("name_\(name.number)")
+        }
+        }
+    }
+
+    #if HAS_QURAN
+    @ViewBuilder
+    private func ayahsDestination(for target: (surahID: Int, ayahID: Int)) -> some View {
+        if let surah = quranData.surah(target.surahID) {
+            SurahView(surah: surah, ayah: target.ayahID)
+        } else {
+            Text("Reference not found")
+        }
+    }
+    #endif
+
+    private func handleNameTap(name: NameOfAllah, hasActiveSearch: Bool, proxy: ScrollViewProxy) {
+        if hasActiveSearch {
+            let targetID = "name_\(name.number)"
+            withAnimation {
+                searchText = ""
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation {
+                    proxy.scrollTo(targetID, anchor: .top)
+                }
+            }
+        } else {
+            #if os(iOS)
+            // The same thing a grid tile's tap does (Abu, 2026-09-25: "for list view instead of
+            // opening that below just do the same thing of opening the same way as grid mode"):
+            // the name full screen, with Other Names, the description and the two doors under it.
+            FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+            #else
+            // The watch has no overlay, so a row still opens in place there.
+            withAnimation {
+                if expandedNameNumbers.contains(name.number) {
+                    expandedNameNumbers.remove(name.number)
+                } else {
+                    expandedNameNumbers.insert(name.number)
+                }
+            }
+            #endif
+        }
+    }
+
+    /// Quranic content wholesale (an ayah and the four Al-Hashr reflections) - it only exists in
+    /// apps that ship the Quran.
+    @ViewBuilder
+    private var finalInvocationSection: some View {
+        #if HAS_QURAN
+        Section(header: Text("MOST BEAUTIFUL NAMES")) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text.islamText("Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names.", highlightAllah: settings.highlightAllahNamesIslam)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                
+                Text("Surah Al-Isra 17:110")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            VerseReflectionCard(
+                title: "Surah Al-Hashr 59:21",
+                contentText: "If this Quran were sent upon a mountain, it would humble and break from awe of Allah. These examples are given so people reflect."
+            )
+
+            VerseReflectionCard(
+                title: "Surah Al-Hashr 59:22",
+                contentText: "He is Allah, none is worthy of worship except Him. Knower of the seen and unseen, the Most Compassionate, the Most Merciful."
+            )
+
+            VerseReflectionCard(
+                title: "Surah Al-Hashr 59:23",
+                contentText: "He is Allah: the King, the Most Holy, the Source of Peace, the Granter of Security, the Guardian, the Almighty, the Compeller, the Supreme. Exalted is He above all partners."
+            )
+
+            VerseReflectionCard(
+                title: "Surah Al-Hashr 59:24",
+                contentText: "He is Allah, the Creator, the Originator, the Fashioner. To Him belong the Most Beautiful Names; all in the heavens and earth glorify Him."
+            )
+        }
+        #endif
+    }
+}
+
+private struct NameRow: View, Equatable {
+    // Deliberately NOT observing Settings: every input this body reads is passed in and folded into `==`,
+    // so with `.equatable()` a Settings publish (favorite toggle, accent change elsewhere) skips every
+    // row whose inputs didn't change. Actions reach Settings.shared directly - they don't need observation.
+    let name: NameOfAllah
+    let firstFoundTarget: (surahID: Int, ayahID: Int)?
+    let showDescription: Bool
+    let isExpanded: Bool
+    let isFavorite: Bool
+    let accentColor: AccentColor
+    /// Compared alongside `accentColor`: for the `.custom` accent, `.color` resolves through this hex,
+    /// so an edit to it must fail `==` - this row observes nothing, and comparing only the enum case
+    /// left visible rows on the old tint until they scrolled off (the `ReciterRow` fix, applied here).
+    let customAccentHex: String
+    let useFontArabic: Bool
+    let fontArabic: String
+    /// Islam Settings' "Highlight Allah", captured like every other appearance input and folded
+    /// into `==` (this row observes nothing).
+    let highlightAllah: Bool
+    let searchQuery: String
+    let onTap: () -> Void
+
+    init(
+        name: NameOfAllah,
+        firstFoundTarget: (surahID: Int, ayahID: Int)? = nil,
+        showDescription: Bool,
+        isExpanded: Bool,
+        isFavorite: Bool,
+        accentColor: AccentColor = Settings.shared.accentColor,
+        useFontArabic: Bool = Settings.shared.useFontArabic,
+        fontArabic: String = Settings.shared.nonQuranArabicFontName,
+        searchQuery: String = "",
+        onTap: @escaping () -> Void
+    ) {
+        self.name = name
+        self.firstFoundTarget = firstFoundTarget
+        self.showDescription = showDescription
+        self.isExpanded = isExpanded
+        self.isFavorite = isFavorite
+        self.accentColor = accentColor
+        self.customAccentHex = Settings.shared.customAccentColorHex
+        self.useFontArabic = useFontArabic
+        self.fontArabic = fontArabic
+        self.highlightAllah = Settings.shared.highlightAllahNamesIslam
+        self.searchQuery = searchQuery
+        self.onTap = onTap
+    }
+
+    var body: some View {
+        #if os(iOS)
+        content
+            // The same items the grid tile offers through `GridTileMenu` - one menu, both modes.
+            // While searching, the row's tap already clears the search and scrolls to the name
+            // (`handleNameTap`); the menu and the trailing swipe say so explicitly, the Quran list's way.
+            .contextMenu {
+                nameContextItems(
+                    name,
+                    isFavorite: isFavorite,
+                    onScrollTo: searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : onTap
+                )
+            }
+            .swipeActions(edge: .leading) {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+                    }
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                }
+                .tint(accentColor.color)
+            }
+            .swipeActions(edge: .trailing) {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+                    }
+                } label: {
+                    Image(systemName: isFavorite ? "star.fill" : "star")
+                }
+                .tint(accentColor.color)
+
+                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        onTap()
+                    } label: {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                    .tint(.secondary)
+                }
+            }
+        #else
+        content
+        #endif
+    }
+
+    private var content: some View {
+        let fieldMatches = name.displayedFieldMatches(query: searchQuery)
+        return Group {
+            HStack(alignment: .center, spacing: 12) {
+                numberPill
+
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HighlightedSnippet(
+                            source: name.transliteration,
+                            term: searchQuery,
+                            font: .subheadline.weight(.semibold),
+                            accent: accentColor.color,
+                            fg: .primary,
+                            guaranteeMatch: fieldMatches.transliteration
+                        )
+                            .lineLimit(1)
+
+                        HighlightedSnippet(
+                            source: name.meaning,
+                            term: searchQuery,
+                            font: .caption,
+                            accent: accentColor.color,
+                            fg: .secondary,
+                            highlightAllahNames: highlightAllah,
+                            guaranteeMatch: fieldMatches.meaning
+                        )
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        // A Quran reference - it only exists in apps that ship the Quran.
+                        #if HAS_QURAN
+                        Text("First Found: \(name.firstFoundShort)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        #endif
+                    }
+
+                    Spacer(minLength: 8)
+
+                    HStack {
+                        HighlightedSnippet(
+                            source: displayArabicName,
+                            term: searchQuery,
+                            font: useFontArabic ? Font.arabic(fontArabic, size: 24) : .title3,
+                            accent: accentColor.color,
+                            fg: .primary,
+                            highlightAllahNames: highlightAllah,
+                            guaranteeMatch: fieldMatches.arabic
+                        )
+                            .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        // Always the Uthmani face: it renders the number as the circled-flower ornament.
+                        Text(name.numberArabic)
+                            .font(.custom(Settings.hafsUthmaniFontName, size: 28))
+                            .arabicFontDesign(custom: true)
+                            .foregroundColor(accentColor.color)
+                            .lineLimit(1)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if !showDescription {
+                        Settings.shared.hapticFeedback()
+                        onTap()
+                    }
+                }
+            }
+            
+            if showDescription || isExpanded {
+                NameRowDetails(
+                    name: name,
+                    firstFoundTarget: firstFoundTarget,
+                    showDescription: showDescription,
+                    isExpanded: isExpanded
+                )
+            }
+        }
+    }
+
+    private var displayArabicName: String {
+        name.displayArabicName
+    }
+
+    @ViewBuilder
+    private var numberPill: some View {
+        ZStack(alignment: .topTrailing) {
+            Text("\(name.number)")
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(accentColor.color)
+                .frame(minWidth: 40)
+                .frame(maxHeight: .infinity)
+                .conditionalGlassEffect(
+                    useColor: isFavorite ? 0.3 : nil,
+                    customTint: isFavorite ? accentColor.color : nil
+                )
+
+            if isFavorite {
+                Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundStyle(accentColor.color)
+                    .padding(4)
+                    .offset(x: 8, y: -6)
+            }
+        }
+        .onTapGesture {
+            Settings.shared.hapticFeedback()
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+        }
+        .padding(.vertical, {
+            if #available(iOS 26, *) { 0 } else { 8 }
+        }())
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.firstFoundTarget?.surahID == rhs.firstFoundTarget?.surahID &&
+        lhs.firstFoundTarget?.ayahID == rhs.firstFoundTarget?.ayahID &&
+        lhs.showDescription == rhs.showDescription &&
+        lhs.isExpanded == rhs.isExpanded &&
+        lhs.isFavorite == rhs.isFavorite &&
+        lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
+        lhs.useFontArabic == rhs.useFontArabic &&
+        lhs.fontArabic == rhs.fontArabic &&
+        lhs.highlightAllah == rhs.highlightAllah &&
+        lhs.searchQuery == rhs.searchQuery
+    }
+}
+
+private struct NameRowDetails: View {
+    @ObservedObject var settings = Settings.shared
+    #if HAS_QURAN
+    @ObservedObject var quranData = QuranData.shared
+    #endif
+
+    let name: NameOfAllah
+    let firstFoundTarget: (surahID: Int, ayahID: Int)?
+    let showDescription: Bool
+    let isExpanded: Bool
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            if showDescription || isExpanded {
+                if !name.otherNames.isEmpty {
+                    // Baseline-aligned and free to wrap: a name with many alternates used to clip to
+                    // whatever fit on the label's line.
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Other Names:")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+
+                        Text(name.otherNames.joined(separator: ", "))
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .transition(.opacity)
+                }
+
+                Text.islamText(name.desc, highlightAllah: settings.highlightAllahNamesIslam)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .transition(.opacity)
+                    .padding(.top, 2)
+
+                #if os(iOS)
+                if NamesDetailsStore.isBundled {
+                    NameDetailLink(name: name)
+                }
+                #endif
+
+                #if HAS_QURAN
+                if showDescription || isExpanded, let target = firstFoundTarget {
+                    Text("View First Found")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                        .conditionalGlassEffect(useColor: 0.2)
+                        .padding(.top, 6)
+                        .background(
+                            NavigationLink("", destination: LazyDestination { ayahsDestination(for: target) })
+                                .opacity(0)
+                        )
+                }
+                #endif
+            }
+        }
+    }
+
+    #if HAS_QURAN
+    @ViewBuilder
+    private func ayahsDestination(for target: (surahID: Int, ayahID: Int)) -> some View {
+        if let surah = quranData.surah(target.surahID) {
+            SurahView(surah: surah, ayah: target.ayahID)
+        } else {
+            Text("Reference not found")
+        }
+    }
+    #endif
+}
+
+private struct VerseReflectionCard: View {
+    @ObservedObject var settings = Settings.shared
+    
+    let title: String
+    let contentText: String
+
+    var body: some View {
+        content
+    }
+    
+    var content: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
+
+            Text.islamText(contentText, highlightAllah: settings.highlightAllahNamesIslam)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.secondary.opacity(0.1))
+        )
+        .padding(-4)
+    }
+}
+
+#if os(iOS)
+/// The 99 Names menu, shared by `NameRow`'s `contextMenu` and `NameGridTile`'s press-and-hold
+/// `GridTileMenu`: one list of actions, in one order, whichever mode the screen is in.
+@ViewBuilder
+func nameContextItems(_ name: NameOfAllah, isFavorite: Bool, onScrollTo: (() -> Void)? = nil) -> some View {
+    Text("Name Actions")
+        .foregroundStyle(.secondary)
+
+    Button {
+        Settings.shared.hapticFeedback()
+        FocusOverlayPresenter.shared.present(.name(name))
+    } label: {
+        Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+    }
+
+    // ONE entry where six Copy items used to sit (Abu, 2026-09-23). The sheet asks which parts you
+    // want, previews them, and its own Copy button is what replaced "Copy All" and the rest - so
+    // this is both the share AND the copy door. See `NameShareSheet`.
+    Button {
+        Settings.shared.hapticFeedback()
+        NameSharePresenter.shared.present(name)
+    } label: {
+        Label("Share Name", systemImage: "square.and.arrow.up")
+    }
+
+    Divider()
+
+    Button(role: isFavorite ? .destructive : nil) {
+        Settings.shared.hapticFeedback()
+        withAnimation(.easeInOut) {
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+        }
+    } label: {
+        Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+    }
+
+    // Only while searching: the row's own tap already does this, and the grid tile has no other way.
+    if let onScrollTo {
+        Divider()
+
+        Button {
+            Settings.shared.hapticFeedback()
+            onScrollTo()
+        } label: {
+            Label("Scroll To Name", systemImage: "arrow.down.circle")
+        }
+    }
+}
+
+#endif
+
+/// Press-and-hold opens the same menu the row carries (`GridTileMenu`); a tap opens the name
+/// fullscreen WITH the second half the list row expands to (Other Names, the description, and the
+/// two doors under it) - see `FocusNameDetails`. Expanding in place is a list-row idea, so the
+/// overlay is where a tile shows it.
+private struct NameGridTile: View, Equatable {
+
+    let name: NameOfAllah
+    let isFavorite: Bool
+    let accentColor: AccentColor
+    let useFontArabic: Bool
+    let fontArabic: String
+    /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
+    /// comparing only the enum case left tiles on the old tint (the `ReciterRow` fix, applied here).
+    var customAccentHex: String = Settings.shared.customAccentColorHex
+    /// Islam Settings' "Highlight Allah", captured and compared like the rest.
+    var highlightAllah: Bool = Settings.shared.highlightAllahNamesIslam
+
+    /// Every appearance input is a stored value, so equality of the values means the drawn tile is identical.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.highlightAllah == rhs.highlightAllah &&
+        lhs.isFavorite == rhs.isFavorite &&
+        lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
+        lhs.useFontArabic == rhs.useFontArabic &&
+        lhs.fontArabic == rhs.fontArabic
+    }
+
+    var body: some View {
+        #if os(iOS)
+        GridTileMenu {
+            Settings.shared.hapticFeedback()
+            // `withDetails`: a tile has no way to expand in place, so its tap opens the name with
+            // everything the list row shows expanded (Abu, 2026-09-23).
+            FocusOverlayPresenter.shared.present(.name(name, withDetails: true))
+        } menu: {
+            nameContextItems(name, isFavorite: isFavorite)
+        } label: {
+            tile
+        }
+        // OUTSIDE the menu's label: inside, the star's tap target fights the long press.
+        .gridFavoriteStar(
+            isFavorite: isFavorite,
+            accent: accentColor.color,
+            accessibilityName: name.transliteration
+        ) {
+            Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+        }
+        #else
+        tile
+            .gridFavoriteStar(
+                isFavorite: isFavorite,
+                accent: accentColor.color,
+                accessibilityName: name.transliteration
+            ) {
+                Settings.shared.toggleNameFavoriteOrConfirm(number: name.number, transliteration: name.transliteration)
+            }
+        #endif
+    }
+
+    private var tile: some View {
+        VStack(spacing: 3) {
+            Text.islamArabic(name.displayArabicName, highlightAllah: highlightAllah)
+                .font(useFontArabic ? Font.arabic(fontArabic, size: 20) : .title3)
+                .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
+                .foregroundColor(accentColor.color)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+
+            Text(name.transliteration)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+
+            Text("\(name.number)")
+                .font(.caption2)
+                .foregroundColor(.secondaryOnGlass)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 5)
+        .padding(.horizontal, 4)
+        // Only a favorite is tinted; every other tile is clear. A grid where all 99 boxes are filled is just a
+        // wall of color, and the favorites disappear into it.
+        .conditionalGlassEffect(
+            clear: !isFavorite,
+            rectangle: true,
+            useColor: isFavorite ? 0.25 : nil,
+            customTint: isFavorite ? accentColor.color : nil
+        )
+    }
+}
+
+#Preview {
+    AlIslamPreviewContainer {
+        NamesView()
+    }
+}

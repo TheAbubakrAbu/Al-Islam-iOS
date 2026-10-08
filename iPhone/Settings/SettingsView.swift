@@ -400,11 +400,17 @@ struct SettingsView: View {
     private func settingsListChrome<L: View>(_ list: L, disableNowPlayingInset: Bool) -> some View {
         list
             .collapseBarsOnScroll($barsCollapsed)
+            .navigationTitle("Settings")
+            // The Now Playing bar's inset (inside `applyConditionalListStyle`) must be applied BEFORE
+            // the search bar's, because bottom safe-area insets stack outward: the one applied first
+            // ends up nearest the content, and the one applied last sits below it. With the search bar
+            // first, the player landed UNDER it (Abu, 2026-10-07: "ProgressView goes below the search
+            // bar in settings"), which is the opposite of the Quran tab, where one inset stacks the
+            // player above the search row (`QuranView.nowPlayingInset` then `bottomControls`).
+            .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
             .adaptiveSafeArea(edge: .bottom) {
                 settingsSearchBarInset
             }
-            .navigationTitle("Settings")
-            .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
             // Each door's flag and its target are raised together (`openDoor`) and the flag is lowered
             // again when the target is missing: an `if let` that fails here would push a page with
             // NOTHING on it, which is the blank screen half of the same report. A door can only lose
@@ -620,6 +626,10 @@ struct SettingsView: View {
         #else
         appearanceSection(grid: false)
         #endif
+        // Under APPEARANCE, because that is what it is: a choice about what the app SHOWS, not about
+        // what it does. Its own section rather than a row inside the appearance pages - it reaches
+        // every tab, where those pages are about theme and accent.
+        SimpleModeSection()
         // Reset stays a row in both modes: a destructive action keeps its explanation and its two
         // confirmations, never a tile's one tap.
         resetSection
@@ -1993,6 +2003,46 @@ struct ProfileTilesSection: View {
 /// the values they hold. A screen that hides nothing carries no ADVANCED section at all - which is
 /// why the Settings tab's own hub no longer has one. Compiles for the watch too (its Notifications
 /// and Nagging Mode pages use it).
+/// Simple Mode's one switch, in APPEARANCE. The per-screen Advanced switches trim the SETTINGS
+/// screens; this trims the app's own chrome (Abu, 2026-10-07: "just make the app look less
+/// overwhelming and have a toggle to show more complicated stuff").
+///
+/// One switch, app-wide, where Advanced is one per screen: Advanced answers "show me the rest of
+/// THIS screen", which is a question about the screen in front of you. Simple Mode answers "I find
+/// the app busy", which is not - hunting a dozen switches to settle it would be the clutter it is
+/// meant to remove.
+struct SimpleModeSection: View {
+    @ObservedObject private var settings = Settings.shared
+
+    var body: some View {
+        Section(header: Text("SIMPLE MODE")) {
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Simple Mode", isOn: $settings.simpleMode.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.simpleMode) { _ in settings.hapticFeedback() }
+
+                #if os(iOS)
+                Text(caption)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+                #endif
+            }
+        }
+    }
+
+    /// Says what moves and, either way, that nothing stops working - the one worry a switch that
+    /// hides parts of the app has to answer before it is turned on.
+    private var caption: String {
+        if settings.simpleMode {
+            return "The app is kept to its essentials: the extra rows and buttons are out of the way. Nothing is turned off - what they control still applies, and every one of them is still reachable. Turn this off to see them again."
+        }
+        return "Hides the busier controls across the app, like the Quran tab's sort row and the reader's second toolbar, leaving the essentials. Nothing is turned off: everything hidden still applies and is still reachable, and turning this back off brings it all straight back."
+    }
+}
+
 struct AdvancedSettingsSection: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -2093,8 +2143,60 @@ struct VersionNumber: View {
     }
 }
 
-#Preview {
+#Preview("Settings") {
     AlIslamPreviewContainer(embedInNavigation: false) {
         SettingsView()
     }
 }
+
+#if DEBUG
+/// THE regression preview for 2026-10-07: Settings with recitation live. The floating search bar and
+/// the Now Playing player are both bottom safe-area insets, and insets stack OUTWARD - whichever is
+/// applied first sits nearest the content. Settings used to add its search bar before
+/// `applyConditionalListStyle` (which installs the player), so the player rendered UNDERNEATH the
+/// search bar instead of above it.
+///
+/// What correct looks like here: search bar on the bottom, player directly above it, list content
+/// above that. If they ever swap, the modifier order in `settingsListChrome` has been changed back.
+///
+/// The surah and reciter are real (`QuranData.shared`), so the card shows the shipped Arabic name and
+/// a title of realistic length rather than a short placeholder that would never reveal a clipping bug.
+#Preview("Settings - player sits ABOVE the search bar") {
+    let surah = AlIslamPreviewData.quranData.quran.first(where: { $0.id == 55 })
+        ?? AlIslamPreviewData.surah
+    QuranPlayer.shared.nowPlaying.previewSeed { snapshot in
+        snapshot.isPlaying = true
+        snapshot.isPaused = false
+        snapshot.currentSurahNumber = surah.id
+        snapshot.currentAyahNumber = 13
+        snapshot.isPlayingSurah = true
+        snapshot.nowPlayingTitle = "\(surah.nameTransliteration) \(surah.id):13"
+        snapshot.nowPlayingReciter = "Mishary Rashid Alafasy"
+    }
+    PlaybackVisibility.shared.update(showsBar: true)
+    return AlIslamPreviewContainer(embedInNavigation: false) {
+        SettingsView()
+    }
+}
+
+/// The same screen with the player EXPANDED. The big card is roughly double the height, so this is
+/// where the two insets would overlap first if the order regressed: the list's bottom content must
+/// still clear both, and the search bar must stay fully tappable.
+#Preview("Settings - expanded player + search bar") {
+    let surah = AlIslamPreviewData.quranData.quran.first(where: { $0.id == 2 })
+        ?? AlIslamPreviewData.surah
+    AlIslamPreviewData.seedPersisted("nowPlayingExpanded", true)
+    QuranPlayer.shared.nowPlaying.previewSeed { snapshot in
+        snapshot.isPlaying = true
+        snapshot.currentSurahNumber = surah.id
+        snapshot.currentAyahNumber = 255
+        snapshot.isPlayingSurah = true
+        snapshot.nowPlayingTitle = "\(surah.nameTransliteration) \(surah.id):255"
+        snapshot.nowPlayingReciter = "Mishary Rashid Alafasy"
+    }
+    PlaybackVisibility.shared.update(showsBar: true)
+    return AlIslamPreviewContainer(embedInNavigation: false) {
+        SettingsView()
+    }
+}
+#endif

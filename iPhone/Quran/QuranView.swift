@@ -209,7 +209,22 @@ struct QuranView: View {
     // window compact - the column layout must collapse to the iPhone shape there, so the layout is keyed
     // on the size class, not just the idiom (see `usesColumnNavigation`).
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    /// A phone held in landscape. The browse list is built for a tall, narrow band: two wide tiles per
+    /// row, a 6-wide juz grid, and two stacked control rows. Turned sideways that band is 874pt across
+    /// and ~400pt tall, so the tiles stretch to absurd widths while the list itself is left a sliver of
+    /// height. Every landscape adjustment on this tab keys off this one value.
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
+
+    /// `verticalSizeClass == .compact` on iOS, always false on the watch (the symbol is iOS-only, and
+    /// this view's body is shared).
+    private var isCompactHeight: Bool {
+        #if os(iOS)
+        return verticalSizeClass == .compact
+        #else
+        return false
+        #endif
+    }
 
     /// Whether the Quran tab is the one on screen. Page mode means "the Quran tab IS the mushaf", so every time
     /// the tab is entered it should land in the mushaf again - not just the first time. Keying this on the tab
@@ -294,7 +309,16 @@ struct QuranView: View {
     /// to "...الفَ" and the summary tiles' titles to "Ayah of th..." (2026-09-27). The watch keeps two.
     private var quranGridColumns: [GridItem] {
         #if os(iOS)
-        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        // Landscape doubles the columns rather than doubling each tile's width: on the 874pt band two
+        // columns gave ~420pt tiles, a surah name adrift in a field of empty green. Four keeps a tile
+        // roughly its portrait width, which is the width the row was designed at. The accessibility
+        // sizes still step down, to two across instead of one.
+        let count: Int
+        if dynamicTypeSize.isAccessibilitySize {
+            count = isCompactHeight ? 2 : 1
+        } else {
+            count = isCompactHeight ? 4 : 2
+        }
         #else
         let count = 2
         #endif
@@ -1529,17 +1553,6 @@ struct QuranView: View {
                 .navigationDestination(for: QuranRoute.self) { route in
                     routeDestination(route)
                 }
-                #if os(iOS)
-                // The ONE destination the summary doors share. On the stack, not on the row: a lazy
-                // row's own destination never fires, and a hidden link there is the crash the DEBUG
-                // note below records.
-                .pushDestination(isPresented: Binding(
-                    get: { openSummaryDoor != nil },
-                    set: { if !$0 { openSummaryDoor = nil } }
-                )) {
-                    summaryDoorDestination
-                }
-                #endif
                 #if DEBUG && os(iOS)
                 // "-openThemes" (DEBUG): the Browse by Theme screen pushed on launch, for headless
                 // verification of the theme rows. Through the stack's own destination, never a hidden
@@ -1809,10 +1822,28 @@ struct QuranView: View {
                 .themedListRowBackground()
             }
             .applyConditionalListStyle(disableNowPlayingInset: true)
+            // Landscape on a phone: the sensor housing insets this list 62pt on BOTH sides, so the
+            // browse tiles were being laid out into 750pt of an 874pt band. Reclaim the container
+            // inset and re-apply the real per-side clearance, exactly as both readers do.
+            .readerLandscapeWidth(isCompactHeight)
             #if os(iOS)
             // The Word of the Day's push lives on the List itself (a lazy row's destination never fires),
             // so it works in the iPhone stack and in the iPad split's sidebar column alike.
             .pushDestination(isPresented: $openWordOfDay) { wordOfDayPushedDestination }
+            // The ONE destination the summary doors share, on the List for the SAME reason - not on a
+            // lazy row (its destination never fires), and not on `pathNavigation`'s stack, which is
+            // built only when `usesColumnNavigation` is false. Parked there, an iPad/Mac tap set
+            // `openSummaryDoor` and nothing read it: no door opened, and because the binding's setter
+            // only runs when a destination pops, the flag never cleared, so every later tap was
+            // swallowed too (Abu, 2026-10-06: "i go to quran in ipad and mac on grid then click on one
+            // nothing happens and it lwokey just partialyl crashes"). The doors are not grid-only - they
+            // were dead in the sidebar's list mode as well.
+            .pushDestination(isPresented: Binding(
+                get: { openSummaryDoor != nil },
+                set: { if !$0 { openSummaryDoor = nil } }
+            )) {
+                summaryDoorDestination
+            }
             #endif
             .compactListSectionSpacing()
             .listSectionIndexVisibilityWhenAvailable(visible: settings.quranSortMode == .juz && searchText.isEmpty)
@@ -2152,19 +2183,39 @@ struct QuranView: View {
         // It also stands down while a query is on the page: it orders BROWSING, a search leads with
         // the surah named for the query, and over results it is one more row to read past. With
         // "Every Filter as a Button" on it stays, as it did.
-        let secondaryVisible = !isQuranSearchFocused && (searchText.isEmpty || showsEveryFilterButton)
+        // Simple Mode folds the sort row away too: it orders BROWSING, and the surah order it defaults
+        // to is the one the Quran is in - the row is a control most readers never touch.
+        //
+        // ONLY while the sort is still that default, though. The row is the sort's one and only home
+        // (there is no sort control in Settings), so hiding it while a juz/pages/khatm sort is active
+        // would leave a list in an order with nothing on screen to explain or undo it - a hidden
+        // control that changes what the app DOES, which is the one thing Simple Mode must never do.
+        // Sorted, the row stays and Simple Mode is the lighter for having let it.
+        let simpleModeHidesSort = settings.simpleMode
+            && settings.quranSortMode == .surah
+            && settings.quranSortDirection == .ascending
 
-        VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-            // (Recent-search chips used to stack above the sort row while the field was focused;
-            // they live in the search-help card over the list now - see `searchHelpOverlayCard`.)
-            sortControls
-                .frame(height: secondaryVisible ? nil : 0)
-                .clipped()
-                .opacity(secondaryVisible ? 1 : 0)
-                .allowsHitTesting(secondaryVisible)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: secondaryVisible)
-            searchAndPlaybackRow
-                .minimizedBarStyle(barsCollapsed && !isQuranSearchFocused)
+        let secondaryVisible = !isQuranSearchFocused
+            && (searchText.isEmpty || showsEveryFilterButton)
+            && !simpleModeHidesSort
+
+        // Landscape lays the two rows SIDE BY SIDE instead of stacking them. Stacked, this inset took
+        // 162pt of a 402pt band and the browse list was left 162pt - less than one juz card, so JUMP TO
+        // JUZ never came on screen. The band is 874pt wide and both rows are happy at half of it, so
+        // turning the stack on its side gives the list back ~52pt without hiding a single control.
+        // `AnyLayout` (iOS 16+) rather than branching the view tree: branching rebuilds the rows on every
+        // rotation, which drops the search field's focus and its text. Pre-16 keeps the stack.
+        Group {
+            if #available(iOS 16.0, *) {
+                let layout = isCompactHeight
+                    ? AnyLayout(HStackLayout(alignment: .center, spacing: 10))
+                    : AnyLayout(VStackLayout(spacing: SafeAreaInsetVStackSpacing.standard))
+                layout { bottomControlRows(secondaryVisible: secondaryVisible) }
+            } else {
+                VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                    bottomControlRows(secondaryVisible: secondaryVisible)
+                }
+            }
         }
         // Value-gated spring, INSIDE the keyboard transaction-strip below (inner modifiers win): without it
         // the strip also swallowed the collapse animation and the sort row popped in and out as a hard box.
@@ -2181,6 +2232,33 @@ struct QuranView: View {
         .transaction { $0.animation = nil }
         #else
         EmptyView()
+        #endif
+    }
+
+    /// The two rows inside `bottomControls`, built once and placed by whichever layout that chooses.
+    @ViewBuilder
+    private func bottomControlRows(secondaryVisible: Bool) -> some View {
+        #if os(iOS)
+        // (Recent-search chips used to stack above the sort row while the field was focused;
+        // they live in the search-help card over the list now - see `searchHelpOverlayCard`.)
+        sortControls
+            // Side by side the sort row takes a share of the WIDTH rather than a row of height, so the
+            // height clamp would squash it to nothing; only the stacked layout collapses it vertically.
+            .frame(height: (secondaryVisible || isCompactHeight) ? nil : 0)
+            // Side by side, the sort row is capped so the search field keeps the larger share. 440pt
+            // holds the Asc/Desc segments and the sort menu at their natural widths; below about 400
+            // the segmented control starts clipping its own labels.
+            // Leading, not centred: inside the capped frame a centred row floated inward and left a
+            // gap against the gutter while crowding the search field beside it.
+            .frame(maxWidth: isCompactHeight ? 440 : nil, alignment: .leading)
+            // The clip exists ONLY to hide the row while its height collapses to zero. Side by side
+            // nothing collapses, and clipping there shaved the segmented control's leading edge.
+            .modifier(ClipWhenStacked(stacked: !isCompactHeight))
+            .opacity(secondaryVisible ? 1 : 0)
+            .allowsHitTesting(secondaryVisible)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: secondaryVisible)
+        searchAndPlaybackRow
+            .minimizedBarStyle(barsCollapsed && !isQuranSearchFocused)
         #endif
     }
 
@@ -2228,7 +2306,9 @@ struct QuranView: View {
             sortModeMenu
                 .frame(minWidth: 150, maxWidth: 180)
         }
-        .frame(maxWidth: .infinity)
+        // Stacked (portrait) the row owns the full width and centres in it. Beside the search field in
+        // landscape it must sit flush against the gutter instead, or it floats into the field's space.
+        .frame(maxWidth: .infinity, alignment: isCompactHeight ? .leading : .center)
         #else
         EmptyView()
         #endif
@@ -2915,7 +2995,22 @@ struct QuranView: View {
         .buttonStyle(.plain)
     }
 
+    /// Raises one summary door, and only if no other is in flight.
+    ///
+    /// `openWordOfDay` and `openSummaryDoor` are two `navigationDestination(isPresented:)` on one
+    /// stack, which is the hazard `SettingsView.anyDoorOpen` already documents: tapping a second door
+    /// before the first push has settled leaves two true at once and asks the stack to push two
+    /// destinations in one frame, the presentation stack does not recover, the screen goes blank, and
+    /// the next push can crash inside SwiftUI (Abu, 2026-10-05: "i go to settings and tap on a bunch
+    /// and keep switching then it turns blank for some reason then it just crashes"). The second tap is
+    /// dropped rather than queued, for the reason given there: the user is already travelling to the
+    /// screen they asked for first.
+    private var anyDoorOpen: Bool {
+        openWordOfDay || openSummaryDoor != nil
+    }
+
     private func openDoor(_ door: SummaryDoorChip) {
+        guard !anyDoorOpen else { return }
         switch door.kind {
         case .word: openWordOfDay = true
         case .door(let target): openSummaryDoor = target
@@ -4121,6 +4216,19 @@ struct QuranView: View {
     /// Juz mode's jump card (Abu, 2026-10-01: "for juz let me see all 30 when I am in juz and I can tap
     /// on one and it scrolls down"): all thirty in a 6 x 5 grid above the list, the juz you are
     /// reading in filled. The native section index is iOS 26 only; this works everywhere.
+    /// How many juz fit across the JUMP TO JUZ card. Six in portrait (five rows of thirty); ten in
+    /// landscape, where the band is more than twice as wide and the list below it has barely any
+    /// height to spare - three rows there instead of five, so the juz list itself stays in view.
+    /// One column at the accessibility sizes in portrait would be unreadable, so it steps to four.
+    private var juzJumpColumnCount: Int {
+        #if os(iOS)
+        if dynamicTypeSize.isAccessibilitySize { return isCompactHeight ? 6 : 4 }
+        return isCompactHeight ? 10 : 6
+        #else
+        return 6
+        #endif
+    }
+
     @ViewBuilder
     private func juzJumpSection() -> some View {
         let accent = settings.accentColor.color
@@ -4134,7 +4242,7 @@ struct QuranView: View {
             isExpanded: $showJuzJumpGrid
         )) {
             if showJuzJumpGrid {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: juzJumpColumnCount), spacing: 8) {
                     ForEach(QuranData.juzList, id: \.id) { juz in
                         let isReading = juz.id == readingJuz
                         Button {
@@ -5866,6 +5974,19 @@ struct ListScrollProbe: UIViewRepresentable {
                 ancestor = view.superview
             }
         }
+    }
+}
+#endif
+
+
+#if os(iOS)
+/// `.clipped()` applied only in the stacked layout - see `bottomControlRows`.
+private struct ClipWhenStacked: ViewModifier {
+    let stacked: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if stacked { content.clipped() } else { content }
     }
 }
 #endif

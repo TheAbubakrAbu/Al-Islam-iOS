@@ -60,6 +60,13 @@ struct Widgets: WidgetBundle {
         if #available(iOS 16.2, *) {
             FastingLiveActivity()
         }
+        // Control Center (iOS 18+), which is also the Lock Screen's bottom corners and the Action
+        // button. See `ControlWidgets.swift` for why these three and no more.
+        if #available(iOS 18.0, *) {
+            ResumeRecitationControl()
+            PrayerTimesControl()
+            QiblaControl()
+        }
         #endif
         
         // Al-Quran: the reading/listening widgets.

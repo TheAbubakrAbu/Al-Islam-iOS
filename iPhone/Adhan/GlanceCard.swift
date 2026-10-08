@@ -59,6 +59,17 @@ struct GlanceCard: View {
             }
         }
         .padding(.vertical, 2)
+        #if os(iOS)
+        // A Control Center control asked for the Qibla (Abu, 2026-10-07). It lands here rather than in
+        // AdhanView because the bearing and the distance are computed on THIS card for its own tiles,
+        // so the control opens the very sheet the tile opens - one compass, not a second copy. Cleared
+        // on arrival so re-tapping the control works a second time.
+        .onReceive(AppNavigation.shared.$pendingAdhan) { target in
+            guard case .qibla = target else { return }
+            AppNavigation.shared.pendingAdhan = nil
+            onSelect(.qibla(bearing: qiblaSummary, distance: distanceToMakkah))
+        }
+        #endif
     }
 
     /// The tiles that fill complete rows: everything but a trailing odd one.

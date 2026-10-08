@@ -120,3 +120,25 @@ private struct LastListenedSurahCard: View {
 extension ResumeListeningIntent {
     func resumeListening() async {}
 }
+
+// The same arrangement for the Control Center controls' intents (`Widget/ControlWidgets.swift`): the
+// extension only names them for a `ControlWidgetButton`/`ControlWidgetToggle`. An `AudioPlaybackIntent`
+// always runs in the app, and an `openAppWhenRun` intent opens the app and runs there, so these bodies
+// are never reached in this process. They live in THIS file rather than beside the controls because
+// `ControlWidgets.swift` compiles into the app target too, where the real implementations
+// (`iPhone/Settings/ControlIntents.swift`) would collide with them.
+
+@available(iOSApplicationExtension 18.0, *)
+extension ToggleRecitationIntent {
+    func setRecitationPlaying(_ playing: Bool) async {}
+}
+
+@available(iOSApplicationExtension 18.0, *)
+extension OpenQiblaIntent {
+    func openQibla() async {}
+}
+
+@available(iOSApplicationExtension 18.0, *)
+extension OpenPrayerTimesIntent {
+    func openPrayerTimes() async {}
+}
