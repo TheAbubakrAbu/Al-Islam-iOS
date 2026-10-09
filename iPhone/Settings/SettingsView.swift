@@ -1490,23 +1490,23 @@ struct AppearancePageView: View {
 
             if #available(iOS 26.0, *) {
                 VStack(alignment: .leading) {
-                    Toggle("Classic Look (No Liquid Glass)", isOn: $settings.classicLook.animation(.easeInOut))
+                    Toggle("Show Liquid Glass", isOn: $settings.showLiquidGlass.animation(.easeInOut))
                         .font(.subheadline)
                         .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
 
-                    Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery. The search bar keeps its Liquid Glass.")
+                    Text("Turn this off for the Classic Look, the way the app looked before iOS 26: faster and easier on the battery. It changes the app's own cards, pills, and bars. The tab bar, navigation bars, sheets, and the search field are drawn by iOS and keep their Liquid Glass either way, so screens that are mostly those will look much the same.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
 
-                    if !settings.classicLook {
+                    if settings.showLiquidGlass {
                         VStack(alignment: .leading) {
                             Toggle("Automatically in Low Power Mode", isOn: $settings.classicLookInLowPower.animation(.easeInOut))
                                 .font(.subheadline)
                                 .onChange(of: settings.classicLookInLowPower) { _ in settings.hapticFeedback() }
 
-                            Text("Uses the Classic Look while Low Power Mode is on and brings Liquid Glass back when it is off.")
+                            Text("Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1652,10 +1652,9 @@ struct SettingsAppearanceView: View {
             // their cells, the grid grew its row heights to compensate, and `.padding(.vertical)` piled 32pt on
             // top - which is the "random huge padding" on the watch. The phone has the width for the original
             // layout, so it keeps it.
-            LazyVGrid(columns: Array(
-                repeating: GridItem(.flexible(), spacing: Self.swatchSpacing),
-                count: Self.swatchColumns
-            ), spacing: Self.swatchSpacing) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(columns: Self.swatchColumns, spacing: Self.swatchSpacing) {
                 ForEach(accentColors, id: \.self) { accentColor in
                     accentSwatch(accentColor)
                 }

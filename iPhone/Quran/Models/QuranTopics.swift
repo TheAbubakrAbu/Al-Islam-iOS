@@ -633,7 +633,9 @@ struct TopicChipFlow: View {
         FlowLayoutView(spacing: 6) {
             ForEach(topics) { topic in
                 NavigationLink {
-                    ThemeTopicDetailView(topic: topic, onOpenAyah: nil)
+                    LazyDestination {
+                        ThemeTopicDetailView(topic: topic, onOpenAyah: nil)
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Text(topic.name)

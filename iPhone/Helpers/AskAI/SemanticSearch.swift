@@ -642,7 +642,9 @@ final class SemanticCorpus: @unchecked Sendable {
             let dim = Int(dim32), vocabCount = Int(vocabCount32)
             let itemCount = Int(itemCount32)
 
-            guard dim > 0, vocabCount > 0,
+            // Counts bounded by the file's own size before any multiply or reserve: a corrupted cache
+            // could otherwise overflow `vocabCount * dim` or reserve gigabytes.
+            guard dim > 0, vocabCount > 0, vocabCount <= total / 4 / dim, itemCount <= total / 4,
                   let wordsString = readBlob(Int(blobLen32)) else { return nil }
             let words = wordsString.components(separatedBy: "\n")
             guard words.count == vocabCount else { return nil }

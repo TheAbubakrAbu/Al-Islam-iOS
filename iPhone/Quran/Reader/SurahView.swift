@@ -766,9 +766,43 @@ struct SurahView: View {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// The row's render signature, which `AyahRow`'s `==` folds (see Equatable render signatures:
+    /// `==` must fold every field a row's body reads).
+    ///
+    /// The INTERFACE WIDTH is part of it (Abu, 2026-10-07: "going from horizontal to vertical or vice
+    /// versa ruins list"). `AyahRow` is `Equatable` and its `==` compared 14 fields, none of which a
+    /// rotation changes - so after a rotation SwiftUI considered every surviving row equal to its old
+    /// value and never re-ran its body. Traced: `WordByWordTextView.updateUIView` fired 16 times and
+    /// its LAST call was `width=794` in landscape; nothing arrived when the interface came back to
+    /// 402pt. The row therefore kept 794pt of TextKit layout inside a ~338pt card, and because that
+    /// view sets `clipsToBounds = false` (so tashkeel ink is not sheared at the edge) the overflow
+    /// PAINTED outside the row: Arabic and English ran off both sides and the List scrolled sideways.
+    ///
+    /// Folding the width in means a rotation changes the signature, `==` returns false, and the rows
+    /// re-render against the new geometry. It is the width and not the size class because an iPad
+    /// split-view resize changes the former without changing the latter.
     private var ayahRowRenderSettingsSignature: String {
-        settings.ayahRenderSettingsSignature
+        #if os(iOS)
+        return "\(settings.ayahRenderSettingsSignature)|w\(Int(interfaceWidthForRender))"
+        #else
+        return settings.ayahRenderSettingsSignature
+        #endif
     }
+
+    #if os(iOS)
+    /// The width the rows are laid out against, rounded to a point so a sub-pixel jitter cannot churn
+    /// the signature.
+    private var interfaceWidthForRender: CGFloat {
+        // The WINDOW's width, not `screen.bounds.width`: the screen's bounds are the physical panel and
+        // stay 402pt through a rotation on this device, so keying the signature to them changed nothing
+        // and the rows never re-rendered. The window follows the interface.
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .bounds.width ?? 0
+    }
+    #endif
 
     #if os(iOS)
     /// Presents one of a row's sheets. A request while another sheet is up (the actions sheet asking
@@ -1342,7 +1376,10 @@ struct SurahView: View {
     /// deep links are stored in Hafs numbering, but qiraat merge/omit some ayahs (e.g. Baqarah ends at 285
     /// in Warsh, 286 in Hafs), so a target may not exist - land on the closest one instead of the top.
     private func nearestExistingAyahID(_ requested: Int, in ids: [Int]) -> Int? {
-        ids.min(by: { abs($0 - requested) < abs($1 - requested) })
+        // A deep link can carry any Int ("alislam://ayah/2/-9223372036854775808"): `id - Int.min`
+        // overflows and traps. No ayah id is negative, so a floor of 0 picks the same nearest id.
+        let requested = max(requested, 0)
+        return ids.min(by: { abs($0 - requested) < abs($1 - requested) })
     }
 
     /// Stable ids for the rows ABOVE the first ayah, so a Previous/Next swap can land at the list's
@@ -2912,23 +2949,38 @@ struct SurahView: View {
                         // The page/juz line is ALWAYS part of the pinned header (when dividers are on). It
                         // used to hide while the surah's first inline divider was on screen - but on short
                         // surahs that divider never leaves the screen, so the overlay never appeared at all.
-                        let currentFloatingAyah = shouldUpdateFloatingPageJuzOverlay
-                            ? (anchorID.flatMap { ayahByID[$0] } ?? ayahsForQiraah.first)
-                            : ayahsForQiraah.first
-                        let floatingDividerModel: BoundaryDividerModel? = {
-                            guard shouldShowFloatingPageJuzOverlay else { return nil }
-                            guard let currentFloatingAyah else { return nil }
-                            return overlayDividerByAyahID[currentFloatingAyah.id]
-                                ?? ayahsForQiraah.first.flatMap { overlayDividerByAyahID[$0.id] }
-                        }()
-                        floatingHeaderOverlay(
-                            floatingDividerModel: floatingDividerModel,
-                            floatingDividerAnimationKey: floatingDividerModel.map(boundaryDividerID) ?? "none"
-                        )
+                        //
+                        // Except on a phone in landscape, where the line rides in the title pill instead
+                        // (`titlePageJuzLabel`) and this strip is not drawn at all. Its own row cost about
+                        // 44pt of a 402pt screen, close to a third of the 149pt the reading list had left
+                        // between the bars (measured 2026-10-09), while the bar row above it sat half
+                        // empty on either side of the title.
+                        if !isCompactHeight {
+                            let floatingDividerModel = floatingPageJuzModel(
+                                anchorID: anchorID,
+                                ayahs: ayahsForQiraah,
+                                ayahByID: ayahByID,
+                                shows: shouldShowFloatingPageJuzOverlay,
+                                follows: shouldUpdateFloatingPageJuzOverlay
+                            )
+                            floatingHeaderOverlay(
+                                floatingDividerModel: floatingDividerModel,
+                                floatingDividerAnimationKey: floatingDividerModel.map(boundaryDividerID) ?? "none"
+                            )
+                        }
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
+            // `adaptiveSafeArea`, NOT a raw `safeAreaInset` (Abu, 2026-10-07: "going from horizontal to
+            // vertical or vice versa ruins list"). This screen stacks TWO bottom insets, and on iOS 26+
+            // the outer one below is a `safeAreaBar` while this one was a plain `safeAreaInset`. The two
+            // reserve room differently: the bar floats its content over the scroll area, so with the
+            // mismatched pair the list only ever reserved room for ONE of them. The ayah card's last
+            // lines ran under the legend row and the search field and the rows showed through behind the
+            // tab bar - on iOS 27, in PLAIN PORTRAIT on launch, not only after a rotation (verified
+            // against clean main, so this is a long-standing defect the rotation merely made obvious).
+            // Matching the mechanism makes the two stack as a single reserved band in both orientations.
+            .adaptiveSafeArea(edge: .bottom, spacing: 0) {
                 let active = nowPlaying.isPlaying || nowPlaying.isPaused
                 // Insert/remove the bar on isPlaying||isPaused with `.animation` so SwiftUI animates BOTH the
                 // fade (the bar's `.transition`) and the height collapse natively. The bar keeps its content
@@ -2961,7 +3013,16 @@ struct SurahView: View {
                         .clipped()
                         .opacity(controlsVisible ? 1 : 0)
                         .allowsHitTesting(controlsVisible)
-                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: controlsVisible)
+                        // NO animation on `controlsVisible` (Abu, 2026-10-07: "going from horizontal to
+                        // vertical or vice versa ruins list"). This row's height IS the list's bottom
+                        // safe-area inset, and `controlsVisible` only ever changes on a ROTATION. Springing
+                        // it meant that during the rotation SwiftUI re-measured the inset against a height
+                        // that was still in flight, so the list kept the old orientation's content inset and
+                        // the bars painted over the rows instead of insetting them. A rotation is a one-step
+                        // size change: the row takes its new height in the same transaction as the bounds
+                        // change, and the inset lands correct on the first frame. (The scroll-fold spring
+                        // below, on `barsCollapsed`, is a real gesture and keeps its animation.)
+                        .animation(nil, value: controlsVisible)
                         .padding(.top, active ? SafeAreaInsetVStackSpacing.standard : 0)
                 }
                 .padding(.bottom, BottomBarCushion.standard)
@@ -3156,19 +3217,32 @@ struct SurahView: View {
     }
 
 
+    /// The page/juz line the list reader pins while you read: the divider of the page the top visible
+    /// ayah sits on, or the surah's first page when the surah never changes page or juz. Shared by the
+    /// pinned strip (portrait) and the title pill (landscape), so the two can never disagree.
+    private func floatingPageJuzModel(
+        anchorID: Int?,
+        ayahs: [Ayah],
+        ayahByID: [Int: Ayah],
+        shows: Bool,
+        follows: Bool
+    ) -> BoundaryDividerModel? {
+        guard shows else { return nil }
+        let current = follows ? (anchorID.flatMap { ayahByID[$0] } ?? ayahs.first) : ayahs.first
+        guard let current else { return nil }
+        return overlayDividerByAyahID[current.id] ?? ayahs.first.flatMap { overlayDividerByAyahID[$0.id] }
+    }
+
+    /// Portrait only: a phone in landscape draws neither this card nor its page/juz line (see the
+    /// pinned header). There the pinned header cost 144.7 pt of a 402 pt screen (measured 2026-10-05);
+    /// the surah card said only what the title pill already says, and the page/juz line now rides in
+    /// the pill (`titlePageJuzLabel`).
     private func floatingHeaderOverlay(
         floatingDividerModel: BoundaryDividerModel?,
         floatingDividerAnimationKey: String
     ) -> some View {
         VStack(spacing: 2) {
-            // A phone in LANDSCAPE drops the surah card: the pinned header costs 144.7 pt of a 402 pt
-            // screen (measured 2026-10-05), and this card is the biggest piece of it while saying only
-            // what the navigation title pill already says - the surah's name and number sit two lines
-            // above it. The page/juz line below is kept: that one changes as you read and is the whole
-            // reason the header is pinned. Portrait keeps both.
-            if !isCompactHeight {
-                SurahSectionHeader(surah: surah)
-            }
+            SurahSectionHeader(surah: surah)
 
             if let floatingDividerModel {
                 boundaryDivider(model: floatingDividerModel, isOverlay: true)
@@ -4135,6 +4209,8 @@ struct SurahView: View {
                             .foregroundColor(settings.accentColor.color)
                             .lineLimit(1)
                     }
+
+                    titlePageJuzLabel
                 }
 
                 // Not in a compact height (a phone in landscape): the bar is the page's dearest chrome
@@ -4154,6 +4230,37 @@ struct SurahView: View {
             .padding(.horizontal)
             .padding(.bottom, 6)
             .conditionalGlassEffect()
+        }
+    }
+
+    /// A phone in landscape: the list reader's pinned page/juz line, in the title pill rather than a
+    /// strip of its own under the bar (see the pinned header). The bar row is a fixed cost either way
+    /// and sat half empty beside a one-line title, so the line moves up and the reading list gets that
+    /// row back. It observes the scroll model itself, through `ReaderPinnedHeader`, so a scroll tick
+    /// re-renders this label and never the reader body around it.
+    @ViewBuilder
+    private var titlePageJuzLabel: some View {
+        if isCompactHeight, !settings.quranPageMode, settings.showPageJuzDividers, searchText.isEmpty {
+            let ayahs = cachedAyahsForQiraah
+            let byID = cachedAyahByID
+            let follows = surah.pageOrJuzChangesWithinSurah
+            ReaderPinnedHeader(visibility: visibility) { anchorID, _, _, _ in
+                if let model = floatingPageJuzModel(anchorID: anchorID, ayahs: ayahs, ayahByID: byID,
+                                                    shows: true, follows: follows) {
+                    HStack(spacing: 10) {
+                        Capsule()
+                            .fill(Color.secondary.opacity(0.35))
+                            .frame(width: 1, height: 16)
+
+                        (Text(displayPageSegment(model.pageSegment, isOverlay: true))
+                            + (model.juzSegment.map { Text(" • ") + Text($0) } ?? Text("")))
+                            .font(.footnote.weight(.semibold))
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                }
+            }
         }
     }
 
@@ -4187,10 +4294,9 @@ struct SurahView: View {
     }
 
     private var settingsSheet: some View {
-        // .stack matters on iPad: a regular-width sheet renders a default NavigationView as two
-        // columns with an empty gray detail pane.
-        NavigationView { SettingsQuranView(presentedAsSheet: true) }
-            .navigationViewStyle(.stack)
+        // A `NavigationStack` from iOS 16, so the page's `navigationDestination` pushes land in the
+        // sheet; see `SettingsSheetStack`.
+        SettingsSheetStack { SettingsQuranView(presentedAsSheet: true) }
             #if DEBUG
             .onAppear { NSLog("SHEETTRACE reader settings sheet appeared") }
             .onDisappear { NSLog("SHEETTRACE reader settings sheet disappeared") }

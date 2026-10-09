@@ -67,7 +67,7 @@ def write_deflate(qname, obj):
     with open(os.path.join(ROOT, "Resources", "Data", "Quran", f"{qname}.json.deflate"), "wb") as f:
         f.write(co.compress(raw) + co.flush())
 
-quran = json.load(open(os.path.join(ROOT, "Resources", "JSONs-Deprecated", "Quran.json")))
+quran = json.load(open(os.path.join(os.path.dirname(ROOT), "Quran-Tajweed-Engine", "sources", "Quran.json")))
 HAFS = {str(s["id"]): [(a["id"], a["textArabic"]) for a in s["ayahs"]] for s in quran}
 
 def surah_tokens(ayat):

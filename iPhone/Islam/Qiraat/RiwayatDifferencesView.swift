@@ -9,7 +9,7 @@ import SwiftUI
 /// that stands for an eased hamzah, ٱ against the Madani dot for hamzat al-wasl, the filled and hollow
 /// dots of imalah and taqlil, the small waw of silah, and the madd sign. Every spelling below was
 /// copied out of the app's own riwayah texts by a script (never retyped), and every count was taken
-/// from them: the eight verified texts in Resources/JSONs-Deprecated/Qiraat (with Hafs from
+/// from them: the eight verified texts in Quran-Tajweed-Engine/sources/Qiraat (with Hafs from
 /// Quran.json) and the twelve beta texts' v2 candidates, which is why the page says the beta counts
 /// are close rather than exact.
 struct RiwayatDifferencesView: View {

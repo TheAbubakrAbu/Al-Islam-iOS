@@ -101,7 +101,8 @@ struct HadithBookView: View {
     @State private var searchText = ""
     /// The chapter list shares the tab's grid/list choice, with its own copy of the toggle up top.
     @AppStorage("hadithGridMode") private var hadithGridMode = false
-    /// The hidden push target the chapter grid tiles use (a NavigationLink cell would draw a chevron).
+    /// The push target the chapter grid tiles use when no tab path is handed in (a NavigationLink cell
+    /// would draw a chevron). See the `pushDestination` pair in `body`.
     @State private var pushedChapter: HadithBookData.Chapter?
     /// "Scroll to chapter": clears the search, then lands the list on this chapter.
     @State private var pendingScrollToChapterId: Int? = nil
@@ -274,8 +275,9 @@ struct HadithBookView: View {
     /// `NavigationStack` path. Path state is the fix for the deep-link pop - a hidden
     /// `NavigationLink(isActive:)` could be handed a spurious `false` whenever a store publish
     /// re-rendered these screens mid-push, which unwound the freshly opened chapter no matter how the
-    /// publish was debounced or where the link was anchored. Nil on iOS 15 (hidden links remain) and in
-    /// column mode (chapters swap the detail column instead of pushing).
+    /// publish was debounced or where the link was anchored. Nil in column mode (chapters swap the detail
+    /// column instead of pushing) and when the book is opened outside the Hadith tab (the screen then
+    /// pushes by itself, see the `pushDestination` pair in `body`).
     var onPushChapter: ((HadithBookData.Chapter, Int?) -> Void)? = nil
 
     init(book: HadithCatalogBook, autoOpenHadithID: Int? = nil, onPushChapter: ((HadithBookData.Chapter, Int?) -> Void)? = nil) {
@@ -391,7 +393,8 @@ struct HadithBookView: View {
             return
         }
         let folded = HadithFold.query(query)
-        let limit = hadithMatchLimit
+        // "Load all" sets Int.max; clamped so the one-past-the-page `limit + 1` below cannot overflow.
+        let limit = min(hadithMatchLimit, Int.max - 1)
         // The filters in force for THIS scan: the words become needles and the grading a row test run
         // on text matches only. With neither (the row untouched, or only its order changed) the scan
         // is the one-needle sweep it has always been, so the pages come out the same.
@@ -490,53 +493,9 @@ struct HadithBookView: View {
         // English - so each query pays for exactly ONE field, matched against the fold the pack
         // already carries.
         let folded = HadithFold.query(query)
-        let rows = data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: hadithMatchLimit + 1)
-        return (rows.prefix(hadithMatchLimit).map { data.hadiths[$0] }, rows.count > hadithMatchLimit)
-    }
-
-    /// The two invisible `isActive` pushes this screen drives programmatically: the chapter a grid tile
-    /// taps, and the auto-open deep link (a hadith opened from the tab root lands on ITS chapter, scrolled
-    /// to it, so backing out shows the chapter list instead of skipping it).
-    ///
-    /// `isDetailLink(false)` is load-bearing, not decoration: NavigationView can feed a programmatic
-    /// link's `isActive` binding a spurious `false` while reconciling a re-render of the screen hosting
-    /// it - which nils the state and pops the pushed chapter right back here. That re-render reliably
-    /// arrived from the chapter recording Last Read (a publish these screens observe), so every deep-
-    /// linked open popped itself moments after the scroll landed, no matter where in this screen the
-    /// link was anchored.
-    @ViewBuilder
-    private var pushLinks: some View {
-        // iOS 15 only: on iOS 16+ chapter pushes go through `onPushChapter` into the tab root's
-        // NavigationStack path (stack mode) or swap the detail column (column mode) - these links
-        // must not exist there, or their bindings reintroduce the spurious-pop surface.
-        if #unavailable(iOS 16.0), let data {
-            ZStack {
-                NavigationLink(isActive: Binding(
-                    get: { pushedChapter != nil },
-                    set: { if !$0 { pushedChapter = nil } }
-                )) {
-                    if let pushedChapter {
-                        HadithChapterView(book: book, bookData: data, chapter: pushedChapter)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .isDetailLink(false)
-
-                NavigationLink(isActive: Binding(
-                    get: { autoOpenTarget != nil },
-                    set: { if !$0 { autoOpenTarget = nil } }
-                )) {
-                    if let autoOpenTarget, let autoOpenHadithID {
-                        HadithChapterView(book: book, bookData: data, chapter: autoOpenTarget, scrollToHadithId: autoOpenHadithID)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .isDetailLink(false)
-            }
-            .opacity(0)
-        }
+        let limit = min(hadithMatchLimit, Int.max - 1)
+        let rows = data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: limit + 1)
+        return (rows.prefix(limit).map { data.hadiths[$0] }, rows.count > limit)
     }
 
     var body: some View {
@@ -558,11 +517,30 @@ struct HadithBookView: View {
                 .padding()
             }
         }
-        // Both invisible push links live HERE, on the outer container, not on the chapters List.
-        // Hung off the List they were torn down whenever it re-diffed - and the chapter they pushed
-        // records Last Read through the store this screen observes, so opening a hadith from the tab
-        // root reliably popped itself back to the chapter list a beat after it scrolled.
-        .background(pushLinks)
+        // The chapter pushes this screen makes by itself, when no tab path is handed in
+        // (`onPushChapter` nil outside column mode): a book opened from somewhere other than the Hadith
+        // tab's own stack, such as the Daily Hub's "Read the hadith". A grid tile sets `pushedChapter`;
+        // the auto-open sets `autoOpenTarget` (the hadith's chapter, scrolled to it). Until 2026-10-09
+        // these rode on iOS 15 hidden `isActive` links that did not exist on iOS 16, so from the Daily
+        // Hub a grid tile did nothing and "Read the hadith" stopped at the chapter list. On the outer
+        // container, not the chapters List: the List re-diffs whenever the pushed chapter records Last
+        // Read through the store this screen observes. In the Hadith tab both stay nil.
+        .pushDestination(isPresented: Binding(
+            get: { pushedChapter != nil },
+            set: { if !$0 { pushedChapter = nil } }
+        )) {
+            if let pushedChapter, let data {
+                HadithChapterView(book: book, bookData: data, chapter: pushedChapter)
+            }
+        }
+        .pushDestination(isPresented: Binding(
+            get: { autoOpenTarget != nil },
+            set: { if !$0 { autoOpenTarget = nil } }
+        )) {
+            if let autoOpenTarget, let autoOpenHadithID, let data {
+                HadithChapterView(book: book, bookData: data, chapter: autoOpenTarget, scrollToHadithId: autoOpenHadithID)
+            }
+        }
         .navigationTitle(book.englishTitle)
         .navigationBarTitleDisplayMode(.inline)
         // The Quran reader's toolbar shape: the reading-mode toggle on the left, the gear on the
@@ -622,9 +600,11 @@ struct HadithBookView: View {
                             }
                         } else {
                             NavigationLink {
-                                // byRowNumber: a stale record's key is a row number, not a citation -
-                                // citation-first reading would open a different hadith in drifted books.
-                                HadithReferenceView(book: book, chapter: nil, hadith: lastRead.idInBook, byRowNumber: true)
+                                LazyDestination {
+                                    // byRowNumber: a stale record's key is a row number, not a citation -
+                                    // citation-first reading would open a different hadith in drifted books.
+                                    HadithReferenceView(book: book, chapter: nil, hadith: lastRead.idInBook, byRowNumber: true)
+                                }
                             } label: {
                                 lastReadRow(lastRead)
                             }
@@ -735,7 +715,9 @@ struct HadithBookView: View {
 
                     if hadithGridMode {
                         Section {
-                            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a
+                            // different height on each self-sizing pass, which iOS 26 traps on.
+                            SummaryTileGrid(columns: 2) {
                                 ForEach(shownChapters) { chapter in
                                     chapterGridTile(chapter, data: data)
                                 }
@@ -761,12 +743,11 @@ struct HadithBookView: View {
         // header carries the counts - a floating bar was pure repetition on this screen.
         // The grid/list flip animates, same as the catalog.
         .animation(.easeInOut, value: hadithGridMode)
-        // NOTE: the two invisible push links (grid tile, auto-open) deliberately do NOT live here.
-        // Anchoring an `isActive` NavigationLink to this List means every re-diff of the List can tear
-        // it down and pop whatever it pushed - and the pushed chapter's own Last Read record publishes
-        // through the store THIS screen observes, which re-diffs the List (for a first read it inserts
-        // the whole LAST READ section). They hang off the outer container in `body` instead, where the
-        // List's content can't reach them. See `pushLinks`.
+        // NOTE: the screen's own chapter pushes (grid tile, auto-open) deliberately do NOT live here.
+        // The pushed chapter's Last Read record publishes through the store THIS screen observes, which
+        // re-diffs the List (for a first read it inserts the whole LAST READ section), and a push hung
+        // off something that re-diffs is a push that can be torn down. They sit on the outer container
+        // in `body` instead, where the List's content can't reach them.
         .onAppear {
             // (No AI index build on open any more: the all-books corpus loads or builds on the first
             // AI-eligible query, from `runAISearch`.)
@@ -804,7 +785,8 @@ struct HadithBookView: View {
                 if let onPushChapter {
                     // iOS 16 stack: append the chapter to the tab root's path (immune to re-renders).
                     onPushChapter(chapter, targetID)
-                } else {
+                } else if pushedChapter == nil {
+                    // Never raise both of the screen's push flags: a tile tapped inside the delay wins.
                     autoOpenTarget = chapter
                 }
             }
@@ -1198,7 +1180,9 @@ struct HadithBookView: View {
             .buttonStyle(.plain)
         } else {
             NavigationLink {
-                HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+                LazyDestination {
+                    HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+                }
             } label: {
                 label()
             }
@@ -1391,12 +1375,13 @@ struct HadithBookView: View {
         let isCurrent = isReaderChapter(chapter)
         return GridTileMenu {
             settings.hapticFeedback()
-            // Column mode swaps the detail; iOS 16 stack appends to the path; iOS 15 uses the hidden link.
+            // Column mode swaps the detail; the Hadith tab's stack appends to its path; a book opened
+            // anywhere else pushes the chapter itself (the `pushDestination` pair in `body`).
             if usesColumnNavigation {
                 withAnimation(.easeInOut) { selectChapter(chapter, data: data) }
             } else if let onPushChapter {
                 onPushChapter(chapter, nil)
-            } else {
+            } else if autoOpenTarget == nil {
                 pushedChapter = chapter
             }
         } menu: {

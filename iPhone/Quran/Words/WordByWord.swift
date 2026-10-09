@@ -1176,11 +1176,22 @@ struct WordByWordTextView: UIViewRepresentable {
     /// CURRENT bounds' fitting size - one line, before it has ever been given the real width. Answer
     /// with the text's laid-out height at the row width instead, or every ayah rendered through this
     /// view clips to its first line.
+    ///
+    /// Never wider than the room offered, though. `WordByWordText` learns `width` by measuring THIS
+    /// view, so answering with `width` whatever the proposal made that measurement circular: once
+    /// `width` was wider than its container, the view still claimed it, measured wide, and kept the
+    /// stale value alive. Rotating the ayah actions sheet back to portrait left the whole sheet laid
+    /// out at the landscape width (2026-10-09), because the claimed 768pt forced every stack around it
+    /// that wide. Taking the offer breaks the loop: the view measures narrow, `width` follows, and
+    /// TextKit relays out on the next pass. Growth never needed this (the flexible frame around the
+    /// view takes a wider offer by itself); see `WordByWordWidthTests`.
     @available(iOS 16.0, *)
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
         guard width > 0 else { return nil }
-        let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: ceil(fitting.height))
+        let offered = proposal.width.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
+        let fitWidth = min(width, offered ?? width)
+        let fitting = uiView.sizeThatFits(CGSize(width: fitWidth, height: .greatestFiniteMagnitude))
+        return CGSize(width: fitWidth, height: ceil(fitting.height))
     }
 
     /// The selected word's accent wash, painted on top rather than composed in: a background attribute
@@ -1350,9 +1361,41 @@ struct WordByWordText: View {
 
     /// The reader's content width. Seeded from the last measurement so only the very first row of a
     /// session has to wait for a layout pass to know it.
-    @State private var width: CGFloat = WordByWordText.lastMeasuredWidth
+    ///
+    /// The seed is keyed to the INTERFACE WIDTH it was measured at (Abu, 2026-10-07: "going from
+    /// horizontal to vertical or vice versa ruins list"). `@State` is initialised once per row, so a
+    /// plain static seed handed every row rebuilt after a rotation the width from the PREVIOUS
+    /// orientation - 695pt of landscape text laid out inside a ~362pt portrait card. TextKit duly
+    /// typeset to 695, and because this view sets `clipsToBounds = false` (so tashkeel ink is not
+    /// sheared at the edge) the overflow PAINTED outside the card: both the Arabic and the English
+    /// ran off each side of the row, and the List could be scrolled sideways. The preference below
+    /// does correct the width a pass later, but a row that was reused rather than re-measured never
+    /// got that pass and stayed wrong until it was scrolled off screen and rebuilt.
+    ///
+    /// Keying the seed means a rotation simply misses the cache and the row waits one layout pass for
+    /// its real width, which is what the un-seeded path already does and is invisible in practice.
+    @State private var width: CGFloat = WordByWordText.seedWidth()
 
-    private static var lastMeasuredWidth: CGFloat = 0
+    /// The last measured content width, together with the interface width it was measured at. Only
+    /// reused while the interface is still that wide - see `width`.
+    private static var lastMeasured: (interface: CGFloat, content: CGFloat) = (0, 0)
+
+    /// The current interface width, which changes on every rotation. Read on the main actor only.
+    /// The WINDOW's width. NOT `screen.bounds.width`: the screen's bounds are the physical panel and
+    /// stay 402pt through a rotation on a phone, so anything keyed to them is a silent no-op.
+    private static var interfaceWidth: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .bounds.width ?? 0
+    }
+
+    private static func seedWidth() -> CGFloat {
+        let current = interfaceWidth
+        guard current > 0, lastMeasured.interface == current else { return 0 }
+        return lastMeasured.content
+    }
 
     /// Where every segment's tokens sit in the concatenated run: `wordRanges` are UTF-16 ranges into the
     /// string `buildAttributedText` assembles (each segment's text, then " marker", then a joining space
@@ -1444,16 +1487,22 @@ struct WordByWordText: View {
                 }
             }
         }
-        .background(
-            GeometryReader { proxy in
-                Color.clear.preference(key: WordByWordWidthKey.self, value: proxy.size.width)
-            }
-        )
-        .onPreferenceChange(WordByWordWidthKey.self) { measured in
+        // The row's content width, measured straight off the layout.
+        //
+        // This was a `.background(GeometryReader { ... preference })` plus `onPreferenceChange`, and on
+        // the way BACK from landscape the preference simply stopped firing (traced 2026-10-07: the last
+        // callback a row ever saw was `measured=794` in landscape; nothing arrived when the interface
+        // returned to 402pt). The row kept 794pt of TextKit layout inside a ~338pt card, and since
+        // `WordByWordTextView` sets `clipsToBounds = false` so tashkeel ink is not sheared at the edge,
+        // the overflow PAINTED outside the row: Arabic and English both ran off each side and the List
+        // could be dragged sideways (Abu, 2026-10-07: "going from horizontal to vertical or vice versa
+        // ruins list"). `onGeometryChange` reports a SHRINK as reliably as a growth, which is exactly
+        // the direction the old path dropped.
+        .modifier(WordByWordWidthReader { measured in
             guard measured > 0, abs(measured - width) > 0.5 else { return }
             width = measured
-            Self.lastMeasuredWidth = measured
-        }
+            Self.lastMeasured = (Self.interfaceWidth, measured)
+        })
     }
 
     private var swiftUIFont: Font {
@@ -1562,6 +1611,27 @@ struct WordByWordText: View {
             run.append(body)
         }
         return run
+    }
+}
+
+/// Reports the row's content width, growths AND shrinks alike. `onGeometryChange` (iOS 18) is used
+/// where it exists; below it the `GeometryReader` + preference pair stays, with the preference keyed
+/// per row so a shrink still propagates.
+private struct WordByWordWidthReader: ViewModifier {
+    let onChange: (CGFloat) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { onChange($0) }
+        } else {
+            content
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: WordByWordWidthKey.self, value: proxy.size.width)
+                    }
+                )
+                .onPreferenceChange(WordByWordWidthKey.self) { onChange($0) }
+        }
     }
 }
 
@@ -2465,7 +2535,9 @@ private struct WordByQiraahGrid: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+                // Not lazy (`SummaryTileGrid`, as `columns` above): a lazy grid in a List row can
+                // answer a different height on each self-sizing pass, which iOS 26 traps on.
+                SummaryTileGrid(adaptiveMinimum: 140, spacing: 8, alignment: .top) {
                     ForEach(cells) { cell in
                         cellView(cell)
                     }
@@ -3118,7 +3190,9 @@ struct WordMeaningSheet: View {
             AyahInsightsCard(surah: focus.surah, ayah: focus.ayah)
 
             NavigationLink {
-                ThemesBrowseView(onOpenAyah: { _, _ in })
+                LazyDestination {
+                    ThemesBrowseView(onOpenAyah: { _, _ in })
+                }
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.grid.2x2")

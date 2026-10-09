@@ -60,7 +60,7 @@ from islam_packs import Hadith  # noqa: E402
 from tilawa_ts import eval_consts, load_softener, xz_compress  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 ENGINE = ROOT.parent / "Hadith-JSON-Engine" / "db" / "by_book" / "the_9_books"
 OUT = ROOT / "Resources" / "Data" / "Islam" / "DailyReminders.json.xz"
 HISN = ROOT / "Resources" / "Data" / "Islam" / "HisnDuas.json.xz"

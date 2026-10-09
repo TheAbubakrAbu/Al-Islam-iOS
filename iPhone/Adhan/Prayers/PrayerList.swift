@@ -219,7 +219,8 @@ struct PrayerList: View {
         .onChange(of: scenePhase) { phase in
             if phase == .active { resetToTodayIfDayChanged() }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+        // Foundation can post the day change off main; the handler writes @State inside withAnimation.
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged).receive(on: DispatchQueue.main)) { _ in
             resetToTodayIfDayChanged()
         }
     }
@@ -547,7 +548,9 @@ struct PrayerList: View {
         let accent = settings.accentColor.accent2
         let textAccent = tileTextAccent(accent)
 
-        LazyVGrid(columns: columns, spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(columns: columns.count, spacing: 8) {
             ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
                 let color: Color = isComparisonBaseline
                     ? .secondary
@@ -683,7 +686,9 @@ struct PrayerList: View {
         // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the tiles flatter
         // and dropped the current tile's glow. The flat pre-26 fill below is the win that matters
         // (the A11-A13 devices that stutter never run iOS 26).
-        LazyVGrid(columns: columns, spacing: tileSpacing) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(columns: columns.count, spacing: tileSpacing) {
             ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
                 let color: Color = isComparisonBaseline
                     ? .secondary

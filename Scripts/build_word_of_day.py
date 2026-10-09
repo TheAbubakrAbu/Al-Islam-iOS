@@ -7,7 +7,7 @@ Tilawa (Jamil Hammoudeh, with permission) curates 150 pieces of Quranic vocabula
 src/data/generated/wordOfDay.ts: the exact KFGQPC token of an anchor occurrence, its
 transliteration and the English gloss of that occurrence (the same Quran.com word-by-word gloss the
 reader's word-by-word mode uses). This script takes those three fields and the anchor, then derives
-everything else from THIS app's Hafs text (Resources/JSONs-Deprecated/Quran.json): every ayah the
+everything else from THIS app's Hafs text (Quran-Tajweed-Engine/sources/Quran.json): every ayah the
 written form appears in, with the 0-based whitespace-token indices the reader tints, and the
 occurrence count. Tokens are compared folded (harakat and annotation marks stripped, alif wasla and
 the hamza carriers on their base letter, the dagger alif KEPT so genuinely different forms never
@@ -23,7 +23,7 @@ text at runtime, so the pack carries no copy of a Quranic word (version 1 did, a
 import json, lzma, pathlib, re, subprocess, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "WordOfDay.json.xz"
 TILAWA = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "Tilawa"
 

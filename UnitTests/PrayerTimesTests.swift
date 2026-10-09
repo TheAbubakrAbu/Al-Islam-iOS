@@ -231,6 +231,29 @@ final class PrayerTimesTests: XCTestCase {
     /// whatever the device's is.
     func testNightEventsAreRemindedTheDayTheyBegin() throws {
         let settings = Settings.shared
+        // An event's reminder fires 30 minutes before Fajr at `currentLocation`, and its day is read in
+        // the device's own calendar. Both are ambient state in a hosted test, and they disagreed for
+        // days: a crashed run left Mecca persisted on a simulator set to Pacific time, Fajr less 30
+        // minutes in Mecca is the previous evening in California, and all twelve events "fired the
+        // day before" (fire times 00:43 to 02:13 UTC, 2026-10-06; reproduced 2026-10-09 by setting
+        // exactly that pair). The app is right whenever the phone's clock and its location agree,
+        // which is the only case this test can state, so it pins the pair. Traveling mode is pinned
+        // off too: a far location can flip it, and the flip outlives the test.
+        let savedLocation = settings.currentLocation
+        let savedZone = NSTimeZone.default
+        let savedTravelAutomatic = settings.travelAutomatic
+        let savedTravelingMode = settings.travelingMode
+        defer {
+            settings.currentLocation = savedLocation
+            NSTimeZone.default = savedZone
+            settings.travelAutomatic = savedTravelAutomatic
+            settings.travelingMode = savedTravelingMode
+        }
+        settings.travelAutomatic = false
+        settings.travelingMode = false
+        NSTimeZone.default = TimeZone(identifier: "America/Los_Angeles")!
+        settings.currentLocation = Location(city: "San Francisco", latitude: 37.7749, longitude: -122.4194)
+
         let gregorian = Calendar(identifier: .gregorian)
         let year = settings.hijriCalendar.component(.year, from: Date()) + 1
         let events = Settings.specialEvents(inHijriYear: year)

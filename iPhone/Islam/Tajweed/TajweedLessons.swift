@@ -879,7 +879,9 @@ private struct TajweedLetterTiles: View {
             }
             .padding(.vertical, 2)
         } else {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 58), spacing: 8)], spacing: 8) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(adaptiveMinimum: 58, spacing: 8) {
                 ForEach(Array(set.letters.enumerated()), id: \.offset) { _, glyph in
                     if let letter = LetterTraits.letterData(for: glyph) {
                         let open = openInstances.contains(OpenScreenInstance(screen: .arabicLetter, id: glyph))

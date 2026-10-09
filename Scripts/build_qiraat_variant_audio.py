@@ -28,7 +28,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from tilawa_ts import eval_consts, xz_compress  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "QiraatVariantAudio.json.xz"
 TILAWA = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "Tilawa"
 

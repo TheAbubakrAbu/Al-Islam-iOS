@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build Resources/Data/Quran/QiraatVariants.json.xz: the annotated variant readings of the
 1,409 ayahs that carry them, from the Quran.com qiraat matrix (Quran Foundation), kept as one
-compacted source at Resources/JSONs-Deprecated/Qiraat/quran-com-qiraat.json.xz.
+compacted source at Quran-Tajweed-Engine/sources/Qiraat/quran-com-qiraat.json.xz.
 
 Each ayah lists its JUNCTURES (the word or words read differently), and each juncture the
 READINGS: the reading's text, a transliteration, an English rendering, an explanation where
@@ -40,9 +40,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from sukoon import normalize_sukoon  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SRC = ROOT / "Resources" / "JSONs-Deprecated" / "Qiraat" / "quran-com-qiraat.json.xz"
+SOURCES = ROOT.parent / "Quran-Tajweed-Engine" / "sources"
+SRC = SOURCES / "Qiraat" / "quran-com-qiraat.json.xz"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "QiraatVariants.json.xz"
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = SOURCES / "Quran.json"
 
 # Quran.com transmitter id -> this app's riwayah tag (Settings.Riwayah). Hafs is the empty tag.
 TRANSMITTER_TAGS = {

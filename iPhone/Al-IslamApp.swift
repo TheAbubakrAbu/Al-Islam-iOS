@@ -630,8 +630,10 @@ private struct MainTabView: View {
                 guard !Task.isCancelled else { return }
                 // The ~18k-key lexicon is a full-tier luxury (Phase 5 step 1): on the reduced tier the
                 // first cross-language query builds it itself (`lexiconIfReady` kicks the build once).
+                // Called here, on main: it copies `QuranData.quran`, which main reassigns on a qiraah
+                // change, so a detached caller raced that write. The build itself still runs off main.
                 if !AppPerformance.shouldAvoidBroadPrewarm {
-                    Task.detached(priority: .utility) { CrossLanguageWordHighlight.prewarmLexicon() }
+                    CrossLanguageWordHighlight.prewarmLexicon()
                 }
                 IslamArticleSearchModel.prewarm()
             }

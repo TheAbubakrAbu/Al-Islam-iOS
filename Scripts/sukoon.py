@@ -40,7 +40,7 @@ The guarantee, and how to check it:
 
     python3 Scripts/sukoon.py
 
-It reads the app's own Hafs text (Resources/JSONs-Deprecated/Quran.json), 77,629 words that
+It reads the app's own Hafs text (Quran-Tajweed-Engine/sources/Quran.json), 77,629 words that
 already follow the convention, and demands two things of every word: that the rule changes
 nothing (so no silent letter ever loses its mark), and that damaging the word the way the
 matrix is damaged (every U+06E1 written as U+0652) and then applying the rule gives the
@@ -148,7 +148,7 @@ def _long_vowel(chars: list, j: int) -> bool:
 def main() -> None:
     """The proof: the app's own Hafs text must survive the rule untouched and round-trip."""
     root = pathlib.Path(__file__).resolve().parent.parent
-    quran = json.loads((root / "Resources" / "JSONs-Deprecated" / "Quran.json").read_text(encoding="utf-8"))
+    quran = json.loads((root.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json").read_text(encoding="utf-8"))
     words = changed = failed = 0
     for surah in quran:
         for ayah in surah["ayahs"]:
@@ -176,7 +176,7 @@ def RIWAYAH_TEXTS(root: pathlib.Path) -> list[pathlib.Path]:
     """The 19 other riwayah texts as the app ships them: the 12 beta deflates behind
     qiraah.solidpack and the 7 KFGQPC texts behind qiraat.qpk (their JSON sources)."""
     return sorted((root / "Resources" / "Data" / "Quran").glob("Qiraah*.json.deflate")) + \
-        sorted((root / "Resources" / "JSONs-Deprecated" / "Qiraat").glob("Qiraah*.json"))
+        sorted((root.parent / "Quran-Tajweed-Engine" / "sources" / "Qiraat").glob("Qiraah*.json"))
 
 
 def riwayah_text(path: pathlib.Path) -> dict:

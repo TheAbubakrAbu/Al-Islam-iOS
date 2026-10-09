@@ -880,6 +880,20 @@ extension View {
         modifier(DismissKeyboardOnScrollModifier())
     }
 
+    /// The keyboard goes away at the first touch here, before any menu in this view opens. For the
+    /// search filter rows: a menu whose own label or toggles change while it is on screen over a live
+    /// keyboard re-entered SwiftUI's graph update through the keyboard's re-layout and aborted in
+    /// AttributeGraph (iOS 26.5, found by the monkey 2026-10-09). With the keyboard down first, no
+    /// menu in the row is ever updated over one.
+    @ViewBuilder
+    func endsEditingOnTouch() -> some View {
+        #if os(iOS)
+        simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in endEditing() })
+        #else
+        self
+        #endif
+    }
+
     func apply<V: View>(@ViewBuilder _ block: (Self) -> V) -> V {
         block(self)
     }
@@ -1977,11 +1991,25 @@ struct AdaptiveSectionHeader<Title: View, Controls: View>: View {
                 stacked
             }
         } else {
-            HStack(spacing: 8) {
-                title()
-                Spacer()
-                controls()
-            }
+            LegacyHeaderLine(title: title, controls: controls)
+        }
+    }
+}
+
+/// `AdaptiveSectionHeader` before iOS 16: the one line it always was. Its own view, not an `HStack`
+/// written in the `else` above: with Al-Islam's floor at iOS 16 (2026-10-09), a several-child builder
+/// inside a dead `#available` branch made the compiler warn twice (no `buildLimitedAvailability`, and a
+/// `TupleContent` conformance it can only promise from iOS 26). Kept rather than deleted because
+/// Al-Quran and Al-Adhan still ship this file on iOS 15.
+private struct LegacyHeaderLine<Title: View, Controls: View>: View {
+    let title: () -> Title
+    let controls: () -> Controls
+
+    var body: some View {
+        HStack(spacing: 8) {
+            title()
+            Spacer()
+            controls()
         }
     }
 }
@@ -2021,6 +2049,149 @@ struct HeaderLineLayout: Layout {
     }
 }
 #endif
+
+// MARK: - Summary tile grid
+
+/// The YOUR SUMMARY tiles' grid (the Quran and Hadith tabs), and every other small grid that is a List
+/// row's content. Not lazy: inside a List row a `LazyVGrid` answered 246 pt and then 242 pt for the
+/// same width on consecutive self-sizing passes, and iOS 26's collection view traps on a row that
+/// never settles ("stuck in a recursive layout loop"). It took real Last Listened tiles and juz sort,
+/// whose section index narrows every row, to land there (six crashes on 2026-10-07, reproduced
+/// 2026-10-09); the iPad sidebar's narrow rows hit it too. A grid in a List row is built whole anyway,
+/// so the laziness bought nothing. Here, with no `#if`, because the Adhan and Islam grids use it too
+/// and Al-Adhan compiles none of the Quran folder.
+///
+/// The most tiles one List row's `SummaryTileGrid` holds where a grid can grow without bound (bookmarks):
+/// the rest go in further rows, so the List keeps virtualizing. A multiple of every column count (1, 2,
+/// 3, 4, 6), so only the last row is ever short.
+let tileGridChunk = 24
+
+extension View {
+    /// One List row of a grid chunked by `tileGridChunk`, starting at tile `start` of `count`: no
+    /// separator, the grid's 4 pt padding at its outer edges, and -10 pt where two chunks meet, which
+    /// takes back the List's own row insets there (measured: 30 pt between the rows' tiles, 10 inside
+    /// a row), so the rows read as one grid.
+    @ViewBuilder
+    func tileGridChunkRow(start: Int, count: Int) -> some View {
+        let padded = self
+            .padding(.top, start == 0 ? 4 : -10)
+            .padding(.bottom, start + tileGridChunk >= count ? 4 : -10)
+        #if os(iOS)
+        padded.listRowSeparator(.hidden)
+        #else
+        padded
+        #endif
+    }
+}
+
+/// `spacing` is the replaced grid's row spacing, and its column spacing too unless `columnSpacing`
+/// says otherwise; `alignment: .top` stands for its `GridItem(alignment: .top)`, and anything else
+/// centres a cell in its row. `adaptiveMinimum` stands for `GridItem(.adaptive(minimum:))`: as many
+/// columns as fit at that width, the spare width shared out equally.
+struct SummaryTileGrid<Content: View>: View {
+    let columns: Int
+    let adaptiveMinimum: CGFloat?
+    let spacing: CGFloat
+    let columnSpacing: CGFloat
+    let alignment: VerticalAlignment
+    let content: Content
+
+    init(columns: Int, spacing: CGFloat = 10, columnSpacing: CGFloat? = nil, alignment: VerticalAlignment = .center,
+         @ViewBuilder content: () -> Content) {
+        self.columns = columns
+        self.adaptiveMinimum = nil
+        self.spacing = spacing
+        self.columnSpacing = columnSpacing ?? spacing
+        self.alignment = alignment
+        self.content = content()
+    }
+
+    init(adaptiveMinimum: CGFloat, spacing: CGFloat = 10, columnSpacing: CGFloat? = nil,
+         alignment: VerticalAlignment = .center, @ViewBuilder content: () -> Content) {
+        self.columns = 1
+        self.adaptiveMinimum = adaptiveMinimum
+        self.spacing = spacing
+        self.columnSpacing = columnSpacing ?? spacing
+        self.alignment = alignment
+        self.content = content()
+    }
+
+    var body: some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            EqualColumnsLayout(columns: columns, adaptiveMinimum: adaptiveMinimum, spacing: spacing,
+                               columnSpacing: columnSpacing, alignment: alignment) { content }
+        } else {
+            let cellAlignment: Alignment? = alignment == .top ? .top : nil
+            let items = adaptiveMinimum.map {
+                [GridItem(.adaptive(minimum: $0), spacing: columnSpacing, alignment: cellAlignment)]
+            } ?? Array(repeating: GridItem(.flexible(), spacing: columnSpacing, alignment: cellAlignment), count: columns)
+            LazyVGrid(columns: items, alignment: .leading, spacing: spacing) { content }
+        }
+    }
+}
+
+/// Equal columns (a fixed count, or as many as fit at `adaptiveMinimum`), rows as tall as their
+/// tallest cell: what the `LazyVGrid` drew, as a pure function of the proposed width.
+@available(iOS 16.0, watchOS 9.0, *)
+struct EqualColumnsLayout: Layout {
+    let columns: Int
+    var adaptiveMinimum: CGFloat? = nil
+    let spacing: CGFloat
+    var columnSpacing: CGFloat? = nil
+    /// `.top` pins each cell to its row's top; anything else centres it vertically.
+    var alignment: VerticalAlignment = .center
+
+    private var gap: CGFloat { columnSpacing ?? spacing }
+
+    private func columnCount(_ width: CGFloat?) -> Int {
+        guard let minimum = adaptiveMinimum else { return max(columns, 1) }
+        guard let width, width.isFinite, minimum + gap > 0 else { return 1 }
+        return max(1, Int(((width + gap) / (minimum + gap)).rounded(.down)))
+    }
+
+    private func columnWidth(_ width: CGFloat?, count: Int, _ subviews: Subviews) -> CGFloat {
+        if let width, width.isFinite {
+            return max(0, (width - gap * CGFloat(count - 1)) / CGFloat(count))
+        }
+        return subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+    }
+
+    private func rowHeights(_ width: CGFloat, perRow: Int, _ subviews: Subviews) -> [CGFloat] {
+        stride(from: 0, to: subviews.count, by: perRow).map { start in
+            subviews[start..<min(start + perRow, subviews.count)]
+                .map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
+                .max() ?? 0
+        }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let count = columnCount(proposal.width)
+        let width = columnWidth(proposal.width, count: count, subviews)
+        let heights = rowHeights(width, perRow: count, subviews)
+        let total = heights.reduce(0, +) + spacing * CGFloat(max(heights.count - 1, 0))
+        return CGSize(width: width * CGFloat(count) + gap * CGFloat(count - 1), height: total)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let count = columnCount(bounds.width)
+        let width = columnWidth(bounds.width, count: count, subviews)
+        let heights = rowHeights(width, perRow: count, subviews)
+        let top = alignment == .top
+        var y = bounds.minY
+        for (row, height) in heights.enumerated() {
+            for column in 0..<count {
+                let index = row * count + column
+                guard index < subviews.count else { break }
+                // Centred across the column, as `LazyVGrid` centres a cell narrower than its column.
+                let x = bounds.minX + CGFloat(column) * (width + gap) + width / 2
+                subviews[index].place(at: CGPoint(x: x, y: top ? y : y + height / 2),
+                                      anchor: top ? .top : .center,
+                                      proposal: ProposedViewSize(width: width, height: height))
+            }
+            y += height + spacing
+        }
+    }
+}
 
 extension View {
     #if os(iOS)

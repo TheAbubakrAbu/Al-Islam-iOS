@@ -325,6 +325,8 @@ struct MapView: View {
     }
 
     private func updateRegion(to coordinate: CLLocationCoordinate2D) {
+        // MKMapView throws "Invalid Region" for a point off the globe, e.g. the old (1000, 1000) "no fix" location.
+        guard CLLocationCoordinate2DIsValid(coordinate) else { return }
         region = MKCoordinateRegion(
             center: coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.2, longitudeDelta: 0.2)

@@ -68,7 +68,7 @@ def xz_compress(body: bytes) -> bytes:
     return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 DEFAULT_SOURCE = ROOT.parent / "Tilawa" / "assets" / "quran" / "word-by-word-en.json"
 DEFAULT_TRANSLIT_SOURCE = DEFAULT_SOURCE.with_name("word-by-word-translit.json")

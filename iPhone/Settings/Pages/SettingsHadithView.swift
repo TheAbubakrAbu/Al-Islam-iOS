@@ -31,20 +31,15 @@ struct SettingsHadithView: View {
         if let standalonePage {
             hadithPageDestination(standalonePage)
         } else if presentedAsSheet {
-            NavigationView {
+            SettingsSheetStack {
                 settingsList
                     .navigationTitle("Hadith Settings")
                     .navigationBarTitleDisplayMode(.inline)
                     .sheetDismissToolbar()
                     #if DEBUG
-                    .background(
-                        NavigationLink(isActive: $autoOpenReadingView) { readingViewDestination }
-                                      label: { EmptyView() }
-                            .hidden()
-                    )
+                    .debugPushDestination(isPresented: $autoOpenReadingView) { readingViewDestination }
                     #endif
             }
-            .navigationViewStyle(.stack)
         } else {
             settingsList
                 .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {

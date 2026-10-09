@@ -67,7 +67,8 @@ struct HadithView: View {
     @State private var searchText = ""
     @State private var showHadithSettings = false
     /// Grid tiles are plain Buttons (a NavigationLink cell in a List draws a chevron); tapping one sets
-    /// this, and a hidden `NavigationLink` behind the List performs the actual push.
+    /// this, and the `onChange` on `content` turns it into a `bookPath` push (iOS 16 is the floor since
+    /// 2026-10-09, so the hidden `NavigationLink` that once did the push on iOS 15 is gone).
     @State private var pushedBook: HadithCatalogBook?
     /// Which summary door was tapped (Topics / Encyclopedia / History). One piece of state driving one
     /// destination: three hidden links in the same List row all fired together. See `encyclopediaDoors`.
@@ -415,9 +416,9 @@ struct HadithView: View {
             .columnLayoutMigration(columns: usesColumnNavigation) { columns in
                 guard #available(iOS 16.0, *) else { return }
                 if columns {
-                    // Stack → columns: a book opened through the tracked hidden links becomes the
-                    // content column's path. (The interceptors on `content` only fire on assignment,
-                    // and these were set BEFORE the flip, so they must be converted here.)
+                    // Stack → columns: a book still pending in the request state becomes the content
+                    // column's path. (The interceptors on `content` only fire on assignment, and these
+                    // were set BEFORE the flip, so they must be converted here.)
                     if let book = pushedBook {
                         pushedBook = nil
                         bookPath = [.book(slug: book.slug, autoOpenHadithID: nil)]
@@ -426,10 +427,12 @@ struct HadithView: View {
                         bookPath = [.book(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
                     }
                 } else if let route = bookPath.last {
-                    // Columns → stack: reopen the book through the hidden links - at the spot the
-                    // reading column was on when the store has one (the reader keeps last-read fresh),
-                    // else at its chapter list. Delayed like every other programmatic push here: an
-                    // isActive flip during the container swap is unreliable in NavigationView.
+                    // Columns → stack: reopen the book through the request state, which the
+                    // interceptors below turn into the stack's path. It opens at the spot the reading
+                    // column was on when the store has one (the reader keeps last-read fresh), else at
+                    // its chapter list.
+                    // Delayed like every other programmatic push here: a push issued during the
+                    // container swap lands on the container that is going away.
                     bookPath.removeAll()
                     let slug = route.slug
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -480,39 +483,6 @@ struct HadithView: View {
     }
 
     @State private var bookPath: [BookRoute] = []
-
-    /// The iOS 15 hidden-link pair - see the note at its `.background` call site in `content`.
-    @ViewBuilder
-    private var legacyHiddenPushLinks: some View {
-        if #unavailable(iOS 16.0) {
-            ZStack {
-                NavigationLink(isActive: Binding(
-                    get: { pushedBook != nil },
-                    set: { if !$0 { pushedBook = nil } }
-                )) {
-                    if let pushedBook {
-                        HadithBookView(book: pushedBook)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .isDetailLink(false)
-
-                NavigationLink(isActive: Binding(
-                    get: { pushedReference != nil },
-                    set: { if !$0 { pushedReference = nil } }
-                )) {
-                    if let pushedReference, let book = HadithCatalogBook.bySlug[pushedReference.slug] {
-                        HadithBookView(book: book, autoOpenHadithID: pushedReference.idInBook)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .isDetailLink(false)
-            }
-            .opacity(0)
-        }
-    }
 
     /// Shared by both iOS 16 containers. `columns` decides the environment flag and whether the book
     /// screen pushes chapters through the path (stack) or swaps the detail column (split).
@@ -590,7 +560,9 @@ struct HadithView: View {
             }
         } else {
             NavigationLink {
-                HadithBookView(book: book)
+                LazyDestination {
+                    HadithBookView(book: book)
+                }
             } label: {
                 label()
             }
@@ -693,14 +665,6 @@ struct HadithView: View {
             .compactListSectionSpacing()
             // The grid/list flip animates the whole catalog, same as the Quran tab.
             .animation(.easeInOut, value: hadithGridMode)
-            // iOS 15 ONLY: the hidden isActive links programmatic pushes ride on where there is no
-            // NavigationStack path (grid tiles → book; shuffled bookmark / summary tiles / daily
-            // history → book, which then auto-pushes the hadith's chapter). On iOS 16+ BOTH containers
-            // navigate by value through `bookPath` - these links must not even exist there: an active
-            // legacy link inside a NavigationStack can fire a phantom push in the frame before the
-            // interceptors below clear the state, and spurious binding writes are the very bug the
-            // path migration removes.
-            .background(legacyHiddenPushLinks)
             #if DEBUG
             .debugPushDestination(isPresented: $debugOpenEncyclopedia) { HadeethEncView() }
             .debugPushDestination(isPresented: $debugOpenTopics) { HadithTopicsView() }
@@ -713,13 +677,14 @@ struct HadithView: View {
                 HadithSearchHandoff.shared.pendingTerm = nil
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { searchText = term }
             }
-            // Column mode navigates by value instead: both hidden links above are legacy
-            // `destination` links, which a split view routes into the DETAIL column - the reader's
-            // place. Intercepting the two state vars here keeps every caller in the tab unchanged.
+            // Every caller in the tab sets one of these two request vars; here they become `bookPath`
+            // values, which both containers navigate by (a legacy `destination` link inside a split
+            // view would open in the DETAIL column, the reader's place). Intercepting them keeps every
+            // caller unchanged.
             .onChange(of: pushedBook) { book in
                 guard #available(iOS 16.0, *), let book else { return }
                 pushedBook = nil
-                // Both iOS 16 containers navigate by path; only iOS 15 still uses the hidden link.
+                // Both containers navigate by path.
                 bookPath = [.book(slug: book.slug, autoOpenHadithID: nil)]
             }
             .onChange(of: pushedReference) { reference in
@@ -1049,7 +1014,9 @@ struct HadithView: View {
             // The grid only when there is something in it: before any reading the section is just the
             // three doors, and an empty grid would still draw its own padded row.
             if showSummaryTiles {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height
+                // on each self-sizing pass, which iOS 26 traps on.
+                SummaryTileGrid(columns: 2) {
                     if let dailyHadith {
                         // The Ayah of the Day tile's long-press menu (Hide for Today, Delete Forever,
                         // then the hadith's own actions) - a GridTileMenu, like every other grid tile.
@@ -1270,9 +1237,16 @@ struct HadithView: View {
         var id: String { rawValue }
     }
 
+    /// A tile's book push still on its way (request set, or the path already non-empty): a door raised
+    /// now would be a second push on the same stack in the same frame, so the door tap is dropped.
+    private var bookPushInFlight: Bool {
+        pushedBook != nil || pushedReference != nil || !bookPath.isEmpty
+    }
+
     /// One "About Hadith" card: a Button, for the same reason the summary doors are.
     private func aboutDoorButton(_ title: String, door: SummaryDoor) -> some View {
         Button {
+            guard !bookPushInFlight else { return }
             settings.hapticFeedback()
             openDoor = door
         } label: {
@@ -1294,6 +1268,7 @@ struct HadithView: View {
 
     private func doorButton(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
         Button {
+            guard !bookPushInFlight else { return }
             settings.hapticFeedback()
             openDoor = door
         } label: {
@@ -1391,7 +1366,9 @@ struct HadithView: View {
            let chapter = data.chapter(atPosition: reference.hadith) {
             Section(header: Text("CHAPTER \(reference.hadith)")) {
                 NavigationLink {
-                    HadithChapterView(book: reference.book, bookData: data, chapter: chapter)
+                    LazyDestination {
+                        HadithChapterView(book: reference.book, bookData: data, chapter: chapter)
+                    }
                 } label: {
                     globalChapterRow(GlobalChapterHit(book: reference.book, data: data, chapter: chapter))
                 }
@@ -1408,11 +1385,13 @@ struct HadithView: View {
             if let data = HadithStore.shared.book(reference.book),
                let resolved = resolvedReferenceHadith(reference, data: data) {
                 NavigationLink {
-                    // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
-                    if let chapter = data.chapters.first(where: { $0.id == resolved.chapterId }) {
-                        HadithChapterView(book: reference.book, bookData: data, chapter: chapter, scrollToHadithId: resolved.idInBook)
-                    } else {
-                        HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
+                    LazyDestination {
+                        // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
+                        if let chapter = data.chapters.first(where: { $0.id == resolved.chapterId }) {
+                            HadithChapterView(book: reference.book, bookData: data, chapter: chapter, scrollToHadithId: resolved.idInBook)
+                        } else {
+                            HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
+                        }
                     }
                 } label: {
                     HadithRow(book: reference.book, hadith: resolved, compact: true).equatable()
@@ -1420,7 +1399,9 @@ struct HadithView: View {
             } else {
                 // Unresolvable number: keep the plain jump row - HadithReferenceView explains.
                 NavigationLink {
-                    HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
+                    LazyDestination {
+                        HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix, introduction: reference.introduction)
+                    }
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "number")
@@ -1469,7 +1450,9 @@ struct HadithView: View {
                 Section(header: SectionPillHeader(title: "CHAPTER \(number)", count: globalNumberChapters.count, icon: "book.closed")) {
                     ForEach(globalNumberChapters) { hit in
                         NavigationLink {
-                            HadithChapterView(book: hit.book, bookData: hit.data, chapter: hit.chapter)
+                            LazyDestination {
+                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: hit.chapter)
+                            }
                         } label: {
                             globalChapterRow(hit)
                         }
@@ -1483,10 +1466,12 @@ struct HadithView: View {
                 Section(header: SectionPillHeader(title: "HADITH \(citedLabel)", count: globalNumberHadiths.count, icon: "number")) {
                     ForEach(globalNumberHadiths) { hit in
                         NavigationLink {
-                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                            } else {
-                                HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                            LazyDestination {
+                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                }
                             }
                         } label: {
                             HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
@@ -1542,7 +1527,9 @@ struct HadithView: View {
                 Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: globalChapterResults.count, overflow: globalHasMoreChapters)) {
                     ForEach(globalChapterResults) { hit in
                         NavigationLink {
-                            HadithChapterView(book: hit.book, bookData: hit.data, chapter: hit.chapter)
+                            LazyDestination {
+                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: hit.chapter)
+                            }
                         } label: {
                             globalChapterRow(hit)
                         }
@@ -1588,10 +1575,12 @@ struct HadithView: View {
                     Section(header: bookSearchSectionHeader(book: group.book, matchCount: group.hits.count)) {
                         ForEach(group.hits) { hit in
                             NavigationLink {
-                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                                } else {
-                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                LazyDestination {
+                                    if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                        HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                    } else {
+                                        HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                    }
                                 }
                             } label: {
                                 HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
@@ -1628,10 +1617,12 @@ struct HadithView: View {
                     ForEach(rankedRows.prefix(globalRankedLimit)) { row in
                         let hit = row.hit
                         NavigationLink {
-                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                            } else {
-                                HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                            LazyDestination {
+                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                }
                             }
                         } label: {
                             // The ranked rows paint the words the engine matched (a corrected spelling,
@@ -1667,11 +1658,13 @@ struct HadithView: View {
                     Section(header: bookSearchSectionHeader(book: group.book, matchCount: group.hits.count)) {
                         ForEach(group.hits) { hit in
                             NavigationLink {
-                                // Land in the chapter, scrolled to the hadith - the Quran search's arrival.
-                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                                } else {
-                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                LazyDestination {
+                                    // Land in the chapter, scrolled to the hadith - the Quran search's arrival.
+                                    if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                        HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                    } else {
+                                        HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                    }
                                 }
                             } label: {
                                 HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
@@ -2294,15 +2287,20 @@ struct HadithView: View {
                 // "View All" push, and no folders above them: bookmarks ARE the filing system
                 // (Abu, 2026-09-07). In grid mode they render as tiles, like the Quran's bookmark grid.
                 if hadithGridMode {
-                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
-                        ForEach(store.bookmarks) { bookmark in
-                            HadithBookmarkGridTile(bookmark: bookmark, ringsReading: usesColumnNavigation) {
-                                pushedReference = bookmark
+                    // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a
+                    // different height on each self-sizing pass, which iOS 26 traps on.
+                    let bookmarks = store.bookmarks
+                    ForEach(Array(stride(from: 0, to: bookmarks.count, by: tileGridChunk)), id: \.self) { start in
+                        SummaryTileGrid(columns: gridColumns.count) {
+                            ForEach(bookmarks[start..<min(start + tileGridChunk, bookmarks.count)]) { bookmark in
+                                HadithBookmarkGridTile(bookmark: bookmark, ringsReading: usesColumnNavigation) {
+                                    pushedReference = bookmark
+                                }
+                                .equatable()
                             }
-                            .equatable()
                         }
+                        .tileGridChunkRow(start: start, count: bookmarks.count)
                     }
-                    .padding(.vertical, 4)
                 } else {
                     ForEach(store.bookmarks) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
@@ -2358,7 +2356,9 @@ struct HadithView: View {
                 Section {
                     // Centered: a book tile is short labels (Abu, 2026-10-05). The BOOKMARK grid above
                     // keeps .leading - those tiles carry hadith prose.
-                    LazyVGrid(columns: gridColumns, alignment: .center, spacing: 10) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on.
+                    SummaryTileGrid(columns: gridColumns.count) {
                         ForEach(books) { book in
                             bookGridTile(book)
                         }

@@ -146,7 +146,9 @@ struct MutashabihatRows: View {
     var body: some View {
         ForEach(phrases) { phrase in
             NavigationLink {
-                PhraseOccurrencesView(phrase: phrase, originKey: originKey)
+                LazyDestination {
+                    PhraseOccurrencesView(phrase: phrase, originKey: originKey)
+                }
             } label: {
                 VStack(alignment: .trailing, spacing: 6) {
                     Text(mutashabihPhraseText(phrase, quranData: quranData))

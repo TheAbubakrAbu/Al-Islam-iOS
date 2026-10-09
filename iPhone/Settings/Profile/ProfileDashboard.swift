@@ -427,7 +427,10 @@ struct ActivityAnalyticsView: View {
                 }
 
                 Section(header: Text("AT A GLANCE")) {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on. 8 is the system's default
+                    // gap between columns, which these `GridItem`s left unset.
+                    SummaryTileGrid(columns: 2, spacing: 10, columnSpacing: 8) {
                         tile("\(actions)", "Actions")
                         tile("\(derived.activeDays)", "Active days")
                         tile(derived.activeDays > 0 ? "\(actions / derived.activeDays)" : "0", "Per active day")

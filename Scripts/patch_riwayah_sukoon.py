@@ -13,7 +13,7 @@ is a run to look at before committing.
 
 What is rewritten, in place, with the formatting the files already use (compact JSON, UTF-8):
   Resources/Data/Quran/Qiraah*.json.deflate         the 12 beta texts (raw deflate)
-  Resources/JSONs-Deprecated/Qiraat/Qiraah*.json    the 7 KFGQPC sources
+  Quran-Tajweed-Engine/sources/Qiraat/Qiraah*.json  the 7 KFGQPC sources (sibling checkout)
   Resources/Data/Quran/qiraat.qpk                   the 7 KFGQPC texts as the app reads them
                                                     (through Scripts/reblock_packs.py's Qpk)
 and then `Scripts/build_solidpacks.py` rebuilds qiraah.solidpack from the 12 deflates. The run
@@ -102,7 +102,7 @@ def check_qpk_against_json() -> None:
     pack = reblock_packs.Qpk(QIRAAT_QPK.read_bytes(), "qiraat")
     for key, ayahs in pack.records():
         key = bytes(key).decode("utf-8") if not isinstance(key, str) else key
-        source = riwayah_text(ROOT / "Resources" / "JSONs-Deprecated" / "Qiraat" / f"{KFGQPC[key]}.json")
+        source = riwayah_text(ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Qiraat" / f"{KFGQPC[key]}.json")
         expected = [(int(s), a["id"], a["text"].encode("utf-8")) for s in sorted(source, key=int) for a in source[s]]
         if [(s, a, t) for s, a, t in ayahs] != expected:
             raise SystemExit(f"qiraat.qpk reading {key} does not match {KFGQPC[key]}.json after the patch")

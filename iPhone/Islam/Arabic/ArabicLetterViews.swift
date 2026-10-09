@@ -285,8 +285,9 @@ struct TashkeelLettersView: View {
 
                         // Three fixed columns, not an adaptive grid: every family lines up under the
                         // one above it, and a name gets a third of the row instead of a quarter.
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
-                                                 count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
+                        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                        // height on each self-sizing pass, which iOS 26 traps on.
+                        SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 2 : 3, spacing: 8) {
                             ForEach(group.marks, id: \.english) { mark in
                                 markChip(mark)
                             }
@@ -377,7 +378,9 @@ struct TashkeelLettersView: View {
 
     private var lettersSection: some View {
         Section(selectedMark.map { "LETTERS WITH \(displayName($0).uppercased())" } ?? "LETTERS") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 60), spacing: 6)], spacing: 6) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(adaptiveMinimum: 60, spacing: 6) {
                 ForEach(letters) { letter in
                     letterTile(letter)
                 }
@@ -436,7 +439,9 @@ struct TashkeelLettersView: View {
     private var defaultTashkeelSection: some View {
         Section {
             NavigationLink {
-                DefaultTashkeelView()
+                LazyDestination {
+                    DefaultTashkeelView()
+                }
             } label: {
                 ArabicTopicLinkLabel(
                     specimen: "\u{0628}\u{064A}",
@@ -3138,7 +3143,9 @@ struct QuranSignsSectionContent: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on. `.top`: the columns' own alignment.
+        SummaryTileGrid(columns: columns.count, spacing: 8, alignment: .top) {
             ForEach(signs) { sign in
                 StopInfoRow(title: sign.title, symbol: sign.symbol, color: accentColor)
             }

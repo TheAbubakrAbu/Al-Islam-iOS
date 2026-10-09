@@ -4,7 +4,7 @@ from) with QUL's natural-reading scheme.
 
 The pack shipped the Tanzil-style transliteration ("Bismi Allahi alrrahmani alrraheemi"),
 which spells the assimilated definite article letter by letter. The replacement is QUL's
-"English Transliteration (Tajweed)" (Resources/JSONs-Deprecated/QUL/
+"English Transliteration (Tajweed)" (Quran-Tajweed-Engine/sources/QUL/
 english-transliteration-tajweed.json.zip): "Bismil laahir Rahmaanir Raheem", written the way
 the ayah is actually recited - long vowels doubled, the article assimilated, a hyphen between
 a particle and its word, and on 389 ayahs the case ending that is dropped at a pause shown in
@@ -26,9 +26,10 @@ import pathlib
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+SOURCES = ROOT.parent / "Quran-Tajweed-Engine" / "sources"
 PACK = ROOT / "Resources" / "Data" / "Quran" / "quran.qpk"
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-SOURCE = ROOT / "Resources" / "JSONs-Deprecated" / "QUL" / "english-transliteration-tajweed.json.zip"
+QURAN_JSON = SOURCES / "Quran.json"
+SOURCE = SOURCES / "QUL" / "english-transliteration-tajweed.json.zip"
 
 _spec = importlib.util.spec_from_file_location("reblock_packs", ROOT / "Scripts" / "reblock_packs.py")
 _rb = importlib.util.module_from_spec(_spec)

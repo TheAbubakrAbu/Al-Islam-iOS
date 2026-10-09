@@ -532,7 +532,9 @@ struct PrayerTrackerSection: View {
                 }
 
                 NavigationLink {
-                    PrayerTrackerView()
+                    LazyDestination {
+                        PrayerTrackerView()
+                    }
                 } label: {
                     HStack(spacing: 12) {
                         AccentIconChip(systemImage: "chart.bar.xaxis", tint: settings.accentColor.accent2, size: 26)

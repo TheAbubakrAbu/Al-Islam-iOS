@@ -116,6 +116,66 @@ func ayahHighlightMenuItems(surah: Int, ayah: Int, settings: Settings) -> some V
     }
 }
 
+/// "Play From Ayah" as a MENU of how far the recitation carries (Abu, 2026-10-07: "play from ayah ... it
+/// becomes a menu and then theres play til end of page, or end of surah or end of juz or end of
+/// infinitely"). Every surface that offers Play From Ayah renders THIS, so the four scopes, their order
+/// and their wording can never drift apart between the actions sheet, the rows' ellipsis menu, the
+/// long-press context menu and the history rows - the same parity rule the highlight palette follows
+/// (`ayahHighlightMenuItems`, and [[ayah-menu-parity-and-search-paint]]).
+///
+/// End of Surah is FIRST and is the plain default: it is what Play From Ayah already did before the menu
+/// existed, so the habitual tap lands on the familiar behaviour. End of Juz and Forever cross surah
+/// boundaries; Forever stops at the end of An-Nas rather than looping back to Al-Fatihah.
+///
+/// `onPick` fires after the player is told, so a sheet can dismiss itself (the actions sheet does; the
+/// menus pass nothing).
+@ViewBuilder
+func ayahPlayFromMenuItems(
+    surah: Int,
+    ayah: Int,
+    settings: Settings,
+    quranPlayer: QuranPlayer,
+    onPick: (() -> Void)? = nil
+) -> some View {
+    Button {
+        settings.hapticFeedback()
+        quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
+                             continueRecitation: true, continueScope: .surah)
+        onPick?()
+    } label: {
+        Label("Until End of Surah", systemImage: "book.closed")
+    }
+
+    Button {
+        settings.hapticFeedback()
+        quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
+                             continueRecitation: true, continueScope: .page)
+        onPick?()
+    } label: {
+        Label("Until End of Page", systemImage: "doc.plaintext")
+    }
+
+    Button {
+        settings.hapticFeedback()
+        quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
+                             continueRecitation: true, continueScope: .juz)
+        onPick?()
+    } label: {
+        Label("Until End of Juz", systemImage: "square.stack.3d.up")
+    }
+
+    Divider()
+
+    Button {
+        settings.hapticFeedback()
+        quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
+                             continueRecitation: true, continueScope: .forever)
+        onPick?()
+    } label: {
+        Label("Until the End of the Quran", systemImage: "infinity")
+    }
+}
+
 #if os(iOS)
 /// The "Apply Settings" menu body, shared by the list row's ellipsis menu, the ayah actions sheet's tile
 /// and the multi-select bar (Abu, 2026-09-05): one checkmark row per display option, each flipping the
@@ -767,13 +827,9 @@ struct AyahContextMenuModifier: ViewModifier {
                             Label("Play Custom Range", systemImage: "slider.horizontal.3")
                         }
 
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playAyah(
-                                surahNumber: surah,
-                                ayahNumber: ayah,
-                                continueRecitation: true
-                            )
+                        Menu {
+                            ayahPlayFromMenuItems(surah: surah, ayah: ayah, settings: settings,
+                                                  quranPlayer: quranPlayer)
                         } label: {
                             Label("Play From Ayah", systemImage: "play.circle.fill")
                         }

@@ -3657,6 +3657,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// keep the system look, which only the build-time `UIDesignRequiresCompatibility` key changes.
     @AppStorage("classicLook") var classicLook: Bool = false
 
+    /// The Appearance toggle's sense: ON means Liquid Glass, OFF means the Classic Look. The STORED key
+    /// stays `classicLook` so existing installs, the iCloud manifest and the `-classicLook` launch
+    /// argument all keep working; only the switch the user sees is inverted, because "Show Liquid Glass"
+    /// is what the setting does and a negative toggle ("Classic Look (No Liquid Glass)") made ON mean
+    /// "no glass" (Abu, 2026-10-08).
+    var showLiquidGlass: Bool {
+        get { !classicLook }
+        set { classicLook = !newValue }
+    }
+
     /// Switch to the Classic Look automatically while Low Power Mode is on. Glass is a per-surface
     /// backdrop pass; on the reduced tier the classic fallback is a flat fill, the cheapest thing there is.
     @AppStorage("classicLookInLowPower") var classicLookInLowPower: Bool = true

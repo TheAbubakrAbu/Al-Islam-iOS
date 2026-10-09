@@ -512,7 +512,12 @@ struct IslamView: View {
             // don't have it be a sheet"). It renders only once the corpus has parsed, so the
             // resource grid never waits on it.
             #if os(iOS)
-            ReminderOfTheDaySection(openDoor: $reminderDoor)
+            // A pill tapped while a resource's path push is still in flight (the last resources sit just
+            // above) would be a second push on the stack in the same instant: dropped.
+            ReminderOfTheDaySection(openDoor: Binding(
+                get: { reminderDoor },
+                set: { new in if new == nil || islamPath.isEmpty { reminderDoor = new } }
+            ))
                 .id("reminder")
             #endif
 
@@ -795,7 +800,7 @@ struct IslamView: View {
 
             // Press-and-hold offers the row's menu through `GridTileMenu` - a plain `contextMenu`
             // here would lift the WHOLE row (every tile at once) as its preview, since the grid is
-            // one LazyVGrid inside a single List row.
+            // one grid inside a single List row.
             //
             // The grid and the banner share ONE row, 8 pt apart like the tiles themselves. As two
             // rows each carried its own ~16 pt inset, so the banner sat 33 pt under the tiles, and a
@@ -804,8 +809,9 @@ struct IslamView: View {
             // "weird top padding for ask ai").
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
-                                             count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on.
+                    SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 2 : 3, spacing: 8) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 settings.hapticFeedback()
@@ -1296,8 +1302,9 @@ struct IslamView: View {
             // section's only item (Favorites).
             VStack(spacing: 8) {
                 if !tiles.isEmpty {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
-                                             count: dynamicTypeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on (the sidebar's narrow rows).
+                    SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 2 : 3, spacing: 8) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 selectSplitResource(item)

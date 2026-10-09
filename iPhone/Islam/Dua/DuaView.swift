@@ -443,7 +443,10 @@ struct DuaView: View {
                 if let hisnLibrary, let today = HisnDuasStore.shared.duaOfTheDay() {
                     Section {
                         HisnDuaOfTheDayCard(entry: today, category: hisnLibrary.categories.first { $0.id == today.categoryID },
-                                            library: hisnLibrary) { hisnCardDoor = $0 }
+                                            library: hisnLibrary) { door in
+                            // One door at a time: the About card's push is the List's other destination.
+                            if aboutDoor == nil { hisnCardDoor = door }
+                        }
                     }
                 }
                 // The two libraries DO overlap, and the footer says so rather than leaving a reader to
@@ -505,7 +508,9 @@ struct DuaView: View {
 
                     ForEach(shownCollections) { collection in
                         NavigationLink {
-                            DuaCollectionView(collection: collection)
+                            LazyDestination {
+                                DuaCollectionView(collection: collection)
+                            }
                         } label: {
                             // The Islam tab's resource-row grammar: an accent chip for the icon, the
                             // title and its one-line subtitle, and the collection's size as a count
@@ -667,7 +672,8 @@ struct DuaView: View {
                 AboutSignsSection(heading: "About Dua",
                                   systemImage: "text.book.closed",
                                   doors: [.makeDua, .allah, .tawhid],
-                                  openDoor: $aboutDoor)
+                                  openDoor: Binding(get: { aboutDoor },
+                                                    set: { new in if new == nil || hisnCardDoor == nil { aboutDoor = new } }))
                 #endif
             }
             .themedListRowBackground()

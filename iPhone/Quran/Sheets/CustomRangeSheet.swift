@@ -545,8 +545,10 @@ struct PlayCustomRangeSheet: View {
 
     private var reciterRow: some View {
         NavigationLink {
-            ReciterListView()
-                .environmentObject(settings)
+            LazyDestination {
+                ReciterListView()
+                    .environmentObject(settings)
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "person.wave.2.fill")

@@ -41,20 +41,15 @@ struct SettingsIslamView: View {
         if let standalonePage {
             islamPageDestination(standalonePage)
         } else if presentedAsSheet {
-            NavigationView {
+            SettingsSheetStack {
                 settingsList
                     .navigationTitle("Islam Settings")
                     .navigationBarTitleDisplayMode(.inline)
                     .sheetDismissToolbar()
                     #if DEBUG
-                    .background(
-                        NavigationLink(isActive: $autoOpenArabicText) { arabicTextDestination }
-                                      label: { EmptyView() }
-                            .hidden()
-                    )
+                    .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
                     #endif
             }
-            .navigationViewStyle(.stack)
         } else {
             settingsList
                 .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: openPage != nil) {
@@ -66,11 +61,7 @@ struct SettingsIslamView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { openRequestedPage = true }
                 }
                 #if DEBUG
-                .background(
-                    NavigationLink(isActive: $autoOpenArabicText) { arabicTextDestination }
-                                  label: { EmptyView() }
-                        .hidden()
-                )
+                .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
                 #endif
                 .navigationTitle("Islam Settings")
         }

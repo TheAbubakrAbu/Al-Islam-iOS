@@ -888,12 +888,20 @@ final class HadithStore: ObservableObject {
             dailyHistoryCache = []
             return []
         }
-        dailyHistoryCache = decoded
-        return decoded
+        let unique = uniqueDays(decoded)
+        dailyHistoryCache = unique
+        return unique
+    }
+
+    /// One entry per day, the newest kept: the lists key their rows by `dayKey`, and a clock set back
+    /// (or a flight west across midnight) filed the same day twice, a duplicate id inside a List.
+    private static func uniqueDays(_ entries: [DailyHadithEntry]) -> [DailyHadithEntry] {
+        var seen = Set<String>()
+        return entries.filter { seen.insert($0.dayKey).inserted }
     }
 
     private static func saveDailyHistory(_ entries: [DailyHadithEntry]) {
-        let trimmed = Array(entries.prefix(5))
+        let trimmed = Array(uniqueDays(entries).prefix(5))
         dailyHistoryCache = trimmed
         if let data = try? JSONEncoder().encode(trimmed) {
             UserDefaults.standard.set(data, forKey: "hadithOfTheDayHistory")

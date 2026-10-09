@@ -16,25 +16,49 @@ final class AdhanCatchUpOfferTests: XCTestCase {
     /// Mecca, so every prayer is well inside the day and no high-latitude rule is in play.
     private let mecca = Location(city: "Mecca", latitude: 21.4225, longitude: 39.8262)
 
-    private var savedLocation: Location?
-    private var savedOverride = false
-    private var savedSound = ""
+    /// The real settings these tests move, saved ONCE for the whole class rather than per test.
+    ///
+    /// Captured per test, the save/restore was a leak rather than a guard: a test that writes
+    /// `adhanOverridesSilentMode = true` leaves it true, so the NEXT `setUp` saves `true` as the
+    /// "original" and no `tearDown` ever puts it back. Class-level storage restores the values the
+    /// device actually had (2026-10-08).
+    private static var savedLocation: Location?
+    private static var savedOverride = false
+    private static var savedSound = ""
+    private static var savedTravelAutomatic = false
+    private static var savedTravelingMode = false
+    private static var saved = false
 
     override func setUp() async throws {
         try await super.setUp()
         let settings = Settings.shared
-        savedLocation = settings.currentLocation
-        savedOverride = settings.adhanOverridesSilentMode
-        savedSound = settings.adhanNotificationSound
+        if !Self.saved {
+            Self.savedLocation = settings.currentLocation
+            Self.savedOverride = settings.adhanOverridesSilentMode
+            Self.savedSound = settings.adhanNotificationSound
+            Self.savedTravelAutomatic = settings.travelAutomatic
+            Self.savedTravelingMode = settings.travelingMode
+            Self.saved = true
+        }
         settings.currentLocation = mecca
+        // Mecca is a long way from whatever home this device has, and `travelAutomatic` defaults to
+        // true - so setting the location above was enough to flip traveling mode on, and traveling
+        // mode condenses the day to "Fajr, Shurooq, Dhuhr/Asr, Maghrib/Isha". A lookup for "Dhuhr"
+        // then found nothing while "Fajr" still resolved, which is exactly how
+        // `testTheCatchUpWindowIsFiveMinutes` failed in the full-class run while passing alone.
+        // These tests are about the catch-up window, not about Qasr: pin the full five.
+        settings.travelAutomatic = false
+        settings.travelingMode = false
         ForegroundAdhanPlayer.shared.clearPendingOffer()
     }
 
     override func tearDown() async throws {
         let settings = Settings.shared
-        settings.currentLocation = savedLocation
-        settings.adhanOverridesSilentMode = savedOverride
-        settings.adhanNotificationSound = savedSound
+        settings.currentLocation = Self.savedLocation
+        settings.adhanOverridesSilentMode = Self.savedOverride
+        settings.adhanNotificationSound = Self.savedSound
+        settings.travelAutomatic = Self.savedTravelAutomatic
+        settings.travelingMode = Self.savedTravelingMode
         ForegroundAdhanPlayer.shared.clearPendingOffer()
         try await super.tearDown()
     }
@@ -46,7 +70,12 @@ final class AdhanCatchUpOfferTests: XCTestCase {
     func testTheCatchUpWindowIsFiveMinutes() throws {
         let settings = Settings.shared
         let prayers = try XCTUnwrap(settings.getPrayerTimes(for: Date()), "no prayer times for Mecca")
-        let dhuhr = try XCTUnwrap(prayers.first { $0.nameTransliteration == "Dhuhr" })
+        // "Jumuah" on a Friday, the way the app's own lookups spell it (`_filterTravelingMode` takes
+        // the same pair). `setUp` pins traveling mode off, so "Dhuhr/Asr" cannot appear here.
+        let dhuhr = try XCTUnwrap(
+            prayers.first { $0.nameTransliteration == "Dhuhr" || $0.nameTransliteration == "Jumuah" },
+            "no midday prayer in \(prayers.map(\.nameTransliteration))"
+        )
 
         let justInside = dhuhr.time.addingTimeInterval(4 * 60 + 59)
         let justOutside = dhuhr.time.addingTimeInterval(5 * 60 + 1)
@@ -60,9 +89,12 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         let outside = settings.recentForegroundAdhan(within: window, now: justOutside)
 
         // Dhuhr's own eligibility depends on the user's notification switches, so assert the window's
-        // BEHAVIOUR: whatever it finds at 4:59 it must not still find at 5:01.
-        if let inside, inside.name == "Dhuhr" {
-            XCTAssertNotEqual(outside?.name, "Dhuhr", "an adhan 5:01 old is outside the window")
+        // BEHAVIOUR: whatever it finds at 4:59 it must not still find at 5:01. Against the RESOLVED
+        // name, not the literal "Dhuhr" - on a Friday that literal matched nothing and the assertion
+        // quietly skipped instead of testing the window.
+        let middayName = dhuhr.nameTransliteration
+        if let inside, inside.name == middayName {
+            XCTAssertNotEqual(outside?.name, middayName, "an adhan 5:01 old is outside the window")
         }
         if let outside {
             XCTAssertLessThan(justOutside.timeIntervalSince(outside.date), window,

@@ -41,7 +41,7 @@ final class WordGrammarTests: XCTestCase {
     }
 
     /// Every counted entry still cuts the runtime text exactly: the builder checked its counts
-    /// against Resources/JSONs-Deprecated/Quran.json, and the reader draws quran.qpk. A drift between
+    /// against Quran-Tajweed-Engine/sources/Quran.json, and the reader draws quran.qpk. A drift between
     /// the two would light the wrong letters, so it fails here instead.
     @MainActor
     func testCountsCutTheRuntimeTextEverywhere() async {

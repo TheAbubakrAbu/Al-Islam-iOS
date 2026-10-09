@@ -216,7 +216,7 @@ enum SettingsAppearancePage: String, CaseIterable, Hashable {
     var caption: String {
         switch self {
         case .customColors: return "Your own background and accent, the glow"
-        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, list style, Classic Look, haptics" : "List style, Classic Look, haptics"
+        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, list style, Liquid Glass, haptics" : "List style, Liquid Glass, haptics"
         }
     }
 }
@@ -688,7 +688,8 @@ struct SettingsScopedSearch<Content: View>: View {
 /// (a push raised before the container exists never lands, 2026-09-05): iOS 16+ through
 /// `navigationDestination(isPresented:)`, iOS 15 through a hidden `isActive` link. Inert when
 /// nothing was requested, so a page presented in a plain `NavigationView` (the readers' settings
-/// sheets) never carries a destination modifier that container would not honour.
+/// sheets before iOS 16; see `SettingsSheetStack`) never carries a destination modifier that container
+/// would not honour.
 struct SettingsDeepLink<Destination: View>: ViewModifier {
     @Binding var isPresented: Bool
     var active: Bool = true
@@ -698,12 +699,34 @@ struct SettingsDeepLink<Destination: View>: ViewModifier {
         if !active {
             content
         } else if #available(iOS 16.0, *) {
-            content.navigationDestination(isPresented: $isPresented, destination: destination)
+            // Lazy for the reason `PushDestination` gives: the modifier would otherwise build the page
+            // on every pass of the screen that carries it, requested or not.
+            content.navigationDestination(isPresented: $isPresented) { LazyDestination(build: destination) }
         } else {
             content.background(
                 NavigationLink(isActive: $isPresented) { destination() } label: { EmptyView() }
                     .hidden()
             )
+        }
+    }
+}
+
+/// The container a settings page sits in when it is presented as a SHEET (the readers' Quran settings,
+/// the Hadith and Islam settings): a `NavigationStack` from iOS 16, so the page's
+/// `navigationDestination` pushes (`SettingsDeepLink`, `pushDestination`, the DEBUG auto-opens) work in
+/// the sheet exactly as in the Settings tab, which a plain `NavigationView` silently ignores. Before
+/// iOS 16, the stack-style `NavigationView` these sheets always used (`.stack` matters on iPad: a
+/// regular-width sheet would otherwise show two columns with an empty detail pane). Al-Islam's floor is
+/// iOS 16 since 2026-10-09; the iOS 15 branch stays for Al-Quran and Al-Adhan, which share this file.
+struct SettingsSheetStack<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if #available(iOS 16.0, *) {
+            NavigationStack { content() }
+        } else {
+            NavigationView { content() }
+                .navigationViewStyle(.stack)
         }
     }
 }

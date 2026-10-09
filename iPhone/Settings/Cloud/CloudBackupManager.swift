@@ -490,6 +490,11 @@ final class CloudBackupManager: ObservableObject {
     nonisolated static func importFile(_ url: URL) throws -> (snapshot: CloudSnapshot, bytes: Int) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        // A backup is kilobytes. A large file picked by mistake (a video) is refused before it is read
+        // whole into memory, where it could pass the app's memory limit and end it.
+        if let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, size > 100_000_000 {
+            throw CloudSnapshot.Failure.unreadable
+        }
         let data: Data
         do {
             data = try Data(contentsOf: url)

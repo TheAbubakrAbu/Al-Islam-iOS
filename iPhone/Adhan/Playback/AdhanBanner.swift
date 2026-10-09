@@ -86,9 +86,19 @@ struct AdhanBannerHost: View {
 
 private struct AdhanBannerCard: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var player = ForegroundAdhanPlayer.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let prayerName: String
+
+    /// What the card says under the prayer name. On `.ambient` the recording obeys the ringer switch,
+    /// so a silenced phone shows this banner over silence - the line names the switch instead of
+    /// claiming sound, because that is the only thing that explains it (Abu, 2026-10-08).
+    private var subtitle: String {
+        player.followsRingerSwitch
+            ? "Silent if the ringer switch is off"
+            : "Tap Stop to end the adhan"
+    }
 
     @State private var pulse = false
     @State private var dragOffset: CGFloat = 0
@@ -111,7 +121,7 @@ private struct AdhanBannerCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
-                Text("Tap Stop to end the adhan")
+                Text(subtitle)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

@@ -98,28 +98,13 @@ struct SettingsQuranView: View {
     private var rootBody: some View {
         rootList
         #if DEBUG && os(iOS)
-        .background(
-            NavigationLink(isActive: $autoOpenArabicText) { arabicTextDestination }
-                          label: { EmptyView() }
-                .hidden()
-        )
-        // In `.background`, not the List: a hidden link placed as a row still draws that row's
-        // background and separators.
-        .background(
-            NavigationLink(isActive: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
-                          label: { EmptyView() }
-                .hidden()
-        )
-        .background(
-            NavigationLink(isActive: $autoOpenSunnah) { SunnahRemindersView() }
-                          label: { EmptyView() }
-                .hidden()
-        )
-        .background(
-            NavigationLink(isActive: $autoOpenThemes) { ThemeHighlightsView() }
-                          label: { EmptyView() }
-                .hidden()
-        )
+        // On the List, not a row (a lazy row's destination never fires, see `PushDestination`). The
+        // readers' sheets host this page in `SettingsSheetStack`, a `NavigationStack`, so these push
+        // there as in the Settings tab.
+        .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
+        .debugPushDestination(isPresented: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
+        .debugPushDestination(isPresented: $autoOpenSunnah) { SunnahRemindersView() }
+        .debugPushDestination(isPresented: $autoOpenThemes) { ThemeHighlightsView() }
         #endif
         #if os(iOS)
         .modifier(SettingsDeepLink(isPresented: $openRequestedPage, active: requestedPage != nil) {
@@ -269,10 +254,12 @@ struct SettingsQuranView: View {
 
     private func favoritesLink(title: String, type: FavoriteType) -> some View {
         NavigationLink {
-            FavoritesView(type: type)
-                .environmentObject(quranData)
-                .environmentObject(settings)
-                .accentColor(settings.accentColor.color)
+            LazyDestination {
+                FavoritesView(type: type)
+                    .environmentObject(quranData)
+                    .environmentObject(settings)
+                    .accentColor(settings.accentColor.color)
+            }
         } label: {
             Label(title, systemImage: "pencil")
                 .padding(.vertical, 4)

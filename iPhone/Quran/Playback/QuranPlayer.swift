@@ -297,7 +297,11 @@ final class QuranPlayer: ObservableObject {
     /// refilled queue, and two deliveries each added one, so the highlight and the Now Playing title
     /// ran ahead of the audio. Recorded when the item is queued and looked up by identity - the same
     /// fix the custom-range twin already carries (`customRangeItemPositions`).
-    private var continueAyahItemNumbers: [ObjectIdentifier: Int] = [:]
+    ///
+    /// Carries the SURAH as well as the ayah since 2026-10-07: `.juz` and `.forever` cross surah
+    /// boundaries, so an item's ayah number alone no longer identifies it (every surah has an ayah 1).
+    /// The advance reads the surah back off the item to know which surah it is now in.
+    private var continueAyahItemNumbers: [ObjectIdentifier: (surahNumber: Int, ayahNumber: Int)] = [:]
     private var didHandleSingleAyahEnd = false
     
     var player: AVPlayer?
@@ -1025,12 +1029,17 @@ final class QuranPlayer: ObservableObject {
         guard let s = currentSurahNumber, let a = currentAyahNumber else { return }
         let repeatCountToKeep = carriedAyahRepeatCount(continueRecitation: continueRecitationFromAyah)
         if a > 1 {
+            // Keeps the running scope and its original bound (see `ayahSkipBackward`).
+            let scope = continueScope
+            let bound = continueBound
             playAyah(
                 surahNumber: s,
                 ayahNumber: a - 1,
                 continueRecitation: continueRecitationFromAyah,
+                continueScope: scope,
                 repeatCount: repeatCountToKeep
             )
+            if continueRecitationFromAyah { continueBound = bound }
         }
     }
     
@@ -1144,6 +1153,10 @@ final class QuranPlayer: ObservableObject {
         // fresh playAyah, so a value left over from a finished recitation decided how the NEXT one
         // behaved: a Play This Ayah after a Play From Ayah could keep going, and vice versa.
         continueRecitationFromAyah = false
+        // The scope goes with the flag, for exactly the same reason: a `.forever` or `.juz` left over
+        // from a finished recitation would otherwise decide how the next Play From Ayah ends.
+        continueScope = .surah
+        continueBound = nil
 
         // Persist position OUTSIDE withAnimation: these write @AppStorage-backed settings, which republish
         // observing screens (e.g. SurahView). Animating that republish mid-scroll makes the reading view
@@ -1222,6 +1235,31 @@ final class QuranPlayer: ObservableObject {
     /// an infinite option"). The countdowns below simply never reach the last pass; a custom range
     /// builds ONE pass and wraps (never an expanded sequence).
     static let infiniteRepeat = Int.max
+
+    /// How far a "Play From Ayah" carries (Abu, 2026-10-07: "it becomes a menu and then theres play til
+    /// end of page, or end of surah or end of juz or end of infinitely"). Before this the continue path
+    /// had exactly one shape - run to the surah's last ayah and stop - so `.surah` is the old behaviour
+    /// and stays the default everywhere a caller does not choose.
+    ///
+    /// `.page` and `.juz` resolve their LAST ayah once, when playback begins (`resolveContinueBound`),
+    /// rather than being re-derived per advance: the bound is a property of where you started, and a
+    /// page/juz lookup on every ayah hand-off would re-scan the pack mid-recitation.
+    ///
+    /// `.juz` and `.forever` CROSS SURAHS (Abu's explicit choice): a juz spans surahs, and "forever" that
+    /// stopped at a surah end would be indistinguishable from `.surah`. `.forever` ends at the end of
+    /// An-Nas rather than wrapping to Al-Fatihah - it is "finish the Quran from here", not a loop.
+    enum ContinueScope: String, Equatable {
+        case page, surah, juz, forever
+    }
+
+    /// The scope of the running continue-from-ayah recitation, and the ayah it ends on.
+    ///
+    /// Held apart from `continueRecitationFromAyah` (which only says WHETHER to carry on) because the
+    /// three advance sites all need to ask the same question - "is this ayah the last one?" - and a
+    /// resolved `(surah, ayah)` bound answers it without re-reading page/juz tables. `nil` bound means
+    /// unbounded within the scope's own rule (`.surah` stops at `numberOfAyahs`, `.forever` at 114).
+    private var continueScope: ContinueScope = .surah
+    private var continueBound: (surahNumber: Int, ayahNumber: Int)?
 
     /// A download started for a repeat that playback is waiting on. Any new playback, or stop, clears
     /// it, so a fetch that lands late cannot start audio the user has already moved on from.
@@ -1375,6 +1413,8 @@ final class QuranPlayer: ObservableObject {
         // A range this surah replaces is over (see `resetCustomRangeState`).
         resetCustomRangeState()
         continueRecitationFromAyah = false
+        continueScope = .surah
+        continueBound = nil
         backButtonClickCount = 0
         playbackReciter = reciter
         cancelSurahCopy(keeping: remoteURL)
@@ -1793,6 +1833,7 @@ final class QuranPlayer: ObservableObject {
         ayahNumber: Int,
         isBismillah: Bool = false,
         continueRecitation: Bool = false,
+        continueScope: ContinueScope = .surah,
         repeatCount: Int = 1
     ) -> Bool {
         installAudioInfrastructureIfNeeded()
@@ -1824,6 +1865,7 @@ final class QuranPlayer: ObservableObject {
             ayahNumber: ayahNumber,
             isBismillah: isBismillah,
             continueRecitation: continueRecitation,
+            continueScope: continueScope,
             repeatCount: repeatCount,
             reciter: resolvedReciter
         )
@@ -1837,6 +1879,7 @@ final class QuranPlayer: ObservableObject {
         ayahNumber: Int,
         isBismillah: Bool,
         continueRecitation: Bool,
+        continueScope: ContinueScope = .surah,
         repeatCount: Int,
         reciter: Reciter
     ) {
@@ -1853,6 +1896,12 @@ final class QuranPlayer: ObservableObject {
         resetCustomRangeState()
 
         continueRecitationFromAyah = continueRecitation
+        // Resolved HERE, once, from the ayah the user started on - not per advance. A scope only means
+        // anything while continuing, so a plain Play Ayah leaves it at the default and clears the bound.
+        self.continueScope = continueRecitation ? continueScope : .surah
+        self.continueBound = continueRecitation
+            ? resolveContinueBound(scope: continueScope, surahNumber: surahNumber, ayahNumber: ayahNumber)
+            : nil
         didHandleSingleAyahEnd = false
         isPlayingBismillah = isBismillah
         if !isBismillah { saveLastListenedAyah() }
@@ -2012,6 +2061,8 @@ final class QuranPlayer: ObservableObject {
         isPlayingBismillah = false
         isPlayingCustomRange = true
         continueRecitationFromAyah = false
+        continueScope = .surah
+        continueBound = nil
 
         setupAudioSession()
         isLoading = true
@@ -2413,10 +2464,16 @@ final class QuranPlayer: ObservableObject {
         }
         firstItem.preferredForwardBufferDuration = ayahStartupBuffer
 
+        // The second item comes from the SCOPE rule, not from `ayahNumber < surah.numberOfAyahs`: a
+        // `.page` recitation must not prime an ayah past its page, and a `.juz` / `.forever` one has to
+        // be able to prime the next SURAH's first ayah (2026-10-07).
         var nextItem: AVPlayerItem?
-        if ayahNumber < surah.numberOfAyahs {
-            nextItem = makeItem(forSurah: surah, reciter: reciter, ayahNumber: ayahNumber + 1)
+        var nextPos: (surahNumber: Int, ayahNumber: Int)?
+        if let next = nextContinuePosition(afterSurah: surahNumber, ayah: ayahNumber),
+           let nextSurah = quranData.quran.first(where: { $0.id == next.surahNumber }) {
+            nextItem = makeItem(forSurah: nextSurah, reciter: reciter, ayahNumber: next.ayahNumber)
             nextItem?.preferredForwardBufferDuration = ayahStartupBuffer
+            if nextItem != nil { nextPos = next }
         }
 
         let q = AVQueuePlayer()
@@ -2424,11 +2481,13 @@ final class QuranPlayer: ObservableObject {
         q.automaticallyWaitsToMinimizeStalling = false
 
         q.insert(firstItem, after: nil)
-        continueAyahItemNumbers = [ObjectIdentifier(firstItem): ayahNumber]
+        continueAyahItemNumbers = [
+            ObjectIdentifier(firstItem): (surahNumber: surahNumber, ayahNumber: ayahNumber)
+        ]
 
-        if let ni = nextItem {
+        if let ni = nextItem, let np = nextPos {
             q.insert(ni, after: firstItem)
-            continueAyahItemNumbers[ObjectIdentifier(ni)] = ayahNumber + 1
+            continueAyahItemNumbers[ObjectIdentifier(ni)] = (surahNumber: np.surahNumber, ayahNumber: np.ayahNumber)
         }
 
         // Retire the outgoing players via locals (see stop()).
@@ -2480,17 +2539,21 @@ final class QuranPlayer: ObservableObject {
                     // "Play From Ayah" stop dead after an ayah or two on a poor connection. Hold
                     // instead and let the pending insert resume it - the same way the custom-range
                     // twin waits on `customRangeAwaitedPosition`.
+                    // "Is there a next ayah?" is now the SCOPE's question (`nextContinuePosition`), so a
+                    // dry queue at a page's or juz's last ayah ends the recitation while one mid-scope
+                    // still holds and resumes - including across a surah boundary for `.juz`/`.forever`.
                     if self.continueRecitationFromAyah,
                        let s = self.currentSurahNumber,
                        let a = self.currentAyahNumber,
-                       let sur = self.quranData.quran.first(where: { $0.id == s }),
-                       a < sur.numberOfAyahs,
+                       let next = self.nextContinuePosition(afterSurah: s, ayah: a),
+                       let nextSur = self.quranData.quran.first(where: { $0.id == next.surahNumber }),
                        let rec = self.playbackReciter ?? self.resolvedSelectedReciter(),
-                       let resume = self.makeItem(forSurah: sur, reciter: rec, ayahNumber: a + 1) {
+                       let resume = self.makeItem(forSurah: nextSur, reciter: rec, ayahNumber: next.ayahNumber) {
                         // Re-enqueue the ayah that should have followed and carry on. Holding
                         // without this would leave the recitation stalled with no path back.
                         resume.preferredForwardBufferDuration = self.ayahStartupBuffer
-                        self.continueAyahItemNumbers[ObjectIdentifier(resume)] = a + 1
+                        self.continueAyahItemNumbers[ObjectIdentifier(resume)] =
+                            (surahNumber: next.surahNumber, ayahNumber: next.ayahNumber)
                         qPlayer.insert(resume, after: nil)
                         self.isLoading = true
                         qPlayer.play()
@@ -2511,27 +2574,37 @@ final class QuranPlayer: ObservableObject {
                 // queued for the previous recitation moved the NEW one's ayah on by one, so the
                 // highlight and the title ran an ayah ahead of the audio.
                 guard self.queuePlayer === qPlayer else { return }
-                guard let s = self.currentSurahNumber,
-                      let sur = self.quranData.quran.first(where: { $0.id == s }) else { return }
+                guard self.currentSurahNumber != nil else { return }
 
-                // The ayah this item IS, not one more than the last one we published: a repeated
+                // The POSITION this item IS, not one more than the last one we published: a repeated
                 // KVO for the same item now resolves to the same number instead of advancing twice.
-                guard let newAyah = self.continueAyahItemNumbers[ObjectIdentifier(newItem)] else { return }
+                // It carries the surah too, so a `.juz` / `.forever` hand-off into the next surah
+                // republishes the surah rather than numbering the new surah's ayahs as the old one's.
+                guard let pos = self.continueAyahItemNumbers[ObjectIdentifier(newItem)] else { return }
+                guard let posSurah = self.quranData.quran.first(where: { $0.id == pos.surahNumber })
+                else { return }
 
                 // Already published (a duplicate delivery for the item that is still current).
-                guard newAyah != self.currentAyahNumber else { return }
+                guard pos.surahNumber != self.currentSurahNumber
+                        || pos.ayahNumber != self.currentAyahNumber else { return }
 
-                guard newAyah <= sur.numberOfAyahs else {
+                guard pos.ayahNumber <= posSurah.numberOfAyahs else {
                     self.stop()
                     return
                 }
 
-                self.currentAyahNumber = newAyah
+                // The surah can change mid-recitation now; publishing it keeps the reader's highlight,
+                // the Now Playing title and Last Listened Ayah on the surah actually being recited.
+                if self.currentSurahNumber != pos.surahNumber {
+                    self.currentSurahNumber = pos.surahNumber
+                }
+                self.currentAyahNumber = pos.ayahNumber
+                self.saveLastListenedAyah()
                 // The items left behind can never come back, so their entries go with them.
                 let live = Set(qPlayer.items().map { ObjectIdentifier($0) })
                 self.continueAyahItemNumbers = self.continueAyahItemNumbers.filter { live.contains($0.key) }
                 if let recNow = self.playbackReciter ?? self.resolvedSelectedReciter() {
-                    self.nowPlayingTitle = "\(sur.nameTransliteration) \(s):\(newAyah)"
+                    self.nowPlayingTitle = "\(posSurah.nameTransliteration) \(pos.surahNumber):\(pos.ayahNumber)"
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: recNow)
                     self.updateNowPlayingInfo()
                 }
@@ -2540,9 +2613,10 @@ final class QuranPlayer: ObservableObject {
                    qPlayer.items().count < 2,
                    let rec = self.playbackReciter ?? self.resolvedSelectedReciter() {
 
-                    let nextAyah = newAyah + 1
-                    if nextAyah <= sur.numberOfAyahs,
-                       let upcoming = self.makeItem(forSurah: sur, reciter: rec, ayahNumber: nextAyah) {
+                    // The scope decides whether there IS a next ayah, and which surah it is in.
+                    if let next = self.nextContinuePosition(afterSurah: pos.surahNumber, ayah: pos.ayahNumber),
+                       let nextSurah = self.quranData.quran.first(where: { $0.id == next.surahNumber }),
+                       let upcoming = self.makeItem(forSurah: nextSurah, reciter: rec, ayahNumber: next.ayahNumber) {
                         upcoming.preferredForwardBufferDuration = self.ayahStartupBuffer
                         // The queue may have advanced past (or dropped) `newItem` between the KVO
                         // delivery and this async block - inserting after an item that left the
@@ -2550,7 +2624,8 @@ final class QuranPlayer: ObservableObject {
                         // like the custom-range twin does.
                         let anchor = qPlayer.items().contains(newItem) ? newItem : qPlayer.currentItem
                         qPlayer.insert(upcoming, after: anchor)
-                        self.continueAyahItemNumbers[ObjectIdentifier(upcoming)] = nextAyah
+                        self.continueAyahItemNumbers[ObjectIdentifier(upcoming)] =
+                            (surahNumber: next.surahNumber, ayahNumber: next.ayahNumber)
                     }
                 }
             }
@@ -2638,12 +2713,18 @@ final class QuranPlayer: ObservableObject {
             ayahBackPendingRestart = nil
             ayahBackPendingRestartScheduledAt = nil
             if a > 1 {
+                // Stepping BACK never leaves the scope, so the original bound is kept rather than
+                // re-derived from the earlier ayah (2026-10-07).
+                let scope = continueScope
+                let bound = continueBound
                 playAyah(
                     surahNumber: s,
                     ayahNumber: a - 1,
                     continueRecitation: continueRecitationFromAyah,
+                    continueScope: scope,
                     repeatCount: repeatCountToKeep
                 )
+                if continueRecitationFromAyah { continueBound = bound }
             }
             return
         }
@@ -2678,6 +2759,115 @@ final class QuranPlayer: ObservableObject {
         continueRecitation ? 1 : ayahRepeatCount
     }
 
+    // MARK: - Continue-from-ayah scope (end of page / surah / juz / forever)
+
+    /// The last ayah a `.page` or `.juz` recitation plays, resolved ONCE at the start.
+    ///
+    /// `.page` reads `Ayah.page` and walks to the last ayah carrying the same page number, crossing a
+    /// surah boundary when the printed page does (the mushaf's last page of a surah usually also holds
+    /// the next surah's opening). It deliberately does NOT use `CustomRangeSheet.pageGroups`, which is
+    /// surah-scoped and would truncate such a page.
+    ///
+    /// `.juz` takes the boundary straight from `QuranData.juzList`, the same static table the juz
+    /// headers and the audit flag use, so a scope boundary can never disagree with the displayed juz.
+    ///
+    /// Returns nil when the data cannot answer (an ayah with no `page`, a juz not in the table): the
+    /// caller then falls back to the surah's end, which is the pre-2026-10-07 behaviour.
+    private func resolveContinueBound(
+        scope: ContinueScope,
+        surahNumber: Int,
+        ayahNumber: Int
+    ) -> (surahNumber: Int, ayahNumber: Int)? {
+        switch scope {
+        case .surah, .forever:
+            // Both are rule-based rather than bounded: `.surah` stops at `numberOfAyahs`, `.forever`
+            // at the end of An-Nas. Nothing to resolve.
+            return nil
+
+        case .page:
+            guard
+                let surah = quranData.quran.first(where: { $0.id == surahNumber }),
+                let startAyah = surah.ayahs.first(where: { $0.id == ayahNumber }),
+                let page = startAyah.page
+            else { return nil }
+
+            // Walk forward from where we are, taking every ayah still printed on this page. The scan
+            // stops at the first ayah on a later page, so it costs the page's length, not the pack's.
+            var bound = (surahNumber: surahNumber, ayahNumber: ayahNumber)
+            var s = surahNumber
+            var a = ayahNumber
+            while let next = nextPosition(afterSurah: s, ayah: a, crossingSurahs: true) {
+                guard
+                    let nextSurah = quranData.quran.first(where: { $0.id == next.surahNumber }),
+                    let nextAyah = nextSurah.ayahs.first(where: { $0.id == next.ayahNumber }),
+                    nextAyah.page == page
+                else { break }
+                bound = next
+                s = next.surahNumber
+                a = next.ayahNumber
+            }
+            return bound
+
+        case .juz:
+            guard
+                let surah = quranData.quran.first(where: { $0.id == surahNumber }),
+                let startAyah = surah.ayahs.first(where: { $0.id == ayahNumber }),
+                let juz = startAyah.juz,
+                let entry = QuranData.juzList.first(where: { $0.id == juz })
+            else { return nil }
+            return (surahNumber: entry.endSurah, ayahNumber: entry.endAyah)
+        }
+    }
+
+    /// The ayah after `(surah, ayah)`, stepping into the next surah when `crossingSurahs` allows it.
+    /// Nil at the end of the surah (when not crossing) and at the end of An-Nas (always) - the two
+    /// places a continue recitation runs out of Quran.
+    private func nextPosition(
+        afterSurah surahNumber: Int,
+        ayah ayahNumber: Int,
+        crossingSurahs: Bool
+    ) -> (surahNumber: Int, ayahNumber: Int)? {
+        guard let surah = quranData.quran.first(where: { $0.id == surahNumber }) else { return nil }
+        if ayahNumber < surah.numberOfAyahs {
+            return (surahNumber: surahNumber, ayahNumber: ayahNumber + 1)
+        }
+        guard crossingSurahs, surahNumber < 114,
+              let next = quranData.quran.first(where: { $0.id == surahNumber + 1 }),
+              next.numberOfAyahs >= 1
+        else { return nil }
+        return (surahNumber: next.id, ayahNumber: 1)
+    }
+
+    /// The next ayah the RUNNING continue recitation should play, or nil when it has reached its end.
+    /// The single place the scope rule is applied, so the queue priming, the dry-queue resume and the
+    /// prefetch can never disagree about where a recitation stops.
+    private func nextContinuePosition(afterSurah surahNumber: Int, ayah ayahNumber: Int)
+        -> (surahNumber: Int, ayahNumber: Int)? {
+        // At or past an explicit bound, this recitation is done.
+        if let bound = continueBound {
+            if surahNumber == bound.surahNumber, ayahNumber >= bound.ayahNumber { return nil }
+            // Past the bound's surah entirely: a bound that data drift put behind us.
+            if surahNumber > bound.surahNumber { return nil }
+        }
+
+        // `.juz` and `.forever` cross by definition. `.page` crosses only as far as its own bound: a
+        // printed page routinely straddles a surah end (the next surah opens halfway down it), and
+        // `resolveContinueBound` already walked across that boundary to find the page's last ayah, so
+        // refusing to cross here would stop the recitation at the surah end and never reach the bound
+        // the user asked for. The bound checks above and below are what still stop it on time.
+        let crosses = (continueScope == .juz || continueScope == .forever)
+            || (continueScope == .page && continueBound != nil)
+        guard let next = nextPosition(afterSurah: surahNumber, ayah: ayahNumber, crossingSurahs: crosses)
+        else { return nil }
+
+        // A bound can sit mid-surah, so the step itself has to be re-checked against it.
+        if let bound = continueBound {
+            if next.surahNumber > bound.surahNumber { return nil }
+            if next.surahNumber == bound.surahNumber, next.ayahNumber > bound.ayahNumber { return nil }
+        }
+        return next
+    }
+
     private func ayahSkipForward(continueRecitation: Bool) {
         guard
             let s = currentSurahNumber,
@@ -2685,6 +2875,28 @@ final class QuranPlayer: ObservableObject {
             let sur = quranData.quran.first(where: { $0.id == s })
         else { return }
         let repeatCountToKeep = carriedAyahRepeatCount(continueRecitation: continueRecitation)
+
+        // In continue mode the SCOPE decides where Next may go: it must not step past the page or juz
+        // the user asked for, and for `.juz` / `.forever` it must be able to step into the next surah.
+        // `playAyah` re-resolves the bound from the ayah it is handed, so the scope is re-stated and
+        // the surviving bound is restored underneath it (2026-10-07).
+        if continueRecitation {
+            let scope = continueScope
+            let bound = continueBound
+            guard let next = nextContinuePosition(afterSurah: s, ayah: a) else { return }
+            playAyah(
+                surahNumber: next.surahNumber,
+                ayahNumber: next.ayahNumber,
+                continueRecitation: true,
+                continueScope: scope,
+                repeatCount: repeatCountToKeep
+            )
+            // A `.page` / `.juz` bound belongs to where the recitation STARTED, so keep the original
+            // rather than the one just re-derived from the ayah we skipped to.
+            continueBound = bound
+            return
+        }
+
         if (a + 1) <= sur.numberOfAyahs {
             playAyah(
                 surahNumber: s,

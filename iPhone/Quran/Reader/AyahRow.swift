@@ -707,11 +707,25 @@ struct AyahRow: View, Equatable {
         }
     }
 
+    /// The identity of the Arabic text views in this row: a change here REPLACES the view rather than
+    /// updating it.
+    ///
+    /// `renderSettingsSignature` is part of it, which folds the window width (see SurahView), so a
+    /// ROTATION gives these views a fresh identity (Abu, 2026-10-07: "going from horizontal to vertical
+    /// or vice versa ruins list"). `WordByWordText` keeps its measured content width in `@State`, and
+    /// `@State` is tied to a view's IDENTITY, not to its value: re-rendering the row (which the
+    /// signature in `AyahRow.==` already forced correctly) does NOT reset a child's state, so the view
+    /// kept the previous orientation's width - 794pt of TextKit layout inside a ~338pt card. Traced:
+    /// `updateUIView` was still being handed `width=794` after the interface came back to 402pt. Since
+    /// `WordByWordTextView` sets `clipsToBounds = false` so tashkeel ink is not sheared at the edge,
+    /// that overflow PAINTED outside the row - Arabic and English running off both sides, and a List
+    /// that scrolled sideways. A new identity discards the stale state and the view re-measures.
     private var tajweedAnimationKey: String {
         let categorySignature = settings.tajweedCategoryVisibilitySignature
         let qiraahKey = comparisonQiraahOverride ?? settings.displayQiraah
         let choices = displayChoices
         return [
+            renderSettingsSignature,
             choices.tajweed ? "1" : "0",
             choices.highlightAllah ? "1" : "0",
             choices.hideTashkeel ? "1" : "0",
@@ -1593,9 +1607,9 @@ struct AyahRow: View, Equatable {
                 Label("Play Custom Range", systemImage: "slider.horizontal.3")
             }
 
-            Button {
-                settings.hapticFeedback()
-                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, continueRecitation: true)
+            Menu {
+                ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
+                                      quranPlayer: quranPlayer)
             } label: {
                 Label("Play From Ayah", systemImage: "play.circle.fill")
             }
@@ -1648,9 +1662,9 @@ struct AyahRow: View, Equatable {
                 Label("Play Custom Range", systemImage: "slider.horizontal.3")
             }
 
-            Button {
-                settings.hapticFeedback()
-                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, continueRecitation: true)
+            Menu {
+                ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
+                                      quranPlayer: quranPlayer)
             } label: {
                 Label("Play From Ayah", systemImage: "play.circle.fill")
             }

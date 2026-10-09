@@ -46,6 +46,16 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     /// auto-plays, because `.ambient` already obeys the switch and cannot be loud on a silenced phone.
     @Published private(set) var pendingPrayerName: String?
 
+    /// True while the adhan now playing was started on `.ambient`, which obeys the ringer switch.
+    ///
+    /// The recording really is running, so the banner is not lying when it says so - but on a silenced
+    /// phone it is running inaudibly, and "ADHAN PLAYING" over silence reads as a bug ("adhan not playing
+    /// even though the banner is here", Abu, 2026-10-08). iOS exposes no way to read the ringer switch, so
+    /// the banner cannot know whether this one is audible; it can only say that the switch applies, which
+    /// is the one thing that explains a silent banner. False under "Play In-App Adhan in Silent Mode",
+    /// where `.playback` ignores the switch and the adhan is always audible.
+    @Published private(set) var followsRingerSwitch = false
+
     var isPlaying: Bool { playingPrayerName != nil }
 
     /// The moment the pending offer expires, so a stale offer can never start an adhan detached from
@@ -361,6 +371,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         // `-fakeAdhanPlaying` has no player behind it: clear the flag so the footer animates back.
         if player == nil, playingPrayerName != nil {
             playingPrayerName = nil
+            followsRingerSwitch = false
             return
         }
         #endif
@@ -406,6 +417,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             // thread and the adhan starts in its completion, still in the right order (category, then
             // activation, then play) and still on the main actor.
             let overridesSilentMode = Settings.shared.adhanOverridesSilentMode
+            followsRingerSwitch = !overridesSilentMode
             Task.detached(priority: .userInitiated) {
                 let session = AVAudioSession.sharedInstance()
                 do {
@@ -420,7 +432,19 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
                 }
                 await MainActor.run { [weak self] in
                     guard let self, self.player === p else { return }   // stopped while we activated
-                    p.play()
+                    // `play()` reports whether the sound actually STARTED, and that return used to be
+                    // discarded. When it came back false (another app holding the session, a route that
+                    // never came up), `playingPrayerName` stayed set from the synchronous write above and
+                    // `audioPlayerDidFinishPlaying` never fires for audio that never began - so the banner
+                    // sat on screen announcing "ADHAN PLAYING" over silence, with Stop as the only way out
+                    // (Abu, 2026-10-08: "adhan not playing even though the banner is here"). A false here
+                    // retires the player the same way a finished recording does.
+                    guard p.play() else {
+                        logger.error("Adhan playback refused to start (session busy or route unavailable)")
+                        self.player = nil
+                        self.finishPlayback()
+                        return
+                    }
                 }
             }
         } catch {
@@ -432,6 +456,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
 
     private func finishPlayback() {
         playingPrayerName = nil
+        followsRingerSwitch = false
         if pausedQuranForAdhan {
             pausedQuranForAdhan = false
             Self.resumeRecitation?()

@@ -13,7 +13,7 @@ instead of whatever the model half-remembers.
 Quran quotes in the articles are REFERENCES (`ScriptureQuote(quran: "2:255")`,
 `.ayah("2:255")`, since 2026-09-16), not copies of the ayah: the screen renders
 them from the app's own Quran text, and this builder resolves them the same way
-(Resources/JSONs-Deprecated/Quran.json, Saheeh International) so the corpus
+(Quran-Tajweed-Engine/sources/Quran.json, Saheeh International) so the corpus
 carries the words the reader sees. Hadith quotes are references too
 (`ScriptureQuote(hadith: "muslim:16d", cite: ..., arabic: 35...53, english: 8...38)`,
 `.hadith(...)`): the row of the bundled .hpk and token ranges into it, resolved
@@ -108,7 +108,7 @@ HADITH_RE = re.compile(r"(?:ScriptureQuote\(\s*hadith:|(?<!\w)\.hadith\()\s*(" +
 HADITH_ARG_RE = re.compile(r"(arabic|english|text|arabicText):\s*(" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\])", re.S)
 RANGE_RE = re.compile(r"(\d+)\s*\.\.\.\s*(\d+)")
 TITLE_RE = re.compile(r"\.navigationTitle\((" + STR + r")\)", re.S)
-QURAN_JSON = ROOT / "Resources/JSONs-Deprecated/Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine/sources/Quran.json"
 REFERENCE_RE = re.compile(r"^(\d+):(\d+)(?:-(\d+))?((?:,\s*\d+(?:-\d+)?)*)$")
 
 _quran_cache = None

@@ -54,7 +54,7 @@ from islam_packs import Hadith  # noqa: E402
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 DATA = ROOT / "Resources" / "Data"
 PBXPROJ = ROOT / "Al-Islam.xcodeproj" / "project.pbxproj"
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 ENGINE = ROOT.parent / "Hadith-JSON-Engine" / "db" / "by_book" / "the_9_books"
 
 PACKS = {

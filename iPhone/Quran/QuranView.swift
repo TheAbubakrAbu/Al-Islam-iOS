@@ -858,7 +858,8 @@ struct QuranView: View {
                 await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
                 isPreparingPageMode = false
                 withAnimation { settings.quranPageMode = true }
-                openMushafWhereLeftOff()
+                // Not over a summary door opened during the build (two pushes in one instant).
+                if !anyDoorOpen { openMushafWhereLeftOff() }
             }
         } else {
             withAnimation { settings.quranPageMode.toggle() }
@@ -973,10 +974,12 @@ struct QuranView: View {
 
     private func openFromOutside(surahID: Int, ayahID: Int?) {
         #if os(iOS)
-        guard quranData.surah(surahID) != nil else { return }
+        guard let surah = quranData.surah(surahID) else { return }
         // An explicit first ayah for a whole-surah target: with nil the page reader resumes at the
         // last-read page, which for another surah is the wrong page under the right header.
-        let route = QuranRoute.ayahs(surahID: surahID, ayah: ayahID ?? 1)
+        // A deep link carries any Int (alislam://ayah/2/-9): clamped into the surah's Hafs numbering.
+        let ayah = min(max(ayahID ?? 1, 1), max(1, surah.numberOfAyahs))
+        let route = QuranRoute.ayahs(surahID: surahID, ayah: ayah)
         if usesColumnNavigation {
             selectQuranRoute(route)
             return
@@ -1349,7 +1352,9 @@ struct QuranView: View {
                 // over it. With the animation off the tab is simply found standing on the mushaf.
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
-                withTransaction(transaction) { openMushafWhereLeftOff() }
+                // A summary door tapped during the await is already pushing: a path push on top of it
+                // in the same instant is the crash `-openThemes` hit.
+                if !anyDoorOpen { withTransaction(transaction) { openMushafWhereLeftOff() } }
             }
             #endif
             #if os(iOS)
@@ -2049,10 +2054,9 @@ struct QuranView: View {
             #endif
         }
         .sheet(isPresented: $showingSettingsSheet) {
-            // .stack matters on iPad: a regular-width sheet renders a default NavigationView as two
-            // columns with an empty gray detail pane.
-            NavigationView { SettingsQuranView(presentedAsSheet: true) }
-                .navigationViewStyle(.stack)
+            // A `NavigationStack` from iOS 16, so the page's `navigationDestination` pushes land in the
+            // sheet; see `SettingsSheetStack`.
+            SettingsSheetStack { SettingsQuranView(presentedAsSheet: true) }
                 .smallMediumSheetPresentation()
         }
         .sheet(isPresented: $showAskAI) {
@@ -2833,11 +2837,7 @@ struct QuranView: View {
         let wordSurah = word.flatMap { quranData.surah($0.surah) }
         let wordFillsGrid = historyTileCount % 2 == 1
         Section(header: summaryHeader) {
-            LazyVGrid(
-                columns: quranGridColumns,
-                alignment: .leading,
-                spacing: 10
-            ) {
+            SummaryTileGrid(columns: quranGridColumns.count) {
                 if hasLastRead, let lastReadSurah, let lastReadAyah {
                     SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
                                     rowHeight: rowHeight,
@@ -2878,6 +2878,8 @@ struct QuranView: View {
                     // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
                     // every ayah it appears in and pushes the reader itself.
                     SummaryWordTile(word: word, surahName: wordSurah.nameTransliteration, rowHeight: rowHeight) {
+                        // Through the doors' guard: this tile sits right above the chips.
+                        guard !anyDoorOpen, path.isEmpty else { return }
                         openWordOfDay = true
                     }
                     .equatable()
@@ -3010,7 +3012,8 @@ struct QuranView: View {
     }
 
     private func openDoor(_ door: SummaryDoorChip) {
-        guard !anyDoorOpen else { return }
+        // A non-empty path is a tile's reader push still in flight (the root is only tappable at []).
+        guard !anyDoorOpen, path.isEmpty else { return }
         switch door.kind {
         case .word: openWordOfDay = true
         case .door(let target): openSummaryDoor = target
@@ -3063,18 +3066,18 @@ struct QuranView: View {
             Section(header: bookmarkHeader(count: sortedBookmarks.count)) {
                 if settings.showBookmarks {
                     if usesGrid {
-                        LazyVGrid(
-                            columns: quranGridColumns,
-                            // Centered like every short tile label (Abu, 2026-10-05); only the summary
-                            // grid above and the ayah/hadith prose tiles stay leading.
-                            alignment: .center,
-                            spacing: 10
-                        ) {
-                            ForEach(sortedBookmarks, id: \.id) { bookmarkedAyah in
-                                bookmarkGridTile(bookmarkedAyah, context: context)
+                        // List rows of at most `tileGridChunk` tiles, each a non-lazy grid: a lazy grid
+                        // in a List row answered a different height on each self-sizing pass (the iPad
+                        // sidebar trapped on this one when rotated, 2026-10-09), and one non-lazy row of
+                        // every bookmark would build them all at once. The List still virtualizes rows.
+                        ForEach(Array(stride(from: 0, to: sortedBookmarks.count, by: tileGridChunk)), id: \.self) { start in
+                            SummaryTileGrid(columns: quranGridColumns.count) {
+                                ForEach(sortedBookmarks[start..<min(start + tileGridChunk, sortedBookmarks.count)], id: \.id) { bookmarkedAyah in
+                                    bookmarkGridTile(bookmarkedAyah, context: context)
+                                }
                             }
+                            .tileGridChunkRow(start: start, count: sortedBookmarks.count)
                         }
-                        .padding(.vertical, 4)
                     } else {
                         ForEach(sortedBookmarks, id: \.id) { bookmarkedAyah in
                             bookmarkRow(bookmarkedAyah, context: context)
@@ -3257,18 +3260,15 @@ struct QuranView: View {
             Section(header: favoriteHeader(count: sortedFavorites.count)) {
                 if settings.showFavorites {
                     if usesGrid {
-                        LazyVGrid(
-                            columns: quranGridColumns,
-                            // Centered like every short tile label (Abu, 2026-10-05); only the summary
-                            // grid above and the ayah/hadith prose tiles stay leading.
-                            alignment: .center,
-                            spacing: 10
-                        ) {
-                            ForEach(sortedFavorites, id: \.self) { surahID in
-                                favoriteGridTile(surahID: surahID, context: context)
+                        // Chunked non-lazy rows, as the bookmarks above (`tileGridChunk`).
+                        ForEach(Array(stride(from: 0, to: sortedFavorites.count, by: tileGridChunk)), id: \.self) { start in
+                            SummaryTileGrid(columns: quranGridColumns.count) {
+                                ForEach(sortedFavorites[start..<min(start + tileGridChunk, sortedFavorites.count)], id: \.self) { surahID in
+                                    favoriteGridTile(surahID: surahID, context: context)
+                                }
                             }
+                            .tileGridChunkRow(start: start, count: sortedFavorites.count)
                         }
-                        .padding(.vertical, 4)
                     } else {
                         ForEach(sortedFavorites, id: \.self) { surahID in
                             favoriteRow(surahID: surahID, context: context)
@@ -3609,18 +3609,16 @@ struct QuranView: View {
     private func specialAyahCollection(_ rows: [(surah: Surah, ayah: Ayah)], context: SearchDisplayContext) -> some View {
         #if os(iOS)
         if usesGrid {
-            LazyVGrid(
-                columns: quranGridColumns,
-                // Centered like every short tile label (Abu, 2026-10-05); only the summary
-                // grid above and the ayah/hadith prose tiles stay leading.
-                alignment: .center,
-                spacing: 10
-            ) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
-                    specialAyahGridTile(item: item, context: context)
+            // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
+            // height on each self-sizing pass, which iOS 26 traps on.
+            ForEach(Array(stride(from: 0, to: rows.count, by: tileGridChunk)), id: \.self) { start in
+                SummaryTileGrid(columns: quranGridColumns.count) {
+                    ForEach(start..<min(start + tileGridChunk, rows.count), id: \.self) { index in
+                        specialAyahGridTile(item: rows[index], context: context)
+                    }
                 }
+                .tileGridChunkRow(start: start, count: rows.count)
             }
-            .padding(.vertical, 4)
         } else {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, item in
                 specialAyahRow(item: item, context: context)
@@ -3665,6 +3663,9 @@ struct QuranView: View {
             compactArabic: true,
             onSelectAyah: columnAyahSelectionHandler
         )
+        // 604 rows in the Pages sort: without this the row has no `==` to consult and every Settings
+        // publish re-diffed all of them (Abu, 2026-10-08).
+        .equatable()
     }
 
     private func muqattaatHeader(count: Int) -> some View {
@@ -3966,12 +3967,16 @@ struct QuranView: View {
 
     @ViewBuilder
     private func surahGrid(_ surahs: [Surah], context: SearchDisplayContext) -> some View {
-        LazyVGrid(columns: surahGridColumns, alignment: .center, spacing: 10) {
-            ForEach(surahs, id: \.id) { surah in
-                surahGridTile(surah: surah, context: context)
+        // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a different
+        // height on each self-sizing pass, which iOS 26 traps on (landscape and the iPad sidebar).
+        ForEach(Array(stride(from: 0, to: surahs.count, by: tileGridChunk)), id: \.self) { start in
+            SummaryTileGrid(columns: surahGridColumns.count) {
+                ForEach(surahs[start..<min(start + tileGridChunk, surahs.count)], id: \.id) { surah in
+                    surahGridTile(surah: surah, context: context)
+                }
             }
+            .tileGridChunkRow(start: start, count: surahs.count)
         }
-        .padding(.vertical, 4)
     }
 
     private func surahGridTile(surah: Surah, context: SearchDisplayContext) -> some View {
@@ -4184,7 +4189,10 @@ struct QuranView: View {
                 #if os(iOS)
                 if usesGrid {
                     let openRowID = openJuzRowID(in: sectionData, context: context)
-                    LazyVGrid(columns: surahGridColumns, alignment: .center, spacing: 10) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on (juz sort's section index
+                    // narrows every row). A juz holds 37 tiles at most (juz 30).
+                    SummaryTileGrid(columns: surahGridColumns.count) {
                         ForEach(sectionData.rows) { row in
                             juzGridTile(row: row, isOpen: row.id == openRowID, context: context)
                         }
@@ -4242,7 +4250,9 @@ struct QuranView: View {
             isExpanded: $showJuzJumpGrid
         )) {
             if showJuzJumpGrid {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: juzJumpColumnCount), spacing: 8) {
+                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                // height on each self-sizing pass, which iOS 26 traps on.
+                SummaryTileGrid(columns: juzJumpColumnCount, spacing: 8) {
                     ForEach(QuranData.juzList, id: \.id) { juz in
                         let isReading = juz.id == readingJuz
                         Button {
@@ -4718,8 +4728,10 @@ struct QuranView: View {
                 Section(header: pageSearchHeader(title: "TOPICS", valueText: "\(topics.count)")) {
                     ForEach(shownTopics) { topic in
                         NavigationLink {
-                            ThemeTopicDetailView(topic: topic) { surahID, ayahID in
-                                push(surahID: surahID, ayahID: ayahID)
+                            LazyDestination {
+                                ThemeTopicDetailView(topic: topic) { surahID, ayahID in
+                                    push(surahID: surahID, ayahID: ayahID)
+                                }
                             }
                         } label: {
                             HStack(spacing: 10) {
@@ -4801,16 +4813,18 @@ struct QuranView: View {
     private func morphologyRow(arabic: String, kind: String, locations: [WordLocation], title: String) -> some View {
         let ayahs = Set(locations.map(\.ayahKey)).count
         return NavigationLink {
-            RootOccurrencesView(title: title, locations: locations) { surahID, ayahID in
-                // The morphology numbers ayahs by Hafs and the reader by the displayed riwayah: under
-                // Warsh an al-Baqarah row opened one verse off (2026-10-04). Mapped like the
-                // comparison sheet maps its anchor; an unmapped ayah keeps its number.
-                let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
-                let readerAyah = tag.isEmpty
-                    ? ayahID
-                    : QiraahComparison.alignment(surahID: surahID, tag: tag, quranData: quranData)?
-                        .riwayahNumberForHafs[ayahID] ?? ayahID
-                push(surahID: surahID, ayahID: readerAyah)
+            LazyDestination {
+                RootOccurrencesView(title: title, locations: locations) { surahID, ayahID in
+                    // The morphology numbers ayahs by Hafs and the reader by the displayed riwayah: under
+                    // Warsh an al-Baqarah row opened one verse off (2026-10-04). Mapped like the
+                    // comparison sheet maps its anchor; an unmapped ayah keeps its number.
+                    let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+                    let readerAyah = tag.isEmpty
+                        ? ayahID
+                        : QiraahComparison.alignment(surahID: surahID, tag: tag, quranData: quranData)?
+                            .riwayahNumberForHafs[ayahID] ?? ayahID
+                    push(surahID: surahID, ayahID: readerAyah)
+                }
             }
         } label: {
             HStack(spacing: 12) {
@@ -5676,6 +5690,9 @@ private extension View {
         }
     }
 }
+
+// `SummaryTileGrid` (the YOUR SUMMARY tiles' grid) lives in Helpers/ViewExtensions.swift, so every
+// app that shares the List-row grids it now backs (Al-Adhan has no Quran folder) compiles it.
 
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {

@@ -58,6 +58,8 @@ struct QuranSearchFilterBar: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
+        // The keyboard first: a menu here updated over a live keyboard aborted (`endsEditingOnTouch`).
+        .endsEditingOnTouch()
     }
 
     /// Always offered in the full row: the symbols that used to say "without" can no longer be typed.
@@ -499,7 +501,9 @@ struct QuranSearchFilterSheet: View {
 
     private var juzSection: some View {
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(columns: 6, spacing: 8) {
                 ForEach(QuranData.juzList) { juz in
                     let isOn = filters.juzs.contains(juz.id)
                     Button {

@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HADITH_DIR = ROOT / 'Resources/Data/Hadith'
-QURAN_JSON = ROOT / 'Resources/JSONs-Deprecated/Quran.json'
+QURAN_JSON = ROOT.parent / 'Quran-Tajweed-Engine/sources/Quran.json'
 
 
 @dataclass

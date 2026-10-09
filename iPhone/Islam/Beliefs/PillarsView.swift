@@ -594,7 +594,9 @@ struct IslamPillarsHero: View {
                     .tracking(1.4)
                     .foregroundColor(accent)
 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 5), count: 3), spacing: 5) {
+                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height
+                // on each self-sizing pass, which iOS 26 traps on.
+                SummaryTileGrid(columns: 3, spacing: 5) {
                     ForEach(Self.six) { pillar in
                         Button {
                             Settings.shared.hapticFeedback()

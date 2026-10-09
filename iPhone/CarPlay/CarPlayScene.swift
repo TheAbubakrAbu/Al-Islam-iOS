@@ -376,8 +376,39 @@ final class CarPlayController {
         let template = makeList(title: "Up Next", sections: CarPlayContent.upNextSections(queue: player.surahQueue, surahs: surahIndex()))
         template.emptyViewTitleVariants = ["Nothing Up Next"]
         template.emptyViewSubtitleVariants = ["Add surahs to the queue on your iPhone."]
+        guard push(template) else { return }
         upNextTemplate = template
-        interface.pushTemplate(template, animated: true, completion: nil)
+    }
+
+    /// True from a push until the car reports it done. A second tap on a row while the first push is
+    /// still animating ran its handler again and stacked a second copy, and CarPlay throws once the
+    /// stack passes its depth limit; that second push is dropped. A completion that never arrives
+    /// cannot wedge the car: the gate reopens on its own after a second.
+    private var pushInFlight = false
+    private var pushGeneration = 0
+
+    @discardableResult
+    private func push(_ template: CPTemplate) -> Bool {
+        guard !pushInFlight else { return false }
+        pushInFlight = true
+        pushGeneration += 1
+        let generation = pushGeneration
+        interface.pushTemplate(template, animated: true) { [weak self] _, _ in
+            if Thread.isMainThread {
+                self?.reopenPushes(after: generation)
+            } else {
+                DispatchQueue.main.async { self?.reopenPushes(after: generation) }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.reopenPushes(after: generation)
+        }
+        return true
+    }
+
+    private func reopenPushes(after generation: Int) {
+        guard generation == pushGeneration else { return }
+        pushInFlight = false
     }
 
     /// Back to Now Playing after an Up Next choice.
@@ -396,14 +427,14 @@ final class CarPlayController {
     }
 
     private func pushList(title: String, sections: [CarPlaySection]) {
-        interface.pushTemplate(makeList(title: title, sections: sections), animated: true, completion: nil)
+        push(makeList(title: title, sections: sections))
     }
 
     /// A pushed list whose rows follow playback until the driver backs out of it.
     private func pushLiveList(title: String, build: @escaping (_ surahs: [Int: CarPlaySurah], _ playback: CarPlayPlayback) -> [CarPlaySection]) {
         let template = makeList(title: title, sections: build(surahIndex(), playback))
+        guard push(template) else { return }
         liveLists.append(LiveList(template: template, build: build))
-        interface.pushTemplate(template, animated: true, completion: nil)
     }
 
     /// Callers push it only for a play that started (`playSurah` and `playAyah` say so). It used to
@@ -412,7 +443,13 @@ final class CarPlayController {
     private func showNowPlaying() {
         let nowPlaying = CPNowPlayingTemplate.shared
         guard interface.topTemplate !== nowPlaying else { return }
-        interface.pushTemplate(nowPlaying, animated: true, completion: nil)
+        // Up Next is only ever pushed over Now Playing, so Now Playing is already on the stack under
+        // it (the offline "Play <reciter>" sheet answered over Up Next): back to it, never a second copy.
+        if let upNext = upNextTemplate, interface.topTemplate === upNext {
+            closeUpNext()
+            return
+        }
+        push(nowPlaying)
     }
 
     // MARK: Playback failures

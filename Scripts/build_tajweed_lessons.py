@@ -91,7 +91,7 @@ from tilawa_ts import eval_modules, load_softener, xz_compress  # noqa: E402
 import tajweed_foundations as foundations  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 PACK_VERSION = 5

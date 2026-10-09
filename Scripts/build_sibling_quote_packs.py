@@ -45,7 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from hadith_spans import row as shelf_row  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-QURAN = ROOT / "Resources/JSONs-Deprecated/Quran.json"
+QURAN = ROOT.parent / "Quran-Tajweed-Engine/sources/Quran.json"
 
 # Which packs each sibling needs: "quran" only where the app ships no Quran text of its own.
 SIBLINGS = {

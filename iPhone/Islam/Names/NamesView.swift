@@ -611,7 +611,9 @@ struct NamesView: View {
                 if !aiHits.isEmpty {
                     Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
                         if settings.namesGridMode {
-                            LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                            // height on each self-sizing pass, which iOS 26 traps on. Ten matches at most.
+                            SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
                                 ForEach(aiHits, id: \.id) { name in
                                     NameGridTile(
                                         name: name,
@@ -1036,7 +1038,9 @@ struct NamesView: View {
                 if !showFavoriteNames {
                     EmptyView()
                 } else if settings.namesGridMode {
-                    LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on. At most 99 tiles.
+                    SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
                         ForEach(favorites, id: \.id) { name in
                             NameGridTile(
                                 name: name,
@@ -1076,7 +1080,9 @@ struct NamesView: View {
     private func namesSections(filteredNames: [NameOfAllah], favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if settings.namesGridMode {
             Section {
-                LazyVGrid(columns: nameGridColumns, spacing: 8) {
+                // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                // height on each self-sizing pass, which iOS 26 traps on. At most 99 tiles.
+                SummaryTileGrid(columns: nameGridColumns.count, spacing: 8) {
                     ForEach(filteredNames, id: \.id) { name in
                         NameGridTile(
                             name: name,

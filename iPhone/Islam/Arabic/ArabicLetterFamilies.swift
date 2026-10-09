@@ -61,7 +61,8 @@ private struct ArabicDoorDestination: ViewModifier {
     func body(content: Content) -> some View {
         Group {
             if #available(iOS 16.0, watchOS 9.0, *) {
-                content.navigationDestination(isPresented: isPresented) { destination }
+                // Lazy, as in `PushDestination`: the door's screen is built when the push shows it.
+                content.navigationDestination(isPresented: isPresented) { LazyDestination { destination } }
             } else {
                 content.background(
                     NavigationLink(isActive: isPresented) { destination } label: { EmptyView() }
@@ -212,7 +213,9 @@ struct LetterTileStrip: View {
     }
 
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: Self.tileMinimum), spacing: 8)], spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on each
+        // self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(adaptiveMinimum: Self.tileMinimum, spacing: 8) {
             ForEach(letters, id: \.self) { glyph in
                 if let letter = LetterTraits.letterData(for: glyph) {
                     let open = isOpen(glyph)
@@ -1397,7 +1400,9 @@ struct LetterQuizView: View {
         }
 
         Section {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(columns: 2) {
                 ForEach(question.choices) { choice in
                     choiceButton(choice, in: question)
                 }

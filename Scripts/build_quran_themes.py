@@ -44,7 +44,7 @@ def xz_compress(body: bytes) -> bytes:
     return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT_TOPICS = ROOT / "Resources" / "Data" / "Quran" / "ThematicTopics.json.xz"
 OUT_SECTIONS = ROOT / "Resources" / "Data" / "Quran" / "SurahSections.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"

@@ -33,7 +33,7 @@ The Performance Guide (docs/Performance Guide.md) is the parent document. Its fo
 
 ## Decisions pending Abu
 
-- **F. The iOS 15 floor.** `push(surahID:)` and `pushDestination(isPresented:)` are no-ops before iOS 16 (Globals.swift `PushDestination`), so on iOS 15 the Word of the Day tile and row, the summary tiles and the daily card's verse door do nothing (the app's existing tiles share the limitation). Options: a `NavigationLink` fallback for those doors under `if #available` (one branch each), or move the deployment floor to iOS 16. Recommendation: move the floor. Abu answered A to E on 2026-09-08 and left this one open.
+- **F. The iOS 15 floor.** `push(surahID:)` and `pushDestination(isPresented:)` are no-ops before iOS 16 (Globals.swift `PushDestination`), so on iOS 15 the Word of the Day tile and row, the summary tiles and the daily card's verse door do nothing (the app's existing tiles share the limitation). Options: a `NavigationLink` fallback for those doors under `if #available` (one branch each), or move the deployment floor to iOS 16. Recommendation: move the floor. Abu answered A to E on 2026-09-08 and left this one open. **DECIDED 2026-10-09: the floor moved to iOS 16.0** (Abu first said "Keep 15", then, told that every `pushDestination` door, `QuranView.push` and the Islam grid's `islamPath` pushes were dead on iOS 15 and that Xcode 27 cannot run an iOS 15 simulator to test a fallback: "just do ios 16"). All twelve iOS build configurations now say 16.0; watchOS stays 9.0. The `#available(iOS 16.0, *)` checks were left in place on purpose: Al-Quran and Al-Adhan share this code and are still on 15.0.
 
 ## Decisions made
 

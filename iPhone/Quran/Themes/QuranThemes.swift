@@ -637,7 +637,9 @@ struct ThemesBrowseView: View {
             if isExpanded {
                 ForEach(shown) { topic in
                     NavigationLink {
-                        ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
+                        LazyDestination {
+                            ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
+                        }
                     } label: {
                         topicLabel(topic)
                     }
@@ -813,7 +815,9 @@ struct ThemeTopicDetailView: View {
                 Section(header: SectionPillHeader(title: "SUBTOPICS", count: subtopics.count)) {
                     ForEach(subtopics) { child in
                         NavigationLink {
-                            ThemeTopicDetailView(topic: child.asThemeTopic(parentName: topic.name), onOpenAyah: onOpenAyah)
+                            LazyDestination {
+                                ThemeTopicDetailView(topic: child.asThemeTopic(parentName: topic.name), onOpenAyah: onOpenAyah)
+                            }
                         } label: {
                             HStack {
                                 Text(child.name)

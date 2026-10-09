@@ -641,7 +641,9 @@ struct WordRootPage: View {
                 }
 
                 NavigationLink {
-                    RootOccurrencesView(title: "Root \(root.letters)", locations: occurrences, highlight: location)
+                    LazyDestination {
+                        RootOccurrencesView(title: "Root \(root.letters)", locations: occurrences, highlight: location)
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "text.magnifyingglass")

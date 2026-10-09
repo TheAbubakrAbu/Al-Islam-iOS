@@ -490,7 +490,8 @@ struct PrayerTimesMapView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
 
-            ForEach(rows, id: \.name) { row in
+            // Keyed on the canonical name: custom names can repeat, and duplicate ids can crash a List.
+            ForEach(rows, id: \.selected.nameTransliteration) { row in
                 comparisonRow(row: row, current: current, selected: selected)
             }
         }

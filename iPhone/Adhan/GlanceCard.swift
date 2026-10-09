@@ -18,7 +18,10 @@ struct GlanceCard: View {
     /// thing"); the card only names what was tapped and the Adhan tab decides what opens.
     var onSelect: (GlanceAction) -> Void = { _ in }
 
-    private static let kaaba = CLLocation(latitude: 21.4225, longitude: 39.8262)
+    /// The one Kaaba coordinate, shared with `QiblaView` and with the bearing `Qibla(coordinates:)`
+    /// computes from. This was a third independently-truncated copy.
+    private static let kaaba = CLLocation(latitude: QiblaView.kaabaCoordinate.latitude,
+                                          longitude: QiblaView.kaabaCoordinate.longitude)
 
     /// Two columns, or one at the accessibility text sizes: half a row left "CURRENT..." over "San".
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -42,7 +45,9 @@ struct GlanceCard: View {
 
                 let paired = pairedTiles(group.tiles)
                 if !paired.isEmpty {
-                    LazyVGrid(columns: columns, alignment: .center, spacing: 10) {
+                    // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
+                    // height on each self-sizing pass, which iOS 26 traps on.
+                    SummaryTileGrid(columns: columns.count, alignment: .top) {
                         ForEach(paired) { tile in
                             GlanceTile(tile: tile, accent: accent, onSelect: onSelect)
                                 .equatable()

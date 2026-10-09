@@ -897,7 +897,9 @@ struct ReadingSessionView: View {
     private func choiceArea(_ question: ReadingQuestion, style: ReadingTextStyle) -> some View {
         // Two by two while every choice fits a half-width button; one column for an ayah or a long word.
         let long = question.choices.contains { $0.text.count > ($0.isArabic ? 12 : 15) }
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: long ? 1 : 2), spacing: 10) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(columns: long ? 1 : 2) {
             ForEach(question.choices) { choice in
                 choiceButton(choice, in: question, style: style, long: long)
             }
@@ -1010,7 +1012,8 @@ struct ReadingSessionView: View {
             if !checked {
                 HStack(spacing: 8) {
                     buildControl("Undo", systemImage: "delete.left", enabled: !placed.isEmpty) {
-                        placed.removeLast()
+                        // `enabled` is from the last render: a second fast tap can find nothing left.
+                        if !placed.isEmpty { placed.removeLast() }
                     }
 
                     buildControl("Clear", systemImage: "xmark", enabled: !placed.isEmpty) {

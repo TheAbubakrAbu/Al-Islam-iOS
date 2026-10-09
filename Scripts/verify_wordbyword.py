@@ -28,7 +28,7 @@ import lzma
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 PACK = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 
 _spec = importlib.util.spec_from_file_location("build_wordbyword", ROOT / "Scripts" / "build_wordbyword.py")
 _builder = importlib.util.module_from_spec(_spec)

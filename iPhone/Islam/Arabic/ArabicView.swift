@@ -33,6 +33,22 @@ struct ArabicView: View {
     /// header's info button. One state and one destination, because they share List rows.
     @State private var door: ArabicDoor?
 
+    /// The List carries three `navigationDestination(isPresented:)` (the grid's letter, `door`, the About
+    /// card), the hazard `SettingsView.anyDoorOpen` documents: a second door raised before the first push
+    /// settles leaves the stack blank, then crashes. One at a time; a second tap is dropped.
+    private var anyDoorOpen: Bool {
+        #if os(iOS)
+        return gridSelection != nil || door != nil || aboutDoor != nil
+        #else
+        return door != nil
+        #endif
+    }
+
+    private func openDoor(_ raise: () -> Void) {
+        guard !anyDoorOpen else { return }
+        raise()
+    }
+
     /// How the 28 letters are laid out: in order, by shared shape, or by one of the tajweed axes
     /// (`LetterAxis`: where letters are made, how they sound, what they do to their neighbours).
     ///
@@ -459,7 +475,8 @@ struct ArabicView: View {
                 AboutSignsSection(heading: "About Arabic & the Quran",
                                   systemImage: "textformat.size.ar",
                                   doors: [.quran, .tajweed],
-                                  openDoor: $aboutDoor)
+                                  openDoor: Binding(get: { aboutDoor },
+                                                    set: { new in if new == nil || !anyDoorOpen { aboutDoor = new } }))
                 #endif
             }
             .themedListRowBackground()
@@ -468,10 +485,20 @@ struct ArabicView: View {
         #if os(watchOS)
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #else
-        .background(gridNavigationLink)
+        // Every grid section's tile tap and shuffle land here: one push for the one letter. On the List,
+        // not a row (a lazy row's destination never fires, see `PushDestination`). It was a hidden
+        // `NavigationLink(isActive:)`, deprecated once the floor moved to iOS 16 (2026-10-09).
+        .pushDestination(isPresented: Binding(
+            get: { gridSelection != nil },
+            set: { if !$0 { gridSelection = nil } }
+        )) {
+            if let gridSelection {
+                ArabicLetterView(letterData: gridSelection)
+            }
+        }
         #if DEBUG
         // "-islamOpenLetter <letter>": push that letter's detail screen once the list is up. The grid's
-        // hidden link is the only way into `ArabicLetterView` and a tile tap cannot be scripted, so
+        // push is the only way into `ArabicLetterView` and a tile tap cannot be scripted, so
         // without this the letter page has no headless route at all - and it is where the size slider
         // and the two practice toggles live. Pair it with "-settingsProbe arabicLetterSizeIndex=6@8".
         .onAppear {
@@ -483,7 +510,7 @@ struct ArabicView: View {
         // "-arabicTopic tashkeel|defaultTashkeel|baaHaa|laamAlif|basics|families|soundAlikes|quiz|readingTest|family:<id>",
         // and "-arabicGrouping <axis raw value>" to land on a grouping: push one of the topic pages. Their
         // rows sit below the fold of a list that cannot be scrolled from a script.
-        .background(debugTopicLink)
+        .debugPushDestination(isPresented: $debugTopicOpen) { debugTopicDestination }
         .onAppear {
             let arguments = ProcessInfo.processInfo.arguments
             // "-arabicSearch" seeds the field before the first render, so the onChange that starts
@@ -612,7 +639,7 @@ struct ArabicView: View {
             SectionPillHeader(
                 title: title,
                 count: letters.count,
-                onShuffle: shuffle ? { if let letter = letters.randomElement() { gridSelection = letter } } : nil
+                onShuffle: shuffle ? { openDoor { if let letter = letters.randomElement() { gridSelection = letter } } } : nil
             )
         } footer: {
             if let footer { Text(footer) }
@@ -644,7 +671,7 @@ struct ArabicView: View {
                 icon: "star.fill",
                 accentTitle: true,
                 isExpanded: $showFavoriteLetters,
-                onShuffle: { if let letter = favorites.randomElement() { gridSelection = letter } }
+                onShuffle: { openDoor { if let letter = favorites.randomElement() { gridSelection = letter } } }
             )) {
                 if showFavoriteLetters {
                     letterCollection(favorites)
@@ -693,8 +720,8 @@ struct ArabicView: View {
     }
 
     #if os(iOS)
-    /// The letter a grid tile asked to open. Every grid section shares the one link below, so exactly one
-    /// letter is ever pushed.
+    /// The letter a grid tile asked to open. Every grid section shares the one push on the List, so exactly
+    /// one letter is ever pushed.
     @State private var gridSelection: LetterData?
 
     #if DEBUG
@@ -717,50 +744,29 @@ struct ArabicView: View {
     @State private var debugTopicOpen = false
 
     @ViewBuilder
-    private var debugTopicLink: some View {
-        NavigationLink(isActive: $debugTopicOpen) {
-            switch Self.debugTopic {
-            case "tashkeel": TashkeelLettersView()
-            case "defaultTashkeel": DefaultTashkeelView()
-            case "baaHaa": BaaHaaShapesView()
-            case "laamAlif": LaamAlifShapesView()
-            case "families": LetterFamiliesView()
-            case "soundAlikes": SoundAlikeLettersView()
-            case "quiz": LetterQuizView()
-            case "readingTest": ReadingTestView()
-            case let topic? where topic.hasPrefix("family:"):
-                // "-arabicTopic family:safeer": one family's page.
-                if let family = LetterTraits.family(id: String(topic.dropFirst("family:".count))) {
-                    LetterFamilyView(family: family)
-                }
-            default: ArabicBasicsView()
+    private var debugTopicDestination: some View {
+        switch Self.debugTopic {
+        case "tashkeel": TashkeelLettersView()
+        case "defaultTashkeel": DefaultTashkeelView()
+        case "baaHaa": BaaHaaShapesView()
+        case "laamAlif": LaamAlifShapesView()
+        case "families": LetterFamiliesView()
+        case "soundAlikes": SoundAlikeLettersView()
+        case "quiz": LetterQuizView()
+        case "readingTest": ReadingTestView()
+        case let topic? where topic.hasPrefix("family:"):
+            // "-arabicTopic family:safeer": one family's page.
+            if let family = LetterTraits.family(id: String(topic.dropFirst("family:".count))) {
+                LetterFamilyView(family: family)
             }
-        } label: {
-            EmptyView()
+        default: ArabicBasicsView()
         }
-        .opacity(0)
     }
     #endif
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showFavoriteLetters") private var showFavoriteLetters = true
 
-    @ViewBuilder
-    private var gridNavigationLink: some View {
-        NavigationLink(
-            isActive: Binding(
-                get: { gridSelection != nil },
-                set: { if !$0 { gridSelection = nil } }
-            )
-        ) {
-            if let gridSelection {
-                ArabicLetterView(letterData: gridSelection)
-            }
-        } label: {
-            EmptyView()
-        }
-        .opacity(0)
-    }
     #endif
 
     /// Every letter section renders through here, so list and grid can never fall out of sync on *which*
@@ -769,7 +775,9 @@ struct ArabicView: View {
     private func letterCollection(_ letters: [LetterData]) -> some View {
         #if os(iOS)
         if isGridMode {
-            LazyVGrid(columns: letterGridColumns, spacing: 6) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on. At most 46 tiles.
+            SummaryTileGrid(columns: letterGridColumns.count, spacing: 6) {
                 ForEach(letters) { letter in
                     ArabicLetterGridTile(
                         letterData: letter,
@@ -777,7 +785,7 @@ struct ArabicView: View {
                         accentColor: settings.accentColor,
                         useFontArabic: settings.useFontArabic,
                         fontArabic: settings.nonQuranArabicFontName,
-                        onTap: { gridSelection = letter }
+                        onTap: { openDoor { gridSelection = letter } }
                     )
                     .equatable()
                 }
@@ -800,7 +808,9 @@ struct ArabicView: View {
     private var numberCollection: some View {
         #if os(iOS)
         if isGridMode {
-            LazyVGrid(columns: letterGridColumns, spacing: 6) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on. Eleven numerals.
+            SummaryTileGrid(columns: letterGridColumns.count, spacing: 6) {
                 ForEach(numbers, id: \.number) { ArabicNumberGridTile(numberData: $0) }
             }
             .padding(.horizontal, -8)
@@ -982,7 +992,7 @@ struct ArabicView: View {
     private func exploreTile(_ tile: ExploreTile) -> some View {
         Button {
             settings.hapticFeedback()
-            door = tile.door
+            openDoor { door = tile.door }
         } label: {
             VStack(spacing: 3) {
                 exploreSpecimen(tile, base: 22, relativeTo: .title3)
@@ -1029,7 +1039,7 @@ struct ArabicView: View {
     private func wideExploreTile(_ tile: ExploreTile) -> some View {
         Button {
             settings.hapticFeedback()
-            door = tile.door
+            openDoor { door = tile.door }
         } label: {
             HStack(alignment: .center, spacing: 12) {
                 exploreSpecimen(tile, base: 24, relativeTo: .title2)
@@ -1166,7 +1176,7 @@ struct ArabicView: View {
                     .conditionalGlassEffect(circle: true)
                     .onTapGesture {
                         settings.hapticFeedback()
-                        door = .family(family)
+                        openDoor { door = .family(family) }
                     }
                     .accessibilityLabel("About \(family.name)")
                     .accessibilityAddTraits(.isButton)
@@ -1248,7 +1258,7 @@ struct ArabicView: View {
                 // than the letters it introduces.
                 HStack(spacing: 8) {
                     bannerAction("About These Families", systemImage: "book") {
-                        door = .axes(title: axis.title, axes: [axis])
+                        openDoor { door = .axes(title: axis.title, axes: [axis]) }
                     }
 
                     bannerAction("Alphabetical", systemImage: "arrow.uturn.backward") {

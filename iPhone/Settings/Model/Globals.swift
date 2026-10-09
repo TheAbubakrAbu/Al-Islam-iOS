@@ -1575,6 +1575,14 @@ struct EmptyDoor: View {
 
 struct LazyDestination<Content: View>: View {
     let build: () -> Content
+
+    /// A view builder, so a destination that branches (`if let chapter { ... } else { ... }`) can be
+    /// deferred exactly as written: the `_ConditionalContent` it builds is the type the link's own
+    /// destination closure built, so the pushed screen is the same view either way.
+    init(@ViewBuilder build: @escaping () -> Content) {
+        self.build = build
+    }
+
     var body: Content { build() }
 }
 
@@ -1585,16 +1593,24 @@ struct LazyDestination<Content: View>: View {
 /// is still a List row that draws a band. Attach it to the List itself (a lazy row's destination never
 /// fires). No-op before iOS 16 / watchOS 9.
 ///
-/// Two users: the DEBUG "open this screen on launch" hooks (`debugPushDestination`), and the article
-/// search, whose results open an article's index first and then push the article on top of it
+/// Its users: the Settings root's doors, the Quran and Hadith summary doors, the Islam screens'
+/// programmatic doors, the DEBUG "open this screen on launch" hooks (`debugPushDestination`), and the
+/// article search, whose results open an article's index first and then push the article on top of it
 /// (`ArticleAutoOpen`).
+///
+/// The destination goes in as a `LazyDestination`. `navigationDestination(isPresented:)` calls its
+/// closure on the spot and keeps the VIEW it returns, so handing it `destination` built every door's
+/// screen on every pass of the page that carries the modifier, pushed or not, and AttributeGraph laid
+/// out every case of a door switch (the Hadith summary door's eight screens, the Settings grid door's
+/// pages) at launch. Wrapped, it keeps a closure and builds the screen when the push shows it
+/// (Performance Guide, Phase 11, item 1).
 struct PushDestination<Destination: View>: ViewModifier {
     @Binding var isPresented: Bool
     @ViewBuilder let destination: () -> Destination
 
     func body(content: Content) -> some View {
         if #available(iOS 16.0, watchOS 9.0, *) {
-            content.navigationDestination(isPresented: $isPresented, destination: destination)
+            content.navigationDestination(isPresented: $isPresented) { LazyDestination(build: destination) }
         } else {
             content
         }

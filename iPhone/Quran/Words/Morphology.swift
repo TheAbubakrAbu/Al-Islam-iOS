@@ -302,11 +302,13 @@ struct WordMorphologySection: View {
                 if let rootInfo {
                     let locations = MorphologyStore.shared.occurrences(ofRoot: rootInfo.id)
                     NavigationLink {
-                        RootOccurrencesView(
-                            title: "Root \(rootInfo.root.letters)",
-                            locations: locations,
-                            highlight: WordLocation(surah: surah.id, ayah: ayah.id, token: tokenIndex)
-                        )
+                        LazyDestination {
+                            RootOccurrencesView(
+                                title: "Root \(rootInfo.root.letters)",
+                                locations: locations,
+                                highlight: WordLocation(surah: surah.id, ayah: ayah.id, token: tokenIndex)
+                            )
+                        }
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "text.magnifyingglass")

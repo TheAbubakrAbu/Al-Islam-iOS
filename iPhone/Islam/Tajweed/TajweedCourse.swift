@@ -73,8 +73,10 @@ struct TajweedLessonExample: Identifiable {
     /// What to listen for in this ayah.
     let focus: String
 
+    /// The focus too: a lesson can point at the same words twice (waqf-types, 4:43), and the List rows
+    /// must never share an id.
     var id: String {
-        "\(surahId):\(ayahNumber):" + (wordSpan.map { "\($0.lowerBound)-\($0.upperBound)" } ?? "")
+        "\(surahId):\(ayahNumber):" + (wordSpan.map { "\($0.lowerBound)-\($0.upperBound)" } ?? "") + ":" + focus
     }
 
     /// The words at `wordSpan`, read out of the ayah's own text.

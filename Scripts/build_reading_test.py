@@ -5,7 +5,7 @@
 WHY A BUILD STEP
 ----------------
 The test asks a learner to choose how a word is READ, so every reading has to be right. None of
-them is typed. Each word is cut from the app's own Hafs text (Resources/JSONs-Deprecated/Quran.json)
+them is typed. Each word is cut from the app's own Hafs text (Quran-Tajweed-Engine/sources/Quran.json)
 and read by a strict rule-based reader (`read_word` below) that REFUSES any word outside the small
 grammar it was written for. What it accepts is then cross-checked, sound by sound, against the
 word-by-word transliteration the app already ships (Resources/Data/Quran/WordByWord.json.xz, the
@@ -49,8 +49,9 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-NAMES_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "NamesOfAllah.json"
+SOURCES = ROOT.parent / "Quran-Tajweed-Engine" / "sources"
+QURAN_JSON = SOURCES / "Quran.json"
+NAMES_JSON = SOURCES / "NamesOfAllah.json"
 WBW_PACK = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 HADITH_DB = ROOT.parent / "Hadith-JSON-Engine" / "db" / "by_book"
 OUT = ROOT / "iPhone" / "Islam" / "ArabicReadingBank.swift"

@@ -690,6 +690,9 @@ struct MiracleArticleView: View {
             // its own grey disclosure chevron beside the accent disc, which is the double-arrow this
             // pair was built to avoid. One `@State` + one destination on the List solves both.
             Button {
+                // One door at a time: a prose link's push in flight plus this one is two destinations
+                // on one stack in a frame (the Settings doors' blank screen, then crash).
+                guard !linkOpen else { return }
                 Settings.shared.hapticFeedback()
                 openSibling = target
             } label: {
@@ -867,6 +870,8 @@ struct MiracleArticleView: View {
         // app's own scheme, and the push happens on the List (a lazy row's destination never fires).
         .environment(\.openURL, OpenURLAction { url in
             guard url.scheme == MiracleProse.scheme else { return .systemAction }
+            // The Previous | Next push already in flight: see `siblingNavigationButton`.
+            guard openSibling == nil else { return .handled }
             if url.host == "article", let slug = url.pathComponents.dropFirst().first,
                let target = MiraclesStore.shared.article(slug: slug) {
                 Settings.shared.hapticFeedback()

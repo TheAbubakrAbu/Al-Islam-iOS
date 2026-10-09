@@ -336,7 +336,9 @@ struct AyahQiraatVariantsSection: View {
                 }
 
                 NavigationLink {
-                    AyahQiraatVariantsView(surah: surah, ayah: ayah, hafsAyahs: hafsAyahs)
+                    LazyDestination {
+                        AyahQiraatVariantsView(surah: surah, ayah: ayah, hafsAyahs: hafsAyahs)
+                    }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "text.book.closed")

@@ -19,6 +19,7 @@ from collections import Counter, defaultdict
 from difflib import SequenceMatcher
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SOURCES = os.path.join(os.path.dirname(ROOT), "Quran-Tajweed-Engine", "sources")
 V1DIR = os.path.join(ROOT, "Scripts", "tajweed-extraction", "v1-extraction-packs")
 WRITE = "--write" in sys.argv
 
@@ -69,7 +70,7 @@ def load_qiraat_qpk():
     return out
 
 qpk = load_qiraat_qpk()
-quran = json.load(open(os.path.join(ROOT, "Resources", "JSONs-Deprecated", "Quran.json")))
+quran = json.load(open(os.path.join(SOURCES, "Quran.json")))
 
 HAFS_T = defaultdict(dict)
 for s in quran:
@@ -1253,8 +1254,7 @@ def legend_entry(c, k):
 # What it replaces: an ink threshold over rasterised pages (which supplied an extent for
 # just 34% of flagged words), a Hafs-diff fallback for the other 71%, and a whole-word
 # fallback for the rest. Hafs has no colour layer and is not built here.
-PIPE = os.path.join(ROOT, "Resources", "JSONs-Deprecated", "Qiraat",
-                    "_staging-riwayat", "pipeline", "data")
+PIPE = os.path.join(SOURCES, "Qiraat", "_staging-riwayat", "pipeline", "data")
 
 # The builder's key for ad-Duri Abu Amr; every other key is the pipeline slug already.
 PIPE_SLUG = {"duri": "duriabiamr"}

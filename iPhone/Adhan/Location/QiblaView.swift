@@ -13,7 +13,10 @@ struct QiblaView: View {
 
     let size: CGFloat
 
-    private static let kaabaCoordinate = CLLocationCoordinate2D(latitude: 21.4225, longitude: 39.8262)
+    /// The same coordinate `Qibla(coordinates:)` computes the bearing from, to full precision. This
+    /// was independently truncated to 4 decimals here, so the distance was measured to a point about
+    /// 20 m from the one the needle pointed at.
+    static let kaabaCoordinate = CLLocationCoordinate2D(latitude: 21.4225241, longitude: 39.8261818)
 
     @StateObject private var compass: LocalQiblaCompass
 
@@ -56,11 +59,84 @@ struct QiblaView: View {
     /// an uncalibrated one, or one with no location yet used to draw a straight-up needle, an accent
     /// ring and the words "You are facing the Kaaba" - the failure state was indistinguishable from
     /// success, which is what makes a broken compass read as a working one pointing the wrong way.
-    private var isAligned: Bool { compass.hasHeading && distanceToQibla <= 1 }
-    private var isNearlyAligned: Bool { compass.hasHeading && distanceToQibla <= 5 }
-    private var isWithinArc: Bool { compass.hasHeading && distanceToQibla <= 20 }
+    ///
+    /// The same reasoning is why the claim is now gated on `isTrustworthy` as well: a sample Core
+    /// Location itself reports as +-40 degrees cannot support "You are facing the Kaaba" either.
+
+    /// Close enough to the Kaaba that a bearing to it is noise rather than direction. Matches
+    /// `GlanceCard.atKaabaRadius`, which has guarded its own tile for longer.
+    private static let atKaabaRadius: CLLocationDistance = 1_000
+
+    /// True inside the Masjid al-Haram, where the great-circle bearing degenerates.
+    ///
+    /// Standing ON the Kaaba the formula returns 0; one metre north it returns 180, one metre south
+    /// 0 again, ten metres east 270. Measured: **walking two metres across the mataaf flips the
+    /// needle a full 180 degrees.** The maths is not wrong, it is undefined - every direction points
+    /// at the Kaaba when you are on it - so a compass here spins and reads as broken while the real
+    /// instruction is the simplest one in Islam: face the Kaaba you can see.
+    ///
+    /// `GlanceCard` has said "You are here" for its tile all along; the compass itself never did.
+    ///
+    /// Read by `isAligned`, `isWithinArc`, both colours and the card, so it runs several times per
+    /// heading sample (10+ a second). A cheap bounding-box test on the coordinate, not two
+    /// `CLLocation` allocations and a geodesic distance: 1 km is 0.009 degrees of latitude, and of
+    /// longitude at this latitude 0.0097, so the box is a hair wider than the circle and the exact
+    /// radius is only ever evaluated for someone already standing in Mecca.
+    private var isAtKaaba: Bool {
+        guard let currentLocation = live.currentLocation, hasUsableLocation else { return false }
+        let latitudeDelta = abs(currentLocation.latitude - Self.kaabaCoordinate.latitude)
+        guard latitudeDelta <= 0.01 else { return false }
+        let longitudeDelta = abs(currentLocation.longitude - Self.kaabaCoordinate.longitude)
+        guard longitudeDelta <= 0.011 else { return false }
+        return CLLocation(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
+            .distance(from: CLLocation(latitude: Self.kaabaCoordinate.latitude,
+                                       longitude: Self.kaabaCoordinate.longitude))
+            <= Self.atKaabaRadius
+    }
+
+    /// The tolerance the alignment claim is allowed to use, in degrees either way.
+    ///
+    /// Was a hardcoded 1 degree, which is finer than a phone magnetometer can resolve, so the claim
+    /// was never the sensor's to make. Now it is the magnetometer's own reported error, floored at 3
+    /// degrees (a well-calibrated iPhone's realistic best) and capped at 15 so a merely mediocre
+    /// sample does not call half the horizon "the Kaaba". Beyond 15 the reading is not trustworthy at
+    /// all and `isTrustworthy` withholds the claim outright rather than widening it further.
+    private static let minimumAlignmentTolerance: Double = 3
+    private static let maximumAlignmentTolerance: Double = 15
+
+    private var alignmentTolerance: Double {
+        guard let accuracy = compass.accuracyDegrees, accuracy > 0 else {
+            return Self.minimumAlignmentTolerance
+        }
+        return min(Self.maximumAlignmentTolerance, max(Self.minimumAlignmentTolerance, accuracy))
+    }
+
+    /// Whether the last sample is good enough to make a positive claim about where the Kaaba is.
+    ///
+    /// Core Location reports a large `headingAccuracy` near metal, magnets, speakers, a car dashboard
+    /// or a magnetic case, and when the magnetometer simply needs calibrating. The needle keeps
+    /// moving in that state (it is still the best information available, and freezing it reads as a
+    /// broken app) but "You are facing the Kaaba" is withheld: a confident wrong claim about the
+    /// direction of prayer is the one failure this view must not produce.
+    private var isTrustworthy: Bool {
+        guard let accuracy = compass.accuracyDegrees else { return false }
+        return accuracy > 0 && accuracy <= Self.maximumAlignmentTolerance
+    }
+
+    /// All three are false at the Kaaba: the bearing they measure against is undefined there, so
+    /// tinting the ring or claiming alignment would be reacting to noise.
+    private var isAligned: Bool {
+        compass.hasHeading && isTrustworthy && !isAtKaaba && distanceToQibla <= alignmentTolerance
+    }
+    private var isNearlyAligned: Bool {
+        compass.hasHeading && isTrustworthy && !isAtKaaba && distanceToQibla <= max(5, alignmentTolerance)
+    }
+    private var isWithinArc: Bool { compass.hasHeading && !isAtKaaba && distanceToQibla <= 20 }
 
     private var qiblaTurnText: String? {
+        // Checked before the heading: inside the Haram no heading can improve the answer, and
+        // "Waiting for the compass" would be a stall for a direction that does not exist.
+        if isAtKaaba { return "You are at the Kaaba" }
         guard compass.hasHeading else {
             guard CLLocationManager.headingAvailable() else { return "No compass on this device" }
             // Heading samples are DROPPED while there is no usable fix (there is no bearing to
@@ -74,6 +150,24 @@ struct QiblaView: View {
         let direction = delta < 0 ? "left" : "right"
         let degrees = Int(abs(delta).rounded())
         return "Turn \(direction) \(degrees)°"
+    }
+
+    /// Shown under the turn line while the magnetometer's own error estimate is too large to claim a
+    /// direction from. Names the two things that actually cause it, in the order a user can act on.
+    private var calibrationHint: String? {
+        // No calibration helps at the Kaaba, and the needle is not the instruction there.
+        if isAtKaaba { return "Face the Kaaba in front of you" }
+        guard compass.hasHeading, !isTrustworthy else { return nil }
+        return "Move away from metal or magnets, or wave your phone in a figure 8"
+    }
+
+    /// The reported error, always visible on the expanded compass once a sample has landed, so the
+    /// needle is never read as more precise than it is.
+    private var accuracyText: String? {
+        // The reading's error is beside the point when there is no direction to be in error about.
+        guard !isAtKaaba else { return nil }
+        guard compass.hasHeading, let accuracy = compass.accuracyDegrees, accuracy > 0 else { return nil }
+        return "±\(Int(accuracy))°"
     }
 
     /// A fix the Qibla maths can actually use: present, and not the app's (1000, 1000) "none yet"
@@ -113,6 +207,19 @@ struct QiblaView: View {
         return (raw * 24).rounded() / 24
     }
 
+    /// Spoken description of the compass. The turn instruction carries the actual information; the
+    /// accuracy and the calibration hint follow so a screen-reader user learns the reading is
+    /// untrustworthy at the same moment a sighted user reads it off the card.
+    private var accessibilityDescription: String {
+        var parts = ["Qibla compass"]
+        if let qiblaTurnText { parts.append(qiblaTurnText) }
+        if let accuracy = compass.accuracyDegrees, compass.hasHeading, accuracy > 0 {
+            parts.append("accurate to within \(Int(accuracy)) degrees")
+        }
+        if let calibrationHint { parts.append(calibrationHint) }
+        return parts.joined(separator: ". ")
+    }
+
     private var arrowColor: Color {
         isNearlyAligned ? settings.accentColor.color : .primary
     }
@@ -133,6 +240,12 @@ struct QiblaView: View {
                     .rotationEffect(.degrees(compass.direction))
             }
             .conditionalGlassEffect()
+            // A rotating needle says nothing to VoiceOver, so the turn instruction is the label and
+            // updates as the user turns. `.updatesFrequently` lets VoiceOver re-announce it while
+            // the element stays focused, which is the whole point: the user is turning on the spot.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityDescription)
+            .accessibilityAddTraits(.updatesFrequently)
 
             if size >= 70 {
                 qiblaInfoCard
@@ -221,11 +334,31 @@ struct QiblaView: View {
                     .minimumScaleFactor(0.7)
             }
 
-            if let distanceToKaabaMiles {
-                Text(String(format: "%.1f miles away", distanceToKaabaMiles))
+            // Distance and the reported error share a line: both are secondary to the turn
+            // instruction, and the card sits under a 100 pt compass in the location row.
+            if distanceToKaabaMiles != nil || accuracyText != nil {
+                Text(
+                    // "0.1 miles away" inside the Haram is noise, and the turn line already says
+                    // "You are at the Kaaba" - so the distance drops out entirely rather than
+                    // repeating it, leaving the one line that tells you what to do.
+                    [isAtKaaba ? nil
+                               : distanceToKaabaMiles.map { String(format: "%.1f miles away", $0) },
+                     accuracyText]
+                        .compactMap { $0 }
+                        .joined(separator: " · ")
+                )
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            }
+
+            if let calibrationHint {
+                Text(calibrationHint)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.75)
             }
         }
@@ -277,6 +410,9 @@ struct QiblaView: View {
     #if os(iOS)
     private func handleDirectionChange(_ newAngle: Double) {
         guard size > 50 else { return }
+        // At the Kaaba the needle chases a 180-degree flip every couple of metres; buzzing along
+        // with it would be the loudest possible way to be wrong.
+        guard !isAtKaaba else { return }
 
         let now = ProcessInfo.processInfo.systemUptime
         guard now - lastHapticTime >= 0.08 else { return }
@@ -288,7 +424,9 @@ struct QiblaView: View {
 
         guard absoluteDelta >= threshold else { return }
 
-        if distance <= 5 {
+        // The success tap is a claim of alignment in its own right - the one cue a user feels without
+        // looking - so it is gated on the same trust as the words, not on the angle alone.
+        if distance <= max(5, alignmentTolerance), isTrustworthy {
             notify.notificationOccurred(.success)
             notify.prepare()
         } else {
@@ -433,6 +571,20 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// It stays true through `stop()`: a compass that scrolls or tabs away and comes back keeps its
     /// last reading until the next sample, instead of flashing "Waiting for the compass" every time.
     @Published private(set) var hasHeading = false
+
+    /// Core Location's own error estimate for the last accepted sample, in degrees (`CLHeading`'s
+    /// `headingAccuracy`: the needle may be off by up to this much either way).
+    ///
+    /// This used to be read only as a sign check and thrown away, so a sample known to be +-40 degrees
+    /// out drew exactly the same confident needle as a +-3 degree one, and "You are facing the Kaaba"
+    /// appeared inside a hardcoded 1 degree either way. 1 degree is finer than any phone magnetometer
+    /// can resolve, so the claim was never the sensor's to make: near a laptop, a car dashboard, a
+    /// magnetic case or a speaker it was routinely confident and wrong. Published so the view can widen
+    /// the alignment claim to what the hardware actually supports and say when it cannot be trusted.
+    ///
+    /// Quantized to whole degrees: it feeds text and a tolerance, and the raw value jitters on every
+    /// sample, which would republish this object 10+ times a second for a string that never changes.
+    @Published private(set) var accuracyDegrees: Double?
 
     private let locationManager = CLLocationManager()
     private let locationProvider: () -> Location?
@@ -640,7 +792,15 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        guard newHeading.headingAccuracy >= 0, let location = usableLocation() else { return }
+        // A negative `headingAccuracy` means the reading is invalid, so the needle must not move -
+        // but the LAST estimate has to be retired with it. Left standing it would keep vouching for
+        // a frozen needle: `hasHeading` stays true by design across a stop, so the view would read a
+        // stale "+-3 degrees" and go on claiming the Kaaba from a sample that no longer exists.
+        guard newHeading.headingAccuracy >= 0 else {
+            if accuracyDegrees != nil { accuracyDegrees = nil }
+            return
+        }
+        guard let location = usableLocation() else { return }
         #if os(iOS)
         // A new frame makes this sample meaningless (it was measured against the old top edge); the
         // next one re-seeds the low-pass.
@@ -653,6 +813,12 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         if target < 0 { target += 360 }
 
         if !hasHeading { hasHeading = true }
+
+        // Whole degrees only, so a jittering estimate does not republish the string and the tolerance
+        // on every sample. Rounded UP: the tolerance derived from this must never claim the sample is
+        // better than Core Location says it is.
+        let quantizedAccuracy = newHeading.headingAccuracy.rounded(.up)
+        if accuracyDegrees != quantizedAccuracy { accuracyDegrees = quantizedAccuracy }
 
         guard let current = smoothedDelta else {
             smoothedDelta = target

@@ -2,7 +2,7 @@
 
 What the three qiraat sources hold, how they were checked against each other, and what came of it.
 The three: this app's own corpus, Tilawa's qiraat work (Jamil Hammoudeh, shared both ways), and the
-Quran.com qiraat matrix (Quran Foundation), kept at `Resources/JSONs-Deprecated/Qiraat/quran-com-qiraat.json.xz`.
+Quran.com qiraat matrix (Quran Foundation), kept at `Quran-Tajweed-Engine/sources/Qiraat/quran-com-qiraat.json.xz`.
 
 ## 1. Who has what
 
@@ -99,7 +99,7 @@ Warsh: 3:60 فَنَجْعَل (missing fatha), 4:19 تَرِثُواْ, 4:76 ا
 and 34:23 الشَّفَٰعَة (missing shaddah), 27:66 بُرْهَٰنَكُمُ, 33:37 وَاللَّهُ, 33:72 وَأَشْفَقْنَ, 50:2 مُّنذِرٞ, 51:47 بِأَيَيْدٖ, 58:10 وَعَلَى.
 Qalun: 9:110 ه۪ارٖ, 33:37 وَاللَّهُ (and v2.1 drops the ۞ there), 34:23 اُ۬لشَّفَٰعَةُ, 51:47 بِأَيَيْدٖ, 58:10 وَعَلَى.
 
-Taking them means editing `Resources/JSONs-Deprecated/Qiraat/QiraahWarsh.json` and `QiraahQaloon.json` and
+Taking them means editing `Quran-Tajweed-Engine/sources/Qiraat/QiraahWarsh.json` and `QiraahQaloon.json` and
 rebuilding everything downstream (`qiraat.qpk`, the solid packs, the tajweed and line packs), so it was not done
 here; the word list above is the whole job.
 

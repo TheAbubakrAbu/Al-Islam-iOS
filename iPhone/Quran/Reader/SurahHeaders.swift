@@ -34,15 +34,17 @@ struct SurahsHeader: View {
     #if os(iOS)
     private var randomSurahLink: some View {
         NavigationLink {
-            Group {
-                if let randomSurah {
-                    SurahView(surah: randomSurah)
-                } else {
-                    Text("No surah found!")
+            LazyDestination {
+                Group {
+                    if let randomSurah {
+                        SurahView(surah: randomSurah)
+                    } else {
+                        Text("No surah found!")
+                    }
                 }
-            }
-            .onDisappear {
-                randomSurah = quranData.quran.randomElement()
+                .onDisappear {
+                    randomSurah = quranData.quran.randomElement()
+                }
             }
         } label: {
             Image(systemName: "shuffle.circle")
@@ -169,15 +171,17 @@ struct JuzHeader: View {
 
     private var randomSurahLink: some View {
         NavigationLink {
-            Group {
-                if let randomSurah {
-                    SurahView(surah: randomSurah)
-                } else {
-                    Text("No surah found in Juz \(juz.id).")
+            LazyDestination {
+                Group {
+                    if let randomSurah {
+                        SurahView(surah: randomSurah)
+                    } else {
+                        Text("No surah found in Juz \(juz.id).")
+                    }
                 }
-            }
-            .onDisappear {
-                randomSurah = randomSurahInJuz
+                .onDisappear {
+                    randomSurah = randomSurahInJuz
+                }
             }
         } label: {
             Image(systemName: "shuffle.circle")

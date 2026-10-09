@@ -468,9 +468,9 @@ private struct TajweedFoundationsHero: View {
                 .tracking(1.4)
                 .foregroundColor(accent)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6),
-                                     count: dynamicTypeSize.isAccessibilitySize ? 1 : 2),
-                      spacing: 6) {
+            // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+            // each self-sizing pass, which iOS 26 traps on.
+            SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 1 : 2, spacing: 6) {
                 ForEach(Self.marks) { mark in
                     Button {
                         Settings.shared.hapticFeedback()

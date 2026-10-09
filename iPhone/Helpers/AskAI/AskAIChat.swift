@@ -687,7 +687,9 @@ private struct AskAISourceCard: View {
             label
         } else {
             NavigationLink {
-                AskAISourceDestination.view(for: source)
+                LazyDestination {
+                    AskAISourceDestination.view(for: source)
+                }
             } label: {
                 label
             }

@@ -31,9 +31,9 @@ Five repositories: three apps, and the two engines they are built on. Everything
 - [**Quran Tajweed Engine**](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine): 6,236 ayahs with pre-computed tajweed, qiraat, and recitations
 
 **Where the raw JSON lives.** This app ships compressed packs (`Resources/Data/`), not source
-JSON. The uncompressed sources those packs are built from live here in
-`Resources/JSONs-Deprecated/` (nothing in that folder is bundled into any target; `Scripts/`
-reads it), and are published for everyone else in the engines:
+JSON. The uncompressed sources those packs are built from live in the engines, and the build
+scripts in `Scripts/` read them from checkouts that sit next to this one
+(`../Quran-Tajweed-Engine/sources/`, `../Hadith-JSON-Engine/db/`):
 
 - Quran text, "About this Surah", the 99 Names, the qiraah overlays, the beta riwayat and their
   extraction pipeline: [`sources/`](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine/tree/main/sources)

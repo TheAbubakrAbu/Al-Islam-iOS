@@ -578,7 +578,9 @@ struct ArticleStatGrid: View {
 
     var body: some View {
         let accent = appearance.accent
-        LazyVGrid(columns: columns, spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on. `.top`: the columns' own alignment.
+        SummaryTileGrid(columns: columns.count, spacing: 8, alignment: .top) {
             ForEach(stats, id: \.self) { stat in
                 VStack(alignment: .leading, spacing: 3) {
                     Text(stat.value)
@@ -1157,9 +1159,9 @@ struct ResourceHeroStats: View {
     var body: some View {
         // One column at the accessibility sizes, where three figures to a row shrank their labels
         // past reading.
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
-                                 count: dynamicTypeSize.isAccessibilitySize ? 1 : max(stats.count, 1)),
-                  spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 1 : max(stats.count, 1), spacing: 8) {
             ForEach(stats, id: \.self) { stat in
                 statChip(stat, accent: appearance.accent)
             }

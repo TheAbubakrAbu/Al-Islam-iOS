@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One-off generator for Resources/Data/Quran/surah-stats.json.
 
-Reads the app's bundled Quran source JSON (Resources/JSONs-Deprecated/Quran.json -
+Reads the app's Quran source JSON (Quran-Tajweed-Engine/sources/Quran.json,
 the exact text the shipped quran.qpk was packed from) and computes, per surah:
 
   - ayahs:   ayah count
@@ -23,7 +23,7 @@ import unicodedata
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+SOURCE = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUTPUT = ROOT / "Resources" / "Data" / "Quran" / "surah-stats.json"
 
 # The standard 30-juz start table (surah, ayah), Kufi ayah numbering (Hafs).

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build the packs derived from the Quranic Universal Library (QUL, qul.tarteel.ai) downloads
-kept under Resources/JSONs-Deprecated/QUL/:
+kept under Quran-Tajweed-Engine/sources/QUL/:
 
     Resources/Data/Quran/Morphology.json.xz     root + lemma of every word (Quranic Arabic Corpus)
     Resources/Data/Quran/Mutashabihat.json.xz   814 repeated phrases with their occurrences
@@ -58,9 +58,10 @@ import tempfile
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-QUL = ROOT / "Resources" / "JSONs-Deprecated" / "QUL"
+SOURCES = ROOT.parent / "Quran-Tajweed-Engine" / "sources"
+QUL = SOURCES / "QUL"
 OUT = ROOT / "Resources" / "Data" / "Quran"
-QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
+QURAN_JSON = SOURCES / "Quran.json"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 
 _spec = importlib.util.spec_from_file_location("build_wordbyword", ROOT / "Scripts" / "build_wordbyword.py")

@@ -974,7 +974,7 @@ struct AyahArabicSnippet: View, Equatable {
     }
 }
 
-struct AyahSearchResultRow: View {
+struct AyahSearchResultRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let surah: Surah
@@ -989,6 +989,25 @@ struct AyahSearchResultRow: View {
     /// When true, the Arabic line is rendered smaller (used by the page/juz starting-ayah lists).
     var compactArabic: Bool = false
     var onSelectAyah: ((Int, Int) -> Void)? = nil
+
+    /// Baked at init like every other equatable ayah row's, so a Settings change that alters what this
+    /// row draws still redraws it (Quality Guide G9 / `equatable-render-signatures`).
+    var renderSettingsSignature: String = Settings.shared.ayahRenderSettingsSignature
+
+    /// Sorting the Quran tab by Pages mounts 604 of these at once, and without `==` every Settings
+    /// publish re-diffed all of them - each one rebuilding two swipe-action sets and a full per-ayah
+    /// context menu - which is the "lag is crazy" on that sort (Abu, 2026-10-08).
+    ///
+    /// The bindings and `onSelectAyah` are deliberately absent: a `Binding` is not `Equatable` and the
+    /// closure is recreated per pass, so including them would defeat the comparison entirely. They feed
+    /// actions, never the drawing. Bookmark/favorite state is absent for the same reason it is on
+    /// `SurahAyahRow`: it lives in observed `Settings`, whose publish invalidates this row directly.
+    static func == (l: Self, r: Self) -> Bool {
+        l.surah.id == r.surah.id && l.ayah.id == r.ayah.id &&
+        l.disableTajweedColors == r.disableTajweedColors &&
+        l.compactArabic == r.compactArabic &&
+        l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     private var isBookmarked: Bool {
         bookmarkedAyahs.contains("\(surah.id)-\(ayah.id)")

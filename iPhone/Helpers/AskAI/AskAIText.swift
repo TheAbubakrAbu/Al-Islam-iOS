@@ -237,7 +237,8 @@ enum AskAIText {
         /// Whether the text right after a "[n]" marker is that source's own reference, title or
         /// provenance: the mark of a copied source line rather than a citation.
         func namesSource(_ n: Int, after rest: String) -> Bool {
-            guard sources.indices.contains(n - 1) else { return false }
+            // `n > 0` first: a reply line "[-9223372036854775808]" reads as Int.min, and `n - 1` trapped.
+            guard n > 0, sources.indices.contains(n - 1) else { return false }
             var rest = rest.trimmingCharacters(in: .whitespaces)
             if rest.hasPrefix("subject of the question:") { rest = String(rest.dropFirst(24)).trimmingCharacters(in: .whitespaces) }
             let source = sources[n - 1]

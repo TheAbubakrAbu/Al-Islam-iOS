@@ -255,10 +255,40 @@ enum IslamArticles {
     /// Lowercased, everything non-alphanumeric flattened to a space, so "wudhu," and "(wudhu)" both
     /// match "wudhu"; Latin accents folded first, so "Ṣaḥīḥ" and "Jāmiʿ" match "sahih" and "jami".
     /// `HadeethEncStore.foldEnglish` is this same rule over bytes and must stay identical to it.
+    ///
+    /// One pass over the scalars, the shape `foldEnglish` uses over bytes: ASCII decides itself, the
+    /// `LatinFold` tables drop the transliteration marks and flatten an accented letter to its plain
+    /// one, and only a scalar none of that covers pays for `lowercased()` and a `CharacterSet`
+    /// lookup. The old version built the folded string, then a lowercased copy, then a `[Character]`
+    /// of every scalar, and asked `CharacterSet.alphanumerics` about each one; it was ~3% of all
+    /// profiler samples at launch over the ~1 MB corpus (Performance Guide, Phase 11).
+    /// `UnitTests/IslamArticlesFoldEquivalenceTests` pins this to the old code scalar by scalar.
     static func fold(_ text: String) -> String {
-        String(text.foldingLatinDiacritics.lowercased().unicodeScalars.map { scalar in
-            CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
-        })
+        var out = String.UnicodeScalarView()
+        out.reserveCapacity(text.unicodeScalars.count)
+        for scalar in text.unicodeScalars {
+            let value = scalar.value
+            if value < 0x80 {
+                // a-z and 0-9 stand, A-Z lowercases, everything else is a space.
+                switch value {
+                case 0x41...0x5A: out.append(Unicode.Scalar(value + 32)!)
+                case 0x61...0x7A, 0x30...0x39: out.append(scalar)
+                default: out.append(" ")
+                }
+            } else if LatinFold.isDropped(scalar) {
+                continue
+            } else if let plain = LatinFold.base(scalar) {
+                // Always an ASCII letter; lowercase it the way the ASCII branch does.
+                let byte = plain.value
+                out.append((0x41...0x5A).contains(byte) ? Unicode.Scalar(byte + 32)! : plain)
+            } else {
+                // Arabic, CJK, emoji, symbols: the rare tail. One scalar can lowercase to several.
+                for lowered in String(scalar).lowercased().unicodeScalars {
+                    out.append(CharacterSet.alphanumerics.contains(lowered) ? lowered : " ")
+                }
+            }
+        }
+        return String(out)
     }
 
     // MARK: Loading

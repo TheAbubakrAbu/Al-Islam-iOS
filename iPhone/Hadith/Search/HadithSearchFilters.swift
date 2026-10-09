@@ -374,6 +374,8 @@ struct HadithSearchFilterBar: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 6)
         }
+        // The keyboard first: a menu here updated over a live keyboard aborted (`endsEditingOnTouch`).
+        .endsEditingOnTouch()
     }
 
     private var divider: some View {

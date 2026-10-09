@@ -226,7 +226,9 @@ enum ThemeColorGuide {
 /// can.
 struct ThemeColorLegend: View {
     var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], alignment: .leading, spacing: 8) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        SummaryTileGrid(columns: 2, spacing: 8) {
             ForEach(ThemeWashColor.allCases) { color in
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 6) {

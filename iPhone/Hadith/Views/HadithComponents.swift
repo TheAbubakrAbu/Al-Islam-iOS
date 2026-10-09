@@ -1213,7 +1213,8 @@ struct HadithLoadMoreControls: View {
         if hasMore {
             LoadMoreControls(
                 label: label,
-                onLoad: { limit += $0 },
+                // Saturating: after "Load all" (Int.max) the card stays up until the scan lands.
+                onLoad: { limit = min(limit, Int.max - $0) + $0 },
                 onLoadAll: { limit = Int.max }
             )
         }
@@ -1398,7 +1399,9 @@ struct HadithBookmarkRow: View, Equatable {
             }
         } else {
             NavigationLink {
-                HadithBookView(book: book, autoOpenHadithID: bookmark.idInBook)
+                LazyDestination {
+                    HadithBookView(book: book, autoOpenHadithID: bookmark.idInBook)
+                }
             } label: {
                 label()
             }

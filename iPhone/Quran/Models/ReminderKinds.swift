@@ -241,11 +241,19 @@ final class ExtraRemindersStore: ObservableObject {
     /// (`ReminderScheduler.rearmAfterLaunch`) owns it.
     func rearmIfNeeded() {
         guard anythingOn, AppReveal.revealed else { return }
-        let inputs = buildInputs()
-        guard Self.signature(of: inputs) != persistedSignature else { return }
         Task { @MainActor in
+            await self.waitForDuaCorpus()
+            let inputs = self.buildInputs()
+            guard Self.signature(of: inputs) != self.persistedSignature else { return }
             await self.rebuild(inputs: inputs, reschedulePrayers: false, reason: "foreground")
         }
+    }
+
+    /// `buildInputs` reads `DailyReminderStore.entries`, which blocks its caller (here the main thread)
+    /// on the corpus parse while it is still running; every pass awaits the parse here first instead.
+    func waitForDuaCorpus() async {
+        guard config.duaEnabled else { return }
+        await DailyReminderStore.shared.waitUntilLoaded()
     }
 
     private var rescheduleTask: Task<Void, Never>?
@@ -264,6 +272,7 @@ final class ExtraRemindersStore: ObservableObject {
     /// Rebuilds the queue from the current inputs (a settled user change), then lets the prayer
     /// scheduler re-fit its own requests under the changed budget.
     func reschedule() async {
+        await waitForDuaCorpus()
         await rebuild(inputs: buildInputs(), reschedulePrayers: true, reason: "change")
     }
 
@@ -538,6 +547,8 @@ enum ReminderScheduler {
             if !extraPending.isEmpty { center.removePendingNotificationRequests(withIdentifiers: extraPending) }
             return
         }
+        await extra.waitForDuaCorpus()
+        guard !Task.isCancelled else { return }
         let inputs = extra.buildInputs()
         if !extraPending.isEmpty, ExtraRemindersStore.signature(of: inputs) == extra.persistedSignature {
             #if DEBUG

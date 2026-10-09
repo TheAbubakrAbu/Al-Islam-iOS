@@ -73,7 +73,9 @@ struct NowPlayingView: View {
                         .buttonStyle(.plain)
                     } else if quranView {
                         NavigationLink {
-                            destinationView(for: ctx)
+                            LazyDestination {
+                                destinationView(for: ctx)
+                            }
                         } label: {
                             playerRow(isPlaying: nowPlaying.isPlaying)
                         }
@@ -88,10 +90,17 @@ struct NowPlayingView: View {
                     expandToggleButton
                 }
                 // The quit button takes the corner opposite the expand button, on the same alignment
-                // rule, so the pair reads as one row of card controls in both the one-row and the
-                // stacked shapes.
+                // rule, so the pair reads as one row of card controls.
+                //
+                // BIG PLAYER ONLY (Abu, 2026-10-07: "remove it from small playing view only keep it for
+                // big"). The compact bar is narrow and its title already runs close to both corners, so
+                // a second corner control there crowded the one line that matters. Stopping playback
+                // from the small bar is still a long press away ("Stop Playing" in the context menu),
+                // and expanding puts the button back.
                 .overlay(alignment: singleRow ? .leading : .topLeading) {
-                    quitButton
+                    if isExpanded {
+                        quitButton
+                    }
                 }
                 .contextMenu {
                     contextMenu(for: ctx)
@@ -511,9 +520,9 @@ struct NowPlayingView: View {
                 titleBlock(expanded: false)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Clearance for the top-LEFT quit button, the mirror of the trailing clearance the controls
-            // below carry for the expand button: without it the title ran under the xmark.
-            .padding(.leading, 30)
+            // No leading clearance: the quit button is BIG-PLAYER ONLY now (Abu, 2026-10-07), so this
+            // corner is empty on the small bar and the title takes the 30pt back. The trailing
+            // clearance below stays - the expand button is still in that corner.
 
             HStack(spacing: 10) {
                 compactTransportButtons(isPlaying: isPlaying)

@@ -283,7 +283,9 @@ struct AdhanView: View {
             // sections. With a single-color accent the two are identical, so nothing changes visually there.
             ToolbarItem(placement: .navigationBarLeading) {
                 NavigationLink {
-                    PrayerCalendarView()
+                    LazyDestination {
+                        PrayerCalendarView()
+                    }
                 } label: {
                     Image(systemName: "calendar")
                 }
@@ -379,10 +381,11 @@ struct AdhanView: View {
             glanceSheet = .homeLocation
         case let .qibla(bearing, distance):
             glanceSheet = .qibla(bearing: bearing, distance: distance)
+        // One calendar at a time: flipping to the other mid-push swaps two isPresented flags on one stack.
         case .prayerCalendar:
-            pushedCalendar = .prayerCalendar
+            if pushedCalendar == nil { pushedCalendar = .prayerCalendar }
         case .hijriCalendar:
-            pushedCalendar = .hijriCalendar
+            if pushedCalendar == nil { pushedCalendar = .hijriCalendar }
         case .prayerCalculation:
             settingsSheet = .prayerCalculation
         case .travelingMode:
@@ -1143,29 +1146,50 @@ private struct GlanceCalendarPushes: ViewModifier {
 
     func body(content: Content) -> some View {
         if #available(iOS 16.0, *) {
+            // Lazy (see `PushDestination`): built eagerly, both calendars were constructed on every
+            // pass of the Adhan tab and laid out at launch, though neither is on screen until a tap.
             content
-                .navigationDestination(isPresented: binding(.prayerCalendar)) { PrayerCalendarView() }
-                .navigationDestination(isPresented: binding(.hijriCalendar)) { CalendarView() }
+                .navigationDestination(isPresented: binding(.prayerCalendar)) { LazyDestination { PrayerCalendarView() } }
+                .navigationDestination(isPresented: binding(.hijriCalendar)) { LazyDestination { CalendarView() } }
         } else {
-            content.background(
-                ZStack {
-                    NavigationLink(isActive: binding(.prayerCalendar)) {
-                        PrayerCalendarView()
-                    } label: { EmptyView() }
-                    NavigationLink(isActive: binding(.hijriCalendar)) {
-                        CalendarView()
-                    } label: { EmptyView() }
-                }
-                .hidden()
-            )
+            content.background(GlanceCalendarLegacyLinks(pushed: $pushed))
         }
     }
 
     private func binding(_ target: GlancePush) -> Binding<Bool> {
+        GlancePush.binding(target, in: $pushed)
+    }
+}
+
+private extension GlancePush {
+    /// True while `target` is the pushed calendar; a pop clears it, only if it is still the one shown.
+    static func binding(_ target: GlancePush, in pushed: Binding<GlancePush?>) -> Binding<Bool> {
         Binding(
-            get: { pushed == target },
-            set: { active in if !active, pushed == target { pushed = nil } }
+            get: { pushed.wrappedValue == target },
+            set: { active in if !active, pushed.wrappedValue == target { pushed.wrappedValue = nil } }
         )
+    }
+}
+
+/// The iOS 15 half of `GlanceCalendarPushes`: hidden `isActive` links, since a `NavigationView` ignores
+/// `navigationDestination`. Its own view rather than a `ZStack` in the modifier's `else`, because a
+/// several-child builder in that dead branch warned once Al-Islam's floor moved to iOS 16 (2026-10-09),
+/// and marked deprecated there so the links' own iOS 16 deprecation stays inside it. Kept because
+/// Al-Adhan still ships this file on iOS 15.
+@available(iOS, deprecated: 16.0, message: "iOS 15 only; iOS 16 pushes through navigationDestination")
+private struct GlanceCalendarLegacyLinks: View {
+    @Binding var pushed: GlancePush?
+
+    var body: some View {
+        ZStack {
+            NavigationLink(isActive: GlancePush.binding(.prayerCalendar, in: $pushed)) {
+                PrayerCalendarView()
+            } label: { EmptyView() }
+            NavigationLink(isActive: GlancePush.binding(.hijriCalendar, in: $pushed)) {
+                CalendarView()
+            } label: { EmptyView() }
+        }
+        .hidden()
     }
 }
 

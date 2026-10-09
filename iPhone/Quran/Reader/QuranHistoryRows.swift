@@ -1168,9 +1168,9 @@ struct LastListenedAyahRow: View {
                     Label("Play This Ayah", systemImage: "play.circle")
                 }
 
-                Button {
-                    settings.hapticFeedback()
-                    quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, continueRecitation: true)
+                Menu {
+                    ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
+                                          quranPlayer: quranPlayer)
                 } label: {
                     Label("Play From Ayah", systemImage: "play.circle.fill")
                 }

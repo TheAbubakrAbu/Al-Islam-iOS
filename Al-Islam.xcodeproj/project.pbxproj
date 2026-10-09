@@ -114,6 +114,8 @@
 		7249B79430770CAF007F1D04 /* HadithReferenceParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77330770CAF007F1D04 /* HadithReferenceParserTests.swift */; };
 		7249B79530770CAF007F1D04 /* HostSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77430770CAF007F1D04 /* HostSmokeTests.swift */; };
 		7249B79630770CAF007F1D04 /* JuzTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77530770CAF007F1D04 /* JuzTableTests.swift */; };
+		7249B79630770CAF007F1DA1 /* QiblaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77530770CAF007F1DA1 /* QiblaTests.swift */; };
+		808EAB1EC19F59A52B6EA13F /* WordByWordWidthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1135A78BAD9A7771A9014C8 /* WordByWordWidthTests.swift */; };
 		7249B79730770CAF007F1D04 /* LexiconCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77630770CAF007F1D04 /* LexiconCacheTests.swift */; };
 		7249B79830770CAF007F1D04 /* NotificationBudgetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77730770CAF007F1D04 /* NotificationBudgetTests.swift */; };
 		7249B79930770CAF007F1D04 /* PrayerTimesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77830770CAF007F1D04 /* PrayerTimesTests.swift */; };
@@ -123,6 +125,7 @@
 		7249B79D30770CAF007F1D04 /* SearchFixTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77C30770CAF007F1D04 /* SearchFixTests.swift */; };
 		7249B79E30770CAF007F1D04 /* SearchFoldEquivalenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77D30770CAF007F1D04 /* SearchFoldEquivalenceTests.swift */; };
 		7249B79F30770CAF007F1D04 /* SearchFoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77E30770CAF007F1D04 /* SearchFoldTests.swift */; };
+		7249B7000000000000BB0001 /* IslamArticlesFoldEquivalenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B7000000000000AA0001 /* IslamArticlesFoldEquivalenceTests.swift */; };
 		7249B7A030770CAF007F1D04 /* SearchRankTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B77F30770CAF007F1D04 /* SearchRankTests.swift */; };
 		7249B7A130770CAF007F1D04 /* SpellingFoldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B78030770CAF007F1D04 /* SpellingFoldTests.swift */; };
 		7249B7A230770CAF007F1D04 /* TajweedPaintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B78130770CAF007F1D04 /* TajweedPaintTests.swift */; };
@@ -802,6 +805,8 @@
 		7249B77330770CAF007F1D04 /* HadithReferenceParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HadithReferenceParserTests.swift; sourceTree = "<group>"; };
 		7249B77430770CAF007F1D04 /* HostSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSmokeTests.swift; sourceTree = "<group>"; };
 		7249B77530770CAF007F1D04 /* JuzTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JuzTableTests.swift; sourceTree = "<group>"; };
+		7249B77530770CAF007F1DA1 /* QiblaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QiblaTests.swift; sourceTree = "<group>"; };
+		E1135A78BAD9A7771A9014C8 /* WordByWordWidthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordByWordWidthTests.swift; sourceTree = "<group>"; };
 		7249B77630770CAF007F1D04 /* LexiconCacheTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LexiconCacheTests.swift; sourceTree = "<group>"; };
 		7249B77730770CAF007F1D04 /* NotificationBudgetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationBudgetTests.swift; sourceTree = "<group>"; };
 		7249B77830770CAF007F1D04 /* PrayerTimesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTimesTests.swift; sourceTree = "<group>"; };
@@ -811,6 +816,7 @@
 		7249B77C30770CAF007F1D04 /* SearchFixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFixTests.swift; sourceTree = "<group>"; };
 		7249B77D30770CAF007F1D04 /* SearchFoldEquivalenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFoldEquivalenceTests.swift; sourceTree = "<group>"; };
 		7249B77E30770CAF007F1D04 /* SearchFoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFoldTests.swift; sourceTree = "<group>"; };
+		7249B7000000000000AA0001 /* IslamArticlesFoldEquivalenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslamArticlesFoldEquivalenceTests.swift; sourceTree = "<group>"; };
 		7249B77F30770CAF007F1D04 /* SearchRankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRankTests.swift; sourceTree = "<group>"; };
 		7249B78030770CAF007F1D04 /* SpellingFoldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpellingFoldTests.swift; sourceTree = "<group>"; };
 		7249B78130770CAF007F1D04 /* TajweedPaintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedPaintTests.swift; sourceTree = "<group>"; };
@@ -1323,6 +1329,8 @@
 				7249B77330770CAF007F1D04 /* HadithReferenceParserTests.swift */,
 				7249B77430770CAF007F1D04 /* HostSmokeTests.swift */,
 				7249B77530770CAF007F1D04 /* JuzTableTests.swift */,
+				7249B77530770CAF007F1DA1 /* QiblaTests.swift */,
+				E1135A78BAD9A7771A9014C8 /* WordByWordWidthTests.swift */,
 				7249B77630770CAF007F1D04 /* LexiconCacheTests.swift */,
 				7249B77730770CAF007F1D04 /* NotificationBudgetTests.swift */,
 				7249B77830770CAF007F1D04 /* PrayerTimesTests.swift */,
@@ -1332,6 +1340,7 @@
 				7249B77C30770CAF007F1D04 /* SearchFixTests.swift */,
 				7249B77D30770CAF007F1D04 /* SearchFoldEquivalenceTests.swift */,
 				7249B77E30770CAF007F1D04 /* SearchFoldTests.swift */,
+				7249B7000000000000AA0001 /* IslamArticlesFoldEquivalenceTests.swift */,
 				7249B77F30770CAF007F1D04 /* SearchRankTests.swift */,
 				7249B78030770CAF007F1D04 /* SpellingFoldTests.swift */,
 				7249B78130770CAF007F1D04 /* TajweedPaintTests.swift */,
@@ -3054,6 +3063,8 @@
 				7249B79430770CAF007F1D04 /* HadithReferenceParserTests.swift in Sources */,
 				7249B79530770CAF007F1D04 /* HostSmokeTests.swift in Sources */,
 				7249B79630770CAF007F1D04 /* JuzTableTests.swift in Sources */,
+				7249B79630770CAF007F1DA1 /* QiblaTests.swift in Sources */,
+				808EAB1EC19F59A52B6EA13F /* WordByWordWidthTests.swift in Sources */,
 				7249B79730770CAF007F1D04 /* LexiconCacheTests.swift in Sources */,
 				7249B79830770CAF007F1D04 /* NotificationBudgetTests.swift in Sources */,
 				7249B79930770CAF007F1D04 /* PrayerTimesTests.swift in Sources */,
@@ -3063,6 +3074,7 @@
 				7249B79D30770CAF007F1D04 /* SearchFixTests.swift in Sources */,
 				7249B79E30770CAF007F1D04 /* SearchFoldEquivalenceTests.swift in Sources */,
 				7249B79F30770CAF007F1D04 /* SearchFoldTests.swift in Sources */,
+				7249B7000000000000BB0001 /* IslamArticlesFoldEquivalenceTests.swift in Sources */,
 				7249B7A030770CAF007F1D04 /* SearchRankTests.swift in Sources */,
 				7249B7A130770CAF007F1D04 /* SpellingFoldTests.swift in Sources */,
 				7249B7A230770CAF007F1D04 /* TajweedPaintTests.swift in Sources */,
@@ -3207,7 +3219,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Al-Islam";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSStickerSharingLevel = OS;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Stickers";
@@ -3232,7 +3244,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Al-Islam";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSStickerSharingLevel = OS;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Stickers";
@@ -3260,7 +3272,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3294,7 +3306,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3370,7 +3382,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
 				INFOPLIST_PREPROCESS = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -3435,7 +3447,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = "";
 				INFOPLIST_PREPROCESS = NO;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -3479,7 +3491,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_PREPROCESS = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3527,7 +3539,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_PREPROCESS = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -3629,7 +3641,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -3651,7 +3663,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -3672,7 +3684,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -3693,7 +3705,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				MARKETING_VERSION = 4.6.5;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";

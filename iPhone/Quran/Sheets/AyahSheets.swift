@@ -751,7 +751,7 @@ struct AyahActionsSheet: View {
     private struct AyahAction: Identifiable {
         /// The two tiles that open a menu instead of firing an action: the repeat count and the comparison
         /// (qiraah vs translation) both need a choice before anything happens.
-        enum Kind { case button, repeatMenu, comparisonMenu, highlightMenu, settingsMenu }
+        enum Kind { case button, repeatMenu, playFromMenu, comparisonMenu, highlightMenu, settingsMenu }
 
         let id: String
         let title: String
@@ -876,11 +876,11 @@ struct AyahActionsSheet: View {
                 dismiss()
             }))
 
-            list.append(AyahAction(id: "playFrom", title: "Play From Ayah", systemImage: "play.circle.fill", action: {
-                settings.hapticFeedback()
-                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, continueRecitation: true)
-                dismiss()
-            }))
+            // A MENU since 2026-10-07 (Abu: "play from ayah ... it becomes a menu and then theres play
+            // til end of page, or end of surah or end of juz or end of infinitely"). The tile itself is
+            // unchanged; picking how far it carries is the choice the menu asks for.
+            list.append(AyahAction(id: "playFrom", title: "Play From Ayah", systemImage: "play.circle.fill",
+                                   kind: .playFromMenu))
 
             list.append(AyahAction(id: "repeat", title: "Repeat Ayah", systemImage: "repeat", kind: .repeatMenu))
 
@@ -1025,6 +1025,14 @@ struct AyahActionsSheet: View {
                         } label: {
                             Label("Play Custom Range", systemImage: "slider.horizontal.3")
                         }
+                    } label: {
+                        actionTileLabel(item.title, systemImage: item.systemImage)
+                    }
+
+                case .playFromMenu:
+                    Menu {
+                        ayahPlayFromMenuItems(surah: surah.id, ayah: ayah.id, settings: settings,
+                                              quranPlayer: quranPlayer) { dismiss() }
                     } label: {
                         actionTileLabel(item.title, systemImage: item.systemImage)
                     }

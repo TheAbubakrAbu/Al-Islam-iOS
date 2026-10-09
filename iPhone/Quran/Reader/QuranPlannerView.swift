@@ -977,7 +977,9 @@ struct QuranPlannerView: View {
     private func statsGrid(plan: QuranPlan, doneToday: Int) -> some View {
         let streak = QuranPlannerMath.streak(plan: plan, doneToday: doneToday)
 
-        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+        // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
+        // each self-sizing pass, which iOS 26 traps on.
+        return SummaryTileGrid(columns: 2) {
             if let end = plan.endDate {
                 let daysLeft = QuranPlannerMath.daysLeft(until: end)
                 statTile(value: "\(daysLeft)", unit: daysLeft == 1 ? "day" : "days",
