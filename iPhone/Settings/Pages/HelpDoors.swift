@@ -419,6 +419,10 @@ struct HelpDoorsSection: View {
     /// first tap. The door stays listed, and its sheet up, until the sheet is dismissed.
     @State private var openDoor: HelpDoor?
 
+    /// The folded header's trash asks first: the section leaves the tab until its settings page's
+    /// switch brings it back.
+    @State private var confirmingRemove = false
+
     private var expanded: Binding<Bool> {
         Binding(
             get: { settings.helpDoorsExpanded(area) },
@@ -427,12 +431,13 @@ struct HelpDoorsSection: View {
     }
 
     var body: some View {
-        if settings.showsHelpDoors(area) {
+        // Simple Mode keeps every tab to its essentials, and each door's answer already lives in
+        // Settings (docs/Simple Mode Guide.md), so the section steps aside on all four tabs at once.
+        if settings.showsHelpDoors(area), !settings.simpleMode {
             let listed = HelpDoorCatalog.doors(for: area, settings: settings, sunnah: sunnah)
             let doors = keepingOpenDoor(listed)
             if !doors.isEmpty {
-                Section(header: SectionPillHeader(title: "NEED A HAND?", count: doors.count,
-                                                  icon: "questionmark.circle.fill", isExpanded: expanded)) {
+                Section(header: header(count: doors.count)) {
                     // Folded, the cards are not in the List at all: no empty row, no card-shaped gap.
                     if expanded.wrappedValue {
                         // One row, 8 pt between cards like the grid tiles, and 1 pt of vertical padding so
@@ -457,6 +462,23 @@ struct HelpDoorsSection: View {
                 }
             }
         }
+    }
+
+    /// The pill header, with the trash its folded state offers (Abu, 2026-10-10: "when a tips tab is
+    /// collapsed have a button to trash remove it"). The dialog hangs off the header, the one view of
+    /// the section that is on screen while it is folded.
+    private func header(count: Int) -> some View {
+        SectionPillHeader(title: "NEED A HAND?", count: count, icon: "questionmark.circle.fill",
+                          isExpanded: expanded, onRemove: { confirmingRemove = true })
+            .confirmationDialog("Remove Need a Hand?", isPresented: $confirmingRemove, titleVisibility: .visible) {
+                Button("Remove", role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { settings.setShowsHelpDoors(area, false) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("It leaves the \(area.tabName) tab. You can bring it back in \(area.settingsPageName).")
+            }
     }
 
     /// The catalog's doors, plus the open one if its own choice just took it off the catalog.

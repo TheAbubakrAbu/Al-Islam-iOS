@@ -508,7 +508,7 @@ private struct MainTabView: View {
                     try? await Task.sleep(nanoseconds: 250_000_000)
                     guard !Task.isCancelled else { return }
                 }
-                QiraatExplorerBench.run(places: places)
+                await QiraatExplorerBench.run(places: places)
             }
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-auditSemanticPacks") else { return }

@@ -10,7 +10,7 @@ import SwiftUI
 
 /// The Quran settings' sub-screens, each a row on the Quran Settings root.
 enum SettingsQuranPage: String, CaseIterable, Hashable {
-    case recitation, readingView, arabicText, englishText, highlightThemes, sunnahReminders, favorites
+    case recitation, readingView, arabicText, englishText, testMode, highlightThemes, sunnahReminders, favorites
 
     var title: String {
         switch self {
@@ -18,6 +18,7 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
         case .readingView: return "Reading View"
         case .arabicText: return "Arabic Text"
         case .englishText: return "English Text"
+        case .testMode: return "Test Mode"
         case .highlightThemes: return "Highlight Themes"
         case .sunnahReminders: return "Sunnah Reminders"
         case .favorites: return "Favorites and Bookmarks"
@@ -30,6 +31,7 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
         case .readingView: return "book"
         case .arabicText: return "textformat.ar"
         case .englishText: return "textformat"
+        case .testMode: return "eye.slash"
         case .highlightThemes: return "paintbrush.pointed.fill"
         case .sunnahReminders: return "bell.badge"
         case .favorites: return "star"
@@ -43,6 +45,7 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
         case .readingView: return "List or pages, dividers, the Quran tab"
         case .arabicText: return "Fonts, tajweed, riwayat, word by word"
         case .englishText: return "Translations and transliteration"
+        case .testMode: return "Hide the text and recite from memory"
         case .highlightThemes: return "Color-coded passages and lit themes"
         case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
         case .favorites: return "Edit surahs, ayahs, letters, khatm"

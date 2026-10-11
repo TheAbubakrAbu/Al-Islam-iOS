@@ -260,6 +260,16 @@ enum CloudDevice {
         #endif
     }
 
+    /// The device's SF Symbol, the one the profile cards draw for this kind.
+    static var symbol: String {
+        switch kind {
+        case "iPad": return "ipad"
+        case "Mac": return "desktopcomputer"
+        case "Apple Watch": return "applewatch"
+        default: return "iphone"
+        }
+    }
+
     static var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }

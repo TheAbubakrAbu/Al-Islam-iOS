@@ -315,6 +315,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     private override init() {
         // Before any screen reads its own key: carries the legacy single Advanced switch over.
         Settings.migrateAdvancedSettings()
+        // Likewise for the grid switches: each screen keeps what it shows today.
+        Settings.migrateGridModes()
 
         let storedAccent = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         self.accentColor = storedAccent
@@ -929,7 +931,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @MainActor
     func storedContentWasReplaced(includingPreferences: Bool) {
         guard Self.isAppProcess else { return }
-        if includingPreferences { rehydrateAppGroupPreferences() }
+        if includingPreferences {
+            rehydrateAppGroupPreferences()
+            // A backup from before the grid split can bring its screens back unset.
+            Self.migrateGridModes(force: true)
+        }
         remirrorAppGroupPreferences()
 
         // The presence-checked caches (the byte-keyed memos heal themselves).
@@ -1201,13 +1207,20 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Migrations and one-time seeds.
         "appGroupMirrorsSeeded.v1", "settings.explicitlySetKeys", "settings.didSeedExplicitKeys",
         "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
-        "advancedSettingsPerScreenMigrated",
+        "advancedSettingsPerScreenMigrated", "gridModesPerScreenMigrated",
         // What was last scheduled, played or drawn here.
         "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
         "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
         "dailyWidgetsWrittenDay", "quranWidgetSnapshot", "dailyWidgetSnapshot", "mushaf.lastPageGeometry",
+        // Whether a recitation is playing on this phone right now, mirrored into the app group for the
+        // Control Center toggle (`QuranPlayer.mirrorPlaybackStateForControls`): live state, and a restore
+        // onto another phone would show that phone's toggle playing.
+        "widgetQuranIsPlaying",
         // The page reader's learned fold and find-bar band pairs: this screen's geometry, like the one above.
         "mushaf.foldTwins", "mushaf.findTwins",
+        // Whether Test Mode is on: a session on this phone, not a choice to carry to another one (a restored
+        // backup must never open the Quran with its text hidden).
+        "quranTestModeOn",
         // More of the same, found by `-cloudKeyAudit` in a live domain (2026-09-21): the source scan
         // cannot see a key declared as a `let flag` constant or passed as an argument. The locator
         // caches are LOCATION (the masjids and halal places around the home city).
@@ -2963,45 +2976,65 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     // MARK: - [Islam tab] Arabic letters & 99 Names
     
-    /// THE grid toggle, app-wide: the Quran tab's lists, the Arabic alphabet, the 99 Names, and the Islam
-    /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
-    /// historical name so existing users' Quran preference carries over. The retired per-screen
-    /// `arabicDisplayMode` / `namesDisplayMode` strings are no longer migrated - those screens default to
-    /// grid until re-toggled.)
-    ///
-    /// Grid is the DEFAULT everywhere (Abu, 2026-09-18). Only a fresh install sees it: `@AppStorage`
-    /// returns the stored value for anyone who has ever flipped a grid icon, so an existing reader who
-    /// chose lists keeps them.
+    /// The Quran tab's grid/list choice. (The key keeps its historical name so existing users' Quran
+    /// preference carries over.) Grid is the DEFAULT everywhere (Abu, 2026-09-18), and every screen
+    /// owns its own choice since 2026-10-10: this one used to be the app-wide fallback the Alphabet,
+    /// the 99 Names, the Islam tab and Settings followed until each was set, so flipping the Quran tab
+    /// (or a Scroll To Surah, which wrote it off) rearranged screens nobody had touched.
     @AppStorage("quranGridMode") var gridMode = true
     
-    /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab; the Hadith tab and the Quran tab
-    /// own theirs). -1 = "not chosen yet": falls back to the app-wide `gridMode`, so existing users keep
-    /// their current look until they flip that screen's own toggle - after which each grid icon controls
-    /// only its own screen.
+    /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab / Settings; the Hadith tab, its
+    /// chapters and the Quran tab own theirs). 1 grid, 0 list, -1 not written yet, which is grid, the
+    /// default (`migrateGridModes` writes every one of them once).
     @AppStorage("gridModeArabicRaw") var gridModeArabicRaw: Int = -1
     @AppStorage("gridModeNamesRaw") var gridModeNamesRaw: Int = -1
     @AppStorage("gridModeIslamRaw") var gridModeIslamRaw: Int = -1
-    /// The Settings tab's own grid button (2026-09-26), the same -1 fallback as its siblings.
+    /// The Settings tab's own grid button (2026-09-26), the same -1 default as its siblings.
     @AppStorage("gridModeSettingsRaw") var gridModeSettingsRaw: Int = -1
 
     var arabicGridMode: Bool {
-        get { gridModeArabicRaw == -1 ? gridMode : gridModeArabicRaw == 1 }
+        get { gridModeArabicRaw != 0 }
         set { gridModeArabicRaw = newValue ? 1 : 0 }
     }
 
     var namesGridMode: Bool {
-        get { gridModeNamesRaw == -1 ? gridMode : gridModeNamesRaw == 1 }
+        get { gridModeNamesRaw != 0 }
         set { gridModeNamesRaw = newValue ? 1 : 0 }
     }
 
     var islamGridMode: Bool {
-        get { gridModeIslamRaw == -1 ? gridMode : gridModeIslamRaw == 1 }
+        get { gridModeIslamRaw != 0 }
         set { gridModeIslamRaw = newValue ? 1 : 0 }
     }
 
     var settingsGridMode: Bool {
-        get { gridModeSettingsRaw == -1 ? gridMode : gridModeSettingsRaw == 1 }
+        get { gridModeSettingsRaw != 0 }
         set { gridModeSettingsRaw = newValue ? 1 : 0 }
+    }
+
+    /// The per-screen grid keys the Quran tab's switch used to stand in for while they were unset.
+    static let gridModeFollowerKeys = ["gridModeArabicRaw", "gridModeNamesRaw", "gridModeIslamRaw", "gridModeSettingsRaw"]
+
+    /// One-time split of the grid switches (2026-10-10), so nothing on screen changes with it: every
+    /// screen still following the Quran tab's switch is given what that switch shows, and the Hadith
+    /// chapters what they showed (the collections' stored choice, else a list).
+    ///
+    /// The values are written even where they equal the default, on purpose: a backup made after this
+    /// carries every screen's choice, so an UNSET follower in a restored backup can only come from an
+    /// older one, where unset meant "follow the Quran tab". `force` re-runs it after a restore to
+    /// give such a backup its old meaning.
+    static func migrateGridModes(force: Bool = false) {
+        let defaults = UserDefaults.standard
+        let doneKey = "gridModesPerScreenMigrated"
+        guard force || !defaults.bool(forKey: doneKey) else { return }
+        defaults.set(true, forKey: doneKey)
+        let quranShowsGrid = defaults.object(forKey: "quranGridMode") as? Bool ?? true
+        for key in gridModeFollowerKeys where (defaults.object(forKey: key) as? Int ?? -1) == -1 {
+            defaults.set(quranShowsGrid ? 1 : 0, forKey: key)
+        }
+        if defaults.object(forKey: "hadithChapterGridMode") == nil {
+            defaults.set(defaults.object(forKey: "hadithGridMode") as? Bool ?? false, forKey: "hadithChapterGridMode")
+        }
     }
     
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
@@ -3566,9 +3599,31 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     ///
     /// The rule it follows is the Advanced switch's rule exactly: hiding a control NEVER changes what
     /// the app does, only what is on screen. Every setting a hidden control drives keeps its value and
-    /// keeps applying, so turning Simple Mode on and off again lands back where it started. Nothing
-    /// that is the only way to reach something may hide behind it.
+    /// keeps applying, so turning Simple Mode on and off again lands back where it started.
+    ///
+    /// 2026-10-10 (Abu: "right now its worthless"): the only-door rule became a MOVE, not a veto.
+    /// Anything hidden from a tab stays one tap away, in that tab's ⋯ More menu or in Settings, and a
+    /// short list of details is dropped outright. The rules and the catalog of every trim are in
+    /// docs/Simple Mode Guide.md and atop iPhone/Helpers/UI/SimpleMode.swift. New installs choose it
+    /// on the splash's second step (Full preselected); existing installs are never asked.
     @AppStorage("simpleMode") var simpleMode: Bool = false
+
+    /// Test Mode (Abu, 2026-10-11): the readers hide the Quran's text until an ayah is tapped, for
+    /// reciting from memory. The switch lives in both readers' play menus and on its own settings page
+    /// (`QuranTestModeSettingsView`); the session state is `QuranTestMode`. These four are its options.
+    ///
+    /// What it hides: `QuranTestHiding` raw value. The default hides the recitation (the Arabic and its
+    /// transliteration) and leaves the translations as the cue.
+    @AppStorage("quranTestModeHides") var quranTestModeHides: String = "arabic"
+    /// What a tap shows: `QuranTestReveal` raw value, the tapped ayah alone by default.
+    @AppStorage("quranTestModeReveals") var quranTestModeReveals: String = "selected"
+    /// The ayah being recited shows itself, by the same rule a tap follows (Abu: "reveal as its recited").
+    @AppStorage("quranTestModeRevealsRecited") var quranTestModeRevealsRecited: Bool = true
+    /// Test Mode turns itself off once the last reader closes (Abu: "probably off when I leave the
+    /// reader"); off, it stays on, across launches too, until it is switched off.
+    @AppStorage("quranTestModeEndsOnLeave") var quranTestModeEndsOnLeave: Bool = true
+    /// Whether Test Mode was on, read back at launch only while `quranTestModeEndsOnLeave` is off.
+    @AppStorage("quranTestModeOn") var quranTestModeStoredOn: Bool = false
 
     /// A settings screen that keeps a second half behind its own Advanced switch. Every screen that
     /// hides nothing is simply absent from this list and carries no ADVANCED section.

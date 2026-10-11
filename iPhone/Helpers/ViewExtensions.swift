@@ -1378,7 +1378,9 @@ struct ConditionalListStyle: ViewModifier {
     // itself lives in `AccentWashedBackground` - one implementation for lists, sheets, and the watch.)
     @ViewBuilder
     private func styledContent(_ content: Content) -> some View {
-        let base = usesDefaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
+        let base = (usesDefaultView ? AnyView(content) : AnyView(content.listStyle(.plain)))
+            // The style the rows are drawn in, for a row that paints its own cell (`rowWash`).
+            .environment(\.listUsesDefaultView, usesDefaultView)
 
         if #available(iOS 16.0, *) {
             // Always hidden (not just for custom themes): the wash reproduces every theme's system
@@ -1472,6 +1474,97 @@ struct ThemedListRowBackground: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+private struct ListUsesDefaultViewKey: EnvironmentKey {
+    static let defaultValue = true
+}
+
+extension EnvironmentValues {
+    /// The style the enclosing List draws its rows in: inset-grouped cards ("Default List View" on) or
+    /// plain full-width rows. `ConditionalListStyle` sets it from the value it LATCHED, so it stays true
+    /// to the List on screen after the switch flips.
+    var listUsesDefaultView: Bool {
+        get { self[ListUsesDefaultViewKey.self] }
+        set { self[ListUsesDefaultViewKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// The wash a List row wears while it is marked: the ayah being recited, the ayah or hadith the
+    /// reader tapped or landed on, a row picked in select mode, the dhikr being counted, the current
+    /// prayer. Pass nil while the row is not marked.
+    ///
+    /// It is the row's CELL background, not a shape behind the row's content. A shape behind the
+    /// content reaches only as far as its guessed outset, and the cell's edges move with the list
+    /// style and the iOS version: on iOS 27 the ayah's wash stopped 4 pt short of its card on every
+    /// side and the hadith's 10 pt (Abu, 2026-10-09: "make sure it takes up full vertical and
+    /// horizontal"). The cell background fills the cell exactly: the whole card, rounded corners
+    /// included, with "Default List View" on, and the full width between the separators with it off.
+    ///
+    /// It stands in for the cell's own ground, so it paints that too: the reading theme's row color,
+    /// else the system color of the List style around it. An unmarked row comes out exactly as the
+    /// plain cell would. Apply it to the row itself, the view the List holds: from inside a Button's
+    /// label or a `.background` it never reaches the cell. On a row it wins over the List-wide
+    /// `themedListRowBackground()`.
+    ///
+    /// The watch keeps each row's own wash: there a cell background replaces the rounded section cards.
+    ///
+    /// `fade` is how long the wash takes to come and go.
+    func rowWash(_ wash: Color?, fade: Double = 0.15) -> some View {
+        modifier(RowWash(wash: wash, fade: fade))
+    }
+}
+
+/// See `rowWash`.
+struct RowWash: ViewModifier {
+    let wash: Color?
+    let fade: Double
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.listRowBackground(RowWashBackground(wash: wash, fade: fade))
+        #else
+        content
+        #endif
+    }
+}
+
+#if os(iOS)
+/// The cell background `rowWash` installs. A view of its own so it reads the List's environment (the
+/// theme, the latched style) and fades its own changes: a cell background is updated outside the
+/// transaction that changed it, so a `withAnimation` around the change never reaches it.
+///
+/// Hand it to `.listRowBackground` yourself only when the row must not observe what marks it: a view
+/// that observes the state and builds this one re-renders alone (see AdhkarView's `SpokenRowWash`).
+struct RowWashBackground: View {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.listUsesDefaultView) private var usesDefaultView
+
+    let wash: Color?
+    var fade: Double = 0.15
+
+    var body: some View {
+        ZStack {
+            appearance.themeRowBackground
+                ?? Color(usesDefaultView ? UIColor.secondarySystemGroupedBackground : UIColor.systemBackground)
+            wash ?? .clear
+        }
+        .animation(.easeInOut(duration: fade), value: wash)
+    }
+}
+#endif
+
+/// The tints the two readers mark a row with, shared so an ayah and a hadith marked the same way look
+/// the same.
+enum ReaderRowTint {
+    /// Tapped, landed on, or holding an open sheet.
+    static let attention = Color.secondary.opacity(0.18)
+
+    /// Being recited, or picked in select mode: the accent, stronger on the plain list's bare ground.
+    static func accent(_ color: Color, defaultView: Bool) -> Color {
+        color.opacity(defaultView ? 0.15 : 0.25)
     }
 }
 
@@ -2219,28 +2312,8 @@ extension View {
         onToggle: @escaping () -> Void
     ) -> some View {
         overlay(alignment: .topTrailing) {
-            Image(systemName: isFavorite ? "star.fill" : "star")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(isFavorite ? accent : .secondary)
-                // The tap target is a 30pt square CENTERED ON THE GLYPH - sized before the corner
-                // positioning, not after. The old shape came after the 10/11pt paddings and then
-                // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
-                // corner: on a small grid tile, tapping anywhere on the right side toggled the star
-                // instead of opening the tile.
-                .frame(width: 30, height: 30)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    Settings.shared.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        onToggle()
-                    }
-                }
-                .padding(.top, 1)
-                .padding(.trailing, 2)
-                .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
-                // A tap-gesture image: VoiceOver announced it as an image, not something to press.
-                .accessibilityRemoveTraits(.isImage)
-                .accessibilityAddTraits(.isButton)
+            GridFavoriteStar(isFavorite: isFavorite, accent: accent, accessibilityName: accessibilityName,
+                             onToggle: onToggle)
         }
     }
 
@@ -2271,27 +2344,167 @@ extension View {
     ///
     /// A filled bed rather than the tiles' ring: that is how a system sidebar marks a selected row,
     /// and a 2 pt ring around a full-width row reads as a box, not a selection.
-    func rowSelectionHighlight(_ isSelected: Bool) -> some View {
-        modifier(RowSelectionHighlight(isSelected: isSelected))
+    ///
+    /// The bed fills the selected row's whole cell in UIKit's own selection shape: the pill a sidebar
+    /// cell is drawn as (its corner radius read off the cell, 26 pt on iPadOS 26), a plain rectangle in
+    /// a plain list. Until 2026-10-09 it was a 10 pt shape 8 pt past the label, inside the system's grey
+    /// pill: a box within a box (Abu: every highlight takes up the full row). As the row's own cell
+    /// background it still survives the three things that wiped the system's selection bed: a
+    /// plain-styled Button, the reading theme's row color, and the plain list style. Apply it to the
+    /// row itself, not to a Button's label: from inside a label it cannot reach the cell.
+    ///
+    /// Only the selected row paints its cell. A sidebar draws its other cells transparent over the
+    /// section's card, with their own hover and press states; painting them all (as `rowWash` does)
+    /// lifted every row off the card. `isActive` false leaves the row untouched, for the screens that
+    /// share these rows with the iPhone's stack.
+    func rowSelectionHighlight(_ isSelected: Bool, isActive: Bool = true) -> some View {
+        modifier(RowSelectionHighlight(isSelected: isSelected, isActive: isActive))
     }
 }
 
 /// See `rowSelectionHighlight`.
 private struct RowSelectionHighlight: ViewModifier {
     @Environment(\.appearance) private var appearance
+    #if os(iOS)
+    @StateObject private var cellShape = SidebarCellShape()
+    #endif
 
     let isSelected: Bool
+    let isActive: Bool
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content.background {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(appearance.accent.opacity(isSelected ? 0.15 : 0))
-                // Out past the row's own inset, so the bed spans the full row the way a system
-                // sidebar's does instead of stopping at the label.
-                .padding(.horizontal, -8)
-                .padding(.vertical, -4)
-                // Decoration only: never between a finger and the row.
-                .allowsHitTesting(false)
+        #if os(iOS)
+        if isActive {
+            content
+                .background(SidebarCellProbe(shape: cellShape, isSelected: isSelected))
+                // An unselected row keeps the system's cell, or the theme's row color the List-wide
+                // `themedListRowBackground()` would give it (a bare nil here would wipe that).
+                .listRowBackground(isSelected
+                    ? AnyView(SidebarSelectionPill(shape: cellShape, ground: appearance.themeRowBackground,
+                                                   fill: appearance.accent.opacity(0.15)))
+                    : appearance.themeRowBackground.map { AnyView($0) })
+        } else {
+            content
+        }
+        #else
+        content
+        #endif
+    }
+}
+
+#if os(iOS)
+/// The corner radius UIKit gives a cell's selected background, read off the cell by `SidebarCellProbe`.
+@MainActor
+private final class SidebarCellShape: ObservableObject {
+    @Published var cornerRadius: CGFloat = 0
+}
+
+/// The selected row's cell: the accent in the shape UIKit would draw its own selection, over the row's
+/// ground (clear in a sidebar, where the section's card shows through).
+private struct SidebarSelectionPill: View {
+    @ObservedObject var shape: SidebarCellShape
+    let ground: Color?
+    let fill: Color
+
+    var body: some View {
+        ZStack {
+            ground ?? Color.clear
+            RoundedRectangle(cornerRadius: shape.cornerRadius, style: .continuous)
+                .fill(fill)
+        }
+    }
+}
+
+/// Reaches the List cell the row sits in, for the two things SwiftUI does not expose: the corner radius
+/// UIKit draws a selected cell with, and the cell's focus ring.
+///
+/// UIKit rings a focused cell whose background it does not draw itself, and the selected row's
+/// background is the pill. In these sidebars the selection follows keyboard focus, so the pill already
+/// shows where focus is and the ring only doubled it as a hard square around the pill (measured on the
+/// iPadOS 26 simulator, which has a hardware keyboard, as every Mac does). `.focusEffectDisabled()` does
+/// not reach the cell's ring; the cell's own `focusEffect` does.
+private struct SidebarCellProbe: UIViewRepresentable {
+    let shape: SidebarCellShape
+    let isSelected: Bool
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ view: ProbeView, context: Context) {
+        view.shape = shape
+        view.isSelected = isSelected
+        view.apply()
+    }
+
+    final class ProbeView: UIView {
+        weak var shape: SidebarCellShape?
+        var isSelected = false
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            apply()
+        }
+
+        func apply() {
+            guard window != nil else { return }
+            var ancestor = superview
+            while let view = ancestor, !(view is UICollectionViewListCell) {
+                ancestor = view.superview
+            }
+            guard let cell = ancestor as? UICollectionViewListCell else { return }
+            if isSelected { cell.focusEffect = nil }
+            var state = cell.configurationState
+            state.isSelected = true
+            let radius = cell.defaultBackgroundConfiguration().updated(for: state).cornerRadius
+            if let shape, shape.cornerRadius != radius {
+                // Not inside SwiftUI's update of the row.
+                DispatchQueue.main.async { shape.cornerRadius = radius }
+            }
+        }
+    }
+}
+#endif
+
+/// The corner star of `gridFavoriteStar`. A view of its own so it can watch Simple Mode itself: in
+/// Simple Mode a tile that is not a favorite draws no star (docs/Simple Mode Guide.md; every tile's
+/// press-and-hold menu still offers Favorite), and an Equatable tile around it may not redraw when the
+/// switch flips, where this view does.
+private struct GridFavoriteStar: View {
+    let isFavorite: Bool
+    let accent: Color
+    let accessibilityName: String
+    let onToggle: () -> Void
+
+    @AppStorage("simpleMode") private var simpleMode = false
+
+    var body: some View {
+        if isFavorite || !simpleMode {
+            Image(systemName: isFavorite ? "star.fill" : "star")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(isFavorite ? accent : .secondary)
+                // The tap target is a 30pt square CENTERED ON THE GLYPH - sized before the corner
+                // positioning, not after. The old shape came after the 10/11pt paddings and then
+                // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
+                // corner: on a small grid tile, tapping anywhere on the right side toggled the star
+                // instead of opening the tile.
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        onToggle()
+                    }
+                }
+                .padding(.top, 1)
+                .padding(.trailing, 2)
+                .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
+                // A tap-gesture image: VoiceOver announced it as an image, not something to press.
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
         }
     }
 }
@@ -2451,6 +2664,15 @@ struct SectionPillHeader: View {
     /// A magnifier that starts a search held to this section's items (the Quran bookmarks and
     /// favorites). Sits between the count and the shuffle.
     var onSearch: (() -> Void)? = nil
+    /// A trash that puts the whole section away (NEED A HAND?), drawn only while the section is
+    /// folded: the arrow folds it, the trash removes it (Abu, 2026-10-10: "when a tips tab is
+    /// collapsed have a button to trash remove it"). The owner confirms before removing anything.
+    var onRemove: (() -> Void)? = nil
+
+    /// Simple Mode keeps a header to its title and its arrow: the count, search and shuffle step aside
+    /// (docs/Simple Mode Guide.md, rule 3). The one key is observed here rather than read off
+    /// `Settings.shared`, so a header redraws when the switch flips without observing every setting.
+    @AppStorage("simpleMode") private var simpleMode = false
 
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
@@ -2502,12 +2724,14 @@ struct SectionPillHeader: View {
     @ViewBuilder
     private var controls: some View {
         // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
-        // of the cluster (it is information, not a control), then the buttons: search, shuffle, then
-        // the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
-        // must follow this order too.
-        CountPill(count: count, overflow: overflow)
+        // of the cluster (it is information, not a control), then the buttons: search, shuffle, trash,
+        // then the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its
+        // cluster must follow this order too. Simple Mode drops the count, search and shuffle.
+        if !simpleMode {
+            CountPill(count: count, overflow: overflow)
+        }
 
-        if let onSearch {
+        if let onSearch, !simpleMode {
             Image(systemName: "magnifyingglass")
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
@@ -2522,7 +2746,7 @@ struct SectionPillHeader: View {
                 .accessibilityAddTraits(.isButton)
         }
 
-        if let onShuffle {
+        if let onShuffle, !simpleMode {
             // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
             // and as wide as it is tall.
             Image(systemName: "shuffle")
@@ -2536,6 +2760,23 @@ struct SectionPillHeader: View {
                 }
                 .accessibilityLabel("Random \(title.lowercased())")
                 // Tap-gesture images: without these VoiceOver said "image" and offered no action.
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
+        }
+
+        // Only while folded: an open section's cards are still in use, and the arrow is the way to put
+        // them out of sight. The shuffle's circle, so the cluster reads as one family.
+        if let onRemove, isExpanded?.wrappedValue == false {
+            Image(systemName: "trash")
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(appearance.accent)
+                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .conditionalGlassEffect(circle: true)
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    onRemove()
+                }
+                .accessibilityLabel("Remove \(title.lowercased())")
                 .accessibilityRemoveTraits(.isImage)
                 .accessibilityAddTraits(.isButton)
         }

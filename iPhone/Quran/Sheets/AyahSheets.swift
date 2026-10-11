@@ -1036,6 +1036,17 @@ struct AyahActionsSheet: View {
                     } label: {
                         actionTileLabel(item.title, systemImage: item.systemImage)
                     }
+                    // Page first, top to bottom, wherever the tile sits: a tile low in the sheet opens
+                    // its menu upward, and the automatic order would put Page at the bottom.
+                    .fixedMenuOrder()
+
+                case .comparisonMenu where !(settings.showQiraahDetails && settings.isHafsDisplay):
+                    // One choice (no riwayah details, or a non-Hafs display): the tile opens it directly
+                    // instead of a menu holding a single row.
+                    actionTile(item.title, systemImage: item.systemImage) {
+                        settings.hapticFeedback()
+                        onRequestSheet?(settings.isHafsDisplay ? .translations : .qiraah)
+                    }
 
                 case .comparisonMenu:
                     Menu {

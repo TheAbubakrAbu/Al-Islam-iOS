@@ -33,10 +33,10 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE_DIRS = ["iPhone", "Apple Watch", "Widget", "Complication"]
-MANIFEST = os.path.join(ROOT, "iPhone", "Settings", "CloudManifest.swift")
-SETTINGS = os.path.join(ROOT, "iPhone", "Settings", "Settings.swift")
-WATCH = os.path.join(ROOT, "iPhone", "Settings", "WatchConnectivity.swift")
-CATEGORIES = os.path.join(ROOT, "iPhone", "Settings", "ContentCategories.swift")
+MANIFEST = os.path.join(ROOT, "iPhone", "Settings", "Cloud", "CloudManifest.swift")
+SETTINGS = os.path.join(ROOT, "iPhone", "Settings", "Model", "Settings.swift")
+WATCH = os.path.join(ROOT, "iPhone", "Settings", "System", "WatchConnectivity.swift")
+CATEGORIES = os.path.join(ROOT, "iPhone", "Settings", "Model", "ContentCategories.swift")
 
 APPSTORAGE = re.compile(r'@AppStorage\(\s*"([^"\\]+)"')
 FORKEY = re.compile(r'forKey:\s*"([^"\\]+)"')

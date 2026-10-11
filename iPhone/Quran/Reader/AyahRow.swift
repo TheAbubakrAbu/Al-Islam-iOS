@@ -134,6 +134,39 @@ struct AyahRow: View, Equatable {
     var themeWash: ThemeWashColor? = nil
 
     #if os(iOS)
+    /// What Test Mode hides in this row, nil when it shows (see `QuranTestMode`). An input compared in
+    /// `==`, like `isPlayingThis`: the row never reads the test's state itself.
+    var testVeil: QuranTestVeil? = nil
+    #endif
+
+    /// Test Mode hides the recitation here: the Arabic (in whichever renderer draws it), the muqattaat
+    /// pronunciation and the transliteration.
+    private var testHidesRecitation: Bool {
+        #if os(iOS)
+        return testVeil != nil
+        #else
+        return false
+        #endif
+    }
+
+    /// Test Mode hides the translations here too.
+    private var testHidesEverything: Bool {
+        #if os(iOS)
+        return testVeil == .everything
+        #else
+        return false
+        #endif
+    }
+
+    private func sameTestVeil(as other: Self) -> Bool {
+        #if os(iOS)
+        return testVeil == other.testVeil
+        #else
+        return true
+        #endif
+    }
+
+    #if os(iOS)
     /// The host presents this row's sheets (Phase 5 step 6): twelve `.sheet`/`.confirmationDialog`
     /// modifiers per row were ~100-150 presentation hosts churned per screenful of scrolling. The
     /// kind of the sheet currently up for THIS ayah comes back as `openSheet`, so the row keeps its
@@ -188,7 +221,8 @@ struct AyahRow: View, Equatable {
         lhs.isSelecting == rhs.isSelecting &&
         lhs.isSelected == rhs.isSelected &&
         lhs.searchText == rhs.searchText &&
-        lhs.sameOpenSheet(as: rhs)
+        lhs.sameOpenSheet(as: rhs) &&
+        lhs.sameTestVeil(as: rhs)
     }
 
     nonisolated(unsafe) private static let arabicDisplayCache: NSCache<NSString, NSString> = {
@@ -285,6 +319,11 @@ struct AyahRow: View, Equatable {
         // the same reason (`RiwayahTextCacheMark`).
         let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(choices.hideDots ? 1 : 0)|\(choices.beginner ? 1 : 0)|\(qiraahKey)"
             + RiwayahTextCacheMark.mark(for: qiraah)
+        // The key names the ayah by its surah and number alone, so it is only right while `ayah` really
+        // is that surah's ayah. A row handed another surah's ayah files those words under this number for
+        // as long as the entry lives: the Previous / Next defect (see `SurahView.listAyahs`).
+        assert(surah.ayahs.first(where: { $0.id == ayah.id }) == ayah,
+               "AyahRow \(surah.id):\(ayah.id) was handed another surah's ayah")
 
         if let cached = Self.arabicDisplayCache.object(forKey: key as NSString) {
             return cached as String
@@ -738,12 +777,16 @@ struct AyahRow: View, Equatable {
         ].joined(separator: "|")
     }
 
+    #if os(watchOS)
+    /// How far the watch's wash reaches above and below the text. The phone paints the whole cell
+    /// instead (`rowWash`).
     private var ayahHighlightBackgroundVerticalPadding: CGFloat {
-        if #available(iOS 26.0, watchOS 26.0, *) {
+        if #available(watchOS 26.0, *) {
             return -11
         }
         return -2
     }
+    #endif
 
     /// The gutter the reading column keeps on each side, ON TOP of the List row's own inset (Abu,
     /// 2026-09-22: "why is there no natural horizontal padding for list mode for ayahs"). Measured
@@ -756,17 +799,55 @@ struct AyahRow: View, Equatable {
     /// is already ~20pt - so the two stacked and the text column lost ~32pt a side, about 16% of a
     /// 402pt screen, on the axis justified Arabic needs most (Abu, 2026-10-05: "why is there
     /// horizontal padding bruv"). The system inset IS the natural padding the original request asked
-    /// for; this constant only ever added a second one on top of it. The washes keep their own
-    /// `washOutset`, so a highlighted ayah still reads as a band rather than a strip.
+    /// for; this constant only ever added a second one on top of it. A marked ayah's wash is the
+    /// whole cell (`rowWash`), so it never depended on this.
     ///
-    /// Kept as a named constant rather than deleted: the select-mode checkmark and the wash outset
-    /// are both positioned relative to it, and a future idiom (a wider phone, a different list style)
-    /// may want it back. The watch keeps 0 for its own reason - 12pt of a 40mm screen is a line of text.
+    /// Kept as a named constant rather than deleted: the select-mode checkmark is positioned relative
+    /// to it, and a future idiom (a wider phone, a different list style) may want it back. The watch
+    /// keeps 0 for its own reason: 12pt of a 40mm screen is a line of text.
     private static let readingGutter: CGFloat = 0
 
-    /// How far each wash expands past the text. It stays 12pt WIDER than the text column - that is
-    /// what makes a highlighted ayah read as a band - but it is no longer wider than the row.
+    #if os(watchOS)
+    /// How far the watch's wash reaches past the text on each side, so a marked ayah reads as a band.
     private static let washOutset: CGFloat = 12
+    #endif
+
+    /// The one wash a row wears, the strongest claim first.
+    ///
+    /// Being recited, or picked in select mode, is the accent. Tapped, landed on, or holding one of its
+    /// sheets open (lit until the sheet is gone) is the grey attention tint; select mode shows only
+    /// the selection. Then the highlighter's color: it is the quietest of the four tints on purpose.
+    /// Recitation, selection and attention are momentary, what the app is doing right now, while the
+    /// highlight is a standing mark the user left and must not compete with them for the same row: it
+    /// shows only when nothing momentary is on the ayah, and comes back the moment the reciter moves
+    /// on. Last, a lit theme's wash.
+    ///
+    /// Static so the reader can lay it over the row's whole cell (`rowWash`) from OUTSIDE `.equatable()`:
+    /// a cell background set inside this body never reached the List (measured 2026-10-09: every ayah
+    /// card stayed its plain color).
+    static func wash(
+        isPlaying: Bool,
+        isSelecting: Bool,
+        isSelected: Bool,
+        isMarked: Bool,
+        highlight: AyahHighlightColor?,
+        themeWash: ThemeWashColor?,
+        colorScheme: ColorScheme,
+        accent: Color,
+        defaultView: Bool,
+        themeGround: Color? = nil
+    ) -> Color? {
+        if isPlaying || (isSelecting && isSelected) {
+            return ReaderRowTint.accent(accent, defaultView: defaultView)
+        }
+        if !isSelecting && isMarked {
+            return ReaderRowTint.attention
+        }
+        if let highlight {
+            return highlight.tint(colorScheme)
+        }
+        return themeWash?.tint(colorScheme, on: themeGround)
+    }
 
     var body: some View {
         let _ = RenderCounter.hit("AyahRow")
@@ -830,42 +911,24 @@ struct AyahRow: View, Equatable {
         let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
         let fontSizeEN = settings.englishFontSize
 
-        // `isPlayingThis` is the input property - see its declaration.
-        // The persistent attention tint (grey), separate from the accent playing tint: shown when this ayah is
-        // the shared highlight OR while one of its action sheets is open (keep the selection lit until the
-        // sheet is gone). The accent playing tint always wins when this ayah is being recited. In multi-select
-        // mode, a SELECTED row gets the accent tint instead.
-        let showSelectionTint = isSelecting && isSelected
-        let showAttentionTint = !isPlayingThis && !isSelecting && (isHighlighted || anyAyahSheetOpen)
-
-        // The highlighter's wash. It is the quietest of the four tints on purpose: the recitation tint,
-        // the selection tint, and the attention tint are all momentary - what the app is doing right now -
-        // while the highlight is a standing mark the user left, and it must not compete with them for the
-        // same row. So a highlighted ayah shows its color only when nothing momentary is on it, and the
-        // color comes back the moment the reciter moves on.
-        let highlightWash = ayahHighlight
+        // The row's wash (see `wash(...)`). The phone paints it as the row's whole cell from the reader
+        // (`SurahView.ayahRowGroup`); the watch draws it here, behind the text.
+        #if os(watchOS)
+        let wash = Self.wash(isPlaying: isPlayingThis, isSelecting: isSelecting, isSelected: isSelected,
+                             isMarked: isHighlighted || anyAyahSheetOpen, highlight: ayahHighlight,
+                             themeWash: themeWash, colorScheme: colorScheme,
+                             accent: settings.accentColor.color, defaultView: settings.defaultView)
+        #endif
 
         ZStack {
-            if isPlayingThis || showAttentionTint || showSelectionTint {
+            #if os(watchOS)
+            if let wash {
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(
-                        isPlayingThis || showSelectionTint
-                        ? settings.accentColor.color.opacity(settings.defaultView ? 0.15 : 0.25)
-                        : Color.secondary.opacity(0.18)
-                    )
-                    .padding(.horizontal, -Self.washOutset)
-                    .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
-            } else if let highlightWash {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(highlightWash.tint(colorScheme))
-                    .padding(.horizontal, -Self.washOutset)
-                    .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
-            } else if let themeWash {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(themeWash.tint(colorScheme))
+                    .fill(wash)
                     .padding(.horizontal, -Self.washOutset)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             }
+            #endif
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
@@ -941,7 +1004,9 @@ struct AyahRow: View, Equatable {
                             .frame(width: 28, height: 28)
                     }
 
-                    if settings.isHafsDisplay {
+                    // Simple Mode folds the play menu into the one ayah menu, whose first action is
+                    // Play This Ayah (docs/Simple Mode Guide.md).
+                    if settings.isHafsDisplay, !settings.simpleMode {
                         Menu {
                             Text("Ayah Playback")
                                 .foregroundStyle(.secondary)
@@ -965,7 +1030,13 @@ struct AyahRow: View, Equatable {
                         // With playback: the play button beside it is the shortcut, but this menu is
                         // the same list every other ayah menu shows (user rule 2026-09-05: the Quran
                         // tab's long press, this menu and the page's sheet offer the same actions).
-                        menuBlock(isBookmarked: isBookmarked, includePlaybackOptions: true)
+                        // Simple Mode is the one exception: five actions and More Actions, which
+                        // opens the long-press sheet with all of them (Abu, 2026-10-10).
+                        if settings.simpleMode {
+                            simpleMenuBlock(isBookmarked: isBookmarked)
+                        } else {
+                            menuBlock(isBookmarked: isBookmarked, includePlaybackOptions: true)
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                             .resizable()
@@ -975,6 +1046,8 @@ struct AyahRow: View, Equatable {
                             .conditionalGlassEffect()
                             .frame(width: 28, height: 28)
                     }
+                    .accessibilityLabel("Ayah Actions")
+                    .accessibilityIdentifier("ayahActionsMenu")
                     #else
                     HStack(spacing: 8) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
@@ -1030,9 +1103,8 @@ struct AyahRow: View, Equatable {
             }
         }
         .animation(.easeInOut(duration: 0.15), value: isSelecting)
-        // The reading gutter, OUTERMOST: the washes inside the ZStack still measure from the text
-        // column and keep their outset, and the select-mode checkmark stays inside the margin
-        // instead of sitting flush against the screen edge. The whole row moves in by this much.
+        // The reading gutter, OUTERMOST: the select-mode checkmark stays inside the margin instead of
+        // sitting flush against the screen edge. The whole row moves in by this much.
         .padding(.horizontal, Self.readingGutter)
         #if os(iOS)
         // Report this row's sheet state to the shared tracker so the reader's follow-the-recitation
@@ -1289,8 +1361,11 @@ struct AyahRow: View, Equatable {
             }
 
             muqattaatPronunciationBlock()
+                .quranTestVeiledIfAvailable(testHidesRecitation)
 
-
+            // One unit for Test Mode, whichever renderer draws the Arabic. A `Group`, so the modifier
+            // reaches each view inside and the stack's spacing is exactly what it was.
+            Group {
             if showArabic {
                 let beginner = choices.beginner
                 let arabicSource = arabicDisplayText()
@@ -1332,7 +1407,8 @@ struct AyahRow: View, Equatable {
                 let searchActive = hasTerm || !searchRanges.isEmpty
                 // A word opens its card only when nothing else owns the tap: while a term is typed the
                 // row's tap scrolls to (or clears) the match, and in multi-select it toggles the row.
-                let wordTapsAllowed = !isSelecting && !hasTerm
+                // Nor while Test Mode hides the ayah: the tap is the reveal, and a card would be the answer.
+                let wordTapsAllowed = !isSelecting && !hasTerm && !testHidesRecitation
                 // On a matched row the accent spans win over tajweed (the snippet's priority).
                 let wordPreStyled = searchActive ? nil : preStyled
                 if let glosses = wordByWordGlosses(displayText: arabicSource, beginner: beginner) {
@@ -1484,6 +1560,8 @@ struct AyahRow: View, Equatable {
                               extraRanges: crossArabic)
                 #endif
             }
+            }
+            .quranTestVeiledIfAvailable(testHidesRecitation)
 
             if showTranslit {
                 let txt = prefixOnTranslit ? "\(ayah.id). \(ayah.textTransliteration)" : ayah.textTransliteration
@@ -1499,6 +1577,7 @@ struct AyahRow: View, Equatable {
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(nil)
+                .quranTestVeiledIfAvailable(testHidesRecitation)
             }
 
             if showEnglishSaheeh {
@@ -1515,13 +1594,17 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedSaheeh,
                         extraHighlightRanges: Self.offsetSpans(crossSaheeh, by: (prefix as NSString).length)
                     )
-                    Text("Saheeh International")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    // The translation's name tells two apart; with one on screen, Simple Mode drops it.
+                    if !settings.simpleMode || showEnglishMustafa {
+                        Text("Saheeh International")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(nil)
+                .quranTestVeiledIfAvailable(testHidesEverything)
             }
 
             if showEnglishMustafa {
@@ -1538,13 +1621,16 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedMustafa,
                         extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
-                    Text("Clear Quran (Mustafa Khattab)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    if !settings.simpleMode || showEnglishSaheeh {
+                        Text("Clear Quran (Mustafa Khattab)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineLimit(nil)
+                .quranTestVeiledIfAvailable(testHidesEverything)
             }
         }
         .lineLimit(nil)
@@ -1718,6 +1804,86 @@ struct AyahRow: View, Equatable {
     }
     #endif
 
+    /// Simple Mode's ayah menu (docs/Simple Mode Guide.md): the five actions a reader reaches for, then
+    /// More Actions, which opens the long-press sheet holding every action there is. Each item is the
+    /// full menu's own action, so the two can never drift in what a tap does.
+    @ViewBuilder
+    private func simpleMenuBlock(isBookmarked: Bool) -> some View {
+        #if os(iOS)
+        let canShowTafsir: Bool = {
+            if let override = comparisonQiraahOverride {
+                return override.isEmpty || override == "Hafs"
+            }
+            return settings.isHafsDisplay
+        }()
+
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Button {
+                settings.hapticFeedback()
+                withAnimation {
+                    scrollDown = ayah.id
+                }
+            } label: {
+                Label("Scroll Down to Ayah", systemImage: "arrow.down.to.line")
+            }
+
+            Divider()
+        }
+
+        // Ayah audio is Hafs-numbered, so playback follows the play menu's own gate.
+        if settings.isHafsDisplay {
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
+            } label: {
+                Label("Play This Ayah", systemImage: "play.circle")
+            }
+        }
+
+        Button(role: isBookmarked ? .destructive : nil) {
+            settings.hapticFeedback()
+            toggleBookmarkOrConfirm()
+        } label: {
+            Label(
+                isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
+                systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
+            )
+        }
+
+        if canShowTafsir {
+            Button {
+                settings.hapticFeedback()
+                requestSheet(.secondary(.tafsir))
+            } label: {
+                Label("See Tafsir", systemImage: "text.book.closed")
+            }
+        }
+
+        Button {
+            settings.hapticFeedback()
+            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id, settings: settings, quranData: quranData)
+        } label: {
+            Label("Copy Ayah", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            requestSheet(.secondary(.share))
+        } label: {
+            Label("Share Ayah", systemImage: "square.and.arrow.up")
+        }
+
+        Divider()
+
+        Button {
+            settings.hapticFeedback()
+            requestSheet(.actions)
+        } label: {
+            Label("More Actions\u{2026}", systemImage: "ellipsis.circle")
+        }
+        #endif
+    }
+
     @ViewBuilder
     private func menuBlock(isBookmarked: Bool, includePlaybackOptions: Bool) -> some View {
         #if os(iOS)
@@ -1880,6 +2046,18 @@ struct AyahRow: View, Equatable {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
         .padding(.bottom, 2)
+        #endif
+    }
+}
+
+private extension View {
+    /// Test Mode's veil (`quranTestVeiled`) on iOS. The watch has no Test Mode and draws the line as is.
+    @ViewBuilder
+    func quranTestVeiledIfAvailable(_ hidden: Bool) -> some View {
+        #if os(iOS)
+        quranTestVeiled(hidden)
+        #else
+        self
         #endif
     }
 }

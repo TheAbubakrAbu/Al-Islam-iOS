@@ -1736,15 +1736,19 @@ enum LaunchClock {
     }
     private static var marked: Set<String> = []
     private static var stallObserver: CFRunLoopObserver?
+    /// "-stallWatch": the same watch for the whole run, not only the launch, so a screen's taps can be
+    /// timed (the Qiraat Explorer's steps, 2026-10-09). A stall "after beforeWaiting" is the run loop
+    /// asleep with nothing to do; any other activity is the main thread busy.
+    static let watchesWholeRun = ProcessInfo.processInfo.arguments.contains("-stallWatch")
     /// Logs every main run-loop iteration over 40 ms in the first 10 s: "stall <from>-<to> ms".
     /// With the marks, says what held the main thread between two of them.
     static func installStallWatch() {
-        guard enabled, stallObserver == nil else { return }
+        guard enabled || watchesWholeRun, stallObserver == nil else { return }
         var last = 0
         var lastActivity = ""
         stallObserver = CFRunLoopObserverCreateWithHandler(nil, CFRunLoopActivity.allActivities.rawValue, true, 0) { _, activity in
             let now = elapsedMS()
-            guard now < 10_000 else { return }
+            guard now < 10_000 || watchesWholeRun else { return }
             if last > 0, now - last > 40 {
                 NSLog("LAUNCH TIMING stall %d-%d ms (%d) after %@", last, now, now - last, lastActivity)
             }

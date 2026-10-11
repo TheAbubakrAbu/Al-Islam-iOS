@@ -799,18 +799,18 @@ struct SettingsView: View {
         //      which REPLACES the cell background - including the bed - on Sepia, Gray and Custom.
         //   3. "Default List View" off makes every list `.listStyle(.plain)`, which draws no bed at
         //      all, and the style is latched at first appear, so it changes only after a relaunch.
-        // Drawing it inside the row's own content survives all three.
+        // The row's own cell background (`rowSelectionHighlight`) survives all three.
         Button {
             settings.hapticFeedback()
             selectSplitDestination(value)
         } label: {
             toolLabel(title, systemImage: systemImage, subtitle: subtitle, chipTint: tint, chipSecondaryTint: secondaryTint)
-                .rowSelectionHighlight(selectedDestination == value)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .tag(value)
         .tint(settings.accentColor.color)
+        .rowSelectionHighlight(selectedDestination == value)
     }
 
     /// The four settings destinations as ONE card - the old one-row-per-section layout spent most

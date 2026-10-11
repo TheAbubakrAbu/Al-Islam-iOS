@@ -328,10 +328,14 @@ struct CreditsView: View {
         }
     }
 
-    /// The landing tint: the accent, faint, on the row a search asked for.
-    private func landingBackground(_ rowID: String) -> Color? {
+    /// The landing tint: the accent, faint, over the whole row a search asked for (`rowWash`). It
+    /// replaced the row's ground until 2026-10-09, so on a card it read darker than the cards around it.
+    private func landingWash(_ rowID: String) -> Color? {
         highlighted == rowID ? settings.accentColor.color.opacity(0.16) : nil
     }
+
+    /// The landing tint comes and goes slowly: it is a pointer, not a state.
+    private static let landingFade = 0.45
 
     // MARK: - Search
 
@@ -549,7 +553,7 @@ struct CreditsView: View {
                 ForEach(CreditItem.inGroup(group)) { item in
                     creditLink(item)
                         .id(item.rowID)
-                        .listRowBackground(landingBackground(item.rowID))
+                        .rowWash(landingWash(item.rowID), fade: Self.landingFade)
                 }
                 .foregroundColor(settings.accentColor.color)
                 .font(.body)
@@ -562,7 +566,7 @@ struct CreditsView: View {
             ForEach(appsByAbubakr) { app in
                 AppLinkRow(imageName: app.imageName, title: app.title, url: app.url)
                     .id(Self.appRowID(app))
-                    .listRowBackground(landingBackground(Self.appRowID(app)))
+                    .rowWash(landingWash(Self.appRowID(app)), fade: Self.landingFade)
             }
         }
     }
@@ -572,7 +576,7 @@ struct CreditsView: View {
             ForEach(botsByAbubakr) { bot in
                 AppLinkRow(imageName: bot.imageName, title: bot.title, url: bot.url)
                     .id(Self.botRowID(bot))
-                    .listRowBackground(landingBackground(Self.botRowID(bot)))
+                    .rowWash(landingWash(Self.botRowID(bot)), fade: Self.landingFade)
             }
         }
     }

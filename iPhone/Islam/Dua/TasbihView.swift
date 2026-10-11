@@ -441,14 +441,11 @@ struct TasbihView: View {
     private var freeDhikrSection: some View {
         Section(header: Text("OTHER DHIKR"), footer: Text("For any other authentic dhikr you are reciting. The count is kept between visits and has no limit.")) {
             ZStack {
+                #if os(watchOS)
                 RoundedRectangle(cornerRadius: 24)
                     .fill(isFreeDhikrSelected ? settings.accentColor.color.opacity(0.15) : .clear)
-                    #if os(iOS)
-                    .padding(.horizontal, -12)
-                    .padding(.vertical, tasbihSelectionBackgroundVerticalPadding)
-                    #else
                     .padding(-7)
-                    #endif
+                #endif
 
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
@@ -477,6 +474,8 @@ struct TasbihView: View {
                     selectedDhikrIndex = TasbihCounters.freeIndex
                 }
             }
+            // The dhikr being counted fills its whole row (see `rowWash`).
+            .rowWash(isFreeDhikrSelected ? settings.accentColor.color.opacity(0.15) : nil)
         }
     }
 
@@ -529,14 +528,11 @@ struct TasbihView: View {
 
     private func tasbihSelectionButton(for index: Int) -> some View {
         ZStack {
+            #if os(watchOS)
             RoundedRectangle(cornerRadius: 24)
                 .fill(selectedDhikrIndex == index ? settings.accentColor.color.opacity(0.15) : .clear)
-                #if os(iOS)
-                .padding(.horizontal, -12)
-                .padding(.vertical, tasbihSelectionBackgroundVerticalPadding)
-                #else
                 .padding(-7)
-                #endif
+            #endif
 
             TasbihRow(tasbih: tasbihData[index], counterIndex: index)
         }
@@ -553,16 +549,9 @@ struct TasbihView: View {
         #if os(watchOS)
         .padding(.vertical, 12)
         #endif
+        // The dhikr being counted fills its whole row (see `rowWash`).
+        .rowWash(selectedDhikrIndex == index ? settings.accentColor.color.opacity(0.15) : nil)
     }
-
-    #if os(iOS)
-    private var tasbihSelectionBackgroundVerticalPadding: CGFloat {
-        if #available(iOS 26.0, *) {
-            return -11
-        }
-        return -2
-    }
-    #endif
 
     private var activeTasbihSection: some View {
         return Section {

@@ -50,6 +50,9 @@ private struct ArabicLineHeightKey: PreferenceKey {
 /// piece that tracks the speech queue: when AdhkarRow itself observed `ArabicSpeech`, every queue
 /// advance during Listen All re-ran every row's body (re-folding all its highlight fields). Now a
 /// queue advance re-renders just these washes and the Listen buttons.
+///
+/// On the phone it is the row's whole cell, the `rowWash` fill (Abu, 2026-10-09: every highlight
+/// takes up the full row); the watch keeps its band behind the text.
 private struct SpokenRowWash: View {
     @ObservedObject private var speech = ArabicSpeech.shared
     let text: String
@@ -57,11 +60,39 @@ private struct SpokenRowWash: View {
 
     var body: some View {
         let active = speech.currentText == text
+        #if os(iOS)
+        RowWashBackground(wash: active ? color.opacity(0.12) : nil, fade: 0.25)
+        #else
         RoundedRectangle(cornerRadius: 12)
             .fill(active ? color.opacity(0.12) : .clear)
             .padding(.horizontal, -10)
             .padding(.vertical, -2)
             .animation(.easeInOut(duration: 0.25), value: active)
+        #endif
+    }
+}
+
+extension View {
+    /// The phone's spoken-row wash: the row being read aloud wears the accent over its whole cell
+    /// (`SpokenRowWash`). Apply it where the List holds the row, after `.equatable()`: from inside
+    /// `AdhkarRow`'s body a cell background never reaches the List.
+    func spokenRowWash(_ arabicText: String) -> some View {
+        modifier(SpokenRowWashModifier(text: arabicText))
+    }
+}
+
+/// See `spokenRowWash`.
+private struct SpokenRowWashModifier: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let text: String
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.listRowBackground(SpokenRowWash(text: text, color: appearance.accent))
+        #else
+        content
+        #endif
     }
 }
 
@@ -274,22 +305,32 @@ struct AdhkarRow: View, Equatable {
             .fixedSize(horizontal: false, vertical: true)
 
             // The bottom row: the citation sits leading, the Listen button trailing - one row, not two.
-            if source != nil || (speechEnabled && ArabicSpeech.shared.isAvailable) {
+            // The button waits on the voice through `ArabicVoiceGate`: this row does not observe the
+            // speech engine, and the voice resolves after the first rows draw, so a plain check here
+            // left those rows with no Listen button. Without a citation, the gate holds the whole row,
+            // so a device with no Arabic voice still spends no space on it.
+            if let source {
                 HStack(spacing: 8) {
-                    if let source {
-                        HighlightedSnippet(
-                            source: source,
-                            term: searchQuery,
-                            font: .caption.weight(.semibold),
-                            accent: appearance.accent,
-                            fg: .secondary,
-                            guaranteeMatch: matches(source)
-                        )
-                    }
+                    HighlightedSnippet(
+                        source: source,
+                        term: searchQuery,
+                        font: .caption.weight(.semibold),
+                        accent: appearance.accent,
+                        fg: .secondary,
+                        guaranteeMatch: matches(source)
+                    )
 
                     Spacer(minLength: 8)
 
-                    if speechEnabled, ArabicSpeech.shared.isAvailable {
+                    if speechEnabled {
+                        ArabicVoiceGate { AdhkarListenButton(text: arabicText) }
+                    }
+                }
+            } else if speechEnabled {
+                ArabicVoiceGate {
+                    HStack(spacing: 8) {
+                        Spacer(minLength: 8)
+
                         AdhkarListenButton(text: arabicText)
                     }
                 }
@@ -301,7 +342,10 @@ struct AdhkarRow: View, Equatable {
         .padding(.vertical, 4)
         // The row being read aloud carries a soft accent wash; during Listen All it walks down the
         // section one row at a time as the queue advances. (Its own observing view - see SpokenRowWash.)
+        // On the phone it is the row's whole cell, applied where the List holds the row (`spokenRowWash`).
+        #if os(watchOS)
         .background(SpokenRowWash(text: arabicText, color: appearance.accent))
+        #endif
         #if os(iOS)
         .contextMenu {
             Text("Copy")
@@ -528,6 +572,7 @@ struct AdhkarView: View {
                                 speechEnabled: true
                             )
                             .equatable()
+                            .spokenRowWash(dhikr.arabicText)
                         }
                     } header: {
                         SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)
@@ -683,6 +728,7 @@ struct AdhkarView: View {
                 } : nil
             )
             .equatable()
+            .spokenRowWash(dhikr.arabicText)
         }
     }
 

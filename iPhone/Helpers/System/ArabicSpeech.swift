@@ -1,6 +1,43 @@
 import AVFoundation
 import SwiftUI
 
+/// Whether an Arabic voice is installed, published on its own.
+///
+/// The voice resolves off the main thread (`ArabicSpeech.resolveVoice`), usually after the first rows
+/// have drawn. A view that shows a Listen control by reading `ArabicSpeech.shared.isAvailable` without
+/// observing the speech engine keeps the answer from before the voice was known: the adhkar and dua
+/// rows (Equatable, and kept off `ArabicSpeech` so a Listen All queue does not re-render every row on
+/// each phrase) came up with no Listen button until something redrew them (found 2026-10-09). Watching
+/// THIS (`ArabicVoiceGate`) redraws such a view when the answer changes, and never per phrase.
+@MainActor
+final class ArabicVoiceAvailability: ObservableObject {
+    static let shared = ArabicVoiceAvailability()
+
+    @Published private(set) var isAvailable: Bool
+
+    private init() {
+        // Touching the engine starts the background resolution if nothing has asked yet.
+        isAvailable = ArabicSpeech.shared.isAvailable
+    }
+
+    fileprivate func update(_ available: Bool) {
+        if isAvailable != available { isAvailable = available }
+    }
+}
+
+/// Shows `content` only while an Arabic voice is installed, and brings it in the moment one resolves
+/// (see `ArabicVoiceAvailability`). Renders nothing otherwise, so a stack spends no spacing on it.
+struct ArabicVoiceGate<Content: View>: View {
+    @ObservedObject private var availability = ArabicVoiceAvailability.shared
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if availability.isAvailable {
+            content()
+        }
+    }
+}
+
 /// Speaks Arabic aloud with the system voice.
 ///
 /// The alphabet screens have no recorded audio, so the names of the tashkeel marks and the syllables they make
@@ -82,6 +119,7 @@ final class ArabicSpeech: NSObject, ObservableObject {
                 speech.arabicVoice = resolved
                 speech.voiceResolved = true
                 speech.voiceResolving = false
+                ArabicVoiceAvailability.shared.update(resolved != nil)
                 if let then { then(resolved) }
             }
         }

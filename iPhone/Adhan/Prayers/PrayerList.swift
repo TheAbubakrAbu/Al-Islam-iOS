@@ -261,9 +261,24 @@ struct PrayerList: View {
         // The selected day only highlights a "current" prayer when it is actually today; on any other
         // day the concept doesn't apply, so render its prayers in the neutral primary color.
         prayerModeContent(prayers: displayedPrayers, highlightsCurrent: !isShowingDifferentDay)
+        // Simple Mode (docs/Simple Mode Guide.md): the traveling banner atop the tab already says what
+        // the footer says, and other days live in the Prayer Calendar. The stepper stays while another
+        // day is on screen, so the list is never left unexplained.
+        #if os(iOS)
+        if !settings.simpleMode {
+            travelModeFooter
+        }
+        #else
         travelModeFooter
+        #endif
         optionalPrayersFooter
+        #if os(iOS)
+        if !settings.simpleMode || isShowingDifferentDay {
+            dateSelectionFooter
+        }
+        #else
         dateSelectionFooter
+        #endif
     }
 
     // MARK: - Rakaah guide
@@ -388,8 +403,12 @@ struct PrayerList: View {
 
             // Both disclosures share one line - two half-width pills instead of two stacked full-width ones.
             footerButtonPair {
-                footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
-                    showOptionalPrayerToggles.toggle()
+                // Simple Mode keeps the Rakaah Guide (a beginner's question) and leaves Optional Times
+                // to Settings > Prayer Settings > Optional Prayers.
+                if !settings.simpleMode {
+                    footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
+                        showOptionalPrayerToggles.toggle()
+                    }
                 }
 
                 footerActionButton("Rakaah Guide", isExpanded: showRakaahGuide) {
@@ -397,7 +416,7 @@ struct PrayerList: View {
                 }
             }
 
-            if showOptionalPrayerToggles {
+            if showOptionalPrayerToggles, !settings.simpleMode {
                 VStack(spacing: 10) {
                     optionalPrayerToggle("Duhaa", isOn: $settings.showDuha)
                     optionalPrayerToggle("Islamic Midnight", isOn: $settings.showIslamicMidnight)
@@ -454,19 +473,23 @@ struct PrayerList: View {
 
             Spacer()
 
-            Picker("", selection: $prayerDisplayModeRawValue) {
-                Section {
-                    ForEach(PrayerDisplayMode.allCases) { mode in
-                        Text(mode.displayName).tag(mode.rawValue)
+            // Simple Mode leaves the layout to Settings > Prayer Settings > Prayer Times Layout; the
+            // chosen layout explains itself on screen.
+            if !settings.simpleMode {
+                Picker("", selection: $prayerDisplayModeRawValue) {
+                    Section {
+                        ForEach(PrayerDisplayMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode.rawValue)
+                        }
+                    } header: {
+                        Text("Prayer Display")
                     }
-                } header: {
-                    Text("Prayer Display")
                 }
+                .font(.caption2)
+                .pickerStyle(MenuPickerStyle())
+                .padding(.vertical, -12)
+                .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
             }
-            .font(.caption2)
-            .pickerStyle(MenuPickerStyle())
-            .padding(.vertical, -12)
-            .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
             #endif
         }
     }
@@ -1288,14 +1311,11 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
 
     var body: some View {
         ZStack {
+            #if os(watchOS)
             RoundedRectangle(cornerRadius: 20)
                 .fill(isCurrent ? highlight : .clear)
-                #if os(iOS)
-                .padding(.vertical, backgroundVerticalPadding)
-                .padding(.horizontal, -12)
-                #else
                 .padding(.horizontal, -10)
-                #endif
+            #endif
 
             // Spacings are explicit. Nested stacks each contributed their own ~8pt default, which stacked into a
             // wide gap between the icon and the name, while the row itself had no vertical padding at all.
@@ -1332,16 +1352,9 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
             }
             .padding(.vertical, 4)
         }
+        // The current prayer fills its whole row (see `rowWash`); the watch keeps the band above.
+        .rowWash(isCurrent ? highlight : nil)
     }
-
-    #if os(iOS)
-    private var backgroundVerticalPadding: CGFloat {
-        if #available(iOS 26.0, *) {
-            return -10
-        }
-        return -4
-    }
-    #endif
 }
 
 private struct PrayerDetailBlock: View {

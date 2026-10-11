@@ -183,6 +183,9 @@ struct SettingsQuranView: View {
             quranPageLink(.readingView) { readingViewsDestination }
             quranPageLink(.arabicText) { arabicTextDestination }
             quranPageLink(.englishText) { englishTextDestination }
+            #if os(iOS)
+            quranPageLink(.testMode) { QuranTestModeSettingsView() }
+            #endif
         }
 
         #if os(iOS)
@@ -221,6 +224,7 @@ struct SettingsQuranView: View {
         case .readingView: readingViewsDestination
         case .arabicText: arabicTextDestination
         case .englishText: englishTextDestination
+        case .testMode: QuranTestModeSettingsView()
         case .highlightThemes: ThemeHighlightsView()
         case .sunnahReminders: SunnahRemindersView()
         case .favorites: favoritesAndBookmarksDestination
@@ -1506,6 +1510,7 @@ extension SettingsSearchEntry {
         .init(title: "Hide Tashkeel & Dots", path: "Quran Settings → Arabic Text", keywords: "clean arabic tashkeel harakat diacritics dots beginner spacing", destination: .quranPage(.arabicText), advanced: true),
         .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranPage(.arabicText)),
         .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranPage(.arabicText), advanced: true),
+        .init(title: "Test Mode", path: "Quran Settings → Test Mode", keywords: "test memorize memorization hifz hide text recite from memory quiz check reveal tap ayah", destination: .quranPage(.testMode)),
         .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranPage(.englishText)),
         .init(title: "English Font Size", path: "Quran Settings → English Text", keywords: "english font size translation slider system", destination: .quranPage(.englishText)),
         .init(title: "Highlight Themes (Color-Coded Passages)", path: "Quran Settings → Highlight Themes", keywords: "thematic highlighting colors legend passages sections topics wash lit themes browse by theme tilawa", destination: .quranPage(.highlightThemes)),

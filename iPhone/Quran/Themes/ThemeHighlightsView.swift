@@ -11,6 +11,8 @@ struct ThemeHighlightsView: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
+    @Environment(\.appearance) private var appearance
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Opens an ayah in the reader; nil where there is no reader to open (the Settings tab), in which
     /// case the row lands on the Quran tab through `AppNavigation`.
@@ -176,7 +178,7 @@ struct ThemeHighlightsView: View {
                             .foregroundStyle(.secondary)
                         Text("· \(color.meaning)")
                             .font(.caption2)
-                            .foregroundColor(color.color)
+                            .foregroundColor(color.ink)
                             .lineLimit(1)
                     }
 
@@ -200,7 +202,7 @@ struct ThemeHighlightsView: View {
                 VStack(alignment: .trailing, spacing: 6) {
                     Text("\(section.ayahCount) ayah\(section.ayahCount == 1 ? "" : "s")")
                         .font(.caption2.weight(.semibold))
-                        .foregroundColor(lit ? color.color : .secondary)
+                        .foregroundColor(lit ? color.ink : .secondary)
                         .monospacedDigit()
 
                     ZStack {
@@ -211,23 +213,19 @@ struct ThemeHighlightsView: View {
                         if lit {
                             Image(systemName: "checkmark")
                                 .font(.caption.weight(.bold))
-                                .foregroundColor(color.color)
+                                .foregroundColor(color.ink)
                         }
                     }
                     .frame(width: 26, height: 26)
                 }
             }
             .padding(.vertical, 4)
-            .padding(.horizontal, 8)
-            // A lit passage carries its wash on the row itself, the way it will in the reader.
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(lit ? color.color.opacity(0.12) : Color.clear)
-            )
-            .padding(.horizontal, -8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // A lit passage carries its wash on the row itself, the whole row (`rowWash`): the reader's
+        // own wash, so the row looks exactly like the ayahs it lights.
+        .rowWash(lit ? color.tint(colorScheme, on: appearance.themeRowBackground) : nil)
         .contextMenu {
             Button {
                 settings.hapticFeedback()

@@ -152,6 +152,13 @@ struct AdhanView: View {
         }
     }
 
+    /// Simple Mode shows the tracker to someone who tracks: any prayer marked in the last
+    /// `SimpleMode.trackerWindowDays` (docs/Simple Mode Guide.md). Marking one from a prayer's detail
+    /// brings it back. At most fourteen lookups into the cached tracker, so the countdown tick can ask.
+    private var showsTracker: Bool {
+        !settings.simpleMode || settings.trackerMarkedRecently()
+    }
+
     private var adhanContent: some View {
         List {
             Group {
@@ -189,11 +196,11 @@ struct AdhanView: View {
                 // without scrolling (there is no scroll tooling for the simulator).
                 Group {
                     if hoistsTrackerForDebug {
-                        PrayerTrackerSection()
+                        if showsTracker { PrayerTrackerSection() }
                         prayersSection
                     } else {
                         prayersSection
-                        PrayerTrackerSection()
+                        if showsTracker { PrayerTrackerSection() }
                     }
                 }
 
@@ -202,8 +209,12 @@ struct AdhanView: View {
                 // See HelpDoors.swift.
                 HelpDoorsSection(area: .adhan)
 
-                Section(header: Text("AT A GLANCE")) {
-                    GlanceCard(onSelect: handleGlance)
+                // Simple Mode leaves the glance wall out: each tile is a shortcut to a door the tab
+                // already has (the calendar button, the compass, the city pill, the sky's moon).
+                if !settings.simpleMode {
+                    Section(header: Text("AT A GLANCE")) {
+                        GlanceCard(onSelect: handleGlance)
+                    }
                 }
                 #else
                 // Watch: the countdown and prayer times come first (that's the whole reason you raised your

@@ -7,7 +7,8 @@ import SwiftUI
 // narrator's own text reads a word differently from Hafs, as Hafs-reads / he-reads pairs, with the
 // meaning of each form where the Quran.com qiraat reference gives one, and the same reciter reading
 // the verse both ways where a recording exists (Warsh, Qalun, ad-Duri and Shubah have one). Every
-// row opens the Qiraat Explorer at that place, and the section ends with the walk of a whole surah.
+// row opens the Qiraat Explorer at that place, and the section ends with the explorer's Compare Two
+// set to this narrator against Hafs.
 //
 // Nothing here is authored. The pairs come from the app's own riwayah texts diffed against Hafs
 // exactly as the explorer diffs them (`QiraatChange`), so a pair appears only because the two texts
@@ -114,7 +115,7 @@ enum RiwayahDifferenceFinder {
         guard let surahObject = quranData.surah(surah),
               let resolved = QiraahAyahResolver.resolve(surahNumber: surah, ayahNumber: ayah, anchorHafsAyah: ayah,
                                                         optionTag: tag, clean: false) else { return nil }
-        let change = QiraatExplorerView.change(for: tag, surah: surah, hafsAyah: ayah, resolved: resolved, quranData: quranData)
+        let change = QiraatChange.at(tag: tag, surah: surah, hafsAyah: ayah, resolved: resolved, quranData: quranData)
         guard change.differsAtWordLevel else { return nil }
         let hafsIndices = change.hafsWordLevel.sorted()
         let riwayahIndices = change.riwayahWordLevel.sorted()
@@ -234,7 +235,7 @@ struct RiwayahDifferencesSection: View {
                 }
 
                 NavigationLink(destination: LazyDestination { QiraatExplorerView(surahWalk: tag) }) {
-                    Label("Walk a whole surah as \(name) reads it", systemImage: "arrow.left.and.right.text.vertical")
+                    Label("Step through every place \(name) differs from Hafs", systemImage: "arrow.left.and.right.text.vertical")
                         .font(.subheadline.weight(.medium))
                         .foregroundColor(appearance.accent)
                 }

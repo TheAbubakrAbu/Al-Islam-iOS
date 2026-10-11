@@ -32,6 +32,8 @@ final class CloudBackupManager: ObservableObject {
     // MARK: Constants
 
     nonisolated static let maxProfiles = 6
+    /// The longest profile name; the name field stops typing here.
+    nonisolated static let nicknameLimit = 40
     nonisolated static let recordType = "Profile"
     nonisolated static let zoneName = "Profiles"
     /// Automatic saves: on leaving the foreground when something changed and the last save is
@@ -804,7 +806,7 @@ final class CloudBackupManager: ObservableObject {
     static func cleanNickname(_ raw: String) -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = trimmed.isEmpty ? CloudDevice.suggestedNickname : trimmed
-        return String(name.prefix(40))
+        return String(name.prefix(nicknameLimit))
     }
 
     /// Is this device's own profile: the one it writes.

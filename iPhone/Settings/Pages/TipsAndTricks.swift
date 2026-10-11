@@ -480,7 +480,7 @@ enum TipCatalog {
 
         AppTip(id: "quran.legend", area: .quran, group: "TAJWEED AND QIRAAT", systemImage: "circle.hexagongrid.fill",
                title: "The Legend pill does two things",
-               detail: "Tap the row of colored dots for the full tajweed guide. Touch and hold it for a quick reminder of what the colors mean.",
+               detail: "Tap the row of colored dots for the full tajweed guide. Touch and hold it for a quick reminder of what the colors mean. With tajweed colors and theme highlights both off, the dots turn grey and a tap opens the switches that bring them back.",
                place: "Quran reader", tour: true),
         AppTip(id: "quran.tajweedcolors", area: .quran, group: "TAJWEED AND QIRAAT", systemImage: "eyedropper.halffull",
                title: "Choose your own tajweed colors",

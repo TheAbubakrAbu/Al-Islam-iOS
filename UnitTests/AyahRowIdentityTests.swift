@@ -4,14 +4,14 @@ import XCTest
 /// The reading list's row identity.
 ///
 /// `SurahView` swaps the displayed surah IN PLACE (`swappedSurah`) rather than pushing a new reader,
-/// so one `ForEach` outlives the swap. If its rows are keyed on `Ayah.id` - the ayah's number within
-/// its own surah - the old and new surahs hand it identical identities, SwiftUI diffs zero changes
-/// and REUSES the existing rows instead of rebuilding them. Rows off-screen across the swap then keep
-/// the previous surah's Arabic under the new surah's numbering (reported 2026-10-05: An-Nas 114:5's
-/// header and translation sitting over Al-Falaq 113:5's text).
+/// so one `ForEach` outlives the swap, and keyed on `Ayah.id` (the ayah's number within its own
+/// surah) the old and new surahs would hand it identical identities. The surah-qualified keys were
+/// added for the 2026-10-05 report (An-Nas 114:5's header and translation over Al-Falaq 113:5's
+/// text), which turned out to come from `AyahRow`'s display cache instead (see
+/// `SurahView.listAyahs` and `UITests/SurahSwapTests`). They stay, so a swap replaces every row.
 final class AyahRowIdentityTests: XCTestCase {
 
-    /// The collision the defect rested on: `Ayah.id` alone is NOT unique across surahs.
+    /// The collision: `Ayah.id` alone is NOT unique across surahs.
     @MainActor
     func testAyahIDAloneCollidesAcrossSurahs() async {
         let data = QuranData.shared
@@ -28,7 +28,7 @@ final class AyahRowIdentityTests: XCTestCase {
                        "Precondition: bare ayah numbers are expected to repeat across surahs")
     }
 
-    /// The fix: qualifying by surah makes the identity unique, so an in-place swap is a full
+    /// Qualifying by surah makes the identity unique, so an in-place swap is a full
     /// replacement (every old key deleted, every new key inserted) rather than a silent reuse.
     @MainActor
     func testAyahKeyIsUniqueAcrossTheWholeQuran() async {

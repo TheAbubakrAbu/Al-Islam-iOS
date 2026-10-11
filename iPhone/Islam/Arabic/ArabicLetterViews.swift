@@ -513,8 +513,8 @@ struct TashkeelLettersView: View {
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
-        // The wash reaches the row's full height (user rule), not just the text band.
-        .arabicPracticeSelection(isSelected, hInset: -8, vInset: -6)
+        // The wash reaches the row's full height and width (user rule): it is the row's own cell.
+        .arabicPracticeRowSelection(isSelected, hInset: -8, vInset: -6)
         .onTapGesture {
             settings.hapticFeedback()
             withAnimation(.easeInOut) { selection.toggle(id) }
@@ -1775,16 +1775,47 @@ final class ArabicPracticeSelection: ObservableObject {
 }
 
 extension View {
-    /// The one "this is the combination being taught" treatment on the Arabic screens: the accent wash and
-    /// hairline `TashkeelLettersView`'s chosen mark chip already uses. The insets let a full-width list row
-    /// bleed its wash past the text without the text itself moving when the selection changes.
+    /// The one "this is the combination being taught" treatment on the Arabic screens: the accent wash
+    /// over the cell's whole slot in its table. The insets reach the slot's edges (half the gap to the
+    /// next cell, the dividers above and below) without moving the text when the selection changes.
+    ///
+    /// Until 2026-10-10 it was a chip inset inside its slot with a 1.5 pt accent hairline around it;
+    /// every other marked row in the app fills its row, so this fills its slot (Abu: "fix those").
+    /// `topInset` overrides `vInset` above a cell with a caption close over it.
     func arabicPracticeSelection(
         _ isSelected: Bool,
         cornerRadius: CGFloat = 12,
         hInset: CGFloat = 0,
-        vInset: CGFloat = 0
+        vInset: CGFloat = 0,
+        topInset: CGFloat? = nil
     ) -> some View {
-        modifier(ArabicPracticeSelectionWash(isSelected: isSelected, cornerRadius: cornerRadius, hInset: hInset, vInset: vInset))
+        modifier(ArabicPracticeSelectionWash(isSelected: isSelected, cornerRadius: cornerRadius, hInset: hInset,
+                                             vInset: vInset, topInset: topInset))
+    }
+
+    /// The same selection on a row that IS a whole List row (an example word, a letter with every
+    /// mark): the selection's fill over the entire row (`rowWash`), the way every other marked row in
+    /// the app reads. The cells inside a table row fill their slot instead. The watch keeps the wash
+    /// behind the text, inset by `hInset` and `vInset`.
+    func arabicPracticeRowSelection(_ isSelected: Bool, hInset: CGFloat, vInset: CGFloat) -> some View {
+        modifier(ArabicPracticeRowSelection(isSelected: isSelected, hInset: hInset, vInset: vInset))
+    }
+}
+
+/// See `arabicPracticeRowSelection`.
+private struct ArabicPracticeRowSelection: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let isSelected: Bool
+    let hInset: CGFloat
+    let vInset: CGFloat
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content.rowWash(isSelected ? appearance.accent.opacity(0.18) : nil)
+        #else
+        content.arabicPracticeSelection(isSelected, hInset: hInset, vInset: vInset)
+        #endif
     }
 }
 
@@ -1797,20 +1828,15 @@ private struct ArabicPracticeSelectionWash: ViewModifier {
     let cornerRadius: CGFloat
     let hInset: CGFloat
     let vInset: CGFloat
+    let topInset: CGFloat?
 
     func body(content: Content) -> some View {
-        let accent = appearance.accent
-        return content.background(
+        content.background(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .fill(accent.opacity(isSelected ? 0.18 : 0))
+                .fill(appearance.accent.opacity(isSelected ? 0.18 : 0))
                 .padding(.horizontal, hInset)
-                .padding(.vertical, vInset)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                .stroke(isSelected ? accent : .clear, lineWidth: 1.5)
-                .padding(.horizontal, hInset)
-                .padding(.vertical, vInset)
+                .padding(.top, topInset ?? vInset)
+                .padding(.bottom, vInset)
         )
     }
 }
@@ -1996,7 +2022,7 @@ struct TashkeelRow: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -4, vInset: -2)
+                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) { selection.toggle(id) }
@@ -2231,7 +2257,7 @@ struct VowelCombinationRow: View {
             }
         }
         .contentShape(Rectangle())
-        .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -4, vInset: -2)
+        .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10, topInset: -4)
         .onTapGesture {
             Settings.shared.hapticFeedback()
             withAnimation(.easeInOut) { selection.toggle(id) }
@@ -2274,7 +2300,9 @@ struct TashkeelDetailSheet: View {
                                 .foregroundColor(.secondary)
                         }
 
-                        if ArabicSpeech.shared.isAvailable {
+                        // Through the gate: this sheet does not observe the speech engine, and the voice
+                        // resolves in the background (see `ArabicVoiceAvailability`).
+                        ArabicVoiceGate {
                             Button {
                                 settings.hapticFeedback()
                                 ArabicSpeech.shared.speak(spokenText)
@@ -2538,7 +2566,7 @@ struct HamzaPracticeRow: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -4, vInset: -2)
+                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10)
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) { selection.toggle(id) }
@@ -2588,6 +2616,8 @@ struct HamzaPracticeRow: View {
                 }
             }
             .frame(width: 28)
+            // Above the triplet: a selected syllable's wash reaches 10 pt past its cell, toward this column.
+            .zIndex(1)
 
             practiceTriplet(syllables, expanded: isExpanded)
         }
@@ -2643,7 +2673,7 @@ struct NonArabicVowelPracticeRow: View {
                     }
                 }
                 .contentShape(Rectangle())
-                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -4, vInset: -2)
+                .arabicPracticeSelection(isSelected, cornerRadius: 10, hInset: -10, vInset: -10)
                 .onTapGesture {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { selection.toggle(id) }
@@ -2732,7 +2762,7 @@ struct ArabicExampleRow: View {
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())
-        .arabicPracticeSelection(isSelected, hInset: -8, vInset: -2)
+        .arabicPracticeRowSelection(isSelected, hInset: -8, vInset: -2)
         .onTapGesture {
             Settings.shared.hapticFeedback()
             withAnimation(.easeInOut) { selection.toggle(id) }

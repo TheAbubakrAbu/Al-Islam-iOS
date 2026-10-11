@@ -1014,11 +1014,12 @@ struct IslamView: View {
                 Button {
                     selectSplitResource(resource)
                 } label: {
-                    label.rowSelectionHighlight(selectedResource == resource)
+                    label
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
                 .tag(resource)
+                .rowSelectionHighlight(selectedResource == resource)
             } else {
                 NavigationLink(value: resource) { label }
             }
@@ -1356,18 +1357,18 @@ struct IslamView: View {
             // Re-tapping the selected row must still LAND - see `selectSplitResource`.
             selectSplitResource(value)
         } label: {
-            // The highlight is DRAWN here rather than left to `List(selection:)` - see the same fix
-            // on the Settings sidebar (`SettingsView.splitResourceLink`) for why the native bed was
-            // unreliable: a plain-styled Button never drives it, `themedListRowBackground()` paints
-            // over it on Sepia/Gray/Custom, and `.listStyle(.plain)` draws none. The grid tiles
-            // beside these rows already ringed (`gridSelectionRing`), which is why grid mode looked
-            // right and list mode did not.
             toolLabel(value.title, systemImage: value.systemImage)
-                .rowSelectionHighlight(selectedResource == value)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .tag(value)
+        // The highlight is DRAWN by the row rather than left to `List(selection:)`. The Settings
+        // sidebar (`SettingsView.splitResourceLink`) has the same fix and says why the native bed
+        // was unreliable: a plain-styled Button never drives it, `themedListRowBackground()` paints
+        // over it on Sepia/Gray/Custom, and `.listStyle(.plain)` draws none. The grid tiles
+        // beside these rows already ringed (`gridSelectionRing`), which is why grid mode looked
+        // right and list mode did not.
+        .rowSelectionHighlight(selectedResource == value)
         .contextMenu { favoriteToggleButton(value) }
     }
     #endif

@@ -354,6 +354,11 @@ struct QuranPlannerToolbarButton: View {
     @ObservedObject private var quranData = QuranData.shared
 
     let openReader: (Int, Int) -> Void
+    /// Simple Mode: the planner stays mounted (its settle hooks below stamp a finished plan, which is
+    /// what the planner DOES, so they must keep running) but draws no button; the Quran tab's More menu
+    /// opens it through `presentRequest` (docs/Simple Mode Guide.md, rule 1).
+    var hidesButton = false
+    var presentRequest: Binding<Bool> = .constant(false)
 
     @State private var showingPlanner = false
     @State private var pendingRead: QuranPlannerPendingRead?
@@ -363,14 +368,27 @@ struct QuranPlannerToolbarButton: View {
     }
 
     var body: some View {
-        Button {
-            settings.hapticFeedback()
-            showingPlanner = true
-        } label: {
-            Image(systemName: "calendar.badge.clock")
+        Group {
+            if hidesButton {
+                Color.clear
+                    .frame(width: 0, height: 0)
+                    .accessibilityHidden(true)
+            } else {
+                Button {
+                    settings.hapticFeedback()
+                    showingPlanner = true
+                } label: {
+                    Image(systemName: "calendar.badge.clock")
+                }
+                .accessibilityLabel("Quran Planner")
+                .tint(settings.accentColor.accent1)
+            }
         }
-        .accessibilityLabel("Quran Planner")
-        .tint(settings.accentColor.accent1)
+        .onChange(of: presentRequest.wrappedValue) { requested in
+            guard requested else { return }
+            presentRequest.wrappedValue = false
+            showingPlanner = true
+        }
         .onAppear {
             settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
         }

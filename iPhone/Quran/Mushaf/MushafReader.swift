@@ -2604,26 +2604,16 @@ struct SurahPageReader<Controls: View>: View {
                               surahPosition: Int, surahTotal: Int,
                               juzPosition: Int, juzTotal: Int) -> some View {
         VStack(spacing: 6 * footerScale) {
-            HStack(alignment: .center, spacing: 10 * footerScale) {
-                VStack(alignment: .leading, spacing: 4 * footerScale) {
-                    // Plain "Surah", deliberately (user rule: names run too long here) - the row
-                    // above names it.
-                    meter(label: "Surah", position: surahPosition, total: surahTotal,
-                          color: settings.accentColor.accent1)
-
-                    if juzTotal > 0 {
-                        meter(label: "Juz", position: juzPosition, total: juzTotal,
-                              color: settings.accentColor.accent2)
-                    }
-                }
-
-                Spacer(minLength: 4)
-
-                VStack(alignment: .trailing, spacing: 4 * footerScale) {
+            if settings.simpleMode {
+                // Simple Mode: where this page is, as the two jumps; the meters, the percentages and
+                // the whole-mushaf bar step aside (docs/Simple Mode Guide.md). Same pill, same height,
+                // so the page above never re-fits when the switch flips.
+                HStack(spacing: 12 * footerScale) {
                     jumpButton(
-                        title: "\(pageLabel(for: page, in: pages)) / \(pages.count)  \(percent(page.page, of: pages.count))",
+                        title: pageLabel(for: page, in: pages),
                         target: .page,
                         color: settings.accentColor.accent1,
+                        prominent: true,
                         seed: {
                             pagePickerSelection = pageIndex
                             pickerBaseGeometry = MushafPageRenderCache.currentGeometry
@@ -2631,24 +2621,64 @@ struct SurahPageReader<Controls: View>: View {
                     )
 
                     jumpButton(
-                        title: "Juz \(page.juz ?? 1) / 30  \(percent(page.juz ?? 1, of: 30))",
+                        title: "Juz \(page.juz ?? 1)",
                         target: .juz,
                         color: settings.accentColor.accent2,
+                        prominent: true,
                         seed: {
                             juzPickerSelection = page.juz ?? 1
                             pickerBaseGeometry = MushafPageRenderCache.currentGeometry
                         }
                     )
                 }
-            }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                HStack(alignment: .center, spacing: 10 * footerScale) {
+                    VStack(alignment: .leading, spacing: 4 * footerScale) {
+                        // Plain "Surah", deliberately (user rule: names run too long here) - the row
+                        // above names it.
+                        meter(label: "Surah", position: surahPosition, total: surahTotal,
+                              color: settings.accentColor.accent1)
 
-            // Progress through the whole mushaf. A track behind the fill is what makes it legible - the old
-            // hairline had nothing to read against, so it just looked like a stray line.
-            trackedBar(
-                fraction: pages.count > 0 ? CGFloat(page.page) / CGFloat(pages.count) : 0,
-                height: 5 * footerScale,
-                color: settings.accentColor.accent2
-            )
+                        if juzTotal > 0 {
+                            meter(label: "Juz", position: juzPosition, total: juzTotal,
+                                  color: settings.accentColor.accent2)
+                        }
+                    }
+
+                    Spacer(minLength: 4)
+
+                    VStack(alignment: .trailing, spacing: 4 * footerScale) {
+                        jumpButton(
+                            title: "\(pageLabel(for: page, in: pages)) / \(pages.count)  \(percent(page.page, of: pages.count))",
+                            target: .page,
+                            color: settings.accentColor.accent1,
+                            seed: {
+                                pagePickerSelection = pageIndex
+                                pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                            }
+                        )
+
+                        jumpButton(
+                            title: "Juz \(page.juz ?? 1) / 30  \(percent(page.juz ?? 1, of: 30))",
+                            target: .juz,
+                            color: settings.accentColor.accent2,
+                            seed: {
+                                juzPickerSelection = page.juz ?? 1
+                                pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                            }
+                        )
+                    }
+                }
+
+                // Progress through the whole mushaf. A track behind the fill is what makes it legible - the old
+                // hairline had nothing to read against, so it just looked like a stray line.
+                trackedBar(
+                    fraction: pages.count > 0 ? CGFloat(page.page) / CGFloat(pages.count) : 0,
+                    height: 5 * footerScale,
+                    color: settings.accentColor.accent2
+                )
+            }
         }
         .padding(.horizontal, 12 * footerScale)
         .padding(.vertical, 8 * footerScale)
@@ -2715,8 +2745,11 @@ struct SurahPageReader<Controls: View>: View {
 
     /// The page / juz readouts double as the buttons that open their picker. `seed` sets the wheel to where you
     /// currently are, so opening it and confirming without touching it is a no-op.
-    private func jumpButton(title: String, target: PickerTarget, color: Color, seed: @escaping () -> Void) -> some View {
+    /// `prominent` is Simple Mode's pill, where the two jumps are all it holds and read at a glance.
+    private func jumpButton(title: String, target: PickerTarget, color: Color, prominent: Bool = false,
+                            seed: @escaping () -> Void) -> some View {
         let isOpen = activePicker == target
+        let size: CGFloat = prominent ? 14 : 10
 
         return Button {
             settings.hapticFeedback()
@@ -2728,20 +2761,20 @@ struct SurahPageReader<Controls: View>: View {
             HStack(spacing: 3 * footerScale) {
                 Text(title)
                 Image(systemName: isOpen ? "chevron.down" : "chevron.up.chevron.down")
-                    .font(.system(size: 6 * footerScale))
+                    .font(.system(size: size * 0.6 * footerScale))
             }
-            .font(.system(size: 10 * footerScale, weight: .semibold))
+            .font(.system(size: size * footerScale, weight: .semibold))
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .foregroundStyle(color)
-            .padding(.horizontal, 6 * footerScale)
-            .padding(.vertical, 2 * footerScale)
+            .padding(.horizontal, (prominent ? 10 : 6) * footerScale)
+            .padding(.vertical, (prominent ? 5 : 2) * footerScale)
             .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                RoundedRectangle(cornerRadius: prominent ? 8 : 5, style: .continuous)
                     .fill(color.opacity(isOpen ? 0.22 : 0.12))
             )
-            .contentShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: prominent ? 8 : 5, style: .continuous))
         }
         .accessibilityLabel("\(title). Jump to")
     }
@@ -2896,6 +2929,13 @@ struct SurahPageReader<Controls: View>: View {
 
                         Divider()
                     }
+
+                    // Test Mode, as in the list reader's menu. The printed facsimile is a picture of
+                    // the page and cannot hide one ayah, so there the row says so and stays off.
+                    QuranTestModeMenuSection(settings: settings,
+                                             available: !settings.resolvedMushafPageLanguage.isPDF)
+
+                    Divider()
 
                     Text("Surah Playback")
                         .foregroundStyle(.secondary)
@@ -3053,6 +3093,10 @@ struct SurahPageReader<Controls: View>: View {
         .frame(width: footerHeight, height: footerHeight)
         .contentShape(Rectangle())
         .conditionalGlassEffect(rectangle: true)
+        // While Test Mode hides the text, the button that turns it off says so (the list reader's too).
+        .overlay(alignment: .topTrailing) {
+            QuranTestModeBadgeSlot(accent: settings.accentColor.color)
+        }
     }
 }
 
@@ -3081,6 +3125,8 @@ private struct MushafPageContent: View {
     /// re-evaluates this page: the composed text changes, and the render cache key (which folds in this
     /// page's pins) has to be recomputed to pick it up.
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
+    /// Test Mode (see `QuranTestMode`): which of this page's ayahs draw in clear ink.
+    @ObservedObject private var testMode = QuranTestMode.shared
 
     let page: MushafPage
     /// Route a sheet request to the reader's HOST instead of presenting it here: a page is mounted only
@@ -3200,6 +3246,17 @@ private struct MushafPageContent: View {
         let ref = (surahID: actionsSheetAyah.surahID, ayahID: actionsSheetAyah.ayahID)
         if let playingAyah, playingAyah == ref { return nil }
         return ref
+    }
+
+    /// The ayahs of this page Test Mode is hiding, when the page's text is one it hides (see
+    /// `QuranTestMode.hides(pageLanguage:)`): drawn in clear ink over a faint bar, number ornaments kept.
+    private var testHiddenOnPage: [(surahID: Int, ayahID: Int)] {
+        guard testMode.isOn, testMode.hides(pageLanguage: settings.resolvedMushafPageLanguage) else { return [] }
+        return page.segments.flatMap { segment in
+            segment.ayahs.compactMap { ayah in
+                testMode.isHidden(surah: segment.surah.id, ayah: ayah.id) ? (segment.surah.id, ayah.id) : nil
+            }
+        }
     }
 
     /// Tap an ayah to mark it, tap it again to clear it. Tapping a different ayah moves the mark. Writes the
@@ -3367,6 +3424,10 @@ private struct MushafPageContent: View {
         // modes (its caption says so), so with it off a double tap here does nothing.
         guard settings.wordByWordMeanings, !isSelecting,
               let (surah, ayah) = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
+        // Test Mode: a hidden ayah's word is the answer, so no card for it (the list reader turns its word
+        // taps off the same way). The double tap cancels the single tap's reveal, so this does nothing.
+        guard !(testMode.hides(pageLanguage: settings.resolvedMushafPageLanguage)
+                && testMode.isHidden(surah: surahID, ayah: ayahID)) else { return }
         // The ayah's own pins shape the composed text the tap landed on; beginner spacing splits every
         // letter into a token, so no word index can be trusted there (the list rows opt out the same way).
         let choices = displayOverrides.choices(surah: surah.id, ayah: ayah.id, settings: settings)
@@ -3428,6 +3489,14 @@ private struct MushafPageContent: View {
         return page.ayahRefs.compactMap { ref in
             themeHighlights.wash(surah: ref.surahID, ayah: ref.ayahID).map { (ref.surahID, ref.ayahID, $0) }
         }
+    }
+
+    /// The page colour a light theme wash steps away from: the theme's own on Sepia, Gray and Custom,
+    /// nil (white or black) otherwise.
+    private var themeWashGround: UIColor? {
+        guard !themeHighlights.isEmpty, settings.hasCustomThemeColors,
+              let ground = settings.themeBackgroundColor else { return nil }
+        return UIColor(ground)
     }
 
     private var bookmarkedAyahsOnPage: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] {
@@ -3533,6 +3602,8 @@ private struct MushafPageContent: View {
                     selected: isSelecting ? selectedAyahs.map { (surahID: $0.surahID, ayahID: $0.ayahID) } : [],
                     bookmarked: bookmarkedAyahsOnPage,
                     themeWashes: themeWashesOnPage,
+                    washGround: themeWashGround,
+                    testHidden: testHiddenOnPage,
                     baselineOffset: rendered.baselineOffset,
                     baselineBand: rendered.baselineBand,
                     zoomsLikePDF: zoomable
@@ -3545,6 +3616,8 @@ private struct MushafPageContent: View {
                         onToggleSelection?(surahID, ayahID)
                         return
                     }
+                    // Test Mode: the tap that marks an ayah is the one that shows it, as in the list.
+                    testMode.select(surah: surahID, ayah: ayahID)
                     // A search arrival clears in ONE tap: touching the arrived ayah removes the accent
                     // snippet AND its selection together. A tap elsewhere clears the snippet and acts
                     // on the tapped ayah as usual.
@@ -6844,6 +6917,13 @@ struct MushafPageTextView: UIViewRepresentable {
     var bookmarked: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] = []
     /// The lit themes' washes on this page (see `ThemeHighlights`): painted under the bookmark washes.
     var themeWashes: [(surahID: Int, ayahID: Int, color: ThemeWashColor)] = []
+    /// The page's own colour on a custom theme, which a light theme wash is a step away from (see
+    /// `ThemeWashColor.washPaint`). Nil on Light, Dark and System: white or black.
+    var washGround: UIColor? = nil
+    /// Test Mode's hidden ayahs on this page (`QuranTestMode`). Each draws in clear ink over a faint bar,
+    /// with its number ornament still showing: ink and background are attributes that change no layout,
+    /// so the page keeps every line where it was, and the ornament says where each ayah is to be tapped.
+    var testHidden: [(surahID: Int, ayahID: Int)] = []
     /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
     var baselineOffset: CGFloat = 0
     /// Fragment heights the forced baseline applies to (running text lines, not headings).
@@ -6950,7 +7030,7 @@ struct MushafPageTextView: UIViewRepresentable {
         // color where a lit theme also names it.
         var highlightWashes: [(NSRange, UIColor)] = themeWashes.compactMap { wash in
             guard let range = range(of: (wash.surahID, wash.ayahID)) else { return nil }
-            return (range, wash.color.pageWashUIColor)
+            return (range, wash.color.washUIColor(ground: washGround))
         }
         highlightWashes += bookmarked.compactMap { ref in
             guard let color = ref.highlight,
@@ -6958,10 +7038,32 @@ struct MushafPageTextView: UIViewRepresentable {
             return (range, color.pageWashUIColor)
         }
 
-        guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive else { return (text, []) }
+        // Test Mode's hidden ayahs, each with its number ornament: the marker that ENDS where its ayah ends
+        // (the composer appends the number last; see `updateBookmarkBadges`).
+        let markerEntries = testHidden.isEmpty ? [] : ranges.filter { $0.ayahID == MushafAyahRange.ayahMarkerID }
+        let hidden: [(ayah: NSRange, marker: NSRange?)] = testHidden.compactMap { ref in
+            guard let ayahRange = range(of: ref), NSMaxRange(ayahRange) <= text.length else { return nil }
+            let marker = markerEntries.first {
+                $0.surahID == ref.surahID && NSMaxRange($0.range) == NSMaxRange(ayahRange)
+            }?.range
+            return (ayahRange, marker)
+        }
+
+        guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive
+                || !hidden.isEmpty else { return (text, []) }
 
         var touched: [NSRange] = []
         let mutable = NSMutableAttributedString(attributedString: text)
+        // Test Mode's bar goes down FIRST, so every wash and tint below still paints over it: the
+        // recitation tint has to show on a hidden ayah for the listener to follow along. It stops short
+        // of the ornament, which stays as it always looks.
+        for entry in hidden {
+            let words = entry.marker.map {
+                NSRange(location: entry.ayah.location, length: max(0, $0.location - entry.ayah.location))
+            } ?? entry.ayah
+            mutable.addAttribute(.backgroundColor, value: Self.testVeilColor, range: words)
+            touched.append(entry.ayah)
+        }
         for (range, color) in highlightWashes {
             mutable.addAttribute(.backgroundColor, value: color, range: range)
             touched.append(range)
@@ -7007,7 +7109,31 @@ struct MushafPageTextView: UIViewRepresentable {
                 touched.append(entry.range)
             }
         }
+        // Test Mode's clear ink goes on LAST, over every colour above (tajweed, a search's accent, an
+        // arrival's snippet), so nothing can paint a hidden word back in. The ornament then gets back the
+        // colour the composer drew it in, read off the composed text: usually the accent, but a riwayah's
+        // khilaf-numbered ornament has its own (`QiraahTajweedStore.khilafNumberColor`).
+        for entry in hidden {
+            mutable.addAttribute(.foregroundColor, value: UIColor.clear, range: entry.ayah)
+            if let marker = entry.marker {
+                text.enumerateAttribute(.foregroundColor, in: marker, options: []) { color, run, _ in
+                    if let color {
+                        mutable.addAttribute(.foregroundColor, value: color, range: run)
+                    } else {
+                        mutable.removeAttribute(.foregroundColor, range: run)
+                    }
+                }
+            }
+        }
         return (mutable, touched)
+    }
+
+    /// Test Mode's faint bar where a hidden ayah's words are (see `testHidden`): a neutral tint that reads
+    /// on every reading theme, a touch stronger on a dark page.
+    private static let testVeilColor = UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(white: 1, alpha: 0.10)
+            : UIColor(white: 0, alpha: 0.07)
     }
 
     /// Where `term` matches inside `ayahRange` of the page's plain text - using the EXACT SAME range ladder
@@ -7195,7 +7321,12 @@ struct MushafPageTextView: UIViewRepresentable {
             .map { "\($0.surahID):\($0.ayahID):\($0.color.rawValue)" }
             .sorted()
             .joined(separator: ",")
-        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)|\(themeKey)"
+        // The ground too: switching between two light themes (Light and Sepia) changes no trait, so the
+        // dynamic wash cannot notice it; only this key can.
+        let groundKey = washGround.map { WashRGB($0).key } ?? ""
+        // Test Mode's hidden ayahs, for the same reason: revealing one changes nothing else on the page.
+        let testKey = testHidden.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ",")
+        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)|\(themeKey)|\(groundKey)|\(testKey)"
         let sameText = context.coordinator.lastAssignedText === attributed
             && context.coordinator.lastWidth == width
             && context.coordinator.lastHeight == height

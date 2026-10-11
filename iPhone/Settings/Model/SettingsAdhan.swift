@@ -3360,6 +3360,13 @@ extension Settings {
         Set(canonicalMarks(forDayKey: key).filter { $0.value.isPrayed }.keys)
     }
 
+    /// Simple Mode's gate for the Adhan tab's PRAYER TRACKER: any mark within the last
+    /// `SimpleMode.trackerWindowDays`. Cheap enough for the countdown tick that re-renders the tab:
+    /// the tracker is cached, and this is at most fourteen lookups into it.
+    func trackerMarkedRecently(now: Date = Date()) -> Bool {
+        SimpleMode.markedRecently(loadPrayerTracker(), today: now, dayKey: prayerTrackerKey(for:))
+    }
+
     /// Every canonical prayer recorded on the day, with its mark. See `canonicalMarks(of:)`.
     /// The last day asked for is memoized until the next tracker write (`trackerGeneration` bumps on
     /// every save): the tracker card and the prayer list resolve the same day a dozen times per pass
@@ -4554,5 +4561,43 @@ extension Settings {
         calculationAutoAnsweredCountryCode = calculationAutoDetectedCountryCode
         calculationAutoAnsweredMethod = calculationAutoDetectedMethod
         calculationAutoChanged = false
+    }
+}
+
+// MARK: - Simple Mode's rules (docs/Simple Mode Guide.md)
+
+/// The rules Simple Mode's views share, kept pure so they are tested on their own (SimpleModeTests).
+/// Here rather than beside the More menu in SimpleMode.swift because the widgets compile this file
+/// and not that one.
+enum SimpleMode {
+    /// How recent a tracker mark keeps the Adhan tab's PRAYER TRACKER on screen in Simple Mode: someone
+    /// who tracks sees it, someone who never has is not handed an empty habit tracker on day one.
+    static let trackerWindowDays = 14
+
+    /// How long Ignore quiets the Adhan tab's location and notification dialogs (Abu, 2026-10-10: "for
+    /// ignore snoozing make it wait a day"). Never Ask Again stays permanent.
+    static let nagSnooze: TimeInterval = 86_400
+
+    /// Whether any prayer was marked (on time, late or missed) on today or one of the `days - 1` days
+    /// before it. At most `days` dictionary lookups: the Adhan tab asks on every countdown tick, so
+    /// this never walks the whole history.
+    static func markedRecently(
+        _ tracker: [String: [String: PrayerMark]],
+        today: Date,
+        days: Int = trackerWindowDays,
+        calendar: Calendar = .current,
+        dayKey: (Date) -> String
+    ) -> Bool {
+        guard days > 0, !tracker.isEmpty else { return false }
+        for offset in 0..<days {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            if let marks = tracker[dayKey(day)], !marks.isEmpty { return true }
+        }
+        return false
+    }
+
+    /// Whether a dialog snoozed until `until` (seconds since 1970; 0 = never snoozed) is still quiet.
+    static func isSnoozed(until: Double, now: Date) -> Bool {
+        now.timeIntervalSince1970 < until
     }
 }

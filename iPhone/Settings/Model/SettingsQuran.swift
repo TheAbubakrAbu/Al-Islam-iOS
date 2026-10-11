@@ -493,6 +493,9 @@ extension Settings {
             wordByWordInlineTransliteration ? "1" : "0",
             riwayahTajweedHiddenRules,
             showMuqattaatHelper ? "1" : "0",
+            // Simple Mode trims the row's own buttons (the play menu, the short ayah menu, the
+            // translation's name): an Equatable row has to see the flip to redraw.
+            simpleMode ? "1" : "0",
             quranSortModeRaw,
             automaticKhatmCompletion ? "1" : "0",
             defaultView ? "1" : "0",

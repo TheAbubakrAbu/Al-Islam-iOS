@@ -10,9 +10,19 @@ struct HadithTrailingToolbar: ViewModifier {
     @ObservedObject var settings = Settings.shared
     @Binding var hadithGridMode: Bool
     @Binding var showHadithSettings: Bool
+    /// A jump's one-visit list (`HadithView.listForJump`, `HadithBookView.listForJump`).
+    var listForJump: Binding<Bool> = .constant(false)
+    /// Simple Mode's More menu items (`HadithView.simpleMoreItems`), nil in Full Mode and on a book's
+    /// screen. While set, the grid toggle moves into the menu and the gear keeps its own slot.
+    var simpleMoreItems: AnyView? = nil
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if let simpleMoreItems {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { SimpleMoreMenu { simpleMoreItems } }
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        } else if #available(iOS 26.0, *) {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) { gridButton }
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
@@ -27,13 +37,19 @@ struct HadithTrailingToolbar: ViewModifier {
     }
 
     private var gridButton: some View {
-        Button {
+        // What the screen shows, so a jump's one-visit list reads as a list here too.
+        let showsGrid = hadithGridMode && !listForJump.wrappedValue
+        return Button {
             settings.hapticFeedback()
-            withAnimation { hadithGridMode.toggle() }
+            withAnimation {
+                // From a jump's list the button only brings the grid back: the stored choice never
+                // stopped being grid.
+                if listForJump.wrappedValue { listForJump.wrappedValue = false } else { hadithGridMode.toggle() }
+            }
         } label: {
-            Image(systemName: hadithGridMode ? "list.bullet" : "square.grid.2x2")
+            Image(systemName: showsGrid ? "list.bullet" : "square.grid.2x2")
         }
-        .accessibilityLabel(hadithGridMode ? "Show list" : "Show grid")
+        .accessibilityLabel(showsGrid ? "Show list" : "Show grid")
         .tint(settings.accentColor.accent2)
     }
 
@@ -87,6 +103,10 @@ struct HadithView: View {
     /// switch, so flipping the hadith catalog doesn't flip the Quran, 99 Names, and Islam grids too.
     /// Grid by default, like every other catalog (Abu, 2026-09-18).
     @AppStorage("hadithGridMode") private var hadithGridMode = true
+    /// Scroll To Book from the grid shows the list for that one visit (a grid tile has no scroll
+    /// target), and never writes the stored choice, which until 2026-10-10 it switched off for good.
+    @State private var listForJump = false
+    private var showsGrid: Bool { hadithGridMode && !listForJump }
     /// "Scroll to book" from a search result: clears the search and lands the catalog on this book.
     @State private var pendingScrollToBookSlug: String? = nil
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -583,7 +603,11 @@ struct HadithView: View {
                         // encyclopedia - hang off the bottom of this same section (Abu, 2026-09-07),
                         // the way Browse by Theme hangs off the Quran tab's summary. So it renders even
                         // before there is a Last Read: the doors are always worth showing.
-                        boxed(summaryTilesSection)
+                        // Simple Mode moves the doors into the More menu, so with no tile to show
+                        // there is nothing left in the section.
+                        if !settings.simpleMode || showSummaryTiles {
+                            boxed(summaryTilesSection)
+                        }
                         // Need a Hand?: one language or both, and the name of Allah in red, right
                         // under the summary (see HelpDoors.swift).
                         boxed(HelpDoorsSection(area: .hadith))
@@ -664,7 +688,7 @@ struct HadithView: View {
             }
             .compactListSectionSpacing()
             // The grid/list flip animates the whole catalog, same as the Quran tab.
-            .animation(.easeInOut, value: hadithGridMode)
+            .animation(.easeInOut, value: showsGrid)
             #if DEBUG
             .debugPushDestination(isPresented: $debugOpenEncyclopedia) { HadeethEncView() }
             .debugPushDestination(isPresented: $debugOpenTopics) { HadithTopicsView() }
@@ -778,7 +802,9 @@ struct HadithView: View {
             // treatment the Quran tab's trailing toolbar has).
             .modifier(HadithTrailingToolbar(
                 hadithGridMode: $hadithGridMode,
-                showHadithSettings: $showHadithSettings
+                showHadithSettings: $showHadithSettings,
+                listForJump: $listForJump,
+                simpleMoreItems: settings.simpleMode ? AnyView(simpleMoreItems) : nil
             ))
             .sheet(isPresented: $showHadithSettings) {
                 SettingsHadithView()
@@ -790,6 +816,8 @@ struct HadithView: View {
                 }
             }
             .onAppear {
+                // Back from the book a jump opened (or from another tab): the grid again.
+                if listForJump { listForJump = false }
                 store.loadLastRead()
                 // An order or a Show choice changed inside a book or a chapter (their filter rows
                 // share the preference) reaches this row when the tab comes back.
@@ -896,9 +924,10 @@ struct HadithView: View {
             .onChange(of: pendingScrollToBookSlug) { slug in
                 guard let slug else { return }
                 pendingScrollToBookSlug = nil
-                // Grid tiles carry no scroll ids (the Quran list has the same rule), so flip to the
-                // list first; and clear the search so the catalog rows exist, then land on the book.
-                if hadithGridMode { hadithGridMode = false }
+                // Grid tiles carry no scroll ids (the Quran list has the same rule), so this visit
+                // shows the list, the stored choice untouched; and clear the search so the catalog
+                // rows exist, then land on the book.
+                if showsGrid { listForJump = true }
                 withAnimation { searchText = "" }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     withAnimation { scrollProxy.scrollTo("hadith-book-\(slug)", anchor: .top) }
@@ -994,12 +1023,16 @@ struct HadithView: View {
                 }
             } controls: {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-                NavigationLink(destination: LazyDestination { DailyHubView() }) {
-                    DailyHubDoorLabel()
+                // Simple Mode keeps the tiles alone: Today moves into the More menu, and the history
+                // expander steps aside (docs/Simple Mode Guide.md).
+                if !settings.simpleMode {
+                    NavigationLink(destination: LazyDestination { DailyHubView() }) {
+                        DailyHubDoorLabel()
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
-                if !dailyHistory.isEmpty {
+                if !dailyHistory.isEmpty, !settings.simpleMode {
                     Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
                         .padding(4)
                         .conditionalGlassEffect()
@@ -1067,14 +1100,16 @@ struct HadithView: View {
                 .padding(.vertical, 4)
             }
 
-            if showDailyHistory {
+            if showDailyHistory, !settings.simpleMode {
                 ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
                     dailyHistoryRow(entry, isToday: index == 0)
                         .opacity(index == 0 ? 1 : 0.75)
                 }
             }
 
-            encyclopediaDoors
+            if !settings.simpleMode {
+                encyclopediaDoors
+            }
         }
     }
 
@@ -1230,7 +1265,9 @@ struct HadithView: View {
 
     /// The doors under the summary. One `@State` + one destination, so exactly one screen opens.
     enum SummaryDoor: String, Identifiable, Hashable {
-        case topics, encyclopedia, history
+        /// `daily` is the Today screen: Full Mode opens it from the summary header's pill, Simple Mode
+        /// from the More menu (a toolbar menu cannot hold a NavigationLink).
+        case topics, encyclopedia, history, daily
         /// The "About Hadith & the Sunnah" cards, which share the same one-destination plumbing: the two
         /// pillar screens, then (2026-09-29) the Hadith & Its Sciences group of Pillars & Beliefs.
         case sunnah, hadithPillar, hadithSciences, hadithPreservation, hadithRejectors
@@ -1266,6 +1303,42 @@ struct HadithView: View {
         .buttonStyle(.plain)
     }
 
+    /// Simple Mode's ⋯ menu (docs/Simple Mode Guide.md): the Today pill and the three doors under the
+    /// summary, then the grid. Each item raises the same door as its chip, through the same guard.
+    @ViewBuilder
+    var simpleMoreItems: some View {
+        menuDoor(.daily, title: "Today", systemImage: "sun.horizon.fill")
+        if HadithTopicsStore.isBundled {
+            menuDoor(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
+        }
+        if HadeethEncStore.isBundled {
+            menuDoor(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
+        }
+        menuDoor(.history, title: "History", systemImage: "clock.arrow.circlepath")
+
+        Divider()
+
+        let showsGrid = hadithGridMode && !listForJump
+        Button {
+            settings.hapticFeedback()
+            withAnimation {
+                if listForJump { listForJump = false } else { hadithGridMode.toggle() }
+            }
+        } label: {
+            Label(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2")
+        }
+    }
+
+    private func menuDoor(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
+        Button {
+            guard !bookPushInFlight else { return }
+            settings.hapticFeedback()
+            openDoor = door
+        } label: {
+            Label(title, systemImage: systemImage)
+        }
+    }
+
     private func doorButton(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
         Button {
             guard !bookPushInFlight else { return }
@@ -1285,6 +1358,7 @@ struct HadithView: View {
         case .topics:       HadithTopicsView()
         case .encyclopedia: HadeethEncView()
         case .history:      HadithHistoryView()
+        case .daily:        LazyDestination { DailyHubView() }
         case .sunnah:       SunnahPillarView()
         case .hadithPillar: HadithPillarView()
         case .hadithSciences:     HadithSciencesView()
@@ -2286,7 +2360,7 @@ struct HadithView: View {
                 // Every bookmark lives right here, Quran-bookmark style - no capped preview with a
                 // "View All" push, and no folders above them: bookmarks ARE the filing system
                 // (Abu, 2026-09-07). In grid mode they render as tiles, like the Quran's bookmark grid.
-                if hadithGridMode {
+                if showsGrid {
                     // Chunked non-lazy rows (`tileGridChunk`): a lazy grid in a List row can answer a
                     // different height on each self-sizing pass, which iOS 26 traps on.
                     let bookmarks = store.bookmarks
@@ -2352,7 +2426,7 @@ struct HadithView: View {
             .padding(.bottom, -12)
 
         if isExpanded?.wrappedValue ?? true {
-            if hadithGridMode {
+            if showsGrid {
                 Section {
                     // Centered: a book tile is short labels (Abu, 2026-10-05). The BOOKMARK grid above
                     // keeps .leading - those tiles carry hadith prose.
@@ -2370,14 +2444,12 @@ struct HadithView: View {
                     Section {
                         bookLink(book) {
                             bookRow(book)
-                                // iPad/Mac: the book the detail column is reading keeps its bed, the
-                                // same promise the grid tiles' ring makes (2026-10-05). Behind the
-                                // row, as its own observing view, so a chapter pick never re-renders
-                                // the catalog (see `HadithReadingRowHighlight`).
-                                .background { 
-                                    if usesColumnNavigation { HadithReadingRowHighlight(slug: book.slug) }
-                                }
                         }
+                        // iPad/Mac: the book the detail column is reading keeps its bed, the same
+                        // promise the grid tiles' ring makes (2026-10-05). The row's whole cell, from a
+                        // modifier that alone observes the selection, so a chapter pick never
+                        // re-renders the catalog (see `HadithReadingRowHighlight`).
+                        .modifier(HadithReadingRowHighlight(slug: book.slug, isActive: usesColumnNavigation))
                         .contextMenu { bookContextMenu(book) }
                         // The surah rows' swipe language: icon-only. Favorite on the leading edge,
                         // scroll-to on the trailing edge.
@@ -2561,16 +2633,19 @@ struct HadithView: View {
                 // Separate chips - chapters, then hadiths - one stat per pill. There is no third
                 // (size) chip any more: every book ships in the app, so its download weight is not a
                 // fact the reader has to decide anything with.
-                HStack(spacing: 4) {
-                    if let counts = store.counts(for: book) {
-                        statChip("\(counts.chapters) Ch")
-                        statChip("\(counts.hadiths.formatted()) Ha")
+                // Simple Mode leaves the counts and the era to the book's own screen.
+                if !settings.simpleMode {
+                    HStack(spacing: 4) {
+                        if let counts = store.counts(for: book) {
+                            statChip("\(counts.chapters) Ch")
+                            statChip("\(counts.hadiths.formatted()) Ha")
+                        }
                     }
-                }
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
 
-                bookEraLabel(book)
+                    bookEraLabel(book)
+                }
             }
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -2625,25 +2700,29 @@ struct HadithView: View {
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.55)
 
-                HStack(spacing: 4) {
-                    Text("\(book.number)")
-                        .font(.caption2.monospacedDigit().weight(.bold))
-                        .foregroundColor(settings.accentColor.color)
+                // Simple Mode leaves the number, the counts and the era to the book's own screen, and
+                // the tile shrinks to what it still holds.
+                if !settings.simpleMode {
+                    HStack(spacing: 4) {
+                        Text("\(book.number)")
+                            .font(.caption2.monospacedDigit().weight(.bold))
+                            .foregroundColor(settings.accentColor.color)
 
-                    Text("• \(bookShapeText(book))")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .monospacedDigit()
+                        Text("• \(bookShapeText(book))")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .monospacedDigit()
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                    bookEraLabel(book)
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-
-                bookEraLabel(book)
             }
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             // A fixed height so every tile in the grid lines up regardless of how its titles wrap.
-            .frame(height: 100)
+            .frame(height: settings.simpleMode ? 72 : 100)
             .padding(.vertical, 4)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())

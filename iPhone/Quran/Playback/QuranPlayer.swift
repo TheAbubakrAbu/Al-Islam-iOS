@@ -310,6 +310,22 @@ final class QuranPlayer: ObservableObject {
     private var statusObserver: NSKeyValueObservation?
     private var queuePlayerItemObserver: NSKeyValueObservation?
     private var notificationObservers = [NSObjectProtocol]()
+    /// The playing player's `timeControlStatus` and `reasonForWaitingToPlay`, and the half-second grace
+    /// before a wait shows the loading gear (see `observeBuffering`).
+    private var bufferingObserver: NSKeyValueObservation?
+    private var bufferingReasonObserver: NSKeyValueObservation?
+    private var bufferingSpinnerWork: DispatchWorkItem?
+    /// The gear is up because of a wait (not because a start is still loading), so a pause takes it down.
+    private var bufferingRaisedLoading = false
+    /// A real wait happened since the audio last ran, so its resumption re-syncs the lock screen.
+    private var bufferingWasWaiting = false
+
+    /// Which continue-from-ayah recitation a download belongs to: renewed by every ayah start and by
+    /// `stop()`, so a next-ayah file that lands late is never queued into a recitation that has moved on.
+    private var continueToken = UUID()
+    /// The next ayah while its file downloads (see `enqueueContinueItem`). A queue that runs dry meanwhile
+    /// WAITS for it instead of ending, or of queueing the stream that was freezing the hand-off.
+    private var continueAwaitedPosition: (surahNumber: Int, ayahNumber: Int)?
 
     /// Periodic observer on the surah player used to prewarm the next surah near the end of the current one.
     private var surahTimeObserver: Any?
@@ -430,6 +446,26 @@ final class QuranPlayer: ObservableObject {
                 debugStartWhenDataReady {
                     QuranPlayer.shared.playAyah(surahNumber: surahNumber, ayahNumber: ayahNumber, repeatCount: repeatCount)
                 }
+            }
+        }
+        // `-playFromAyah s:a[:scope]`: Play From Ayah, scope `page`, `surah` (the default), `juz` or
+        // `forever`. With `-ayahAudioBase` and `-playbackProbe` it replays a network stall headlessly.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playFromAyah"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            let fields = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":")
+            if fields.count >= 2, let surahNumber = Int(fields[0]), let ayahNumber = Int(fields[1]) {
+                let scope = fields.count > 2 ? ContinueScope(rawValue: String(fields[2])) ?? .surah : .surah
+                debugStartWhenDataReady {
+                    QuranPlayer.shared.playAyah(surahNumber: surahNumber, ayahNumber: ayahNumber,
+                                                continueRecitation: true, continueScope: scope)
+                }
+            }
+        }
+        // `-playbackProbe`: logs the player twice a second (`PLAYBACKPROBE` in the unified log), the
+        // evidence for a recitation that stops while the bar still says it is playing.
+        if ProcessInfo.processInfo.arguments.contains("-playbackProbe") {
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                QuranPlayer.shared.logPlaybackProbe()
             }
         }
         // `-playCustomRange s:a:b[:perAyah[:section]]`: ayah-by-ayah range playback, for verifying the
@@ -674,9 +710,85 @@ final class QuranPlayer: ObservableObject {
         return item
     }
 
+    /// Every recitation player is set up here, the queue players included.
+    ///
+    /// The fast start comes from `playImmediately(atRate:)` at each start, NOT from switching off
+    /// `automaticallyWaitsToMinimizeStalling`. It was off on every player until 2026-10-11 (Abu: "it stops
+    /// halfway or at the end of the ayah and doesn't keep going unless I go back ten seconds"), and with it
+    /// off AVFoundation answers a network dip by PAUSING the player (rate 0) for good: nothing in the app
+    /// restarts it, and the bar went on saying it was playing over silence. Measured against a stalling
+    /// local server on the iPhone 17 Pro simulator: off, the player never resumed after the data came
+    /// back; on, it waited and carried on within a second of it, from where it stopped.
     private func configureFastStartPlayer(_ player: AVPlayer, bufferDuration: TimeInterval = 2) {
-        player.automaticallyWaitsToMinimizeStalling = false
+        player.automaticallyWaitsToMinimizeStalling = true
         player.currentItem?.preferredForwardBufferDuration = bufferDuration
+    }
+
+    /// Shows the loading gear while the recitation waits on the network, and takes it away the moment
+    /// audio runs again (2026-10-11). With stall recovery on, a dip mid-ayah leaves `isPlaying` true while
+    /// the player waits, and a queue run dry waits for its next ayah's download: without this the reader
+    /// showed a playing recitation over silence. Half a second of grace keeps a brief dip from flashing
+    /// the gear. The reasons are explicit: `.evaluatingBufferingRate` passes at every start and seek and
+    /// is no stall. Both properties are watched, because AVFoundation can re-label a wait from one reason
+    /// to another without the status itself changing.
+    private func observeBuffering(of observed: AVPlayer) {
+        bufferingSpinnerWork?.cancel()
+        bufferingSpinnerWork = nil
+        bufferingRaisedLoading = false
+        bufferingWasWaiting = false
+        let changed: (AVPlayer) -> Void = { [weak self] p in
+            DispatchQueue.main.async { self?.bufferingStateChanged(p) }
+        }
+        bufferingObserver = observed.observe(\.timeControlStatus, options: [.new]) { p, _ in changed(p) }
+        bufferingReasonObserver = observed.observe(\.reasonForWaitingToPlay, options: [.new]) { p, _ in changed(p) }
+    }
+
+    /// One look at the playing player's wait, from either observer in `observeBuffering`.
+    private func bufferingStateChanged(_ p: AVPlayer) {
+        guard player === p else { return }
+        switch p.timeControlStatus {
+        case .playing:
+            bufferingSpinnerWork?.cancel()
+            bufferingSpinnerWork = nil
+            bufferingRaisedLoading = false
+            if isLoading { isLoading = false }
+            // The rate stayed 1 through the wait, so the lock screen ran its clock on over the silence:
+            // put it back where the audio is.
+            if bufferingWasWaiting {
+                bufferingWasWaiting = false
+                updateNowPlayingInfo()
+            }
+        case .waitingToPlayAtSpecifiedRate:
+            guard p.reasonForWaitingToPlay == .toMinimizeStalls || p.reasonForWaitingToPlay == .noItemToPlay
+            else { return }
+            bufferingWasWaiting = true
+            guard bufferingSpinnerWork == nil else { return }
+            let waiting = ObjectIdentifier(p)
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, let current = self.player, ObjectIdentifier(current) == waiting else { return }
+                self.bufferingSpinnerWork = nil
+                if current.timeControlStatus == .waitingToPlayAtSpecifiedRate,
+                   self.isPlaying, !self.isPaused, !self.isLoading {
+                    self.isLoading = true
+                    self.bufferingRaisedLoading = true
+                }
+            }
+            bufferingSpinnerWork = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+        case .paused:
+            // A pause (the listener's, an interruption's, a lost route's) ends the wait: the gear this
+            // observer raised goes with it, or the reader spun it over a paused recitation. A gear the
+            // START raised (the first item still loading) is not this observer's to clear.
+            bufferingSpinnerWork?.cancel()
+            bufferingSpinnerWork = nil
+            bufferingWasWaiting = false
+            if bufferingRaisedLoading {
+                bufferingRaisedLoading = false
+                if isLoading { isLoading = false }
+            }
+        default:
+            break
+        }
     }
 
     private func presentPlaybackFailure(_ message: String, title: String = "Playback Error", offlineSwitch: OfflineReciterSwitch? = nil) {
@@ -1089,20 +1201,28 @@ final class QuranPlayer: ObservableObject {
         guard let p = player else { return }
         let current = CMTimeGetSeconds(p.currentTime())
         guard current.isFinite else { return }
-        var target = current + seconds
-        // Clamp to [0, duration] so a skip near the ends can't seek negative or past the item.
+        seek(toSeconds: current + seconds)
+    }
+
+    /// Seeks the playing item to `seconds`, clamped to [0, duration] so a skip near either end can't seek
+    /// negative or past the item. The ±10 s buttons come through here, and so does the big player's
+    /// scrubber, which passes `completion` (run on main once the seek lands) to let go of the position
+    /// it was showing without the bar jumping back for a tick.
+    func seek(toSeconds seconds: Double, completion: (() -> Void)? = nil) {
+        guard let p = player, seconds.isFinite else { completion?(); return }
+        var target = seconds
         if let item = p.currentItem {
             let dur = CMTimeGetSeconds(item.duration)
             if dur.isFinite, dur > 0 { target = min(target, dur) }
         }
         target = max(0, target)
-        guard target.isFinite else { return }
         // Timescale 600, not 1: a timescale of 1 quantizes the seek to whole seconds.
         p.seek(to: CMTime(seconds: target, preferredTimescale: 600)) { _ in
             // AVPlayer invokes seek completions on an internal queue - hop before touching
             // published/persisted state (same as the Control Center scrub handler does).
             DispatchQueue.main.async {
                 self.updateNowPlayingInfo(); self.saveLastListenedSurah(); self.saveLastListenedAyah()
+                completion?()
             }
         }
     }
@@ -1157,6 +1277,9 @@ final class QuranPlayer: ObservableObject {
         // from a finished recitation would otherwise decide how the next Play From Ayah ends.
         continueScope = .surah
         continueBound = nil
+        // A next-ayah download still in flight belongs to the recitation being stopped.
+        continueToken = UUID()
+        continueAwaitedPosition = nil
 
         // Persist position OUTSIDE withAnimation: these write @AppStorage-backed settings, which republish
         // observing screens (e.g. SurahView). Animating that republish mid-scroll makes the reading view
@@ -1219,6 +1342,12 @@ final class QuranPlayer: ObservableObject {
         notificationObservers.removeAll()
         queuePlayerItemObserver = nil
         statusObserver = nil
+        bufferingObserver = nil
+        bufferingReasonObserver = nil
+        bufferingSpinnerWork?.cancel()
+        bufferingSpinnerWork = nil
+        bufferingRaisedLoading = false
+        bufferingWasWaiting = false
         // The time observer was added to the current `player`; always removed here before `player` is
         // reassigned/nilled, so it's removed from the same instance it was added to (never crashes).
         if let obs = surahTimeObserver {
@@ -1530,6 +1659,7 @@ final class QuranPlayer: ObservableObject {
     /// Wires the status observer (+ already-ready fast path), end-of-item handler, and the prewarm timer for
     /// a surah player. Shared by fresh playback and prewarm adoption so behavior never diverges.
     private func wireSurahPlayback(item: AVPlayerItem, surahNumber: Int, surahName: String, reciter: Reciter, certainReciter: Bool, skipSurah: Bool, wasLocal: Bool = false, remoteURL: URL? = nil) {
+        if let p = player { observeBuffering(of: p) }
         statusObserver = item.observe(\.status) { [weak self] itm, _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -1700,7 +1830,9 @@ final class QuranPlayer: ObservableObject {
         let buffer = localURL != nil ? localSurahStartupBuffer : remoteSurahStartupBuffer
         let item = makeFastStartItem(url: url, bufferDuration: buffer)
         let pre = AVPlayer(playerItem: item)
-        pre.automaticallyWaitsToMinimizeStalling = false
+        // Stall recovery on, like every recitation player (`configureFastStartPlayer`, which also runs
+        // again when this player is adopted).
+        pre.automaticallyWaitsToMinimizeStalling = true
         pre.pause()   // attaching the item to a player starts buffering even while paused
         prewarmedSurah = PrewarmedSurah(
             surahNumber: number,
@@ -2080,8 +2212,8 @@ final class QuranPlayer: ObservableObject {
 
         let q = AVQueuePlayer()
         q.actionAtItemEnd = .advance
-        q.automaticallyWaitsToMinimizeStalling = false
         q.insert(firstItem, after: nil)
+        configureFastStartPlayer(q, bufferDuration: ayahStartupBuffer)
 
         // Retire the outgoing players via locals (see stop()) so their dealloc runs after the
         // writes below close, never inside them.
@@ -2090,6 +2222,7 @@ final class QuranPlayer: ObservableObject {
         queuePlayer = q
         player = q
         _ = retiringPlayer; _ = retiringQueue
+        observeBuffering(of: q)
 
         if let next = nextCustomRangePosition(after: (initialIndex, 0)) {
             enqueueCustomRangeItem(at: next, in: q, surah: surah, reciter: reciter)
@@ -2186,7 +2319,9 @@ final class QuranPlayer: ObservableObject {
 
     /// True while a custom range repeats forever: the sequence is one pass and wraps.
     private var customRangeLoops = false
-    /// True when this range plays from files fetched once (it repeats), false when it streams.
+    /// True when this range repeats: its first ayah waits for its download, and every ayah of the range is
+    /// prefetched behind it. Any range downloads each QUEUED ayah before queueing it (see
+    /// `enqueueCustomRangeItem`); only the first ayah of a range that plays once streams.
     private var customRangeFetchesFirst = false
     /// Each queued item's place: its index in the one-pass-or-full sequence, and which loop it is in.
     private var customRangeItemPositions: [ObjectIdentifier: (index: Int, pass: Int)] = [:]
@@ -2205,8 +2340,13 @@ final class QuranPlayer: ObservableObject {
         return customRangeLoops && !customRangeSequence.isEmpty ? (0, position.pass + 1) : nil
     }
 
-    /// Appends the item for `position` to the queue: at once when its audio is on disk (or the range
-    /// streams), else once its one download lands. If the queue ran dry meanwhile, playback resumes.
+    /// Appends the item for `position` to the queue: at once when its audio is on disk, else once its one
+    /// download lands. If the queue ran dry meanwhile, playback resumes.
+    ///
+    /// Every range waits for the download now, not only one that repeats (2026-10-11): a queued STREAM
+    /// whose first bytes were late at the hand-off froze AVQueuePlayer at 0:00 while it reported playing,
+    /// or skipped the ayah's first seconds (see `enqueueContinueItem`, which Play From Ayah shares this
+    /// rule with). A failed download still streams that one ayah.
     private func enqueueCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer, surah: Surah, reciter: Reciter) {
         guard position.index < customRangeSequence.count else { return }
         let entry = customRangeSequence[position.index]
@@ -2224,9 +2364,19 @@ final class QuranPlayer: ObservableObject {
                 // Not over a pause: a range paused while its next ayah was loading resumed by itself (R4).
                 if !self.isPaused { q.play() }
             }
+            // The ayah after it starts downloading now, as in Play From Ayah (`warmContinueFile`), so a
+            // short ayah followed by a long one is not left waiting at the hand-off. A repeating range
+            // has already asked for every file; the cache joins the two requests.
+            if let after = self.nextCustomRangePosition(after: position),
+               after.index < self.customRangeSequence.count {
+                let upcoming = self.customRangeSequence[after.index]
+                if let remote = self.ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: upcoming.ayahNumber,
+                                                     isBismillah: upcoming.isBismillah) {
+                    PlaybackAudioCache.shared.fetch(remote) { _ in }
+                }
+            }
         }
-        if customRangeFetchesFirst,
-           let remote = ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: entry.ayahNumber, isBismillah: entry.isBismillah) {
+        if let remote = ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: entry.ayahNumber, isBismillah: entry.isBismillah) {
             customRangeAwaitedPosition = position
             PlaybackAudioCache.shared.fetch(remote) { [weak self] _ in
                 guard let self, self.customRangeToken == token else { return }
@@ -2319,6 +2469,9 @@ final class QuranPlayer: ObservableObject {
     ) {
         removeAllObservers()
         discardPrewarm()
+        // Whatever the last recitation was still downloading for its queue is not this one's.
+        continueToken = UUID()
+        continueAwaitedPosition = nil
 
         guard
             let surah  = quranData.quran.first(where: { $0.id == surahNumber }),
@@ -2386,6 +2539,7 @@ final class QuranPlayer: ObservableObject {
             configureFastStartPlayer(single, bufferDuration: ayahStartupBuffer)
             player = single
             _ = retiringPlayer; _ = retiringQueue
+            observeBuffering(of: single)
 
             statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
                 DispatchQueue.main.async { [weak self] in
@@ -2464,31 +2618,13 @@ final class QuranPlayer: ObservableObject {
         }
         firstItem.preferredForwardBufferDuration = ayahStartupBuffer
 
-        // The second item comes from the SCOPE rule, not from `ayahNumber < surah.numberOfAyahs`: a
-        // `.page` recitation must not prime an ayah past its page, and a `.juz` / `.forever` one has to
-        // be able to prime the next SURAH's first ayah (2026-10-07).
-        var nextItem: AVPlayerItem?
-        var nextPos: (surahNumber: Int, ayahNumber: Int)?
-        if let next = nextContinuePosition(afterSurah: surahNumber, ayah: ayahNumber),
-           let nextSurah = quranData.quran.first(where: { $0.id == next.surahNumber }) {
-            nextItem = makeItem(forSurah: nextSurah, reciter: reciter, ayahNumber: next.ayahNumber)
-            nextItem?.preferredForwardBufferDuration = ayahStartupBuffer
-            if nextItem != nil { nextPos = next }
-        }
-
         let q = AVQueuePlayer()
         q.actionAtItemEnd = .advance
-        q.automaticallyWaitsToMinimizeStalling = false
-
         q.insert(firstItem, after: nil)
+        configureFastStartPlayer(q, bufferDuration: ayahStartupBuffer)
         continueAyahItemNumbers = [
             ObjectIdentifier(firstItem): (surahNumber: surahNumber, ayahNumber: ayahNumber)
         ]
-
-        if let ni = nextItem, let np = nextPos {
-            q.insert(ni, after: firstItem)
-            continueAyahItemNumbers[ObjectIdentifier(ni)] = (surahNumber: np.surahNumber, ayahNumber: np.ayahNumber)
-        }
 
         // Retire the outgoing players via locals (see stop()).
         let retiringPlayer = player
@@ -2496,6 +2632,15 @@ final class QuranPlayer: ObservableObject {
         queuePlayer = q
         player = q
         _ = retiringPlayer; _ = retiringQueue
+        observeBuffering(of: q)
+
+        // The second ayah comes from the SCOPE rule, not from `ayahNumber < surah.numberOfAyahs`: a
+        // `.page` recitation must not prime an ayah past its page, and a `.juz` / `.forever` one has to
+        // be able to prime the next SURAH's first ayah (2026-10-07). It joins the queue from disk
+        // (`enqueueContinueItem`); only this first ayah streams, for the fast start.
+        if let next = nextContinuePosition(afterSurah: surahNumber, ayah: ayahNumber) {
+            enqueueContinueItem(at: next, in: q, reciter: reciter)
+        }
 
         statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
             DispatchQueue.main.async { [weak self] in
@@ -2532,12 +2677,16 @@ final class QuranPlayer: ObservableObject {
                     // Only while this queue is still the one playing (2026-10-04): a play started
                     // between the KVO delivery and this block was stopped by the old queue's end.
                     guard self.queuePlayer === qPlayer else { return }
+                    // Still dry: the next ayah's download can land between the KVO delivery and this
+                    // block, and its insert already resumed the queue. Queueing it again here would
+                    // recite that ayah twice.
+                    guard qPlayer.items().isEmpty else { return }
 
                     // A dry queue is the END of the recitation only when the ayah that just played
                     // was the surah's last one. Mid-surah it means the next item is not ready yet
-                    // (a slow network, or `makeItem` returning nil), and ending there is what made
-                    // "Play From Ayah" stop dead after an ayah or two on a poor connection. Hold
-                    // instead and let the pending insert resume it - the same way the custom-range
+                    // (its file is still downloading), and ending there is what made "Play From
+                    // Ayah" stop dead after an ayah or two on a poor connection. Hold on the loading
+                    // gear instead: the download's insert resumes it, the same way the custom-range
                     // twin waits on `customRangeAwaitedPosition`.
                     // "Is there a next ayah?" is now the SCOPE's question (`nextContinuePosition`), so a
                     // dry queue at a page's or juz's last ayah ends the recitation while one mid-scope
@@ -2546,17 +2695,13 @@ final class QuranPlayer: ObservableObject {
                        let s = self.currentSurahNumber,
                        let a = self.currentAyahNumber,
                        let next = self.nextContinuePosition(afterSurah: s, ayah: a),
-                       let nextSur = self.quranData.quran.first(where: { $0.id == next.surahNumber }),
-                       let rec = self.playbackReciter ?? self.resolvedSelectedReciter(),
-                       let resume = self.makeItem(forSurah: nextSur, reciter: rec, ayahNumber: next.ayahNumber) {
-                        // Re-enqueue the ayah that should have followed and carry on. Holding
-                        // without this would leave the recitation stalled with no path back.
-                        resume.preferredForwardBufferDuration = self.ayahStartupBuffer
-                        self.continueAyahItemNumbers[ObjectIdentifier(resume)] =
-                            (surahNumber: next.surahNumber, ayahNumber: next.ayahNumber)
-                        qPlayer.insert(resume, after: nil)
+                       let rec = self.playbackReciter ?? self.resolvedSelectedReciter() {
                         self.isLoading = true
-                        qPlayer.play()
+                        // Nothing in flight for it (it was never asked for, or `makeItem` failed):
+                        // ask now. Holding without this would leave the recitation with no path back.
+                        if self.continueAwaitedPosition.map({ $0 != next }) ?? true {
+                            self.enqueueContinueItem(at: next, in: qPlayer, reciter: rec)
+                        }
                         return
                     }
 
@@ -2609,27 +2754,78 @@ final class QuranPlayer: ObservableObject {
                     self.updateNowPlayingInfo()
                 }
 
+                // The scope decides whether there IS a next ayah, and which surah it is in; it joins the
+                // queue once its file is on disk. (It is appended, not inserted after `newItem`: the
+                // queue may have advanced past `newItem` by the time the download lands.)
                 if self.continueRecitationFromAyah,
                    qPlayer.items().count < 2,
+                   self.continueAwaitedPosition == nil,
+                   let next = self.nextContinuePosition(afterSurah: pos.surahNumber, ayah: pos.ayahNumber),
                    let rec = self.playbackReciter ?? self.resolvedSelectedReciter() {
-
-                    // The scope decides whether there IS a next ayah, and which surah it is in.
-                    if let next = self.nextContinuePosition(afterSurah: pos.surahNumber, ayah: pos.ayahNumber),
-                       let nextSurah = self.quranData.quran.first(where: { $0.id == next.surahNumber }),
-                       let upcoming = self.makeItem(forSurah: nextSurah, reciter: rec, ayahNumber: next.ayahNumber) {
-                        upcoming.preferredForwardBufferDuration = self.ayahStartupBuffer
-                        // The queue may have advanced past (or dropped) `newItem` between the KVO
-                        // delivery and this async block - inserting after an item that left the
-                        // queue raises NSInvalidArgumentException. Anchor on the LIVE current item,
-                        // like the custom-range twin does.
-                        let anchor = qPlayer.items().contains(newItem) ? newItem : qPlayer.currentItem
-                        qPlayer.insert(upcoming, after: anchor)
-                        self.continueAyahItemNumbers[ObjectIdentifier(upcoming)] =
-                            (surahNumber: next.surahNumber, ayahNumber: next.ayahNumber)
-                    }
+                    self.enqueueContinueItem(at: next, in: qPlayer, reciter: rec)
                 }
             }
         }
+    }
+
+    /// Queues the ayah at `position` behind the one playing, once its file is ON DISK (2026-10-11).
+    ///
+    /// The queue used to take the next ayah as a fresh STREAM. AVQueuePlayer reads only a few kilobytes
+    /// of a queued item ahead, so the hand-off fetched the rest just in time, and when those bytes were
+    /// late the queue froze at 0:00 while it reported playing (no seek and no pause/play revived it, only
+    /// a new player) or skipped the ayah's first seconds. Reproduced against a stalling local server, in
+    /// a harness and in the app (`-ayahAudioBase`, `-playbackProbe`): Abu's "stops at the end of the ayah
+    /// and doesn't keep going". A file on disk hands over cleanly, so the next ayah now waits for its
+    /// `PlaybackAudioCache` download (custom ranges share the rule, `enqueueCustomRangeItem`); a failed
+    /// download streams that one ayah as before. If the playing ayah ends first, the dry queue holds on
+    /// the loading gear and this insert carries the recitation on.
+    ///
+    /// Inserting also starts the download of the ayah after this one (`warmContinueFile`), so a run of
+    /// short ayahs is not left waiting on the network at every hand-off.
+    private func enqueueContinueItem(at position: (surahNumber: Int, ayahNumber: Int), in q: AVQueuePlayer,
+                                     reciter: Reciter) {
+        guard let surah = quranData.quran.first(where: { $0.id == position.surahNumber }) else { return }
+        let token = continueToken
+        let insert = { [weak self, weak q] in
+            guard let self, let q, self.queuePlayer === q, self.continueRecitationFromAyah,
+                  self.continueToken == token else { return }
+            guard let item = self.makeItem(forSurah: surah, reciter: reciter, ayahNumber: position.ayahNumber)
+            else { return }
+            item.preferredForwardBufferDuration = self.ayahStartupBuffer
+            self.continueAyahItemNumbers[ObjectIdentifier(item)] = position
+            let ranDry = q.items().isEmpty
+            q.insert(item, after: nil)
+            if ranDry {
+                // The ayah before it ended while this one downloaded: carry on, unless the listener
+                // paused meanwhile (then `resume()` plays it).
+                self.isLoading = false
+                if !self.isPaused { q.play() }
+            }
+            self.warmContinueFile(after: position, reciter: reciter)
+        }
+        if let remote = ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: position.ayahNumber,
+                                        isBismillah: false) {
+            continueAwaitedPosition = position
+            PlaybackAudioCache.shared.fetch(remote) { [weak self] _ in
+                guard let self, self.continueToken == token else { return }
+                self.continueAwaitedPosition = nil
+                // A failed fetch streams this one ayah: `makeItem` falls back to the remote URL.
+                insert()
+            }
+        } else {
+            insert()
+        }
+    }
+
+    /// Starts downloading the ayah after `position` when it would stream, so it is already on disk when
+    /// `enqueueContinueItem` asks for it. `PlaybackAudioCache` joins the two requests if it is not.
+    private func warmContinueFile(after position: (surahNumber: Int, ayahNumber: Int), reciter: Reciter) {
+        guard let next = nextContinuePosition(afterSurah: position.surahNumber, ayah: position.ayahNumber),
+              let surah = quranData.quran.first(where: { $0.id == next.surahNumber }),
+              let remote = ayahFileToFetch(forSurah: surah, reciter: reciter, ayahNumber: next.ayahNumber,
+                                           isBismillah: false)
+        else { return }
+        PlaybackAudioCache.shared.fetch(remote) { _ in }
     }
     
     private func makeItem(
@@ -2663,8 +2859,34 @@ final class QuranPlayer: ObservableObject {
         return makeFastStartItem(url: url, bufferDuration: ayahStartupBuffer)
     }
 
+    #if DEBUG
+    /// `-ayahAudioBase <url>`: every streamed ayah comes from `<url>SSSAAA.mp3` instead of the reciter's
+    /// host, so a local server can throttle or stall it (the network-stall repro for Play From Ayah).
+    private static let debugAyahAudioBase: String? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let idx = args.firstIndex(of: "-ayahAudioBase"), args.indices.contains(idx + 1) else { return nil }
+        return args[idx + 1]
+    }()
+
+    /// One `-playbackProbe` line: where the recitation is and what the player says it is doing.
+    func logPlaybackProbe() {
+        guard let p = player else { return }
+        let seconds = CMTimeGetSeconds(p.currentTime())
+        let reason = p.reasonForWaitingToPlay?.rawValue ?? "-"
+        NSLog("PLAYBACKPROBE %ld:%ld t=%.2f rate=%.1f tcs=%ld reason=%@ playing=%d loading=%d queued=%ld",
+              currentSurahNumber ?? 0, currentAyahNumber ?? 0, seconds.isFinite ? seconds : -1,
+              p.rate, p.timeControlStatus.rawValue, reason, isPlaying ? 1 : 0, isLoading ? 1 : 0,
+              queuePlayer?.items().count ?? -1)
+    }
+    #endif
+
     /// The streamed file of one ayah. Nil only for a malformed link.
     private func ayahRemoteURL(forSurah surah: Surah, reciter: Reciter, ayahNumber: Int) -> URL? {
+        #if DEBUG
+        if let base = Self.debugAyahAudioBase {
+            return URL(string: base + String(format: "%03d%03d.mp3", surah.id, ayahNumber))
+        }
+        #endif
         let urlStr: String
         if let folder = reciter.everyayahFolder {
             // everyayah.com uses a surah+ayah filename scheme. Used for editions whose cdn.islamic.network

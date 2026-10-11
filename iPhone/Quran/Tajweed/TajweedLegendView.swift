@@ -896,11 +896,11 @@ struct TajweedLegendView: View {
                     }
                     .tint(settings.accentColor.color)
 
-                    // Lit themes keep the reader's Legend button up on their own, so with them on this
-                    // switch stays one tap away and the trip to Settings is not needed.
-                    Text(ThemeHighlights.shared.isEmpty
-                         ? "If you turn it off, go to Quran Settings → Arabic Text to turn it back on"
-                         : "Theme highlights keep the Legend button in the reader, so you can turn this back on from here")
+                    // The reader's Legend button stays up with the colors off (grey dots), so this switch
+                    // stays one tap away; only Simple Mode folds the button while nothing is colored.
+                    Text(settings.simpleMode && ThemeHighlights.shared.isEmpty
+                         ? "Simple Mode hides the Legend button while nothing is colored. To turn this back on, go to Quran Settings → Arabic Text"
+                         : "The Legend button stays in the reader with the colors off, so you can turn this back on from there")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

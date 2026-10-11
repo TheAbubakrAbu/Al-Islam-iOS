@@ -26,39 +26,61 @@ struct CloudOfferView: View {
     @State private var working = false
     @State private var errorMessage: String?
     @State private var restoreCandidate: CloudBackupManager.ProfileSummary?
+    @FocusState private var nameFocused: Bool
 
     private var isDarkMode: Bool { (settings.colorScheme ?? systemColorScheme) == .dark }
     private var accent: Color { settings.accentColor.color }
+
+    private static let nameCardID = "cloudOfferNameCard"
 
     var body: some View {
         ZStack {
             backdrop
 
             VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        header
-                        if !checked {
-                            ProgressView().padding(.top, 24)
-                        } else if manager.accountAvailable == false {
-                            noAccountCard
-                        } else {
-                            if !manager.profiles.isEmpty { existingProfiles }
-                            newProfileCard
+                ScrollViewReader { proxy in
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 18) {
+                            header
+                            if !checked {
+                                ProgressView().padding(.top, 24)
+                            } else if manager.accountAvailable == false {
+                                noAccountCard
+                            } else {
+                                if !manager.profiles.isEmpty { existingProfiles }
+                                newProfileCard
+                            }
+                            if let errorMessage {
+                                Text(errorMessage)
+                                    .font(.footnote)
+                                    .foregroundColor(.red)
+                                    .multilineTextAlignment(.center)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            // What the typing scroll lands on: the card and any error above it, with the
+                            // stack's own spacing left between them and the Save button.
+                            Color.clear
+                                .frame(height: 0)
+                                .id(Self.nameCardID)
                         }
-                        if let errorMessage {
-                            Text(errorMessage)
-                                .font(.footnote)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: 560)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 22)
+                        .padding(.top, presentedAsSheet ? 24 : 36)
+                        .padding(.bottom, 16)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    // The keyboard lifts the Save button with it, and the card it was under stayed put,
+                    // half hidden behind the button while the name was being typed: once the keyboard
+                    // has taken its room, the whole card is brought up above the button.
+                    .onChange(of: nameFocused) { focused in
+                        guard focused else { return }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                proxy.scrollTo(Self.nameCardID, anchor: .bottom)
+                            }
                         }
                     }
-                    .frame(maxWidth: 560)
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 22)
-                    .padding(.top, presentedAsSheet ? 24 : 36)
-                    .padding(.bottom, 16)
                 }
 
                 actions
@@ -139,32 +161,33 @@ struct CloudOfferView: View {
                     .foregroundColor(.secondary)
                     .padding(.leading, 4)
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Name this backup")
                     .font(.headline)
-                TextField("Abu's iPhone", text: $nickname)
-                    .textFieldStyle(.roundedBorder)
-                    .textInputAutocapitalization(.words)
+                CloudNameField(text: $nickname, isFocused: $nameFocused) { nameFocused = false }
                     .disabled(working)
                 Text(manager.profiles.count >= CloudBackupManager.maxProfiles
                      ? "You already have \(CloudBackupManager.maxProfiles) profiles. Delete one in Settings to add another."
-                     : "Up to \(CloudBackupManager.maxProfiles) people or devices can share one iCloud account, each with a backup of their own.")
+                     : "The name you will see when restoring. Up to \(CloudBackupManager.maxProfiles) people or devices can share one iCloud account, each with a backup of their own.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
-            .padding(14)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(cardSurface(selected: true))
         }
     }
 
+    /// The accent card is the one this screen asks about; its edge stays faint, so the field's own
+    /// accent ring is the only strong line while a name is being typed.
     private func cardSurface(selected: Bool) -> some View {
         RoundedRectangle(cornerRadius: 20, style: .continuous)
-            .fill(selected ? accent.opacity(0.12) : Color(UIColor.secondarySystemBackground))
+            .fill(selected ? accent.opacity(isDarkMode ? 0.14 : 0.10) : Color(UIColor.secondarySystemBackground))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(selected ? accent.opacity(0.6) : Color.primary.opacity(0.08), lineWidth: 1)
+                    .strokeBorder(selected ? accent.opacity(0.28) : Color.primary.opacity(0.08), lineWidth: 1)
             )
     }
 
@@ -218,6 +241,7 @@ struct CloudOfferView: View {
     }
 
     private func start() {
+        nameFocused = false
         working = true
         errorMessage = nil
         Task {
@@ -254,6 +278,81 @@ struct CloudOfferView: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - The name field
+
+/// Where a backup's name is typed: the welcome offer and the Rename sheet. Built like the app's other
+/// standalone field (Ask AI's question bar), plain text on the app's glass, which at this height is a
+/// capsule; it replaced a `.roundedBorder` field, the old UIKit box that read as a black slot in dark
+/// mode (Abu, 2026-10-10: "iCloud backup needs to look prettier especially text field"). The device it
+/// names sits at the leading end and Clear at the trailing end, the two ends the HIG gives a field,
+/// and the accent rings it while it is being edited. Typing stops at
+/// `CloudBackupManager.nicknameLimit`, where the manager would cut the name anyway.
+struct CloudNameField: View {
+    @Environment(\.appearance) private var appearance
+
+    @Binding var text: String
+    var isFocused: FocusState<Bool>.Binding
+    var onSubmit: () -> Void = {}
+
+    var body: some View {
+        let focused = isFocused.wrappedValue
+        HStack(spacing: 10) {
+            Image(systemName: CloudDevice.symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(appearance.accent)
+                .frame(width: 22)
+                .accessibilityHidden(true)
+
+            // The placeholder is what an empty name becomes (`CloudBackupManager.cleanNickname`).
+            TextField(CloudDevice.suggestedNickname, text: $text)
+                .font(.headline)
+                .textFieldStyle(.plain)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .submitLabel(.done)
+                .focused(isFocused)
+                .onSubmit(onSubmit)
+                .accessibilityLabel("Backup name")
+
+            // While editing, as iOS shows its own Clear button.
+            if focused, !text.isEmpty {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    text = ""
+                    isFocused.wrappedValue = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.body)
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Clear name")
+                .transition(.opacity)
+            }
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, focused && !text.isEmpty ? 8 : 16)
+        .frame(minHeight: 52)
+        .conditionalGlassEffect(clear: true, rectangle: true, interactive: false)
+        .overlay(
+            RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous)
+                .strokeBorder(focused ? appearance.accent : Color.primary.opacity(0.12), lineWidth: focused ? 1.5 : 1)
+                .allowsHitTesting(false)
+        )
+        .contentShape(RoundedRectangle(cornerRadius: GlassCorner.rectangle, style: .continuous))
+        .onTapGesture { isFocused.wrappedValue = true }
+        .animation(.easeOut(duration: 0.15), value: focused)
+        .animation(.easeOut(duration: 0.15), value: text.isEmpty)
+        .onChange(of: text) { newValue in
+            if newValue.count > CloudBackupManager.nicknameLimit {
+                text = String(newValue.prefix(CloudBackupManager.nicknameLimit))
+            }
+        }
     }
 }
 
@@ -629,7 +728,6 @@ struct CloudBackupSettingsView: View {
 
     @State private var showOffer = false
     @State private var renaming = false
-    @State private var newName = ""
     @State private var restoreCandidate: CloudBackupManager.ProfileSummary?
     @State private var switchCandidate: CloudBackupManager.ProfileSummary?
     @State private var fileCandidate: FileCandidate?
@@ -678,12 +776,8 @@ struct CloudBackupSettingsView: View {
         .fileImporter(isPresented: $importing, allowedContentTypes: [.item]) { result in
             pickedFile(result)
         }
-        .alert("Rename Profile", isPresented: $renaming) {
-            TextField("Name", text: $newName)
-            Button("Rename") { rename() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The name shown when choosing a profile to restore.")
+        .sheet(isPresented: $renaming) {
+            CloudRenameSheet(current: manager.nickname)
         }
     }
 
@@ -692,30 +786,29 @@ struct CloudBackupSettingsView: View {
     private var statusSection: some View {
         Section(footer: Text(statusFooter)) {
             if manager.isEnabled {
-                HStack {
-                    Label("Backing Up", systemImage: "icloud.fill")
-                    Spacer()
+                // The page's rows wear the Settings chips (What's Included, History), these two included.
+                HStack(spacing: 8) {
+                    SettingsRowLabel(title: "Backing Up", systemImage: "icloud.fill",
+                                     value: manager.isBusy ? nil : (manager.lastSavedAt.map(CloudProfileCard.relative) ?? "Not yet"))
                     if manager.isBusy {
+                        Spacer(minLength: 8)
                         ProgressView()
-                    } else if let saved = manager.lastSavedAt {
-                        Text(CloudProfileCard.relative(saved)).foregroundColor(.secondary)
-                    } else {
-                        Text("Not yet").foregroundColor(.secondary)
                     }
                 }
+                let canBackUp = !manager.isBusy && manager.status != .takenOver
                 Button {
                     settings.hapticFeedback()
                     backUpNow()
                 } label: {
-                    Label("Back Up Now", systemImage: "arrow.clockwise.icloud")
+                    actionLabel("Back Up Now", systemImage: "arrow.clockwise.icloud", enabled: canBackUp)
                 }
-                .disabled(manager.isBusy || manager.status == .takenOver)
+                .disabled(!canBackUp)
             } else {
                 Button {
                     settings.hapticFeedback()
                     showOffer = true
                 } label: {
-                    Label("Set Up iCloud Backup", systemImage: "icloud.and.arrow.up")
+                    actionLabel("Set Up iCloud Backup", systemImage: "icloud.and.arrow.up", enabled: true)
                 }
             }
             if let errorMessage {
@@ -741,17 +834,37 @@ struct CloudBackupSettingsView: View {
         return "Keep your bookmarks, prayer tracker, khatm, tasbih counts, journal and settings in your own iCloud. Your location is never included."
     }
 
+    /// An action row: the chip, and its title in the accent, the way a button reads in a list.
+    private func actionLabel(_ title: String, systemImage: String, enabled: Bool) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage)
+            Text(title)
+                .foregroundColor(settings.accentColor.color)
+        }
+        .padding(.vertical, 3)
+        .opacity(enabled ? 1 : 0.45)
+    }
+
     private var profileSection: some View {
         Section(header: Text("THIS \(CloudDevice.kind.uppercased())'S PROFILE")) {
-            HStack {
-                Text("Name")
-                Spacer()
-                Text(manager.nickname).foregroundColor(.secondary)
-            }
-            Button("Rename") {
-                newName = manager.nickname
+            // One row for the name and its rename (the two used to be a Name row and a Rename row).
+            Button {
+                settings.hapticFeedback()
                 renaming = true
+            } label: {
+                HStack(spacing: 10) {
+                    SettingsRowLabel(title: "Name", systemImage: CloudDevice.symbol, value: manager.nickname)
+                    Image(systemName: "pencil")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                // A list button tints its label, and the value and pencil are hierarchical styles that
+                // would come out in the accent; read-outs stay grey. `Color.primary`, the label colour:
+                // the hierarchical `.primary` would itself resolve to the tint.
+                .foregroundStyle(Color.primary)
             }
+            .accessibilityHint("Renames this profile")
             Button("Stop Backing Up on This \(CloudDevice.kind)", role: .destructive) {
                 settings.hapticFeedback()
                 RemovalConfirmation.present(
@@ -870,12 +983,6 @@ struct CloudBackupSettingsView: View {
         }
     }
 
-    private func rename() {
-        Task {
-            do { try await manager.rename(newName) } catch { errorMessage = error.localizedDescription }
-        }
-    }
-
     private func exportFile() {
         fileMessage = nil
         do {
@@ -913,6 +1020,92 @@ struct CloudBackupSettingsView: View {
             Task {
                 do { try await manager.delete(profile) } catch { errorMessage = error.localizedDescription }
             }
+        }
+    }
+}
+
+// MARK: - Rename
+
+/// Renames this device's profile with the field the welcome offer named it in, in a small sheet with
+/// the app's X and checkmark. It was an alert with a text field, the one kind of alert the app kept
+/// (a confirmation dialog drops a field); a sheet gives the name its real field back, and a save that
+/// fails says so under the name instead of at the top of the page behind it.
+struct CloudRenameSheet: View {
+    @ObservedObject private var manager = CloudBackupManager.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String
+    @State private var saving = false
+    @State private var errorMessage: String?
+    @FocusState private var focused: Bool
+
+    init(current: String) {
+        _name = State(initialValue: current)
+    }
+
+    var body: some View {
+        SheetNavigationContainer {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    CloudNameField(text: $name, isFocused: $focused) { save() }
+                        .disabled(saving)
+
+                    Text("The name shown when choosing a profile to restore, on this \(CloudDevice.kind) and on every device signed in to your iCloud.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 4)
+
+                    if saving {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text("Saving to iCloud…")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 4)
+                    } else if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 4)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+            .navigationTitle("Rename Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar(onConfirm: {
+                save()
+                return false
+            })
+        }
+        .smallMediumSheetPresentation()
+        .interactiveDismissDisabled(saving)
+        .onAppear { focused = true }
+    }
+
+    /// Saves and closes; an unchanged name just closes. The sheet stays up while iCloud answers, and a
+    /// failure stays on it, under the name.
+    private func save() {
+        guard !saving else { return }
+        guard CloudBackupManager.cleanNickname(name) != manager.nickname else {
+            dismiss()
+            return
+        }
+        focused = false
+        saving = true
+        errorMessage = nil
+        Task {
+            do {
+                try await manager.rename(name)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            saving = false
         }
     }
 }

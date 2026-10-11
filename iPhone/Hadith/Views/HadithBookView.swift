@@ -99,8 +99,14 @@ struct HadithBookView: View {
     let book: HadithCatalogBook
 
     @State private var searchText = ""
-    /// The chapter list shares the tab's grid/list choice, with its own copy of the toggle up top.
-    @AppStorage("hadithGridMode") private var hadithGridMode = false
+    /// The chapter list's OWN grid/list choice, LIST by default: chapter titles are sentences, which a
+    /// tile cuts off. Until 2026-10-10 it shared the tab's `hadithGridMode` key with the opposite
+    /// default, so flipping the collections flipped the chapters too (`Settings.migrateGridModes`
+    /// carried each install's choice over).
+    @AppStorage("hadithChapterGridMode") private var chapterGridMode = false
+    /// Scroll To Chapter from the grid shows the list for that one visit, the stored choice untouched.
+    @State private var listForJump = false
+    private var showsGrid: Bool { chapterGridMode && !listForJump }
     /// The push target the chapter grid tiles use when no tab path is handed in (a NavigationLink cell
     /// would draw a chevron). See the `pushDestination` pair in `body`.
     @State private var pushedChapter: HadithBookData.Chapter?
@@ -548,8 +554,9 @@ struct HadithBookView: View {
         // Pages/list top left (the Quran reader's toolbar shape), grid + gear top right - the tab
         // root's exact trailing pair. Fullscreen/sharing live in the rows' context menus.
         .modifier(HadithTrailingToolbar(
-            hadithGridMode: $hadithGridMode,
-            showHadithSettings: $showHadithSettings
+            hadithGridMode: $chapterGridMode,
+            showHadithSettings: $showHadithSettings,
+            listForJump: $listForJump
         ))
         .sheet(isPresented: $showHadithSettings) {
             SettingsHadithView()
@@ -713,7 +720,7 @@ struct HadithBookView: View {
                     Section(header: chaptersSectionHeader(data)) { }
                         .padding(.bottom, -12)
 
-                    if hadithGridMode {
+                    if showsGrid {
                         Section {
                             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a
                             // different height on each self-sizing pass, which iOS 26 traps on.
@@ -742,13 +749,15 @@ struct HadithBookView: View {
         // No pinned book header here: the navigation title already names the book, and the CHAPTERS
         // header carries the counts - a floating bar was pure repetition on this screen.
         // The grid/list flip animates, same as the catalog.
-        .animation(.easeInOut, value: hadithGridMode)
+        .animation(.easeInOut, value: showsGrid)
         // NOTE: the screen's own chapter pushes (grid tile, auto-open) deliberately do NOT live here.
         // The pushed chapter's Last Read record publishes through the store THIS screen observes, which
         // re-diffs the List (for a first read it inserts the whole LAST READ section), and a push hung
         // off something that re-diffs is a push that can be torn down. They sit on the outer container
         // in `body` instead, where the List's content can't reach them.
         .onAppear {
+            // Back from the chapter a jump opened: the grid again.
+            if listForJump { listForJump = false }
             // (No AI index build on open any more: the all-books corpus loads or builds on the first
             // AI-eligible query, from `runAISearch`.)
 
@@ -825,9 +834,10 @@ struct HadithBookView: View {
         .onChange(of: pendingScrollToChapterId) { chapterId in
             guard let chapterId else { return }
             pendingScrollToChapterId = nil
-            // Grid tiles carry no scroll ids (the Quran list has the same rule), so flip to the
-            // list first; and clear the search so the chapter rows exist, then land on the chapter.
-            if hadithGridMode { hadithGridMode = false }
+            // Grid tiles carry no scroll ids (the Quran list has the same rule), so this visit shows
+            // the list, the stored choice untouched; and clear the search so the chapter rows exist,
+            // then land on the chapter.
+            if showsGrid { listForJump = true }
             withAnimation { searchText = "" }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 withAnimation { scrollProxy.scrollTo("hadith-chapter-\(chapterId)", anchor: .top) }
@@ -942,8 +952,10 @@ struct HadithBookView: View {
             Spacer()
 
             // Chapters, then hadiths - the SAME order as the catalog rows' chips, abbreviated in the
-            // split view's narrow content column so neither ellipsizes.
-            if usesColumnNavigation {
+            // split view's narrow content column so neither ellipsizes. Simple Mode drops them.
+            if settings.simpleMode {
+                EmptyView()
+            } else if usesColumnNavigation {
                 statPill("\(data.chapters.count) Ch")
                 statPill("\(data.hadiths.count.formatted()) Ha")
             } else {
@@ -1195,15 +1207,15 @@ struct HadithBookView: View {
         let isCurrent = isReaderChapter(chapter)
         return chapterLink(chapter, data: data) {
             chapterRow(chapter, data: data)
-                // Column mode only: the left list stays truthful about what fills the right, including
-                // after the reader swaps chapters from inside the reader itself. The SHARED row
-                // highlight (2026-10-05), not a hand-rolled fill: this one was accent at 0.18 behind a
-                // 12 pt corner while the Quran rows drew nothing and the Settings sidebar used the
-                // system tint, which is how the three tabs came to mark a selected row three different
-                // ways (Abu: "sometimes it gets highlighted then it stops sometimes it doesnt
-                // highlight at all").
-                .rowSelectionHighlight(isCurrent)
         }
+        // Column mode only: the left list stays truthful about what fills the right, including
+        // after the reader swaps chapters from inside the reader itself. The SHARED row
+        // highlight (2026-10-05), not a hand-rolled fill: this one was accent at 0.18 behind a
+        // 12 pt corner while the Quran rows drew nothing and the Settings sidebar used the
+        // system tint, which is how the three tabs came to mark a selected row three different
+        // ways (Abu: "sometimes it gets highlighted then it stops sometimes it doesnt
+        // highlight at all"). On the row, not the label: it is the row's whole cell.
+        .rowSelectionHighlight(isCurrent, isActive: usesColumnNavigation)
         .contextMenu { chapterContextMenu(chapter, data: data) }
         // The surah rows' swipe language, icon-only: favorite leading, scroll-to trailing.
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -1319,7 +1331,7 @@ struct HadithBookView: View {
 
                     Spacer(minLength: 8)
 
-                    if let count = chapterStats(data).counts[chapter.id] {
+                    if !settings.simpleMode, let count = chapterStats(data).counts[chapter.id] {
                         CountPill(count: count)
                     }
                 }
@@ -1354,7 +1366,7 @@ struct HadithBookView: View {
 
                     Spacer(minLength: 8)
 
-                    if let rangeText = chapterRangeText(chapter, data: data) {
+                    if !settings.simpleMode, let rangeText = chapterRangeText(chapter, data: data) {
                         Text(rangeText)
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -1441,23 +1453,26 @@ struct HadithBookView: View {
                 }
                 .minimumScaleFactor(0.6)
 
-                HStack(spacing: 4) {
-                    if let rangeText = chapterRangeText(chapter, data: data) {
-                        Text(rangeText)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
-                    }
+                // Simple Mode leaves the span and the count to the reader's chapter header.
+                if !settings.simpleMode {
+                    HStack(spacing: 4) {
+                        if let rangeText = chapterRangeText(chapter, data: data) {
+                            Text(rangeText)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
 
-                    if let count = chapterStats(data).counts[chapter.id] {
-                        Text("• \(count)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
+                        if let count = chapterStats(data).counts[chapter.id] {
+                            Text("• \(count)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .monospacedDigit()
+                        }
                     }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
 
                 Spacer(minLength: 0)
             }
@@ -1465,7 +1480,7 @@ struct HadithBookView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .frame(height: 76)
+            .frame(height: settings.simpleMode ? 60 : 76)
             .contentShape(Rectangle())
             // The chapter filling the detail column wears the sidebar's ring. It used to get a lighter
             // accent TINT, the favorite's own grammar, so the open chapter "just highlights the back as
@@ -1636,19 +1651,18 @@ struct HadithReadingRing: View {
 ///
 /// Grid mode ringed its tiles and list mode drew nothing at all, so on iPad the same screen marked
 /// the open book in one shape and not the other (Abu, 2026-10-05).
-struct HadithReadingRowHighlight: View {
+///
+/// A modifier on the row (`rowSelectionHighlight` paints the row's whole cell), and the only thing that
+/// observes the selection: a pick re-renders these modifiers, never the catalog. `isActive` is column
+/// mode; the iPhone's stack leaves the rows alone.
+struct HadithReadingRowHighlight: ViewModifier {
     @ObservedObject private var selection = HadithColumnSelection.shared
 
     let slug: String
+    let isActive: Bool
 
-    private var isReading: Bool {
-        selection.target?.book.slug == slug
-    }
-
-    var body: some View {
-        Color.clear
-            .rowSelectionHighlight(isReading)
-            .allowsHitTesting(false)
+    func body(content: Content) -> some View {
+        content.rowSelectionHighlight(selection.target?.book.slug == slug, isActive: isActive)
     }
 }
 
@@ -1894,6 +1908,11 @@ struct HadithChapterView: View {
     /// neighbour: at chapter 1 the Previous slot is the dimmed "First Chapter", not nothing.
     private var showsChapterNav: Bool { bookData.chapters.count > 1 }
 
+    /// The pair ABOVE the first hadith. Simple Mode keeps only the one below the last
+    /// (docs/Simple Mode Guide.md), and the two scrolls that land "at the literal top" target the
+    /// first hadith instead of a pair that is not there.
+    private var showsTopChapterNav: Bool { showsChapterNav && !settings.simpleMode }
+
     /// Swap the chapter in place - recompute its derived reading data, reset the search and visibility,
     /// and record it as Last Read - exactly as the surah reader swaps surahs without a new push.
     /// `recordLastRead: false` is for the page-mode entry jump TO the last read: recording the
@@ -2078,6 +2097,11 @@ struct HadithChapterView: View {
     /// The hadith the reader marked by tapping it - the ayah list's grey attention tint, for hadiths.
     /// Tap to mark (keep your place), tap again to clear; arriving at a searched hadith marks it too.
     @State private var highlightedHadithID: Int? = nil
+    /// Set once the chapter has landed on `scrollToHadithId`. The landing runs from the list's
+    /// `onAppear`, which runs again every time the tab comes back, and each run scrolled a reader who
+    /// had read on back to the hadith they arrived at and marked it again (Abu, 2026-10-09). The surah
+    /// reader's `didScrollDown`.
+    @State private var didLandOnArrival = false
     /// Which hadiths are on screen - drives the pinned header's progress bar, the surah reader's way.
     /// A plain (NOT observed) reference in @State: rows write into it on every viewport crossing, and
     /// only ChapterProgressBar subscribes - so scrolling no longer invalidates this whole view.
@@ -2366,13 +2390,14 @@ struct HadithChapterView: View {
     /// it (the Quran's arrival rule: the selection shows you where you landed; tap to clear). Fired
     /// once the rows exist, which is `textReady` - not the List's appearance.
     private func scheduleArrivalScroll(_ scrollProxy: ScrollViewProxy) {
-        guard let target = scrollToHadithId else { return }
+        guard let target = scrollToHadithId, !didLandOnArrival else { return }
+        didLandOnArrival = true
         highlightedHadithID = target
         // Landing on the chapter's FIRST hadith lands at the literal top, the Previous/Next pair
         // included (the chapter-swap rule): anchoring hadith 1 itself left the pair's bottom edge
         // peeking out under the bar.
         let anchorID: String
-        if allChapterHadiths.first?.idInBook == target, showsChapterNav {
+        if allChapterHadiths.first?.idInBook == target, showsTopChapterNav {
             anchorID = "chapter-top-nav"
         } else {
             anchorID = "chapter-hadith-\(target)"
@@ -2551,7 +2576,7 @@ struct HadithChapterView: View {
                     // The Quran ayah list's shape: each hadith is its own Section, with a Previous/Next
                     // chapter pair at the top and bottom that swaps the chapter in place. The chapter's
                     // identity is the pinned header above; rows report visibility for its progress bar.
-                    if showsChapterNav {
+                    if showsTopChapterNav {
                         Section { chapterNavButtonPair() }
                             .id("chapter-top-nav")
                     }
@@ -2567,14 +2592,6 @@ struct HadithChapterView: View {
                                 // The ayah list's tap grammar: selecting mode builds the selection
                                 // (accent tint); otherwise tap-to-mark (grey attention tint). The row's
                                 // own controls (number pill, menu) win their taps either way.
-                                .padding(6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(isSelectingHadiths && isSelected
-                                              ? settings.accentColor.color.opacity(0.16)
-                                              : Color.secondary.opacity(highlightedHadithID == hadith.idInBook ? 0.18 : 0))
-                                )
-                                .padding(-6)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     settings.hapticFeedback()
@@ -2592,6 +2609,13 @@ struct HadithChapterView: View {
                                         }
                                     }
                                 }
+                                // The ayah row's wash, tint for tint, filling the whole cell. It was a
+                                // 14 pt box 6 pt outside the text, which left a 10 pt rim of card around
+                                // the mark (Abu, 2026-10-09: the ayah's highlight was fixed, "fix it for
+                                // hadith"). Select mode shows only the selection, as the ayah list does.
+                                .rowWash(isSelectingHadiths
+                                         ? (isSelected ? ReaderRowTint.accent(settings.accentColor.color, defaultView: settings.defaultView) : nil)
+                                         : (highlightedHadithID == hadith.idInBook ? ReaderRowTint.attention : nil))
                                 .id("chapter-hadith-\(hadith.idInBook)")
                                 .onAppear { visibility.visibleIDs.insert(hadith.idInBook) }
                                 .onDisappear { visibility.visibleIDs.remove(hadith.idInBook) }
@@ -2620,7 +2644,7 @@ struct HadithChapterView: View {
             // A Previous/Next chapter swap lands at the LITERAL top of the new chapter - the nav
             // buttons above the first hadith included - not at hadith 1 with them scrolled away.
             let target: String
-            if showsChapterNav {
+            if showsTopChapterNav {
                 target = "chapter-top-nav"
             } else if let first = allChapterHadiths.first?.idInBook {
                 target = "chapter-hadith-\(first)"

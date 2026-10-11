@@ -384,6 +384,7 @@ struct DuaView: View {
                                 source: item.reference
                             )
                             .equatable()
+                            .spokenRowWash(item.arabicText)
                         }
                     } header: {
                         SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)
@@ -613,6 +614,7 @@ struct DuaView: View {
                             scrollLabel: "Scroll To Collection"
                         )
                         .equatable()
+                        .spokenRowWash(item.arabicText)
                     }
                 } header: {
                     HStack(spacing: 8) {
@@ -939,6 +941,7 @@ struct DuaCollectionView: View {
                     scrollLabel: "Scroll To Dua"
                 )
                 .equatable()
+                .spokenRowWash(item.arabicText)
 
                 #if os(iOS)
                 // The Hisn al-Muslim rows carry a recitation: the play pill sits under the dua.

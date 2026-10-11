@@ -1838,7 +1838,7 @@ struct QiraatView: View {
                     OpenScreenLink(screen: .qiraatExplorer) {
                         QiraatExplorerView(mode: .duel)
                     } label: {
-                        QiraatDoorRow(systemImage: "arrow.left.arrow.right", title: "Head-to-Head",
+                        QiraatDoorRow(systemImage: "arrow.left.arrow.right", title: "Compare Two Riwayat",
                                       subtitle: "Pick any two riwayat and step through the places where they part ways")
                     }
                     OpenScreenLink(screen: .qiraatIsnadIndex) {
@@ -2197,7 +2197,7 @@ struct QiraatView: View {
         }
         #if DEBUG && os(iOS)
         .debugPushDestination(isPresented: $debugOpenExplorer) {
-            // "-qiraatExplorerMode duel|surah" opens that mode instead of All Riwayat.
+            // "-qiraatExplorerMode duel" opens Compare Two instead of All Riwayat.
             if let place = Self.debugExplorerPlace {
                 QiraatExplorerView(surah: place.surah, ayah: place.ayah)
             } else if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-qiraatExplorerMode"),

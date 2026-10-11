@@ -7,6 +7,9 @@ import AVFoundation
 
 struct SettingsAdhanView: View {
     @ObservedObject var settings = Settings.shared
+    /// The Adhan tab's prayer layout (TILES / GRID / LIST / SPLIT), the same key the PRAYER TIMES
+    /// header's picker writes. That header picker was its only home until Simple Mode hid it there.
+    @AppStorage("prayerDisplayModeV2") private var prayerDisplayModeRawValue: String = PrayerList.PrayerDisplayMode.tiles.rawValue
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingMap = false
@@ -311,6 +314,20 @@ struct SettingsAdhanView: View {
         notificationsSection
 
         Section(header: Text("PRAYER TIMES")) {
+            #if os(iOS)
+            // The watch always draws tiles, so the choice is the phone's alone.
+            Picker(selection: $prayerDisplayModeRawValue) {
+                ForEach(PrayerList.PrayerDisplayMode.allCases) { mode in
+                    Text(mode.displayName.capitalized).tag(mode.rawValue)
+                }
+            } label: {
+                Text("Prayer Times Layout")
+                    .font(.subheadline)
+            }
+            .tint(settings.accentColor.color)
+            .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
+            #endif
+
             adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
             adhanPageLink(.travelingMode) { travelingModeDestination }
             adhanPageLink(.optionalPrayers) { optionalTimesDestination }
@@ -1765,6 +1782,7 @@ extension SettingsSearchEntry {
     static let adhanEntries: [SettingsSearchEntry] = [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
         .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings),
+        .init(title: "Prayer Times Layout", path: "Prayer Settings", keywords: "tiles grid list split layout columns prayer times view display", destination: .prayerSettings),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),
         .init(title: "Optional Prayer Times", path: "Prayer Settings → Optional Prayers", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerPage(.optionalPrayers)),
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),

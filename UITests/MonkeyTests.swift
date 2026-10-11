@@ -29,7 +29,7 @@ final class MonkeyTests: XCTestCase {
     /// XCUITest waits for the app to go idle before every event, and a screen with an endless
     /// animation (the Adhan sky) never does: each step then sat out a 60 s timeout. A walk only
     /// needs the app alive, so the wait becomes a no-op (private XCTest API, test target only).
-    private static func skipQuiescenceWait() {
+    static func skipQuiescenceWait() {
         guard let process = NSClassFromString("XCUIApplicationProcess") else { return }
         let oneArgument: @convention(block) (AnyObject, Bool) -> Void = { _, _ in }
         let twoArguments: @convention(block) (AnyObject, Bool, Bool) -> Void = { _, _, _ in }

@@ -123,9 +123,11 @@ func ayahHighlightMenuItems(surah: Int, ayah: Int, settings: Settings) -> some V
 /// long-press context menu and the history rows - the same parity rule the highlight palette follows
 /// (`ayahHighlightMenuItems`, and [[ayah-menu-parity-and-search-paint]]).
 ///
-/// End of Surah is FIRST and is the plain default: it is what Play From Ayah already did before the menu
-/// existed, so the habitual tap lands on the familiar behaviour. End of Juz and Forever cross surah
-/// boundaries; Forever stops at the end of An-Nas rather than looping back to Al-Fatihah.
+/// The order runs smallest to largest: Page, Surah, Juz, then the whole Quran (Abu, 2026-10-11: "play
+/// from ayah should be page before surah"). End of Surah led until then, as the behaviour Play From Ayah
+/// had before the menu existed; the one-tap shortcuts that pick no scope still default to it. End of Juz
+/// and Forever cross surah boundaries; Forever stops at the end of An-Nas rather than looping back to
+/// Al-Fatihah.
 ///
 /// `onPick` fires after the player is told, so a sheet can dismiss itself (the actions sheet does; the
 /// menus pass nothing).
@@ -140,19 +142,19 @@ func ayahPlayFromMenuItems(
     Button {
         settings.hapticFeedback()
         quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
-                             continueRecitation: true, continueScope: .surah)
+                             continueRecitation: true, continueScope: .page)
         onPick?()
     } label: {
-        Label("Until End of Surah", systemImage: "book.closed")
+        Label("Until End of Page", systemImage: "doc.plaintext")
     }
 
     Button {
         settings.hapticFeedback()
         quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah,
-                             continueRecitation: true, continueScope: .page)
+                             continueRecitation: true, continueScope: .surah)
         onPick?()
     } label: {
-        Label("Until End of Page", systemImage: "doc.plaintext")
+        Label("Until End of Surah", systemImage: "book.closed")
     }
 
     Button {

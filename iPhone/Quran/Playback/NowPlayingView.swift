@@ -20,6 +20,10 @@ struct NowPlayingView: View {
     private let singleRow: Bool
 
     @State private var confirmClearQueue = false
+    /// What the big player's scrubber shows in place of the playhead, 0...1: the finger while it drags,
+    /// then where its seek is headed until the seek lands (`PlaybackScrubber`). The elapsed time follows
+    /// it. Nil while the bar follows the recitation.
+    @State private var scrubFraction: Double?
     /// Last real playback context, kept so the bar can stay mounted (hidden) after playback stops - tearing
     /// it down inside the stop action was cancelling "Stop Playing". A reference box under `@State`, not a
     /// `@State` value: writing a value here on every context change was a second body evaluation per
@@ -266,11 +270,13 @@ struct NowPlayingView: View {
             let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0
-            let safeElapsed = elapsed.isFinite ? max(0, elapsed) : 0
+            let playedElapsed = elapsed.isFinite ? max(0, elapsed) : 0
+            // While the scrubber is held the time follows the finger, not the recitation.
+            let safeElapsed = scrubFraction.map { $0 * total } ?? playedElapsed
 
             VStack(spacing: 6) {
                 if total > 0 {
-                    TinyProgressBar(fraction: safeElapsed / total, color: settings.accentColor.color)
+                    scrubber(elapsed: playedElapsed, total: total)
                 }
 
                 // This row must never be wider than the card it sits in. Two rigid 40 pt time labels,
@@ -306,6 +312,26 @@ struct NowPlayingView: View {
             // easing - otherwise resuming (and each tick) shows a weird sliding/lurching animation.
             .transaction { $0.animation = nil }
         }
+    }
+
+    /// The big player's progress bar, which takes a finger (Abu, 2026-10-11: "make the progress view
+    /// scrollable for playing view"). It seeks when let go, and holds the spot it was let go at until the
+    /// seek lands, so the bar never jumps back to the old position for a tick (`PlaybackScrubber`).
+    @ViewBuilder
+    private func scrubber(elapsed: Double, total: Double) -> some View {
+        #if os(iOS)
+        PlaybackScrubber(
+            fraction: elapsed / total,
+            total: total,
+            color: settings.accentColor.color,
+            shownFraction: $scrubFraction
+        ) { seconds, landed in
+            quranPlayer.seek(toSeconds: seconds, completion: landed)
+        }
+        #else
+        // The watch's card has no big player to scrub; the bar only shows where the recitation is.
+        TinyProgressBar(fraction: elapsed / total, color: settings.accentColor.color)
+        #endif
     }
 
     private static func formatMMSS(_ seconds: Double) -> String {
@@ -492,13 +518,18 @@ struct NowPlayingView: View {
             let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0
-            let safeElapsed = elapsed.isFinite ? max(0, elapsed) : 0
+            let playedElapsed = elapsed.isFinite ? max(0, elapsed) : 0
+            let safeElapsed = scrubFraction.map { $0 * total } ?? playedElapsed
 
             HStack(spacing: 8) {
                 Text(total > 0 ? Self.formatMMSS(safeElapsed) : "")
                     .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .trailing)
 
-                TinyProgressBar(fraction: total > 0 ? safeElapsed / total : 0, color: settings.accentColor.color)
+                if total > 0 {
+                    scrubber(elapsed: playedElapsed, total: total)
+                } else {
+                    TinyProgressBar(fraction: 0, color: settings.accentColor.color)
+                }
 
                 Text(total > 0 ? Self.formatMMSS(total) : "")
                     .frame(minWidth: 0, idealWidth: 40, maxWidth: 48, alignment: .leading)
@@ -733,6 +764,20 @@ struct NowPlayingView: View {
             )
         }
 
+        #if os(iOS)
+        // In a reader the play button is Stop while this bar is up, which takes Test Mode's usual home
+        // (that button's menu) away until the recitation ends, so its rows ride here meanwhile. Only the
+        // readers supply `onOpenPlayback`.
+        if onOpenPlayback != nil {
+            Divider()
+
+            QuranTestModeMenuSection(
+                settings: settings,
+                available: !(settings.quranPageMode && settings.resolvedMushafPageLanguage.isPDF)
+            )
+        }
+        #endif
+
         Divider()
 
         if quranView {
@@ -761,6 +806,117 @@ struct PlaybackContext {
     let ayahNumber: Int
     let isPlaying: Bool
 }
+
+#if os(iOS)
+/// A progress bar you can drag or tap to seek: the big player's. It draws at `TinyProgressBar`'s 3 pt,
+/// thickening with a knob while held, and takes its touches from a 24 pt band around the bar that adds
+/// nothing to the layout: the card keeps its height, which the page reader's fitted page depends on.
+///
+/// While a finger is on it, and after it lets go until the seek lands, the bar shows that spot instead of
+/// the playhead, and reports it through `shownFraction` for the elapsed time beside it. `onSeek` seeks to
+/// the given seconds and calls back once the seek has landed. The bar always runs left to right, like the
+/// times either side of it (the app's interface is English only).
+struct PlaybackScrubber: View {
+    let fraction: Double
+    let total: Double
+    let color: Color
+    @Binding var shownFraction: Double?
+    let onSeek: (Double, @escaping () -> Void) -> Void
+
+    /// The finger's position while it drags. A `@GestureState`, so it resets on its own however the drag
+    /// ends: lifted, or taken away by the card's long-press menu, an edge gesture, or the bar leaving the
+    /// screen at an ayah hand-off. Held in plain state, a drag that was cancelled froze the bar.
+    @GestureState private var dragFraction: Double?
+    /// Where a released drag's seek is headed, until it lands.
+    @State private var pendingFraction: Double?
+    /// Numbers the seeks, so only the LATEST one's landing lets go of `pendingFraction`: an earlier seek
+    /// landing during a second drag must not drop the bar back for a moment.
+    @State private var seekCount = 0
+
+    /// The invisible band around the 3 pt bar that answers to touch.
+    private static let touchBand: CGFloat = 24
+
+    private static let spokenTime: DateComponentsFormatter = {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.allowedUnits = [.hour, .minute, .second]
+        return formatter
+    }()
+
+    var body: some View {
+        let shown = min(1, max(0, dragFraction ?? pendingFraction ?? fraction))
+        let isDragging = dragFraction != nil
+        let thickness: CGFloat = isDragging ? 6 : 3
+
+        Capsule()
+            .fill(color.opacity(0.22))
+            .frame(height: 3)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(color.opacity(0.22))
+                            .frame(height: thickness)
+                        Capsule()
+                            .fill(color)
+                            .frame(width: shown * geo.size.width, height: thickness)
+                        if isDragging {
+                            Circle()
+                                .fill(color)
+                                .frame(width: 12, height: 12)
+                                .offset(x: shown * geo.size.width - 6)
+                        }
+                    }
+                    .frame(height: geo.size.height)
+                    // The band that takes the touches: grown to `touchBand`, given the gesture, then
+                    // shrunk back, so it answers across 24 pt but is laid out at the bar's 3 pt.
+                    .padding(.vertical, (Self.touchBand - 3) / 2)
+                    .contentShape(Rectangle())
+                    .gesture(scrub(width: geo.size.width))
+                    .padding(.vertical, -(Self.touchBand - 3) / 2)
+                }
+            }
+            .animation(.easeOut(duration: 0.15), value: isDragging)
+            .environment(\.layoutDirection, .leftToRight)
+            .onChange(of: dragFraction) { drag in shownFraction = drag ?? pendingFraction }
+            .onChange(of: pendingFraction) { pending in shownFraction = dragFraction ?? pending }
+            .onDisappear { shownFraction = nil }
+            .accessibilityElement()
+            .accessibilityLabel("Playback Position")
+            .accessibilityValue(Self.spoken(shown * total) + " of " + Self.spoken(total))
+            .accessibilityAdjustableAction { direction in
+                let step: Double = direction == .increment ? 10 : -10
+                onSeek(min(total, max(0, shown * total + step))) {}
+            }
+    }
+
+    private func scrub(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .updating($dragFraction) { value, state, _ in
+                state = position(of: value.location.x, width: width)
+            }
+            .onEnded { value in
+                let landed = position(of: value.location.x, width: width)
+                seekCount += 1
+                let seek = seekCount
+                pendingFraction = landed
+                onSeek(landed * total) {
+                    if seek == seekCount { pendingFraction = nil }
+                }
+            }
+    }
+
+    private func position(of x: CGFloat, width: CGFloat) -> Double {
+        guard width > 0 else { return 0 }
+        return min(1, max(0, Double(x / width)))
+    }
+
+    private static func spoken(_ seconds: Double) -> String {
+        spokenTime.string(from: max(0, seconds.rounded())) ?? ""
+    }
+}
+#endif
 
 #if DEBUG
 /// Real playback state for the canvas. The card renders from `QuranPlayer.shared.nowPlaying`, which in

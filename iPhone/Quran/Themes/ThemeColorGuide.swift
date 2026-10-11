@@ -225,6 +225,9 @@ enum ThemeColorGuide {
 /// and Tilawa's line about it. The Highlight Themes screen shows it; any screen that paints the washes
 /// can.
 struct ThemeColorLegend: View {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height on
         // each self-sizing pass, which iOS 26 traps on.
@@ -238,7 +241,7 @@ struct ThemeColorLegend: View {
 
                         Text(color.name.capitalized)
                             .font(.caption2.weight(.bold))
-                            .foregroundColor(color.color)
+                            .foregroundColor(color.ink)
                     }
 
                     Text(color.meaning)
@@ -254,9 +257,11 @@ struct ThemeColorLegend: View {
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                // The tile wears the reader's own wash, so the legend shows each colour exactly as a
+                // page paints it.
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(color.color.opacity(0.12))
+                        .fill(color.tint(colorScheme, on: appearance.themeRowBackground))
                 )
             }
         }

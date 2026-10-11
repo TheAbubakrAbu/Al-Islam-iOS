@@ -4,6 +4,9 @@ struct SurahsHeader: View {
     @ObservedObject var quranData = QuranData.shared
 
     @State private var randomSurah: Surah?
+    /// Simple Mode drops the count and the shuffle (docs/Simple Mode Guide.md); Random Surah moves to
+    /// the tab's More menu.
+    @AppStorage("simpleMode") private var simpleMode = false
 
     var headerText: String
 
@@ -20,8 +23,10 @@ struct SurahsHeader: View {
 
             goToSurah
             // The count pill sits left of the shuffle, the section-header family's order.
-            CountPill(count: quranData.quran.count)
-            randomSurahLink
+            if !simpleMode {
+                CountPill(count: quranData.quran.count)
+                randomSurahLink
+            }
             #endif
         }
         .onAppear {
@@ -66,6 +71,8 @@ struct JuzHeader: View {
     #if os(iOS)
     @ObservedObject var settings = Settings.shared
     #endif
+    /// Simple Mode drops the count and the shuffle, as `SurahsHeader` does; the info button stays.
+    @AppStorage("simpleMode") private var simpleMode = false
 
     let juz: Juz
 
@@ -91,11 +98,13 @@ struct JuzHeader: View {
             #if os(iOS)
             Spacer()
 
-            surahCountBadge
+            if !simpleMode {
+                surahCountBadge
+            }
             infoButton
             // Khatm's Juz grouping is about tracking a full read-through, so the random "shuffle to a surah"
             // jump doesn't belong there - hide it in khatm mode.
-            if settings.quranSortMode != .khatm {
+            if settings.quranSortMode != .khatm, !simpleMode {
                 randomSurahLink
             }
             #endif
@@ -314,11 +323,14 @@ struct SurahSectionHeader: View {
         .onTapGesture {
             settings.hapticFeedback()
 
-            if quranPlayer.isLoading {
+            // Playing comes first: the gear also shows while a recitation waits on the network mid-ayah
+            // (2026-10-11, `QuranPlayer.observeBuffering`), and a bare `player.pause()` there left
+            // `isPlaying` true over silence. The cancel path is for a first load only.
+            if quranPlayer.isPlaying {
+                quranPlayer.pause(saveInfo: false)
+            } else if quranPlayer.isLoading {
                 quranPlayer.isLoading = false
                 quranPlayer.player?.pause()
-            } else if quranPlayer.isPlaying {
-                quranPlayer.pause(saveInfo: false)
             } else {
                 quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
             }
