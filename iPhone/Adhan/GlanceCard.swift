@@ -13,6 +13,9 @@ struct GlanceCard: View {
     @ObservedObject private var settings = Settings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
+    #if HAS_WEATHER
+    @ObservedObject private var weatherStore = SkyWeatherStore.shared
+    #endif
 
     /// Every tile is a button (Abu, 2026-09-04: "when you click on certain ones have it do a certain
     /// thing"); the card only names what was tapped and the Adhan tab decides what opens.
@@ -64,17 +67,20 @@ struct GlanceCard: View {
             }
         }
         .padding(.vertical, 2)
-        #if os(iOS)
-        // A Control Center control asked for the Qibla (Abu, 2026-10-07). It lands here rather than in
-        // AdhanView because the bearing and the distance are computed on THIS card for its own tiles,
-        // so the control opens the very sheet the tile opens - one compass, not a second copy. Cleared
-        // on arrival so re-tapping the control works a second time.
-        .onReceive(AppNavigation.shared.$pendingAdhan) { target in
-            guard case .qibla = target else { return }
-            AppNavigation.shared.pendingAdhan = nil
-            onSelect(.qibla(bearing: qiblaSummary, distance: distanceToMakkah))
-        }
-        #endif
+        // The Control Center "Open Qibla" control used to be answered here (2026-10-07). AdhanView
+        // answers it now, through `qiblaValues`: Simple Mode does not mount this card at all, and as the
+        // last row of a lazy list it was not always built in Full Mode either (2026-10-10).
+    }
+
+    /// The Qibla tile's two values for a stored location: the bearing ("58° ENE", or "You are here"
+    /// within a kilometre of the Kaaba) and the distance. Shared with AdhanView, which opens the same
+    /// compass sheet for the Control Center control.
+    static func qiblaValues(latitude: Double, longitude: Double) -> (bearing: String?, distance: String?) {
+        guard latitude != 1000, longitude != 1000 else { return (nil, nil) }
+        let meters = CLLocation(latitude: latitude, longitude: longitude).distance(from: kaaba)
+        guard meters > atKaabaRadius else { return ("You are here", "At the Kaaba") }
+        let direction = Qibla(coordinates: Coordinates(latitude: latitude, longitude: longitude)).direction
+        return (String(format: "%.0f° %@", direction, compassPoint(direction)), distanceText(meters))
     }
 
     /// The tiles that fill complete rows: everything but a trailing odd one.
@@ -154,10 +160,45 @@ struct GlanceCard: View {
         today.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary,
                            action: .prayerCalculation))
 
-        return [
+        var groups = [
             GlanceGroup(id: GlanceGroup.here, title: "Here", tiles: here),
             GlanceGroup(id: GlanceGroup.today, title: "Today", tiles: today)
         ]
+        // The sky's weather, while the switch is on and the reading is fresh (SkyWeather.swift):
+        // the temperature, the conditions, and the numbers under them. Every tile opens the full
+        // reading. Nothing here is computed; it is the one group that comes from the network.
+        if let weather = freshWeather {
+            groups.append(GlanceGroup(id: GlanceGroup.weather, title: "Weather", tiles: weatherTiles(weather)))
+        }
+        return groups
+    }
+
+    private var freshWeather: SkyWeather? {
+        #if HAS_WEATHER
+        return weatherStore.freshWeather
+        #else
+        return nil
+        #endif
+    }
+
+    private func weatherTiles(_ weather: SkyWeather) -> [GlanceItem] {
+        var tiles: [GlanceItem] = []
+        tiles.append(.init(icon: "thermometer.medium", title: "Temperature",
+                           value: "\(weather.temperatureText)\nFeels like \(weather.apparentText)", action: .weather))
+        tiles.append(.init(icon: weather.symbolName, title: "Conditions",
+                           value: "\(weather.conditionText)\n\(weather.cloudCoverText) cloud cover", action: .weather))
+        tiles.append(.init(icon: "sun.max.trianglebadge.exclamationmark", title: "UV Index",
+                           value: "\(weather.uvIndex)\n\(weather.uvCategory)", action: .weather))
+        tiles.append(.init(icon: "humidity.fill", title: "Humidity",
+                           value: "\(weather.humidityText)\nDew point \(weather.dewPointText)", action: .weather))
+        tiles.append(.init(icon: "wind", title: "Wind", value: weather.windText, action: .weather))
+        if let chance = weather.precipitationChanceText {
+            tiles.append(.init(icon: "drop.fill", title: "Precipitation",
+                               value: "\(chance)\n\(weather.precipitationText) this hour", action: .weather))
+        } else {
+            tiles.append(.init(icon: "eye.fill", title: "Visibility", value: weather.visibilityText, action: .weather))
+        }
+        return tiles
     }
 
     // MARK: - Values
@@ -378,6 +419,8 @@ struct GlanceCard: View {
 /// share one: the three sun tiles open the prayer calendar, the Moon and Next Islamic Date the
 /// Hijri calendar, the location and time-zone tiles the City Prayer Times sheet.
 enum GlanceAction: Hashable {
+    /// The full weather reading (`WeatherDetailSheet`).
+    case weather
     /// The City Prayer Times sheet (the same one the city pill at the top opens).
     case cityPrayerTimes
     /// The Adhan settings sheet, opened straight onto Prayer Calculation.
@@ -398,6 +441,7 @@ enum GlanceAction: Hashable {
 struct GlanceGroup: Identifiable {
     static let here = "here"
     static let today = "today"
+    static let weather = "weather"
 
     let id: String
     let title: String

@@ -162,8 +162,9 @@ struct SkyTimeLineFramesKey: PreferenceKey {
 /// A field of faint, slowly twinkling stars, faded in over the night prayers.
 ///
 /// Positions are derived from a fixed seed rather than `Math.random`, so the sky doesn't reshuffle itself on
-/// every re-render - and the same star keeps the same twinkle phase across state changes.
-private struct StarFieldView: View {
+/// every re-render - and the same star keeps the same twinkle phase across state changes. Internal: the
+/// whole-tab sky (`SkyPageBackground`) draws the same field under the rows.
+struct StarFieldView: View {
     @Environment(\.appearance) private var appearance
 
     let opacity: Double
@@ -208,6 +209,11 @@ struct SkyView: View {
     @Environment(\.appearance) private var appearance
     @Environment(\.scenePhase) private var scenePhase
 
+    /// True while the sky fills the whole tab (`Settings.skyFillsAdhanTab`): the card then draws no
+    /// gradient, stars or frame of its own, since `SkyPageBackground` paints them under every row,
+    /// and its arc, columns and countdown float on the page's sky.
+    var pageSky: Bool = false
+
     @State private var isOnScreen = false
     /// Restarting the schedule from now on appear and on activation snaps the clock forward after
     /// the card was hidden or the app sat in the background.
@@ -224,7 +230,7 @@ struct SkyView: View {
         let _ = ChangePrinter.hit(Self.self)
         let interval: TimeInterval = appearance.isReducedTier ? 300 : 60
         TimelineView(.periodic(from: clockAnchor, by: interval)) { context in
-            SkyCard(now: Self.effectiveNow(context.date), isOnScreen: isOnScreen)
+            SkyCard(now: Self.effectiveNow(context.date), isOnScreen: isOnScreen, pageSky: pageSky)
         }
         // The two list themes give a row different built-in margins, so the card has to make up the
         // difference itself. Grouped rows already carry the list's 20pt margin - adding any more is what
@@ -234,6 +240,7 @@ struct SkyView: View {
         .onAppear {
             isOnScreen = true
             clockAnchor = Date()
+            refreshWeather()
             #if DEBUG
             // `-fakeAdhanPlaying <name>`: the footer opens on the stop button, so its cross-fade back
             // to the moon line can be verified headlessly (see `ForegroundAdhanPlayer.debugSetPlaying`).
@@ -249,8 +256,19 @@ struct SkyView: View {
         }
         .onDisappear { isOnScreen = false }
         .onChange(of: scenePhase) { phase in
-            if phase == .active { clockAnchor = Date() }
+            if phase == .active {
+                clockAnchor = Date()
+                refreshWeather()
+            }
         }
+    }
+
+    /// The sky's weather, asked for when the card comes in front and when the app comes back: at most
+    /// one request per half hour (`SkyWeatherStore.refreshIfNeeded`), and none while the switch is off.
+    private func refreshWeather() {
+        #if HAS_WEATHER
+        SkyWeatherStore.shared.refreshIfNeeded()
+        #endif
     }
 
     /// The sun moves 0.24 pt a minute (sub-pixel), so a minute is all the resolution the card can show.
@@ -258,7 +276,8 @@ struct SkyView: View {
         Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
     }
 
-    private static func effectiveNow(_ date: Date) -> Date {
+    /// The moment the card (and the page sky) draws for: the live minute, or `-skyNow`.
+    static func effectiveNow(_ date: Date) -> Date {
         #if DEBUG
         if let debugNow { return debugNow }
         #endif
@@ -289,12 +308,20 @@ struct SkyCard: View {
     // Publishes only when the picked DAY changes, so following it costs one re-render per date change.
     @ObservedObject private var selectedDay = SelectedDayPreview.shared
     @ObservedObject private var adhanPlayer = ForegroundAdhanPlayer.shared
+    #if HAS_WEATHER
+    @ObservedObject private var weatherStore = SkyWeatherStore.shared
+    #endif
     @Environment(\.layoutDirection) private var layoutDirection
 
     /// The live moment, quantized to the minute by `SkyView`.
     let now: Date
     /// False while another tab is selected; pauses the starfield.
     let isOnScreen: Bool
+    /// See `SkyView.pageSky`.
+    var pageSky: Bool = false
+
+    /// The weather sheet (`WeatherDetailSheet`), opened from the chip at the top of the card.
+    @State private var weatherSheet = false
 
     /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
     /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
@@ -449,28 +476,41 @@ struct SkyCard: View {
         )
 
         let skyPeriod = settings.skyPeriodName(at: displayedDate)
-        let starOpacity = SkyStars.opacity(forPeriod: skyPeriod)
-        let skyColors = settings.skyGradientColors(forPrayer: skyPeriod)
+        // The weather greys the gradient, hides the stars and draws its clouds or rain (SkyWeather.swift);
+        // nil (off, stale, or not fetched yet) is the plain sky.
+        let weather = freshWeather
+        let starOpacity = SkyStars.opacity(forPeriod: skyPeriod) * (weather?.look.starFactor ?? 1)
+        let skyColors = settings.skyGradientColors(forPrayer: skyPeriod, weather: weather)
+        // What the gradient's retint animates on: the period, and the weather's look with it.
+        let tintKey = "\(skyPeriod ?? "")|\(weather?.look.signature ?? "")"
 
         ZStack {
-            LinearGradient(
-                colors: skyColors,
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            // Re-tint both when the period changes and when the user edits that prayer's colors. The
-            // period's change takes a leisurely second so the first paint, and the turn at each prayer,
-            // ease between the two gradients instead of snapping (Abu, 2026-09-16: "smoother").
-            //
-            // But a full second is wrong WHILE DRAGGING (Abu, 2026-09-19): a scrub crosses several
-            // prayer boundaries in a second, so each crossing started a 1s retint that the next one
-            // interrupted, and the gradient lagged visibly behind the thumb. During a scrub the retint
-            // is quick enough to keep up with the finger; released, it goes back to the leisurely turn.
-            .animation(.easeInOut(duration: scrubber.isScrubbing ? 0.2 : 1.0), value: skyPeriod)
-            .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
+            if !pageSky {
+                LinearGradient(
+                    colors: skyColors,
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                // Re-tint both when the period changes and when the user edits that prayer's colors. The
+                // period's change takes a leisurely second so the first paint, and the turn at each prayer,
+                // ease between the two gradients instead of snapping (Abu, 2026-09-16: "smoother").
+                //
+                // But a full second is wrong WHILE DRAGGING (Abu, 2026-09-19): a scrub crosses several
+                // prayer boundaries in a second, so each crossing started a 1s retint that the next one
+                // interrupted, and the gradient lagged visibly behind the thumb. During a scrub the retint
+                // is quick enough to keep up with the finger; released, it goes back to the leisurely turn.
+                .animation(.easeInOut(duration: scrubber.isScrubbing ? 0.2 : 1.0), value: tintKey)
+                .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
 
-            StarFieldView(opacity: starOpacity, paused: !isOnScreen)
-                .animation(.easeInOut(duration: 0.6), value: starOpacity)
+                StarFieldView(opacity: starOpacity, paused: !isOnScreen)
+                    .animation(.easeInOut(duration: 0.6), value: starOpacity)
+
+                if let weather, !weather.look.isClear {
+                    SkyWeatherOverlay(look: weather.look, night: starOpacity > 0.4 || !weather.isDaylight,
+                                      time: now.timeIntervalSinceReferenceDate)
+                        .transition(.opacity)
+                }
+            }
 
             arc(curve: curve, window: window, skyColors: skyColors)
 
@@ -504,7 +544,13 @@ struct SkyCard: View {
         .onPreferenceChange(SkyTimeLineFramesKey.self) { frames in
             if frames != timeLineFrames { timeLineFrames = frames }
         }
-        .overlay(alignment: .top) { scrubReadout }
+        .overlay(alignment: .top) {
+            if scrubber.isScrubbing {
+                scrubReadout
+            } else if let weather {
+                weatherChip(weather)
+            }
+        }
         .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
         // The card is a fixed 200 pt drawing whose bands were measured at the default text size (see
         // `arcTopInset`), and the skyline spans the columns' time lines. Above that size its text
@@ -519,8 +565,13 @@ struct SkyCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                // On the page sky the card has no edge of its own: its scrim is the only thing that
+                // sets it off, and a hairline around a panel of the same sky looked like a window frame.
+                .strokeBorder(Color.primary.opacity(pageSky ? 0 : 0.10), lineWidth: 1)
         )
+        #if HAS_WEATHER
+        .sheet(isPresented: $weatherSheet) { WeatherDetailSheet() }
+        #endif
         // Full screen, the "whole space" (Abu, 2026-09-25). On iOS 18 it zooms out of the moon that
         // was touched; before that it rises like any full-screen cover.
         .fullScreenCover(item: $moonViewer) { request in
@@ -762,6 +813,45 @@ struct SkyCard: View {
     private var moonDate: Date {
         let reference = scrubber.scrubbedDate ?? selectedDay.date ?? now
         return Date(timeIntervalSinceReferenceDate: (reference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
+    }
+
+    /// The weather while the switch is on and the reading is fresh (SkyWeatherStore.swift); nil otherwise.
+    private var freshWeather: SkyWeather? {
+        #if HAS_WEATHER
+        return weatherStore.freshWeather
+        #else
+        return nil
+        #endif
+    }
+
+    /// The weather at the top of the card, between the two prayer columns' eyebrows: the condition's
+    /// symbol and the temperature. A tap opens the reading in full (`WeatherDetailSheet`). It takes the
+    /// scrub readout's place, and yields it while the sun is dragged.
+    private func weatherChip(_ weather: SkyWeather) -> some View {
+        Button {
+            settings.hapticFeedback()
+            weatherSheet = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: weather.symbolName)
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.caption.weight(.semibold))
+                Text(weather.temperatureText)
+                    .font(.caption.weight(.semibold).monospacedDigit())
+            }
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.black.opacity(0.28)))
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 6)
+        .accessibilityLabel("Weather, \(weather.conditionText), \(weather.temperatureText)")
+        .accessibilityHint("Shows the full weather")
+        .transition(.opacity)
     }
 
     /// The moment (and prayer) being previewed while the sun is dragged. It rides at the TOP of the card, over

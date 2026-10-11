@@ -172,12 +172,6 @@ struct SettingsQuranView: View {
     /// Reminders sit ABOVE Favorites and Bookmarks (Abu, 2026-09-12).
     @ViewBuilder
     private var rootSections: some View {
-        #if os(iOS)
-        TipsSection(area: .quran, resolve: resolveSearchDestination)
-        // The Quran tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
-        HelpDoorsSettingsSection(area: .quran)
-        #endif
-
         Section(header: Text("READING")) {
             quranPageLink(.recitation) { recitationDestination }
             quranPageLink(.readingView) { readingViewsDestination }
@@ -200,6 +194,14 @@ struct SettingsQuranView: View {
         }
 
         readingModeSection
+
+        // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and the
+        // Need a Hand? switch wait at the foot (this page's Advanced switches live on its subpages).
+        // They led every page from 2026-09-20 until then, which put the first real setting most of a
+        // screen down.
+        TipsSection(area: .quran, resolve: resolveSearchDestination)
+        // The Quran tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+        HelpDoorsSettingsSection(area: .quran)
         #endif
     }
 

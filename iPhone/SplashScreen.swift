@@ -14,6 +14,12 @@ struct SplashScreen: View {
     var presentedAsSheet = false
 
     @State private var openedAppStoreFromHero = false
+    /// The first launch's second step (Abu, 2026-10-10: "include simple mode in splash screen"): Simple
+    /// or Full, before the app opens. A sheet never leaves step one.
+    @State private var step = 1
+    /// The step's choice, Full preselected: the 10-07 "off by default for everyone" stands, so the
+    /// question offers Simple Mode rather than deciding it (docs/Simple Mode Guide.md).
+    @State private var choosesSimple = false
     @State private var popCenter = false
     @State private var popLeft = false
     @State private var popRight = false
@@ -34,8 +40,9 @@ struct SplashScreen: View {
     }
 
     /// The app family below the card, at this fraction of the launch screen's size. The feature card
-    /// needs the room: four rows in Al-Islam, where iCloud Backup joins them.
-    private static let heroFraction: CGFloat = 0.8
+    /// needs the room: four rows in Al-Islam, where iCloud Backup joins them. 0.74 since 2026-10-10:
+    /// at 0.8 the family row's longer text ran its last line under the hero on the iPhone 17 Pro.
+    private static let heroFraction: CGFloat = 0.74
 
     /// At the accessibility text sizes the family row and its labels would take half the screen and
     /// leave the promises a sliver, so they scroll with the text instead of standing below it.
@@ -57,6 +64,16 @@ struct SplashScreen: View {
                     splashBackdrop(scale: s)
 
                     VStack(spacing: 0) {
+                        if step == 2 {
+                            ScrollView(showsIndicators: false) {
+                                modeChoice(scale: s)
+                                    .frame(width: column)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 28 * s)
+                                    .padding(.bottom, 12)
+                            }
+                            .transition(.opacity)
+                        } else {
                         // The greeting and the promises scroll only when they must (a small phone, a
                         // large text size, the sheet); the family row and the button stay put.
                         ScrollView(showsIndicators: false) {
@@ -79,6 +96,7 @@ struct SplashScreen: View {
                             appHeroStack(layoutScale: s)
                                 .zIndex(-1)
                         }
+                        }
 
                         actionButtons
                             .frame(width: column)
@@ -97,6 +115,16 @@ struct SplashScreen: View {
             // Started" - but the sheet now also closes from the house X, like every other sheet.
             .sheetDismissToolbarIf(presentedAsSheet)
             .onAppear(perform: runHeroPopAnimation)
+            #if DEBUG
+            // `-splashStep 2` lands on the Simple or Full step, for screenshots (taps aren't scriptable).
+            .onAppear {
+                let args = ProcessInfo.processInfo.arguments
+                if !presentedAsSheet, let index = args.firstIndex(of: "-splashStep"), index + 1 < args.count,
+                   args[index + 1] == "2" {
+                    step = 2
+                }
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
     }
@@ -284,7 +312,11 @@ struct SplashScreen: View {
 
     /// What every app in the family promises, and what only Al-Islam has. iCloud Backup is Al-Islam's
     /// alone (`HAS_ICLOUD_BACKUP`, which the companion apps do not define), so they show three rows
-    /// and name it in the family row instead.
+    /// and name it in the family row instead, with the rest of what only Al-Islam has (Abu,
+    /// 2026-10-11: "mention in splash screen al Islam has iCloud support amongst other things"):
+    /// the weather on the sky (`HAS_WEATHER`) and the iMessage stickers. Tips & Tricks is not on the
+    /// list: the companions compile it too, with their own areas (`TipArea.offered`). Al-Islam's own
+    /// row keeps its two lines: a third pushed the family row under the hero on the iPhone 17 Pro.
     private var features: [Feature] {
         #if HAS_ICLOUD_BACKUP
         return [
@@ -305,7 +337,7 @@ struct SplashScreen: View {
             Feature(icon: "heart.fill", title: "Free forever",
                     text: "No ads, fees or subscriptions. Offered as sadaqah jariyah."),
             Feature(icon: "square.grid.2x2.fill", title: "One family of apps",
-                    text: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup. Tap an app below to see it on the App Store."),
+                    text: "Al-Islam does everything Al-Quran and Al-Adhan do, plus iCloud Backup, weather on the sky and iMessage stickers. Tap an app below to see it on the App Store."),
         ]
         #endif
     }
@@ -458,35 +490,164 @@ struct SplashScreen: View {
             }
             .conditionalGlassEffect(rectangle: true, useColor: 0.38, customTint: AppIdentifiers.mainColor.color)*/
             
-            Button {
-                settings.hapticFeedback()
-                if presentedAsSheet {
-                    // A sheet over the running app: there is no first launch to end, only the sheet.
-                    dismiss()
-                } else {
-                    withAnimation {
-                        settings.firstLaunch = false
-                    }
+            VStack(spacing: 6) {
+                Button {
+                    settings.hapticFeedback()
+                    primaryAction()
+                } label: {
+                    Text(actionTitle)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                 }
-            } label: {
-                Text(actionTitle)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
+                .conditionalGlassEffect(
+                    rectangle: true,
+                    useColor: 0.38,
+                    customTint: AppIdentifiers.mainColor.color
+                )
+                .accessibilityLabel(actionTitle)
+
+                if step == 2 {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { step = 1 }
+                    } label: {
+                        Text("Back")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .conditionalGlassEffect(
-                rectangle: true,
-                useColor: 0.38,
-                customTint: AppIdentifiers.mainColor.color
-            )
-            .accessibilityLabel(actionTitle)
+        }
+    }
+
+    /// Step one moves on to the Simple or Full step; that step ends the first launch. A sheet opened
+    /// from "Learn More" over the running app has no first launch to end, only the sheet: it never
+    /// reaches the step, so a promotional sheet never changes a setting.
+    private func primaryAction() {
+        if presentedAsSheet {
+            dismiss()
+        } else if step == 1 {
+            withAnimation(.easeInOut) { step = 2 }
+        } else {
+            finishFirstLaunch()
+        }
+    }
+
+    /// The choice is written once, here, and then the first launch ends as it always has.
+    private func finishFirstLaunch() {
+        if settings.simpleMode != choosesSimple {
+            settings.simpleMode = choosesSimple
+        }
+        withAnimation {
+            settings.firstLaunch = false
         }
     }
 
     /// "Get Started" only makes sense on the first launch; a sheet opened from "Learn More" closes with "Done".
     private var actionTitle: String {
-        (presentedAsSheet || openedAppStoreFromHero) ? "Done" : "Get Started"
+        if step == 2 { return "Continue" }
+        return (presentedAsSheet || openedAppStoreFromHero) ? "Done" : "Get Started"
+    }
+
+    // MARK: The Simple or Full step
+
+    /// "How much would you like to see?": two cards in About You's option grammar, then where to change
+    /// it later. The copy is the guide's (docs/Simple Mode Guide.md, Splash).
+    private func modeChoice(scale s: CGFloat) -> some View {
+        VStack(spacing: 18 * s) {
+            VStack(spacing: 8) {
+                Image(systemName: "rectangle.compress.vertical")
+                    .font(.system(size: 40, weight: .semibold))
+                    .foregroundColor(accent)
+                    .accessibilityHidden(true)
+
+                Text("How much would you like to see?")
+                    .font(.title2.bold())
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+            }
+
+            VStack(spacing: 10) {
+                modeCard(simple: true,
+                         title: "Simple",
+                         text: "Prayer times, the Quran and the essentials, with the extras tucked away until you want them.",
+                         systemImage: "rectangle.compress.vertical")
+                modeCard(simple: false,
+                         title: "Full",
+                         text: "Every tool, shortcut and detail, right on screen.",
+                         systemImage: "rectangle.expand.vertical")
+            }
+
+            Text("You can change this any time in Settings \u{203A} Simple Mode.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func modeCard(simple: Bool, title: String, text: String, systemImage: String) -> some View {
+        let selected = choosesSimple == simple
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.2)) { choosesSimple = simple }
+        } label: {
+            HStack(spacing: 13) {
+                // The feature card's icon tile, so the step reads as the same screen.
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 34, height: 34)
+                    .overlay(
+                        Image(systemName: systemImage)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                    )
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(text)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundColor(selected ? accent : Color.secondary.opacity(0.5))
+                    .accessibilityHidden(true)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(selected ? accent.opacity(0.16) : Color(UIColor.secondarySystemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .strokeBorder(selected ? accent : Color.primary.opacity(0.08), lineWidth: selected ? 2 : 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title). \(text)")
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier(simple ? "splashChoiceSimple" : "splashChoiceFull")
     }
 
     private func openAppStoreFromHero(_ url: URL?) {

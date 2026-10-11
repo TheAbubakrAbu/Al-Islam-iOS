@@ -525,6 +525,24 @@ extension Settings {
     
     // AUTHORIZATION CHANGES
     func locationManager(_ mgr: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        // The location question has an answer: whatever waited on it goes now (the Adhan tab's
+        // notification question, see `requestLocationIfUndetermined`). The callback that arrives with
+        // the manager itself reports `.notDetermined` and releases nothing. Here because this is the
+        // callback the app implements: if `locationManagerDidChangeAuthorization(_:)` is ever adopted,
+        // iOS stops calling this one, so move the release with it. Missing it would degrade, not hang:
+        // the next activation's refresh asks for notifications anyway.
+        if status != .notDetermined, !Self.locationAnswerWaiters.isEmpty {
+            let waiters = Self.locationAnswerWaiters
+            Self.locationAnswerWaiters.removeAll()
+            DispatchQueue.main.async { waiters.forEach { $0() } }
+        }
+        #if os(iOS)
+        // The permissions sheet shows the status beside its Allow button (PermissionsSheet.swift).
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: Self.locationAuthorizationDidChange, object: nil)
+        }
+        #endif
+
         switch status {
         case .authorizedAlways, .authorizedWhenInUse:
             // Guarded: an unconditional `@AppStorage` write is a publish even when nothing changed, and
@@ -615,6 +633,7 @@ extension Settings {
                 // Fresh install: now that the first fix has a city, adopt it as home.
                 seedHomeLocationIfNeeded()
                 fetchPrayerTimes(force: false)
+                refreshSkyWeatherForLocation()
             }
             return
         }
@@ -668,8 +687,18 @@ extension Settings {
                 // KEEPS the label - 20 km across one metro - never recomputed, and times/adhans kept the
                 // old coordinate all day. The thresholds above already gate how often this can fire.
                 fetchPrayerTimes(force: true)
+                refreshSkyWeatherForLocation()
             }
         }
+    }
+
+    /// The sky's weather follows the fix (SkyWeatherStore.swift): a reading for another place, or an
+    /// old one, is replaced. A background significant-change wake lands here too, which is what keeps
+    /// the widgets' weather current without the app being opened. No-op while the switch is off.
+    @MainActor
+    private func refreshSkyWeatherForLocation() {
+        guard Self.isAppProcess else { return }
+        NotificationCenter.default.post(name: Self.skyWeatherRefreshRequested, object: nil)
     }
 
     /// Re-runs `commitLocation` for `loc` once the moving-commit interval has elapsed, unless a newer fix
@@ -859,6 +888,35 @@ extension Settings {
     // ERROR HANDLER
     func locationManager(_ mgr: CLLocationManager, didFailWithError err: Error) {
         logger.error("CLLocationManager failed: \(err.localizedDescription)")
+    }
+
+    /// What waits on the location question's answer (`requestLocationIfUndetermined`). Main thread.
+    private static var locationAnswerWaiters: [() -> Void] = []
+
+    /// Posted (on the main queue) whenever CoreLocation reports a new authorization status, so a
+    /// screen showing the status (the permissions sheet) can follow it.
+    static let locationAuthorizationDidChange = Notification.Name("AlIslam.locationAuthorizationDidChange")
+
+    /// Launch's half of `requestLocationAuthorization`: an install that has already answered starts its
+    /// monitoring and its fix as before; one that has not only starts the network monitor, and is asked
+    /// on the Adhan tab once the welcome is over.
+    func startLocationAtLaunch() {
+        if Self.locationManager.authorizationStatus == .notDetermined {
+            Self.ensureNetworkMonitorStarted()
+        } else {
+            requestLocationAuthorization()
+        }
+    }
+
+    /// Asks the location question if this install has never answered it, and calls `next` once it has
+    /// (at once when there is nothing to ask), so two system prompts never stand on top of each other.
+    func requestLocationIfUndetermined(then next: @escaping () -> Void) {
+        guard Self.locationManager.authorizationStatus == .notDetermined else {
+            next()
+            return
+        }
+        Self.locationAnswerWaiters.append(next)
+        requestLocationAuthorization()
     }
 
     // PERMISSION REQUEST
@@ -2250,9 +2308,13 @@ extension Settings {
     /// finds it allowed again reschedules.
     static var notificationsDeliverable: Bool?
 
+    /// `askIfUndetermined`: false leaves an unanswered permission alone (reports false) instead of
+    /// raising the system prompt. The Adhan tab passes false while the permissions sheet's Not Now
+    /// stands (`PermissionsSheet`), so the sheet is the one door to that prompt; Settings' Request
+    /// Access and the sheet's own buttons always ask.
     @MainActor
-    func requestNotificationAuthorization() async -> Bool {
-        let deliverable = await notificationAuthorizationResult()
+    func requestNotificationAuthorization(askIfUndetermined: Bool = true) async -> Bool {
+        let deliverable = await notificationAuthorizationResult(askIfUndetermined: askIfUndetermined)
         let wasBlocked = Self.notificationsDeliverable == false
         Self.notificationsDeliverable = deliverable
         if deliverable, wasBlocked { scheduleNotifications(deferred: true) }
@@ -2260,7 +2322,7 @@ extension Settings {
     }
 
     @MainActor
-    private func notificationAuthorizationResult() async -> Bool {
+    private func notificationAuthorizationResult(askIfUndetermined: Bool) async -> Bool {
         #if os(watchOS)
         guard shouldScheduleNotificationsLocally else { return true }
         #endif
@@ -2292,6 +2354,7 @@ extension Settings {
             // permission undetermined instead of asking. DEBUG builds only.
             if ProcessInfo.processInfo.arguments.contains("-skipNotificationPrompt") { return false }
             #endif
+            guard askIfUndetermined else { return false }
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .sound])
                 showNotificationAlert = !granted && !notificationNeverAskAgain
@@ -2311,9 +2374,9 @@ extension Settings {
         #endif
     }
     
-    func requestNotificationAuthorization(completion: (() -> Void)? = nil) {
+    func requestNotificationAuthorization(askIfUndetermined: Bool = true, completion: (() -> Void)? = nil) {
         Task { @MainActor in
-            _ = await requestNotificationAuthorization()
+            _ = await requestNotificationAuthorization(askIfUndetermined: askIfUndetermined)
             completion?()
         }
     }
@@ -4472,26 +4535,77 @@ extension Settings {
 
     // MARK: - Travel & automatic calculation (UI prompts)
 
-    func automaticTravelMessage(turnOn: Bool) -> String {
-        // Name the home city the detection is measured against so the user knows the reference point. Falls
-        // back to the city-less wording if no home is set (shouldn't happen - checkIfTraveling requires one
-        // before raising this dialog - but keeps the copy clean if it's ever empty).
-        let homeCity = homeLocation?.city
-        if turnOn {
-            if let homeCity, !homeCity.isEmpty {
-                return "\(AppIdentifiers.appName) has automatically detected that you are traveling away from your home city of \(homeCity), so your prayers will be shortened."
+    /// The three automatic-change cards the Adhan tab and the settings sheet raise, in one place so
+    /// the two never drift. Rewritten 2026-10-11 (Abu: the dialogs were "ugly, too long and hard"):
+    /// a short title that says what already happened, one plain sentence of why, and two buttons that
+    /// name the two outcomes ("Keep On" / "Turn Off") instead of "Override: Turn Off" and "Confirm:
+    /// Keep On", which had to be decoded before they could be chosen. No destructive red: neither
+    /// answer loses anything.
+    struct AutoChangeCard: Equatable {
+        enum Kind { case travelOn, travelOff, calculation }
+
+        let title: String
+        let message: String
+        /// Accepts what was detected (the first button).
+        let confirmTitle: String
+        /// Puts it back (the second button).
+        let overrideTitle: String
+
+        /// The country a region code names, in the user's language ("SA" is "Saudi Arabia").
+        static func countryName(forRegionCode code: String) -> String? {
+            let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return Locale.current.localizedString(forRegionCode: trimmed) ?? trimmed
+        }
+
+        static func travel(turnOn: Bool, homeCity: String?) -> AutoChangeCard {
+            let home = homeCity?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let named = home.map { !$0.isEmpty } ?? false
+            if turnOn {
+                return AutoChangeCard(
+                    title: "Traveling Mode On",
+                    message: named
+                        ? "You are away from \(home!), so prayers are shortened and combined."
+                        : "You are traveling, so prayers are shortened and combined.",
+                    confirmTitle: "Keep On",
+                    overrideTitle: "Turn Off")
             }
-            return "\(AppIdentifiers.appName) has automatically detected that you are traveling, so your prayers will be shortened."
+            return AutoChangeCard(
+                title: "Traveling Mode Off",
+                message: named
+                    ? "You are back in \(home!), so prayers are full length again."
+                    : "You are home again, so prayers are full length again.",
+                confirmTitle: "OK",
+                overrideTitle: "Keep On")
         }
-        if let homeCity, !homeCity.isEmpty {
-            return "\(AppIdentifiers.appName) has automatically detected that you have returned to your home city of \(homeCity), so your prayers will not be shortened."
+
+        static func calculation(previous: String, detected: String, regionCode: String) -> AutoChangeCard {
+            let place = countryName(forRegionCode: regionCode)
+            return AutoChangeCard(
+                title: "Calculation Method Updated",
+                message: place.map { "Prayer times now use \(detected), the method for \($0)." }
+                    ?? "Prayer times now use \(detected) for this region.",
+                confirmTitle: "Use \(detected)",
+                overrideTitle: "Keep \(previous)")
         }
-        return "\(AppIdentifiers.appName) has automatically detected that you are no longer traveling, so your prayers will not be shortened."
+    }
+
+    func autoChangeCard(_ kind: AutoChangeCard.Kind) -> AutoChangeCard {
+        switch kind {
+        case .travelOn: return .travel(turnOn: true, homeCity: homeLocation?.city)
+        case .travelOff: return .travel(turnOn: false, homeCity: homeLocation?.city)
+        case .calculation:
+            return .calculation(previous: calculationAutoPreviousMethod, detected: calculationAutoDetectedMethod,
+                                regionCode: calculationAutoDetectedCountryCode)
+        }
+    }
+
+    func automaticTravelMessage(turnOn: Bool) -> String {
+        autoChangeCard(turnOn ? .travelOn : .travelOff).message
     }
 
     var automaticCalculationMessage: String {
-        let country = calculationAutoDetectedCountryCode.isEmpty ? "unknown" : calculationAutoDetectedCountryCode
-        return "\(AppIdentifiers.appName) detected your region as \(country) and switched prayer calculation from \(calculationAutoPreviousMethod) to \(calculationAutoDetectedMethod)."
+        autoChangeCard(.calculation).message
     }
 
     func resetTravelAutomaticFlags() {

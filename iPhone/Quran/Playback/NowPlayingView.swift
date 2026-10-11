@@ -32,19 +32,28 @@ struct NowPlayingView: View {
     @State private var retained = RetainedContext()
 
     /// Small (default) vs. big player. Stored on `settings` (not @AppStorage) so `withAnimation` animates it.
-    private var isExpanded: Bool { settings.nowPlayingExpanded }
+    /// The page reader hands the size in instead (`expandedOverride`): there the card's room is the
+    /// reader's to change in one step, so the card draws the size it has room for and follows the setting
+    /// a beat late, through the reader (`SurahPageReader.applyPlayerExpanded`).
+    private var isExpanded: Bool { expandedOverride ?? settings.nowPlayingExpanded }
+    /// The size to draw, when the host decides it (see `isExpanded`); nil follows the setting. With an
+    /// override the small / big switch is NOT animated here: the host fades the card out and in around a
+    /// one-step size change, and an animated height would sweep its inset under the page.
+    private let expandedOverride: Bool?
 
     init(
         quranView: Bool = false,
         scrollDown: Binding<Int> = .constant(-1),
         searchText: Binding<String> = .constant(""),
         singleRow: Bool = false,
+        expanded: Bool? = nil,
         onOpenPlayback: ((PlaybackContext) -> Void)? = nil
     ) {
         self.quranView = quranView
         _scrollDown = scrollDown
         _searchText = searchText
         self.singleRow = singleRow
+        self.expandedOverride = expanded
         self.onOpenPlayback = onOpenPlayback
     }
 
@@ -437,7 +446,8 @@ struct NowPlayingView: View {
         // Animate only the compact<->expanded size change locally, from this single source. The expand button
         // no longer wraps the toggle in a global `withAnimation` (that animated the whole List - squishing
         // rows and resetting the Quran scroll), so there's no longer a second animation to fight with.
-        .animation(.easeInOut, value: isExpanded)
+        // No animation at all under a host-driven size (`expandedOverride`): see `isExpanded`.
+        .animation(expandedOverride == nil ? .easeInOut : nil, value: isExpanded)
         #else
         VStack(alignment: .center, spacing: 6) {
             titleBlock(expanded: false)
@@ -471,7 +481,11 @@ struct NowPlayingView: View {
             // Horizontal inset keeps the centered title clear of the top-right expand button.
             .padding(.horizontal, 24)
 
-            if nowPlaying.isPlaying || nowPlaying.isPaused {
+            // Under a host-driven size (`expandedOverride`) the progress row stays through the card's
+            // fade-out: the page reader removes the card's room only once it has faded, and dropping
+            // this row the moment playback ends made the card 9 pt shorter mid-fade, which moved the
+            // page under it and taught the reader a band it never rests at (2026-10-11).
+            if nowPlaying.isPlaying || nowPlaying.isPaused || expandedOverride != nil {
                 transportRowWithProgress(isPlaying: isPlaying)
             } else {
                 HStack(spacing: 14) {
@@ -495,7 +509,8 @@ struct NowPlayingView: View {
             // Clearance for the leading quit button, mirroring the trailing clearance on the controls.
             .padding(.leading, 30)
 
-            if nowPlaying.isPlaying || nowPlaying.isPaused {
+            // Kept through a host-driven fade-out, as in `expandedPlayerRow`.
+            if nowPlaying.isPlaying || nowPlaying.isPaused || expandedOverride != nil {
                 inlineProgress(isPlaying: isPlaying)
                     .frame(minWidth: 120, maxWidth: .infinity)
             }

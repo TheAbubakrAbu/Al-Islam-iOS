@@ -117,6 +117,11 @@ struct IslamView: View {
         // AI (`bannerResources`), so the grid keeps its eighteen tiles in rows of three.
         case provingIslam
         case askAI
+        /// Simple Mode's one row standing in for the sections it folds (TOOLS, SIGNS & PROOFS, ASK AI;
+        /// docs/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
+        /// screen stacks on the same path; never `available`, so search, favorites and the grids
+        /// never list it.
+        case moreResources
 
         /// Screens the door leaves alone. The alphabet, the 99 Names, the inheritance calculator and
         /// the journal have a trailing button of their own and place the gear themselves, after it
@@ -133,6 +138,7 @@ struct IslamView: View {
         var title: String {
             switch self {
             case .askAI: return "Ask AI"
+            case .moreResources: return "More Resources"
             case .arabicAlphabet: return "Arabic Alphabet"
             case .tajweedFoundations: return "Tajweed Foundations"
             case .tajweedCourse: return "Tajweed Course"
@@ -159,6 +165,7 @@ struct IslamView: View {
         var systemImage: String {
             switch self {
             case .askAI: return "sparkles"
+            case .moreResources: return "square.grid.2x2"
             case .arabicAlphabet: return "textformat.size.ar"
             case .tajweedFoundations: return "waveform"
             case .tajweedCourse: return "graduationcap"
@@ -186,6 +193,8 @@ struct IslamView: View {
         var subtitle: String {
             switch self {
             case .askAI: return "Ask anything about Islam, on device"
+            case .moreResources:
+                return OnDeviceAsk.isAvailable ? "Tools, signs and proofs, and Ask AI" : "Tools, and signs and proofs"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
             case .tajweedFoundations: return "Every rule of tajweed, one page each"
             case .tajweedCourse: return "Lesson by lesson, with ayahs to play and a quiz in each"
@@ -215,6 +224,7 @@ struct IslamView: View {
         var gridTitle: String {
             switch self {
             case .askAI: return "Ask\nAI"
+            case .moreResources: return "More\nResources"
             case .arabicAlphabet: return "Arabic\nAlphabet"
             case .tajweedFoundations: return "Tajweed\nFoundations"
             case .tajweedCourse: return "Tajweed\nCourse"
@@ -242,6 +252,7 @@ struct IslamView: View {
         var searchKeywords: [String] {
             switch self {
             case .askAI: return ["chat", "question", "assistant", "apple intelligence"]
+            case .moreResources: return []
             case .arabicAlphabet: return ["letters", "harakat", "huruf", "alphabet", "tashkeel", "numbers",
                                           "sifaat", "sifat", "makharij", "whistling", "safeer", "hams", "families",
                                           "sound-alike", "quiz", "sun letters", "moon letters",
@@ -297,6 +308,8 @@ struct IslamView: View {
             // so it closes the resources rather than sitting inside TOOLS where its banner split
             // that section's tiles in two.
             case .askAI: return .assistant
+            // Listed nowhere (see `available`); its own screen shows the folded groups.
+            case .moreResources: return .tools
             }
         }
 
@@ -311,6 +324,7 @@ struct IslamView: View {
         /// course when its lesson pack is not in the bundle.
         static var available: [IslamDestination] {
             allCases.filter {
+                if $0 == .moreResources { return false }
                 if $0 == .askAI { return OnDeviceAsk.isAvailable }
                 if $0 == .tajweedCourse { return TajweedLessonsStore.isBundled }
                 return true
@@ -355,6 +369,12 @@ struct IslamView: View {
         /// This group's resources on this device, in case order.
         var resources: [IslamDestination] {
             IslamDestination.available.filter { $0.group == self }
+        }
+
+        /// Simple Mode keeps the study, remembrance and faith groups on the tab and folds these into
+        /// one More Resources row (docs/Simple Mode Guide.md); search still finds every resource.
+        var foldsInSimpleMode: Bool {
+            self == .tools || self == .signs || self == .assistant
         }
     }
 
@@ -434,10 +454,12 @@ struct IslamView: View {
             .columnLayoutMigration(columns: columnLayoutActive) { columns in
                 guard #available(iOS 16.0, *) else { return }
                 if columns {
-                    if let top = islamPath.last {
+                    // More Resources (Simple Mode) is a stack-only screen, never a detail column: its
+                    // tiles push onto this path. Carry the resource opened from it, or none.
+                    if let top = islamPath.last(where: { $0 != .moreResources }) {
                         selectedResource = top
-                        islamPath.removeAll()
                     }
+                    if !islamPath.isEmpty { islamPath.removeAll() }
                 } else if let selected = selectedResource, islamPath.isEmpty {
                     islamPath = [selected]
                 }
@@ -521,7 +543,11 @@ struct IslamView: View {
                 .id("reminder")
             #endif
 
-            ProphetQuote()
+            // Simple Mode keeps one daily card on the tab (the Reminder of the Day), and leaves the
+            // other apps to the Settings tab's copy of that card (docs/Simple Mode Guide.md).
+            if !settings.simpleMode {
+                ProphetQuote()
+            }
 
             #if os(iOS)
             // Need a Hand?: getting started (while the Start Here guide is not on the tab), the tab's
@@ -531,8 +557,10 @@ struct IslamView: View {
             HelpDoorsSection(area: .islam)
             #endif
 
-            AlIslamAppsSection()
-                .id("apps")
+            if !settings.simpleMode {
+                AlIslamAppsSection()
+                    .id("apps")
+            }
         }
         .themedListRowBackground()
     }
@@ -684,7 +712,11 @@ struct IslamView: View {
 
     private func scrollToResource(_ item: IslamDestination) {
         withAnimation { searchText = "" }
-        scrollTarget = Self.rowID(item)
+        // In Simple Mode a folded resource has no row of its own on the tab (unless it is a favorite):
+        // the row that holds it is More Resources.
+        let folded = settings.simpleMode && item.group.foldsInSimpleMode
+            && !settings.isIslamResourceFavorite(item.rawValue)
+        scrollTarget = Self.rowID(folded ? .moreResources : item)
     }
 
     private static func rowID(_ item: IslamDestination) -> String { "resource_\(item.rawValue)" }
@@ -773,12 +805,72 @@ struct IslamView: View {
 
         ForEach(ResourceGroup.allCases, id: \.self) { group in
             let items = group.resources
-            if !items.isEmpty {
+            if !items.isEmpty, !(settings.simpleMode && group.foldsInSimpleMode) {
                 Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
                     resourceItems(items)
                 }
             }
         }
+
+        if settings.simpleMode {
+            Section {
+                moreResourcesEntry
+            }
+        }
+    }
+
+    /// Simple Mode's door to the folded groups: the banner in grid mode, a row in list mode, pushed
+    /// by value like every resource. No star and no menu: it is a place, not something to favorite.
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private var moreResourcesEntry: some View {
+        if settings.islamGridMode {
+            // The banners' own `GridTileMenu`, not a Button: a plain Button here never took the tap
+            // (2026-10-10, the UI test tapped it and nothing was pushed).
+            GridTileMenu {
+                settings.hapticFeedback()
+                islamPath.append(.moreResources)
+            } menu: {
+                Button {
+                    settings.hapticFeedback()
+                    islamPath.append(.moreResources)
+                } label: {
+                    Label("Open More Resources", systemImage: "arrow.right.circle")
+                }
+            } label: {
+                resourceBanner(.moreResources)
+            }
+            .accessibilityIdentifier("moreResourcesRow")
+            .id(Self.rowID(.moreResources))
+            .padding(.vertical, 1)
+            .listRowSeparator(.hidden)
+        } else {
+            NavigationLink(value: IslamDestination.moreResources) {
+                toolLabel(IslamDestination.moreResources.title, systemImage: IslamDestination.moreResources.systemImage,
+                          subtitle: IslamDestination.moreResources.subtitle)
+            }
+            .id(Self.rowID(.moreResources))
+        }
+    }
+
+    /// The folded groups, in the tab's own grid or list form, so a resource opened here pushes onto
+    /// the same path as one opened from the tab.
+    @available(iOS 16.0, *)
+    private var moreResourcesScreen: some View {
+        List {
+            ForEach(ResourceGroup.allCases.filter(\.foldsInSimpleMode), id: \.self) { group in
+                let items = group.resources
+                if !items.isEmpty {
+                    Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
+                        resourceItems(items)
+                    }
+                }
+            }
+        }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        .themedListRowBackground()
+        .navigationTitle("More Resources")
     }
 
     @available(iOS 16.0, *)
@@ -1119,6 +1211,10 @@ struct IslamView: View {
     @ViewBuilder
     private func resourceRoot(for destination: IslamDestination) -> some View {
         switch destination {
+        case .moreResources:
+            if #available(iOS 16.0, *) {
+                moreResourcesScreen
+            }
         case .askAI:
             if #available(iOS 16.0, *) {
                 AskAIChatView()

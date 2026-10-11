@@ -77,6 +77,12 @@ struct WidgetGalleryView: View {
         // The sky's own period, exactly as the provider resolves it: the full, uncombined set, so the
         // gallery shows a traveler the same night sky the real widget will (see `Settings.skyPeriodName`).
         let skyPeriod = settings.skyPeriodName(at: now)
+        // The weather as a widget would see it: the app's cached reading (`-fakeWeather` seeds it).
+        #if HAS_WEATHER
+        let weather = SkyWeatherStore.shared.freshWeather
+        #else
+        let weather: SkyWeather? = nil
+        #endif
         return PrayersEntry(
             date: now,
             accentColor: settings.accentColor,
@@ -88,7 +94,8 @@ struct WidgetGalleryView: View {
             hijriOffset: settings.hijriOffset,
             switchHijriDateAtMaghrib: settings.switchHijriDateAtMaghrib,
             skyPeriod: skyPeriod,
-            skyColors: settings.skyGradientColors(forPrayer: skyPeriod)
+            skyColors: settings.skyGradientColors(forPrayer: skyPeriod, weather: weather),
+            weather: weather
         )
     }
 
@@ -304,8 +311,9 @@ struct WidgetGalleryView: View {
             Color.black
         } else if item.sky {
             PrayerSkyBackground.fill(colors: entry.skyColors,
-                                     starOpacity: SkyStars.opacity(forPeriod: entry.skyPeriod),
-                                     twinkleTime: entry.date.timeIntervalSinceReferenceDate)
+                                     starOpacity: SkyStars.opacity(forPeriod: entry.skyPeriod) * (entry.weather?.look.starFactor ?? 1),
+                                     twinkleTime: entry.date.timeIntervalSinceReferenceDate,
+                                     weather: entry.weather)
         } else {
             Color(uiColor: .secondarySystemGroupedBackground)
         }

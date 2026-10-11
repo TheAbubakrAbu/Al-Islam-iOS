@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import UserNotifications
 
 struct AdhanView: View {
     @ObservedObject var settings = Settings.shared
@@ -36,6 +37,15 @@ struct AdhanView: View {
     /// Whether the list is in front (between `onAppear` and `onDisappear`): the flag-driven presentation
     /// in `autoChangeFlagsDidChange` only fires while it is.
     @State private var isOnScreen = false
+    #if os(iOS)
+    /// The permissions sheet (PermissionsSheet.swift): location and notifications, explained and asked
+    /// for from one place, before either system prompt. Presented once this tab is in front after the
+    /// welcome; its dismissal runs the refresh the bare prompts used to lead into.
+    @State private var showPermissionsSheet = false
+    @State private var permissionsSheetChecked = false
+    /// The scheme the list's content keeps while the sky does not fill the tab (`skyPageContent`).
+    @Environment(\.colorScheme) private var colorScheme
+    #endif
 
     enum AlertType: Identifiable {
         case travelTurnOnAutomatic
@@ -138,6 +148,12 @@ struct AdhanView: View {
                         settings.resetTravelAutomaticFlags()
                     case .calculationAutomaticChanged:
                         settings.confirmAutomaticCalculationChange()
+                    // Ignore, Open Settings or a tap outside: quiet for a day, not until the next
+                    // app open. Never Ask Again has already set its permanent flag.
+                    case .locationAlert:
+                        settings.snoozePermissionAlert(location: true)
+                    case .notificationAlert:
+                        settings.snoozePermissionAlert(location: false)
                     default:
                         break
                     }
@@ -158,6 +174,14 @@ struct AdhanView: View {
     private var showsTracker: Bool {
         !settings.simpleMode || settings.trackerMarkedRecently()
     }
+
+    #if os(iOS)
+    /// The sky under the whole tab (`Settings.skyFillsAdhanTab`, SkyPageBackground.swift): only with
+    /// the sky on and something to paint it from, like the card itself.
+    private var fillsSky: Bool {
+        settings.showSkyView && settings.skyFillsAdhanTab && live.prayers != nil && live.currentLocation != nil
+    }
+    #endif
 
     private var adhanContent: some View {
         List {
@@ -184,7 +208,7 @@ struct AdhanView: View {
 
                 if settings.showSkyView, live.prayers != nil, live.currentLocation != nil {
                     Section {
-                        SkyView()
+                        SkyView(pageSky: fillsSky)
                             .listRowBackground(Color.clear)
                     }
                 }
@@ -234,7 +258,15 @@ struct AdhanView: View {
                 #endif
             }
             .themedListRowBackground()
+            #if os(iOS)
+            // Under the whole-tab sky the rows are its glass and the content draws light-on-dark. On
+            // the content, never the List: the sheets below would inherit the dark scheme otherwise.
+            .skyPageContent(active: fillsSky, scheme: colorScheme)
+            #endif
         }
+        #if os(iOS)
+        .skyPageFill(active: fillsSky, paused: !isOnScreen)
+        #endif
         // Sections stay separate but sit close together, so the header cards stack instead of drifting apart.
         .compactListSectionSpacing()
         .refreshable {
@@ -250,7 +282,7 @@ struct AdhanView: View {
         .onAppear {
             isOnScreen = true
             if appRevealed {
-                prayerTimeRefresh(force: false)
+                askLocationThenRefresh()
                 settings.refreshLocationIfStale()
             } else {
                 // Behind the launch cover (this is the initial tab): compute today's list from the
@@ -262,7 +294,13 @@ struct AdhanView: View {
         }
         .onChange(of: appRevealed) { revealed in
             guard revealed else { return }
-            prayerTimeRefresh(force: false)
+            // The location question waits for this tab to be in front (a learner's welcome lands on
+            // the Islam tab); the refresh runs either way, as it always has.
+            if isOnScreen {
+                askLocationThenRefresh()
+            } else {
+                prayerTimeRefresh(force: false)
+            }
             settings.refreshLocationIfStale()
         }
         .onDisappear {
@@ -332,6 +370,11 @@ struct AdhanView: View {
         // On the List, not on the glance row: the row is lazy and sits at the bottom of the tab, so a
         // destination declared there does not exist until the row has scrolled on screen.
         .modifier(GlanceCalendarPushes(pushed: $pushedCalendar))
+        // The Control Center Qibla control, on the List for the same reason (`openQiblaFromControl`).
+        .onReceive(AppNavigation.shared.$pendingAdhan) { target in
+            guard case .qibla = target else { return }
+            openQiblaFromControl()
+        }
         .sheet(item: $glanceSheet) { sheet in
             switch sheet {
             case .cityPrayerTimes:
@@ -347,12 +390,21 @@ struct AdhanView: View {
                     .smallMediumSheetPresentation()
             case let .qibla(bearing, distance):
                 QiblaSheet(bearing: bearing, distance: distance)
+            case .weather:
+                #if HAS_WEATHER
+                WeatherDetailSheet()
+                #else
+                EmptyView()
+                #endif
             }
+        }
+        .sheet(isPresented: $showPermissionsSheet, onDismiss: permissionsSheetDismissed) {
+            PermissionsSheet()
         }
         #if DEBUG
         // "-glanceAction <name>": fire a glance tile's action after the reveal, since tiles are not
         // tappable from simctl. Names: city, calculation, qibla, prayerCalendar, hijriCalendar,
-        // home, traveling.
+        // home, traveling, weather.
         .onAppear {
             let args = ProcessInfo.processInfo.arguments
             guard let i = args.firstIndex(of: "-glanceAction"), args.indices.contains(i + 1) else { return }
@@ -365,6 +417,7 @@ struct AdhanView: View {
                 case "hijriCalendar": return .hijriCalendar
                 case "home": return .homeLocation
                 case "traveling": return .travelingMode
+                case "weather": return .weather
                 default: return nil
                 }
             }()
@@ -384,6 +437,18 @@ struct AdhanView: View {
     /// A glance tile was tapped: sheets for the place, compass and settings screens, pushes for the
     /// two calendars (the same destinations the tab's own controls reach, so a tile is a shortcut,
     /// never a second copy of a screen).
+    /// The Control Center "Open Qibla" control (ControlIntents), answered on this always-mounted list:
+    /// the glance card that used to answer it is not on screen in Simple Mode, and as the last row of a
+    /// lazy list it was not always built in Full Mode either. Cleared on arrival, so the control works
+    /// a second time.
+    private func openQiblaFromControl() {
+        AppNavigation.shared.pendingAdhan = nil
+        let values = live.currentLocation.map {
+            GlanceCard.qiblaValues(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        handleGlance(.qibla(bearing: values?.bearing, distance: values?.distance))
+    }
+
     private func handleGlance(_ action: GlanceAction) {
         switch action {
         case .cityPrayerTimes:
@@ -401,6 +466,8 @@ struct AdhanView: View {
             settingsSheet = .prayerCalculation
         case .travelingMode:
             settingsSheet = .travelingMode
+        case .weather:
+            glanceSheet = .weather
         }
     }
 
@@ -535,8 +602,76 @@ struct AdhanView: View {
     }
     #endif
 
-    private func prayerTimeRefresh(force: Bool) {
-        settings.requestNotificationAuthorization {
+    /// Location first, then the refresh, which is where the notification question is asked: one system
+    /// prompt at a time, and neither over the welcome (launch no longer asks for location).
+    ///
+    /// Since 2026-10-11 the permissions sheet stands in front of both prompts (PermissionsSheet.swift):
+    /// while a permission is unanswered and the sheet is due, it is presented instead and the refresh
+    /// runs when it closes; while its Not Now stands (a day), the tab refreshes WITHOUT raising either
+    /// system prompt, so the sheet is the one door to them. Snoozed is also what "-skipNotificationPrompt"
+    /// runs look like for notifications, which the existing DEBUG gate inside already handles.
+    private func askLocationThenRefresh() {
+        #if os(iOS)
+        if !permissionsSheetChecked {
+            permissionsSheetChecked = true
+            Task { @MainActor in
+                let due = await PermissionsSheet.shouldPresent(settings)
+                #if DEBUG
+                NSLog("PERMISSIONS SHEET due=%d onScreen=%d revealed=%d", due ? 1 : 0, isOnScreen ? 1 : 0, AppReveal.revealed ? 1 : 0)
+                #endif
+                if due {
+                    // A beat after the reveal, so the sheet rises over a settled tab rather than
+                    // mid-dissolve; the refresh follows its dismissal. `AppReveal.revealed` is the
+                    // live mirror of `appRevealed`: a captured environment value would be stale here.
+                    try? await Task.sleep(nanoseconds: 450_000_000)
+                    guard isOnScreen, AppReveal.revealed, !showPermissionsSheet else {
+                        askLocationThenRefresh()
+                        return
+                    }
+                    showPermissionsSheet = true
+                } else {
+                    askLocationThenRefresh()
+                }
+            }
+            return
+        }
+        let now = Date()
+        let locationSnoozed = SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now)
+        let notificationsSnoozed = SimpleMode.isSnoozed(until: settings.notificationAlertSnoozedUntil, now: now)
+        if locationSnoozed {
+            prayerTimeRefresh(force: false, askNotifications: !notificationsSnoozed)
+        } else {
+            settings.requestLocationIfUndetermined {
+                prayerTimeRefresh(force: false, askNotifications: !notificationsSnoozed)
+            }
+        }
+        #else
+        settings.requestLocationIfUndetermined {
+            prayerTimeRefresh(force: false)
+        }
+        #endif
+    }
+
+    #if os(iOS)
+    /// The permissions sheet closed, by its Done, its Not Now, or a swipe. Whatever is still unanswered
+    /// waits a day (the dialogs' snooze), then the usual refresh, which asks nothing while it waits.
+    private func permissionsSheetDismissed() {
+        let center = UNUserNotificationCenter.current()
+        Task { @MainActor in
+            let notifications = await center.notificationSettings().authorizationStatus
+            if Settings.locationManager.authorizationStatus == .notDetermined {
+                settings.snoozePermissionAlert(location: true)
+            }
+            if notifications == .notDetermined {
+                settings.snoozePermissionAlert(location: false)
+            }
+            askLocationThenRefresh()
+        }
+    }
+    #endif
+
+    private func prayerTimeRefresh(force: Bool, askNotifications: Bool = true) {
+        settings.requestNotificationAuthorization(askIfUndetermined: askNotifications) {
             settings.fetchPrayerTimes(force: force) {
                 // The one place the confirmation is raised: after the refresh has actually settled, a beat
                 // later so the list isn't still animating. `nextAlertToPresent` reads the standing flags, and
@@ -595,28 +730,38 @@ struct AdhanView: View {
         if settings.ownsAutomaticCalculationCheck, settings.calculationAutoChanged {
             return .calculationAutomaticChanged
         }
-        if !settings.locationNeverAskAgain && settings.showLocationAlert {
+        // A dismissed permission dialog waits a day before it asks again (`snoozePermissionAlert`).
+        let now = Date()
+        if !settings.locationNeverAskAgain && settings.showLocationAlert
+            && !SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now) {
             return .locationAlert
         }
-        if !settings.notificationNeverAskAgain && settings.showNotificationAlert {
+        if !settings.notificationNeverAskAgain && settings.showNotificationAlert
+            && !SimpleMode.isSnoozed(until: settings.notificationAlertSnoozedUntil, now: now) {
             return .notificationAlert
         }
         return nil
     }
 
-    private var dialogTitle: String {
+    /// The automatic-change cards' copy lives in `Settings.AutoChangeCard`, shared with the settings
+    /// sheet's copy of these dialogs.
+    private var autoChangeCard: Settings.AutoChangeCard? {
         switch showAlert {
-        case .travelTurnOnAutomatic:
-            return "Traveling Mode Detected"
-        case .travelTurnOffAutomatic:
-            return "Traveling Mode Updated"
-        case .calculationAutomaticChanged:
-            return "Calculation Method Changed"
+        case .travelTurnOnAutomatic: return settings.autoChangeCard(.travelOn)
+        case .travelTurnOffAutomatic: return settings.autoChangeCard(.travelOff)
+        case .calculationAutomaticChanged: return settings.autoChangeCard(.calculation)
+        default: return nil
+        }
+    }
+
+    private var dialogTitle: String {
+        if let card = autoChangeCard { return card.title }
+        switch showAlert {
         case .locationAlert:
             return "Location Access Needed"
         case .notificationAlert:
             return "Notifications Off"
-        case .none:
+        default:
             return ""
         }
     }
@@ -624,48 +769,49 @@ struct AdhanView: View {
     @ViewBuilder
     private var alertActions: some View {
         switch showAlert {
+        // Accept first, put back second, no destructive red (see `AutoChangeCard`).
         case .travelTurnOnAutomatic:
-            Button("Override: Turn Off", role: .destructive) {
+            Button(settings.autoChangeCard(.travelOn).confirmTitle) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.confirmTravelAutomaticChange()
+                }
+            }
+
+            Button(settings.autoChangeCard(.travelOn).overrideTitle) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
                     settings.overrideTravelingMode(keepOn: false)
                 }
             }
 
-            Button("Confirm: Keep On") {
+        case .travelTurnOffAutomatic:
+            Button(settings.autoChangeCard(.travelOff).confirmTitle) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
                     settings.confirmTravelAutomaticChange()
                 }
             }
 
-        case .travelTurnOffAutomatic:
-            Button("Override: Keep On", role: .destructive) {
+            Button(settings.autoChangeCard(.travelOff).overrideTitle) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
                     settings.overrideTravelingMode(keepOn: true)
                 }
             }
 
-            Button("Confirm: Turn Off") {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.confirmTravelAutomaticChange()
-                }
-            }
-
         case .calculationAutomaticChanged:
-            Button("Override: Keep \(settings.calculationAutoPreviousMethod)", role: .destructive) {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.overrideAutomaticCalculationKeepingPrevious()
-                }
-            }
-
-            Button("Confirm: Use \(settings.calculationAutoDetectedMethod)") {
+            Button(settings.autoChangeCard(.calculation).confirmTitle) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
                     settings.confirmAutomaticCalculationChange()
+                }
+            }
+
+            Button(settings.autoChangeCard(.calculation).overrideTitle) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.overrideAutomaticCalculationKeepingPrevious()
                 }
             }
 
@@ -703,12 +849,8 @@ struct AdhanView: View {
     @ViewBuilder
     private var alertMessage: some View {
         switch showAlert {
-        case .travelTurnOnAutomatic:
-            Text(settings.automaticTravelMessage(turnOn: true))
-        case .travelTurnOffAutomatic:
-            Text(settings.automaticTravelMessage(turnOn: false))
-        case .calculationAutomaticChanged:
-            Text(settings.automaticCalculationMessage)
+        case .travelTurnOnAutomatic, .travelTurnOffAutomatic, .calculationAutomaticChanged:
+            Text(autoChangeCard?.message ?? "")
         case .locationAlert:
             Text("Please go to Settings and enable location services to accurately determine prayer times.")
         case .notificationAlert:
@@ -1208,12 +1350,14 @@ private enum GlanceSheet: Identifiable {
     case cityPrayerTimes
     case homeLocation
     case qibla(bearing: String?, distance: String?)
+    case weather
 
     var id: String {
         switch self {
         case .cityPrayerTimes: return "city"
         case .homeLocation: return "home"
         case .qibla: return "qibla"
+        case .weather: return "weather"
         }
     }
 }

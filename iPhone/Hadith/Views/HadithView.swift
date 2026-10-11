@@ -183,6 +183,11 @@ struct HadithView: View {
     @State private var showAskAI = false
     /// The help card folded to its title + recent chips (persists; the -/+ on the card).
     @AppStorage("hadithSearchHelpCollapsed") private var hadithSearchHelpCollapsed = false
+    /// The folded help put away for good by its trash; the recent searches stay. Hadith Settings
+    /// brings it back (the Quran tab's `quranSearchHelpRemoved`, for hadith).
+    @AppStorage("hadithSearchHelpRemoved") private var hadithSearchHelpRemoved = false
+    /// The trash's confirmation, hung on the list: the card exists only while the field is focused.
+    @State private var confirmingSearchHelpRemoval = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showHadithKeywordResults = HadithView.opensOnKeywordResults
@@ -373,16 +378,33 @@ struct HadithView: View {
     /// empty. Deliberately terse.
     @ViewBuilder
     private var searchHelpOverlay: some View {
-        if isHadithSearchFocused, searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        // With the help removed the card is only the recent searches, so with none there is no card.
+        if isHadithSearchFocused, searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !hadithSearchHelpRemoved || !settings.hadithSearchHistory.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 // The Quran card's grammar: the help folds behind a -/+, the recent chips stay at
-                // the bottom, nearest the field.
+                // the bottom, nearest the field. Folded, a trash removes the help for good.
+                if !hadithSearchHelpRemoved {
                 HStack(spacing: 8) {
                     Text("Quick Search Help")
                         .font(.subheadline.bold())
                         .foregroundStyle(settings.accentColor.color)
 
                     Spacer(minLength: 0)
+
+                    if hadithSearchHelpCollapsed {
+                        Button {
+                            settings.hapticFeedback()
+                            confirmingSearchHelpRemoval = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.subheadline)
+                                .foregroundStyle(settings.accentColor.color)
+                                .contentShape(Rectangle().inset(by: -8))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove search help")
+                    }
 
                     Button {
                         settings.hapticFeedback()
@@ -408,6 +430,7 @@ struct HadithView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.primary)
+                }
                 }
 
                 HadithRecentSearches(searchText: $searchText)
@@ -746,6 +769,16 @@ struct HadithView: View {
             .overlay(alignment: .top) {
                 searchHelpOverlay
                     .animation(.easeInOut, value: isHadithSearchFocused)
+            }
+            .confirmationDialog("Remove Quick Search Help?", isPresented: $confirmingSearchHelpRemoval,
+                                titleVisibility: .visible) {
+                Button("Remove", role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { hadithSearchHelpRemoved = true }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your recent searches stay. You can bring the help back in Hadith Settings.")
             }
             // The filter buttons ride above the results while a search (or a filter) is live; applied
             // after the help card, so the card sits under the row.
@@ -1309,7 +1342,7 @@ struct HadithView: View {
     var simpleMoreItems: some View {
         menuDoor(.daily, title: "Today", systemImage: "sun.horizon.fill")
         if HadithTopicsStore.isBundled {
-            menuDoor(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
+            menuDoor(.topics, title: "Topics", systemImage: "tag.fill")
         }
         if HadeethEncStore.isBundled {
             menuDoor(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
@@ -1319,23 +1352,19 @@ struct HadithView: View {
         Divider()
 
         let showsGrid = hadithGridMode && !listForJump
-        Button {
+        SimpleMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { hadithGridMode.toggle() }
             }
-        } label: {
-            Label(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2")
         }
     }
 
     private func menuDoor(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
-        Button {
+        SimpleMoreMenuItem(title, systemImage: systemImage) {
             guard !bookPushInFlight else { return }
             settings.hapticFeedback()
             openDoor = door
-        } label: {
-            Label(title, systemImage: systemImage)
         }
     }
 

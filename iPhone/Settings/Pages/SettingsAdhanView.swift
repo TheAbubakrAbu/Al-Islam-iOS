@@ -52,17 +52,18 @@ struct SettingsAdhanView: View {
         self.standalonePage = standalonePage
     }
 
-    private var dialogTitle: String {
+    /// The card's copy, shared with the Adhan tab's copy of these dialogs (`Settings.AutoChangeCard`).
+    private var autoChangeCard: Settings.AutoChangeCard? {
         switch showAlert {
-        case .travelTurnOnAutomatic:
-            return "Traveling Mode Detected"
-        case .travelTurnOffAutomatic:
-            return "Traveling Mode Updated"
-        case .calculationAutomaticChanged:
-            return "Calculation Method Changed"
-        case .none:
-            return ""
+        case .travelTurnOnAutomatic: return settings.autoChangeCard(.travelOn)
+        case .travelTurnOffAutomatic: return settings.autoChangeCard(.travelOff)
+        case .calculationAutomaticChanged: return settings.autoChangeCard(.calculation)
+        case .none: return nil
         }
+    }
+
+    private var dialogTitle: String {
+        autoChangeCard?.title ?? ""
     }
 
     var body: some View {
@@ -172,40 +173,41 @@ struct SettingsAdhanView: View {
         }
     }
 
+    /// Accept first, put back second, no destructive red (see `AutoChangeCard`).
     @ViewBuilder
     private var autoChangeDialogButtons: some View {
         switch showAlert {
         case .travelTurnOnAutomatic:
-            Button("Override: Turn Off", role: .destructive) {
+            Button(settings.autoChangeCard(.travelOn).confirmTitle) {
+                settings.hapticFeedback()
+                settings.confirmTravelAutomaticChange()
+            }
+
+            Button(settings.autoChangeCard(.travelOn).overrideTitle) {
                 settings.hapticFeedback()
                 settings.overrideTravelingMode(keepOn: false)
             }
 
-            Button("Confirm: Keep On") {
+        case .travelTurnOffAutomatic:
+            Button(settings.autoChangeCard(.travelOff).confirmTitle) {
                 settings.hapticFeedback()
                 settings.confirmTravelAutomaticChange()
             }
 
-        case .travelTurnOffAutomatic:
-            Button("Override: Keep On", role: .destructive) {
+            Button(settings.autoChangeCard(.travelOff).overrideTitle) {
                 settings.hapticFeedback()
                 settings.overrideTravelingMode(keepOn: true)
             }
 
-            Button("Confirm: Turn Off") {
-                settings.hapticFeedback()
-                settings.confirmTravelAutomaticChange()
-            }
-
         case .calculationAutomaticChanged:
-            Button("Override: Keep \(settings.calculationAutoPreviousMethod)", role: .destructive) {
-                settings.hapticFeedback()
-                settings.overrideAutomaticCalculationKeepingPrevious()
-            }
-
-            Button("Confirm: Use \(settings.calculationAutoDetectedMethod)") {
+            Button(settings.autoChangeCard(.calculation).confirmTitle) {
                 settings.hapticFeedback()
                 settings.confirmAutomaticCalculationChange()
+            }
+
+            Button(settings.autoChangeCard(.calculation).overrideTitle) {
+                settings.hapticFeedback()
+                settings.overrideAutomaticCalculationKeepingPrevious()
             }
 
         case .none:
@@ -215,14 +217,9 @@ struct SettingsAdhanView: View {
 
     @ViewBuilder
     private var autoChangeDialogMessage: some View {
-        switch showAlert {
-        case .travelTurnOnAutomatic:
-            Text(settings.automaticTravelMessage(turnOn: true))
-        case .travelTurnOffAutomatic:
-            Text(settings.automaticTravelMessage(turnOn: false))
-        case .calculationAutomaticChanged:
-            Text(settings.automaticCalculationMessage)
-        case .none:
+        if let card = autoChangeCard {
+            Text(card.message)
+        } else {
             EmptyView()
         }
     }
@@ -303,14 +300,6 @@ struct SettingsAdhanView: View {
     /// the sky. Every row carries its caption, so the screen reads as a table of contents.
     @ViewBuilder
     private var rootSections: some View {
-        // First on every settings page (Abu, 2026-09-20): what this side of the app can do that
-        // nothing on screen announces. See TipsAndTricks.swift.
-        #if os(iOS)
-        TipsSection(area: .adhan, resolve: resolveSearchDestination)
-        // The Adhan tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
-        HelpDoorsSettingsSection(area: .adhan)
-        #endif
-
         notificationsSection
 
         Section(header: Text("PRAYER TIMES")) {
@@ -329,6 +318,16 @@ struct SettingsAdhanView: View {
             #endif
 
             adhanPageLink(.prayerCalculation) { prayerCalculationDestination }
+            #if os(iOS)
+            // The tracker's own page (History & Insights). Simple Mode shows the tab's tracker only to
+            // someone who marked a prayer in the last fourteen days, so this is its door the rest of the
+            // time (docs/Simple Mode Guide.md, rule 3); in Full Mode it is a second way in.
+            NavigationLink(destination: LazyDestination { PrayerTrackerView() }) {
+                SettingsRowLabel(title: "Prayer Tracker", systemImage: "checklist",
+                                 subtitle: "History, streaks and insights", tint: SettingsTint.prayer)
+            }
+            .tint(settings.accentColor.color)
+            #endif
             adhanPageLink(.travelingMode) { travelingModeDestination }
             adhanPageLink(.optionalPrayers) { optionalTimesDestination }
             adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
@@ -347,6 +346,15 @@ struct SettingsAdhanView: View {
         // No PRAYER TRACKER section here: "Mark Only After the Time Begins" moved onto the tracker
         // itself, beneath the marks it governs (Abu, 2026-09-18). See
         // `PrayerTrackerView.settingsSection`.
+        #endif
+
+        // Last on every settings page, above its ADVANCED switch (Abu, 2026-10-10): a page opens on its
+        // own settings, and the tips and the Need a Hand? switch wait at the foot. They led every page
+        // from 2026-09-20 until then, which put the first real setting most of a screen down.
+        #if os(iOS)
+        TipsSection(area: .adhan, resolve: resolveSearchDestination)
+        // The Adhan tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+        HelpDoorsSettingsSection(area: .adhan)
         #endif
 
         AdvancedSettingsSection(screen: .prayerSettings, hides: "custom prayer names")
@@ -382,6 +390,15 @@ struct SettingsAdhanView: View {
     }
 
     #if os(iOS)
+    /// The Sky Fills the Screen caption; the weather is Al-Islam's alone (`HAS_WEATHER`).
+    private static var skyFillsCaption: String {
+        #if HAS_WEATHER
+        return "The whole Adhan tab wears the sky: its colors, stars and weather behind the prayer times and everything under them, with the rows turned to glass."
+        #else
+        return "The whole Adhan tab wears the sky: its colors and stars behind the prayer times and everything under them, with the rows turned to glass."
+        #endif
+    }
+
     /// Sky: whether the Adhan tab draws it, its skyline, and the door to its colors.
     private var skyDestination: some View {
         List {
@@ -399,10 +416,45 @@ struct SettingsAdhanView: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
+
+                    if settings.showSkyView {
+                        VStack(alignment: .leading) {
+                            Toggle("Sky Fills the Screen", isOn: $settings.skyFillsAdhanTab.animation(.easeInOut))
+                                .font(.subheadline)
+                                .tint(settings.accentColor.color)
+                                .onChange(of: settings.skyFillsAdhanTab) { _ in settings.hapticFeedback() }
+
+                            Text(Self.skyFillsCaption)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.vertical, 2)
+                        }
+                    }
                 }
 
                 // Nothing to color, and no ground for a skyline, when the sky isn't drawn.
                 if settings.showSkyView {
+                    #if HAS_WEATHER
+                    Section(header: Text("WEATHER")) {
+                        VStack(alignment: .leading) {
+                            Toggle("Weather", isOn: $settings.skyShowsWeather.animation(.easeInOut))
+                                .font(.subheadline)
+                                .tint(settings.accentColor.color)
+                                .onChange(of: settings.skyShowsWeather) { _ in settings.hapticFeedback() }
+
+                            Text("Clouds, rain, snow and fog show on the sky, and the temperature, UV index, humidity and wind sit on the card, in At a Glance and on the sky widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, your location never leaves your device.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.vertical, 2)
+                        }
+
+                        if settings.skyShowsWeather {
+                            weatherAttributionRow
+                        }
+                    }
+                    #endif
                     Section(header: Text("HORIZON")) {
                         VStack(alignment: .leading) {
                             // One row for off / which structures: "off" is the old Skyline switch,
@@ -437,6 +489,24 @@ struct SettingsAdhanView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Sky")
+    }
+    #endif
+
+    #if os(iOS) && HAS_WEATHER
+    /// Apple's mark and legal link, as the WeatherKit terms require wherever its data shows.
+    private var weatherAttributionRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "apple.logo")
+                .accessibilityHidden(true)
+            Text("Weather")
+            Spacer()
+            Link("Legal", destination: SkyWeatherStore.shared.legalURL)
+                .foregroundColor(settings.accentColor.color)
+        }
+        .font(.footnote)
+        .foregroundColor(.secondary)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Weather data by Apple Weather. Legal attribution.")
     }
     #endif
 
@@ -922,8 +992,6 @@ struct NotificationView: View {
                 Section {
                     permissionCard
                 }
-
-                TipsSection(area: .notifications, resolve: resolveSearchDestination)
                 #else
                 // watchOS has no detailed permission card UI; offer a simple request-access row instead.
                 Section(header: Text("PERMISSION")) {
@@ -1094,6 +1162,9 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
+                // Last on the page, above its ADVANCED switch (Abu, 2026-10-10): see Prayer Settings.
+                TipsSection(area: .notifications, resolve: resolveSearchDestination)
+
                 AdvancedSettingsSection(screen: .notifications, hides: "the alert tone, the in-app adhan in silent mode and the day-before reminder for Islamic dates")
                 #else
                 // The watch's only advanced control here is Remind a Day Before, itself shown only
@@ -1127,7 +1198,59 @@ struct NotificationView: View {
     /// ("Per-mission") and the two buttons shrank their text to "Request A..." and "Open Sett...".
     private var permissionCardStacks: Bool { dynamicTypeSize.isAccessibilitySize }
 
+    /// One quiet row while everything is as it should be, the full card only when something is wrong
+    /// (Abu, 2026-10-10: the card's status rows and buttons led the page even when all was well).
+    /// Before the status arrives the row stands in, redacted, so the page opens at its usual height and
+    /// grows only in the case that needs the card.
     private var permissionCard: some View {
+        Group {
+            if notifSettings == nil || notificationsFullyAllowed {
+                allowedRow
+            } else {
+                fullPermissionCard
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: notifSettings?.authorizationStatus.rawValue)
+    }
+
+    /// Allowed, with alerts and sounds on. Provisional or quiet delivery still gets the full card.
+    private var notificationsFullyAllowed: Bool {
+        guard let notifSettings else { return false }
+        return notifSettings.authorizationStatus == .authorized
+            && notifSettings.alertSetting == .enabled
+            && notifSettings.soundSetting == .enabled
+    }
+
+    /// The card's Open Settings, as the whole row.
+    private var allowedRow: some View {
+        Button {
+            settings.hapticFeedback()
+            openSystemSettings()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundColor(settings.accentColor.color)
+                    .accessibilityHidden(true)
+
+                Text("Notifications Allowed")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .redacted(reason: notifSettings == nil ? .placeholder : [])
+        .accessibilityHint("Opens this app's notification settings")
+    }
+
+    private var fullPermissionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Group {
                 if permissionCardStacks {
@@ -1779,7 +1902,16 @@ extension SettingsSearchEntry {
         .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
 
-    static let adhanEntries: [SettingsSearchEntry] = [
+    /// The weather's entry, in Al-Islam alone (`HAS_WEATHER`): the companion apps have no switch to find.
+    private static var weatherEntries: [SettingsSearchEntry] {
+        #if HAS_WEATHER
+        return [.init(title: "Weather on the Sky", path: "Prayer Settings → Sky", keywords: "weather temperature temp uv index humidity wind clouds rain snow fog forecast apple weather conditions feels like degrees", destination: .prayerPage(.sky))]
+        #else
+        return []
+        #endif
+    }
+
+    static let adhanEntries: [SettingsSearchEntry] = weatherEntries + [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
         .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings),
         .init(title: "Prayer Times Layout", path: "Prayer Settings", keywords: "tiles grid list split layout columns prayer times view display", destination: .prayerSettings),
@@ -1791,6 +1923,7 @@ extension SettingsSearchEntry {
         .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames), advanced: true),
         .init(title: "Mark Only After the Time Begins", path: "Al-Adhan → Prayer Tracker", keywords: "prayer tracker mark time begins lock gate future prayers order only after adhan", destination: .prayerTracker),
         .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings → Sky", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerPage(.sky)),
+        .init(title: "Sky Fills the Screen", path: "Prayer Settings → Sky", keywords: "sky whole tab background full screen fill page gradient behind everything glass rows adhan tab color", destination: .prayerPage(.sky)),
         .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings → Sky", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerPage(.sky)),
         .init(title: "Sky Colors", path: "Prayer Settings → Sky → Sky Colors", keywords: "background gradient sunrise sunset theme sky colors", destination: .prayerPage(.skyColors)),
     ]

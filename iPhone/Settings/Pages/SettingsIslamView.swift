@@ -71,10 +71,6 @@ struct SettingsIslamView: View {
     /// push away - on the page-search scaffold, so "arabic font" typed here finds the face picker.
     private var settingsList: some View {
         SettingsScopedSearch(scope: .islam, resolve: resolveSearchDestination) {
-            TipsSection(area: .islam, resolve: resolveSearchDestination)
-            // The Islam tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
-            HelpDoorsSettingsSection(area: .islam)
-
             Section(header: Text("READING")) {
                 islamPageLink(.arabicText) { arabicTextDestination }
                 islamPageLink(.textSize) { IslamTextSizeSettingsView() }
@@ -95,6 +91,12 @@ struct SettingsIslamView: View {
             Section(header: Text("REMINDERS")) {
                 islamPageLink(.sunnahReminders) { SunnahRemindersView() }
             }
+
+            // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and
+            // the Need a Hand? switch wait at the foot.
+            TipsSection(area: .islam, resolve: resolveSearchDestination)
+            // The Islam tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+            HelpDoorsSettingsSection(area: .islam)
         }
     }
 

@@ -41,6 +41,9 @@ struct SettingsSearchEntry: Identifiable {
         case appearance
         /// About You: who the reader says they are, and the Start Here guide it switches on.
         case aboutYou
+        /// Simple Mode's switch on a page of its own (`SimpleModeSettingsView`): where its search
+        /// entry, its tip and the Islam tab's "Too Much on Screen?" door land.
+        case simpleMode
         #if HAS_ICLOUD_BACKUP
         /// iCloud Backup: this device's profile, the others in the account, restore. Al-Islam's
         /// alone: the companion apps define no `HAS_ICLOUD_BACKUP` (sync-manifests, FLAG_SKIP).
@@ -75,6 +78,7 @@ struct SettingsSearchEntry: Identifiable {
             case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
             case .aboutYou: return "person.crop.circle.fill"
+            case .simpleMode: return "rectangle.compress.vertical"
             #if HAS_ICLOUD_BACKUP
             case .cloudBackup: return "icloud.fill"
             #endif
@@ -495,6 +499,7 @@ struct SettingsView: View {
         case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "nagging": return .notificationsPage(.naggingMode)
         case "aboutYou": return .aboutYou
+        case "simpleMode": return .simpleMode
         #if HAS_ICLOUD_BACKUP
         case "cloudBackup": return .cloudBackup
         #endif
@@ -593,6 +598,14 @@ struct SettingsView: View {
             #endif
         }
 
+        // Directly under the settings rows, in both modes (Abu, 2026-10-10): the switch that changes
+        // how busy every tab is has to be the first thing found here, and in Simple Mode it is also
+        // the way back out (docs/Simple Mode Guide.md). iPhone, iPad and Mac only: the watch's screens
+        // do not read it.
+        #if os(iOS)
+        SimpleModeSection()
+        #endif
+
         // No ADVANCED section here (Abu, 2026-09-22: "dont do one general advanced settings there,
         // do that for each one"): the hub hides nothing of its own, and each page below owns the
         // switch for its own second half.
@@ -626,10 +639,6 @@ struct SettingsView: View {
         #else
         appearanceSection(grid: false)
         #endif
-        // Under APPEARANCE, because that is what it is: a choice about what the app SHOWS, not about
-        // what it does. Its own section rather than a row inside the appearance pages - it reaches
-        // every tab, where those pages are about theme and accent.
-        SimpleModeSection()
         // Reset stays a row in both modes: a destructive action keeps its explanation and its two
         // confirmations, never a tile's one tap.
         resetSection
@@ -1239,6 +1248,7 @@ extension SettingsSearchEntry {
         .init(title: "Default List View", path: "Appearance → Look and Feel", keywords: "list style plain grouped inset layout", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Classic Look (No Liquid Glass)", path: "Appearance → Look and Feel", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearancePage(.lookAndFeel)),
         .init(title: "Haptic Feedback", path: "Appearance → Look and Feel", keywords: "vibration taptic buzz feedback toggle", destination: .appearancePage(.lookAndFeel)),
+        .init(title: "Simple Mode", path: "Settings", keywords: "simple simpler busy clutter cluttered overwhelming overwhelmed essentials less minimal declutter calm fewer buttons", destination: .simpleMode),
         .init(title: "Need a Hand? on Every Tab", path: "Appearance → Look and Feel", keywords: "help shortcuts need a hand need help praying reading questions rows doors tabs hide show all nagging beginner transliteration", destination: .appearancePage(.lookAndFeel)),
     ]
 }
@@ -1558,8 +1568,19 @@ struct AppearancePageView: View {
         )
     }
 
+    /// The examples name only the tabs this app has: Al-Adhan and Al-Quran share this file, and a
+    /// question about a tab the reader does not have would send them looking for it.
     private var helpShortcutsCaption: String {
-        let intro = "A few questions on each tab, each with the setting that answers it: Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran answers with Arabic Beginner Mode. Each tab also has its own switch, on its settings page."
+        #if HAS_ADHAN && HAS_QURAN
+        let examples = ": Need Help Praying? on the prayer times opens Nagging Mode, and Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+        #elseif HAS_ADHAN
+        let examples = ": Need Help Praying? on the prayer times opens Nagging Mode."
+        #elseif HAS_QURAN
+        let examples = ": Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+        #else
+        let examples = "."
+        #endif
+        let intro = "A few questions on each tab, each with the setting that answers it" + examples + " Each tab also has its own switch, on its settings page."
         let hidden = settings.hiddenHelpDoorTabs
         guard !hidden.isEmpty, hidden.count < HelpDoorArea.allCases.count else { return intro }
         let names = hidden.count == 1 ? hidden[0] : hidden.dropLast().joined(separator: ", ") + " and " + hidden.last!
@@ -2036,9 +2057,21 @@ struct SimpleModeSection: View {
     /// hides parts of the app has to answer before it is turned on.
     private var caption: String {
         if settings.simpleMode {
-            return "The app is kept to its essentials: the extra rows and buttons are out of the way. Nothing is turned off - what they control still applies, and every one of them is still reachable. Turn this off to see them again."
+            return "Each tab keeps to its essentials. Shortcuts wait in the ⋯ menu at the top of a tab or in Settings, and extras like Need a Hand? and At a Glance step aside. Nothing is turned off: everything you set keeps working."
         }
-        return "Hides the busier controls across the app, like the Quran tab's sort row and the reader's second toolbar, leaving the essentials. Nothing is turned off: everything hidden still applies and is still reachable, and turning this back off brings it all straight back."
+        return "Keeps each tab to its essentials: shortcuts move into a ⋯ menu at the top or into Settings, and the extras step aside. Nothing is turned off, and turning this back off brings it all back."
+    }
+}
+
+/// Simple Mode's switch on a page of its own: where its search entry, its tip and the Islam tab's
+/// "Too Much on Screen?" door land.
+struct SimpleModeSettingsView: View {
+    var body: some View {
+        List {
+            SimpleModeSection()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("Simple Mode")
     }
 }
 

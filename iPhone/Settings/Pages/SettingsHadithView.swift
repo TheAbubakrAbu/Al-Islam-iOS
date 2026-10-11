@@ -92,15 +92,17 @@ struct SettingsHadithView: View {
     /// page-search scaffold, so "font" here finds the size sliders.
     private var settingsList: some View {
         SettingsScopedSearch(scope: .hadith, resolve: resolveSearchDestination) {
-            TipsSection(area: .hadith, resolve: resolveSearchDestination)
-            // The Hadith tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
-            HelpDoorsSettingsSection(area: .hadith)
-
             Section(header: Text("READING")) {
                 hadithPageLink(.readingView) { readingViewDestination }
                 hadithPageLink(.arabicText) { arabicTextDestination }
                 hadithPageLink(.englishText) { englishTextDestination }
             }
+
+            // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and
+            // the Need a Hand? switch wait at the foot.
+            TipsSection(area: .hadith, resolve: resolveSearchDestination)
+            // The Hadith tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
+            HelpDoorsSettingsSection(area: .hadith)
         }
     }
 

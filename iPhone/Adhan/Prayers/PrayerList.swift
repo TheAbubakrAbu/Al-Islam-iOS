@@ -216,6 +216,15 @@ struct PrayerList: View {
         Section(header: sectionHeader) {
             prayerContentStack
         }
+        // On the section, not on the date footer it used to sit on: Simple Mode unmounts that footer
+        // the moment the list is back on today, in the same update, so a Back to Today could leave the
+        // sky's moon previewing the other night (2026-10-10).
+        .onChange(of: selectedDate) { newDate in
+            settings.hapticFeedback()
+            // Let the sky card's moon preview the picked night's phase (nil = back to the live moon).
+            let isToday = Calendar.current.isDate(newDate, inSameDayAs: Date())
+            SelectedDayPreview.shared.update(isToday ? nil : newDate)
+        }
         .onChange(of: scenePhase) { phase in
             if phase == .active { resetToTodayIfDayChanged() }
         }
@@ -930,12 +939,6 @@ struct PrayerList: View {
                     }
                 }
             }
-        }
-        .onChange(of: selectedDate) { newDate in
-            settings.hapticFeedback()
-            // Let the sky card's moon preview the picked night's phase (nil = back to the live moon).
-            let isToday = Calendar.current.isDate(newDate, inSameDayAs: Date())
-            SelectedDayPreview.shared.update(isToday ? nil : newDate)
         }
         #endif
     }

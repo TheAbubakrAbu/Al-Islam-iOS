@@ -681,6 +681,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     // The sky card's two switches, for looking at the card without its skyline (or sky).
                     case "showSkyView": shared.showSkyView = kv[1] == "1"
                     case "showSkyScene": shared.showSkyScene = kv[1] == "1"
+                    // The whole-tab sky and the weather, flipped the way their Toggles flip them.
+                    case "skyFillsAdhanTab": withAnimation(.easeInOut) { shared.skyFillsAdhanTab = kv[1] == "1" }
+                    case "skyShowsWeather": withAnimation(.easeInOut) { shared.skyShowsWeather = kv[1] == "1" }
                     // The skyline's structures (pyramidsMosque | pyramids | mosques), through the
                     // setter so the app-group mirror and the widget reload fire; a first-render seed
                     // is `-seedString skySceneStyle=pyramids`.
@@ -771,8 +774,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             }
 
             // Widgets read the app-group location; they must not touch CoreLocation authorization.
+            // An install that has never answered is asked on the Adhan tab after the welcome, not here
+            // over the launch animation (Abu, 2026-10-10; `requestLocationIfUndetermined`).
             DispatchQueue.main.async { [weak self] in
+                #if os(iOS)
+                self?.startLocationAtLaunch()
+                #else
                 self?.requestLocationAuthorization()
+                #endif
             }
         }
     }
@@ -1099,7 +1108,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// keeps its mirror; a raw `UserDefaults` write (a watch sync apply, a restore) goes underneath
     /// the `didSet`, so whoever writes raw calls `remirrorAppGroupPreferences()` afterwards.
     static let appGroupMirroredStorageKeys: [String] = prayerOffsetKeys + [
-        "switchHijriDateAtMaghrib", "skyGradients", "showSkyScene", "skySceneStyle",
+        "switchHijriDateAtMaghrib", "skyGradients", "showSkyScene", "skySceneStyle", "skyShowsWeather",
         "customFajrAngle", "customIshaAngle",
         "lastListenedAyahData", "lastListenedSurahData",
     ]
@@ -1118,6 +1127,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         group.setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
         group.setValue(showSkyScene, forKey: "showSkyScene")
         group.setValue(skySceneStyle, forKey: "skySceneStyle")
+        group.setValue(skyShowsWeather, forKey: "skyShowsWeather")
         group.setValue(customFajrAngle, forKey: "customFajrAngle")
         group.setValue(customIshaAngle, forKey: "customIshaAngle")
         for key in ["lastListenedAyahData", "lastListenedSurahData"] {
@@ -1204,6 +1214,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Onboarding and permission prompts this install has already been through.
         "THEfirstLaunch", "aboutYouVersionSeen",
         "locationNeverAskAgain", "notificationNeverAskAgain", "showLocationAlert", "showNotificationAlert",
+        "locationAlertSnoozedUntil", "notificationAlertSnoozedUntil",
+        // The last Apple Weather reading for the sky (SkyWeather.swift): this place, this hour.
+        "skyWeather",
         // Migrations and one-time seeds.
         "appGroupMirrorsSeeded.v1", "settings.explicitlySetKeys", "settings.didSeedExplicitKeys",
         "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
@@ -1216,8 +1229,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Control Center toggle (`QuranPlayer.mirrorPlaybackStateForControls`): live state, and a restore
         // onto another phone would show that phone's toggle playing.
         "widgetQuranIsPlaying",
-        // The page reader's learned fold and find-bar band pairs: this screen's geometry, like the one above.
-        "mushaf.foldTwins", "mushaf.findTwins",
+        // The page reader's learned band pairs across its one-step chrome changes (the fold, the find bar,
+        // the mini player mounting and switching size, select mode): this screen's geometry, like the one
+        // above (`MushafChromeJump.twinsDefaultsKey`).
+        "mushaf.foldTwins", "mushaf.findTwins", "mushaf.playerTwins", "mushaf.playerSizeTwins", "mushaf.selectTwins",
         // Whether Test Mode is on: a session on this phone, not a choice to carry to another one (a restored
         // backup must never open the Quran with its text hidden).
         "quranTestModeOn",
@@ -1879,6 +1894,33 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Current/Upcoming countdown card, exactly as it looked before the two were merged.
     @AppStorage("showSkyView") var showSkyView: Bool = true
 
+    /// The sky behind the WHOLE Adhan tab (Abu, 2026-10-11: "make the whole background of adhan tab
+    /// sky color"): the current period's gradient, its stars and its weather painted under every
+    /// row, with the rows turned to glass and the chrome in the dark scheme (`SkyPageBackground`).
+    /// Off by default; only read while `showSkyView` is on, because it IS the sky.
+    @AppStorage("skyFillsAdhanTab") var skyFillsAdhanTab: Bool = false
+
+    /// Apple Weather on the sky (Abu, 2026-10-11): clouds, rain and fog tint the gradient and the
+    /// temperature, UV index and humidity sit on the card, in the glance wall and on the sky widgets.
+    /// OFF by default and opt-in: the location prompt promises "your location stays on your device",
+    /// and a weather request sends the coordinates to Apple's weather service. Mirrored to the app
+    /// group because the widgets read it there, and the sky layouts reload so the tint lands at once.
+    @AppStorage("skyShowsWeather") var skyShowsWeather: Bool = false {
+        didSet {
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(skyShowsWeather, forKey: "skyShowsWeather")
+            // The store (SkyWeatherStore.swift, the app only) answers: on, the first reading now;
+            // off, the cached one goes and the widgets reload. A notification rather than a call, so
+            // this file, which the widget compiles too, never names the store.
+            NotificationCenter.default.post(name: Self.skyWeatherSwitchDidChange, object: nil)
+        }
+    }
+
+    /// Posted by `skyShowsWeather`'s setter (above) and by a committed location fix
+    /// (`refreshSkyWeatherForLocation`): the sky's weather store fetches or clears in answer.
+    static let skyWeatherSwitchDidChange = Notification.Name("AlIslam.skyWeatherSwitchDidChange")
+    static let skyWeatherRefreshRequested = Notification.Name("AlIslam.skyWeatherRefreshRequested")
+
     /// The skyline along the sky card's horizon (pyramids, a mosque, palms) with the sun by day and
     /// the moon by night, on the card and on the Solar Arc widgets. Mirrored to the app group because
     /// the widgets read it there (`Settings.showsSkyline`, SkyScene.swift); the six sky layouts
@@ -2159,6 +2201,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("locationNeverAskAgain") var locationNeverAskAgain = false
     @AppStorage("notificationNeverAskAgain") var notificationNeverAskAgain = false
+    /// Any dismissal of the Adhan tab's location or notification dialog but Never Ask Again quiets it
+    /// until then, in seconds since 1970 (0: not snoozed). It used to return on the very next app open
+    /// (Abu, 2026-10-10: "for ignore snoozing make it wait a day"). Device-only: permission is per device.
+    @AppStorage("locationAlertSnoozedUntil") var locationAlertSnoozedUntil: Double = 0
+    @AppStorage("notificationAlertSnoozedUntil") var notificationAlertSnoozedUntil: Double = 0
+
+    /// Quiets the location (or the notification) dialog for `SimpleMode.nagSnooze`.
+    func snoozePermissionAlert(location: Bool, now: Date = Date()) {
+        let until = now.timeIntervalSince1970 + SimpleMode.nagSnooze
+        if location {
+            locationAlertSnoozedUntil = until
+        } else {
+            notificationAlertSnoozedUntil = until
+        }
+    }
 
     @AppStorage("showPrayerInfo") var showPrayerInfo: Bool = false
 

@@ -475,10 +475,12 @@ private struct MushafPagerSizeReader: ViewModifier {
 
 private final class MushafPagerBandBox {
     var size: CGSize = .zero
-    /// The band the pager had just before a chrome change it takes in ONE step (the fold, the find bar),
-    /// and which of the two it was, until the pager reports the band it lands on (`updatePagerSize`).
-    /// Nil otherwise.
-    var bandBeforeJump: (size: CGSize, kind: MushafChromeJump)?
+    /// The band the pager had just before a chrome change it takes in ONE step (the fold, the find bar,
+    /// the mini player, select mode), which change it was, and when, until the pager reports the band it
+    /// lands on (`updatePagerSize`). Nil otherwise. The time is what lets a report tell a landing from an
+    /// unrelated size change that arrives long after: a change whose room sat inside a FOLDED band moved
+    /// nothing, so its note would otherwise wait here for the next rotation or unfold and teach that pair.
+    var bandBeforeJump: (size: CGSize, kind: MushafChromeJump, at: CFTimeInterval)?
     /// The last such change, for a moment after it lands: a change can settle a point further on its
     /// next report, and that second report is where the page actually rests, so it is the twin that has
     /// to be learned. The find field did exactly this (401 then 400 on the 17 Pro, focusing made it a
@@ -489,12 +491,37 @@ private final class MushafPagerBandBox {
     /// going once the chrome has faded) checks it, so a quicker tap that overtook it wins.
     var foldGeneration = 0
     var findGeneration = 0
+    /// The mini player's changes (mounting, leaving, small / big) share one counter: a stop that lands
+    /// mid-expand must win over the expand's delayed half, and the other way round.
+    var playerGeneration = 0
+    var selectGeneration = 0
 }
 
-/// The two chrome changes the pager takes in one step, each with its own learned twin geometry
-/// (`MushafPageRenderCache.noteTwins`).
-enum MushafChromeJump {
-    case fold, find
+/// The chrome changes the pager takes in one step, each with its own learned twin geometry
+/// (`MushafPageRenderCache.noteTwins`): the fold, the find bar, the mini player mounting or leaving
+/// (`player`), the mini player switching between its small and big card (`playerSize`), and select mode's
+/// bulk-action bar replacing the controls row (`select`).
+enum MushafChromeJump: CaseIterable {
+    case fold, find, player, playerSize, select
+
+    /// For the fit trace and the twin stores' defaults keys.
+    var label: String {
+        switch self {
+        case .fold: return "fold"
+        case .find: return "find"
+        case .player: return "player"
+        case .playerSize: return "playerSize"
+        case .select: return "select"
+        }
+    }
+
+    /// `mushaf.foldTwins`, `mushaf.findTwins`, ... (device-only in `CloudManifest`: this screen's geometry).
+    var twinsDefaultsKey: String { "mushaf.\(label)Twins" }
+
+    /// Whether `MushafPageRenderCache.prewarm` fits the visible page for this change's twin ahead of
+    /// time. Select mode is rare (a title-menu action), so its landing is learned and marked settled but
+    /// not kept warm: its first frames show the clipped fallback for one fit instead.
+    var isPrewarmed: Bool { self != .select }
 }
 
 /// Page-mode chrome that LEAVES fades out where it stands before its room goes; chrome that ARRIVES
@@ -751,6 +778,45 @@ struct SurahPageReader<Controls: View>: View {
     /// when the reader asked for it. Captured rather than re-read from the visible page, because widening then
     /// stepping through the matches turns pages, which would otherwise keep moving the target underfoot.
     @State private var findSurahID: Int?
+
+    /// The mini player's ROOM in the bottom band and its OPACITY, split like the fold's and the find bar's
+    /// (`barsFaded`, `findBarVisible`), with playback itself (`playerActive`) as the intent. Playback
+    /// starting gives the bar its room in one step - the page switches to its layout for the shorter band
+    /// at once, normally fitted already (`MushafPageRenderCache.noteTwins`, kind `.player`) - and then
+    /// fades the bar into it; playback stopping fades the bar out where it stands and only then takes its
+    /// room away (`applyPlayerRoom`).
+    ///
+    /// Until 2026-10-11 the host inserted the bar itself, with an opacity transition, and the reader
+    /// learned nothing from it: the band it landed on had never been fitted and counted as unsettled, so
+    /// every start of playback showed the page SCALED to about 80% in a narrow column for the 220 ms
+    /// settle debounce plus the fit, then cut to its refit (Abu: "now playing view showing up and then
+    /// ugly shrinks the page for a second before fitting in"; recorded at 60 fps, 0.3 s on the simulator).
+    /// Seeded from the player, so a reader opened mid-recitation mounts with its bar in place.
+    @State private var playerRoom = QuranPlayer.shared.nowPlaying.isPlaying || QuranPlayer.shared.nowPlaying.isPaused
+    @State private var playerVisible = QuranPlayer.shared.nowPlaying.isPlaying || QuranPlayer.shared.nowPlaying.isPaused
+    /// The SIZE the bar has room for (small or the big card): `settings.nowPlayingExpanded` is the intent,
+    /// and this follows it a beat late so the card can fade out at its old size, snap to the new one in a
+    /// still transaction (the page switching with it, kind `.playerSize`) and fade back in
+    /// (`applyPlayerExpanded`). The card's own size animation is off in page mode (`NowPlayingView`'s
+    /// `expanded` override): animated, its height swept the band and the page rode the sweep scaled.
+    @State private var playerExpandedRoom = Settings.shared.nowPlayingExpanded
+    /// Select mode's bar in the controls row's place: `isSelecting` is the host's intent, this is the ROOM
+    /// (the bulk-action bar is two rows to the controls' one), moved the same ordered way
+    /// (`applySelecting`, kind `.select`). `selectVisible` is the row's opacity through the swap.
+    @State private var selectRoom = false
+    @State private var selectVisible = true
+    /// The player band's height, FROZEN per mount and size (`playerBand`): measured once when the card
+    /// lands and held until its room goes or its size changes, so nothing the card does to its own
+    /// content can move the band. It needed this: the big card hides its progress bar the moment the
+    /// player is torn down (`transportRowWithProgress`, `if total > 0`), 9 pt before the state the
+    /// reader watches flips, so the band reported a height the page never rests at (432 then 526 on the
+    /// 17 Pro), the page bounced under the fading card, and the pair learned on a stop was off by it.
+    private struct PlayerBandFreeze: Equatable {
+        let singleRow: Bool
+        let expanded: Bool
+        let height: CGFloat
+    }
+    @State private var playerBandFreeze: PlayerBandFreeze?
 
     /// The ayahs matching the find query, in reading order - on the visible page, or across the whole surah
     /// once the reader has widened the find (`findSurahID`). Matching is diacritic-insensitive over Arabic +
@@ -1153,7 +1219,8 @@ struct SurahPageReader<Controls: View>: View {
         // belongs to the orientation we just left.
         if Self.windowWidth > 0, rounded.width > Self.windowWidth + 1 { return }
         guard rounded != pagerBand.size else { return }
-        let beforeJump = pagerBand.bandBeforeJump
+        // A note older than half a second belongs to a change that moved nothing (see `bandBeforeJump`).
+        let beforeJump = pagerBand.bandBeforeJump.flatMap { CACurrentMediaTime() - $0.at < 0.5 ? $0 : nil }
         pagerBand.bandBeforeJump = nil
         pagerBand.size = rounded
         // The rule on the NEW size: `spreadActive` still reads the old state in this call.
@@ -1170,7 +1237,7 @@ struct SurahPageReader<Controls: View>: View {
             pagerBand.recentJump = (beforeJump.size, beforeJump.kind, CACurrentMediaTime())
         } else if let recent = pagerBand.recentJump, CACurrentMediaTime() - recent.at < 0.15 {
             // The same change settling a point further (`recentJump`): it lands HERE.
-            jump = (recent.from, recent.kind)
+            jump = (recent.from, recent.kind, recent.at)
         }
         if let jump, jump.size.width == rounded.width {
             MushafPageRenderCache.noteTwins(
@@ -1184,6 +1251,14 @@ struct SurahPageReader<Controls: View>: View {
             NSLog("PAGEFIT pager band %.0fx%.0f spreadRule=%d", rounded.width, rounded.height, ruleMet ? 1 : 0)
         }
         #endif
+    }
+
+    /// Notes the band the pager has right now as the one a one-step chrome change of `kind` is about to
+    /// leave, for `updatePagerSize` to pair with the band it lands on (`MushafPageRenderCache.noteTwins`).
+    /// Callers skip it while the bottom chrome is FOLDED: a change whose room is inside the folded band
+    /// (the mini player, select mode) moves nothing, and there is no pair to learn.
+    private func noteJump(_ kind: MushafChromeJump, from band: CGSize? = nil) {
+        pagerBand.bandBeforeJump = (band ?? pagerBand.size, kind, CACurrentMediaTime())
     }
 
     /// The band ONE page gets from a pager band: half of it across an open spread.
@@ -1240,13 +1315,13 @@ struct SurahPageReader<Controls: View>: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
                 // A quicker unfold overtook this fold before its room went: nothing to take away.
                 guard pagerBand.foldGeneration == generation else { return }
-                pagerBand.bandBeforeJump = (pagerBand.size, .fold)
+                noteJump(.fold)
                 withTransaction(mushafStillTransaction) { bottomBarsCollapsed = true }
             }
         } else {
             // Still folded (not an unfold that overtook a fold mid-fade): the room comes back first.
             if bottomBarsCollapsed {
-                pagerBand.bandBeforeJump = (pagerBand.size, .fold)
+                noteJump(.fold)
                 withTransaction(mushafStillTransaction) { bottomBarsCollapsed = false }
             }
             withAnimation(.easeOut(duration: mushafChromeFadeIn)) { barsFaded = false }
@@ -1261,7 +1336,7 @@ struct SurahPageReader<Controls: View>: View {
     private func showFindBar() {
         pagerBand.findGeneration &+= 1
         if !findBarRoom {
-            pagerBand.bandBeforeJump = (pagerBand.size, .find)
+            noteJump(.find)
             withTransaction(mushafStillTransaction) { findBarRoom = true }
         }
         withAnimation(.easeOut(duration: mushafChromeFadeIn)) { findBarVisible = true }
@@ -1276,7 +1351,7 @@ struct SurahPageReader<Controls: View>: View {
         let generation = pagerBand.findGeneration
         func removeRoom() {
             guard findBarRoom else { return }
-            pagerBand.bandBeforeJump = (pagerBand.size, .find)
+            noteJump(.find)
             withTransaction(mushafStillTransaction) {
                 findBarVisible = false
                 findBarRoom = false
@@ -1295,6 +1370,94 @@ struct SurahPageReader<Controls: View>: View {
             // Reopened before the fade finished: the room stays.
             guard pagerBand.findGeneration == generation else { return }
             removeRoom()
+        }
+    }
+
+    /// Whether the mini player belongs on screen: playing or paused (the bar stays up through a pause).
+    private var playerActive: Bool { nowPlaying.isPlaying || nowPlaying.isPaused }
+
+    /// Mounts the mini player the way an unfold brings the bars back (its room first, in one step, then
+    /// the bar fades into it), and removes it the way a fold clears them (the bar fades out where it
+    /// stands, then its room goes). The page switches ONCE either way, to a layout normally fitted
+    /// already (`MushafPageRenderCache.noteTwins`, kind `.player`); the first time ever at a geometry it
+    /// shows the clipped fallback for one fit. While the chrome is folded the bar's room is inside the
+    /// folded band, so nothing moves and no pair is noted.
+    private func applyPlayerRoom(_ active: Bool) {
+        pagerBand.playerGeneration &+= 1
+        let generation = pagerBand.playerGeneration
+        if active {
+            if !playerRoom {
+                if !bottomBarsCollapsed { noteJump(.player) }
+                withTransaction(mushafStillTransaction) {
+                    playerRoom = true
+                    // The size the card was last left at, wherever it was toggled (the list reader, the
+                    // Quran tab): it mounts at that size with its room, never grows into it afterwards.
+                    playerExpandedRoom = settings.nowPlayingExpanded
+                }
+            }
+            withAnimation(.easeOut(duration: mushafChromeFadeIn)) { playerVisible = true }
+        } else {
+            // The band the bar is leaving, taken at the intent rather than after the fade: anything the
+            // card does to its height while it fades (the list reader's card drops its progress row the
+            // moment playback ends; page mode's keeps it now, `NowPlayingView.expandedOverride`) would
+            // otherwise be the band paired with the landing, a twin the page never rests at.
+            let bandBefore = pagerBand.size
+            withAnimation(.easeIn(duration: mushafChromeFadeOut)) { playerVisible = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+                // Playback resumed (or a size change began) before the fade finished: the room stays.
+                guard pagerBand.playerGeneration == generation, playerRoom else { return }
+                if !bottomBarsCollapsed { noteJump(.player, from: bandBefore) }
+                withTransaction(mushafStillTransaction) {
+                    playerRoom = false
+                    playerBandFreeze = nil
+                }
+            }
+        }
+    }
+
+    /// The small / big card switch (`settings.nowPlayingExpanded`, the card's own corner button): the
+    /// card fades out at its old size, takes its new size and room in one step - the page switching
+    /// with it (kind `.playerSize`) - and fades back in. With no bar on screen the new size simply waits
+    /// for the next mount.
+    private func applyPlayerExpanded(_ expanded: Bool) {
+        guard expanded != playerExpandedRoom else { return }
+        guard playerRoom, playerVisible else {
+            withTransaction(mushafStillTransaction) {
+                playerExpandedRoom = expanded
+                playerBandFreeze = nil
+            }
+            return
+        }
+        pagerBand.playerGeneration &+= 1
+        let generation = pagerBand.playerGeneration
+        withAnimation(.easeIn(duration: mushafChromeFadeOut)) { playerVisible = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+            guard pagerBand.playerGeneration == generation, playerRoom else { return }
+            if !bottomBarsCollapsed { noteJump(.playerSize) }
+            // The intent as it stands now, not as it was: two quick taps land on the latest. The frozen
+            // height goes with the old size; the new one is measured as the card lands.
+            withTransaction(mushafStillTransaction) {
+                playerExpandedRoom = settings.nowPlayingExpanded
+                playerBandFreeze = nil
+            }
+            withAnimation(.easeOut(duration: mushafChromeFadeIn)) { playerVisible = true }
+        }
+    }
+
+    /// Select mode's bar replacing the controls row (and back): the row fades out, the bar takes the
+    /// row's place and its room in one step - the page switching with it (kind `.select`) - and fades
+    /// in. The host flips `isSelecting` inside its own `withAnimation`; the swap itself happens here,
+    /// in a still transaction, so the band never sweeps through the two rows' heights.
+    private func applySelecting(_ selecting: Bool) {
+        guard selecting != selectRoom else { return }
+        pagerBand.selectGeneration &+= 1
+        let generation = pagerBand.selectGeneration
+        withAnimation(.easeIn(duration: mushafChromeFadeOut)) { selectVisible = false }
+        DispatchQueue.main.asyncAfter(deadline: .now() + mushafChromeFadeOut) {
+            guard pagerBand.selectGeneration == generation else { return }
+            if !bottomBarsCollapsed { noteJump(.select) }
+            withTransaction(mushafStillTransaction) { selectRoom = selecting }
+            withAnimation(.easeOut(duration: mushafChromeFadeIn)) { selectVisible = true }
         }
     }
 
@@ -1379,6 +1542,11 @@ struct SurahPageReader<Controls: View>: View {
                 // find bar's room the same way (`showFindBar`).
                 .animation(nil, value: bottomBarsCollapsed)
                 .animation(nil, value: findBarRoom)
+                // The mini player's room and size, and select mode's bar, the same way (`applyPlayerRoom`,
+                // `applyPlayerExpanded`, `applySelecting`).
+                .animation(nil, value: playerRoom)
+                .animation(nil, value: playerExpandedRoom)
+                .animation(nil, value: selectRoom)
             }
         }
         // A phone in LANDSCAPE reads the page across the sensor housing's safe area. Measured
@@ -1477,6 +1645,14 @@ struct SurahPageReader<Controls: View>: View {
             // the navigation bar is NOT part of the fold any more (see `chromeCollapsed`): it carries the
             // Back button. Seeded false so a reader opening folded still shows its bar.
             if chromeCollapsed { chromeCollapsed = false }
+            // The rooms the reader owns match their intents from the first frame (the player seeded its
+            // own; select mode can only be entered with a reader up, but a mode switch mid-selection
+            // mounts one selecting).
+            if playerRoom != playerActive {
+                playerRoom = playerActive
+                playerVisible = playerActive
+            }
+            if selectRoom != isSelecting { selectRoom = isSelecting }
             #if DEBUG
             // "-mushafCollapseBars": start collapsed for a headless screenshot. Applied here rather than
             // as the @AppStorage default, so a screenshot run cannot leave the flag written into a real
@@ -1505,7 +1681,10 @@ struct SurahPageReader<Controls: View>: View {
             // "=i" turns to page INDEX i through `turnPage` (the picker's path), "picker" opens the page
             // wheel exactly as the jump button does (seeding `pickerBaseGeometry`), "pick=i" moves the
             // wheel to index i, "confirm" is the wheel's checkmark, "collapse" toggles the bottom chrome,
-            // and "left" / "right" press that arrow key (`arrowKeyTurn`, the keyboard shortcut's own action).
+            // "play" / "stop" start (the visible page's first ayah, repeated forever) and stop playback so
+            // the Now Playing bar mounts and leaves, "expand" toggles the small / big player, "search" /
+            // "unsearch" open and close the find bar the way its button and X do, and "left" / "right"
+            // press that arrow key (`arrowKeyTurn`, the keyboard shortcut's own action).
             if let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "-pageTurnScript"),
                ProcessInfo.processInfo.arguments.indices.contains(flag + 1) {
                 for step in ProcessInfo.processInfo.arguments[flag + 1].split(separator: ",") {
@@ -1513,6 +1692,7 @@ struct SurahPageReader<Controls: View>: View {
                     guard parts.count == 2, let delay = Double(parts[1]) else { continue }
                     let action = parts[0]
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        NSLog("SCRIPT %@ at %.3f", action, CACurrentMediaTime())
                         if action == "picker" {
                             pagePickerSelection = pageIndex
                             pickerBaseGeometry = MushafPageRenderCache.currentGeometry
@@ -1525,6 +1705,22 @@ struct SurahPageReader<Controls: View>: View {
                             withAnimation(.easeInOut) { activePicker = nil }
                         } else if action == "collapse" {
                             applyBarsCollapsed(!barsFaded)
+                        } else if action == "play" {
+                            // The visible page's first ayah, repeated forever: what the recording wants is
+                            // the Now Playing bar mounting, not the audio.
+                            if pages.indices.contains(pageIndex), let first = pages[pageIndex].ayahRefs.first {
+                                _ = QuranPlayer.shared.playAyah(surahNumber: first.surahID, ayahNumber: first.ayahID,
+                                                                repeatCount: QuranPlayer.infiniteRepeat)
+                            }
+                        } else if action == "stop" {
+                            QuranPlayer.shared.stop()
+                        } else if action == "expand" {
+                            // The card's own expand button, exactly: no animation transaction of its own.
+                            settings.nowPlayingExpanded.toggle()
+                        } else if action == "search" || action == "unsearch" {
+                            // The Search button and the find bar's X, exactly (each wraps the intent in
+                            // `withAnimation(.easeInOut)`).
+                            withAnimation(.easeInOut) { searchActive = action == "search" }
                         } else if action == "left" || action == "right" {
                             arrowKeyTurn(forward: action == "left", in: pages)
                         } else if action.hasPrefix("="), let i = Int(action.dropFirst()) {
@@ -1722,10 +1918,18 @@ struct SurahPageReader<Controls: View>: View {
                 hideFindBar()
             }
         }
+        // The mini player, its size and select mode's bar are one-step band changes too, ordered the
+        // same way as the fold and the find bar (room before an arrival's fade, a departure's fade
+        // before its room goes). The intents live elsewhere (the player, `settings`, the host); the
+        // reader owns their ROOM so the pager can take each change in one step.
+        .onChange(of: playerActive) { applyPlayerRoom($0) }
+        .onChange(of: settings.nowPlayingExpanded) { applyPlayerExpanded($0) }
+        .onChange(of: isSelecting) { applySelecting($0) }
         // Folding (or restoring) the bottom bars changes every page's height budget. No handling here:
         // the fold animates the visible page's geometry, and `lastGeometry`'s debounced settle sweep
-        // re-warms the ring at the height the pages come to rest at - the same path that covers the
-        // mini player mounting and every other bottom-inset change. (A fixed post-toggle delay lived
+        // re-warms the ring at the height the pages come to rest at - the same path that covers
+        // every bottom-inset change the reader does not take in one step (the mini player's room
+        // is one of its own since 2026-10-11, `applyPlayerRoom`). (A fixed post-toggle delay lived
         // here before, and it raced the fold: transient-height fits started mid-animation overwrote
         // the neighbours' fallback renders, which is exactly the "page shows up uncollapsed for a
         // beat" flash it was meant to fix.)
@@ -2462,9 +2666,9 @@ struct SurahPageReader<Controls: View>: View {
     private func bottomBars(pages: [MushafPage]) -> some View {
         if wideBottomBars {
             VStack(spacing: 0) {
-                bottomControls(.nowPlaying)
+                playerBand(singleRow: true)
                 HStack(alignment: .bottom, spacing: 0) {
-                    bottomControls(.bar)
+                    controlsRow
                         .padding(.bottom, BottomBarCushion.standard)
                         .frame(maxWidth: .infinity)
                     pageFooter(pages: pages)
@@ -2473,10 +2677,57 @@ struct SurahPageReader<Controls: View>: View {
             }
         } else {
             VStack(spacing: 0) {
-                bottomControls(.all)
+                playerBand(singleRow: false)
+                controlsRow
                 pageFooter(pages: pages)
             }
         }
+    }
+
+    /// The mini player, mounted with its room and faded on its own (`applyPlayerRoom`): no insertion
+    /// transition, which would fade it in over a page still at its old layout, and no room while it is
+    /// not up. `singleRow` is the wide reader's one-row bar; `playerExpandedRoom` the size it has room for.
+    @ViewBuilder
+    private func playerBand(singleRow: Bool) -> some View {
+        if playerRoom {
+            // The height this layout was measured at, if this is still that layout (`PlayerBandFreeze`).
+            let frozen = playerBandFreeze.flatMap {
+                $0.singleRow == singleRow && $0.expanded == playerExpandedRoom ? $0.height : nil
+            }
+            bottomControls(.nowPlaying(singleRow: singleRow, expanded: playerExpandedRoom))
+                .frame(height: frozen)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { freezePlayerBand(proxy.size.height, singleRow: singleRow) }
+                            .onChange(of: proxy.size.height) { freezePlayerBand($0, singleRow: singleRow) }
+                    }
+                )
+                .opacity(playerVisible ? 1 : 0)
+                .allowsHitTesting(playerVisible)
+        }
+    }
+
+    /// The FIRST measurement of the player band per layout becomes its frozen height; later ones are the
+    /// card's content moving, which the band must not follow. A still transaction: the frame it sets is
+    /// the height the band already has, so nothing should animate or re-fit for it.
+    private func freezePlayerBand(_ height: CGFloat, singleRow: Bool) {
+        guard height > 0 else { return }
+        if let current = playerBandFreeze, current.singleRow == singleRow, current.expanded == playerExpandedRoom {
+            return
+        }
+        withTransaction(mushafStillTransaction) {
+            playerBandFreeze = PlayerBandFreeze(singleRow: singleRow, expanded: playerExpandedRoom,
+                                                height: height.rounded())
+        }
+    }
+
+    /// The legend / search row, or select mode's bar once the reader has given it the row's place
+    /// (`applySelecting`); faded through the swap.
+    private var controlsRow: some View {
+        bottomControls(.bar(selecting: selectRoom))
+            .opacity(selectVisible ? 1 : 0)
+            .allowsHitTesting(selectVisible)
     }
 
     @ViewBuilder
@@ -2635,7 +2886,7 @@ struct SurahPageReader<Controls: View>: View {
             } else {
                 HStack(alignment: .center, spacing: 10 * footerScale) {
                     VStack(alignment: .leading, spacing: 4 * footerScale) {
-                        // Plain "Surah", deliberately (user rule: names run too long here) - the row
+                        // Plain "Surah", deliberately (user rule: names run too long here); the row
                         // above names it.
                         meter(label: "Surah", position: surahPosition, total: surahTotal,
                               color: settings.accentColor.accent1)
@@ -2671,7 +2922,7 @@ struct SurahPageReader<Controls: View>: View {
                     }
                 }
 
-                // Progress through the whole mushaf. A track behind the fill is what makes it legible - the old
+                // Progress through the whole mushaf. A track behind the fill is what makes it legible: the old
                 // hairline had nothing to read against, so it just looked like a stray line.
                 trackedBar(
                     fraction: pages.count > 0 ? CGFloat(page.page) / CGFloat(pages.count) : 0,
@@ -3100,14 +3351,17 @@ struct SurahPageReader<Controls: View>: View {
     }
 }
 
-/// Which of the host's bottom controls `SurahPageReader` is placing (see `bottomControls`).
+/// Which of the host's bottom controls `SurahPageReader` is placing (see `bottomControls`). The reader
+/// places each on its own, because it owns their ROOM: the mini player is mounted only while
+/// `playerRoom` holds (and at the size the reader has made room for), and the selection bar takes the
+/// controls row's place only once `selectRoom` has - each in one step, faded by the reader
+/// (`applyPlayerRoom`, `applySelecting`). The host reads the part, never the live intent, for both.
 enum PageReaderControlsPart {
-    /// The mini player over the legend / search row: a narrow reader stacks them over the footer.
-    case all
-    /// The mini player alone, which a wide reader lays across its whole width above the bottom row.
-    case nowPlaying
-    /// The legend / search row (or the selection bar) alone, beside a wide reader's footer.
-    case bar
+    /// The mini player: one row across a wide reader's whole width (`singleRow`), the stacked card over
+    /// the controls row on a narrow one. `expanded` is the size the reader has given it room for.
+    case nowPlaying(singleRow: Bool, expanded: Bool)
+    /// The legend / search row, or select mode's bulk-action bar while `selecting`.
+    case bar(selecting: Bool)
 }
 
 /// One page of the mushaf. Its body is only built when the page scrolls into view.
@@ -3547,8 +3801,21 @@ private struct MushafPageContent: View {
             // One branch for both (2026-09-23): an animated band sweeps across the render's own height
             // (the bars folding back, the mini player mounting), and two branches swapped the page's
             // view for a new one right there, mid-animation. Here the scale just follows the band.
-            let scale = fits ? 1 : max(min((visibleHeight - Self.verticalPadding * 2) / max(rendered.height, 1), 1), 0.05)
-            pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight, zoomable: true, scale: scale)
+            //
+            // Except on a band the reader is KNOWN to rest at (`hasSettledRender`: the landing of a
+            // one-step chrome change, or a geometry some page has finished a fit at): there the exact fit
+            // is already on its way with no settle debounce, and a Hafs page's refit differs from this
+            // render only in its line pitch (print-matched pages are width-bound, the font does not
+            // change). Scaled, the whole page shrank into a narrow column for that fit and grew back
+            // (Abu, 2026-10-11: "ugly shrinks the page for a second before fitting in"); kept at its
+            // size, top-anchored and clipped to the band, it loses a line or two under the bottom edge
+            // for a few frames and then settles. Mid-sweep bands (a Mac window being resized) are not
+            // settled, so they keep the scaled follow.
+            let landing = !fits && MushafPageRenderCache.hasSettledRender(width: width,
+                                                                          height: visibleHeight - Self.verticalPadding * 2)
+            let scale = fits || landing ? 1 : max(min((visibleHeight - Self.verticalPadding * 2) / max(rendered.height, 1), 1), 0.05)
+            pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight, zoomable: true, scale: scale,
+                         clipsToBand: landing)
         } else {
             ScrollView {
                 pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight, zoomable: false)
@@ -3583,7 +3850,7 @@ private struct MushafPageContent: View {
     #endif
 
     private func pageTextBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat,
-                              zoomable: Bool, scale: CGFloat = 1) -> some View {
+                              zoomable: Bool, scale: CGFloat = 1, clipsToBand: Bool = false) -> some View {
                 MushafPageTextView(
                     pageNumber: page.page,
                     attributed: rendered.text,
@@ -3698,6 +3965,11 @@ private struct MushafPageContent: View {
                                         || Self.printMatchedCentres(rendered: rendered,
                                                                     visibleHeight: visibleHeight))
                         ? (bottomBarsCollapsed ? -4 : 0) : 0)
+                // A render taller than a settled band, kept at its size while its refit lands
+                // (`renderedPageBody`): pinned to the band's top and clipped at its bottom. Modifiers,
+                // not a branch, so the text view keeps its identity when the refit replaces it.
+                .frame(height: clipsToBand ? visibleHeight : nil, alignment: .top)
+                .clipped()
     }
 
     /// Whether a print-matched page has enough band left over to be worth centering rather than pinned
@@ -6017,14 +6289,17 @@ enum MushafPageRenderCache {
 
         var jobs: [(index: Int, width: CGFloat, height: CGFloat, twin: MushafChromeJump?)] =
             ordered.map { ($0, geometry.width, geometry.height, nil) }
-        // The page on screen fitted for the other side of the bottom-chrome fold and of the find bar
-        // (`foldTwins`, `findTwins`), so either change shows its new layout on its first frame. After the
-        // two nearest neighbours, which a swipe needs sooner, the fold's before the find bar's (the more
-        // frequent tap). The regular ring only (a predictive warm at an override geometry has no twin),
-        // and not in Low Power Mode, where a fold may simply show its fit a beat late.
+        // The page on screen fitted for the other side of each one-step chrome change it has a twin
+        // for (`twinStores`: the fold, the find bar, the mini player mounting or leaving, its small / big
+        // switch), so any of them shows its new layout on its first frame. After the two nearest
+        // neighbours, which a swipe needs sooner, in `MushafChromeJump`'s order (the fold first, the more
+        // frequent tap). A geometry only ever has the twins of the changes that can happen from it: the
+        // plain page has no size twin, the page under a big player no mount twin. The regular ring only
+        // (a predictive warm at an override geometry has no twin), and not in Low Power Mode, where a
+        // change may simply show its fit a beat late.
         if geometryOverride == nil, !AppPerformance.isLowPowerMode, pages.indices.contains(index) {
             var slot = min(jobs.count, (includeCenter ? 1 : 0) + 2)
-            for kind in [MushafChromeJump.fold, .find] {
+            for kind in MushafChromeJump.allCases where kind.isPrewarmed {
                 guard let twin = twin(kind, of: geometry) else { continue }
                 jobs.insert((index, twin.width, twin.height, kind), at: slot)
                 slot += 1
@@ -6037,7 +6312,7 @@ enum MushafPageRenderCache {
             // One fit per key, EVER in flight: overlapping rings used to re-enqueue duplicate fits for the
             // same pages because this check couldn't see queued work - the `pendingRenders` claim can.
             guard cache.object(forKey: key) == nil, pendingRenders[key] == nil else { continue }
-            let twinNote = job.twin.map { " \($0 == .fold ? "fold" : "find") twin \(Int(job.width.rounded()))x\(Int(job.height.rounded()))" } ?? ""
+            let twinNote = job.twin.map { " \($0.label) twin \(Int(job.width.rounded()))x\(Int(job.height.rounded()))" } ?? ""
             fitTrace("RING queue \(traceLabel(page))\(twinNote) gen=\(generation)")
             pendingRenders[key] = []
             enqueueFit(page: page, width: job.width, height: job.height, key: key, config: config,
@@ -6056,9 +6331,9 @@ enum MushafPageRenderCache {
     /// 2. Staleness only skips fits that HAVEN'T STARTED (and only when no visible page is waiting on them):
     ///    a cheap early-exit, not thrown-away work.
     ///
-    /// `notesLatest` false (a fold twin): the render is cached but never becomes the page's fallback in
-    /// `latestByPage`. It belongs to the other side of the fold, and a sweep on THIS side (the find bar,
-    /// the mini player) must keep falling back to this side's layout.
+    /// `notesLatest` false (a chrome twin): the render is cached but never becomes the page's fallback in
+    /// `latestByPage`. It belongs to the other side of that change, and a sweep on THIS side (a Mac window
+    /// being resized) must keep falling back to this side's layout.
     private static func enqueueFit(
         page: MushafPage,
         width: CGFloat,
@@ -6258,7 +6533,8 @@ enum MushafPageRenderCache {
     /// typesettings of different sizes over each other: the page changed size before the bars had moved,
     /// through a double image, plus the extra fits' CPU. Abu, comparing with Al-Quran's reader (this
     /// logic): "less laggy and less weird like where it has to keep resizing". The exceptions since are
-    /// the FOLD and FIND BAR twins (`foldTwins`, `findTwins`): cache only, never recorded here.
+    /// the chrome twins (`twinStores`: fold, find bar, mini player, its size, select mode): cache only, never
+    /// recorded here.
     private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, span: String, rendered: MushafRenderedPage)] = [:]
     /// Insertion order for eviction, oldest first.
     private static var latestOrder: [Int] = []
@@ -6329,13 +6605,16 @@ enum MushafPageRenderCache {
     /// Not the 2026-09-21 "chrome twins": one extra fit, for the page on screen and the fold only, kept
     /// in the cache and never in `latestByPage`, and shown only once the fold has actually happened (the
     /// pager takes its new band in one step, so there is no sweep for it to stand in during).
-    private static var foldTwins: [String: [Double]] = storedTwins(forKey: foldTwinsKey)
-    private static let foldTwinsKey = "mushaf.foldTwins"
-    /// The same for the find bar, which the pager also takes in one step since 2026-09-25
-    /// (`SurahPageReader.showFindBar`): the band with the bar's room and the band without it. Its own
-    /// store, because one geometry has a fold twin AND a find twin.
-    private static var findTwins: [String: [Double]] = storedTwins(forKey: findTwinsKey)
-    private static let findTwinsKey = "mushaf.findTwins"
+    ///
+    /// One store per change (`MushafChromeJump.twinsDefaultsKey`): the find bar since 2026-09-25, the
+    /// mini player (mounting / leaving, and small / big) and select mode since 2026-10-11. Separate
+    /// stores because one geometry has a twin across EACH of them: the plain page's fold twin, find twin
+    /// and player twin are three different bands.
+    private static var twinStores: [MushafChromeJump: [String: [Double]]] = {
+        var stores: [MushafChromeJump: [String: [Double]]] = [:]
+        for kind in MushafChromeJump.allCases { stores[kind] = storedTwins(forKey: kind.twinsDefaultsKey) }
+        return stores
+    }()
 
     private static func storedTwins(forKey key: String) -> [String: [Double]] {
         #if DEBUG
@@ -6344,11 +6623,12 @@ enum MushafPageRenderCache {
         #endif
         return (UserDefaults.standard.dictionary(forKey: key) as? [String: [Double]]) ?? [:]
     }
-    /// Twelve pairs: one per chrome configuration (mini player, comparison row, window size) is plenty.
+    /// Twelve pairs per store: one per chrome configuration (the other bars up or not, the window size)
+    /// is plenty.
     private static let twinsLimit = 24
     private static var twinsSaveWork: DispatchWorkItem?
 
-    /// A fold (or the find bar) took the page band `from` to `to` (`SurahPageReader.updatePagerSize`).
+    /// A one-step chrome change of `kind` took the page band `from` to `to` (`SurahPageReader.updatePagerSize`).
     static func noteTwins(_ kind: MushafChromeJump, from: CGSize, to: CGSize) {
         let a = MushafPageContent.textGeometry(in: from)
         let b = MushafPageContent.textGeometry(in: to)
@@ -6361,28 +6641,28 @@ enum MushafPageRenderCache {
         settledGeometries.insert(keyB)
         let valueA = [Double(a.width.rounded()), Double(a.height.rounded())]
         let valueB = [Double(b.width.rounded()), Double(b.height.rounded())]
-        var twins = kind == .fold ? foldTwins : findTwins
+        var twins = twinStores[kind] ?? [:]
         guard twins[keyA] != valueB || twins[keyB] != valueA else { return }
         if twins.count >= twinsLimit { twins.removeAll() }
         twins[keyA] = valueB
         twins[keyB] = valueA
-        if kind == .fold { foldTwins = twins } else { findTwins = twins }
-        fitTrace("\(kind == .fold ? "FOLDTWIN" : "FINDTWIN") \(keyA) <-> \(keyB)")
+        twinStores[kind] = twins
+        fitTrace("\(kind.label.uppercased())TWIN \(keyA) <-> \(keyB)")
         // Written well after the change's frames: a defaults write republishes `Settings`, and every
         // mounted page re-evaluates for it.
         twinsSaveWork?.cancel()
         let work = DispatchWorkItem {
-            UserDefaults.standard.set(foldTwins, forKey: foldTwinsKey)
-            UserDefaults.standard.set(findTwins, forKey: findTwinsKey)
+            for (kind, store) in twinStores {
+                UserDefaults.standard.set(store, forKey: kind.twinsDefaultsKey)
+            }
         }
         twinsSaveWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
     }
 
-    /// The learned twin of a text geometry across a fold or the find bar, if any.
+    /// The learned twin of a text geometry across a chrome change of `kind`, if any.
     private static func twin(_ kind: MushafChromeJump, of geometry: (width: CGFloat, height: CGFloat)) -> (width: CGFloat, height: CGFloat)? {
-        let twins = kind == .fold ? foldTwins : findTwins
-        guard let value = twins[geometryToken(width: geometry.width, height: geometry.height)],
+        guard let value = twinStores[kind]?[geometryToken(width: geometry.width, height: geometry.height)],
               value.count == 2 else { return nil }
         return (CGFloat(value[0]), CGFloat(value[1]))
     }
@@ -7892,7 +8172,7 @@ private struct MushafReaderPreviewHost: View {
             // The host owns the bottom controls. A stand-in row of the right HEIGHT is what matters
             // for a fit preview: the band it leaves is what the page is typeset into.
             switch part {
-            case .all, .bar:
+            case .bar:
                 HStack(spacing: 12) {
                     Image(systemName: "list.bullet.rectangle")
                     Image(systemName: "magnifyingglass")

@@ -462,7 +462,7 @@ enum AskAISourceFactory {
             reference: "Setting: \(entry.title)",
             title: entry.title,
             text: text,
-            provenance: ["Al-Islam Settings, at \(entry.path)"],
+            provenance: ["\(AppIdentifiers.appName) Settings, at \(entry.path)"],
             aliases: [entry.title.lowercased()],
             maxCharacters: 400)
     }
@@ -474,7 +474,7 @@ enum AskAISourceFactory {
             reference: "App tip: \(tip.title)",
             title: tip.title,
             text: "\(tip.detail) Where: \(tip.place).",
-            provenance: ["Al-Islam Tips & Tricks, \(tip.area.title)", "Where: \(tip.place)"],
+            provenance: ["\(AppIdentifiers.appName) Tips & Tricks, \(tip.area.title)", "Where: \(tip.place)"],
             aliases: [tip.title.lowercased()],
             maxCharacters: 500)
     }

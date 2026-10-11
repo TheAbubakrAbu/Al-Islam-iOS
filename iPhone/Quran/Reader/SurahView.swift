@@ -2112,6 +2112,26 @@ struct SurahView: View {
             // in LIST mode (the page reader has "-openPageSheet"), since neither a long press nor the
             // ellipsis menu can be driven headlessly.
             let launchArgs = ProcessInfo.processInfo.arguments
+            // "-selectAyahsAt s1[,s2...]": toggles select mode at each listed second after this view
+            // appears, exactly as the title menu's "Select Ayahs" and the bar's Done do, so the page
+            // reader's bar swap can be recorded headlessly (2026-10-11).
+            if let flag = launchArgs.firstIndex(of: "-selectAyahsAt"), launchArgs.indices.contains(flag + 1) {
+                for field in launchArgs[flag + 1].split(separator: ",") {
+                    guard let delay = Double(field) else { continue }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        NSLog("SCRIPT select at %.3f", CACurrentMediaTime())
+                        withAnimation(.easeInOut) {
+                            if isSelectingAyahs {
+                                isSelectingAyahs = false
+                            } else {
+                                rebuildQiraahCaches()
+                                isSelectingAyahs = true
+                            }
+                            selectedAyahs = []
+                        }
+                    }
+                }
+            }
             // "-launchReaderSettings" presents the READER's own copy of the Quran settings sheet (the
             // gear), as opposed to "-launchQuranSettings", which presents the surah list's. On iPad the
             // two live in different columns, so what the sheet does when a setting inside it changes the
@@ -2572,9 +2592,12 @@ struct SurahView: View {
         let nextSurah = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? neighboringSurah(after: surah.id) : nil
         // The floating page/juz overlay is always shown when boundary dividers exist; there is no
         // separate opt-in setting for it anymore.
-        // Simple Mode drops the pinned page/juz line; the inline dividers keep marking the pages.
-        let shouldShowFloatingPageJuzOverlay = showBoundaryDividers && searchText.isEmpty && !settings.simpleMode
-        let shouldUpdateFloatingPageJuzOverlay = shouldShowFloatingPageJuzOverlay && surah.pageOrJuzChangesWithinSurah
+        // Simple Mode drops the pinned page/juz line; the inline dividers keep marking the pages, and the
+        // divider rows keep counting toward the top-visible anchor (the last-read position must not
+        // move with the switch, rule 1 of docs/Simple Mode Guide.md).
+        let pageJuzOverlayApplies = showBoundaryDividers && searchText.isEmpty
+        let shouldShowFloatingPageJuzOverlay = pageJuzOverlayApplies && !settings.simpleMode
+        let shouldUpdateFloatingPageJuzOverlay = pageJuzOverlayApplies && surah.pageOrJuzChangesWithinSurah
         // (The floating page/juz model and the ayah progress fraction are derived INSIDE the pinned
         // header's `ReaderPinnedHeader` closure now - they read the scroll anchor, and deriving them
         // here would re-run this whole body on every scroll tick.)
@@ -3618,47 +3641,47 @@ struct SurahView: View {
 
     /// The controls that sit under the pages - shared verbatim by the text reader and the PDF facsimile, so
     /// search and the riwayah picker land in the same place in both.
-    /// The page reader's controls, by the part it asks for (`PageReaderControlsPart`): all of them
-    /// stacked on a narrow reader, or the mini player across a wide reader's width and the bar beside
-    /// its footer.
+    /// The page reader's controls, by the part it asks for (`PageReaderControlsPart`): the mini player,
+    /// or the legend / search row. The READER decides when each is on screen and fades them itself: it
+    /// mounts the player only while it has made room for it (`SurahPageReader.playerRoom`) and swaps in
+    /// the selection bar only once it has made room for that (`selectRoom`), each in one step so the page
+    /// never rides an animated inset. So nothing here reads the live player or `isSelectingAyahs`, and
+    /// nothing here animates: an `.animation(value:)` or an insertion transition on this view would
+    /// sweep the band under the page again (until 2026-10-11 the player was inserted here with one, and
+    /// its band was never learned, so every start of playback shrank the page for a beat).
+    @ViewBuilder
     private func pageReaderControls(_ part: PageReaderControlsPart) -> some View {
-        let active = nowPlaying.isPlaying || nowPlaying.isPaused
-        let showsPlayer = active && part == .all
-        let showsBar = part != .nowPlaying
-        return VStack(spacing: 0) {
-            if showsPlayer {
-                // Now Playing rides on TOP of the bar stack (same as the list reader and the Quran tab).
-                // Tapping it jumps to what's playing - here that means the PAGE holding the recited ayah
-                // (or the playing surah's first page). Across a wide reader it is one row.
-                NowPlayingView(quranView: false, singleRow: part == .nowPlaying,
-                               onOpenPlayback: { _ in goToNowPlaying() })
-                    .padding(.horizontal, 24)
-                    .transition(.opacity)
-            }
-
-            if showsBar {
-                // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
-                Group {
-                    if isSelectingAyahs {
-                        selectionActionBar
-                    } else {
-                        // Always present in page mode: search sits dead center, with the tajweed legend and
-                        // the riwayah picker flanking it when they apply (an English page shows neither, so
-                        // the bar is just the search).
-                        pageBottomControlsBar(part)
-                    }
+        switch part {
+        case .nowPlaying(let singleRow, let expanded):
+            // Now Playing rides on TOP of the bar stack (same as the list reader and the Quran tab).
+            // Tapping it jumps to what's playing - here that means the PAGE holding the recited ayah
+            // (or the playing surah's first page). Across a wide reader it is one row. `expanded` is
+            // the size the reader has room for; the card follows it instead of the setting directly.
+            NowPlayingView(quranView: false, singleRow: singleRow, expanded: expanded,
+                           onOpenPlayback: { _ in goToNowPlaying() })
+                .padding(.horizontal, 24)
+                // The same breathing room the list reader gives its bar. The row below brings its own
+                // top padding, which is what separates the two.
+                .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                .background(Color.white.opacity(0.00001))
+        case .bar(let selecting):
+            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
+            Group {
+                if selecting {
+                    selectionActionBar
+                } else {
+                    // Always present in page mode: search sits dead center, with the tajweed legend and
+                    // the riwayah picker flanking it when they apply (an English page shows neither, so
+                    // the bar is just the search).
+                    pageBottomControlsBar
                 }
-                .padding(.top, showsPlayer ? SafeAreaInsetVStackSpacing.standard : 0)
             }
+            // Top: the breathing room under the player (or under the page). Bottom: what separates it
+            // from the page-navigation footer pinned underneath.
+            .padding(.top, SafeAreaInsetVStackSpacing.standard)
+            .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+            .background(Color.white.opacity(0.00001))
         }
-        // Same breathing room the list reader gives this bar - and here the bottom padding is
-        // also what separates it from the page-navigation footer pinned underneath. The mini player
-        // on its own takes only the top: the bar under it brings its own, and with nothing playing
-        // it takes no room at all.
-        .padding(.top, part == .nowPlaying && !active ? 0 : SafeAreaInsetVStackSpacing.standard)
-        .padding(.bottom, part == .nowPlaying ? 0 : SafeAreaInsetVStackSpacing.standard)
-        .background(Color.white.opacity(0.00001))
-        .animation(.easeInOut, value: active)
     }
 
     /// Which of the page bar's flanking controls apply to the page on screen: the tajweed/theme
@@ -3700,9 +3723,9 @@ struct SurahView: View {
     /// wrong: two stacked rows tower over the surah/juz pill they sit beside, and the point of this bar
     /// is to match that pill's height (Abu, 2026-10-06, with the landscape screenshot).
     ///
-    /// `part` no longer varies what goes in here - a wide reader lays the mini player out separately
-    /// through `nowPlaying` and takes the whole bar through `bar`.
-    private func pageBottomControlsBar(_ part: PageReaderControlsPart) -> some View {
+    /// The same row in every layout: a wide reader lays the mini player out separately through
+    /// `PageReaderControlsPart.nowPlaying` and takes this whole bar through `bar`.
+    private var pageBottomControlsBar: some View {
         let flanks = pageBarFlanks
 
         // Search is ALWAYS here (Abu, 2026-10-06: "always show it lwokey whether in surahview or
@@ -4316,7 +4339,9 @@ struct SurahView: View {
     /// re-renders this label and never the reader body around it.
     @ViewBuilder
     private var titlePageJuzLabel: some View {
-        if isCompactHeight, !settings.quranPageMode, settings.showPageJuzDividers, searchText.isEmpty {
+        // Simple Mode drops this line in landscape as it drops the pinned strip in portrait.
+        if isCompactHeight, !settings.quranPageMode, settings.showPageJuzDividers, searchText.isEmpty,
+           !settings.simpleMode {
             let rows = listAyahs
             let follows = surah.pageOrJuzChangesWithinSurah
             ReaderPinnedHeader(visibility: visibility) { anchorID, _, _, _ in

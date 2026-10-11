@@ -387,7 +387,7 @@ extension SettingsSearchEntry.Destination {
         case .hadithSettings, .hadithPage: return .hadith
         case .islamSettings, .islamPage: return .islam
         case .appearance, .appearancePage: return .appearance
-        case .aboutYou: return .general
+        case .aboutYou, .simpleMode: return .general
         #if HAS_ICLOUD_BACKUP
         case .cloudBackup: return .general
         #endif
@@ -510,6 +510,7 @@ enum SettingsSearchDestinationView {
         case .appearance: AppearanceSettingsScreen()
         case .appearancePage(let page): AppearancePageView(page: page)
         case .aboutYou: AboutYouSettingsView()
+        case .simpleMode: SimpleModeSettingsView()
         #if HAS_ICLOUD_BACKUP
         case .cloudBackup: CloudBackupSettingsView()
         #endif

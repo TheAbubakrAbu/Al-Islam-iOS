@@ -1594,7 +1594,8 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedSaheeh,
                         extraHighlightRanges: Self.offsetSpans(crossSaheeh, by: (prefix as NSString).length)
                     )
-                    // The translation's name tells two apart; with one on screen, Simple Mode drops it.
+                    // The translation's name tells two apart; with the default alone on screen, Simple
+                    // Mode drops it.
                     if !settings.simpleMode || showEnglishMustafa {
                         Text("Saheeh International")
                             .font(.caption2)
@@ -1621,11 +1622,11 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedMustafa,
                         extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
-                    if !settings.simpleMode || showEnglishSaheeh {
-                        Text("Clear Quran (Mustafa Khattab)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                    // Always named, Simple Mode or not: it is the translation someone chose over the
+                    // default, so the screen says which one it is (docs/Simple Mode Guide.md, rule 2).
+                    Text("Clear Quran (Mustafa Khattab)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)

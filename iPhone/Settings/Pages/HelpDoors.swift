@@ -220,6 +220,19 @@ enum HelpDoorCatalog {
                                   landing: .screen { AnyView(SkyColorsView()) },
                                   value: settings.hasCustomSkyGradients ? "Custom" : "Default",
                                   isOn: settings.hasCustomSkyGradients))
+            #if HAS_WEATHER
+            // The weather is opt-in (it sends the location to Apple Weather), so this is its door.
+            // Al-Islam only, like iCloud Backup.
+            doors.append(HelpDoor(id: "adhan.weather", title: "Want the Weather on the Sky?",
+                                  caption: "Clouds and rain on the sky, with the temperature, UV and humidity.",
+                                  answerName: "Weather",
+                                  systemImage: "cloud.sun.fill", tint: SettingsTint.sky,
+                                  landing: .page(.prayerPage(.sky)),
+                                  value: onOff(settings.skyShowsWeather), isOn: settings.skyShowsWeather,
+                                  actions: [.toggle("Weather", isOn: settings.skyShowsWeather, systemImage: "cloud.sun.fill") { on in
+                                      withAnimation(.easeInOut) { settings.skyShowsWeather = on }
+                                  }]))
+            #endif
         } else {
             let renamed = Settings.renameablePrayerNames.filter { settings.customPrayerName(for: $0) != nil }.count
             doors.append(HelpDoor(id: "adhan.names", title: "Prefer Other Prayer Names?",
@@ -318,6 +331,19 @@ enum HelpDoorCatalog {
                                   secondaryTint: SettingsTint.islamSecondary,
                                   landing: .screen { AnyView(AboutYouSettingsView()) }))
         }
+        // Simple Mode (Abu, 2026-10-10: "its too cluttered and too complex easy to get overwhelemd").
+        // Never seen in Simple Mode itself: this whole section steps aside there.
+        doors.append(HelpDoor(id: "islam.simple", title: "Too Much on Screen?",
+                              caption: "Simple Mode keeps each tab to its essentials.",
+                              answerName: "Simple Mode",
+                              systemImage: "rectangle.compress.vertical", tint: SettingsTint.islam,
+                              secondaryTint: SettingsTint.islamSecondary,
+                              landing: .screen { AnyView(SimpleModeSettingsView()) },
+                              value: settings.simpleMode ? "On" : "Off", isOn: settings.simpleMode,
+                              actions: [.toggle("Simple Mode", isOn: settings.simpleMode,
+                                                systemImage: "rectangle.compress.vertical") { on in
+                                  withAnimation(.easeInOut) { settings.simpleMode = on }
+                              }]))
         let textSize = IslamTextSize.size(for: settings.islamTextSize)
         doors.append(HelpDoor(id: "islam.textsize", title: "Text Too Small?",
                               caption: "A text size just for the Al-Islam tab.",
@@ -433,7 +459,9 @@ struct HelpDoorsSection: View {
     var body: some View {
         // Simple Mode keeps every tab to its essentials, and each door's answer already lives in
         // Settings (docs/Simple Mode Guide.md), so the section steps aside on all four tabs at once.
-        if settings.showsHelpDoors(area), !settings.simpleMode {
+        // Not while one of its sheets is up: "Too Much on Screen?" turns Simple Mode on from inside its
+        // own sheet, and removing the section would take the sheet's presenter with it mid-tap.
+        if settings.showsHelpDoors(area), !settings.simpleMode || openDoor != nil {
             let listed = HelpDoorCatalog.doors(for: area, settings: settings, sunnah: sunnah)
             let doors = keepingOpenDoor(listed)
             if !doors.isEmpty {
@@ -778,8 +806,26 @@ private struct DayBeginsAnswer: View {
 /// switch for all four.
 struct HelpDoorsSettingsSection: View {
     @ObservedObject private var settings = Settings.shared
+    /// The Quran and Hadith tabs' Quick Search Help, which its own trash can put away: this page is
+    /// where it comes back (`QuranView.quranSearchHelpRemoved`, `HadithView.hadithSearchHelpRemoved`).
+    @AppStorage("quranSearchHelpRemoved") private var quranSearchHelpRemoved = false
+    @AppStorage("hadithSearchHelpRemoved") private var hadithSearchHelpRemoved = false
 
     let area: HelpDoorArea
+
+    /// The search help's switch on the two tabs that have one, nil elsewhere.
+    private var searchHelpShown: Binding<Bool>? {
+        switch area {
+        case .quran:
+            return Binding(get: { !quranSearchHelpRemoved },
+                           set: { shown in settings.hapticFeedback(); quranSearchHelpRemoved = !shown })
+        case .hadith:
+            return Binding(get: { !hadithSearchHelpRemoved },
+                           set: { shown in settings.hapticFeedback(); hadithSearchHelpRemoved = !shown })
+        case .adhan, .islam:
+            return nil
+        }
+    }
 
     private var shown: Binding<Bool> {
         Binding(
@@ -800,7 +846,8 @@ struct HelpDoorsSettingsSection: View {
                     Toggle("Show on the \(area.tabName) Tab", isOn: shown.animation(.easeInOut))
                         .font(.subheadline)
 
-                    Text("A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away.")
+                    Text("A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away."
+                         + (settings.simpleMode ? " Simple Mode keeps them off every tab while it is on." : ""))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -829,6 +876,18 @@ struct HelpDoorsSettingsSection: View {
                 }
                 .opacity(settings.showsHelpDoors(area) ? 1 : 0.5)
                 .padding(.bottom, 2)
+            }
+
+            if let searchHelpShown {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Quick Search Help", isOn: searchHelpShown.animation(.easeInOut))
+                        .font(.subheadline)
+
+                    Text("The tips over the \(area.tabName) tab's search while you type nothing. Its trash puts them away; your recent searches stay either way.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }

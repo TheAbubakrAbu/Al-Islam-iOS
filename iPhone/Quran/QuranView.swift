@@ -134,7 +134,7 @@ private struct QuranLeadingToolbar: ViewModifier {
         } else if let simpleMoreItems {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    SimpleMoreMenu { simpleMoreItems }
+                    SimpleMoreMenu(isBusy: isPreparingPageMode) { simpleMoreItems }
                         // The planner without its button: its settle hooks keep stamping a finished
                         // plan, and its sheet opens from the menu (`plannerRequest`).
                         .background {
@@ -443,6 +443,12 @@ struct QuranView: View {
     @State private var showAyahSearchLearnMore = false
     /// The help card folded to its title + recent chips (persists; the -/+ on the card).
     @AppStorage("quranSearchHelpCollapsed") private var quranSearchHelpCollapsed = false
+    /// The folded help put away for good by its trash (Abu, 2026-10-10: "when a tips tab is collapsed
+    /// have a button to trash remove it"); the recent searches stay. Quran Settings brings it back.
+    @AppStorage("quranSearchHelpRemoved") private var quranSearchHelpRemoved = false
+    /// The trash's confirmation, hung on the list rather than on the card: the card exists only while
+    /// the field is focused, and a dialog must not vanish with it.
+    @State private var confirmingSearchHelpRemoval = false
     /// Juz mode's JUMP TO JUZ card, open or folded.
     @AppStorage("showJuzJumpGrid") private var showJuzJumpGrid = true
     /// A tap on the JUMP TO JUZ card: the juz to scroll to, with a fresh token so the same juz twice
@@ -1204,6 +1210,8 @@ struct QuranView: View {
             && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             // Makki, a juz or a surah pick lists results with nothing typed: the card would cover them.
             && !searchFilters.narrowsSurahList
+            // With the help removed the card is only the recent searches, so with none there is no card.
+            && (!quranSearchHelpRemoved || !settings.quranSearchHistory.isEmpty)
     }
 
     private func markListMoving() {
@@ -1236,13 +1244,29 @@ struct QuranView: View {
     private var searchHelpOverlayCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             // The help folds away behind a -/+ (a reader who knows the syntax keeps only the recent
-            // chips); the chips stay, at the BOTTOM, nearest the field and the thumb.
+            // chips); the chips stay, at the BOTTOM, nearest the field and the thumb. Folded, a trash
+            // removes the help for good, examples included.
+            if !quranSearchHelpRemoved {
             HStack(spacing: 8) {
                 Text("Quick Search Help")
                     .font(.subheadline.bold())
                     .foregroundStyle(settings.accentColor.color)
 
                 Spacer(minLength: 0)
+
+                if quranSearchHelpCollapsed {
+                    Button {
+                        settings.hapticFeedback()
+                        confirmingSearchHelpRemoval = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.subheadline)
+                            .foregroundStyle(settings.accentColor.color)
+                            .contentShape(Rectangle().inset(by: -8))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove search help")
+                }
 
                 Button {
                     settings.hapticFeedback()
@@ -1304,9 +1328,12 @@ struct QuranView: View {
                 .frame(maxHeight: 180)
             }
             }
+            }
 
             quranRecentSearches
-            quranSearchExamples
+            if !quranSearchHelpRemoved {
+                quranSearchExamples
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -2178,6 +2205,16 @@ struct QuranView: View {
         }
         .overlay(alignment: .top) {
             searchHelpOverlay
+        }
+        .confirmationDialog("Remove Quick Search Help?", isPresented: $confirmingSearchHelpRemoval,
+                            titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { quranSearchHelpRemoved = true }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your recent searches stay. You can bring the help back in Quran Settings.")
         }
         // The filter buttons ride above the results for as long as a search (or a filter) is live.
         // Applied after the help card, so the card sits under the row instead of behind it.
@@ -3085,56 +3122,46 @@ struct QuranView: View {
     /// Full Mode control it stands in for, through the doors' one guard.
     @ViewBuilder
     var simpleMoreItems: some View {
-        Button { openMenuDoor(.daily) } label: { Label("Today", systemImage: "sun.horizon.fill") }
-        Button { openMenuDoor(.history) } label: { Label("History", systemImage: "clock.arrow.circlepath") }
+        SimpleMoreMenuItem("Today", systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
+        SimpleMoreMenuItem("History", systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
         if ThematicTopicsStore.isBundled {
-            Button { openMenuDoor(.themes) } label: { Label("Browse by Theme", systemImage: "square.grid.2x2.fill") }
+            SimpleMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
         }
         if settings.showWordOfTheDay, wordOfTheDay != nil {
-            Button {
+            SimpleMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
                 settings.hapticFeedback()
                 guard !anyDoorOpen, path.isEmpty else { return }
                 openWordOfDay = true
-            } label: {
-                Label(SummaryWordTile.title, systemImage: "character.book.closed.fill")
             }
         }
         if settings.showQiraahDetails {
-            Button { openMenuDoor(.qiraat) } label: { Label("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") }
+            SimpleMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
         }
         if settings.isHafsDisplay {
-            Button {
+            SimpleMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
                 settings.hapticFeedback()
                 plannerRequest = true
-            } label: {
-                Label("Quran Planner", systemImage: "calendar.badge.clock")
             }
         }
-        Button {
+        SimpleMoreMenuItem("Open a Random Surah", systemImage: "shuffle") {
             settings.hapticFeedback()
             guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
             push(surahID: surah.id)
-        } label: {
-            Label("Open a Random Surah", systemImage: "shuffle")
         }
 
         Divider()
 
-        Button {
+        SimpleMoreMenuItem(settings.quranPageMode ? "Read as List" : "Read as Pages",
+                           systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book") {
             settings.hapticFeedback()
             showReadingModeConfirm = true
-        } label: {
-            Label(settings.quranPageMode ? "Read as List" : "Read as Pages",
-                  systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book")
         }
         let showsGrid = settings.gridMode && !listForJump
-        Button {
+        SimpleMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { settings.gridMode.toggle() }
             }
-        } label: {
-            Label(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2")
         }
     }
 

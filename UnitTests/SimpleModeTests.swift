@@ -91,6 +91,33 @@ final class SimpleModeTests: XCTestCase {
         XCTAssertTrue(changed.isEmpty, "flipping Simple Mode wrote: \(changed.sorted())")
     }
 
+    /// Ignore on a permission dialog quiets it for exactly one day.
+    func testSnoozeSetsADay() {
+        let settings = Settings.shared
+        let savedLocation = settings.locationAlertSnoozedUntil
+        let savedNotification = settings.notificationAlertSnoozedUntil
+        defer {
+            settings.locationAlertSnoozedUntil = savedLocation
+            settings.notificationAlertSnoozedUntil = savedNotification
+        }
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        settings.snoozePermissionAlert(location: true, now: now)
+        XCTAssertEqual(settings.locationAlertSnoozedUntil, 2_000_000 + 86_400)
+        settings.snoozePermissionAlert(location: false, now: now)
+        XCTAssertEqual(settings.notificationAlertSnoozedUntil, 2_000_000 + 86_400)
+        XCTAssertTrue(SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now.addingTimeInterval(86_399)))
+        XCTAssertFalse(SimpleMode.isSnoozed(until: settings.locationAlertSnoozedUntil, now: now.addingTimeInterval(86_401)))
+    }
+
+    /// Existing users never see the splash's question, so Settings search has to find the switch by
+    /// the words someone overwhelmed would type.
+    func testSimpleModeIsSearchable() {
+        let entry = SettingsSearchEntry.appearanceEntries.first { $0.title == "Simple Mode" }
+        XCTAssertNotNil(entry, "no Simple Mode entry in Settings search")
+        XCTAssertTrue(entry?.keywords.contains("overwhelming") == true)
+        XCTAssertTrue(entry?.keywords.contains("clutter") == true)
+    }
+
     private static func changedKeys(_ before: [String: Any], _ after: [String: Any]) -> Set<String> {
         Set(before.keys).union(after.keys).filter { key in
             switch (before[key], after[key]) {

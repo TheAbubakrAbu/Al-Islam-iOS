@@ -1,9 +1,87 @@
 # Page mode: the page that "randomly shrinks and appears"
 
-**Status: 2026-09-25 (next section): the FOLD and the FIND BAR are both one-step changes, and the room
-and the chrome now move in order, so nothing ever draws over the text or squeezes it. The mini player
-and the picker still follow the Al-Quran approach (two sections down). The 09-21/22 mechanism at the
-bottom (chrome twins, known bands, the destination render, the crossfade) is history.**
+**Status: 2026-10-11 (next section): EVERY chrome change the reader makes is a one-step band change now,
+with the room and the chrome moving in order: the fold and the find bar (09-25), and since today the mini
+player mounting and leaving, its small / big switch, and select mode's bar. Each has a learned, prewarmed
+twin, and a cold landing keeps the page at its size (clipped at the band's bottom) instead of scaling it.
+The picker is an overlay (09-20). The 09-21/22 mechanism at the bottom (chrome twins, known bands, the
+destination render, the crossfade) is history.**
+
+## 2026-10-11: the mini player, its size and select mode join the fold; a cold landing never scales
+
+> "fix page issues like when clicking on search or a button on the page or now playing view showing up
+> and then ugly shrinks the page for a second before fitting in" (Abu)
+
+**What the recordings showed** (60 fps, `pm/run.sh` + `frames.py`, iPhone 17 Pro simulator, page 6,
+`-pageTurnScript` steps `play` / `stop` / `expand` / `search` / `unsearch` added for this):
+
+- Now Playing mounting: the pager's band went 526 to 423 pt in ONE report (the host inserted the bar
+  with an opacity transition, so its height never swept), but that band had never been fitted and was
+  not a settled geometry. The page kept its 522 pt render SCALED to 0.80 - a 302 pt wide column with
+  wide margins, line pitch 26.3 instead of 32.7 - through the 220 ms settle debounce and the fit, then
+  cut to the refit: 0.3 s of shrunken page on the simulator, every time playback started. The 09-23
+  note's "the mini player keeps the shown render, scaled into the shorter band" was exactly this.
+- The small / big switch: the same when the destination band was cold; instant when it was cached
+  (the second toggle in a recording hit the cache from the first - the proof that a warm twin is a
+  perfect one-step switch).
+- Search with its twin warm: already one step (09-25). Search with NO twin (`-resetChromeTwins`): the
+  page scaled to 0.76 for one fit, 0.15 s on the simulator. The find twin is learned per geometry, so
+  the first search at any new band (under a player, after any chrome change) showed this.
+- Stopping playback: the page grew once after a short beat, never shrank. But the big card dropped its
+  progress row the moment playback ended, 9 pt before its fade was over, so the band reported 432 then
+  526: the page bounced ~4 pt during the fade, and the pair learned on a stop was 428 <-> 522, not
+  419 <-> 522 - the no-player geometry's player twin was wrong after every stop.
+
+What changed:
+
+- **The reader owns the mini player's ROOM** (`playerRoom` / `playerVisible`, `applyPlayerRoom`), the way
+  it owns the find bar's: playback starting gives the bar its room in one still transaction (the page
+  switches at once) and then fades it in (0.2 s); stopping fades it out (0.14 s) and then takes the
+  room. `SurahView.pageReaderControls` builds the player only when asked for the `.nowPlaying` part and
+  no longer animates or transitions anything; `.animation(nil, value: playerRoom)` on the pager.
+- **The card's size is the reader's too** (`playerExpandedRoom`, `applyPlayerExpanded`):
+  `settings.nowPlayingExpanded` stays the intent (the card's corner button flips it), the reader fades
+  the card out at its old size, snaps the size and room in one step, and fades it back in.
+  `NowPlayingView` takes an `expanded:` override for this and does not animate its height under it.
+- **Select mode's bar the same way** (`selectRoom` / `selectVisible`, `applySelecting`; the host's
+  `isSelectingAyahs` is the intent, `PageReaderControlsPart.bar(selecting:)` carries the room): the
+  bulk-action bar is two rows to the controls' one, and the host's `withAnimation` swept the band.
+- **Twins for all of them.** `MushafChromeJump` is now `fold, find, player, playerSize, select`, each with
+  its own learned store (`mushaf.<kind>Twins`, device-only in the manifest), learned by `updatePagerSize`
+  from the band noted before the change (`noteJump`). `prewarm` fits the visible page at every twin it has after the two nearest
+  neighbours (not select mode's, a rare title-menu action, which is learned and marked settled only). A
+  geometry only has the twins of the changes that can happen from it, so this is at most three extra
+  fits per rest, cache-only as before. A note older than 0.5 s is ignored: a change whose room sat
+  inside a FOLDED band moved nothing.
+- **A cold landing never scales.** `renderedPageBody`: a render taller than a SETTLED band (the landing
+  of a one-step change, or a geometry some page has fitted at) is drawn at its size, top-anchored and
+  clipped to the band (`pageTextBody(clipsToBand:)`), through modifiers rather than a branch so the
+  text view keeps its identity. A Hafs page's refit differs only in line pitch (print-matched pages are
+  width-bound), so this reads as the last line or two sliding under the bottom edge for a few frames
+  and the page settling. Mid-sweep bands (a Mac window being resized) are not settled and keep the
+  scaled follow.
+- **The player band's height is frozen per mount and size** (`PlayerBandFreeze`, `freezePlayerBand`):
+  measured once as the card lands, held until its room goes or its size changes. The big card hides its
+  progress bar the moment the player is torn down (`transportRowWithProgress`, `if total > 0`), which
+  is 9 pt before `isPlaying` flips, so the band reported 432 then 526 and the pair learned on a stop
+  was 428 <-> 522. Noting the band at the intent did not help (the geometry report lands in the same
+  update, before the reader's handler); holding the band does. The card also keeps its transport row
+  through the fade (`expandedOverride != nil`).
+
+Result (same harness): a warm start of playback switches the page on the frame after the band changes
+(pitch 32.7 to 28.7 at full width, no scaled frame), the big / small switch both ways and the find bar
+both ways are cache hits with no fallback at all, a COLD start (`-resetChromeTwins`) shows the old
+layout clipped for two frames and then the refit - no column, no margins, no growing back - and a cold
+find (`-resetChromeTwins`, `search@6`) switches once at full width where it used to scale to 0.76.
+Select mode (`-selectAyahsAt 6,11`): one switch each way (pitch 32.7 to 30.3 and back), the pair learned
+(`SELECTTWIN 378x522 <-> 378x458`). Every pair reads correctly in the trace (`PLAYERTWIN 378x522 <->
+378x419`, `PLAYERSIZETWIN 378x419 <-> 378x460`, `FINDTWIN 378x522 <-> 378x398`).
+
+DEBUG: `-pageTurnScript` steps `play@s` (the visible page's first ayah, repeated forever), `stop@s`,
+`expand@s`, `search@s`, `unsearch@s`; SurahView's `-selectAyahsAt s1,s2`; every step logs `SCRIPT <action>`.
+
+Not verified: a device, an iPad spread, Mac windows, Low Power Mode (no twin prefetch there, so every
+change shows the clipped fallback for one fit).
 
 ## 2026-09-25: the room and the chrome move in order; the find bar joins the fold
 

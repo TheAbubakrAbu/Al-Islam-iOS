@@ -192,6 +192,9 @@ struct PrayersProvider: TimelineProvider {
         var highLatitudeRule: String?
         var customPrayerNames: [String: String]
         var travelingShowFullPrayers: Bool
+        // The sky's weather (SkyWeather.swift): the app's cached reading and its switch.
+        var weather: Data?
+        var showsWeather: Bool
     }
     private static var memo: (inputs: Inputs, builtAt: Date, entries: [PrayersEntry])?
     private static let memoMaxAge: TimeInterval = 5 * 60
@@ -213,8 +216,22 @@ struct PrayersProvider: TimelineProvider {
             showSkyScene: store?.object(forKey: "showSkyScene") as? Bool ?? true,
             highLatitudeRule: store?.string(forKey: "highLatitudeRule"),
             customPrayerNames: (store?.dictionary(forKey: "customPrayerNames") as? [String: String]) ?? [:],
-            travelingShowFullPrayers: store?.bool(forKey: "travelingShowFullPrayers") ?? false
+            travelingShowFullPrayers: store?.bool(forKey: "travelingShowFullPrayers") ?? false,
+            weather: store?.data(forKey: SkyWeather.storageKey),
+            showsWeather: store?.bool(forKey: "skyShowsWeather") ?? false
         )
+    }
+
+    /// The app's last Apple Weather reading, while its switch is on and it is fresh. A widget never
+    /// asks Apple itself: the app's half-hourly fetch (and its background location wakes) keep this
+    /// current, which is what keeps the family inside the free allowance.
+    private func cachedWeather() -> SkyWeather? {
+        #if HAS_WEATHER
+        guard store?.bool(forKey: "skyShowsWeather") == true else { return nil }
+        return SkyWeather.freshCached(in: store)
+        #else
+        return nil
+        #endif
     }
 
     /// How long before the next prayer the countdown complication's bar goes red ("not much time
@@ -329,12 +346,14 @@ struct PrayersProvider: TimelineProvider {
 
         // The sky gradient per current prayer, resolved once here rather than by every archived entry
         // view (`Settings.skyGradientColors` decodes the palette overrides behind a memo, but the
-        // gradient widget and the complication each called it once per entry per kind).
+        // gradient widget and the complication each called it once per entry per kind). Under the
+        // weather the app cached, like the app's card (one reading for the whole timeline: a reload
+        // follows every new reading the app writes).
         var skyColorsByKey: [String: [Color]] = [:]
         func skyColors(forPeriod period: String?) -> [Color] {
             let key = SkyPalette.editableKey(for: period)
             if let cached = skyColorsByKey[key] { return cached }
-            let colors = settings.skyGradientColors(forPrayer: period)
+            let colors = settings.skyGradientColors(forPrayer: period, weather: first.weather)
             skyColorsByKey[key] = colors
             return colors
         }
@@ -380,7 +399,8 @@ struct PrayersProvider: TimelineProvider {
                 hijriOffset:                first.hijriOffset,
                 switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib,
                 skyPeriod:                  period,
-                skyColors:                  skyColors(forPeriod: period)
+                skyColors:                  skyColors(forPeriod: period),
+                weather:                    first.weather
             ))
         }
         return entries
@@ -447,6 +467,7 @@ struct PrayersProvider: TimelineProvider {
 
         let now = Date()
         let skyPeriod = settings.skyPeriodName(at: now)
+        let weather = cachedWeather()
 
         return PrayersEntry(
             date:                       now,
@@ -461,7 +482,8 @@ struct PrayersProvider: TimelineProvider {
             // The SKY period, not `currentPrayer`: while traveling the latter is "Maghrib/Isha" from
             // sunset until dawn, which held the home screen on Maghrib's colors all night.
             skyPeriod:                  skyPeriod,
-            skyColors:                  settings.skyGradientColors(forPrayer: skyPeriod)
+            skyColors:                  settings.skyGradientColors(forPrayer: skyPeriod, weather: weather),
+            weather:                    weather
         )
     }
 
@@ -529,6 +551,11 @@ struct PrayersEntry: TimelineEntry {
     /// `currentPrayer`'s traveling pair (`Settings.skyPeriodName(at:)`). It is what the app's card uses,
     /// so the two skies turn together; it also keys the star field's night fade.
     let skyPeriod: String?
-    /// The sky gradient for `skyPeriod`, resolved by the provider (see `makeTimelineEntriesOnMain`).
+    /// The sky gradient for `skyPeriod`, resolved by the provider (see `makeTimelineEntriesOnMain`),
+    /// already greyed by `weather` when there is one.
     let skyColors: [Color]
+    /// The app's last Apple Weather reading, while fresh and switched on (SkyWeather.swift): the sky
+    /// layouts draw its clouds or rain and print its temperature beside the city. Nil paints the
+    /// plain sky, exactly as before the weather existed.
+    var weather: SkyWeather? = nil
 }

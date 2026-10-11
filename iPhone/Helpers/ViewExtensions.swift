@@ -1457,8 +1457,10 @@ private struct SelectableArticleList: ViewModifier {
 
 /// Paints the per-row background for the Sepia / Gray reading themes. Must be applied to rows/sections inside
 /// a `List` so `.listRowBackground` actually reaches the cells. No-op for Light/Dark/System (system colors).
+/// Under the whole-tab sky (`skyPageFill`) every row is the sky's glass instead, whatever the theme.
 struct ThemedListRowBackground: ViewModifier {
     @Environment(\.appearance) private var appearance
+    @Environment(\.skyPageFill) private var skyPageFill
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -1466,7 +1468,9 @@ struct ThemedListRowBackground: ViewModifier {
         // section cards (rows read as square, "cut off") - and the reading themes are phone-only
         // looks anyway (they no longer sync to the watch).
         #if os(iOS)
-        if let rowColor = appearance.themeRowBackground {
+        if skyPageFill {
+            content.listRowBackground(SkyPageFill.rowColor)
+        } else if let rowColor = appearance.themeRowBackground {
             content.listRowBackground(rowColor)
         } else {
             content
@@ -1474,6 +1478,28 @@ struct ThemedListRowBackground: ViewModifier {
         #else
         content
         #endif
+    }
+}
+
+/// The Adhan tab under its whole-tab sky (`Settings.skyFillsAdhanTab`, SkyPageBackground.swift).
+/// Declared for every platform (the watch compiles the modifiers that read it; only iOS ever sets it).
+enum SkyPageFill {
+    /// What every row wears over the sky: a dark glass, so the gradient shows through and the white
+    /// text the dark scheme gives the rows stays legible over a pale midday blue.
+    static let rowColor = Color.black.opacity(0.30)
+}
+
+private struct SkyPageFillKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// True inside the Adhan tab's List while the sky fills the tab: the row backgrounds
+    /// (`ThemedListRowBackground`, `RowWashBackground`) paint the sky's glass instead of a theme's or
+    /// the system's opaque cell.
+    var skyPageFill: Bool {
+        get { self[SkyPageFillKey.self] }
+        set { self[SkyPageFillKey.self] = newValue }
     }
 }
 
@@ -1541,14 +1567,19 @@ struct RowWash: ViewModifier {
 struct RowWashBackground: View {
     @Environment(\.appearance) private var appearance
     @Environment(\.listUsesDefaultView) private var usesDefaultView
+    @Environment(\.skyPageFill) private var skyPageFill
 
     let wash: Color?
     var fade: Double = 0.15
 
     var body: some View {
         ZStack {
-            appearance.themeRowBackground
-                ?? Color(usesDefaultView ? UIColor.secondarySystemGroupedBackground : UIColor.systemBackground)
+            if skyPageFill {
+                SkyPageFill.rowColor
+            } else {
+                appearance.themeRowBackground
+                    ?? Color(usesDefaultView ? UIColor.secondarySystemGroupedBackground : UIColor.systemBackground)
+            }
             wash ?? .clear
         }
         .animation(.easeInOut(duration: fade), value: wash)
@@ -2486,7 +2517,7 @@ private struct GridFavoriteStar: View {
             Image(systemName: isFavorite ? "star.fill" : "star")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(isFavorite ? accent : .secondary)
-                // The tap target is a 30pt square CENTERED ON THE GLYPH - sized before the corner
+                // The tap target is a 30pt square CENTERED ON THE GLYPH, sized before the corner
                 // positioning, not after. The old shape came after the 10/11pt paddings and then
                 // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
                 // corner: on a small grid tile, tapping anywhere on the right side toggled the star

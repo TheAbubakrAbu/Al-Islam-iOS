@@ -23,6 +23,13 @@ import SwiftUI
 // duas, Hadith or Islam widgets and Siri shortcuts, and an .ics export of prayer times.
 //
 // No em dashes and no spaced hyphens in any of this text (house rule); quoted labels are the app's own.
+//
+// The companion apps (Al-Adhan, Al-Quran) compile this file too (HAS_TIPS in both sync manifests,
+// 2026-10-11), each with only its own domains. An area whose tab an app does not have is compiled out
+// with its flag (HAS_ADHAN, HAS_QURAN, HAS_HADITH), and the hub lists the areas that are left
+// (`TipArea.offered`). A tip in an area every app has (Islam, the app) that names another domain
+// either words itself by the same flags or hides (`shipsQuran`, `shipsPrayerTimes`): write new tips
+// the same way, since a tip about a tab the reader does not have is exactly the wrong tip.
 
 // MARK: - Model
 
@@ -92,6 +99,10 @@ enum TipArea: String, CaseIterable, Identifiable {
     var secondaryTint: Color? {
         self == .islam ? SettingsTint.islamSecondary : nil
     }
+
+    /// The areas this app has tips for, in the hub's order. In Al-Adhan and Al-Quran a domain they do
+    /// not ship compiles its areas out of `TipCatalog`, so the hub and its search entries list these.
+    static let offered: [TipArea] = allCases.filter { area in TipCatalog.all.contains { $0.area == area } }
 }
 
 struct AppTip: Identifiable {
@@ -127,6 +138,11 @@ struct AppTip: Identifiable {
 // MARK: - The catalogue
 
 enum TipCatalog {
+    /// A tip about a control Simple Mode takes off the screen (the PRAYER TIMES layout menu, the
+    /// shuffles, the summary doors, Need a Hand?) is not offered while Simple Mode is on: it would
+    /// teach a button the reader cannot see (docs/Simple Mode Guide.md).
+    static let outsideSimpleMode: () -> Bool = { !Settings.shared.simpleMode }
+
     static func tips(in area: TipArea) -> [AppTip] {
         all.filter { $0.area == area && $0.isAvailable() }
     }
@@ -165,6 +181,20 @@ enum TipCatalog {
         }
     }
 
+    /// Three words worth trying when the hub's search finds nothing, each from an area this app has
+    /// ("adhan" finds nothing in Al-Quran).
+    static var searchHint: String {
+        #if HAS_ADHAN && HAS_QURAN
+        return "\"adhan\", \"tajweed\" or \"widget\""
+        #elseif HAS_ADHAN
+        return "\"adhan\", \"qibla\" or \"widget\""
+        #elseif HAS_QURAN
+        return "\"tajweed\", \"reciter\" or \"widget\""
+        #else
+        return "\"tasbih\", \"dua\" or \"zakah\""
+        #endif
+    }
+
     static func tour(in area: TipArea) -> [AppTip] {
         tips(in: area).filter(\.tour)
     }
@@ -201,10 +231,51 @@ enum TipCatalog {
         return false
     }
 
-    static let all: [AppTip] = adhan + notifications + quran + hadith + islam + general
+    /// The Quran domain (the readers, the reciters, the tajweed lessons): Al-Adhan has none of it.
+    private static var shipsQuran: Bool {
+        #if HAS_QURAN
+        return true
+        #else
+        return false
+        #endif
+    }
+    /// The prayer times and their calculation: Al-Quran has neither.
+    private static var shipsPrayerTimes: Bool {
+        #if HAS_ADHAN
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    static let all: [AppTip] = adhan + adhanWeather + notifications + quran + hadith + islam + general
+
+    /// The weather's tip, in Al-Islam alone (`HAS_WEATHER`, like iCloud Backup).
+    private static var adhanWeather: [AppTip] {
+        #if HAS_WEATHER
+        return [
+            AppTip(id: "adhan.weather", area: .adhan, group: "THE SKY", systemImage: "cloud.sun.fill",
+                   title: "Put the weather on the sky",
+                   detail: "Turn on Weather and the sky clouds over, rains and fogs with the real weather outside. The temperature sits at the top of the card (tap it for the UV index, humidity, wind and more), At a Glance gains a Weather group, and the sky widgets show the temperature beside the city. It uses Apple Weather, so your location is sent to Apple while it is on.",
+                   place: "Prayer Settings, Sky", destination: .prayerPage(.sky)),
+        ]
+        #else
+        return []
+        #endif
+    }
+
+    private static var skyFillDetail: String {
+        #if HAS_WEATHER
+        return "Sky Fills the Screen paints the Adhan tab's whole background with the sky: its colors, its stars at night and its weather, behind the prayer times and everything under them."
+        #else
+        return "Sky Fills the Screen paints the Adhan tab's whole background with the sky: its colors and its stars at night, behind the prayer times and everything under them."
+        #endif
+    }
 
     // MARK: Prayer times
 
+    // The prayer times and their notifications are one domain: Al-Quran compiles both lists out.
+    #if HAS_ADHAN
     private static let adhan: [AppTip] = [
         AppTip(id: "adhan.scrub", area: .adhan, group: "THE SKY", systemImage: "sun.max.fill",
                title: "Drag the sun through the day",
@@ -226,6 +297,10 @@ enum TipCatalog {
                title: "Paint your own sky",
                detail: "Sky Colors gives every prayer two colors of its own. Tap a prayer's row to preview it, and Restore Default Colors brings the originals back.",
                place: "Prayer Settings, Sky, Sky Colors", destination: .prayerPage(.skyColors), card: ("Sky Colors", "Two colors of your own for every prayer's sky.")),
+        AppTip(id: "adhan.skyfill", area: .adhan, group: "THE SKY", systemImage: "rectangle.inset.filled",
+               title: "Let the sky fill the whole tab",
+               detail: skyFillDetail,
+               place: "Prayer Settings, Sky", destination: .prayerPage(.sky)),
         AppTip(id: "adhan.stopadhan", area: .adhan, group: "THE SKY", systemImage: "stop.circle.fill",
                title: "Stop an adhan that is playing",
                detail: "While the adhan sounds inside the app, a capsule that reads \u{201C}Tap to stop\u{201D} appears at the foot of the sky card.",
@@ -242,11 +317,11 @@ enum TipCatalog {
         AppTip(id: "adhan.layouts", area: .adhan, group: "THE PRAYER LIST", systemImage: "square.grid.2x2",
                title: "Four layouts for the prayer list",
                detail: "The menu in the PRAYER TIMES header switches between Prayer Tiles, Prayer Grid, Prayer List, and Prayer Split.",
-               place: "Adhan tab"),
+               place: "Adhan tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "adhan.optionalpill", area: .adhan, group: "THE PRAYER LIST", systemImage: "moon.stars",
                title: "Optional times without leaving the tab",
                detail: "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets.",
-               place: "Adhan tab", destination: .prayerPage(.optionalPrayers)),
+               place: "Adhan tab", destination: .prayerPage(.optionalPrayers), isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "adhan.rakaah", area: .adhan, group: "THE PRAYER LIST", systemImage: "tablecells",
                title: "A rakah table at hand",
                detail: "The Rakaah Guide pill unfolds the fard and sunnah rakahs of every prayer, with what changes on Friday and while traveling.",
@@ -254,7 +329,7 @@ enum TipCatalog {
         AppTip(id: "adhan.otherday", area: .adhan, group: "THE PRAYER LIST", systemImage: "calendar",
                title: "Look at any other day",
                detail: "The date picker under the prayer list shows any day's times, and its arrows step a day at a time. Compare Today sets that day beside today's, and Back to Today returns.",
-               place: "Adhan tab"),
+               place: "Adhan tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "adhan.pull", area: .adhan, group: "THE PRAYER LIST", systemImage: "arrow.down.circle",
                title: "Pull down for a fresh location",
                detail: "Pulling down on the Adhan tab takes a new GPS fix, which is what corrects the city after a flight.",
@@ -279,7 +354,7 @@ enum TipCatalog {
         AppTip(id: "adhan.glance", area: .adhan, group: "QIBLA AND PLACE", systemImage: "rectangle.grid.2x2.fill",
                title: "Every tile is a button",
                detail: "The AT A GLANCE tiles all open something. Qibla opens a large compass, Daylight and Fasting Window open the Prayer Calendar, Moon opens the Hijri Calendar, and Prayer Calculation and Distance From Home open their settings.",
-               place: "Adhan tab", tour: true),
+               place: "Adhan tab", tour: true, isAvailable: TipCatalog.outsideSimpleMode),
 
         AppTip(id: "adhan.trackerhold", area: .adhan, group: "THE PRAYER TRACKER", systemImage: "checkmark.circle.fill",
                title: "Tap for on time, hold for more",
@@ -399,18 +474,26 @@ enum TipCatalog {
                title: "Never surprised by Ramadan",
                detail: "Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced.",
                place: "Notifications", destination: .notifications, advanced: true),
+        // Its screen lives in the Quran domain (iPhone/Quran/Models/SunnahReminders.swift), which
+        // Al-Adhan never receives, and a reminder's tap opens the surah in the reader.
         AppTip(id: "notif.sunnah", area: .notifications, group: "WORDING AND DATES", systemImage: "bell.badge",
                title: "Sunnah Reminders",
                detail: "Al-Kahf on Friday, al-Mulk before sleep, and more, each at a time you choose and each with the hadith it comes from. Tapping one opens the surah.",
-               place: "Notifications, Sunnah Reminders", destination: .notificationsPage(.sunnahReminders), card: ("Sunnah Reminders", "Al-Kahf on Friday, al-Mulk before sleep, each with its hadith.")),
+               place: "Notifications, Sunnah Reminders", destination: .notificationsPage(.sunnahReminders), card: ("Sunnah Reminders", "Al-Kahf on Friday, al-Mulk before sleep, each with its hadith."), isAvailable: { shipsQuran }),
         AppTip(id: "notif.focus", area: .notifications, group: "WORDING AND DATES", systemImage: "moon.zzz.fill",
                title: "Through a Focus, if you allow it",
                detail: "Prayer notifications are marked Time Sensitive. Allow Time Sensitive notifications for \(app) in a Focus such as Sleep or Do Not Disturb and they still come through.",
                place: "iPhone Settings, Focus"),
     ]
+    #else
+    private static let adhan: [AppTip] = []
+    private static let notifications: [AppTip] = []
+    #endif
 
     // MARK: Quran
 
+    // Al-Adhan has no Quran reader.
+    #if HAS_QURAN
     private static let quran: [AppTip] = [
         AppTip(id: "quran.holdtitle", area: .quran, group: "MOVING AROUND", systemImage: "hand.tap.fill",
                title: "Hold the title to choose a surah",
@@ -568,7 +651,7 @@ enum TipCatalog {
         AppTip(id: "quran.shuffleaotd", area: .quran, group: "THE QURAN TAB", systemImage: "shuffle",
                title: "Another Ayah of the Day",
                detail: "The shuffle beside today's Ayah of the Day picks a different one, and the Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen.",
-               place: "Quran tab, Your Summary"),
+               place: "Quran tab, Your Summary", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "quran.share", area: .quran, group: "THE QURAN TAB", systemImage: "photo.fill",
                title: "Share an ayah as an image",
                detail: "Share Ayah makes an image or plain text, with your choice of font and backdrop, tajweed colors, your note, and the ayah's details.",
@@ -586,9 +669,14 @@ enum TipCatalog {
                detail: "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Pick one of your bookmarks, or type a reference such as 2:255 or Yaseen 9. Until you choose, it shows your newest bookmark.",
                place: "Home Screen and Lock Screen, Edit Widget", isAvailable: { hasChosenAyahWidget }),
     ]
+    #else
+    private static let quran: [AppTip] = []
+    #endif
 
     // MARK: Hadith
 
+    // The Hadith tab is Al-Islam's alone.
+    #if HAS_HADITH
     private static let hadith: [AppTip] = [
         AppTip(id: "hadith.pills", area: .hadith, group: "SAVING", systemImage: "number.circle.fill",
                title: "The number badges are buttons",
@@ -652,22 +740,76 @@ enum TipCatalog {
         AppTip(id: "hadith.daily", area: .hadith, group: "YOUR SUMMARY", systemImage: "sun.max.fill",
                title: "Another Hadith of the Day",
                detail: "The shuffle beside today's hadith picks a different one, and the plus in YOUR SUMMARY unfolds the days before.",
-               place: "Hadith tab"),
+               place: "Hadith tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "hadith.shuffle", area: .hadith, group: "YOUR SUMMARY", systemImage: "shuffle",
                title: "Open something at random",
                detail: "The shuffle in the BOOKMARKS header opens one of your bookmarks at random, and the one above a group of books opens a random book.",
-               place: "Hadith tab"),
+               place: "Hadith tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "hadith.doors", area: .hadith, group: "YOUR SUMMARY", systemImage: "rectangle.3.group",
                title: "Topics, Encyclopedia, History",
                detail: "Three doors under your summary: hadiths gathered by topic, an encyclopedia of explained narrations, and everything you have opened or searched. Tapping a past search in History runs it again.",
-               place: "Hadith tab"),
+               place: "Hadith tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "hadith.ai", area: .hadith, group: "YOUR SUMMARY", systemImage: "sparkles",
                title: "Summaries, on your device",
                detail: "A hadith's menu offers Summarize with AI, and search offers Ask AI about what you typed. Both run on the iPhone itself.",
                place: "Hadith reader", isAvailable: { hasAppleIntelligence }),
     ]
+    #else
+    private static let hadith: [AppTip] = []
+    #endif
 
     // MARK: Islam
+
+    // Every app of the family has the Islam tab, so these always compile; the few that name the Quran
+    // or the hadith say only what this app has.
+
+    /// Ask AI's sources, which follow the same flags (`AskAIRetrieval.retrieve`).
+    private static var askAISources: String {
+        #if HAS_QURAN && HAS_HADITH
+        return "the Quran, the hadith collections, and the app's articles"
+        #elseif HAS_QURAN
+        return "the Quran and the app's articles"
+        #elseif HAS_HADITH
+        return "the hadith collections and the app's articles"
+        #else
+        return "the app's articles"
+        #endif
+    }
+
+    private static var islamFontDetail: String {
+        let shared = "The duas, the dhikr, the 99 Names, and the alphabet share one Arabic font, chosen here."
+        #if HAS_QURAN && HAS_HADITH
+        return shared + " The Quran and the hadith books keep their own."
+        #elseif HAS_QURAN
+        return shared + " The Quran keeps its own."
+        #elseif HAS_HADITH
+        return shared + " The hadith books keep their own."
+        #else
+        return shared
+        #endif
+    }
+
+    /// The journal gathers the notes left in the readers, so without one it holds your entries alone.
+    private static var journalTitle: String {
+        #if HAS_QURAN || HAS_HADITH
+        return "A journal that gathers your notes"
+        #else
+        return "A journal of your own"
+        #endif
+    }
+
+    private static var journalDetail: String {
+        let rest = " Swipe an entry to pin or delete it, and export everything as text from its menu."
+        #if HAS_QURAN && HAS_HADITH
+        return "The Islamic Journal collects the notes you leave on ayahs and hadiths beside your own entries." + rest
+        #elseif HAS_QURAN
+        return "The Islamic Journal collects the notes you leave on ayahs beside your own entries." + rest
+        #elseif HAS_HADITH
+        return "The Islamic Journal collects the notes you leave on hadiths beside your own entries." + rest
+        #else
+        return "The Islamic Journal keeps your own entries." + rest
+        #endif
+    }
 
     private static let islam: [AppTip] = [
         AppTip(id: "islam.tasbih", area: .islam, group: "DHIKR AND DUA", systemImage: "circles.hexagonpath.fill",
@@ -711,14 +853,16 @@ enum TipCatalog {
                title: "A reading test, tier by tier",
                detail: "Reading Test, under Explore at the top of the alphabet, climbs 21 tiers in the order a qaa'idah teaches reading: single letters, short vowels, long vowels, sukoon and shaddah, the marks of the mushaf, and last of all words printed with no tashkeel. Each tier tests reading, spelling and listening. The hint spaces a word out letter by letter, and Find My Level picks the tier to start on.",
                place: "Islam tab, Arabic Alphabet"),
+        // The lessons ship with the Quran domain (the tab shows the course only when
+        // `TajweedLessonsStore.isBundled`) and play their ayahs in your reciter: Al-Adhan has neither.
         AppTip(id: "islam.course", area: .islam, group: "LEARNING", systemImage: "graduationcap.fill",
                title: "A tajweed course with quizzes",
                detail: "The Tajweed Course runs from reading the letters to reading the mushaf. Each lesson gives the rule, its letters (tap one for its page), words to read aloud, example ayahs played in your own reciter, and a Check Yourself quiz. Mark lessons done, step through with the arrows at the top, and Continue picks up where you left off. Tajweed Foundations, beside it, keeps every rule on a page of its own to look up.",
-               place: "Islam tab, Tajweed Course"),
+               place: "Islam tab, Tajweed Course", isAvailable: { shipsQuran }),
         AppTip(id: "islam.names", area: .islam, group: "LEARNING", systemImage: "signature",
                title: "A Name, full screen",
                detail: "Tap a Name of Allah in the grid, or choose View Fullscreen from any row's menu, to fill the screen with it. Tap a name's number badge to favorite it, and the shuffle in the header to land on one at random.",
-               place: "Islam tab, 99 Names of Allah", tour: true),
+               place: "Islam tab, 99 Names of Allah", tour: true, isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "islam.diagrams", area: .islam, group: "LEARNING", systemImage: "arrow.up.left.and.arrow.down.right",
                title: "Tap any diagram",
                detail: "The charts and photographs in the articles open full screen with a tap. Pinch to zoom, drag to move around, and tap twice to fit.",
@@ -729,7 +873,7 @@ enum TipCatalog {
                place: "Islam tab, articles", tour: true),
         AppTip(id: "islam.askai", area: .islam, group: "LEARNING", systemImage: "sparkles",
                title: "Ask AI, with its sources",
-               detail: "Ask AI answers from the Quran, the hadith collections, and the app's articles, on your device. Every citation opens its source, and wording it could not verify is marked as such.",
+               detail: "Ask AI answers from \(askAISources), on your device. Every citation opens its source, and wording it could not verify is marked as such.",
                place: "Islam tab, Ask AI", isAvailable: { hasAppleIntelligence }),
 
         AppTip(id: "islam.favorites", area: .islam, group: "THE ISLAM TAB", systemImage: "star.fill",
@@ -740,13 +884,15 @@ enum TipCatalog {
                title: "Keep a Reminder of the Day",
                detail: "Save keeps a Reminder of the Day, with its source, in Saved Reflections. The Today pill gathers the ayah, word, hadith, dua, and reminder of the day on one screen.",
                place: "Islam tab"),
+        // Fajr comes from the app's own prayer calculation: Al-Quran has none, and its day turns
+        // over at midnight whatever the switch says (`Settings.dailyFajr`).
         AppTip(id: "islam.fajr", area: .islam, group: "THE ISLAM TAB", systemImage: "sunrise.fill",
                title: "Days that begin at Fajr",
                detail: "Turn Over at Fajr changes every daily feature at Fajr rather than at midnight, so the day begins with the prayer.",
-               place: "Islam Settings, Libraries", destination: .islamPage(.libraries), advanced: true, card: ("Days Begin at Fajr", "Every daily feature turns over with the prayer, not at midnight.")),
+               place: "Islam Settings, Libraries", destination: .islamPage(.libraries), advanced: true, card: ("Days Begin at Fajr", "Every daily feature turns over with the prayer, not at midnight."), isAvailable: { shipsPrayerTimes }),
         AppTip(id: "islam.font", area: .islam, group: "THE ISLAM TAB", systemImage: "textformat.ar",
                title: "One Arabic font for everything else",
-               detail: "The duas, the dhikr, the 99 Names, and the alphabet share one Arabic font, chosen here. The Quran and the hadith books keep their own.",
+               detail: islamFontDetail,
                place: "Islam Settings, Arabic Text", destination: .islamPage(.arabicText)),
 
         AppTip(id: "islam.zakah", area: .islam, group: "CALCULATORS AND TOOLS", systemImage: "percent",
@@ -758,8 +904,8 @@ enum TipCatalog {
                detail: "The Inheritance Calculator works in exact fractions, applies \u{2018}awl and radd where the shares call for them, and names each relative who is present but does not inherit, with the reason.",
                place: "Islam tab, Inheritance Calculator"),
         AppTip(id: "islam.journal", area: .islam, group: "CALCULATORS AND TOOLS", systemImage: "square.and.pencil",
-               title: "A journal that gathers your notes",
-               detail: "The Islamic Journal collects the notes you leave on ayahs and hadiths beside your own entries. Swipe an entry to pin or delete it, and export everything as text from its menu.",
+               title: journalTitle,
+               detail: journalDetail,
                place: "Islam tab, Islamic Journal"),
         AppTip(id: "islam.converter", area: .islam, group: "CALCULATORS AND TOOLS", systemImage: "calendar",
                title: "Copy a converted date",
@@ -775,11 +921,66 @@ enum TipCatalog {
 
     private static let general: [AppTip] = generalLead + backupTips + generalTrail
 
+    // Tips about the whole app that name a tab: each app names only its own.
+
+    private static var advancedDetail: String {
+        let lead = "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so "
+        let tail = " A search result or a tip marked Advanced turns them on for you."
+        #if HAS_ADHAN && HAS_QURAN
+        return lead + "turning Nagging Mode's on leaves Arabic Text simple." + tail
+        #else
+        return lead + "turning one screen's on leaves the others simple." + tail
+        #endif
+    }
+
+    /// At a Glance is the Adhan tab's.
+    private static var simpleModeDetail: String {
+        #if HAS_ADHAN
+        let extras = "extras like Need a Hand? and At a Glance step aside"
+        #else
+        let extras = "extras like Need a Hand? step aside"
+        #endif
+        return "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and \(extras). Nothing is turned off, and turning it back off brings everything back."
+    }
+
+    /// The tabs with a NEED A HAND? section (`HelpDoorsSection`), in tab-bar order.
+    private static var helpDoorsPlace: String {
+        #if HAS_ADHAN && HAS_QURAN && HAS_HADITH
+        return "Adhan, Quran, Hadith and Islam tabs"
+        #elseif HAS_ADHAN && HAS_QURAN
+        return "Adhan, Quran and Islam tabs"
+        #elseif HAS_ADHAN
+        return "Adhan and Islam tabs"
+        #elseif HAS_QURAN
+        return "Quran and Islam tabs"
+        #else
+        return "Islam tab"
+        #endif
+    }
+
+    private static var helpDoorsDetail: String {
+        #if HAS_ADHAN && HAS_QURAN && HAS_HADITH
+        let examples = " Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both."
+        #elseif HAS_ADHAN
+        let examples = " Need Help Praying? on the prayer times opens Nagging Mode."
+        #elseif HAS_QURAN
+        let examples = " Need Help Reading? on the Quran answers with Arabic Beginner Mode."
+        #else
+        let examples = ""
+        #endif
+        return "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it." + examples + " Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them."
+    }
+
     private static let generalLead: [AppTip] = [
         AppTip(id: "app.advanced", area: .app, group: "FINDING THINGS", systemImage: "slider.horizontal.3",
                title: "Simple until you ask for more",
-               detail: "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so turning Nagging Mode's on leaves Arabic Text simple. A search result or a tip marked Advanced turns them on for you.",
+               detail: advancedDetail,
                place: "The foot of a settings screen"),
+
+        AppTip(id: "app.simple", area: .app, group: "FINDING THINGS", systemImage: "rectangle.compress.vertical",
+               title: "Too much on screen? Simple Mode",
+               detail: simpleModeDetail,
+               place: "Settings tab, under the settings", destination: .simpleMode),
 
         AppTip(id: "app.search", area: .app, group: "FINDING THINGS", systemImage: "magnifyingglass",
                title: "Search every setting",
@@ -788,7 +989,7 @@ enum TipCatalog {
         AppTip(id: "app.headers", area: .app, group: "FINDING THINGS", systemImage: "shuffle",
                title: "Headers that do things",
                detail: "Section headers across the app carry small controls: a shuffle that opens something at random, and a chevron that folds the section away.",
-               place: "Everywhere", tour: true),
+               place: "Everywhere", tour: true, isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "app.hold", area: .app, group: "FINDING THINGS", systemImage: "hand.tap.fill",
                title: "Touch and hold is worth trying",
                detail: "Most rows, cards, tiles, and images answer a touch and hold with a menu: Copy, Share, Favorite, View Fullscreen, or Scroll To.",
@@ -859,11 +1060,11 @@ enum TipCatalog {
         AppTip(id: "app.launchtab", area: .app, group: "HOW IT LOOKS", systemImage: "rectangle.portrait.and.arrow.forward",
                title: "Choose the tab the app opens on",
                detail: "Open the App On picks where the app lands: Adhan, Quran, Hadith, or Islam. A notification or a reminder you tap still opens where it points.",
-               place: "Settings tab, Appearance, Look and Feel", destination: .appearancePage(.lookAndFeel)),
+               place: "Settings tab, Appearance, Look and Feel", destination: .appearancePage(.lookAndFeel), isAvailable: { LaunchTab.isOffered }),
         AppTip(id: "app.helpdoors", area: .app, group: "HOW IT LOOKS", systemImage: "questionmark.circle.fill",
                title: "A question on every tab",
-               detail: "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it. Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both. Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them.",
-               place: "Adhan, Quran, Hadith and Islam tabs", destination: .appearancePage(.lookAndFeel)),
+               detail: helpDoorsDetail,
+               place: helpDoorsPlace, destination: .appearancePage(.lookAndFeel), isAvailable: TipCatalog.outsideSimpleMode),
     ]
 }
 
@@ -1194,7 +1395,7 @@ struct TipsHubView: View {
             Group {
                 if trimmedQuery.isEmpty {
                     Section(footer: Text("Each settings page opens with its own list too, and every list has a tour.")) {
-                        ForEach(TipArea.allCases) { area in
+                        ForEach(TipArea.offered) { area in
                             NavigationLink(destination: LazyDestination { TipsView(area: area) }) {
                                 SettingsRowLabel(title: area.title, systemImage: area.systemImage,
                                                  subtitle: TipCatalog.tips(in: area).first?.title,
@@ -1206,7 +1407,7 @@ struct TipsHubView: View {
                     }
                 } else if matches.isEmpty {
                     Section {
-                        Text("No tip matches. Try a word from what you are looking for, like \"adhan\", \"tajweed\" or \"widget\".")
+                        Text("No tip matches. Try a word from what you are looking for, like \(TipCatalog.searchHint).")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -1267,8 +1468,12 @@ struct SettingsSpotlightSection: View {
 
     var body: some View {
         let tips = TipCatalog.spotlight
-        Section(header: Text("ONLY IN \(AppIdentifiers.appName.uppercased())")) {
-            if rows {
+        // Simple Mode keeps the one row to every tip and leaves the twelve cards out
+        // (docs/Simple Mode Guide.md).
+        Section(header: Text(settings.simpleMode ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())")) {
+            if settings.simpleMode {
+                EmptyView()
+            } else if rows {
                 ForEach(tips) { tip in
                     if let destination = tip.destination {
                         NavigationLink(destination: LazyDestination {
@@ -1331,7 +1536,11 @@ extension SettingsSearchEntry {
         .init(title: "Quran Tips & Tricks", path: "Quran Settings", keywords: tipKeywords + " reader mushaf tajweed word search", destination: .tips(.quran)),
         .init(title: "Hadith Tips & Tricks", path: "Hadith Settings", keywords: tipKeywords + " bookmark search reference", destination: .tips(.hadith)),
         .init(title: "Islam Tips & Tricks", path: "Islam Settings", keywords: tipKeywords + " tasbih dua dhikr names alphabet", destination: .tips(.islam)),
-    ]
+    ].filter { entry in
+        // An area this app compiles out has no list to open (`TipArea.offered`).
+        guard case .tips(let area?) = entry.destination else { return true }
+        return TipArea.offered.contains(area)
+    }
 }
 
 private struct SpotlightCard: View {
@@ -1350,6 +1559,13 @@ private struct SpotlightCard: View {
 
     var body: some View {
         let tint = tip.area.tint
+        // Islam wears both of Al-Islam's colours (`TipArea.secondaryTint`), yellow into green, on the
+        // card as on its chip: at one strength corner to corner, since the one-colour fade left the
+        // green end at 0.07 and the edge plain yellow, so the card read as a Prayer Times card.
+        let wash: [Color] = tip.area.secondaryTint.map { [tint.opacity(0.15), $0.opacity(0.15)] }
+            ?? [tint.opacity(0.16), tint.opacity(0.07)]
+        let edge: [Color] = tip.area.secondaryTint.map { [tint.opacity(0.4), $0.opacity(0.4)] }
+            ?? [tint.opacity(0.28), tint.opacity(0.28)]
         VStack(alignment: .leading, spacing: 8) {
             AccentIconChip(systemImage: tip.systemImage, tint: tint,
                            secondaryTint: tip.area.secondaryTint, size: 34)
@@ -1385,12 +1601,11 @@ private struct SpotlightCard: View {
         // has nothing behind it to bend and showed no surface at all in the light themes.
         .background(
             RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
-                .fill(LinearGradient(colors: [tint.opacity(0.16), (tip.area.secondaryTint ?? tint).opacity(0.07)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: wash, startPoint: .topLeading, endPoint: .bottomTrailing))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous)
-                .strokeBorder(tint.opacity(0.28), lineWidth: 1)
+                .strokeBorder(LinearGradient(colors: edge, startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         )
         .contentShape(RoundedRectangle(cornerRadius: Self.cornerRadius, style: .continuous))
     }

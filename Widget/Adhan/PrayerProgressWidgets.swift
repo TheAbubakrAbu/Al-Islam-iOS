@@ -96,12 +96,14 @@ struct PrayerWidgetContextRow: View {
                 VStack(alignment: alignment, spacing: 2) {
                     date
                     city
+                    WidgetWeatherChip(weather: entry.weather)
                 }
             } else {
                 HStack(spacing: 8) {
                     date
                     Spacer(minLength: 0)
                     city
+                    WidgetWeatherChip(weather: entry.weather)
                 }
             }
         }
@@ -123,6 +125,24 @@ struct PrayerWidgetContextRow: View {
 
                 Text(entry.currentCity)
             }
+        }
+    }
+}
+
+/// The weather beside a widget's city: the condition's symbol and the temperature, in whatever font
+/// and colour the line around it wears. Nothing at all without a fresh reading (SkyWeather.swift),
+/// so a widget with the weather off is laid out exactly as before.
+struct WidgetWeatherChip: View {
+    let weather: SkyWeather?
+
+    var body: some View {
+        if let weather {
+            HStack(spacing: 3) {
+                Image(systemName: weather.symbolName)
+                Text(weather.temperatureText)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(weather.conditionText), \(weather.temperatureText)")
         }
     }
 }

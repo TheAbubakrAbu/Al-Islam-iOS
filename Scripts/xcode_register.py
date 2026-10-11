@@ -62,11 +62,13 @@ def register(new_path: str, like: str) -> None:
         if not entry:
             sys.exit(f"{like_name}: build file {like_build} is in no {phase} phase list")
         text = text[:entry.end()] + f"\n\t\t\t\t{new_build} /* {new_name} in {phase} */," + text[entry.end():]
-    # Group membership.
-    child = re.search(r"^\t\t\t\t" + like_ref + r" /\* " + re.escape(like_name) + r" \*/,$", text, re.M)
+    # Group membership. Nested groups (iPhone/Adhan/Sky since the 2026-10-07 regrouping) indent their
+    # children one tab deeper per level, so the new line copies the sibling's indentation.
+    child = re.search(r"^(\t{4,})" + like_ref + r" /\* " + re.escape(like_name) + r" \*/,$", text, re.M)
     if not child:
         sys.exit(f"{like_name}: not a child of any group")
-    text = text[:child.end()] + f"\n\t\t\t\t{new_ref} /* {new_name} */," + text[child.end():]
+    indent = child.group(1)
+    text = text[:child.end()] + f"\n{indent}{new_ref} /* {new_name} */," + text[child.end():]
     PBX.write_text(text)
     print(f"{new_name}: registered like {like_name} ({len(additions)} phase(s))")
 

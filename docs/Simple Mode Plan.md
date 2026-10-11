@@ -353,6 +353,6 @@
 - [ ] **Step 3: The full UnitTests run** (`-only-testing:UnitTests`).
   - Launch once with `-displayQiraah ""` first (the riwayah seed trap).
   - Expected: no new failures. Rerun any CarPlay failure isolated.
-- [ ] **Step 4:** `python3 Scripts/check_cloud_manifest.py` passes. `grep -rn "—"` over the touched files returns nothing.
+- [ ] **Step 4:** `python3 Scripts/check_cloud_manifest.py` passes. A search of the touched files for the em dash character (U+2014) finds nothing.
 - [ ] **Step 5: Review.** Dispatch a fresh `agent-skills:code-reviewer` on `git diff` for these files. Fix every confirmed finding.
 - [ ] **Step 6:** Update the memory (Simple Mode's new rules, the More menu, the splash step, the tracker gate) and the guide's status table. Tell Abu what is modified and what the commit would contain; do not commit.

@@ -66,7 +66,7 @@ More menu: Today, History, Browse by Theme, Word of the Day, Qiraat Explorer, Qu
 | Top Previous/Next surah pair | the bottom pair (both slots always render) |
 | The ▶ `play.circle` menu on each ayah | the ⋯ menu's Play This Ayah; More Actions… for the rest |
 | The long ⋯ menu (13 items, 35 actions, 5 submenus) | ⋯ shows Play This Ayah (Hafs only), Bookmark or Remove Bookmark, See Tafsir, Copy Ayah, Share Ayah, a divider, More Actions… (opens the long-press actions sheet, `requestSheet(.actions)`) |
-| "Saheeh International" caption under the translation | dropped while only one translation shows |
+| "Saheeh International" caption under the translation | dropped while it is the only translation on screen; "Clear Quran (Mustafa Khattab)" always keeps its name, being the off-default choice (rule 2) |
 | Pinned page/juz line ("Page 42 (41/48) • Juz 3") | the inline page and juz dividers, which stay |
 | Global search button in the controls row | the Quran tab's own search |
 
@@ -90,7 +90,7 @@ Everything else stays: the top strip, the controls row, search, play, the fold c
 | Optional Times pill | Settings › Prayer Settings › Optional Prayers (exists) |
 | "Showing prayers for" date stepper, with Compare Today | the Prayer Calendar (toolbar); Compare Today dropped (rule 3) |
 | AT A GLANCE (12 tiles) | each destination keeps another door: the calendar button, the Qibla compass, the city pill, the sky's moon; the figures are dropped (rule 3) |
-| PRAYER TRACKER section | shown once any prayer has been marked in the last 14 days; marking one from a prayer's detail (tap its tile) brings it back |
+| PRAYER TRACKER section | shown once any prayer has been marked in the last 14 days; marking one from a prayer's detail (tap its tile) brings it back; its History & Insights page is a Prayer Tracker row in Settings › Prayer Settings (both modes) |
 | NEED A HAND? | Settings |
 | Travel footer under the prayer list | the traveling banner at the top, which stays |
 
@@ -126,7 +126,7 @@ More menu: Today, Topics, Encyclopedia, History; divider; Show as Grid or Show a
 | NEED A HAND? | Settings |
 | AL-ISLAMIC APPS | the Settings tab's copy, which stays |
 
-Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FAITH & PRACTICE, More Resources, Reminder of the Day. The toolbar is unchanged (grid toggle, gear). The iPad and Mac sidebar folds the same three sections the same way.
+Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FAITH & PRACTICE, More Resources, Reminder of the Day. The toolbar is unchanged (grid toggle, gear). The iPad and Mac sidebar keeps every section (as built 2026-10-10): its detail column cannot host the More Resources screen, whose tiles push onto the iPhone stack's path, and a sidebar is a list of places anyway. The quote card and AL-ISLAMIC APPS step aside there too.
 
 ### Settings tab (SettingsView.swift)
 
@@ -165,11 +165,13 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 - Check in planning that nothing outside the Adhan tab relies on the launch request: the Islam tab's locators, the Qibla screens, the widgets. Each must still work, or ask in context.
 - Al-Quran has no Adhan tab, so it would never ask. At the next sibling sync, confirm it needs no location; if it does, call the same hook at reveal.
 
+**2026-10-11, the permissions sheet (Abu: "have location and notification permissions come as a separate sheet").** The bare system prompts no longer lead. When the Adhan tab is first in front after the welcome and either permission is `.notDetermined`, it presents `PermissionsSheet` (iPhone/Adhan/Location/PermissionsSheet.swift): one card per permission with its status pill and its own Allow button, and a primary button that asks for both in turn (location first). Not Now (or a swipe) snoozes whatever is still unanswered for a day through the same `locationAlertSnoozedUntil` / `notificationAlertSnoozedUntil` keys the nags use, and while a snooze stands the tab refreshes WITHOUT raising a system prompt (`requestNotificationAuthorization(askIfUndetermined: false)`, and `requestLocationIfUndetermined` is skipped). The sheet is the one door to those prompts from the tab; Settings' Request Access still asks on demand. `PermissionsSheet.shouldPresent` is the pure rule (SkyWeatherTests pins it). DEBUG: `-skipNotificationPrompt` never shows it (every headless recipe, and the UI tests above still see the bare location prompt), `-showPermissionsSheet` always does.
+
 ## Splash: choosing Simple or Full (SplashScreen.swift)
 
 - **Step one** is unchanged except for its clipped last row ("...see it on the App Store." is cut off behind the app-family hero). Page one must fit the iPhone 17 Pro at the default text size again; measure before touching it.
 - **Step two.** On a first launch, step one's button (Get Started, or Done after an App Store tap) moves to step two in place; it is not a new root stage. Its title is "How much would you like to see?", above two option cards in About You's option-card grammar (icon tile, title, caption, radio):
-  - Simple: "Prayer times, the Quran and the essentials. Everything else is one tap away."
+  - Simple: "Prayer times, the Quran and the essentials, with the extras tucked away until you want them." (As first written it said "Everything else is one tap away", which the More Resources screen and the dropped details made untrue; changed after the review.)
   - Full: "Every tool, shortcut and detail, right on screen."
   - Full is preselected. The footnote reads "You can change this any time in Settings › Simple Mode."
   - Continue (primary) writes `settings.simpleMode` once, then ends the splash through the existing `firstLaunch = false`. Back (secondary text button) returns to step one.
@@ -187,9 +189,9 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 
 ## Small fixes along the way (everyone)
 
-- "Play Custom Range" sits in both the Repeat Ayah and the Play Ayah submenus. Keep it only under Play Ayah, at all three parity sites: ContextMenu.swift's menu items, `AyahRow.menuBlock`, `AyahActionsSheet`.
-- Repeat counts run Forever, 20 down to 2 in the reader's play menu, and 2 up to 20, then Forever, in the ayah menus. Use the ayah menus' order everywhere.
-- The actions sheet's Compare Ayah tile is a menu even when it holds a single item. Make it a plain button then.
+- **Done:** the actions sheet's Compare Ayah tile is a plain button when it holds a single choice.
+- **Kept, on reading the code:** "Play Custom Range" in both the Repeat Ayah and Play Ayah submenus is deliberate (a custom range repeats too; the code says so). The reader's play menu counts Forever, 20 down to 2 because it opens upward from the bottom bar, which puts 2 by the thumb, as 2 is in the ayah menus that open downward.
+- **Tips:** the tips that teach a control Simple Mode removes (the layout menu, the Optional Times pill, the date picker, At a Glance, the shuffles, the summary doors, Need a Hand?) are not offered while Simple Mode is on (`TipCatalog.outsideSimpleMode`).
 
 ## Architecture
 
@@ -245,19 +247,21 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | The kit and Settings: SimpleMode.swift, the More menu, `SectionPillHeader` (the Simple trims and the trash), the SIMPLE MODE section's move and caption, the search entry, the tip, the "Too Much on Screen?" door | |
-| 2 | Quran tab root | |
-| 3 | List and page readers: the ayah ⋯ menu and the small menu fixes | |
-| 4 | Adhan tab, and the Prayer Times Layout row | |
-| 5 | Hadith tab: the root, the book and the reading screens | |
-| 6 | Islam tab and More Resources | |
-| 7 | For everyone: both trash buttons, settings pages leading with settings, the slim permission card, the nag snooze, location after the welcome | |
-| 8 | Splash step two and the clipped row | |
-| 9 | The verification sweep and the memory update | |
+| 1 | The kit and Settings: SimpleMode.swift, the More menu, `SectionPillHeader` (the Simple trims and the trash), the SIMPLE MODE section's move and caption, the search entry, the tip, the "Too Much on Screen?" door | done 2026-10-10/11 |
+| 2 | Quran tab root | done 2026-10-10/11 |
+| 3 | List and page readers: the ayah ⋯ menu and the small menu fixes | done 2026-10-10/11 |
+| 4 | Adhan tab, and the Prayer Times Layout row | done 2026-10-10/11 |
+| 5 | Hadith tab: the root, the book and the reading screens | done 2026-10-10/11 |
+| 6 | Islam tab and More Resources | done 2026-10-10/11 |
+| 7 | For everyone: both trash buttons, settings pages leading with settings, the slim permission card, the nag snooze, location after the welcome | done 2026-10-10/11 |
+| 8 | Splash step two and the clipped row | done 2026-10-10/11 |
+| 9 | The verification sweep and the memory update | done 2026-10-10/11 |
 
 Each phase ends with a Debug build and its screens' Simple and Full screenshots. Phase 7 does not depend on Simple Mode and can ship on its own.
 
 ## Progress log
+
+- **2026-10-11, the Adhan tab's sky.** Three things Abu asked for the same day, none of them Simple Mode but all on this tab: Sky Fills the Screen (`skyFillsAdhanTab`, off; `SkyPageBackground` under the whole List, rows on `SkyPageFill.rowColor`, dark scheme on the content only), Apple Weather on the sky (`skyShowsWeather`, OFF and opt-in because the location string promises the location stays on the device; SkyWeather.swift is the shared model and tint, SkyWeatherStore.swift the app-only fetch with a half-hour cadence and the app-group cache the widgets read; Al-Islam ONLY behind the project-level `HAS_WEATHER` flag, which both sync manifests skip, so the companion apps compile none of it and the splash names it among Al-Islam's exclusives with iCloud Backup, Tips & Tricks and the stickers), and the permissions sheet above. The automatic-change dialogs were rewritten to one short sentence and two plain buttons (`Settings.AutoChangeCard`).
 
 - **2026-10-10, Task 1 (kit and rules).** Added `iPhone/Helpers/UI/SimpleMode.swift` (the catalog comment and `SimpleMoreMenu`, iPhone target only) and `enum SimpleMode` at the end of SettingsAdhan.swift (the tracker gate and the snooze; the Widget compiles that file). Added `Settings.trackerMarkedRecently(now:)`, a new rule in the `simpleMode` doc comment, and `UnitTests/SimpleModeTests.swift` with 3 tests, all passing. The flip test settles the host launch first: an unsettled run blamed the flip for `surahOpenCountsData`, which the launch's reopened reader writes. `Scripts/xcode_register.py` cannot place a file in a group indented five tabs deep (iPhone/Helpers/UI); an indentation-tolerant copy did it. Full Debug build EXIT 0.
 - **2026-10-10, Task 2 (headers and the trash).**
@@ -292,3 +296,62 @@ Each phase ends with a Debug build and its screens' Simple and Full screenshots.
   - **The tracker** shows only after a mark within 14 days (`showsTracker`).
   - **New:** a Prayer Times Layout picker in Prayer Settings (same `prayerDisplayModeV2` key, iOS only) and its search entry.
   - Screenshots: Simple Adhan ends at the Rakaah Guide; the Prayer Settings picker reads Split.
+- **2026-10-10, Task 7 (Hadith).**
+  - **Toolbar:** a More menu (Today, Topics, Encyclopedia, History, Show as Grid/List; `SummaryDoor.daily`) and the gear.
+  - **Summary:** tiles only. No Today pill, no +/− expander, no door chips; the section is skipped when there are no tiles.
+  - **Books:** tiles drop the stats and era (height 100 to 72); rows drop the stat chips and era.
+  - **Book screen:** no CHAPTERS stat pills, chapter count pills or ranges (the grid tile shrinks from 76 to 60).
+  - **Reader:** the top chapter pair is hidden, and `showsTopChapterNav` re-aims both scroll targets.
+  - **VoiceOver bug, menu items:** a `square.grid.2x2.fill` icon made a menu item read as "Large Grid" instead of its title. Topics is now `tag.fill` and Browse by Theme `rectangle.stack.fill`.
+  - **VoiceOver bug, a failed fix:** hiding the icon from accessibility emptied EVERY item's label, so `SimpleMoreMenuItem` stays a plain `Label`.
+  - UITest `testHadithMoreMenuOpensTopics` passes; it checks Topics and Show as Grid by name.
+- **2026-10-10, Task 8 (Islam).**
+  - **Folding:** TOOLS, SIGNS & PROOFS and ASK AI fold into a More Resources row (`IslamDestination.moreResources`, pushed by value, never `available`). Its screen lists them in the tab's grid or list form.
+  - **Row tap:** a plain Button there never took the tap in the UI test, so the row is a `GridTileMenu` (with "Open More Resources" on the hold), as the banners are.
+  - **Also hidden:** the quote card and AL-ISLAMIC APPS.
+  - UITest `testIslamMoreResourcesListsTools` passes. The `-islamDestination moreResources` screenshot shows the folded groups.
+- **2026-10-10, Task 9 (Settings and finding it).**
+  - SIMPLE MODE now sits under the hub in both modes, with a new caption.
+  - In Simple the spotlight is one All Tips & Tricks row under "TIPS & TRICKS".
+  - New Settings search entry (destination `.simpleMode`, `-settingsOpen simpleMode`) on a `SimpleModeSettingsView` page.
+  - New tip `app.simple`, and the Islam door `islam.simple` ("Too Much on Screen?", Full only).
+  - Unit test `testSimpleModeIsSearchable` passes.
+- **2026-10-10, Task 10 (Quick Search Help trash).** Both tabs:
+  - a trash beside the + while folded
+  - the dialog hung on the list, not the card
+  - removed means recents only, and no card without recents
+  - Quran and Hadith Settings carry the "Quick Search Help" switch
+  - both keys are preferences in CloudManifest
+- **2026-10-10, Task 11 (settings lead with settings).** On five pages, Tips and Need a Hand? move to the foot, above ADVANCED. The permission card is one "Notifications Allowed" row (redacted while loading) unless authorization, alerts or sounds are not fully on.
+- **2026-10-10, Task 12 (nags wait a day).** `locationAlertSnoozedUntil` and `notificationAlertSnoozedUntil` (device-only). Any dismissal but Never Ask Again snoozes for `SimpleMode.nagSnooze`. Unit test `testSnoozeSetsADay` passes.
+- **2026-10-10, Task 13 (location after the welcome).**
+  - **Launch:** `Settings.init` calls `startLocationAtLaunch()`, which only starts the network monitor while undetermined (the watch keeps its launch request).
+  - **Adhan tab:** `askLocationThenRefresh()` asks location first, then runs the refresh that carries the notification question. A one-shot waiter in `didChangeAuthorization` sequences the two.
+  - **Off-screen at reveal:** location waits for the tab; the refresh runs as before.
+  - **Audit:** the Masjid and Halal Food locators already request in context; widgets read the app group.
+  - **Next sibling sync:** Al-Quran has no Adhan tab, so confirm it needs no location.
+- **2026-10-10, Task 14 (splash).**
+  - **Step two:** a Simple or Full step (Full preselected; Back and Continue; `-splashStep 2`). Continue writes `simpleMode` once, then ends the splash; the sheet never reaches the step.
+  - **Step one:** the clipped last row is fixed by `heroFraction` 0.8 to 0.74. Measured: the card's bottom edge now clears the hero on the 17 Pro.
+- **2026-10-11, Task 15 (sweep and review).**
+  - **Tests:**
+    - The full UnitTests suite: 299 tests, 16 skipped, and 2 `AdhanCatchUpOfferTests` failures. The run landed one minute after Fajr in the sim's city, and the live host app was really playing the catch-up adhan. All 7 pass in isolation.
+    - `SimpleModeTests`: all 5 pass.
+    - `SimpleModeUITests`: the More menus, the ayah menu, More Resources, the splash choice, the location timing, the Quick Search Help trash and the Hadith book all pass.
+  - **Screenshots:** Simple and Full in dark and light, at an accessibility size, and on an iPad Pro 13-inch split view (the More menu sits in each sidebar).
+  - **Review fixes:**
+    - (critical) The Control Center "Open Qibla" control was answered only by the glance card, which Simple unmounts. AdhanView answers it now through `GlanceCard.qiblaValues`.
+    - Islam search's "Scroll To" for a folded resource scrolls to the More Resources row.
+    - The iPad column migration never carries `.moreResources` into the detail column.
+    - The moon-preview reset moved from the date footer to the section.
+    - "Too Much on Screen?" keeps its section while its sheet is up.
+    - The Mustafa caption always shows.
+    - The Need a Hand? settings caption mentions Simple.
+    - The copy no longer promises one tap for everything.
+    - The trimmed tips hide in Simple.
+    - The More menu spins while Read as Pages prepares.
+    - A Prayer Tracker row in Prayer Settings.
+    - Simple Mode's switch is iOS-only.
+    - Landscape drops its page/juz line too.
+    - The divider rows keep feeding the last-read anchor in Simple (rule 1).
+  - **Declined:** moving `SimpleMoreMenu`'s tint to `@Environment(\.appearance)`, because it sits in a toolbar, where environment objects have not always arrived in this app.
