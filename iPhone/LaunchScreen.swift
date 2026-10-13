@@ -438,6 +438,21 @@ struct LaunchLogoCard: View {
     var layoutScale: CGFloat = 1
     var showShimmer: Bool = true
 
+    /// The icon artwork at a size the card can use. The "<title>" asset is the 1024 px marketing
+    /// image, which the watch decoded whole for a 146 pt card: 4 MB of bitmap and the decode on the
+    /// launch path (it was the whole "Image IO" line of the watch's footprint). The watch draws the
+    /// 300 px "<title> Tile" twin instead when the catalog has one (a 2x face shows the card at 292 px,
+    /// so it stays crisp); the phone keeps the full image, where the card is larger and the decode is
+    /// nothing.
+    private var logoImage: Image {
+        #if os(watchOS)
+        if UIImage(named: "\(title) Tile") != nil {
+            return Image("\(title) Tile")
+        }
+        #endif
+        return Image(title)
+    }
+
     var body: some View {
         let s = layoutScale
         let outer: CGFloat = 170 * s
@@ -502,7 +517,7 @@ struct LaunchLogoCard: View {
                 }
             #endif
 
-            Image(title)
+            logoImage
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .cornerRadius(imgCr)

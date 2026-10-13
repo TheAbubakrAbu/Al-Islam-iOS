@@ -13,6 +13,10 @@ enum ShareAyahRender {
     static let maxImageWidth: CGFloat = 440
 }
 
+/// The share sheet's Smart Ayah Matching switch (`smartAyahMatching` below), and what the static Copy
+/// Image path reads for the same answer: one key, so the two can never drift apart.
+private let qiraahSmartComparisonKey = "qiraahSmartComparison"
+
 struct ShareAyahSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
@@ -44,7 +48,7 @@ struct ShareAyahSheet: View {
 
     // Same preference the comparison sheet stores: follow the WORDS across riwayat (numbering differs),
     // not the raw number.
-    @AppStorage("qiraahSmartComparison") private var smartAyahMatching = true
+    @AppStorage(qiraahSmartComparisonKey) private var smartAyahMatching = true
 
     @State private var didInit = false
     @State private var didFinishInitialSetup = false
@@ -1111,9 +1115,23 @@ extension ShareAyahSheet {
             // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
             // Same phone-like clamp as the share-sheet render - see `ShareAyahRender.maxImageWidth`.
             let screenWidth = min(UIScreen.main.bounds.width, ShareAyahRender.maxImageWidth)
+            // The Hafs ayah whose transliteration and translations the card prints. With Smart Ayah
+            // Matching on (the share sheet's switch, on by default) it is the anchor of the tapped WORDS,
+            // so under a merged or shifted riwayah numbering the English matches the Arabic on the card
+            // rather than Hafs's verse of the same number (the sheet's `translationAyah`; this path
+            // passed the ayah itself and printed Hafs 2:9's translation under Warsh 2:9's words).
+            // A static path, so the sheet's `@AppStorage` is out of reach: the same key, read raw.
+            let smartMatching = UserDefaults.standard.object(forKey: qiraahSmartComparisonKey) as? Bool ?? true
+            let hafsAyah: Ayah = {
+                guard smartMatching else { return ayah }
+                let anchor = QiraahComparison.hafsAnchor(surahID: surah.id, ayahNumber: ayah.id,
+                                                         tag: Settings.normalizeLegacyRiwayahTag(settings.displayQiraah),
+                                                         quranData: QuranData.shared)
+                return surah.ayahs.first(where: { $0.id == anchor }) ?? ayah
+            }()
             DispatchQueue.global(qos: .userInitiated).async {
                 // The remembered backdrop (the share sheet's chips), so Copy Image matches the last share.
-                let img = composeCard(surah: surah, ayah: ayah, hafsAyah: ayah, shareSettings: shareSettings, settings: settings,
+                let img = composeCard(surah: surah, ayah: ayah, hafsAyah: hafsAyah, shareSettings: shareSettings, settings: settings,
                                       qiraah: Settings.normalizeLegacyRiwayahTag(settings.displayQiraah),
                                       includeNote: includeNote, noteText: noteText, screenWidth: screenWidth,
                                       backdrop: .stored)

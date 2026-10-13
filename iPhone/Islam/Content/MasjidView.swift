@@ -499,8 +499,12 @@ struct PlaceLocatorView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         // Identity by object, not position: when a new search replaces `results`, rows are
-                        // replaced rather than morphing one place's text into another's in place.
-                        ForEach(results, id: \.self) { item in
+                        // replaced rather than morphing one place's text into another's in place. By the
+                        // object's identity, never `\.self`: MapKit can return one place twice (a category
+                        // search and a text search both finding it), two map items that compare equal, and
+                        // SwiftUI traps on duplicate ForEach keys ("Duplicate keys of type 'MKMapItem'",
+                        // the 2026-10-12 stress walk, Halal Food Locator).
+                        ForEach(results, id: \.rowIdentity) { item in
                             HStack(alignment: .top, spacing: 10) {
                                 HStack(alignment: .top, spacing: 10) {
                                     Image(systemName: "mappin.and.ellipse")
@@ -708,7 +712,7 @@ struct PlaceLocatorView: View {
         guard !Task.isCancelled else { return }
 
         withAnimation {
-            results = items
+            results = items.withoutDuplicatePlaces()
             isSearching = false
             if selectedItem == nil || !items.contains(where: { isSameItem($0, selectedItem) }) {
                 selectedItem = items.first
@@ -740,7 +744,7 @@ struct PlaceLocatorView: View {
         let cachedItems = cache.items.map { $0.mapItem() }
         guard !cachedItems.isEmpty else { return }
 
-        results = cachedItems
+        results = cachedItems.withoutDuplicatePlaces()
         if selectedItem == nil {
             selectedItem = cachedItems.first
         }
@@ -910,6 +914,27 @@ private func performPlaceSearch(
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {
         PlaceLocatorView(profile: .masjid)
+    }
+}
+private extension MKMapItem {
+    /// The row's ForEach identity: this object, whatever MapKit's `isEqual:` says about another.
+    var rowIdentity: ObjectIdentifier { ObjectIdentifier(self) }
+}
+
+private extension Array where Element == MKMapItem {
+    /// The same place listed once, whichever search found it first: equal items (MapKit's own
+    /// equality, which the `\.self` identity used to key rows on) and same-name items at the same spot.
+    func withoutDuplicatePlaces() -> [MKMapItem] {
+        var seen: [MKMapItem] = []
+        var keys = Set<String>()
+        for item in self {
+            let coordinate = item.placemark.coordinate
+            let key = "\(item.name ?? "")|\(String(format: "%.5f,%.5f", coordinate.latitude, coordinate.longitude))"
+            if keys.contains(key) || seen.contains(where: { $0 === item || $0.isEqual(item) }) { continue }
+            keys.insert(key)
+            seen.append(item)
+        }
+        return seen
     }
 }
 #endif

@@ -304,7 +304,33 @@ final class QuranPlayer: ObservableObject {
     private var continueAyahItemNumbers: [ObjectIdentifier: (surahNumber: Int, ayahNumber: Int)] = [:]
     private var didHandleSingleAyahEnd = false
     
-    var player: AVPlayer?
+    var player: AVPlayer? {
+        didSet {
+            seekInFlight = false; pendingSeek = nil   // a new player has no seek in flight
+            if let old = oldValue, let observer = playheadObserver {
+                old.removeTimeObserver(observer)
+                playheadObserver = nil
+            }
+            lastKnownSeconds = 0
+            if let p = player {
+                playheadObserver = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600),
+                                                             queue: .main) { [weak self] time in
+                    self?.lastKnownSeconds = CMTimeGetSeconds(time)
+                }
+            }
+        }
+    }
+    /// The playhead as the player last reported it: a periodic observer four times a second (which also
+    /// fires on every time jump, start and stop), plus every seek's target. What the UI and the
+    /// now-playing info read. `player.currentTime()` itself takes the item's MediaToolbox lock, which a
+    /// seek, a new stream or a resume holds for seconds: the player bar's progress row read it on every
+    /// TimelineView tick and stalled the main thread 5-13 s at a time, and once for 15 minutes behind a
+    /// double seek (both sampled, 2026-10-13). Nothing on the main thread calls `currentTime()` now.
+    private(set) var lastKnownSeconds: Double = 0
+    private var playheadObserver: Any?
+    /// One seek at a time (see `seek(toSeconds:completion:)`); the latest target waits for the one in flight.
+    private var seekInFlight = false
+    private var pendingSeek: (seconds: Double, completion: (() -> Void)?)?
     private var queuePlayer: AVQueuePlayer?
     
     private var statusObserver: NSKeyValueObservation?
@@ -403,6 +429,14 @@ final class QuranPlayer: ObservableObject {
         // its way in.
         Task { @MainActor [weak self] in
             await AppReveal.waitUntilRevealed()
+            #if os(watchOS)
+            // The reveal is the START of the cover's 0.5 s dissolve, and this install (the path monitor,
+            // three audio-session observers, the remote command centre) measured ~180 ms of main thread
+            // on the watch simulator: dropped frames in the dissolve once the watch began mirroring
+            // the reveal (2026-10-12). A beat later, after the dissolve. Every play entry point
+            // installs on its way in, so nothing waits on this.
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            #endif
             self?.installAudioInfrastructureIfNeeded()
         }
 
@@ -533,6 +567,7 @@ final class QuranPlayer: ObservableObject {
             object: AVAudioSession.sharedInstance()
         )
         setupRemoteTransportControls()
+        LaunchClock.mark("audio infrastructure installed")
     }
     
     deinit {
@@ -667,9 +702,16 @@ final class QuranPlayer: ObservableObject {
     }
     #endif
 
-    /// Runs a play-start now - or, on watchOS, once the async long-form activation has an output route.
-    /// Starting the player before that completes is silently dropped by the system, which looked like
-    /// "loading forever". On iOS the session is already active synchronously, so this is a plain call.
+    /// Runs a play-start once the audio session is ready for it.
+    ///
+    /// watchOS: once the async long-form activation has an output route. Starting the player before
+    /// that completes is silently dropped by the system, which looked like "loading forever".
+    ///
+    /// iOS: through the session lane and back. `setupAudioSession` activates on `AudioSessionLane.queue`
+    /// (serial), so a start queued behind it runs only once the category is `.playback` and the session
+    /// is active. Started directly, `resumeAfterAdhan` resumed under the adhan's `.ambient` (ringer-muted,
+    /// stopped by the lock) for the tens of milliseconds the activation still took. With nothing pending
+    /// the round trip is one dispatch each way.
     private func whenAudioSessionReady(_ start: @escaping () -> Void) {
         #if os(watchOS)
         if audioSessionActivated {
@@ -679,7 +721,9 @@ final class QuranPlayer: ObservableObject {
             setupAudioSession()
         }
         #else
-        start()
+        AudioSessionLane.queue.async {
+            DispatchQueue.main.async(execute: start)
+        }
         #endif
     }
 
@@ -972,6 +1016,7 @@ final class QuranPlayer: ObservableObject {
                 if let opts = user[AVAudioSessionInterruptionOptionKey] as? UInt,
                    AVAudioSession.InterruptionOptions(rawValue: opts).contains(.shouldResume) {
                     self.whenAudioSessionReady {
+                        guard self.isPlaying else { return }   // a pause or stop got in first
                         self.player?.play()
                     }
                     self.isPlaying = true
@@ -1031,6 +1076,7 @@ final class QuranPlayer: ObservableObject {
             guard !isPlaying, player != nil || queuePlayer != nil else { return .commandFailed }
             DispatchQueue.main.async {
                 self.whenAudioSessionReady {
+                    guard self.isPlaying else { return }   // a pause or stop got in first
                     self.player?.play()
                 }
                 self.isPlaying = true
@@ -1173,7 +1219,10 @@ final class QuranPlayer: ObservableObject {
         installAudioInfrastructureIfNeeded()
         pausedDuringRepeatFetch = false
         whenAudioSessionReady { [weak self] in
-            self?.player?.play()
+            // The start lands a lane round trip later: a pause or a stop that got in first wins, or
+            // the bar would read paused over audio (the flags below are set before this runs).
+            guard let self, self.isPlaying else { return }
+            self.player?.play()
         }
         isPlaying = true; isPaused = false
         updateNowPlayingInfo()
@@ -1198,8 +1247,8 @@ final class QuranPlayer: ObservableObject {
     #endif
 
     func seek(by seconds: Double) {
-        guard let p = player else { return }
-        let current = CMTimeGetSeconds(p.currentTime())
+        guard player != nil else { return }
+        let current = lastKnownSeconds   // never `currentTime()` on main (see `lastKnownSeconds`)
         guard current.isFinite else { return }
         seek(toSeconds: current + seconds)
     }
@@ -1210,6 +1259,16 @@ final class QuranPlayer: ObservableObject {
     /// it was showing without the bar jumping back for a tick.
     func seek(toSeconds seconds: Double, completion: (() -> Void)? = nil) {
         guard let p = player, seconds.isFinite else { completion?(); return }
+        // One seek at a time on the item. Two in flight (a double tap on the position slider) had the
+        // first's completion read `currentTime()` under the item's MediaToolbox lock while the second
+        // seek held it, and the main thread sat in that mutex for 15 minutes (sampled on the iPad
+        // stress walk, 2026-10-13; the unexplained 15-minute Mac freeze of 10-12 had an ayah playing
+        // too). The later target waits for the one in flight and then wins; its completion runs then.
+        if seekInFlight {
+            pendingSeek?.completion?()
+            pendingSeek = (seconds, completion)
+            return
+        }
         var target = seconds
         if let item = p.currentItem {
             let dur = CMTimeGetSeconds(item.duration)
@@ -1217,12 +1276,22 @@ final class QuranPlayer: ObservableObject {
         }
         target = max(0, target)
         // Timescale 600, not 1: a timescale of 1 quantizes the seek to whole seconds.
+        seekInFlight = true
+        let sought = target
+        lastKnownSeconds = target   // the scrubber lands at once; the observer confirms when the seek does
         p.seek(to: CMTime(seconds: target, preferredTimescale: 600)) { _ in
             // AVPlayer invokes seek completions on an internal queue - hop before touching
             // published/persisted state (same as the Control Center scrub handler does).
             DispatchQueue.main.async {
-                self.updateNowPlayingInfo(); self.saveLastListenedSurah(); self.saveLastListenedAyah()
+                guard self.player === p else { return }   // the player was replaced meanwhile
+                self.seekInFlight = false
+                // The time asked for, never `currentTime()` here: that read takes the item's lock.
+                self.updateNowPlayingInfo(elapsed: sought); self.saveLastListenedSurah(); self.saveLastListenedAyah()
                 completion?()
+                if let next = self.pendingSeek {
+                    self.pendingSeek = nil
+                    self.seek(toSeconds: next.seconds, completion: next.completion)
+                }
             }
         }
     }
@@ -1280,6 +1349,10 @@ final class QuranPlayer: ObservableObject {
         // A next-ayah download still in flight belongs to the recitation being stopped.
         continueToken = UUID()
         continueAwaitedPosition = nil
+        // A recitation stopped DURING a call is not resumed when the call ends: the flag is armed at
+        // `.began` and only `.ended` cleared it, so the bar came back "playing" over no player (R2,
+        // through the stop door).
+        resumeAfterInterruption = false
 
         // Persist position OUTSIDE withAnimation: these write @AppStorage-backed settings, which republish
         // observing screens (e.g. SurahView). Animating that republish mid-scroll makes the reading view
@@ -1807,7 +1880,7 @@ final class QuranPlayer: ObservableObject {
         guard repeatRemaining <= 1 else { return }   // a repeat replays the same surah; nothing to prewarm
         guard let p = player, let item = p.currentItem else { return }
         let dur = CMTimeGetSeconds(item.duration)
-        let cur = CMTimeGetSeconds(p.currentTime())
+        let cur = lastKnownSeconds   // never `currentTime()` on main (see `lastKnownSeconds`)
         guard dur.isFinite, dur > 0, cur.isFinite else { return }
         let remaining = dur - cur
         guard remaining > 0, remaining <= surahPrewarmLeadTime else { return }
@@ -2871,7 +2944,7 @@ final class QuranPlayer: ObservableObject {
     /// One `-playbackProbe` line: where the recitation is and what the player says it is doing.
     func logPlaybackProbe() {
         guard let p = player else { return }
-        let seconds = CMTimeGetSeconds(p.currentTime())
+        let seconds = lastKnownSeconds
         let reason = p.reasonForWaitingToPlay?.rawValue ?? "-"
         NSLog("PLAYBACKPROBE %ld:%ld t=%.2f rate=%.1f tcs=%ld reason=%@ playing=%d loading=%d queued=%ld",
               currentSurahNumber ?? 0, currentAyahNumber ?? 0, seconds.isFinite ? seconds : -1,
@@ -3129,7 +3202,9 @@ final class QuranPlayer: ObservableObject {
         }
     }
     
-    private func updateNowPlayingInfo(clear: Bool = false) {
+    /// - Parameter elapsed: the position to report when the caller already knows it (a seek's target):
+    ///   `currentTime()` takes the item's lock, which a seek in flight holds (see `seek`).
+    private func updateNowPlayingInfo(clear: Bool = false, elapsed: Double? = nil) {
         let cmd = MPRemoteCommandCenter.shared()
         if clear {
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -3147,7 +3222,7 @@ final class QuranPlayer: ObservableObject {
         if let dur = player?.currentItem?.duration {
             info[MPMediaItemPropertyPlaybackDuration] = CMTimeGetSeconds(dur)
         }
-        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = CMTimeGetSeconds(player?.currentTime() ?? .zero)
+        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed ?? lastKnownSeconds
         info[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
         if let artwork = Self.nowPlayingArtwork {
             info[MPMediaItemPropertyArtwork] = artwork
@@ -3172,7 +3247,7 @@ final class QuranPlayer: ObservableObject {
         let rec = playbackReciter ?? settings.resolvedSelectedReciterIgnoringRandom()
         guard let rec else { return }
 
-        let currDur = CMTimeGetSeconds(p.currentTime())
+        let currDur = lastKnownSeconds   // never `currentTime()` on main (see `lastKnownSeconds`)
         let fullDur = CMTimeGetSeconds(p.currentItem?.duration ?? .zero)
 
         if isPlayingSurah, let sur = quranData.quran.first(where: { $0.id == num }) {

@@ -319,51 +319,36 @@ final class QiblaTests: XCTestCase {
         XCTAssertFalse(Self.isTrustworthy(accuracy: nil), "no sample")
     }
 
-    // MARK: - Reference implementations
+    // MARK: - The shipped rules
     //
-    // These mirror the private logic under test. `QiblaView`'s helpers and `LocalQiblaCompass`'s
-    // guards are private to the view layer, so the tests above pin the BEHAVIOUR against an
-    // independent statement of it: if the shipped rule changes, these have to be updated
-    // deliberately, which is the point.
+    // Thin forwarders to the production statics (`QiblaView`, `LocalQiblaCompass`), so a change to a
+    // shipped rule fails the tests above. Until 2026-10-11 these were private RE-IMPLEMENTATIONS of
+    // the rules, which no regression in the view could ever fail: swapping the two landscape cases in
+    // `LocalQiblaCompass.headingOrientation(for:)` left every test green.
 
     private static func normalized(_ value: Double) -> Double {
-        var degrees = value.truncatingRemainder(dividingBy: 360)
-        if degrees < 0 { degrees += 360 }
-        return degrees
+        LocalQiblaCompass.normalizedDegrees(value)
     }
 
     private static func signedDelta(from lhs: Double, to rhs: Double) -> Double {
-        var delta = (rhs - lhs).truncatingRemainder(dividingBy: 360)
-        if delta > 180 { delta -= 360 }
-        if delta < -180 { delta += 360 }
-        return delta
+        LocalQiblaCompass.signedDegrees(rhs - lhs)
     }
 
     private static func isUsable(latitude: Double, longitude: Double) -> Bool {
-        abs(latitude) <= 90 && abs(longitude) <= 180
+        LocalQiblaCompass.isUsable(latitude: latitude, longitude: longitude)
     }
 
-    private static let minimumAlignmentTolerance: Double = 3
-    private static let maximumAlignmentTolerance: Double = 15
-
     private static func alignmentTolerance(for accuracy: Double?) -> Double {
-        guard let accuracy, accuracy > 0 else { return minimumAlignmentTolerance }
-        return min(maximumAlignmentTolerance, max(minimumAlignmentTolerance, accuracy))
+        QiblaView.alignmentTolerance(forAccuracy: accuracy)
     }
 
     private static func isTrustworthy(accuracy: Double?) -> Bool {
-        guard let accuracy else { return false }
-        return accuracy > 0 && accuracy <= maximumAlignmentTolerance
+        QiblaView.isTrustworthy(accuracy: accuracy)
     }
 
     #if os(iOS)
     private static func headingOrientation(for interface: UIInterfaceOrientation) -> CLDeviceOrientation {
-        switch interface {
-        case .portraitUpsideDown: return .portraitUpsideDown
-        case .landscapeLeft: return .landscapeRight
-        case .landscapeRight: return .landscapeLeft
-        default: return .portrait
-        }
+        LocalQiblaCompass.headingOrientation(for: interface)
     }
     #endif
 
@@ -371,7 +356,7 @@ final class QiblaTests: XCTestCase {
     /// the shipped spherical bearing can be from a geodesic one.
     private static func geodesicBearingToKaaba(latitude: Double, longitude: Double) -> Double {
         let kaabaLatitude = 21.4225241, kaabaLongitude = 39.8261818
-        let a = 6_378_137.0, f = 1 / 298.257223563
+        let f = 1 / 298.257223563
         let L = (kaabaLongitude - longitude) * .pi / 180
         let U1 = atan((1 - f) * tan(latitude * .pi / 180))
         let U2 = atan((1 - f) * tan(kaabaLatitude * .pi / 180))

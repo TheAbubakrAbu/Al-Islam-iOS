@@ -19,7 +19,12 @@ One at a time:
 | `launch.sh <udid> [runs]` | `-launchTiming` medians per start screen |
 | `tripwire.sh <udid>` | lldb backtrace of the first appearance-default read |
 | `tsan.sh <udid>` | the Thread Sanitizer flows (needs a TSan build in `$QA_OUT/dd-tsan`) |
-| `mac-sweep.sh <tag> [screens.txt]` | the sweep on "My Mac (Designed for iPad)", one hosted `HostSmokeTests` run per screen |
+| `mac-sweep.sh <tag> [screens.txt]` | the sweep on "My Mac (Designed for iPad)", one hosted `HostSmokeTests` run per screen (held at `_dyld_start` on this Mac since 2026-09-29, see stress-mac.sh) |
+| `stress-sim.sh <udid> <tag> <steps> <seed> [args]` | one in-process stress walk (`-stressWalk`, StressWalker.swift) on a simulator: crash reports, HANG markers, the trail |
+| `stress-mac.sh <tag> <steps\|restore> <seed> [args]` | the same walk on "My Mac (Designed for iPad)", launched by Xcode through AppleScript (`write_mac_scheme.py` + `xcode-run-mac.scpt`); `restore` puts the container back after a crashed walk |
+| `stress-mac-seeds.sh <steps> <seed...>` | consecutive Mac walks, one result line each, then the restore pass |
+| `stress-screens.sh <sim\|mac> <udid\|-> <tag> <steps>` | one walk per `screens.txt` line, started with that screen's arguments ("start deep"); on the Mac the lines that write defaults are skipped |
+| `ipsreport.py [report.ips ...]` | one crash report in a few lines: where it ran, the message, the crashing thread, StressWalker on a stack or not |
 
 `screens.txt` lines are `name|seconds|launch arguments`; a line starting with `!` runs a shell command with
 the app terminated. Set state with launch arguments (`-seedBool`, `-seedString`, `-displayQiraah ""`): on the
@@ -34,3 +39,12 @@ The test targets (Quality Guide T7): `xcodebuild test -scheme iPhone -destinatio
 for the 81 unit tests; `-only-testing:UITests` for the XCUITest sweep and the seeded monkey, with
 `TEST_RUNNER_QA_SCREENS="$(cat Scripts/qa/screens.txt)"`, `TEST_RUNNER_QA_ORIENTATION=landscape` (the app's
 own `-landscape` no longer rotates on iPadOS 27) and `TEST_RUNNER_QA_MONKEY_STEPS=150` on the command line.
+
+The stress walk (2026-10-12): `-stressWalk <steps> -stressSeed <n>` makes the app drive itself (accessibility
+activations, double taps, pops, tabs, scrolls, Mac window resizes, settings storms, deep links, playback,
+hostile text, second windows), logging `STRESS <step> <action> | <screen>`; it snapshots and restores the
+container around the walk, so a Mac run leaves the installed app's data as it found it. Add the two arguments
+to the Run scheme to watch a walk in Xcode. On this Mac only Xcode's launcher gets a development build past
+`_dyld_start`; `stress-mac.sh` strips WeatherKit from the entitlements for the build and restores the file.
+The step-by-step procedure for a Mac sweep (checks, batches, how to judge a crash or a HANG, the traps) is
+`docs/Mac Crash Sweep Guide.md`.

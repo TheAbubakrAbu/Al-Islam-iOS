@@ -317,6 +317,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         Settings.migrateAdvancedSettings()
         // Likewise for the grid switches: each screen keeps what it shows today.
         Settings.migrateGridModes()
+        // And the one Help Shortcuts switch, which became the per-tab `helpDoorsHidden` set.
+        Settings.migrateHelpShortcuts()
 
         let storedAccent = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         self.accentColor = storedAccent
@@ -926,6 +928,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         guard isAppProcess else { return }
         shared.flushPendingLastRead()
         shared.flushPendingKhatmProgress()
+        shared.flushPendingRevisionProgress()
         NotificationCenter.default.post(name: flushPendingWritesNotification, object: nil)
     }
 
@@ -949,6 +952,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         // The presence-checked caches (the byte-keyed memos heal themselves).
         loadKhatmProgressCacheFromStorage()
+        reloadRevisionProgressCacheFromStorage()
         Self.invalidateTrackerCaches()
         // And the generation-keyed memos (the day's canonical marks, the tracker's stats, the profile
         // totals): a restore or an erase writes the tracker's bytes without going through a setter,
@@ -1155,7 +1159,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// in no category.
     static let contentStorageKeys: [String] = [
         "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
-        "khatmCompletedAyahsData", "quranPlanData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
+        "khatmCompletedAyahsData", "quranPlanData", "quranRevisionPlanData", "quranRevisionRevisedData",
+        "favoriteReciterIDsData", "favoriteQiraahTagsData",
         "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
         "lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
         "quranSearchHistoryData",
@@ -1219,6 +1224,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "skyWeather",
         // Migrations and one-time seeds.
         "appGroupMirrorsSeeded.v1", "settings.explicitlySetKeys", "settings.didSeedExplicitKeys",
+        // The one Help Shortcuts switch of before 2026-10-02, carried into `helpDoorsHidden` and
+        // retired at launch (`migrateHelpShortcuts`).
+        "showHelpShortcuts",
         "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
         "advancedSettingsPerScreenMigrated", "gridModesPerScreenMigrated",
         // What was last scheduled, played or drawn here.
@@ -2388,6 +2396,24 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("quranPlanData") var quranPlanData = Data() {
         didSet { bumpContentGeneration() }
     }
+    /// The Revision plan (QuranRevisionPlan.swift): the set, the cycle and its per-day bookkeeping.
+    @AppStorage("quranRevisionPlanData") var quranRevisionPlanData = Data() {
+        didSet { bumpContentGeneration() }
+    }
+    /// The current cycle's revised ayahs (surah * 1000 + ayah), the khatm set's shape: loaded on first
+    /// use into `revisionRevisedCache`, written through a debounce (QuranRevisionPlan.swift).
+    @AppStorage("quranRevisionRevisedData") var quranRevisionRevisedData = Data() {
+        didSet { bumpContentGeneration() }
+    }
+    var revisionCacheLoaded = false
+    var revisionRevisedCache: Set<Int> = [] {
+        didSet { revisionProgressRevision &+= 1 }
+    }
+    /// Bumped by every change to the revised set (the planner's span memo keys on it).
+    private(set) var revisionProgressRevision = 0
+    var revisionSaveTask: Task<Void, Never>?
+    var revisionSaveGeneration = 0
+    var revisionRefreshPending = false
     /// Whether the three khatm caches below hold the stored set yet: they load on first use
     /// (`ensureKhatmCacheLoaded`, SettingsQuran.swift), and every reader goes through that.
     var khatmCacheLoaded = false
@@ -3093,6 +3119,20 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             defaults.set(defaults.object(forKey: "hadithGridMode") as? Bool ?? false, forKey: "hadithChapterGridMode")
         }
     }
+
+    /// `showHelpShortcuts` (one Bool; off put every tab's Need a Hand? rows away) was replaced by the
+    /// per-tab `helpDoorsHidden` set (HelpDoors.swift) with no carry-over, so an update brought the
+    /// rows back for anyone who had hidden them. Seeds the set from the old key once, then retires it.
+    static func migrateHelpShortcuts() {
+        let defaults = UserDefaults.standard
+        guard let old = defaults.object(forKey: "showHelpShortcuts") as? Bool else { return }
+        if !old, defaults.object(forKey: "helpDoorsHidden") == nil {
+            // `HelpDoorArea.allCases` by raw value (the type lives in the iPhone-only HelpDoors.swift;
+            // this file compiles into the Widget too).
+            defaults.set("adhan,quran,hadith,islam", forKey: "helpDoorsHidden")
+        }
+        defaults.removeObject(forKey: "showHelpShortcuts")
+    }
     
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
     @AppStorage("fontArabicSize") var fontArabicSize: Double = (Double(UIFont.preferredFont(forTextStyle: .title1).pointSize) * Settings.readerDefaultScale).rounded()
@@ -3672,8 +3712,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// What it hides: `QuranTestHiding` raw value. The default hides the recitation (the Arabic and its
     /// transliteration) and leaves the translations as the cue.
     @AppStorage("quranTestModeHides") var quranTestModeHides: String = "arabic"
-    /// What a tap shows: `QuranTestReveal` raw value, the tapped ayah alone by default.
-    @AppStorage("quranTestModeReveals") var quranTestModeReveals: String = "selected"
+    /// What a tap shows: `QuranTestReveal` raw value. By default the tapped ayah and every ayah before
+    /// it in its surah (Abu, 2026-10-11: "by default test mode should show that ayah and all ayahs before").
+    @AppStorage("quranTestModeReveals") var quranTestModeReveals: String = "throughSelected"
     /// The ayah being recited shows itself, by the same rule a tap follows (Abu: "reveal as its recited").
     @AppStorage("quranTestModeRevealsRecited") var quranTestModeRevealsRecited: Bool = true
     /// Test Mode turns itself off once the last reader closes (Abu: "probably off when I leave the

@@ -38,18 +38,18 @@ from hadith_spans import row as shelf_row, token_count, words as shelf_words  # 
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCES = [
-    ROOT / "iPhone/Islam/PillarsView.swift",
-    ROOT / "iPhone/Islam/PillarViews.swift",
-    ROOT / "iPhone/Islam/ProphetViews.swift",
-    ROOT / "iPhone/Islam/BeliefsViews.swift",
-    ROOT / "iPhone/Islam/HowToGuides.swift",
-    ROOT / "iPhone/Islam/AqeedahViews.swift",
-    ROOT / "iPhone/Islam/SalafiyyahViews.swift",
-    ROOT / "iPhone/Islam/ScholarsViews.swift",
-    ROOT / "iPhone/Islam/AnswersViews.swift",
-    ROOT / "iPhone/Islam/RiwayatDifferencesView.swift",
-    ROOT / "iPhone/Islam/HadithSciencesViews.swift",
-    ROOT / "iPhone/Islam/ProvingIslamChapters.swift",
+    ROOT / "iPhone/Islam/Beliefs/PillarsView.swift",
+    ROOT / "iPhone/Islam/Beliefs/PillarViews.swift",
+    ROOT / "iPhone/Islam/Proofs/ProphetViews.swift",
+    ROOT / "iPhone/Islam/Beliefs/BeliefsViews.swift",
+    ROOT / "iPhone/Islam/Fiqh/HowToGuides.swift",
+    ROOT / "iPhone/Islam/Beliefs/AqeedahViews.swift",
+    ROOT / "iPhone/Islam/Beliefs/SalafiyyahViews.swift",
+    ROOT / "iPhone/Islam/Beliefs/ScholarsViews.swift",
+    ROOT / "iPhone/Islam/Beliefs/AnswersViews.swift",
+    ROOT / "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift",
+    ROOT / "iPhone/Islam/Content/HadithSciencesViews.swift",
+    ROOT / "iPhone/Islam/Proofs/ProvingIslamChapters.swift",
 ]
 OUT = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
 
@@ -64,7 +64,7 @@ STRUCT_RE = re.compile(r"^struct (\w+): View \{", re.M)
 # `.text("...")`, `.markdown("...")` and `.quote(text: "...")` blocks; read those too.
 TEXT_ARG = r"(?:verbatim:\s*|articleMarkdown:\s*)?"
 SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEXT_ARG + r")|ArticleSection\()(" + STR + r")[),]", re.S)
-# The design kit (iPhone/Islam/ArticleDesign.swift, 2026-09-29) draws a lead, a step, a bullet and a
+# The design kit (iPhone/Islam/Content/ArticleDesign.swift, 2026-09-29) draws a lead, a step, a bullet and a
 # closing paragraph as cards; each takes the paragraph as the `Text` it replaced did, so the corpus
 # reads them as prose: `ArticleLead("...")`, `ArticleStep("1. ...")`, `ArticleBullet(verbatim: "...")`,
 # `ArticleClosing(articleMarkdown: "...")`, and the data blocks `.lead(`, `.step(`, `.bullet(`.
@@ -91,8 +91,8 @@ BAR_RE = re.compile(r"RiwayahBar\(\s*(" + STR + r")\s*,\s*filled:\s*(\d+)\s*,\s*
 TRAITS_TABLE_RE = re.compile(r"RiwayahTraitsTable\(\)")
 TRAITS_RE = re.compile(r"RiwayahTraits\(name:\s*(" + STR + r"),\s*from:\s*(" + STR + r"),\s*tag:\s*[\w.]+,\s*hamzah:\s*(" + STR
                        + r"),\s*wasl:\s*(" + STR + r"),\s*dots:\s*(" + STR + r"),\s*silah:\s*(" + STR + r"),\s*madd:\s*(" + STR + r")\)", re.S)
-RIWAYAT_PAGE = Path(__file__).resolve().parent.parent / "iPhone/Islam/RiwayatDifferencesView.swift"
-DESIGN_KIT = Path(__file__).resolve().parent.parent / "iPhone/Islam/ArticleDesign.swift"
+RIWAYAT_PAGE = Path(__file__).resolve().parent.parent / "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift"
+DESIGN_KIT = Path(__file__).resolve().parent.parent / "iPhone/Islam/Content/ArticleDesign.swift"
 QUOTE_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + STR + r")", re.S)
 # The 10 Qiraat article's "Companions behind each Qiraah" cards (2026-09-26): each reading is
 # `lineageRow("Nafi", companions: ["Umar ibn al-Khattab", ...], note: "...")`, drawn as chips, so

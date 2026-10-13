@@ -33,7 +33,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PACK = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
-LOADER = ROOT / "iPhone/Islam/IslamArticles.swift"
+LOADER = ROOT / "iPhone/Islam/Content/IslamArticles.swift"
 
 sys.path.insert(0, str(ROOT / "Scripts"))
 sys.argv = ["verify", "--print"]
@@ -85,7 +85,7 @@ if PACK.exists():
     check(routed <= packed, f"IslamArticles.swift routes ids that are not in the pack: {sorted(routed - packed)}")
 
 # 5/6: the pages themselves - their search tag and their own sources section.
-catalog_ids = set(re.findall(r'\("(\w+View)", "', (ROOT / "iPhone/Islam/IslamSearch.swift").read_text()))
+catalog_ids = set(re.findall(r'\("(\w+View)", "', (ROOT / "iPhone/Islam/Content/IslamSearch.swift").read_text()))
 check(len(catalog_ids) >= 45, f"only {len(catalog_ids)} catalog ids found in IslamSearch.swift")
 struct_re = re.compile(r"^struct (\w+): View \{", re.M)
 seen = set()

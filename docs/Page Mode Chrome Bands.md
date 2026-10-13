@@ -17,12 +17,12 @@ destination render, the crossfade) is history.**
 
 - Now Playing mounting: the pager's band went 526 to 423 pt in ONE report (the host inserted the bar
   with an opacity transition, so its height never swept), but that band had never been fitted and was
-  not a settled geometry. The page kept its 522 pt render SCALED to 0.80 - a 302 pt wide column with
-  wide margins, line pitch 26.3 instead of 32.7 - through the 220 ms settle debounce and the fit, then
+  not a settled geometry. The page kept its 522 pt render SCALED to 0.80 (a 302 pt wide column with
+  wide margins, line pitch 26.3 instead of 32.7) through the 220 ms settle debounce and the fit, then
   cut to the refit: 0.3 s of shrunken page on the simulator, every time playback started. The 09-23
   note's "the mini player keeps the shown render, scaled into the shorter band" was exactly this.
 - The small / big switch: the same when the destination band was cold; instant when it was cached
-  (the second toggle in a recording hit the cache from the first - the proof that a warm twin is a
+  (the second toggle in a recording hit the cache from the first, the proof that a warm twin is a
   perfect one-step switch).
 - Search with its twin warm: already one step (09-25). Search with NO twin (`-resetChromeTwins`): the
   page scaled to 0.76 for one fit, 0.15 s on the simulator. The find twin is learned per geometry, so
@@ -30,7 +30,7 @@ destination render, the crossfade) is history.**
 - Stopping playback: the page grew once after a short beat, never shrank. But the big card dropped its
   progress row the moment playback ended, 9 pt before its fade was over, so the band reported 432 then
   526: the page bounced ~4 pt during the fade, and the pair learned on a stop was 428 <-> 522, not
-  419 <-> 522 - the no-player geometry's player twin was wrong after every stop.
+  419 <-> 522: the no-player geometry's player twin was wrong after every stop.
 
 What changed:
 
@@ -71,7 +71,7 @@ What changed:
 Result (same harness): a warm start of playback switches the page on the frame after the band changes
 (pitch 32.7 to 28.7 at full width, no scaled frame), the big / small switch both ways and the find bar
 both ways are cache hits with no fallback at all, a COLD start (`-resetChromeTwins`) shows the old
-layout clipped for two frames and then the refit - no column, no margins, no growing back - and a cold
+layout clipped for two frames and then the refit (no column, no margins, no growing back), and a cold
 find (`-resetChromeTwins`, `search@6`) switches once at full width where it used to scale to 0.76.
 Select mode (`-selectAyahsAt 6,11`): one switch each way (pitch 32.7 to 30.3 and back), the pair learned
 (`SELECTTWIN 378x522 <-> 378x458`). Every pair reads correctly in the trace (`PLAYERTWIN 378x522 <->

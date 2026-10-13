@@ -1,5 +1,5 @@
 """Readers for the app's own packs, for content work: hadith .hpk (LZMA/xz blocks, the layout in
-iPhone/Hadith/HadithPack.swift) and the Quran JSON (Uthmani Arabic + Saheeh International).
+iPhone/Hadith/Models/HadithPack.swift) and the Quran JSON (Uthmani Arabic + Saheeh International).
 
 The Pillars & Beliefs / How-to articles quote ayat and hadith with `ScriptureQuote(text:arabic:)`;
 the Arabic must come from these packs, never be retyped. This is the reader that pulls it.

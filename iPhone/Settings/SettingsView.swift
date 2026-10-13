@@ -115,35 +115,41 @@ struct SettingsView: View {
     #if os(iOS)
     /// The featured card that was tapped. ONE programmatic push serves every card, because several
     /// links inside one List row all fire on any tap (see `SettingsSpotlightSection`).
+    /// The spotlight card tapped, and its push: non-nil while the card's page is pushing or pushed.
     @State private var spotlightTarget: AppTip?
-    @State private var openSpotlight = false
 
-    /// The tile tapped on the three-up Your Progress / About You / iCloud Backup row, and its push.
+    /// The tile tapped on the three-up Your Progress / About You / iCloud Backup row, and its push:
+    /// non-nil while that page is pushing or pushed.
     @State private var profileDoor: ProfileTilesSection.Door?
-    @State private var openProfileDoor = false
 
-    /// The grid-mode tile that was tapped, and its push (see `SettingsGridTile`).
+    /// The grid-mode tile that was tapped, and its push (see `SettingsGridTile`): non-nil while its
+    /// page is pushing or pushed.
     @State private var gridDoor: SettingsGridDoor?
-    @State private var openGridDoor = false
 
     /// True while ANY of the three programmatic doors above is pushing or pushed.
     ///
-    /// The three `pushDestination`s are three `navigationDestination(isPresented:)` on ONE stack. Each
-    /// tap handler used to set only its own flag, so tapping a second tile before the first push had
-    /// settled left TWO of them true at once and asked the stack to push two destinations in one
-    /// frame. That is the hazard this file's neighbours already document: the presentation stack does
-    /// not recover, the screen goes blank, and the next push can crash inside SwiftUI's navigation
+    /// The three `pushDestination(item:)`s are three `navigationDestination(isPresented:)` on ONE
+    /// stack. Each tap handler used to set only its own door, so tapping a second tile before the first
+    /// push had settled left TWO of them raised at once and asked the stack to push two destinations in
+    /// one frame. That is the hazard this file's neighbours already document: the presentation stack
+    /// does not recover, the screen goes blank, and the next push can crash inside SwiftUI's navigation
     /// rules (Abu, 2026-10-05: "i go to settings and tap on a bunch and keep switching then it turns
     /// blank for some reason then it just crashes"; same class as the `NavigationLink(isActive:)`
     /// EXC_BAD_ACCESS noted on `PushDestination` in Globals.swift, and the "from then on NOTHING
     /// would present" report on SurahView's picker).
     ///
-    /// `openDoor` below is the only way these flags are raised, and it refuses while this is true, so
+    /// `openDoor` below is the only way these doors are raised, and it refuses while this is true, so
     /// at most one door is ever open. The second tap is dropped rather than queued: the user is
     /// already travelling to the screen they asked for first, and a queued push would arrive on top
     /// of it as an unexplained extra screen.
+    ///
+    /// Each door is ONE optional (the target IS the flag), never a Bool beside a target: with the two
+    /// apart, the push built its destination before the target's write was readable and the
+    /// `EmptyDoor` fallback closed it, four taps in five on 2026-10-11 (Abu: "Look and feel opened a
+    /// couple times as a blank tab then after a couple loaded properly"). `PushItemDestination` in
+    /// Globals.swift has the account.
     private var anyDoorOpen: Bool {
-        openSpotlight || openProfileDoor || openGridDoor
+        spotlightTarget != nil || profileDoor != nil || gridDoor != nil
     }
 
     /// Raises one door, and only if no other is in flight - see `anyDoorOpen`.
@@ -177,10 +183,7 @@ struct SettingsView: View {
     }
 
     private func openGrid(_ door: SettingsGridDoor) {
-        openDoor {
-            gridDoor = door
-            openGridDoor = true
-        }
+        openDoor { gridDoor = door }
     }
 
     /// Grid mode as a shape draws it: the iPhone stack on iOS 16 and later (the Islam tab's rule). The
@@ -189,19 +192,20 @@ struct SettingsView: View {
         settings.settingsGridMode && !split && Self.canPushProgrammatically
     }
 
-    /// The grid button, the one the Quran, Hadith and Islam tabs carry: the same symbols, haptic and
-    /// label, and hidden while a search is showing results (the Islam tab's rule).
+    /// The ⋯ More menu every tab leads with (Abu, 2026-10-11: "for settings and hadith too put it on
+    /// the left as a menu"), holding the grid or list switch the trailing edge carried until then: the
+    /// same symbols, haptic and wording as the other tabs' items, and hidden while a search is showing
+    /// results (the Islam tab's rule).
     @ViewBuilder
-    private var settingsGridButton: some View {
+    private var settingsMoreMenu: some View {
         if Self.canPushProgrammatically, settingsSearchText.isEmpty {
-            Button {
-                settings.hapticFeedback()
-                withAnimation { settings.settingsGridMode.toggle() }
-            } label: {
-                Image(systemName: settings.settingsGridMode ? "list.bullet" : "square.grid.2x2")
+            TabMoreMenu {
+                TabMoreMenuItem(settings.settingsGridMode ? "Show as List" : "Show as Grid",
+                                systemImage: settings.settingsGridMode ? "list.bullet" : "square.grid.2x2") {
+                    settings.hapticFeedback()
+                    withAnimation { settings.settingsGridMode.toggle() }
+                }
             }
-            .accessibilityLabel(settings.settingsGridMode ? "Show list" : "Show grid")
-            .tint(settings.accentColor.color)
         }
     }
     #endif
@@ -336,6 +340,7 @@ struct SettingsView: View {
                 if usesColumnNavigation {
                     NavigationSplitView {
                         settingsSplitList
+                            .splitSidebarColumn()
                     } detail: {
                         // Detail gets its own NavigationStack so the sub-screen NavigationLinks
                         // (e.g. Quran settings → Recitation) push within the detail column instead of
@@ -380,7 +385,7 @@ struct SettingsView: View {
         )
         // The iPhone stack only: the iPad/Mac sidebar stays a list (see `usesGrid`).
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) { settingsGridButton }
+            ToolbarItem(placement: .navigationBarLeading) { settingsMoreMenu }
         }
         #else
         List { settingsListContent(split: false) }
@@ -415,31 +420,23 @@ struct SettingsView: View {
             .adaptiveSafeArea(edge: .bottom) {
                 settingsSearchBarInset
             }
-            // Each door's flag and its target are raised together (`openDoor`) and the flag is lowered
-            // again when the target is missing: an `if let` that fails here would push a page with
-            // NOTHING on it, which is the blank screen half of the same report. A door can only lose
-            // its target by being torn down, so clearing the flag just closes a push that has no
-            // content to show, rather than leaving an empty screen on the stack.
-            .pushDestination(isPresented: $openProfileDoor) {
-                if let profileDoor {
-                    profileDoor.destination
-                } else {
-                    EmptyDoor { openProfileDoor = false }
-                }
+            // Each door is pushed from the value that raised it (`pushDestination(item:)`): the target
+            // and the flag are one state, so the page can never build without its target. (A flag
+            // beside a target did exactly that, see `anyDoorOpen`.) A spotlight tip without a
+            // destination is never raised (`openDoor` below checks), so the empty branch there is the
+            // same floor `EmptyDoor` is everywhere: it closes rather than leaving a blank page.
+            .pushDestination(item: $profileDoor) { door in
+                door.destination
             }
-            .pushDestination(isPresented: $openGridDoor) {
-                if let gridDoor {
-                    gridDestination(gridDoor)
-                } else {
-                    EmptyDoor { openGridDoor = false }
-                }
+            .pushDestination(item: $gridDoor) { door in
+                gridDestination(door)
             }
-            .pushDestination(isPresented: $openSpotlight) {
-                if let tip = spotlightTarget, let destination = tip.destination {
+            .pushDestination(item: $spotlightTarget) { tip in
+                if let destination = tip.destination {
                     searchDestinationView(destination)
                         .revealsAdvancedSettings(tip.advanced)
                 } else {
-                    EmptyDoor { openSpotlight = false }
+                    EmptyDoor { spotlightTarget = nil }
                 }
             }
             #if DEBUG
@@ -577,10 +574,7 @@ struct SettingsView: View {
         // fire on any tap (see `one-link-per-list-row`), so the tiles are Buttons writing ONE door
         // and the list owns the push; the iPad sidebar and iOS 15 fall back to three rows.
         ProfileTilesSection(rows: split || !Self.canPushProgrammatically) { door in
-            openDoor {
-                profileDoor = door
-                openProfileDoor = true
-            }
+            openDoor { profileDoor = door }
         }
         #endif
 
@@ -625,11 +619,8 @@ struct SettingsView: View {
                 // The split's detail column is a SELECTION, not a push: swapping it cannot stack two
                 // destinations, so it needs no door guard.
                 selectSplitDestination(.spotlight(tip.id))
-            } else {
-                openDoor {
-                    spotlightTarget = tip
-                    openSpotlight = true
-                }
+            } else if tip.destination != nil {
+                openDoor { spotlightTarget = tip }
             }
         }
         #endif
@@ -667,7 +658,7 @@ struct SettingsView: View {
             case .islamSettings:
                 SettingsIslamView()
             case .spotlight(let id):
-                // Exactly what the card pushes on iPhone (`openSpotlight`), as the detail's root.
+                // Exactly what the card pushes on iPhone (`spotlightTarget`), as the detail's root.
                 if let tip = TipCatalog.spotlight.first(where: { $0.id == id }), let destination = tip.destination {
                     searchDestinationView(destination)
                         .revealsAdvancedSettings(tip.advanced)
@@ -713,7 +704,7 @@ struct SettingsView: View {
             }
         }
 
-        Section(header: SectionPillHeader(title: "SETTING RESULTS", count: results.count)) {
+        Section(header: SectionPillHeader(title: "SETTING RESULTS", count: results.count, icon: "magnifyingglass")) {
             if results.isEmpty {
                 Text(aiOnly.isEmpty ? "No settings match your search." : "No keyword matches. See the AI results above.")
                     .font(.subheadline)
@@ -828,28 +819,28 @@ struct SettingsView: View {
     /// the iOS Settings app's grammar. Every page behind these rows carries its own search bar.
     @ViewBuilder
     private var settingsHubSection: some View {
-        Section(header: Text("SETTINGS")) {
+        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
             resourceLink(title: "Notifications", systemImage: "bell.badge.fill",
                          subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications) {
                 NotificationView()
             }
             resourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                         subtitle: "Calculation, offsets, traveling mode, sky", tint: SettingsTint.prayer) {
+                         subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer) {
                 SettingsAdhanView(showNotifications: false)
             }
             resourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                         subtitle: "Fonts, translations, tajweed, reciters, themes", tint: SettingsTint.quran) {
+                         subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran) {
                 SettingsQuranView()
             }
             #if os(iOS)
             resourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                         subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith) {
+                         subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith) {
                 SettingsHadithView(presentedAsSheet: false)
             }
             // The fourth area, for what belongs to none of the three above. It wears BOTH brand
             // colours rather than one of its own, because it is not one tab (see `SettingsTint.islam`).
             resourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                         subtitle: "Arabic font, alphabet, libraries, reminders",
+                         subtitle: "Arabic font, libraries, reminders",
                          tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary) {
                 SettingsIslamView()
             }
@@ -861,8 +852,10 @@ struct SettingsView: View {
     /// The hub in grid mode: Notifications across the top as a banner, because it spans every area,
     /// then the four areas two by two in the tab bar's order (Prayer, Quran / Hadith, Islam). The same
     /// five pages as the rows, each keeping its caption: it is how people find where a setting lives.
+    /// The captions are short enough for a tile's one line at its 0.75 scale floor (Abu, 2026-10-11:
+    /// "line limit 1 looks chopped so shorten the actual text"); the rows say the same words.
     private var settingsHubGridSection: some View {
-        Section(header: Text("SETTINGS")) {
+        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
             VStack(spacing: 8) {
                 SettingsGridBanner(title: "Notifications", systemImage: "bell.badge.fill",
                                    caption: "Prayer alerts, adhan sounds, reminders",
@@ -870,20 +863,20 @@ struct SettingsView: View {
 
                 SettingsGridTileRow {
                     SettingsGridTile(title: "Prayer Settings", systemImage: "safari.fill",
-                                     caption: "Calculation, offsets, traveling mode, sky",
+                                     caption: "Calculation, offsets, travel, sky",
                                      tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
                     SettingsGridTile(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                                     caption: "Fonts, translations, tajweed, reciters, themes",
+                                     caption: "Fonts, tajweed, reciters, themes",
                                      tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
                 }
 
                 SettingsGridTileRow {
                     SettingsGridTile(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                                     caption: "Arabic and English text, reading view",
+                                     caption: "Arabic and English, reading view",
                                      tint: SettingsTint.hadith, prominent: true) { openGrid(.hadith) }
                     // Both brand colours, as on its row (see `SettingsTint.islam`).
                     SettingsGridTile(title: "Islam Settings", systemImage: "moon.stars.fill",
-                                     caption: "Arabic font, alphabet, libraries, reminders",
+                                     caption: "Arabic font, libraries, reminders",
                                      tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
                                      prominent: true) { openGrid(.islam) }
                 }
@@ -896,17 +889,17 @@ struct SettingsView: View {
     @available(iOS 16.0, *)
     @ViewBuilder
     private var settingsHubSectionSplit: some View {
-        Section(header: Text("SETTINGS")) {
+        Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
             splitResourceLink(title: "Notifications", systemImage: "bell.badge.fill",
                               subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications, value: .notification)
             splitResourceLink(title: "Prayer Settings", systemImage: "safari.fill",
-                              subtitle: "Calculation, offsets, traveling mode, sky", tint: SettingsTint.prayer, value: .prayerSettings)
+                              subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer, value: .prayerSettings)
             splitResourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                              subtitle: "Fonts, translations, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
+                              subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
             splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
-                              subtitle: "Arabic and English text, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
+                              subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
             splitResourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
-                              subtitle: "Arabic font, alphabet, libraries, reminders",
+                              subtitle: "Arabic font, libraries, reminders",
                               tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary, value: .islamSettings)
         }
     }
@@ -914,7 +907,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var resetSection: some View {
         #if os(iOS)
-        Section(header: Text("RESET")) {
+        Section(header: SectionIconHeader("RESET", icon: "arrow.counterclockwise")) {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 showResetConfirmation = true
@@ -978,7 +971,7 @@ struct SettingsView: View {
 
     /// `grid`: the two appearance pages as tiles under the theme and accent controls (which stay).
     private func appearanceSection(grid: Bool) -> some View {
-        Section(header: Text("APPEARANCE")) {
+        Section(header: SectionIconHeader("APPEARANCE", icon: "paintpalette.fill")) {
             #if os(iOS)
             if grid {
                 SettingsAppearanceView(openPage: { openGrid(.appearance($0)) })
@@ -994,7 +987,7 @@ struct SettingsView: View {
     /// `grid`: the three actions as one row of tiles, the profile row's three-across grammar. The
     /// website and email lines stay rows: they are text to read and copy, not buttons.
     private func creditsSection(grid: Bool) -> some View {
-        Section(header: Text("CREDITS")) {
+        Section(header: SectionIconHeader("CREDITS", icon: "scroll.fill")) {
             creditsIntro
             #if os(iOS)
             if grid {
@@ -1615,11 +1608,14 @@ struct SettingsAppearanceView: View {
     private static let swatchDiameter: CGFloat = 22
     private static let swatchSpacing: CGFloat = 6
     private static let swatchGridVerticalPadding: CGFloat = 4
+    private static let swatchGridMaxWidth: CGFloat = .infinity
     #else
     private static let swatchColumns = 4
     private static let swatchDiameter: CGFloat = 30
     private static let swatchSpacing: CGFloat = 12
     private static let swatchGridVerticalPadding: CGFloat = 16
+    /// See the grid's `.frame(maxWidth:)`: four 30 pt swatches about 100 pt apart.
+    private static let swatchGridMaxWidth: CGFloat = 400
     #endif
 
     private func accentSwatch(_ accentColor: AccentColor) -> some View {
@@ -1680,6 +1676,11 @@ struct SettingsAppearanceView: View {
                     accentSwatch(accentColor)
                 }
             }
+            // The four columns at an iPhone's spacing, whatever the row's width: an iPad detail column
+            // spread the twelve dots over 1,400 pt with 350 pt between them (2026-10-12). Narrower than
+            // any iPhone row, so the phone's grid is untouched; wider rows centre the cluster.
+            .frame(maxWidth: Self.swatchGridMaxWidth)
+            .frame(maxWidth: .infinity)
             .padding(.vertical, Self.swatchGridVerticalPadding)
             #if os(iOS)
             .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
@@ -1768,12 +1769,17 @@ struct SettingsGridTile: View {
                     .minimumScaleFactor(0.8)
 
                 if let caption {
+                    // One line (Abu, 2026-10-11: "make sure each caption line is line limit 1"), as the
+                    // list rows' captions are (`toolLabel`); it scales down to 0.75 before it truncates,
+                    // and the captions are written short enough never to (same day: "looks chopped so
+                    // shorten the actual text"). The accessibility sizes keep wrapping: the tiles stack
+                    // one per row there, and a one-line clamp cut every caption short.
                     Text(caption)
                         .font(.caption2)
                         .foregroundColor(.secondaryOnGlass)
                         .multilineTextAlignment(.center)
-                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-                        .minimumScaleFactor(0.85)
+                        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                        .minimumScaleFactor(0.75)
                 }
             }
             // Equal heights across a row: the row fixes its own height, and each tile fills it.
@@ -2035,7 +2041,7 @@ struct SimpleModeSection: View {
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
-        Section(header: Text("SIMPLE MODE")) {
+        Section(header: SectionIconHeader("SIMPLE MODE", icon: "rectangle.compress.vertical")) {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Simple Mode", isOn: $settings.simpleMode.animation(.easeInOut))
                     .font(.subheadline)
@@ -2100,7 +2106,7 @@ struct AdvancedSettingsSection: View {
     }
 
     private var section: some View {
-        Section(header: Text("ADVANCED")) {
+        Section(header: SectionIconHeader("ADVANCED", icon: "slider.horizontal.3")) {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Show Advanced Settings", isOn: settings.advancedBinding(screen).animation(.easeInOut))
                     .font(.subheadline)

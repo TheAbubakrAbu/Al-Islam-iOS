@@ -62,7 +62,7 @@ struct ContentCategory: Identifiable {
                 .measure("favorite", "favorites") }),
         ContentCategory(
             id: "khatm", title: "Khatm and Reading Plan", systemImage: "checkmark.circle.fill",
-            keys: ["khatmCompletedAyahsData", "quranPlanData"],
+            keys: ["khatmCompletedAyahsData", "quranPlanData", "quranRevisionPlanData", "quranRevisionRevisedData"],
             files: [], summaryRank: 3,
             measure: { $0.counted("khatmCompletedAyahsData").measure("khatm ayah", "khatm ayahs") }),
         ContentCategory(

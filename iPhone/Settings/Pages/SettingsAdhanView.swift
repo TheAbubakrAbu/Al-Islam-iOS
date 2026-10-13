@@ -1503,9 +1503,10 @@ struct NotificationView: View {
               let path = Bundle.main.path(forResource: resource, ofType: "caf") else { return }
 
         do {
-            // Decoding the file and preparing the player touch no audio hardware, so they stay here.
+            // Decoding the file touches no audio hardware, so the player is made here; it is prepared
+            // on the lane below, because `prepareToPlay()` activates the session itself when nothing
+            // has yet (AVAudioSession_iOS.mm:978), the same hang risk as the activation (2026-10-12).
             let player = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
-            player.prepareToPlay()
             previewPlayer = player
             isPreviewingAdhan = true
 
@@ -1531,6 +1532,8 @@ struct NotificationView: View {
                     // and a quiet preview beats a swallowed one.
                     logger.error("Adhan preview session failed: \(error.localizedDescription)")
                 }
+                // Preload the buffers here, off the main thread, with the session already active.
+                player.prepareToPlay()
                 DispatchQueue.main.async {
                     guard previewPlayer === player else { return }   // stopped while we activated
                     player.play()

@@ -178,14 +178,34 @@ final class TasbihCounters: ObservableObject {
     /// on one day summed). They are read in the device's calendar, the one that wrote them; a key
     /// whose year a Gregorian key could have (2015 to 2100) is left as it is. Nil when nothing moves.
     private static func gregorianDayKeys(_ counts: [String: Int]) -> [String: Int]? {
-        let writer = Calendar.current
-        guard writer.identifier != .gregorian else { return nil }
+        // The calendars a key may have been written in: the device's current one first (the phone still
+        // shows Hijri), then the others, because the case this exists for is a phone that has gone BACK
+        // to Gregorian, or a backup restored on one, where the current calendar says nothing about who
+        // wrote "1448-04-23" (and the old guard on it skipped the migration outright). A candidate is
+        // right when its reading lands on a day the counter could have been used: 2015 to tomorrow.
+        let current = Calendar.current
+        var candidates: [Calendar] = current.identifier == .gregorian ? [] : [current]
+        for identifier in [Calendar.Identifier.islamicUmmAlQura, .islamic, .islamicCivil, .islamicTabular, .hebrew,
+                           .persian, .buddhist, .coptic, .ethiopicAmeteMihret, .indian, .japanese, .republicOfChina]
+        where identifier != current.identifier {
+            var calendar = Calendar(identifier: identifier)
+            calendar.timeZone = keyCalendar.timeZone
+            candidates.append(calendar)
+        }
+        let earliest = keyCalendar.date(from: DateComponents(year: 2015, month: 1, day: 1)) ?? .distantPast
+        let latest = keyCalendar.date(byAdding: .day, value: 1, to: Date()) ?? .distantFuture
         var out: [String: Int] = [:]
         var moved = false
         for (key, value) in counts {
             let bits = key.split(separator: "-").compactMap { Int($0) }
-            if bits.count == 3, !(2015...2100).contains(bits[0]),
-               let date = writer.date(from: DateComponents(year: bits[0], month: bits[1], day: bits[2])) {
+            // A year a Gregorian key could have is left as it is: nothing says it is anything else.
+            guard bits.count == 3, !(2015...2100).contains(bits[0]) else {
+                out[key, default: 0] += value
+                continue
+            }
+            let components = DateComponents(year: bits[0], month: bits[1], day: bits[2])
+            if let date = candidates.lazy.compactMap({ $0.date(from: components) })
+                .first(where: { $0 >= earliest && $0 <= latest }) {
                 out[dayKey(date), default: 0] += value
                 moved = true
             } else {
@@ -408,6 +428,11 @@ struct TasbihView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
         }
+        #endif
+        #if os(watchOS)
+        // The watch has no floating bottom bar to order against, so it is styled here (the iOS branch
+        // styles before its bottom bar; the 2026-10-07 reorder had dropped the watch's call).
+        .applyConditionalListStyle()
         #endif
         .compactListSectionSpacing()
         .navigationTitle("Tasbih Counter")

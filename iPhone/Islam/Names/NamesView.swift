@@ -730,6 +730,9 @@ struct NamesView: View {
         }
         #if os(watchOS)
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
+        // The watch has no floating bottom bar to order against, so it is styled here (the iOS branch
+        // styles before its bottom bar; the 2026-10-07 reorder had dropped the watch's call).
+        .applyConditionalListStyle()
         #else
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)

@@ -32,6 +32,32 @@ struct AppShortcutsRoot: AppShortcutsProvider {
             systemImageName: "book"
         )
 
+        #if os(iOS)
+        AppShortcut(
+            intent: OpenSurahAppIntent(),
+            phrases: [
+                // In-phrase surah ("open surah Al-Mulk in <app>")
+                "Open surah \(\.$surah) in \(.applicationName)",
+                "Read surah \(\.$surah) in \(.applicationName)",
+                "Open \(\.$surah) in \(.applicationName)",
+                "Show surah \(\.$surah) in \(.applicationName)",
+                "\(.applicationName), open surah \(\.$surah)",
+                "\(.applicationName), read surah \(\.$surah)",
+                "\(.applicationName), open \(\.$surah)",
+                "افتح سورة \(\.$surah) في \(.applicationName)",
+                // Ask-back ("open surah" → Siri asks which one)
+                "Open a surah in \(.applicationName)",
+                "Read a surah in \(.applicationName)",
+                "Open surah in \(.applicationName)",
+                "\(.applicationName), open a surah",
+                "\(.applicationName), open surah",
+                "افتح سورة في \(.applicationName)",
+            ],
+            shortTitle: "Open Surah",
+            systemImageName: "text.book.closed"
+        )
+        #endif
+
         AppShortcut(
             intent: PlayRandomSurahAppIntent(),
             phrases: [

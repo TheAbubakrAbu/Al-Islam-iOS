@@ -310,6 +310,11 @@ private struct MainTabView: View {
                 selectedTab = .adhan
                 if case .tab = target { AppNavigation.shared.pendingAdhan = nil }
             }
+            // iPad: a Dynamic Type change inside the tab bar's selection animation is the UIKit hang
+            // DynamicTypeCoalescer.swift describes; the coalescer holds one until the switch settles.
+            .onChange(of: selectedTab) { _ in
+                DynamicTypeCoalescer.noteTabSelectionChanged()
+            }
             // A Reminder of the Day card's "Open" lands on the Islam tab (or the Hadith tab); the
             // Islam tab's own `.onReceive` pushes the resource from there.
             .onReceive(AppNavigation.shared.$pendingIslam) { target in
@@ -337,8 +342,15 @@ private struct MainTabView: View {
             .task { await SpellingProbe.runIfRequested() }
             // "-chosenAyahProbe": the Chosen Ayah widget's picker, run in-process (ChosenAyahIntent.swift).
             .task { await ChosenAyahProbe.runIfRequested() }
+            // "-stressWalk [steps]": the in-process monkey (StressWalker.swift), the crash sweep that runs
+            // wherever the app runs, "My Mac (Designed for iPad)" included.
+            .task { await StressWalker.runIfRequested() }
             // "-askAITextProbe": Ask AI's pure text functions on the audit's failing inputs (AskAIText.swift).
             .task { AskAITextProbe.runIfRequested() }
+            #if HAS_WEATHER
+            // "-weatherGallery": every weather preset over every prayer's sky, to one PNG (WidgetGalleryView.swift).
+            .task { await WeatherGalleryExport.runIfRequested() }
+            #endif
             #endif
             // The Reminder of the Day is a card at the top of the Islam tab, never a sheet (Abu,
             // 2026-09-12: the sheet clipped the card and covered the landing tab).

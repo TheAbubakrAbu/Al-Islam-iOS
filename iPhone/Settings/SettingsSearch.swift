@@ -218,8 +218,8 @@ enum SettingsAppearancePage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .customColors: return "Your own background and accent, the glow"
-        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, list style, Liquid Glass, haptics" : "List style, Liquid Glass, haptics"
+        case .customColors: return "Background, accent, the glow"
+        case .lookAndFeel: return Self.offersLaunchTab ? "Opening tab, Liquid Glass, haptics" : "List style, Liquid Glass, haptics"
         }
     }
 }
@@ -262,6 +262,10 @@ struct SettingsRowLabel: View {
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #endif
+    /// An iPad sidebar has no room beside the caption: the profile rows' read-outs ("Nothing yet",
+    /// "Raised Muslim", "On") squeezed to a single glyph there, so the sidebar shows the title and
+    /// caption alone and the detail column carries the value (2026-10-12).
+    @Environment(\.isSidebarColumn) private var isSidebarColumn
 
     /// At the accessibility sizes one line cut every title ("Sunnah Remind...", "Favorites and Bo...")
     /// and squeezed the trailing value to a sliver (Nagging Mode's "Off" drew as "("), so the row
@@ -304,7 +308,7 @@ struct SettingsRowLabel: View {
             }
             .layoutPriority(1)
 
-            if !stacks, let value {
+            if !stacks, !isSidebarColumn, let value {
                 Spacer(minLength: 8)
 
                 Text(value)

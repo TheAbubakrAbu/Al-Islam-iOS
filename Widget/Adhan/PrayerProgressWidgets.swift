@@ -95,37 +95,52 @@ struct PrayerWidgetContextRow: View {
             if stacked {
                 VStack(alignment: alignment, spacing: 2) {
                     date
-                    city
-                    WidgetWeatherChip(weather: entry.weather)
+                    WidgetCityWeatherLine(city: entry.currentCity, weather: entry.weather)
                 }
             } else {
                 HStack(spacing: 8) {
                     date
                     Spacer(minLength: 0)
-                    city
-                    WidgetWeatherChip(weather: entry.weather)
+                    WidgetCityWeatherLine(city: entry.currentCity, weather: entry.weather)
                 }
             }
         }
         .font(font)
         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
         .lineLimit(1)
-        .minimumScaleFactor(0.6)
     }
 
+    /// The date keeps its size first (shrinking a little if it must); the place line truncates.
     private var date: some View {
         Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
+            .minimumScaleFactor(0.6)
+            .layoutPriority(1)
     }
+}
 
-    @ViewBuilder
-    private var city: some View {
-        if !entry.currentCity.isEmpty {
-            HStack(spacing: 3) {
-                Image(systemName: "location.fill")
+/// The city with the weather to its RIGHT, on one line (Abu, 2026-10-11: "if you mention the temperature
+/// put it to the right of location, if it can't fit then truncate"). The temperature never shrinks or
+/// clips; the city name gives way with a trailing ellipsis. With no city yet, the weather stands alone;
+/// with neither, nothing.
+struct WidgetCityWeatherLine: View {
+    let city: String
+    let weather: SkyWeather?
 
-                Text(entry.currentCity)
+    var body: some View {
+        HStack(spacing: 6) {
+            if !city.isEmpty {
+                HStack(spacing: 3) {
+                    Image(systemName: "location.fill")
+
+                    Text(city)
+                        .truncationMode(.tail)
+                }
             }
+            WidgetWeatherChip(weather: weather)
+                .fixedSize()
+                .layoutPriority(1)
         }
+        .lineLimit(1)
     }
 }
 

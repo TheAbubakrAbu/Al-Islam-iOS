@@ -513,8 +513,17 @@ final class CloudBackupManager: ObservableObject {
         try await save(force: true, creating: false, automatic: false)
     }
 
+    #if DEBUG
+    /// True while a stress walk (StressWalker.swift) is scrambling settings at random: no automatic
+    /// save may carry that state to iCloud. Back Up Now is untouched (the walk never presses it).
+    nonisolated(unsafe) static var automaticSavesSuspended = false
+    #endif
+
     /// The automatic pass (`AppLifecycle`): silent, throttled, and skipped when nothing changed.
     func automaticSaveIfDue(reason: AutomaticReason) {
+        #if DEBUG
+        if Self.automaticSavesSuspended { return }
+        #endif
         guard isEnabled, profileID != nil, !isBusy, status != .takenOver else { return }
         let age = lastSavedAt.map { Date().timeIntervalSince($0) } ?? .greatestFiniteMagnitude
         switch reason {

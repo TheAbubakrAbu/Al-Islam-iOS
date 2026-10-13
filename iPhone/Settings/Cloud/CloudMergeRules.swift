@@ -54,6 +54,8 @@ enum CloudMergeRules {
         "bookmarkedAyahsData": .unionObjects(identity: ["surah", "ayah"], stamp: "createdAt", newestFirst: false, cap: nil),
         "khatmCompletedAyahsData": .unionScalars(cap: nil),
         "quranPlanData": .fillIfMissing,
+        "quranRevisionPlanData": .fillIfMissing,
+        "quranRevisionRevisedData": .unionScalars(cap: nil),
         "favoriteReciterIDsData": .unionScalars(cap: nil),
         "favoriteQiraahTagsData": .unionScalars(cap: nil),
         "favoriteEnglishTranslationIDsData": .unionScalars(cap: nil),

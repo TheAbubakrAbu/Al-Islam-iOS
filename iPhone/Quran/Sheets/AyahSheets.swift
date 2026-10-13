@@ -1040,6 +1040,12 @@ struct AyahActionsSheet: View {
                     // its menu upward, and the automatic order would put Page at the bottom.
                     .fixedMenuOrder()
 
+                case .comparisonMenu where !settings.showQiraahDetails && !settings.isHafsDisplay:
+                    // Neither comparison applies (riwayah details off while another riwayah is still on
+                    // display): no tile. The menu below would have had no rows, and a single-choice tile
+                    // here opened the Qiraah Comparison the user had switched off.
+                    EmptyView()
+
                 case .comparisonMenu where !(settings.showQiraahDetails && settings.isHafsDisplay):
                     // One choice (no riwayah details, or a non-Hafs display): the tile opens it directly
                     // instead of a menu holding a single row.

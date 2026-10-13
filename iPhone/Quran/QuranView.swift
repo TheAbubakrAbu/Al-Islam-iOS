@@ -18,8 +18,6 @@ private struct QuranTrailingToolbar: ViewModifier {
     var isPicker: Bool = false
     @Binding var khatmEditMode: Bool
     @Binding var showingSettingsSheet: Bool
-    /// A Scroll To Surah's one-visit list (`QuranView.listForJump`).
-    @Binding var listForJump: Bool
     let usesColumnNavigation: Bool
 
     func body(content: Content) -> some View {
@@ -27,53 +25,20 @@ private struct QuranTrailingToolbar: ViewModifier {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
             }
-        } else if settings.simpleMode {
-            // Simple Mode: the grid toggle lives in the More menu (`QuranView.simpleMoreItems`); the
-            // khatm edit button (khatm sort only) and the gear keep their places.
-            if #available(iOS 26.0, *) {
-                content.toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
-                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
-                    ToolbarItem(placement: .navigationBarTrailing) { gearButton }
-                }
-            } else {
-                content.toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
-                    ToolbarItem(placement: .navigationBarTrailing) { gearButton }
-                }
-            }
         } else if #available(iOS 26.0, *) {
+            // The grid switch lives in the leading More menu (`QuranView.moreMenuItems`) in both modes
+            // (Abu, 2026-10-11); the khatm edit button (khatm sort only) and the gear keep their places.
             content.toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
-                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) { gearButton }
             }
         } else {
             content.toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
                 ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
                 ToolbarItem(placement: .navigationBarTrailing) { gearButton }
             }
         }
-    }
-
-    private var gridButton: some View {
-        // What the tab shows, so a jump's one-visit list reads as a list here too.
-        let showsGrid = settings.gridMode && !listForJump
-        return Button {
-            settings.hapticFeedback()
-            withAnimation {
-                // From a jump's list the button only brings the grid back: the stored choice never
-                // stopped being grid.
-                if listForJump { listForJump = false } else { settings.gridMode.toggle() }
-            }
-        } label: {
-            Image(systemName: showsGrid ? "list.bullet" : "square.grid.2x2")
-        }
-        .accessibilityLabel(showsGrid ? "Show lists" : "Show grids")
-        .tint(settings.accentColor.accent2)
     }
 
     @ViewBuilder
@@ -109,9 +74,10 @@ private struct QuranTrailingToolbar: ViewModifier {
     }
 }
 
-/// The leading pair - reading-mode toggle and the Quran Planner - split out for the same reason as
-/// `QuranTrailingToolbar`: iOS 26 wants a ToolbarSpacer between adjacent items (Liquid Glass merges
-/// them into one capsule otherwise), and ToolbarContentBuilder can't branch on availability inline.
+/// The leading slot: the one ⋯ More menu (`TabMoreMenu`), in both modes (Abu, 2026-10-11: "always have
+/// the top left button just be a more button that contains grid and everything else"). Until then Full
+/// Mode showed the reading-mode toggle and the Quran Planner here as two buttons, and the grid switch
+/// at the trailing edge; all three are items of the menu now, with the summary doors.
 private struct QuranLeadingToolbar: ViewModifier {
     @ObservedObject var settings = Settings.shared
     /// The Choose Surah sheet (`QuranView.picker`): the standard sheet X, inline title, nothing else.
@@ -120,9 +86,8 @@ private struct QuranLeadingToolbar: ViewModifier {
     let isPreparingPageMode: Bool
     let performReadingModeToggle: () -> Void
     let push: (Int, Int?) -> Void
-    /// Simple Mode's More menu items (`QuranView.simpleMoreItems`), nil in Full Mode. While set, the
-    /// leading slot holds the one ⋯ menu instead of the reading-mode and planner buttons.
-    var simpleMoreItems: AnyView? = nil
+    /// The More menu's items (`QuranView.moreMenuItems`).
+    let moreMenuItems: AnyView
     /// The More menu's Quran Planner item, for the planner that stays mounted without its button.
     @Binding var plannerRequest: Bool
 
@@ -131,10 +96,10 @@ private struct QuranLeadingToolbar: ViewModifier {
             content
                 .navigationBarTitleDisplayMode(.inline)
                 .sheetDismissToolbar()
-        } else if let simpleMoreItems {
+        } else {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    SimpleMoreMenu(isBusy: isPreparingPageMode) { simpleMoreItems }
+                    TabMoreMenu(isBusy: isPreparingPageMode) { moreMenuItems }
                         // The planner without its button: its settle hooks keep stamping a finished
                         // plan, and its sheet opens from the menu (`plannerRequest`).
                         .background {
@@ -144,58 +109,19 @@ private struct QuranLeadingToolbar: ViewModifier {
                                 }, hidesButton: true, presentRequest: $plannerRequest)
                             }
                         }
+                        // Hung on the menu, so the dialog anchors to it (iPad popover arrows point at
+                        // the button instead of floating mid-screen).
                         .modifier(readingModeConfirmation)
                 }
             }
-        } else if #available(iOS 26.0, *) {
-            content.toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { readingModeButton }
-                ToolbarSpacer(.fixed, placement: .navigationBarLeading)
-                ToolbarItem(placement: .navigationBarLeading) { plannerButton }
-            }
-        } else {
-            content.toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { readingModeButton }
-                ToolbarItem(placement: .navigationBarLeading) { plannerButton }
-            }
         }
     }
 
-    private var readingModeButton: some View {
-        Button {
-            settings.hapticFeedback()
-            // Switching reading mode is a big context change (the whole surah list becomes a mushaf
-            // and vice-versa), so confirm first rather than flipping on an accidental tap.
-            showReadingModeConfirm = true
-        } label: {
-            if isPreparingPageMode {
-                ProgressView()
-            } else {
-                Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
-            }
-        }
-        .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
-        .tint(settings.accentColor.accent1)
-        // Attached to the BUTTON, not the whole view, so the dialog anchors to it (iPad popover
-        // arrows point at the button instead of floating mid-screen).
-        .modifier(readingModeConfirmation)
-    }
-
-    /// The reading-mode switch's confirmation, worn by whichever control asks it: the book button in
-    /// Full Mode, the More menu in Simple Mode.
+    /// The reading-mode switch's confirmation: a big context change (the whole surah list becomes a
+    /// mushaf and vice-versa), so it asks first rather than flipping on an accidental tap.
     private var readingModeConfirmation: ReadingModeConfirmation {
         ReadingModeConfirmation(isPresented: $showReadingModeConfirm, pageMode: settings.quranPageMode,
                                 perform: performReadingModeToggle)
-    }
-
-    @ViewBuilder
-    private var plannerButton: some View {
-        // Hafs-only, matching the khatm store the planner rides on.
-        if settings.isHafsDisplay {
-            QuranPlannerToolbarButton(openReader: { surahID, ayahID in
-                push(surahID, ayahID)
-            })
-        }
     }
 }
 
@@ -667,9 +593,19 @@ struct QuranView: View {
 
     func getSurahAndAyah(from searchText: String) -> (surah: Surah?, ayah: Ayah?) {
         // An ayah asked for by its name ("ayatul kursi") is a reference like any other.
-        if let named = NamedAyah.resolve(searchText), let surah = quranData.surah(named.surah),
-           let ayah = quranData.ayah(surah: named.surah, ayah: named.ayah) {
-            return (surah, ayah)
+        if let named = NamedAyah.resolve(searchText), let surah = quranData.surah(named.surah) {
+            // The table is Hafs-numbered and the row shows the displayed riwayah's text, so the number
+            // is mapped the way `morphologyRow` maps a root's locations (under Warsh, whose al-Baqarah
+            // merges Hafs 2:1 and 2:2, Ayat al-Kursi is 2:254). Unmapped, Warsh's 2:255 is another verse.
+            let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+            let number = tag.isEmpty
+                ? named.ayah
+                : QiraahComparison.alignment(surahID: named.surah, tag: tag, quranData: quranData)?
+                    .riwayahNumberForHafs[named.ayah] ?? named.ayah
+            if let ayah = quranData.ayah(surah: named.surah, ayah: number),
+               ayah.existsInQiraah(settings.displayQiraahForArabic, surahID: named.surah) {
+                return (surah, ayah)
+            }
         }
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         // Each side trimmed: "2: 255" read " 255" as no number.
@@ -1609,6 +1545,7 @@ struct QuranView: View {
             } else if #available(iOS 16.0, *), usesColumnNavigation {
                 NavigationSplitView {
                     content
+                        .splitSidebarColumn()
                 } detail: {
                     // Detail needs its own NavigationStack so NavigationLinks inside a surah push within
                     // the detail column instead of hijacking the split. `.id` resets it when the selected
@@ -2073,18 +2010,16 @@ struct QuranView: View {
         }
         .navigationTitle(isPicker ? "Choose Surah" : "Al-Quran")
         #if os(iOS)
-        // Reading-mode toggle + Quran Planner. Separate modifier for the same reason as the trailing
-        // toolbar: iOS 26 needs a ToolbarSpacer between the items so Liquid Glass doesn't merge them
-        // into one capsule, and ToolbarContentBuilder can't branch on availability inline.
-        // Choose Surah wears the sheet's X there instead: flipping the reading mode or opening the
-        // planner from a sheet over the reader is the tab's business.
+        // The leading ⋯ More menu (reading mode, the planner, the grid, the summary doors), in both
+        // modes. Choose Surah wears the sheet's X there instead: flipping the reading mode or opening
+        // the planner from a sheet over the reader is the tab's business.
         .modifier(QuranLeadingToolbar(
             isPicker: isPicker,
             showReadingModeConfirm: $showReadingModeConfirm,
             isPreparingPageMode: isPreparingPageMode,
             performReadingModeToggle: performReadingModeToggle,
             push: { surahID, ayahID in push(surahID: surahID, ayahID: ayahID) },
-            simpleMoreItems: settings.simpleMode ? AnyView(simpleMoreItems) : nil,
+            moreMenuItems: AnyView(moreMenuItems),
             plannerRequest: $plannerRequest
         ))
         // The trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers between
@@ -2095,7 +2030,6 @@ struct QuranView: View {
             isPicker: isPicker,
             khatmEditMode: $khatmEditMode,
             showingSettingsSheet: $showingSettingsSheet,
-            listForJump: $listForJump,
             usesColumnNavigation: usesColumnNavigation
         ))
         .onAppear {
@@ -2373,10 +2307,13 @@ struct QuranView: View {
             // the segmented control starts clipping its own labels.
             // Leading, not centred: inside the capped frame a centred row floated inward and left a
             // gap against the gutter while crowding the search field beside it.
-            .frame(maxWidth: isCompactHeight ? 440 : nil, alignment: .leading)
-            // The clip exists ONLY to hide the row while its height collapses to zero. Side by side
-            // nothing collapses, and clipping there shaved the segmented control's leading edge.
-            .modifier(ClipWhenStacked(stacked: !isCompactHeight))
+            // Side by side, a hidden row gives its WIDTH back as well: transparent but still 440pt wide,
+            // it pushed the search field into the right half beside a blank gap whenever the sort was
+            // put away (a query typed, the field focused, Simple Mode's default sort).
+            .frame(maxWidth: isCompactHeight ? (secondaryVisible ? 440 : 0) : nil, alignment: .leading)
+            // The clip exists ONLY to hide the row while it collapses (its height stacked, its width side
+            // by side). Open side by side, clipping shaved the segmented control's leading edge.
+            .modifier(ClipWhenStacked(stacked: !isCompactHeight || !secondaryVisible))
             .opacity(secondaryVisible ? 1 : 0)
             .allowsHitTesting(secondaryVisible)
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: secondaryVisible)
@@ -2530,12 +2467,18 @@ struct QuranView: View {
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: settings.quranSortMode.systemImage)
-                    .imageScale(.medium)
+                // No icon in the iPad sidebar: its 150 pt menu beside the Asc / Desc picker has room
+                // for the name or the icon, and "Broken Letters" lost its end with both (2026-10-12).
+                if !usesColumnNavigation {
+                    Image(systemName: settings.quranSortMode.systemImage)
+                        .imageScale(.medium)
+                }
                 Text(settings.quranSortMode.title)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    // 0.7 for the iPad sidebar, where 0.8 still cut "Broken Letters" to "Broken Let..."
+                    // (2026-10-12); the phone's row never needs to shrink.
+                    .minimumScaleFactor(0.7)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption.weight(.semibold))
@@ -2941,12 +2884,13 @@ struct QuranView: View {
         // accessibility text sizes, where the tiles simply take their own.
         let rowHeight = dynamicTypeSize.isAccessibilitySize ? nil : summaryTileHeights.values.max()
         // What the grid holds right now, resolved once so the Word of the Day can count it: with 1 or 3
-        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it becomes a chip
-        // beside the Browse by Theme and History doors instead (a row above them from 2026-09-07 to
-        // 2026-09-16) - never a fifth tile alone on its own row, never a hole beside three.
+        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it stays in the ⋯
+        // More menu (it was a chip beside the Browse by Theme and History doors until 2026-10-11, and
+        // a row above them before 2026-09-16): never a fifth tile alone on its own row, never a hole
+        // beside three.
         // Simple Mode keeps the two tiles a reader comes back for, Last Read and the Ayah of the Day;
-        // the listening tiles, the Word of the Day, the history expanders and the doors step aside (the
-        // play menu resumes listening; the doors live in the More menu). docs/Simple Mode Guide.md.
+        // the listening tiles, the Word of the Day and the history expanders step aside (the play menu
+        // resumes listening). docs/Simple Mode Guide.md.
         let simple = settings.simpleMode
         let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
         let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
@@ -3002,7 +2946,7 @@ struct QuranView: View {
                         // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
                         // every ayah it appears in and pushes the reader itself.
                         SummaryWordTile(word: word, surahName: wordSurah.nameTransliteration, rowHeight: rowHeight) {
-                            // Through the doors' guard: this tile sits right above the chips.
+                            // Through the doors' guard, like the More menu's items.
                             guard !anyDoorOpen, path.isEmpty else { return }
                             openWordOfDay = true
                         }
@@ -3024,40 +2968,13 @@ struct QuranView: View {
                         .transition(.opacity)
                 }
 
-                // The doors (2026-09-16: two full rows were most of the summary's height, so they share
-                // one): up to three on a row, and four (the Qiraat Explorer joins while qiraah is on) go two
-                // by two (Abu, 2026-09-26: "make it 2 lines if there's 4 or 1 line if it's 3"). The screens
-                // introduce themselves in their own first section, so no caption. (The "-openThemes" launch
-                // hook pushes the theme screen from `pathNavigation`, never from a hidden link row here: a
-                // zero-height row is still a List row that draws its band, and an isActive link inside the
-                // path stack crashed against the mushaf auto-open.) A real push, not a sheet: on iPhone it
-                // takes the whole screen, and in the iPad/Mac split it pushes in the LEFT column.
-                let doors = simple ? [] : summaryDoors(showWordChip: !wordFillsGrid && word != nil)
-                // One per row at the accessibility text sizes, where two cut "Word of the Day" mid-name.
-                let maxPerRow = dynamicTypeSize.isAccessibilitySize ? 1 : 3
-                if !doors.isEmpty {
-                    Group {
-                        if #available(iOS 16.0, *) {
-                            // As many to a row as keep each chip's name whole (`EvenChipRows`): three on an
-                            // iPhone, two in an iPad sidebar, where a third of the row broke "His-tory".
-                            EvenChipRows(maximumPerRow: maxPerRow) {
-                                ForEach(doors) { door in summaryDoorButton(door) }
-                            }
-                        } else {
-                            let perRow = maxPerRow == 1 ? 1 : (doors.count == 4 ? 2 : max(1, doors.count))
-                            VStack(spacing: 10) {
-                                ForEach(Array(stride(from: 0, to: doors.count, by: perRow)), id: \.self) { start in
-                                    HStack(spacing: 10) {
-                                        ForEach(doors[start..<min(start + perRow, doors.count)]) { door in
-                                            summaryDoorButton(door)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
+                // No door chips under the tiles since 2026-10-11 (Abu: "put these top left no matter
+                // simple or normal and remove it from summary"): Browse by Theme, History, the Qiraat
+                // Explorer and the Word of the Day's chip live in the ⋯ More menu (`moreMenuItems`) in
+                // both modes. They had shared one row here from 2026-09-16, two rows before that. (The
+                // "-openThemes" launch hook pushes the theme screen from `pathNavigation`, never from a
+                // hidden link row here: a zero-height row is still a List row that draws its band, and an
+                // isActive link inside the path stack crashed against the mushaf auto-open.)
             }
         }
     }
@@ -3088,62 +3005,39 @@ struct QuranView: View {
         }
     }
 
-    /// One chip under the summary tiles. BUTTONS, not `chevronlessLink`s: a NavigationLink activates
-    /// with every OTHER link in the same List row, so tapping one pushed them all (Abu, 2026-09-19).
-    /// One `@State` + one destination on the List instead; see `summaryDoorDestination`.
-    private struct SummaryDoorChip: Identifiable {
-        enum Kind { case word, door(SummaryDoor) }
-        let kind: Kind
-        let title: String
-        let systemImage: String
-        var id: String { title }
-    }
-
-    /// The chips in their order: the Word of the Day (when it is not a tile), Browse by Theme,
-    /// History, and the Qiraat Explorer while "Show Riwayah / Qiraah" is on: the switch that says
-    /// someone reads the riwayat at all, broader than comparison mode.
-    private func summaryDoors(showWordChip: Bool) -> [SummaryDoorChip] {
-        var doors: [SummaryDoorChip] = []
-        if showWordChip {
-            doors.append(.init(kind: .word, title: SummaryWordTile.title, systemImage: "character.book.closed.fill"))
-        }
-        if ThematicTopicsStore.isBundled {
-            doors.append(.init(kind: .door(.themes), title: "Browse by Theme", systemImage: "square.grid.2x2.fill"))
-        }
-        doors.append(.init(kind: .door(.history), title: "History", systemImage: "clock.arrow.circlepath"))
-        if settings.showQiraahDetails {
-            doors.append(.init(kind: .door(.qiraat), title: "Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical"))
-        }
-        return doors
-    }
-
-    /// Simple Mode's ⋯ menu (docs/Simple Mode Guide.md): the summary doors, the Today pill, the planner
-    /// and Random Surah, then the reading mode and the grid. Every item drives the same state as the
-    /// Full Mode control it stands in for, through the doors' one guard.
+    /// The tab's ⋯ More menu (docs/Simple Mode Guide.md), the same in both modes: the summary doors
+    /// (Browse by Theme, History, the Qiraat Explorer while "Show Riwayah / Qiraah" is on, and the
+    /// Word of the Day when it is not a tile), the Today pill, the planner and Random Surah, then the
+    /// reading mode and the grid. The menu is the doors' only door since 2026-10-11: the chips under
+    /// the summary tiles are gone in both modes (Abu: "put these top left no matter simple or normal
+    /// and remove it from summary"). Every item drives the same state as the control it stands in for,
+    /// through the doors' one guard. Items, not NavigationLinks: a link activates with every OTHER link
+    /// in the same List row (Abu, 2026-09-19), so one `@State` + one destination on the List pushes
+    /// the door; see `summaryDoorDestination`.
     @ViewBuilder
-    var simpleMoreItems: some View {
-        SimpleMoreMenuItem("Today", systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
-        SimpleMoreMenuItem("History", systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
+    var moreMenuItems: some View {
+        TabMoreMenuItem("Today", systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
+        TabMoreMenuItem("History", systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
         if ThematicTopicsStore.isBundled {
-            SimpleMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
+            TabMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
         }
         if settings.showWordOfTheDay, wordOfTheDay != nil {
-            SimpleMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
+            TabMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
                 settings.hapticFeedback()
                 guard !anyDoorOpen, path.isEmpty else { return }
                 openWordOfDay = true
             }
         }
         if settings.showQiraahDetails {
-            SimpleMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
+            TabMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
         }
         if settings.isHafsDisplay {
-            SimpleMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
+            TabMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
                 settings.hapticFeedback()
                 plannerRequest = true
             }
         }
-        SimpleMoreMenuItem("Open a Random Surah", systemImage: "shuffle") {
+        TabMoreMenuItem("Open a Random Surah", systemImage: "shuffle") {
             settings.hapticFeedback()
             guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
             push(surahID: surah.id)
@@ -3151,13 +3045,13 @@ struct QuranView: View {
 
         Divider()
 
-        SimpleMoreMenuItem(settings.quranPageMode ? "Read as List" : "Read as Pages",
+        TabMoreMenuItem(settings.quranPageMode ? "Read as List" : "Read as Pages",
                            systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book") {
             settings.hapticFeedback()
             showReadingModeConfirm = true
         }
         let showsGrid = settings.gridMode && !listForJump
-        SimpleMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
+        TabMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { settings.gridMode.toggle() }
@@ -3172,17 +3066,7 @@ struct QuranView: View {
         openSummaryDoor = door
     }
 
-    private func summaryDoorButton(_ door: SummaryDoorChip) -> some View {
-        Button {
-            settings.hapticFeedback()
-            openDoor(door)
-        } label: {
-            summaryDoorChip(title: door.title, systemImage: door.systemImage)
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Raises one summary door, and only if no other is in flight.
+    /// At most one summary door in flight at a time.
     ///
     /// `openWordOfDay` and `openSummaryDoor` are two `navigationDestination(isPresented:)` on one
     /// stack, which is the hazard `SettingsView.anyDoorOpen` already documents: tapping a second door
@@ -3191,44 +3075,10 @@ struct QuranView: View {
     /// the next push can crash inside SwiftUI (Abu, 2026-10-05: "i go to settings and tap on a bunch
     /// and keep switching then it turns blank for some reason then it just crashes"). The second tap is
     /// dropped rather than queued, for the reason given there: the user is already travelling to the
-    /// screen they asked for first.
+    /// screen they asked for first. (A non-empty `path` is a tile's reader push still in flight: the
+    /// root is only tappable at [].)
     private var anyDoorOpen: Bool {
         openWordOfDay || openSummaryDoor != nil
-    }
-
-    private func openDoor(_ door: SummaryDoorChip) {
-        // A non-empty path is a tile's reader push still in flight (the root is only tappable at []).
-        guard !anyDoorOpen, path.isEmpty else { return }
-        switch door.kind {
-        case .word: openWordOfDay = true
-        case .door(let target): openSummaryDoor = target
-        }
-    }
-
-    /// A door under the summary tiles: a glass chip with the accent symbol and the name, a half or a
-    /// third of the row wide, so the doors (and the Word of the Day's chip, when it isn't a tile) share
-    /// one line. The screen it opens introduces itself in its own first
-    /// section.
-    private func summaryDoorChip(title: String, systemImage: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(settings.accentColor.color)
-
-            // Two lines, so three chips on an iPhone row keep their whole names ("Word of the
-            // Day", "Browse by Theme" ran to an ellipsis on one line); two chips still take one.
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
-                .minimumScaleFactor(0.85)
-        }
-        .padding(.vertical, 9)
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .conditionalGlassEffect(clear: true, rectangle: true)
-        .contentShape(Rectangle())
     }
 
     /// The Today screen, built lazily like the other doors: the header pill's destination and the
@@ -3623,8 +3473,8 @@ struct QuranView: View {
             }
         } else if settings.quranSortMode == .page {
             surahs = quranData.quran.sorted {
-                let l = $0.numberOfPages ?? 0
-                let r = $1.numberOfPages ?? 0
+                let l = $0.pageLengthTwelfths
+                let r = $1.pageLengthTwelfths
                 if l == r { return $0.id < $1.id }
                 return l < r
             }
@@ -3736,7 +3586,7 @@ struct QuranView: View {
 
     private func pagesHeader(count: Int) -> some View {
         HStack {
-            Text("QURAN PAGES")
+            SectionIconHeader("QURAN PAGES", icon: "doc.on.doc.fill")
 
             Spacer()
 
@@ -3763,7 +3613,7 @@ struct QuranView: View {
 
     private func sajdahHeader(count: Int) -> some View {
         HStack {
-            Text("SAJDAH AYAHS")
+            SectionIconHeader("SAJDAH AYAHS", icon: "figure.mind.and.body")
 
             Spacer()
 
@@ -3855,7 +3705,7 @@ struct QuranView: View {
 
     private func muqattaatHeader(count: Int) -> some View {
         HStack {
-            Text("MUQATTA'AT AYAHS")
+            SectionIconHeader("MUQATTA'AT AYAHS", icon: "textformat.abc")
 
             Spacer()
 
@@ -3983,7 +3833,7 @@ struct QuranView: View {
                 }
             }
         } header: {
-            Text("KHATM PROGRESS")
+            SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered")
         }
         .onChange(of: settings.automaticKhatmCompletion) { _ in
             settings.hapticFeedback()
@@ -4212,7 +4062,7 @@ struct QuranView: View {
     @ViewBuilder
     private func surahBrowseHeader(showsRevelationOrder: Bool) -> some View {
         if showsRevelationOrder {
-            SurahsHeader(text: "REVELATION ORDER")
+            SurahsHeader(text: "REVELATION ORDER", icon: "list.number")
         } else {
             SurahsHeader()
         }
@@ -4329,7 +4179,7 @@ struct QuranView: View {
     private func surahSectionHeader(context: SearchDisplayContext) -> some View {
         if context.isSearching {
             HStack {
-                Text("SURAH SEARCH RESULTS")
+                SectionIconHeader("SURAH SEARCH RESULTS", icon: "magnifyingglass")
 
                 Spacer()
 
@@ -4635,7 +4485,7 @@ struct QuranView: View {
 
     @ViewBuilder
     private func revelationSections(context: SearchDisplayContext) -> some View {
-        Section(header: SurahsHeader(text: "REVELATION ORDER")) {
+        Section(header: SurahsHeader(text: "REVELATION ORDER", icon: "list.number")) {
             ForEach(quranData.revelationOrderSurahIDs, id: \.self) { surahID in
                 if let surah = quranData.surah(surahID) {
                     Group {

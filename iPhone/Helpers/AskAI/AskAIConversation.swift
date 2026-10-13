@@ -409,7 +409,10 @@ final class AskAIConversation: ObservableObject {
         cleaned = AskAIText.droppingSourceEchoes(cleaned, sources: messages.last?.sources ?? [])
         let count = messages.last?.sources.count ?? 0
         cleaned = AskAIText.normalizeMarkers(cleaned, sourceCount: count).text
-        cleaned = AskAIText.capitalizing(AskAIText.replacingDashes(echoGuard.filter(cleaned)))
+        // Same rule as `finishReply`: a stream the guard would blank entirely is shown as it is.
+        let unechoed = echoGuard.filter(cleaned)
+        cleaned = AskAIText.capitalizing(AskAIText.replacingDashes(
+            unechoed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? cleaned : unechoed))
         RenderCounter.hit("AskAIFlush")
         updateReply {
             guard $0.text != cleaned else { return }
@@ -443,7 +446,13 @@ final class AskAIConversation: ObservableObject {
                     reply.text += "\n\n(" + (message ?? "The answer stopped early. Ask again to continue.") + ")"
                 }
             } else {
-                var text = AskAIText.collapsingRepetition(echoGuard.filter(AskAIText.droppingSourceEchoes(reply.text, sources: reply.sources)))
+                let unechoed = AskAIText.droppingSourceEchoes(reply.text, sources: reply.sources)
+                // An answer the guard would erase WHOLE is a repeated answer (the same question asked
+                // again, or rephrased), not an echo inside a new one: it stays. Emptying it turned a
+                // repeat into the failure card under the sources it had retrieved.
+                let policedEcho = echoGuard.filter(unechoed)
+                var text = AskAIText.collapsingRepetition(
+                    policedEcho.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? unechoed : policedEcho)
                 let markers = AskAIText.normalizeMarkers(text, sourceCount: reply.sources.count)
                 text = markers.text
                 let policed = AskAIText.policeCitations(text, sources: reply.sources)

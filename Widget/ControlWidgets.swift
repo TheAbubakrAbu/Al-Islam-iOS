@@ -152,6 +152,10 @@ struct NextPrayerValueProvider: ControlValueProvider {
         // computed from the stored location, and a control may be read long after the app last ran.
         let settings = await MainActor.run { () -> (name: String, symbol: String, time: Date)? in
             let settings = Settings.shared
+            // The same App Group re-seed the tiles' provider runs before ITS computation (location,
+            // method, traveling mode, offsets, angles): without it the control answered from whatever
+            // this process's Settings held at init, so it could disagree with the tiles beside it.
+            PrayersProvider().seedSettingsFromAppGroup()
             settings.fetchPrayerTimes()
             guard let next = settings.nextPrayer else { return nil }
             return (next.displayName, next.image, next.time)

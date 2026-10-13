@@ -101,15 +101,17 @@ struct QiblaView: View {
     /// degrees (a well-calibrated iPhone's realistic best) and capped at 15 so a merely mediocre
     /// sample does not call half the horizon "the Kaaba". Beyond 15 the reading is not trustworthy at
     /// all and `isTrustworthy` withholds the claim outright rather than widening it further.
-    private static let minimumAlignmentTolerance: Double = 3
-    private static let maximumAlignmentTolerance: Double = 15
+    static let minimumAlignmentTolerance: Double = 3
+    static let maximumAlignmentTolerance: Double = 15
 
-    private var alignmentTolerance: Double {
-        guard let accuracy = compass.accuracyDegrees, accuracy > 0 else {
-            return Self.minimumAlignmentTolerance
-        }
-        return min(Self.maximumAlignmentTolerance, max(Self.minimumAlignmentTolerance, accuracy))
+    /// The rule behind `alignmentTolerance`, pure so `QiblaTests` pins the shipped figures (the tests
+    /// used to assert against their own copy of it, which no regression here could ever fail).
+    static func alignmentTolerance(forAccuracy accuracy: Double?) -> Double {
+        guard let accuracy, accuracy > 0 else { return minimumAlignmentTolerance }
+        return min(maximumAlignmentTolerance, max(minimumAlignmentTolerance, accuracy))
     }
+
+    private var alignmentTolerance: Double { Self.alignmentTolerance(forAccuracy: compass.accuracyDegrees) }
 
     /// Whether the last sample is good enough to make a positive claim about where the Kaaba is.
     ///
@@ -118,9 +120,14 @@ struct QiblaView: View {
     /// moving in that state (it is still the best information available, and freezing it reads as a
     /// broken app) but "You are facing the Kaaba" is withheld: a confident wrong claim about the
     /// direction of prayer is the one failure this view must not produce.
-    private var isTrustworthy: Bool {
-        guard let accuracy = compass.accuracyDegrees else { return false }
-        return accuracy > 0 && accuracy <= Self.maximumAlignmentTolerance
+    private var isTrustworthy: Bool { Self.isTrustworthy(accuracy: compass.accuracyDegrees) }
+
+    /// Core Location marks an invalid heading with a NEGATIVE accuracy; zero is a (perfect) reading
+    /// and is accepted by the delegate, so it is trusted here too (`> 0` withheld the claim and showed
+    /// the calibration hint for a needle that was dead on).
+    static func isTrustworthy(accuracy: Double?) -> Bool {
+        guard let accuracy else { return false }
+        return accuracy >= 0 && accuracy <= maximumAlignmentTolerance
     }
 
     /// All three are false at the Kaaba: the bearing they measure against is undefined there, so
@@ -663,7 +670,7 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// Mapped from the INTERFACE orientation (what the user is actually looking at) rather than the
     /// device one, and the two are inverted for the landscapes: `UIInterfaceOrientation.landscapeLeft`
     /// IS `UIDeviceOrientation.landscapeRight`, and `CLDeviceOrientation` follows the device.
-    private static func headingOrientation(for interface: UIInterfaceOrientation) -> CLDeviceOrientation {
+    static func headingOrientation(for interface: UIInterfaceOrientation) -> CLDeviceOrientation {
         switch interface {
         case .portraitUpsideDown: return .portraitUpsideDown
         case .landscapeLeft: return .landscapeRight
@@ -713,9 +720,14 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// bearing for it, which drew a needle that moved and looked alive while pointing at nothing.
     private func usableLocation() -> Location? {
         guard let location = locationProvider(),
-              abs(location.latitude) <= 90,
-              abs(location.longitude) <= 180 else { return nil }
+              Self.isUsable(latitude: location.latitude, longitude: location.longitude) else { return nil }
         return location
+    }
+
+    /// A coordinate the compass may compute from: the app-wide "no fix yet" sentinel is (1000, 1000),
+    /// and `Qibla(coordinates:)` returns a plausible-looking bearing for it.
+    static func isUsable(latitude: Double, longitude: Double) -> Bool {
+        abs(latitude) <= 90 && abs(longitude) <= 180
     }
 
     private func qiblaBearing(latitude: Double, longitude: Double) -> Double {
@@ -779,13 +791,13 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         locationManager.stopUpdatingLocation()
     }
 
-    private static func normalizedDegrees(_ value: Double) -> Double {
+    static func normalizedDegrees(_ value: Double) -> Double {
         var degrees = value.truncatingRemainder(dividingBy: 360)
         if degrees < 0 { degrees += 360 }
         return degrees
     }
 
-    private static func signedDegrees(_ value: Double) -> Double {
+    static func signedDegrees(_ value: Double) -> Double {
         var degrees = value.truncatingRemainder(dividingBy: 360)
         if degrees > 180 { degrees -= 360 } else if degrees < -180 { degrees += 360 }
         return degrees

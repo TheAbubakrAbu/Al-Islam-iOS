@@ -5,7 +5,7 @@ The rule (2026-09-16): nothing the app ships carries a copy of a hadith the bund
 already hold. A quote stores the row (`bukhari:6306`) and 0-based inclusive ranges of the row's
 whitespace tokens, the Arabic's counted with its chain of narrators, the English's over the
 translation alone, and the app slices the row's text at render time (`WordRange` in
-iPhone/Islam/HadithQuote.swift, `DailyReminderStore.resolveReferences`). The only text a pack may
+iPhone/Islam/Daily/HadithQuote.swift, `DailyReminderStore.resolveReferences`). The only text a pack may
 keep is text the shelf does not have in those words: an abridgement, or its own translation.
 
     shelf_link("Sahih al-Bukhari 6306")   -> ("bukhari", "6306")

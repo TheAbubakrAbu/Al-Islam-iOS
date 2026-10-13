@@ -195,18 +195,60 @@ final class QiraatPlaceTests: XCTestCase {
     }
 
     /// Against the app's own texts: al-Fatiha 1:4, where Warsh reads مَلِكِ for Hafs's مَٰلِكِ.
+    @MainActor
     func testFatihahFourAgainstTheShippedTexts() async throws {
         let quranData = QuranData.shared
-        guard let ayah = quranData.ayah(surah: 1, ayah: 4) else { throw XCTSkip("The Quran is not loaded in this host.") }
+        await quranData.waitUntilLoaded()
+        // The riwayah columns load only when the details switch (or a non-Hafs display) asks for them,
+        // and `rawArabicText(qiraahOverride:)` falls back to Hafs without them, so on a clean simulator
+        // this skipped every time and ran only by order pollution. Ask for them here, the way
+        // FatihahCleanModeTests does, and put the switch back on every exit.
+        let settings = Settings.shared
+        let previousShowQiraah = settings.showQiraahDetails
+        let hadOverlays = quranData.surah(1)?.ayahs.first?.textWarsh != nil
+        if !hadOverlays {
+            settings.showQiraahDetails = true
+            quranData.reloadForQiraahAvailabilityChange()
+            let deadline = Date().addingTimeInterval(20)
+            while quranData.surah(1)?.ayahs.first?.textWarsh == nil, Date() < deadline {
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+        }
+        func restoreQiraahDetails() async throws {
+            guard !hadOverlays else { return }
+            settings.showQiraahDetails = previousShowQiraah
+            if previousShowQiraah != true {
+                quranData.reloadForQiraahAvailabilityChange()
+                let settle = Date().addingTimeInterval(10)
+                while quranData.surah(1)?.ayahs.first?.textWarsh != nil, Date() < settle {
+                    try await Task.sleep(nanoseconds: 20_000_000)
+                }
+            }
+        }
+
+        let ayah: Ayah
+        do {
+            ayah = try XCTUnwrap(quranData.ayah(surah: 1, ayah: 4), "The Quran is not loaded in this host.")
+        } catch {
+            try await restoreQiraahDetails()
+            throw error
+        }
         let warshText = ayah.rawArabicText(surahId: 1, qiraahOverride: warsh)
         let hafsText = ayah.rawArabicText(surahId: 1, qiraahOverride: "")
-        guard !warshText.isEmpty, warshText != hafsText else { throw XCTSkip("Warsh's text is not loaded in this host.") }
+        XCTAssertFalse(warshText.isEmpty, "Warsh's 1:4 is empty")
+        XCTAssertNotEqual(warshText, hafsText, "Warsh's text did not load: the overlays are missing from this build")
 
         let place = await QiraatPlaceBuilder.build(surah: 1, hafsAyah: 4, tags: [warsh], everyDifference: false, quranData: quranData)
-        let site = try XCTUnwrap(place.sites.first { $0.range.contains(0) })
-        let warshReading = try XCTUnwrap(site.reading(of: warsh))
-        XCTAssertFalse(warshReading.isHafs)
-        XCTAssertNotEqual(warshReading.text, site.readings[0].text)
-        XCTAssertTrue(place.hafsTinted.contains(0))
+        do {
+            let site = try XCTUnwrap(place.sites.first { $0.range.contains(0) })
+            let warshReading = try XCTUnwrap(site.reading(of: warsh))
+            XCTAssertFalse(warshReading.isHafs)
+            XCTAssertNotEqual(warshReading.text, site.readings[0].text)
+            XCTAssertTrue(place.hafsTinted.contains(0))
+        } catch {
+            try await restoreQiraahDetails()
+            throw error
+        }
+        try await restoreQiraahDetails()
     }
 }

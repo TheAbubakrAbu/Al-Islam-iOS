@@ -484,6 +484,9 @@ struct ArabicView: View {
         }
         #if os(watchOS)
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
+        // The watch has no floating bottom bar to order against, so it is styled here (the iOS branch
+        // styles before its bottom bar; the 2026-10-07 reorder had dropped the watch's call).
+        .applyConditionalListStyle()
         #else
         // Every grid section's tile tap and shuffle land here: one push for the one letter. On the List,
         // not a row (a lazy row's destination never fires, see `PushDestination`). It was a hidden

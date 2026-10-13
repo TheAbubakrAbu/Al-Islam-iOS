@@ -71,14 +71,14 @@ PACKS = {
 }
 
 PORT_SWIFT = [
-    "iPhone/Islam/DailyReminders.swift", "iPhone/Quran/WordOfDay.swift", "iPhone/Quran/SunnahReminders.swift",
-    "iPhone/Quran/ReminderKinds.swift", "iPhone/Settings/ActivityLog.swift", "iPhone/Settings/ProfileDashboard.swift",
-    "iPhone/Quran/QiraatExplorer.swift", "iPhone/Quran/QiraatVariantAudio.swift", "iPhone/Quran/ThemeHighlights.swift",
-    "iPhone/Quran/ShareBackdrop.swift", "iPhone/Quran/QuranRankedSearch.swift", "iPhone/Hadith/HadithRankedSearch.swift",
-    "iPhone/Hadith/HadeethEncView.swift", "iPhone/Hadith/HadithTopics.swift", "iPhone/Islam/MiraclesView.swift",
-    "iPhone/Islam/JournalView.swift", "iPhone/Islam/NamesDepth.swift", "iPhone/Islam/TajweedLessons.swift",
-    "iPhone/Settings/DailyRollover.swift", "iPhone/Helpers/RemovalConfirmation.swift", "Widget/Quran/DailyWidgets.swift",
-    "iPhone/Islam/DuaView.swift",
+    "iPhone/Islam/Daily/DailyReminders.swift", "iPhone/Quran/Words/WordOfDay.swift", "iPhone/Quran/Models/SunnahReminders.swift",
+    "iPhone/Quran/Models/ReminderKinds.swift", "iPhone/Settings/Profile/ActivityLog.swift", "iPhone/Settings/Profile/ProfileDashboard.swift",
+    "iPhone/Quran/Qiraat/QiraatExplorer.swift", "iPhone/Quran/Playback/QiraatVariantAudio.swift", "iPhone/Quran/Themes/ThemeHighlights.swift",
+    "iPhone/Quran/Sharing/ShareBackdrop.swift", "iPhone/Quran/Search/QuranRankedSearch.swift", "iPhone/Hadith/Search/HadithRankedSearch.swift",
+    "iPhone/Hadith/Views/HadeethEncView.swift", "iPhone/Hadith/Models/HadithTopics.swift", "iPhone/Islam/Proofs/MiraclesView.swift",
+    "iPhone/Islam/Daily/JournalView.swift", "iPhone/Islam/Names/NamesDepth.swift", "iPhone/Islam/Tajweed/TajweedLessons.swift",
+    "iPhone/Settings/Profile/DailyRollover.swift", "iPhone/Helpers/UI/RemovalConfirmation.swift", "Widget/Quran/DailyWidgets.swift",
+    "iPhone/Islam/Dua/DuaView.swift",
 ]
 
 # SunnahReminders.swift's presets, in file order: Mulk (Tirmidhi 2891), Ikhlas x3 (Bukhari 5009, Muslim 808),
@@ -526,6 +526,9 @@ def main() -> None:
     for relative in PORT_SWIFT:
         path = ROOT / relative
         if not path.exists():
+            # A listed file that moved used to drop out of the census silently (21 of 22 did after the
+            # 2026-10-07 regrouping, and the dash rule went unenforced).
+            fail(f"dash census: {relative} is not there (moved? update PORT_SWIFT)")
             continue
         for literal in re.findall(r'"((?:[^"\\]|\\.)*)"', path.read_text(encoding="utf-8")):
             # Arithmetic inside an interpolation ("\(next - current)") is not punctuation.

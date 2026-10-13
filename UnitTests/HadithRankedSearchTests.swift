@@ -17,6 +17,17 @@ final class HadithRankedSearchTests: XCTestCase {
         return books
     }
 
+    /// The shelf, and it must open WHOLE: a pack that fails to decode is the regression this suite
+    /// exists to catch, and a skip reported it as SUCCEEDED (the sibling suites fail in that case).
+    private func openedShelf() async throws -> Shelf {
+        let books = await shelf()
+        XCTAssertEqual(books.count, HadithCatalogBook.all.count, "the shelf did not open whole")
+        guard books.count == HadithCatalogBook.all.count else { throw ShelfError.incomplete }
+        return books
+    }
+
+    private enum ShelfError: Error { case incomplete }
+
     private struct Row {
         let reference: String
         let text: String
@@ -36,8 +47,7 @@ final class HadithRankedSearchTests: XCTestCase {
 
     /// A short narration that is ABOUT the word leads a long one that mentions it once.
     func testShortFocusedNarrationLeads() async throws {
-        let books = await shelf()
-        try XCTSkipIf(books.count < HadithCatalogBook.all.count, "the shelf did not open")
+        let books = try await openedShelf()
         let patience = try search("patience", in: books)
         XCTAssertEqual(patience.rows.first?.reference, "bukhari:1260")
         for row in patience.rows { XCTAssertLessThan(row.text.count, 600, row.reference) }
@@ -48,8 +58,7 @@ final class HadithRankedSearchTests: XCTestCase {
 
     /// One word of several in a chapter's name does not make the chapter about the query.
     func testPartOfAChapterNameIsNotAboutTheQuery() async throws {
-        let books = await shelf()
-        try XCTSkipIf(books.count < HadithCatalogBook.all.count, "the shelf did not open")
+        let books = try await openedShelf()
         let found = try search("actions are by intentions", in: books, cap: 5)
         XCTAssertFalse(found.outcome.relaxed)
         for row in found.rows {
@@ -60,8 +69,7 @@ final class HadithRankedSearchTests: XCTestCase {
 
     /// A chapter whose name IS the query still lifts its narrations, but never a stub with no text.
     func testChapterAboutTheQueryLeadsWithoutStubs() async throws {
-        let books = await shelf()
-        try XCTSkipIf(books.count < HadithCatalogBook.all.count, "the shelf did not open")
+        let books = try await openedShelf()
         let anger = try search("anger", in: books)
         XCTAssertTrue(anger.rows.first?.reference.hasPrefix("aladab_almufrad:") ?? false)
         for row in anger.rows {
@@ -70,8 +78,7 @@ final class HadithRankedSearchTests: XCTestCase {
     }
 
     func testSeveralWordsAndTypos() async throws {
-        let books = await shelf()
-        try XCTSkipIf(books.count < HadithCatalogBook.all.count, "the shelf did not open")
+        let books = try await openedShelf()
         let anger = try search("controlling anger", in: books)
         XCTAssertFalse(anger.outcome.relaxed)
         XCTAssertEqual(anger.rows.first?.reference, "bukhari:5882")
@@ -86,8 +93,7 @@ final class HadithRankedSearchTests: XCTestCase {
     }
 
     func testArabicPhrase() async throws {
-        let books = await shelf()
-        try XCTSkipIf(books.count < HadithCatalogBook.all.count, "the shelf did not open")
+        let books = try await openedShelf()
         let found = try search("إنما الأعمال بالنيات", in: books)
         XCTAssertEqual(found.rows.first?.reference, "bukhari:1")
     }

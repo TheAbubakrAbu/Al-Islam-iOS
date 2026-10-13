@@ -98,11 +98,39 @@ final class FatihahCleanModeTests: XCTestCase {
                 try await Task.sleep(nanoseconds: 50_000_000)
             }
         }
-        try XCTSkipIf(data.surah(1)?.ayahs.first?.textWarsh == nil,
-                      "Qiraat overlays unavailable in this build; nothing to check.")
+        // Put the setting back, then re-merge WITHOUT the overlays and wait for that to land, so the
+        // store the next test sees is the one it would have seen had this test never run. Both halves
+        // matter: leaving the flag set changes later behaviour, and leaving the reload in flight
+        // republishes the whole Quran underneath whichever test is already running. Run on EVERY exit:
+        // the skip and the unwraps below throw, and a restore at the end of the straight path left the
+        // flag on in the simulator's defaults for every later test and launch.
+        func restoreQiraahDetails() async throws {
+            settings.showQiraahDetails = previousShowQiraah
+            if previousShowQiraah != true {
+                data.reloadForQiraahAvailabilityChange()
+                let settle = Date().addingTimeInterval(10)
+                while data.surah(1)?.ayahs.first?.textWarsh != nil, Date() < settle {
+                    try await Task.sleep(nanoseconds: 20_000_000)
+                }
+            }
+        }
+        do {
+            try XCTSkipIf(data.surah(1)?.ayahs.first?.textWarsh == nil,
+                          "Qiraat overlays unavailable in this build; nothing to check.")
+        } catch {
+            try await restoreQiraahDetails()
+            throw error
+        }
 
-        let surah = try XCTUnwrap(data.surah(1))
-        let first = try XCTUnwrap(surah.ayahs.first)
+        let surah: Surah
+        let first: Ayah
+        do {
+            surah = try XCTUnwrap(data.surah(1))
+            first = try XCTUnwrap(surah.ayahs.first)
+        } catch {
+            try await restoreQiraahDetails()
+            throw error
+        }
         let tags = [Settings.Riwayah.hafsTag, Settings.Riwayah.warsh, Settings.Riwayah.qaloon, Settings.Riwayah.duri,
                     Settings.Riwayah.buzzi, Settings.Riwayah.qunbul, Settings.Riwayah.shubah, Settings.Riwayah.susi]
         for tag in tags {
@@ -121,17 +149,6 @@ final class FatihahCleanModeTests: XCTestCase {
         let warsh = first.displayArabicText(surahId: 1, clean: true, removeDots: false, qiraahOverride: Settings.Riwayah.warsh)
         XCTAssertTrue(warsh.hasPrefix("\u{0627}\u{0644}\u{062D}\u{0645}\u{062F}"), warsh)
 
-        // Put the setting back, then re-merge WITHOUT the overlays and wait for that to land, so the
-        // store the next test sees is the one it would have seen had this test never run. Both halves
-        // matter: leaving the flag set changes later behaviour, and leaving the reload in flight
-        // republishes the whole Quran underneath whichever test is already running.
-        settings.showQiraahDetails = previousShowQiraah
-        if previousShowQiraah != true {
-            data.reloadForQiraahAvailabilityChange()
-            let settle = Date().addingTimeInterval(10)
-            while data.surah(1)?.ayahs.first?.textWarsh != nil, Date() < settle {
-                try await Task.sleep(nanoseconds: 20_000_000)
-            }
-        }
+        try await restoreQiraahDetails()
     }
 }

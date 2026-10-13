@@ -150,6 +150,79 @@ final class TajweedPaintTests: XCTestCase {
         XCTAssertEqual(atStop, [], "\(silah.reference): found \(atStop.map(\.rawValue))")
     }
 
+    // MARK: - The 2026-10-12 audit fixes (cross-check against cpfair/quran-tajweed)
+
+    /// A tanween on a noon or meem WITH shadda is a noon sound of its own: the letter keeps its
+    /// ghunnah and the tanween mark takes its ikhfa or idgham into the next word (24 sites). An izhar
+    /// tanween paints nothing of its own, so the whole cluster stays ghunnah.
+    func testShaddaTanweenKeepsItsOwnRule() async throws {
+        // مُّسَمّٗى فَٱكۡتُبُوهُ: the open fathatan hides before ف; the مّ under it is ghunnah
+        let musamman = "\u{0645}\u{0651}\u{064F}\u{0633}\u{064E}\u{0645}\u{0651}\u{0657}\u{0649}"
+        try await assertRule(Site(surah: 2, ayah: 282, word: musamman, scalar: 0x0657), is: .ikhfaaLight)
+        try await assertRule(Site(surah: 2, ayah: 282, word: musamman, scalar: 0x0645, occurrence: 1), is: .generalGhunnah)
+        // صُمّٞ وَبُكۡمٞ: the open dammatan merges into the waw (drawn silent), the waw takes the ghunnah
+        try await assertRule(Site(surah: 6, ayah: 39, word: "\u{0635}\u{064F}\u{0645}\u{0651}\u{065E}", scalar: 0x065E), is: .idghamBilaGhunnah)
+        try await assertRule(Site(surah: 6, ayah: 39, word: "\u{0648}\u{064E}\u{0628}\u{064F}\u{0643}\u{06E1}\u{0645}\u{065E}", scalar: 0x0648), is: .generalGhunnah)
+        // بِغَمّٖ لِّكَيۡلَا: the open kasratan merges into the laam without ghunnah
+        try await assertRule(Site(surah: 3, ayah: 153, word: "\u{0628}\u{0650}\u{063A}\u{064E}\u{0645}\u{0651}\u{0656}", scalar: 0x0656), is: .idghamBilaGhunnah)
+        // مُّسَمًّى عِندَهُ: izhar before ع, so the tanween stays inside the ghunnah
+        try await assertRule(Site(surah: 6, ayah: 2, word: "\u{0645}\u{0651}\u{064F}\u{0633}\u{064E}\u{0645}\u{0651}\u{064B}\u{0649}", scalar: 0x064B), is: .generalGhunnah)
+        // صُمُّۢ بُكۡمٌ: iqlab written as a small meem on the shadda'd letter; the mark is iqlab, the letter ghunnah
+        try await assertRule(Site(surah: 2, ayah: 18, word: "\u{0635}\u{064F}\u{0645}\u{0651}\u{064F}\u{06E2}", scalar: 0x06E2), is: .iqlaab)
+        try await assertRule(Site(surah: 2, ayah: 18, word: "\u{0635}\u{064F}\u{0645}\u{0651}\u{064F}\u{06E2}", scalar: 0x0645), is: .generalGhunnah)
+    }
+
+    /// The ۞ ornament before an ayah's first letter is not that letter: a hamzat wasl after it opens
+    /// the ayah and is pronounced, and the laam of ٱللَّهُ opening 24:35 is heavy as at 2:255.
+    func testHizbMarkDoesNotSilenceTheOpeningWasl() async throws {
+        let allah = "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}"
+        let wasl = try await rules(at: Site(surah: 24, ayah: 35, word: allah, scalar: 0x0671))
+        XCTAssertEqual(wasl, [], "24:35: the opening wasl is painted \(wasl.map(\.rawValue))")
+        try await assertRule(Site(surah: 24, ayah: 35, word: allah, scalar: 0x0644, occurrence: 1), is: .tafkhim)
+        // ۞ ٱحۡشُرُواْ 37:22
+        let ihshuru = try await rules(at: Site(surah: 37, ayah: 22, word: "\u{0671}\u{062D}\u{06E1}\u{0634}\u{064F}\u{0631}\u{064F}\u{0648}\u{0627}\u{0652}", scalar: 0x0671))
+        XCTAssertEqual(ihshuru, [], "37:22: the opening wasl is painted \(ihshuru.map(\.rawValue))")
+    }
+
+    /// A ص under the small high seen is read as seen, a light letter; the ص of ٱلۡمُصَيۡطِرُونَ (52:37)
+    /// and بِمُصَيۡطِرٍ (88:22) is read as itself and stays heavy.
+    func testSmallHighSeenReadsAsSeen() async throws {
+        let yabsutu = try await rules(at: Site(surah: 2, ayah: 245, word: "\u{0648}\u{064E}\u{064A}\u{064E}\u{0628}\u{06E1}\u{0635}\u{06DC}\u{064F}\u{0637}\u{064F}", scalar: 0x0635))
+        XCTAssertEqual(yabsutu, [], "2:245: found \(yabsutu.map(\.rawValue))")
+        let bastatan = try await rules(at: Site(surah: 7, ayah: 69, word: "\u{0628}\u{064E}\u{0635}\u{06DC}\u{06E1}\u{0637}\u{064E}\u{0629}\u{0657}\u{06D6}", scalar: 0x0635))
+        XCTAssertEqual(bastatan, [], "7:69: found \(bastatan.map(\.rawValue))")
+        try await assertRule(Site(surah: 52, ayah: 37, word: "\u{0671}\u{0644}\u{06E1}\u{0645}\u{064F}\u{0635}\u{06DC}\u{064E}\u{064A}\u{06E1}\u{0637}\u{0650}", scalar: 0x0635), is: .tafkhim)
+        try await assertRule(Site(surah: 88, ayah: 22, word: "\u{0628}\u{0650}\u{0645}\u{064F}\u{0635}\u{064E}\u{064A}\u{06E1}\u{0637}\u{0650}\u{0631}\u{064D}", scalar: 0x0635), is: .tafkhim)
+    }
+
+    /// J10: silent letters are "Written but Not Pronounced", not a joining hamzah: the plural alif
+    /// of ٱذۡكُرُواْ and the silent waw of ٱلصَّلَوٰةَ. The wasl itself keeps its own name.
+    func testSilentLettersAreNamedDropped() async throws {
+        let udhkuru = "\u{0671}\u{0630}\u{06E1}\u{0643}\u{064F}\u{0631}\u{064F}\u{0648}\u{0627}\u{0652}"
+        try await assertRule(Site(surah: 2, ayah: 47, word: udhkuru, scalar: 0x0627), is: .droppedLetter)
+        try await assertRule(Site(surah: 2, ayah: 47, word: udhkuru, scalar: 0x0671), is: .hamzatWaslSilent)
+        try await assertRule(Site(surah: 2, ayah: 3, word: "\u{0671}\u{0644}\u{0635}\u{0651}\u{064E}\u{0644}\u{064E}\u{0648}\u{0670}\u{0629}\u{064E}", scalar: 0x0648), is: .droppedLetter)
+    }
+
+    /// The small waw before an ayah's last letter is the madd letter of the stop: ٱلۡغَاوُۥنَ and
+    /// يَسۡتَوُۥنَ end on an Ending Madd, not the two-count Tiny Madd.
+    func testSmallWawAtTheStopIsEndingMadd() async throws {
+        try await assertRule(Site(surah: 26, ayah: 94, word: "\u{0648}\u{064E}\u{0671}\u{0644}\u{06E1}\u{063A}\u{064E}\u{0627}\u{0648}\u{064F}\u{06E5}\u{0646}\u{064E}", scalar: 0x06E5), is: .maddSukoon)
+        try await assertRule(Site(surah: 32, ayah: 18, word: "\u{064A}\u{064E}\u{0633}\u{06E1}\u{062A}\u{064E}\u{0648}\u{064F}\u{06E5}\u{0646}\u{064E}", scalar: 0x06E5), is: .maddSukoon)
+    }
+
+    /// The word card's rules on a cold ayah come straight off the paint, not off a cache read-back
+    /// (2:122 lost its opening dagger alif once in 6,236 on 2026-10-12), and with Hide Dots on.
+    func testWordRulesOnAColdAyah() async throws {
+        let yabani = "\u{064A}\u{064E}\u{0670}\u{0628}\u{064E}\u{0646}\u{0650}\u{064A}\u{0653}"
+        try await assertRule(Site(surah: 2, ayah: 122, word: yabani, scalar: 0x0670), is: .maddNaturalMiniature)
+        let settings = Settings.shared
+        let hadDots = settings.removeArabicDots
+        settings.removeArabicDots = true
+        defer { settings.removeArabicDots = hadDots }
+        try await assertRule(Site(surah: 2, ayah: 47, word: yabani, scalar: 0x0670), is: .maddNaturalMiniature)
+    }
+
     // MARK: - The laam of the name of Allah (heavy / light)
 
     /// The laam of ٱللَّه is heavy after a fatha or a damma. The letter asserted is the SECOND laam,
@@ -214,5 +287,39 @@ final class TajweedPaintTests: XCTestCase {
         let allahumma = Site(surah: 3, ayah: 26, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}\u{0645}\u{0651}\u{064E}", scalar: 0x0644, occurrence: 1)
         let found = try await rules(at: allahumma)
         XCTAssertFalse(found.contains(.tafkhim), "3:26: قُلِ's kasra makes it light")
+    }
+
+    /// Not a rule check: writes the whole Quran's painted rules, one JSON line per ayah
+    /// (`{"s","a","t","c":[[cluster, [rule ids]], ...]}`, one entry per grapheme cluster of the raw
+    /// text), to the file named by TAJWEED_DUMP_PATH (TEST_RUNNER_TAJWEED_DUMP_PATH on the xcodebuild
+    /// line), for an offline comparison against another annotator: the 2026-10-11 cross-check against
+    /// cpfair's quran-tajweed ran on it. Skipped unless that variable is set.
+    func testDumpWholeQuranPaintWhenAsked() async throws {
+        guard let path = ProcessInfo.processInfo.environment["TAJWEED_DUMP_PATH"], !path.isEmpty else {
+            throw XCTSkip("set TEST_RUNNER_TAJWEED_DUMP_PATH to write the dump")
+        }
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        guard TajweedLegendCategory.allCases.allSatisfy(Settings.shared.isTajweedCategoryVisible) else {
+            throw XCTSkip("a tajweed category is hidden in this simulator's settings")
+        }
+        var lines: [String] = []
+        for surah in data.quran {
+            for ayah in surah.ayahs {
+                let raw = ayah.rawArabicText(surahId: surah.id, qiraahOverride: "")
+                var clusters: [[Any]] = []
+                var location = 0
+                for character in raw {
+                    let range = NSRange(location: location, length: character.utf16.count)
+                    location += character.utf16.count
+                    let rules = TajweedStore.shared.wordRules(surah: surah.id, ayah: ayah.id, text: raw, wordRange: range)
+                    clusters.append([String(character), rules.map(\.id)])
+                }
+                let object: [String: Any] = ["s": surah.id, "a": ayah.id, "t": raw, "c": clusters]
+                let json = try JSONSerialization.data(withJSONObject: object)
+                lines.append(String(decoding: json, as: UTF8.self))
+            }
+        }
+        try lines.joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
     }
 }

@@ -2,7 +2,7 @@
 """Re-block the bundled .hpk / .tpk / .qpk packs in place, losslessly.
 
 The packs are block-compressed (the readers decompress ONE block per read, see
-iPhone/Hadith/HadithPack.swift, iPhone/Quran/TafsirPack.swift and iPhone/Quran/QuranPack.swift
+iPhone/Hadith/Models/HadithPack.swift, iPhone/Quran/Models/TafsirPack.swift and iPhone/Quran/Models/QuranPack.swift
 for the byte layouts). Their builders live in other repos (Hadith-JSON-Engine, Tafsir-Corpus,
 Quran-Tajweed-Engine) and wrote 256 KB blocks. Bigger blocks compress better because LZMA gets
 a longer history to match against, and the readers are table-driven, so the block size is a

@@ -2093,7 +2093,7 @@ struct QiraatView: View {
                         .foregroundColor(appearance.accent)
 
                     Link(destination: URL(string: "https://mahajjah.com/the-manner-in-which-the-ahlus-sunnah-and-shia-act-upon-this-hadith/")!) {
-                        Label("Source: Mahajjah - Ahlus Sunnah and Shia on this hadith", systemImage: "link")
+                        Label("Source: Mahajjah, on how Ahlus Sunnah and the Shia act upon this hadith", systemImage: "link")
                     }
                     .font(.caption)
                 }

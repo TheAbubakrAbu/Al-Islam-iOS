@@ -433,6 +433,9 @@ struct SummaryTileHeightKey: PreferenceKey {
 /// each limited to one line - like a normal AyahRow but trimmed to fit a tile.
 struct SummaryAyahTile: View {
     @ObservedObject var settings = Settings.shared
+    /// An iPad sidebar's half-width tile is about 120 pt: "Last Listened Ayah" needs its third line
+    /// there, where two cut it to "Last Listen..." (2026-10-12).
+    @Environment(\.isSidebarColumn) private var isSidebarColumn
 
     let title: String
     let icon: String
@@ -495,8 +498,8 @@ struct SummaryAyahTile: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(titleColor)
                             // Two lines at the large text sizes ("Last Listened Ayah" was "Last Li..."
-                            // in a half-width tile), one everywhere else.
-                            .lineLimit(2)
+                            // in a half-width tile), one everywhere else; three in an iPad sidebar.
+                            .lineLimit(isSidebarColumn ? 3 : 2)
                             .fixedSize(horizontal: false, vertical: true)
                             .layoutPriority(1)
 
@@ -594,6 +597,9 @@ struct SummaryAyahTile: View {
 /// duration, a play button, and a tiny progress bar instead - sized to match the ayah tile beside it.
 struct SummarySurahTile: View {
     @ObservedObject var settings = Settings.shared
+    /// A third title line in an iPad sidebar's half-width tile, as `SummaryAyahTile` ("Last Listened
+    /// Surah" was "Last Listene..." there, 2026-10-12).
+    @Environment(\.isSidebarColumn) private var isSidebarColumn
     /// Actions only: not observed. Play state and the history lists publish on their own objects
     /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
     private let quranPlayer = QuranPlayer.shared
@@ -679,7 +685,7 @@ struct SummarySurahTile: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(titleColor)
                         // Two lines at the large text sizes, one everywhere else (see `SummaryAyahTile`).
-                        .lineLimit(2)
+                        .lineLimit(isSidebarColumn ? 3 : 2)
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(1)
 
@@ -868,7 +874,7 @@ struct LastReadAyahRow: View {
     var body: some View {
         Section(header:
             HStack {
-                Text("LAST READ AYAH")
+                SectionIconHeader("LAST READ AYAH", icon: "clock.arrow.circlepath")
 
                 Spacer()
 

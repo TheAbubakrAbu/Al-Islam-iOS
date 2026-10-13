@@ -273,7 +273,7 @@ struct ZakahCalculatorView: View {
 
             ExplainerButton(
                 title: "What counts, and what does not",
-                body_: "What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet.\n\nGold and silver count whatever they are for, jewellery included - even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi\u{2018}i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \u{201C}Do you pay the zakah on this?\u{201D} (Abu Dawud 1563). This calculator follows that view; if you follow the other, leave the field empty.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone. Business stock is valued at what you would sell it for today, not what you paid.",
+                body_: "What you have held for a full lunar year, in your own currency. Your home, your car, your furniture and the tools you work with are not zakatable, and neither is a pension you cannot draw on yet.\n\nGold and silver count whatever they are for, jewellery included, even a woman's own jewellery kept for wearing. Abu Hanifa held it is due; Malik, ash-Shafi\u{2018}i and Ahmad exempted jewellery kept for lawful use. Ibn Baz, al-Albani and the Permanent Committee held it is due, on the hadith of the woman whose daughter wore two heavy gold bangles and who was asked \u{201C}Do you pay the zakah on this?\u{201D} (Abu Dawud 1563). This calculator follows that view; if you follow the other, leave the field empty.\n\nA debt somebody owes YOU and you expect back counts every year, as if it were in your hand. A debt on somebody who denies it or cannot pay is not counted until you actually receive it, and then for one year.\n\nShares bought to trade are counted at today's market value. Shares held for the long term are counted on the zakatable assets of the company behind them, not on the share price, so enter that part alone. Business stock is valued at what you would sell it for today, not what you paid.",
                 caption: "Held for a lunar year. Your home, car and tools are not counted."
             )
         }
@@ -332,7 +332,7 @@ struct ZakahCalculatorView: View {
     /// The one line that stays on the screen; the rest is behind the explainer.
     private var nisabCaption: String {
         switch nisabBasis {
-        case .silver: return "595g of silver - nearly always the lower of the two, and the better one for the poor."
+        case .silver: return "595g of silver: nearly always the lower of the two, and the better one for the poor."
         case .gold:   return "85g of gold, twenty mithqal."
         case .custom: return "Enter the threshold directly, or leave it empty to skip the check."
         }
@@ -449,7 +449,7 @@ struct ZakahCalculatorView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.primary)
 
-                        Text("The Eid obligation, given as food - worked out per person, not on wealth.")
+                        Text("The Eid obligation, given as food, worked out per person, not on wealth.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

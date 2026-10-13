@@ -63,6 +63,8 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     private var pendingExpiry = Date.distantPast
     /// What a tap on the offer needs to actually play it, captured when the offer was raised.
     private var pendingTarget: (date: Date, name: String, notificationID: String)?
+    /// Clears the offer at `pendingExpiry` while the app stays in the foreground (see `offerMissedAdhan`).
+    private var offerExpiryTask: Task<Void, Never>?
 
     #if DEBUG
     /// `-fakeAdhanPlaying <name>`: shows the sky card's stop button with no audio, so the footer's
@@ -272,6 +274,17 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         pendingTarget = missed
         pendingExpiry = missed.date.addingTimeInterval(Self.catchUpWindow)
         pendingPrayerName = missed.name
+        // The offer takes itself down when its window closes. It used to expire only when checked (on
+        // activation, or on the tap), so an app kept in the foreground showed "Play Dhuhr adhan" for
+        // hours, and the eventual tap cleared it and played nothing.
+        offerExpiryTask?.cancel()
+        let expiry = pendingExpiry
+        offerExpiryTask = Task { @MainActor [weak self] in
+            let delay = min(max(expiry.timeIntervalSinceNow, 0), Self.catchUpWindow)
+            if delay > 0 { try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000)) }
+            guard !Task.isCancelled else { return }
+            self?.expirePendingOfferIfStale()
+        }
     }
 
     /// Plays the adhan currently on offer, if it is still inside its window. The footer's play button
@@ -303,6 +316,8 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     /// Drops the offer without playing it: the window closed, the adhan started by another path, or
     /// the app left the foreground. Never marks the moment played - only a tap does that.
     func clearPendingOffer() {
+        offerExpiryTask?.cancel()
+        offerExpiryTask = nil
         pendingTarget = nil
         pendingExpiry = .distantPast
         pendingPrayerName = nil
@@ -399,10 +414,13 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         }
 
         do {
-            // Decoding the file and preparing the player touch no audio hardware, so they stay here.
+            // Decoding the file touches no audio hardware, so the player is made here. It is NOT
+            // prepared here: `prepareToPlay()` activates the audio session itself when nothing has yet
+            // (AVAudioSession_iOS.mm:978), which on this @MainActor class is exactly the "AVAudioSession
+            // Hang Risk" that Xcode flagged on 2026-10-12. It runs in the detached task below, after the
+            // explicit activation, so the session work never happens on the main thread.
             let p = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
             p.delegate = self
-            p.prepareToPlay()
             // Retire a still-playing previous adhan through a local (the stopAdhan idiom): stop it
             // explicitly, and never let its release run inside the `player = p` write - the shape of
             // the achievement-banner exclusivity crash.
@@ -430,6 +448,9 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
                     // holds the session, and playing silently is better than swallowing the adhan.
                     logger.error("Adhan audio session failed: \(error.localizedDescription)")
                 }
+                // Preload the buffers here, off the main thread, now that the session is active (and
+                // after a failed activation, where it is this call that would have tried again).
+                p.prepareToPlay()
                 await MainActor.run { [weak self] in
                     guard let self, self.player === p else { return }   // stopped while we activated
                     // `play()` reports whether the sound actually STARTED, and that return used to be

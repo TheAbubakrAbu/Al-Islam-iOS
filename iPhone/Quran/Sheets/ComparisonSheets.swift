@@ -91,7 +91,10 @@ struct AyahQiraahComparisonSheet: View {
             option.arabicCaption.localizedStandardContains(query) ||
             option.teacher.localizedStandardContains(query) ||
             option.teacherArabic.localizedStandardContains(query) ||
-            (qiraahText(for: option)?.localizedStandardContains(query) ?? false)
+            // The riwayah's own TEXT keeps its marks: a vowelled query here asks which reading carries
+            // that vowel, which `localizedStandardContains` (mark-insensitive) cannot answer. The
+            // Latin labels above stay accent-blind.
+            (qiraahText(for: option)?.localizedCaseInsensitiveContains(query) ?? false)
         }
     }
 

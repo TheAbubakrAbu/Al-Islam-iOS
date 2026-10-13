@@ -332,6 +332,13 @@ struct PrayersProvider: TimelineProvider {
             guard let next = Calendar.current.date(byAdding: .day, value: 1, to: midnight) else { break }
             midnight = next
         }
+        // ...plus the moment the cached weather goes stale (`SkyWeather.freshFor` after it was read): the
+        // entries past it paint a plain sky, as the app's card does, instead of carrying the evening's
+        // rain into the morning (a widget never fetches, and an unopened app writes no newer reading).
+        if let expiry = first.weather.map({ $0.fetchedAt.addingTimeInterval(SkyWeather.freshFor) }),
+           expiry > now, expiry <= horizon {
+            flipTimes.append(expiry)
+        }
         #if os(watchOS)
         // ...plus one entry shortly BEFORE each boundary, where the countdown complication's bar
         // turns red (`lowTimeWarningWindow`). Watch only: nothing on iOS reads it (every iOS
@@ -344,20 +351,28 @@ struct PrayersProvider: TimelineProvider {
         }
         #endif
 
+        // The weather an entry paints: the app's cached reading while the entry's moment is still inside
+        // its freshness (3 h), none after. One reading used to ride every entry out to the 30-hour
+        // horizon, so a phone left closed overnight showed the evening's rain and temperature over Fajr
+        // while the app's own card had long dropped them.
+        func weather(at moment: Date) -> SkyWeather? {
+            guard let reading = first.weather, reading.isFresh(at: moment) else { return nil }
+            return reading
+        }
+
         // The sky gradient per current prayer, resolved once here rather than by every archived entry
         // view (`Settings.skyGradientColors` decodes the palette overrides behind a memo, but the
-        // gradient widget and the complication each called it once per entry per kind). Under the
-        // weather the app cached, like the app's card (one reading for the whole timeline: a reload
-        // follows every new reading the app writes).
+        // gradient widget and the complication each called it once per entry per kind). Keyed on
+        // whether the weather still tints it: the same period paints plain once the reading is stale.
         var skyColorsByKey: [String: [Color]] = [:]
-        func skyColors(forPeriod period: String?) -> [Color] {
-            let key = SkyPalette.editableKey(for: period)
+        func skyColors(forPeriod period: String?, weather: SkyWeather?) -> [Color] {
+            let key = SkyPalette.editableKey(for: period) + (weather == nil ? "" : "|weather")
             if let cached = skyColorsByKey[key] { return cached }
-            let colors = settings.skyGradientColors(forPrayer: period, weather: first.weather)
+            let colors = settings.skyGradientColors(forPrayer: period, weather: weather)
             skyColorsByKey[key] = colors
             return colors
         }
-        skyColorsByKey[SkyPalette.editableKey(for: first.skyPeriod)] = first.skyColors
+        skyColorsByKey[SkyPalette.editableKey(for: first.skyPeriod) + (first.weather == nil ? "" : "|weather")] = first.skyColors
 
         // The sky period per entry moment, off the full set (see `skyBoundaries`). Resolved from the same
         // list the flip instants came from rather than by re-deriving prayer tables per entry.
@@ -388,6 +403,7 @@ struct PrayersProvider: TimelineProvider {
                   let next = boundaries.first(where: { $0.time > t }) else { continue }
             let table = tables(for: t)
             let period = skyPeriod(at: t)
+            let weatherAt = weather(at: t)
             entries.append(PrayersEntry(
                 date:                       t,
                 accentColor:                first.accentColor,
@@ -399,14 +415,18 @@ struct PrayersProvider: TimelineProvider {
                 hijriOffset:                first.hijriOffset,
                 switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib,
                 skyPeriod:                  period,
-                skyColors:                  skyColors(forPeriod: period),
-                weather:                    first.weather
+                skyColors:                  skyColors(forPeriod: period, weather: weatherAt),
+                weather:                    weatherAt
             ))
         }
         return entries
     }
 
-    private func makeEntryOnMain() -> PrayersEntry {
+    /// Mirrors the app's App Group values into this process's `Settings` before any prayer computation.
+    /// The widgets' timelines AND the Control Center control read prayer times here; a control read
+    /// without this answered from whatever the extension's singleton held at init (the old city, the
+    /// old method, no manual offsets), so it could disagree with the tiles beside it.
+    func seedSettingsFromAppGroup() {
         // The raw bytes, not a decoded `Prayers`: assigning `settings.prayers` re-encoded what was just
         // decoded (its setter persists through `prayersData`). `prayers` decodes lazily on first read.
         if let data = store?.data(forKey: "prayersData"), !data.isEmpty, settings.prayersData != data {
@@ -458,7 +478,10 @@ struct PrayersProvider: TimelineProvider {
         if extensionDefaults.bool(forKey: "travelingShowFullPrayers") != fullPrayers {
             extensionDefaults.set(fullPrayers, forKey: "travelingShowFullPrayers")
         }
+    }
 
+    private func makeEntryOnMain() -> PrayersEntry {
+        seedSettingsFromAppGroup()
         settings.fetchPrayerTimes()
 
         guard let obj = settings.prayers else {

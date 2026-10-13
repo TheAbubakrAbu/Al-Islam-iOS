@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerates the SurahSpelling tables in iPhone/Quran/QuranStructs.swift.
+"""Regenerates the SurahSpelling tables in iPhone/Quran/Models/QuranStructs.swift.
 
 Source of truth: Scripts/surah_aliases.json, keyed "1".."114":
     {"standard": "...", "latin": [...], "arabic": [...], "notes": "..."}
@@ -24,7 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "Scripts" / "surah_aliases.json"
-TARGET = ROOT / "iPhone" / "Quran" / "QuranStructs.swift"
+TARGET = ROOT / "iPhone" / "Quran" / "Models" / "QuranStructs.swift"
 BEGIN = "    // BEGIN GENERATED SURAH ALIASES\n"
 END = "    // END GENERATED SURAH ALIASES\n"
 EM_DASH = chr(0x2014)  # spelled as a code point so this file holds no em dash itself

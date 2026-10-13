@@ -12,6 +12,28 @@ import XCTest
 @MainActor
 final class ViewedLogDeadlockTests: XCTestCase {
 
+    /// The stored History log as the test found it, put back in `tearDown`: these tests record fake
+    /// visits into the REAL log, which used to stay in the simulator's Recently Viewed afterwards.
+    private var storedLog: Data?
+
+    override func setUp() {
+        super.setUp()
+        storedLog = UserDefaults.standard.data(forKey: HadithStore.ViewedLog.key)
+    }
+
+    override func tearDown() {
+        let log = HadithStore.shared.viewedLog
+        // Cancel a pending debounce first (it would write the fakes back over the restored bytes).
+        log.flushSynchronously()
+        if let storedLog {
+            UserDefaults.standard.set(storedLog, forKey: HadithStore.ViewedLog.key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: HadithStore.ViewedLog.key)
+        }
+        log.reloadFromStorage()
+        super.tearDown()
+    }
+
     /// Runs `body` off-main and keeps the MAIN thread serving its run loop until it finishes, which
     /// is what a real app does. Fails rather than hanging the whole suite if `body` blocks.
     private func runOffMainWhileMainSpins(
@@ -86,18 +108,25 @@ final class ViewedLogDeadlockTests: XCTestCase {
         let log = HadithStore.shared.viewedLog
         let observed = expectation(description: "didChange posted")
         observed.assertForOverFulfill = false
+        // A marker no stored log can already hold, so only THIS test's write satisfies the observer.
+        let marker = Int.random(in: 1_000_000...9_999_999)
         nonisolated(unsafe) var postedOnMain: Bool?
         let token = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: nil
         ) { _ in
-            if postedOnMain == nil {
-                postedOnMain = Thread.isMainThread
-                observed.fulfill()
-            }
+            // Only the log's OWN write counts. The host app writes other defaults on its own schedule,
+            // and the first poster used to be taken for ours: a main-thread write by another store
+            // passed this test with the log untested, a background one failed it for no log regression.
+            guard postedOnMain == nil,
+                  let data = UserDefaults.standard.data(forKey: HadithStore.ViewedLog.key),
+                  let stored = try? JSONDecoder().decode([HadithStore.ViewedEntry].self, from: data),
+                  stored.contains(where: { $0.slug == "nasai" && $0.idInBook == marker }) else { return }
+            postedOnMain = Thread.isMainThread
+            observed.fulfill()
         }
         defer { NotificationCenter.default.removeObserver(token) }
 
-        log.record(HadithStore.ViewedEntry(slug: "nasai", idInBook: 3, reference: "Nasai 3",
+        log.record(HadithStore.ViewedEntry(slug: "nasai", idInBook: marker, reference: "Nasai \(marker)",
                                arabicPreview: "", englishPreview: "", viewedAt: Date()))
         wait(for: [observed], timeout: 10)
         XCTAssertEqual(postedOnMain, true,

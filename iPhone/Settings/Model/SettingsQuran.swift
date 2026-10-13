@@ -1091,6 +1091,70 @@ extension Settings {
         }
     }
 
+    // MARK: Revision plan progress (the plan itself is in QuranRevisionPlan.swift, iOS only)
+
+    /// Loads the revision plan's revised set on its first use (the khatm set loads the same way).
+    func ensureRevisionCacheLoaded() {
+        guard !revisionCacheLoaded else { return }
+        let keys = UserDataRescue.decode([Int].self, from: quranRevisionRevisedData,
+                                         key: "quranRevisionRevisedData", decoder: Self.decoder) ?? []
+        revisionCacheLoaded = true
+        revisionRevisedCache = Set(keys)
+    }
+
+    /// Re-reads the revised set after the stored bytes were replaced behind the cache (an iCloud
+    /// restore or merge, `storedContentWasReplaced`), the way the khatm set reloads on that path. A
+    /// debounced save still pending is dropped first: landing it would write the stale set back over
+    /// the bytes that were just restored.
+    func reloadRevisionProgressCacheFromStorage() {
+        revisionSaveTask?.cancel()
+        revisionSaveTask = nil
+        revisionRefreshPending = false
+        revisionCacheLoaded = false
+        ensureRevisionCacheLoaded()
+    }
+
+    /// The revised set's key: surah * 1000 + ayah, like the khatm Int mirror.
+    static func revisionKey(surah: Int, ayah: Int) -> Int { surah &* 1000 &+ ayah }
+
+    var revisionRevisedCount: Int {
+        ensureRevisionCacheLoaded()
+        return revisionRevisedCache.count
+    }
+
+    func isRevisionAyahRevised(surah: Int, ayah: Int) -> Bool {
+        ensureRevisionCacheLoaded()
+        return revisionRevisedCache.contains(Self.revisionKey(surah: surah, ayah: ayah))
+    }
+
+    func persistRevisionProgressNow() {
+        ensureRevisionCacheLoaded()
+        quranRevisionRevisedData = (try? Self.encoder.encode(Array(revisionRevisedCache))) ?? Data()
+    }
+
+    /// Empties the cycle's revised set (a closed cycle, or the plan ending), written at once.
+    func resetRevisionProgress() {
+        ensureRevisionCacheLoaded()
+        revisionRevisedCache.removeAll(keepingCapacity: true)
+        revisionSaveTask?.cancel()
+        revisionSaveTask = nil
+        revisionRefreshPending = false
+        persistRevisionProgressNow()
+        objectWillChange.send()
+    }
+
+    /// Lands a debounced revision mark before the app is backgrounded (`flushAllPendingWrites`).
+    func flushPendingRevisionProgress() {
+        guard revisionSaveTask != nil else { return }
+        revisionSaveTask?.cancel()
+        revisionSaveTask = nil
+        persistRevisionProgressNow()
+        if revisionRefreshPending {
+            revisionRefreshPending = false
+            objectWillChange.send()
+        }
+    }
+
     func isKhatmAyahComplete(surah: Int, ayah: Int) -> Bool {
         guard isHafsDisplay else { return false }
         ensureKhatmCacheLoaded()

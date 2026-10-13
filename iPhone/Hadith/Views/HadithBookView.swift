@@ -549,10 +549,9 @@ struct HadithBookView: View {
         }
         .navigationTitle(book.englishTitle)
         .navigationBarTitleDisplayMode(.inline)
-        // The Quran reader's toolbar shape: the reading-mode toggle on the left, the gear on the
-        // right - fullscreen and sharing live in the rows' context menus, not up here.
-        // Pages/list top left (the Quran reader's toolbar shape), grid + gear top right - the tab
-        // root's exact trailing pair. Fullscreen/sharing live in the rows' context menus.
+        // The chapter grid toggle and the gear, top right. (The tab root moved its grid switch into
+        // its leading ⋯ More menu on 2026-10-11; a pushed screen's leading slot is Back, so this one
+        // keeps the button.) Fullscreen and sharing live in the rows' context menus, not up here.
         .modifier(HadithTrailingToolbar(
             hadithGridMode: $chapterGridMode,
             showHadithSettings: $showHadithSettings,
@@ -843,6 +842,11 @@ struct HadithBookView: View {
                 withAnimation { scrollProxy.scrollTo("hadith-chapter-\(chapterId)", anchor: .top) }
             }
         }
+        // Apple Music-style: the bottom search bar minimizes while scrolling down. The whole bottom
+        // bar is the tab root's exact grammar: just the field. On the List itself, before the help
+        // card and the filter row (a horizontal ScrollView) join the tree, for the reason the tab
+        // root gives: `onScrollGeometryChange` must see one scroll view.
+        .collapseBarsOnScroll($barsCollapsed)
         // Recent searches float over the list top while the field is focused and empty (the tab
         // root's help card, minus the help: a book search needs no syntax guide).
         .overlay(alignment: .top) {
@@ -861,9 +865,6 @@ struct HadithBookView: View {
                     }
             }
         }
-        // Apple Music-style: the bottom search bar minimizes while scrolling down. The whole bottom
-        // bar is the tab root's exact grammar - just the field.
-        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 SearchBar(

@@ -25,7 +25,7 @@ merged) stores "" and the reader shows no card for it.
 
 OUTPUT FORMAT
 -------------
-xz (what iPhone/Quran/WordByWord.swift's inflate and
+xz (what iPhone/Quran/Words/WordByWord.swift's inflate and
 Apple's COMPRESSION_ZLIB expect, matching the Qiraah*/Tajweed* payloads) over:
 
     {"v": 2,

@@ -292,7 +292,7 @@ enum SkyWeatherTint {
     static let nightFogVeil = SkyRGB(red: 0.30, green: 0.31, blue: 0.35)
 
     /// The overcast never flattens a sky completely: the period must stay recognizable through it.
-    static let maxOvercastMix = 0.72
+    static let maxOvercastMix = 0.62
     static let maxFogMix = 0.40
 
     /// A stop under `look`. Night is judged per stop by its luminance, so Maghrib's warm top and
@@ -360,18 +360,22 @@ struct SkyWeatherOverlay: View {
             return Double((seed >> 33) & 0xFFFF) / Double(0xFFFF)
         }
 
-        // Clouds: soft puffs across the upper sky, more and denser with the cover. Each puff is three
-        // overlapping ellipses blurred together, so it reads as cloud rather than as three discs.
+        // Clouds: soft puffs across the upper sky, more with the cover. Each puff is three overlapping
+        // ellipses blurred together, so it reads as cloud rather than as three discs. Kept faint (Abu,
+        // 2026-10-11: "clouds are too strong"; they were bright white blobs on every cloudy sky), and
+        // fading as the sky greys over: an overcast sky is one grey, its tint already says so, and
+        // separate puffs on it read as decoration rather than weather.
         if look.cloudCover > 0.12 {
             let count = Int((look.cloudCover * 9).rounded())
-            let alpha = night ? 0.05 + 0.10 * look.cloudCover : 0.10 + 0.18 * look.cloudCover
+            let distinct = 1 - 0.55 * look.overcast
+            let alpha = (night ? 0.03 + 0.06 * look.cloudCover : 0.06 + 0.10 * look.cloudCover) * distinct
             let fill = night ? Color(white: 0.78) : Color.white
             var clouds = context
-            clouds.addFilter(.blur(radius: max(6, size.width * 0.018)))
+            clouds.addFilter(.blur(radius: max(8, size.width * 0.03)))
             for _ in 0..<count {
                 let cx = next() * size.width
                 let cy = (0.06 + next() * 0.48) * size.height
-                let w = (0.22 + next() * 0.26) * size.width
+                let w = (0.16 + next() * 0.20) * size.width
                 let h = w * (0.28 + next() * 0.14)
                 for (dx, scale) in [(-0.28, 0.72), (0.0, 1.0), (0.3, 0.8)] {
                     let rect = CGRect(x: cx + dx * w - w * scale / 2, y: cy - h * scale / 2,

@@ -23,7 +23,7 @@ on demand instead of one 14 MB JSON parsed at the door:
     payload: one xz string table per block of `entriesPerBlock` full narrations, in id order
 
 A string table is `u32 records`, each `u32 fields` then fields of `u32 length` + UTF-8. No JSON in
-the app's path; `HadeethEncStore` (iPhone/Hadith/HadeethEncView.swift) is the reader, `read_pack`
+the app's path; `HadeethEncStore` (iPhone/Hadith/Views/HadeethEncView.swift) is the reader, `read_pack`
 below the Python twin (Scripts/verify_tilawa_packs.py uses it).
 
 Node decodes the brotli files (Python ships no brotli); pass the Tilawa checkout.

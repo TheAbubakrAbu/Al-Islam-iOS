@@ -30,6 +30,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     ) -> Bool {
         LaunchClock.rebaseIfPrewarmed()
         LaunchClock.mark("app delegate: did finish launching")
+        // iPad: two Dynamic Type changes inside a second hang UIKit's floating tab bar for good
+        // (DynamicTypeCoalescer.swift); the windows follow a managed, settled copy of the category.
+        DynamicTypeCoalescer.install()
         registerBackgroundRefreshTask()
         // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
         // Every backgrounding re-arms them (below); the first arm waits for the launch cover to lift.

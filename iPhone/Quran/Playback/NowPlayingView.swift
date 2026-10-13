@@ -276,7 +276,10 @@ struct NowPlayingView: View {
         // paused, one lazy tick keeps it alive, and the play/pause @Published change re-renders (and
         // re-schedules) immediately on resume.
         TimelineView(.periodic(from: .now, by: isPlaying ? (appearance.isReducedTier ? 1 : 0.5) : 3600)) { _ in
-            let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
+            // The observer-fed playhead, never `currentTime()`: that call waits on the item's MediaToolbox
+            // lock, and this tick stalled the main thread 5-13 s while a stream started or a seek landed
+            // (sampled, 2026-10-13; see `QuranPlayer.lastKnownSeconds`).
+            let elapsed = quranPlayer.lastKnownSeconds
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0
             let playedElapsed = elapsed.isFinite ? max(0, elapsed) : 0
@@ -530,7 +533,10 @@ struct NowPlayingView: View {
     /// The same timeline and cadence as `transportRowWithProgress`.
     private func inlineProgress(isPlaying: Bool) -> some View {
         TimelineView(.periodic(from: .now, by: isPlaying ? (appearance.isReducedTier ? 1 : 0.5) : 3600)) { _ in
-            let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
+            // The observer-fed playhead, never `currentTime()`: that call waits on the item's MediaToolbox
+            // lock, and this tick stalled the main thread 5-13 s while a stream started or a seek landed
+            // (sampled, 2026-10-13; see `QuranPlayer.lastKnownSeconds`).
+            let elapsed = quranPlayer.lastKnownSeconds
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0
             let playedElapsed = elapsed.isFinite ? max(0, elapsed) : 0

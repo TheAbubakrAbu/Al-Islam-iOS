@@ -7,6 +7,11 @@ import UserNotifications
 // it, read ahead and it shrinks. Progress is the khatm store itself: ayahs auto-mark as you read in
 // the app (or can be marked in bulk here for reading done outside the app), so the plan advances
 // without any separate check-in. Lives behind the calendar button in the Quran tab's leading toolbar.
+//
+// Since 2026-10-12 the sheet holds a second plan beside the khatm: the Revision plan
+// (QuranRevisionPlan.swift), a set the reader knows gone through every N days, with its own per-cycle
+// progress. The two share the sheet (a Khatm | Revision picker), the ring, the tiles and the one
+// daily reminder, whose body carries a line for each plan that is running.
 
 // MARK: - Model
 
@@ -101,8 +106,9 @@ extension Settings {
             if plan.completedDate == nil {
                 plan.completedDate = Date()
                 changed = true
-                // The khatm is done - no more daily amounts to nag about.
-                QuranPlannerReminder.cancel()
+                // The khatm is done: no more daily amounts to nag about (unless a revision plan still
+                // shares the reminder; the planner refreshes its body on the next visit).
+                if quranRevisionPlan == nil { QuranPlannerReminder.cancel() }
                 // A finished khatm is the single best moment this app will ever have to ask for a
                 // rating. Every gate (cooldown, quota, engagement) re-checks inside the manager.
                 AppReviewManager.shared.requestAtMomentOfDelight()
@@ -123,9 +129,14 @@ enum QuranPlannerMath {
     private static var totalAyahsCache: (surahCount: Int, total: Int)?
 
     /// Total ayah count of the loaded quran, memoized on the surah count (114 once loaded, 0 before).
+    /// Hafs ayahs only: `Surah.ayahs` also carries 50 slots that exist in another riwayah's numbering
+    /// alone (2:287, 112:5...), with no Hafs text. Counted, they made the khatm 6,286 ayahs long, a
+    /// finish the reader could never reach, and the Today span could start on one (2026-10-12).
     static func totalAyahs(quran: [Surah]) -> Int {
         if let cached = totalAyahsCache, cached.surahCount == quran.count { return cached.total }
-        let total = quran.reduce(0) { $0 + $1.ayahs.count }
+        let total = quran.reduce(0) { sum, surah in
+            sum + surah.ayahs.filter { $0.existsInQiraah(nil, surahID: surah.id) }.count
+        }
         totalAyahsCache = (quran.count, total)
         return total
     }
@@ -141,9 +152,13 @@ enum QuranPlannerMath {
     }
 
     static func daysElapsed(since start: Date) -> Int {
+        daysElapsed(since: start, to: Date())
+    }
+
+    static func daysElapsed(since start: Date, to date: Date) -> Int {
         let calendar = Calendar.current
         let startDay = calendar.startOfDay(for: start)
-        let today = calendar.startOfDay(for: Date())
+        let today = calendar.startOfDay(for: date)
         return max(0, calendar.dateComponents([.day], from: startDay, to: today).day ?? 0)
     }
 
@@ -185,7 +200,12 @@ enum QuranPlannerMath {
     /// Consecutive days with any reading, counting back from today (or yesterday, so an unread morning
     /// doesn't zero an unbroken run).
     static func streak(plan: QuranPlan, doneToday: Int) -> Int {
-        let history = plan.history ?? [:]
+        streak(history: plan.history, doneToday: doneToday)
+    }
+
+    /// The same count over any plan's per-day history (the revision plan keeps one too).
+    static func streak(history: [String: Int]?, doneToday: Int) -> Int {
+        let history = history ?? [:]
         var streak = doneToday > 0 ? 1 : 0
         var daysAgo = 1
         while daysAgo <= 30, (history[QuranPlan.dayKey(daysAgo: daysAgo)] ?? 0) > 0 {
@@ -197,7 +217,11 @@ enum QuranPlannerMath {
 
     /// The last 7 days' read counts, oldest first, today (live) last.
     static func lastSevenDays(plan: QuranPlan, doneToday: Int) -> [(label: String, count: Int, isToday: Bool)] {
-        let history = plan.history ?? [:]
+        lastSevenDays(history: plan.history, doneToday: doneToday)
+    }
+
+    static func lastSevenDays(history: [String: Int]?, doneToday: Int) -> [(label: String, count: Int, isToday: Bool)] {
+        let history = history ?? [:]
         let calendar = Calendar.current
         let symbols = calendar.veryShortWeekdaySymbols
 
@@ -238,7 +262,7 @@ enum QuranPlannerMath {
         var last: (surah: Surah, ayah: Ayah)?
 
         outer: for surah in quran {
-            for ayah in surah.ayahs {
+            for ayah in surah.ayahs where ayah.existsInQiraah(nil, surahID: surah.id) {
                 guard !settings.isKhatmAyahComplete(surah: surah.id, ayah: ayah.id) else { continue }
                 if start == nil { start = (surah, ayah) }
                 last = (surah, ayah)
@@ -263,19 +287,24 @@ enum QuranPlannerMath {
         return span
     }
 
-    /// Marks the next `count` unread ayahs complete - for reading done outside the app (a physical
+    /// Marks the next `count` unread ayahs complete, for reading done outside the app (a physical
     /// mushaf, another app). Rides the khatm store's debounced save.
     static func markNextUnreadAyahs(quran: [Surah], settings: Settings, count: Int) {
-        var remaining = count
-        outer: for surah in quran {
-            for ayah in surah.ayahs {
+        var targets: [(surah: Int, ayah: Int)] = []
+        outer: for surah in quran where count > 0 {
+            for ayah in surah.ayahs where ayah.existsInQiraah(nil, surahID: surah.id) {
                 guard !settings.isKhatmAyahComplete(surah: surah.id, ayah: ayah.id) else { continue }
-                // The last mark is `immediate` so the UI snaps to the new state now; the earlier ones
-                // ride the debounced save (one disk write for the whole batch).
-                settings.markKhatmAyahComplete(surah: surah.id, ayah: ayah.id, immediate: remaining == 1)
-                remaining -= 1
-                if remaining <= 0 { break outer }
+                targets.append((surah.id, ayah.id))
+                if targets.count >= count { break outer }
             }
+        }
+        // The last mark is `immediate` so the UI snaps to the new state now; the earlier ones ride the
+        // debounced save (one disk write for the whole batch). The last of what is LEFT, not the
+        // count-th: with fewer unread ayahs than the amount asked for, the batch used to end without
+        // an immediate mark and the ring stayed stale for the debounce.
+        for (index, target) in targets.enumerated() {
+            settings.markKhatmAyahComplete(surah: target.surah, ayah: target.ayah,
+                                           immediate: index == targets.count - 1)
         }
         spanCache = nil
     }
@@ -299,13 +328,38 @@ enum QuranPlannerReminder {
     /// 6:00 PM, stored as minutes past midnight (matches the @AppStorage key's Int encoding).
     static let defaultMinutes = 18 * 60
 
-    /// Schedules (replacing any pending) the daily reminder at `minutes` past midnight. The body is
-    /// frozen at schedule time: today's target when computable (quran loaded), else a generic line
+    /// The khatm plan's line: today's target when computable (quran loaded), else a generic line
     /// built from the plan's stored pace/finish date.
-    static func schedule(plan: QuranPlan, minutes: Int, todayTarget: Int?, pagesEquivalent: Int?) {
+    struct KhatmLine {
+        let plan: QuranPlan
+        let todayTarget: Int?
+        let pagesEquivalent: Int?
+    }
+
+    /// The revision plan's line: today's portion of the set.
+    struct RevisionLine {
+        let todayTarget: Int
+        let pages: Int?
+        let setLabel: String
+    }
+
+    /// Schedules (replacing any pending) the daily reminder at `minutes` past midnight, one line per
+    /// plan that is running. The body is frozen at schedule time. Nothing to say cancels instead.
+    static func schedule(minutes: Int, khatm: KhatmLine?, revision: RevisionLine?) {
+        var lines: [String] = []
+        if let khatm {
+            lines.append(body(plan: khatm.plan, todayTarget: khatm.todayTarget, pagesEquivalent: khatm.pagesEquivalent))
+        }
+        if let revision {
+            lines.append(revisionBody(revision))
+        }
+        guard !lines.isEmpty else {
+            cancel()
+            return
+        }
         let content = UNMutableNotificationContent()
         content.title = "Quran Planner"
-        content.body = body(plan: plan, todayTarget: todayTarget, pagesEquivalent: pagesEquivalent)
+        content.body = lines.joined(separator: " ")
         content.sound = .default
 
         var components = DateComponents()
@@ -336,6 +390,15 @@ enum QuranPlannerReminder {
             return "Time for today's Quran reading: \(perDay) ayahs a day at your chosen pace."
         }
         return "Time for today's Quran reading."
+    }
+
+    private static func revisionBody(_ line: RevisionLine) -> String {
+        guard line.todayTarget > 0 else {
+            return "Revision: \(line.setLabel) is done for this cycle."
+        }
+        var text = "Revision: \(line.todayTarget) ayahs"
+        if let pages = line.pages { text += " (~\(pages) page\(pages == 1 ? "" : "s"))" }
+        return text + " of \(line.setLabel) today."
     }
 
     private static let mediumDate: DateFormatter = {
@@ -391,17 +454,28 @@ struct QuranPlannerToolbarButton: View {
         }
         .onAppear {
             settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
+            settings.settleQuranRevisionPlan(quran: quranData.quran)
+            #if DEBUG
+            // "-openQuranPlanner" opens the sheet on launch, for headless screenshots. After a beat:
+            // this view sits in a toolbar item's background, and a sheet asked for before the window
+            // holds it is dropped (two of four launches showed nothing, 2026-10-12).
+            if ProcessInfo.processInfo.arguments.contains("-openQuranPlanner") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showingPlanner = true }
+            }
+            #endif
         }
         // Midnight rollover while the app stays open: the system posts a significant-time-change at
         // day boundaries, so "today" resets without waiting for the next onAppear.
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
+            settings.settleQuranRevisionPlan(quran: quranData.quran)
         }
         // Completion stamping right when the final ayah is marked (settle no-ops otherwise). Async
         // hop: settle may write settings, which must not publish from inside a view update.
         .onReceive(settings.objectWillChange) { _ in
             DispatchQueue.main.async {
                 settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahCount, totalAyahs: totalAyahs)
+                settings.settleQuranRevisionPlan(quran: quranData.quran)
             }
         }
         .sheet(isPresented: $showingPlanner, onDismiss: {
@@ -477,6 +551,30 @@ struct QuranPlannerView: View {
     @State private var showingEndPlanConfirmation = false
     @State private var showingRestartConfirmation = false
 
+    /// Which plan the sheet shows; the two run side by side. Chosen once on appear: the revision plan
+    /// when it is the only one running, else the khatm.
+    enum PlannerTab: String, CaseIterable, Identifiable {
+        case khatm = "Khatm"
+        case revision = "Revision"
+        var id: String { rawValue }
+    }
+    @State private var plannerTab: PlannerTab = .khatm
+    @State private var didChooseTab = false
+
+    // Revision setup state
+    @State private var editingRevision = false
+    private enum RevisionScopeMode: String, CaseIterable, Identifiable {
+        case juz = "Juz Range"
+        case surahs = "Surahs"
+        var id: String { rawValue }
+    }
+    @State private var revisionScopeMode: RevisionScopeMode = .juz
+    @State private var revisionJuzFrom = 30
+    @State private var revisionJuzTo = 30
+    @State private var revisionSurahs: Set<Int> = []
+    @State private var revisionCycleDays = 7
+    @State private var showingEndRevisionConfirmation = false
+
     // Daily reminder (local to the planner - Settings is owned elsewhere, so plain @AppStorage keys)
     @AppStorage("quranPlannerReminderEnabled") private var reminderEnabled = false
     @AppStorage("quranPlannerReminderMinutes") private var reminderMinutes = QuranPlannerReminder.defaultMinutes
@@ -511,14 +609,23 @@ struct QuranPlannerView: View {
             List {
                 if !settings.isHafsDisplay {
                     riwayahNotice
-                } else if let plan = settings.quranPlan, !editingGoal {
-                    if plan.completedDate != nil || totalCompleted >= totalAyahs {
-                        completedSections(plan: plan)
-                    } else {
-                        dashboardSections(plan: plan)
-                    }
                 } else {
-                    setupSections
+                    planTabPicker
+                    if plannerTab == .revision {
+                        if let plan = settings.quranRevisionPlan, !editingRevision {
+                            revisionDashboardSections(plan: plan)
+                        } else {
+                            revisionSetupSections
+                        }
+                    } else if let plan = settings.quranPlan, !editingGoal {
+                        if plan.completedDate != nil || totalCompleted >= totalAyahs {
+                            completedSections(plan: plan)
+                        } else {
+                            dashboardSections(plan: plan)
+                        }
+                    } else {
+                        setupSections
+                    }
                 }
             }
             .applyConditionalListStyle()
@@ -528,8 +635,23 @@ struct QuranPlannerView: View {
         .navigationViewStyle(.stack)
         .onAppear {
             settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
+            settings.settleQuranRevisionPlan(quran: quranData.quran)
             if let plan = settings.quranPlan {
                 prefillSetup(from: plan)
+            }
+            if let plan = settings.quranRevisionPlan {
+                prefillRevisionSetup(from: plan)
+            }
+            if !didChooseTab {
+                didChooseTab = true
+                if settings.quranRevisionPlan != nil, settings.quranPlan == nil { plannerTab = .revision }
+                #if DEBUG
+                // "-plannerTab revision" lands on the Revision tab, for headless screenshots.
+                let arguments = ProcessInfo.processInfo.arguments
+                if let index = arguments.firstIndex(of: "-plannerTab"), arguments.indices.contains(index + 1) {
+                    plannerTab = arguments[index + 1] == "revision" ? .revision : .khatm
+                }
+                #endif
             }
             // The notification body is frozen at schedule time; refresh it each visit so "today's
             // target" tracks the plan's self-correcting amount (also cancels if the plan is gone).
@@ -739,6 +861,516 @@ struct QuranPlannerView: View {
         rescheduleReminder()
     }
 
+    // MARK: Plan picker
+
+    private var planTabPicker: some View {
+        Section {
+            Picker("Plan", selection: $plannerTab) {
+                ForEach(PlannerTab.allCases) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .listRowSeparator(.hidden)
+        }
+        .themedListRowBackground()
+    }
+
+    // MARK: Revision setup
+
+    private func prefillRevisionSetup(from plan: QuranRevisionPlan) {
+        switch plan.scope {
+        case .juzRange(let from, let to):
+            revisionScopeMode = .juz
+            revisionJuzFrom = from
+            revisionJuzTo = to
+        case .surahs(let ids):
+            revisionScopeMode = .surahs
+            revisionSurahs = Set(ids)
+        }
+        revisionCycleDays = plan.cycleDays
+    }
+
+    /// The set as the setup controls currently describe it.
+    private var revisionDraftScope: QuranRevisionPlan.Scope {
+        switch revisionScopeMode {
+        case .juz:
+            return .juzRange(from: min(revisionJuzFrom, revisionJuzTo), to: max(revisionJuzFrom, revisionJuzTo))
+        case .surahs:
+            return .surahs(revisionSurahs.sorted())
+        }
+    }
+
+    @ViewBuilder
+    private var revisionSetupSections: some View {
+        let scope = revisionDraftScope
+        let refs = QuranRevisionMath.ayahs(in: scope, quran: quranData.quran)
+        let pages = QuranRevisionMath.pageCount(of: refs)
+        let perDay = refs.isEmpty ? 0 : Int((Double(refs.count) / Double(max(1, revisionCycleDays))).rounded(.up))
+
+        Section {
+            VStack(spacing: 10) {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 30))
+                    .foregroundColor(accent)
+                    .frame(width: 64, height: 64)
+                    .conditionalGlassEffect(circle: true)
+
+                Text(editingRevision ? "Adjust Your Revision" : "Plan Your Revision")
+                    .font(.title3.weight(.semibold))
+
+                Text("Choose what you already know and how often to go through it. Each day gets the next portion; miss a day and the rest spreads over the days left in the cycle.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
+        }
+        .themedListRowBackground()
+
+        Section {
+            Picker("Revise", selection: $revisionScopeMode) {
+                ForEach(RevisionScopeMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .listRowSeparator(.hidden)
+
+            if revisionScopeMode == .juz {
+                HStack(spacing: 8) {
+                    juzPresetButton("Juz 30", from: 30)
+                    juzPresetButton("Juz 29 to 30", from: 29)
+                    juzPresetButton("Juz 28 to 30", from: 28)
+                }
+                .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
+
+                Picker("From", selection: $revisionJuzFrom) {
+                    ForEach(1...30, id: \.self) { Text("Juz \($0)").tag($0) }
+                }
+                .pickerStyle(.menu)
+                .font(.subheadline)
+                .listRowSeparator(.hidden)
+                .onChange(of: revisionJuzFrom) { from in
+                    if revisionJuzTo < from { revisionJuzTo = from }
+                }
+
+                Picker("To", selection: $revisionJuzTo) {
+                    ForEach(1...30, id: \.self) { Text("Juz \($0)").tag($0) }
+                }
+                .pickerStyle(.menu)
+                .font(.subheadline)
+                .listRowSeparator(.hidden)
+                .onChange(of: revisionJuzTo) { to in
+                    if revisionJuzFrom > to { revisionJuzFrom = to }
+                }
+            } else {
+                NavigationLink(destination: RevisionSurahPicker(selection: $revisionSurahs)) {
+                    HStack {
+                        Label("Choose Surahs", systemImage: "list.bullet")
+                            .font(.subheadline)
+                        Spacer()
+                        Text(revisionSurahs.isEmpty ? "None" : (revisionSurahs.count == 1 ? "1 surah" : "\(revisionSurahs.count) surahs"))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .listRowSeparator(.hidden)
+
+                if !settings.favoriteSurahs.isEmpty, Set(settings.favoriteSurahs) != revisionSurahs {
+                    Button {
+                        settings.hapticFeedback()
+                        revisionSurahs = Set(settings.favoriteSurahs)
+                    } label: {
+                        Label("Use Favorite Surahs", systemImage: "star.fill")
+                            .font(.subheadline)
+                            .foregroundColor(accent)
+                    }
+                    .listRowSeparator(.hidden)
+                }
+            }
+
+            if refs.isEmpty {
+                summaryLine("Pick at least one surah to revise.")
+            } else {
+                summaryLine("\(refs.count) ayahs across \(pages) page\(pages == 1 ? "" : "s"): \(QuranRevisionMath.scopeLabel(scope, quran: quranData.quran)).")
+            }
+        } header: {
+            Text("REVISE")
+        } footer: {
+            Text("Ayahs are counted as revised when you read them in the app, in any mode, or when you mark them here.")
+                .font(.caption)
+        }
+        .themedListRowBackground()
+
+        Section {
+            HStack(spacing: 8) {
+                cyclePresetButton("1 Week", days: 7)
+                cyclePresetButton("2 Weeks", days: 14)
+                cyclePresetButton("1 Month", days: 30)
+            }
+            .padding(.vertical, 2)
+            .listRowSeparator(.hidden)
+
+            Stepper(value: $revisionCycleDays, in: 1...90) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(revisionCycleDays == 1 ? "Every day" : "Every \(revisionCycleDays) days")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+
+                    Text("one full pass through the set")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .listRowSeparator(.hidden)
+
+            if !refs.isEmpty {
+                summaryLine("About \(perDay) ayahs a day to go through it every \(revisionCycleDays) day\(revisionCycleDays == 1 ? "" : "s").")
+            }
+        } header: {
+            Text("CYCLE")
+        }
+        .themedListRowBackground()
+
+        Section {
+            Button {
+                settings.hapticFeedback()
+                startRevision()
+            } label: {
+                Text(editingRevision ? "Save Changes" : "Start Revision")
+                    .font(.headline)
+                    .foregroundColor(refs.isEmpty ? .secondary : .primary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+            .disabled(refs.isEmpty)
+            .conditionalGlassEffect(useColor: 0.25)
+            .listRowSeparator(.hidden)
+
+            if editingRevision {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { editingRevision = false }
+                } label: {
+                    Text("Cancel")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .listRowSeparator(.hidden)
+            }
+        }
+        .themedListRowBackground()
+    }
+
+    private func juzPresetButton(_ label: String, from: Int) -> some View {
+        Button {
+            settings.hapticFeedback()
+            revisionJuzFrom = from
+            revisionJuzTo = 30
+        } label: {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .tint(accent)
+    }
+
+    private func cyclePresetButton(_ label: String, days: Int) -> some View {
+        Button {
+            settings.hapticFeedback()
+            revisionCycleDays = days
+        } label: {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .tint(accent)
+    }
+
+    private func startRevision() {
+        let scope = revisionDraftScope
+        guard !scope.isEmpty else { return }
+        let today = Calendar.current.startOfDay(for: Date())
+
+        if editingRevision, var plan = settings.quranRevisionPlan {
+            // Adjusting keeps the cycle and its progress; marks outside a changed set are dropped.
+            if plan.scope != scope {
+                settings.pruneRevisionProgress(to: scope)
+                plan.scope = scope
+            }
+            plan.cycleDays = revisionCycleDays
+            settings.quranRevisionPlan = plan
+            withAnimation { editingRevision = false }
+            rescheduleReminder()
+            return
+        }
+
+        settings.resetRevisionProgress()
+        withAnimation {
+            settings.quranRevisionPlan = QuranRevisionPlan(
+                scope: scope,
+                cycleDays: revisionCycleDays,
+                startDate: today,
+                cycleStartDate: today,
+                cyclesCompleted: 0,
+                dayKey: QuranPlan.dayKey(for: Date()),
+                dayStartRevised: 0,
+                carriedToday: 0,
+                history: [:]
+            )
+        }
+        rescheduleReminder()
+    }
+
+    // MARK: Revision dashboard
+
+    /// Today's numbers for the revision plan, computed once per render for the ring, the tiles and the
+    /// reminder body. A stale dayKey (first render after midnight, before settle lands) reads as a
+    /// fresh day.
+    private struct RevisionProgress {
+        let refs: [QuranRevisionMath.AyahRef]
+        let scopeCount: Int
+        let revised: Int
+        let target: Int
+        let doneToday: Int
+        let leftToday: Int
+        let span: QuranPlannerMath.TodaySpan?
+    }
+
+    private func revisionProgress(plan: QuranRevisionPlan) -> RevisionProgress {
+        let refs = QuranRevisionMath.ayahs(in: plan.scope, quran: quranData.quran)
+        let revised = settings.revisionRevisedCount
+        let freshDay = plan.dayKey != QuranPlan.dayKey(for: Date())
+        let dayStart = freshDay ? revised : min(plan.dayStartRevised, revised)
+        let carried = freshDay ? 0 : plan.carriedToday
+        let target = QuranRevisionMath.todayTarget(plan: plan, scopeCount: refs.count, dayStartRevised: dayStart)
+        let doneToday = carried + max(0, revised - dayStart)
+        let leftToday = max(0, target - doneToday)
+        let span = leftToday > 0
+            ? QuranRevisionMath.todaySpan(refs: refs, scope: plan.scope, settings: settings, count: leftToday)
+            : nil
+        return RevisionProgress(refs: refs, scopeCount: refs.count, revised: revised, target: target,
+                                doneToday: doneToday, leftToday: leftToday, span: span)
+    }
+
+    /// Pages a span covers, from its first to its last page.
+    private func pages(of span: QuranPlannerMath.TodaySpan) -> Int? {
+        guard let start = span.startPage, let end = span.endPage else { return nil }
+        return max(1, end - start + 1)
+    }
+
+    @ViewBuilder
+    private func revisionDashboardSections(plan: QuranRevisionPlan) -> some View {
+        let progress = revisionProgress(plan: plan)
+        let setLabel = QuranRevisionMath.scopeLabel(plan.scope, quran: quranData.quran)
+
+        Section(header: Text("TODAY")) {
+            VStack(spacing: 14) {
+                HStack(spacing: 16) {
+                    PlannerRing(
+                        progress: progress.target > 0 ? min(1, Double(progress.doneToday) / Double(progress.target)) : 1,
+                        accent1: accent,
+                        accent2: accent2
+                    )
+                    .frame(width: 64, height: 64)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        if progress.scopeCount == 0 {
+                            Text("Nothing to revise")
+                                .font(.title3.weight(.bold))
+
+                            Text("The chosen set has no ayahs. Adjust it below.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if progress.doneToday >= progress.target {
+                            Text("Done for today")
+                                .font(.title3.weight(.bold))
+
+                            Text("\(progress.doneToday) revised; anything more brings the cycle in early.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                                Text("\(progress.doneToday)")
+                                    .font(.title.weight(.bold).monospacedDigit())
+                                    .foregroundColor(accent)
+
+                                Text("of \(progress.target) ayahs")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            if let span = progress.span {
+                                Text(QuranPlannerMath.spanLabel(span))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+                }
+
+                weekStrip(history: plan.history, doneToday: progress.doneToday)
+            }
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
+
+            if progress.leftToday > 0, let span = progress.span {
+                HStack(spacing: 10) {
+                    actionTile(
+                        title: "Continue Revising",
+                        subtitle: "from \(span.startSurahName) \(span.startAyah)",
+                        symbol: "book.fill"
+                    ) {
+                        pendingRead = QuranPlannerPendingRead(surah: span.startSurahID, ayah: span.startAyah)
+                        presentationMode.wrappedValue.dismiss()
+                    }
+
+                    actionTile(
+                        title: "Mark as Revised",
+                        subtitle: "revised from memory",
+                        symbol: "checkmark.circle.fill"
+                    ) {
+                        withAnimation {
+                            QuranRevisionMath.markNextUnrevisedAyahs(refs: progress.refs, settings: settings, count: progress.leftToday)
+                        }
+                    }
+                }
+                .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
+            }
+        }
+        .themedListRowBackground()
+
+        Section(header: Text("CYCLE")) {
+            let overdue = plan.daysOverdue()
+            if overdue > 0, progress.scopeCount > 0 {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+
+                    Text("This cycle is \(overdue) day\(overdue == 1 ? "" : "s") over. Finish what is left, or adjust the cycle to give it more days.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
+            }
+
+            revisionStatsGrid(plan: plan, progress: progress)
+                .padding(.vertical, 6)
+                .listRowSeparator(.hidden)
+
+            VStack(spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    let percent = progress.scopeCount > 0 ? Int((Double(progress.revised) / Double(progress.scopeCount) * 100).rounded()) : 0
+                    Text("\(percent)% of \(setLabel)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(accent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+
+                    Spacer()
+
+                    Text("\(progress.revised)/\(progress.scopeCount)")
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                ProgressView(value: Double(progress.revised), total: Double(max(progress.scopeCount, 1)))
+                    .tint(accent)
+
+                let pages = QuranRevisionMath.pageCount(of: progress.refs)
+                Text("\(progress.scopeCount) ayahs · \(pages) page\(pages == 1 ? "" : "s") · every \(plan.cycleDays) day\(plan.cycleDays == 1 ? "" : "s") since \(Self.mediumDate.string(from: plan.startDate))")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
+            }
+            .padding(.vertical, 4)
+            .listRowSeparator(.hidden)
+        }
+        .themedListRowBackground()
+
+        reminderSection
+
+        revisionManageSection
+    }
+
+    private func revisionStatsGrid(plan: QuranRevisionPlan, progress: RevisionProgress) -> some View {
+        let streak = QuranPlannerMath.streak(history: plan.history, doneToday: progress.doneToday)
+        let daysLeft = plan.daysLeftInCycle()
+        let day = min(plan.cycleDay(), plan.cycleDays)
+
+        return SummaryTileGrid(columns: 2) {
+            statTile(value: "Day \(day)", unit: "of \(plan.cycleDays)",
+                     label: "Cycle \(plan.cyclesCompleted + 1)", symbol: "arrow.triangle.2.circlepath")
+            statTile(value: "\(daysLeft)", unit: daysLeft == 1 ? "day" : "days",
+                     label: "Days Left", symbol: "calendar")
+            statTile(value: "\(streak)", unit: streak == 1 ? "day" : "days",
+                     label: "Streak", symbol: "flame.fill")
+            statTile(value: "\(plan.cyclesCompleted)", unit: plan.cyclesCompleted == 1 ? "pass" : "passes",
+                     label: "Completed", symbol: "checkmark.seal.fill")
+        }
+    }
+
+    private var revisionManageSection: some View {
+        Section {
+            Button {
+                settings.hapticFeedback()
+                if let plan = settings.quranRevisionPlan { prefillRevisionSetup(from: plan) }
+                withAnimation { editingRevision = true }
+            } label: {
+                Label("Adjust Revision", systemImage: "slider.horizontal.3")
+                    .font(.subheadline)
+                    .foregroundColor(accent)
+            }
+
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                showingEndRevisionConfirmation = true
+            } label: {
+                Label("End Revision", systemImage: "xmark.circle")
+                    .font(.subheadline)
+            }
+            .confirmationDialog(
+                "End this revision plan?",
+                isPresented: $showingEndRevisionConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("End Revision", role: .destructive) {
+                    withAnimation { settings.quranRevisionPlan = nil }
+                    settings.resetRevisionProgress()
+                    reminderAfterPlanChange()
+                }
+            } message: {
+                Text("The set and this cycle's progress are removed. Khatm marks are not touched.")
+            }
+        } footer: {
+            Text("An ayah of the set counts as revised when you read it in the app, in any mode, or when you mark it here. Once the whole set is done, the next cycle starts from the top.")
+                .font(.caption)
+        }
+        .themedListRowBackground()
+    }
+
     // MARK: Dashboard
 
     @ViewBuilder
@@ -795,7 +1427,7 @@ struct QuranPlannerView: View {
                     Spacer(minLength: 0)
                 }
 
-                weekStrip(plan: plan, doneToday: doneToday)
+                weekStrip(history: plan.history, doneToday: doneToday)
             }
             .padding(.vertical, 8)
             .listRowSeparator(.hidden)
@@ -969,25 +1601,44 @@ struct QuranPlannerView: View {
         )
     }
 
-    /// Replaces (never stacks - stable identifier) the pending reminder with one matching the plan's
-    /// current pace and the chosen time. No-op cancel when the reminder is off or the plan is gone.
+    /// Replaces (never stacks: stable identifier) the pending reminder with one matching each running
+    /// plan's current pace and the chosen time. No-op cancel when the reminder is off or no plan runs.
     private func rescheduleReminder() {
-        guard reminderEnabled, let plan = settings.quranPlan, plan.completedDate == nil else {
+        guard reminderEnabled else {
             QuranPlannerReminder.cancel()
             return
         }
-        var target: Int?
-        if totalAyahs > 0 {
-            let todayKey = QuranPlan.dayKey(for: Date())
-            let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
-            target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: totalAyahs, dayStartCompleted: dayStart)
+        var khatmLine: QuranPlannerReminder.KhatmLine?
+        if let plan = settings.quranPlan, plan.completedDate == nil {
+            var target: Int?
+            if totalAyahs > 0 {
+                let todayKey = QuranPlan.dayKey(for: Date())
+                let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
+                target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: totalAyahs, dayStartCompleted: dayStart)
+            }
+            khatmLine = QuranPlannerReminder.KhatmLine(plan: plan, todayTarget: target, pagesEquivalent: target.map(pagesEquivalent))
         }
-        QuranPlannerReminder.schedule(
-            plan: plan,
-            minutes: reminderMinutes,
-            todayTarget: target,
-            pagesEquivalent: target.map(pagesEquivalent)
-        )
+        var revisionLine: QuranPlannerReminder.RevisionLine?
+        if let plan = settings.quranRevisionPlan {
+            let progress = revisionProgress(plan: plan)
+            revisionLine = QuranPlannerReminder.RevisionLine(
+                todayTarget: progress.target,
+                pages: progress.span.flatMap(pages(of:)),
+                setLabel: QuranRevisionMath.scopeLabel(plan.scope, quran: quranData.quran)
+            )
+        }
+        QuranPlannerReminder.schedule(minutes: reminderMinutes, khatm: khatmLine, revision: revisionLine)
+    }
+
+    /// After a plan ends: the reminder stays for a plan still running, and switches off with the last.
+    private func reminderAfterPlanChange() {
+        let khatmRunning = settings.quranPlan.map { $0.completedDate == nil } ?? false
+        if khatmRunning || settings.quranRevisionPlan != nil {
+            rescheduleReminder()
+        } else {
+            reminderEnabled = false
+            QuranPlannerReminder.cancel()
+        }
     }
 
     /// Four stat tiles in the Prayer Tracker's visual language - the two features should feel like
@@ -1096,8 +1747,8 @@ struct QuranPlannerView: View {
     }
 
     /// The last 7 days as mini bars - a glanceable "did I keep up this week".
-    private func weekStrip(plan: QuranPlan, doneToday: Int) -> some View {
-        let days = QuranPlannerMath.lastSevenDays(plan: plan, doneToday: doneToday)
+    private func weekStrip(history: [String: Int]?, doneToday: Int) -> some View {
+        let days = QuranPlannerMath.lastSevenDays(history: history, doneToday: doneToday)
         let peak = max(1, days.map(\.count).max() ?? 1)
 
         return HStack(alignment: .bottom, spacing: 10) {
@@ -1144,8 +1795,7 @@ struct QuranPlannerView: View {
             ) {
                 Button("End Plan", role: .destructive) {
                     withAnimation { settings.quranPlan = nil }
-                    reminderEnabled = false
-                    QuranPlannerReminder.cancel()
+                    reminderAfterPlanChange()
                 }
             } message: {
                 Text("Your khatm progress is kept; only the goal and daily amounts are removed.")
@@ -1207,8 +1857,7 @@ struct QuranPlannerView: View {
                         settings.quranPlan = nil
                         editingGoal = false
                     }
-                    reminderEnabled = false
-                    QuranPlannerReminder.cancel()
+                    reminderAfterPlanChange()
                 }
             } message: {
                 Text("This resets khatm progress to zero so a fresh plan can begin.")
@@ -1217,8 +1866,7 @@ struct QuranPlannerView: View {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation { settings.quranPlan = nil }
-                reminderEnabled = false
-                QuranPlannerReminder.cancel()
+                reminderAfterPlanChange()
             } label: {
                 Label("End Plan", systemImage: "xmark.circle")
                     .font(.subheadline)

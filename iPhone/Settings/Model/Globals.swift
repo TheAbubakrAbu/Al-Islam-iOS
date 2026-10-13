@@ -759,10 +759,61 @@ private struct RegularIdiomTypeBoost: ViewModifier {
     private static let boosts: Bool = UIDevice.current.userInterfaceIdiom != .phone
 
     func body(content: Content) -> some View {
-        content.dynamicTypeSize(Self.boosts ? max(dynamicTypeSize, .xLarge) : dynamicTypeSize)
+        content
+            // The size as the reader set it, for `splitSidebarColumn()` to restore.
+            .environment(\.unboostedDynamicTypeSize, dynamicTypeSize)
+            .dynamicTypeSize(Self.boosts ? max(dynamicTypeSize, .xLarge) : dynamicTypeSize)
     }
 }
 #endif
+
+/// The reader's own Dynamic Type size, before `regularIdiomTypeBoost()` stepped the pad idiom up: what
+/// `splitSidebarColumn()` restores inside a sidebar. Nil where no boost is in force.
+private struct UnboostedDynamicTypeSizeKey: EnvironmentKey {
+    static let defaultValue: DynamicTypeSize? = nil
+}
+
+/// True inside a `NavigationSplitView` sidebar (`splitSidebarColumn()`): the one column in the app
+/// narrower than an iPhone, where a settings row drops its trailing read-out and a summary tile's
+/// title may take a third line.
+private struct IsSidebarColumnKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var unboostedDynamicTypeSize: DynamicTypeSize? {
+        get { self[UnboostedDynamicTypeSizeKey.self] }
+        set { self[UnboostedDynamicTypeSizeKey.self] = newValue }
+    }
+
+    var isSidebarColumn: Bool {
+        get { self[IsSidebarColumnKey.self] }
+        set { self[IsSidebarColumnKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// A split view's sidebar column (iPad and Mac). The pad idiom's one-step type boost
+    /// (`regularIdiomTypeBoost`) is for the wide detail column: a 320 pt sidebar is narrower than any
+    /// iPhone, and boosted there it cut the Quran summary tiles to "Last Listen...", the sort menu to
+    /// "Broken L..." and the help doors' captions (13-inch iPad, 2026-10-12). The sidebar keeps the
+    /// reader's own size, as the iPad's system sidebars do, and tells its rows where they are
+    /// (`isSidebarColumn`). Apply it to the sidebar closure's root view, once per split view.
+    func splitSidebarColumn() -> some View {
+        modifier(SplitSidebarColumn())
+    }
+}
+
+private struct SplitSidebarColumn: ViewModifier {
+    @Environment(\.unboostedDynamicTypeSize) private var unboosted
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.isSidebarColumn, true)
+            .dynamicTypeSize(unboosted ?? dynamicTypeSize)
+    }
+}
 
 /// The indent + accent rail behind `settingsDependent()`. Reads the accent straight off Settings:
 /// every view that uses the rail already observes Settings, so the rail follows accent changes
@@ -1559,16 +1610,21 @@ enum SpellingFold {
 /// A pushed screen whose content turned out to be missing: it shows nothing and immediately closes
 /// itself, instead of leaving a blank page on the navigation stack.
 ///
-/// The programmatic doors in Settings pair a flag (`isPresented`) with an optional target. The two are
-/// always raised together, but a teardown can clear the target while the flag is still true, and
-/// `navigationDestination` then builds a destination with no content - a blank screen the user has to
-/// back out of. Closing the push is the honest response: there is nothing to show.
+/// A door whose target is missing when its push builds closes itself, instead of leaving a blank page
+/// on the navigation stack. Since 2026-10-11 the doors carry their target in the one state that opens
+/// them (`pushDestination(item:)`), so this should never show; it stays as the floor under a teardown
+/// that clears a target mid-push, and DEBUG logs when it fires, because a push that lands here is a bug.
 struct EmptyDoor: View {
     let close: () -> Void
 
     var body: some View {
         Color.clear
-            .onAppear(perform: close)
+            .onAppear {
+                #if DEBUG
+                NSLog("[doors] EmptyDoor closed a push with no target (a door opened before its target was readable)")
+                #endif
+                close()
+            }
             .accessibilityHidden(true)
     }
 }
@@ -1617,12 +1673,49 @@ struct PushDestination<Destination: View>: ViewModifier {
     }
 }
 
+/// `PushDestination` for a door that carries WHAT it opens: one optional state is both the flag and
+/// the target, presented while it is non-nil and cleared by the pop, and the destination is built from
+/// the value it was presented with.
+///
+/// Never pair a Bool flag with a separately stored target instead. SwiftUI builds the destination the
+/// moment the flag's attribute turns true, and that build read the target's attribute STALE: nil the
+/// first time (so the `EmptyDoor` fallback closed the push before it showed), the previous door after
+/// that (so the last page opened, then swapped). The Settings tiles did exactly this on 2026-10-11
+/// (Abu: "Look and feel opened a couple times as a blank tab then after a couple loaded properly";
+/// the simulator log showed `openDoor` raising the door and `EmptyDoor` closing it in the same
+/// hundredth of a second, four taps out of five). With ONE attribute the flag and the content cannot
+/// disagree: a stale read shows the door closed, and the fresh pass opens it with its value. The
+/// Quran and Hadith summaries' doors always worked this way, by hand; this is that shape, named.
+struct PushItemDestination<Item, Destination: View>: ViewModifier {
+    @Binding var item: Item?
+    @ViewBuilder let destination: (Item) -> Destination
+
+    func body(content: Content) -> some View {
+        content.pushDestination(isPresented: Binding(get: { item != nil }, set: { if !$0 { item = nil } })) {
+            if let item {
+                destination(item)
+            } else {
+                EmptyDoor { self.item = nil }
+            }
+        }
+    }
+}
+
 extension View {
     func pushDestination<Destination: View>(
         isPresented: Binding<Bool>,
         @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
         modifier(PushDestination(isPresented: isPresented, destination: destination))
+    }
+
+    /// Pushes `destination(item)` while `item` is non-nil; see `PushItemDestination` for why a door's
+    /// target and its flag must be one piece of state.
+    func pushDestination<Item, Destination: View>(
+        item: Binding<Item?>,
+        @ViewBuilder destination: @escaping (Item) -> Destination
+    ) -> some View {
+        modifier(PushItemDestination(item: item, destination: destination))
     }
 
     #if DEBUG

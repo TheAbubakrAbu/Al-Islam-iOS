@@ -1281,11 +1281,17 @@ struct ReservedLineLimit: ViewModifier {
 #if os(iOS)
 /// Reading lists on wide layouts: an iPad landscape detail column is ~800 pt, the 13-inch and a Mac
 /// window over 1,000, and a 20 pt translation ran 110+ characters per line there (2026-09-06 iPad
-/// pass). The list's scroll content is held to `readingWidth` and centered, so the ayah / hadith /
+/// pass). The list's content is held to `readingWidth` and centered, so the ayah / hadith /
 /// article cards and their text narrow together; margins are 0 until the column is wider than that,
 /// and iPhones never get the modifier (constant per device, so the List is never rebuilt). Measured
-/// from the list's own frame, so it follows split-view resizes and rotation. iOS 17+ (`contentMargins`);
-/// earlier systems keep the full width.
+/// from the list's own frame, so it follows split-view resizes and rotation. iOS 17+; earlier
+/// systems keep the full width.
+///
+/// Safe-area padding, not `contentMargins(for: .scrollContent)` (2026-10-12): beside iPadOS 26's
+/// floating sidebar, which hands the detail column its width as a leading safe-area inset, the
+/// scroll-content margin landed on the trailing edge only (the cards sat flush against the sidebar
+/// with all the spare width on the right), and on the next launch not at all. A safe-area inset is
+/// what the list already honours for the sidebar, so the margin adds to it on both sides.
 private struct ReadingColumnMargins: ViewModifier {
     let enabled: Bool
     @State private var width: CGFloat = 0
@@ -1296,17 +1302,30 @@ private struct ReadingColumnMargins: ViewModifier {
     func body(content: Content) -> some View {
         if enabled, Self.wideIdiom, #available(iOS 17.0, *) {
             content
-                .contentMargins(.horizontal, max(0, (width - Self.readingWidth) / 2), for: .scrollContent)
+                .safeAreaPadding(.horizontal, max(0, (width - Self.readingWidth) / 2))
                 .background(
                     GeometryReader { proxy in
                         Color.clear
-                            .onAppear { width = proxy.size.width }
-                            .onChange(of: proxy.size.width) { width = $0 }
+                            .onAppear { width = proxy.size.width; Self.log(proxy) }
+                            .onChange(of: proxy.size.width) { width = $0; Self.log(proxy) }
                     }
                 )
         } else {
             content
         }
+    }
+
+    /// "-layoutLog": the list's frame, safe-area insets and the margin it was given, one line per
+    /// change, for reading a wide layout headlessly (`log show --predicate 'eventMessage CONTAINS "LAYOUT"'`).
+    private static func log(_ proxy: GeometryProxy) {
+        #if DEBUG
+        guard ProcessInfo.processInfo.arguments.contains("-layoutLog") else { return }
+        let frame = proxy.frame(in: .global)
+        NSLog("LAYOUT reading-column size=%.1fx%.1f global x=%.1f...%.1f safe l=%.1f r=%.1f margin=%.1f",
+              proxy.size.width, proxy.size.height, frame.minX, frame.maxX,
+              proxy.safeAreaInsets.leading, proxy.safeAreaInsets.trailing,
+              max(0, (proxy.size.width - readingWidth) / 2))
+        #endif
     }
 }
 #endif
@@ -2024,63 +2043,6 @@ private struct GridTileHoldLayer: UIViewRepresentable {
     }
 }
 
-/// Equal-width chips in as few rows as fit, each row filling the width: the doors under the Quran and
-/// Hadith summaries. A fixed three to a row broke their names mid-word in an iPad sidebar ("His-tory",
-/// "Brows e by", "Topi...", Abu 2026-09-29), where a third of the row is about 80 pt; an iPhone row
-/// gives each of three about 103. So the row takes as many as leave each chip `minimumChipWidth`, up
-/// to `maximumPerRow`; four never go three and one (Abu, 2026-09-26: "2 lines if there's 4"), and a
-/// row that ends up short stretches its chips across the width. Rows are as tall as their tallest
-/// chip, and a chip whose frame has `maxHeight: .infinity` takes that height.
-@available(iOS 16.0, *)
-struct EvenChipRows: Layout {
-    var spacing: CGFloat = 10
-    /// Three to a row from a 278 pt row (an iPhone SE's is about 295), two in an iPad sidebar's 245 to 260.
-    var minimumChipWidth: CGFloat = 86
-    var maximumPerRow: Int = 3
-
-    private func rows(count: Int, width: CGFloat) -> [Range<Int>] {
-        guard count > 0 else { return [] }
-        let fit = max(1, Int((width + spacing) / (minimumChipWidth + spacing)))
-        var perRow = max(1, min(count, maximumPerRow, fit))
-        if count == 4, perRow == 3 { perRow = 2 }
-        return stride(from: 0, to: count, by: perRow).map { $0..<min($0 + perRow, count) }
-    }
-
-    private func chipWidth(in row: Range<Int>, width: CGFloat) -> CGFloat {
-        max((width - spacing * CGFloat(row.count - 1)) / CGFloat(row.count), 0)
-    }
-
-    private func rowHeights(_ rows: [Range<Int>], width: CGFloat, subviews: Subviews) -> [CGFloat] {
-        rows.map { row in
-            let proposal = ProposedViewSize(width: chipWidth(in: row, width: width), height: nil)
-            return row.map { subviews[$0].sizeThatFits(proposal).height }.max() ?? 0
-        }
-    }
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? CGFloat(min(subviews.count, maximumPerRow)) * (minimumChipWidth + spacing)
-        let rows = rows(count: subviews.count, width: width)
-        let heights = rowHeights(rows, width: width, subviews: subviews)
-        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = rows(count: subviews.count, width: bounds.width)
-        let heights = rowHeights(rows, width: bounds.width, subviews: subviews)
-        var y = bounds.minY
-        for (row, height) in zip(rows, heights) {
-            let width = chipWidth(in: row, width: bounds.width)
-            var x = bounds.minX
-            for index in row {
-                subviews[index].place(at: CGPoint(x: x, y: y), anchor: .topLeading,
-                                      proposal: ProposedViewSize(width: width, height: height))
-                x += width + spacing
-            }
-            y += height + spacing
-        }
-    }
-}
-
 /// A section header's title with its controls (the Today pill, a count, a fold button) trailing it on
 /// one line when both fit, and under it when they don't. Squeezed onto one line in an iPad sidebar the
 /// title wrapped mid-word ("YOUR SUM- / MARY") beside a pill reading "To- / da / y" (2026-09-29).
@@ -2680,6 +2642,50 @@ extension EnvironmentValues {
     }
 }
 
+/// A section header's title with an accent SF Symbol leading it: the one look for every major
+/// section of a tab root (SURAHS, PRAYER TIMES, THE SIX BOOKS, SETTINGS...), with or without a count
+/// pill beside it (Abu, 2026-10-11: "for each major section with a header ... put an sf symbol next to
+/// it"). `SectionPillHeader` draws its title through this, so the two line up to the point.
+struct SectionIconHeader: View {
+    @Environment(\.appearance) private var appearance
+
+    let title: String
+    /// nil draws the bare title: `SectionPillHeader` without an icon.
+    let icon: String?
+    /// Accent the title as well as the icon (the favorites style); false keeps the header gray.
+    var accentTitle = false
+
+    init(_ title: String, icon: String?, accentTitle: Bool = false) {
+        self.title = title
+        self.icon = icon
+        self.accentTitle = accentTitle
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let icon {
+                Image(systemName: icon)
+                    .foregroundStyle(appearance.accent)
+                    // Decoration beside the title: VoiceOver read the symbol's own name as a heading
+                    // of its own ("Question Mark In A Filled Circle", "Bookmark") before the title.
+                    .accessibilityHidden(true)
+            }
+
+            // The heading trait said explicitly: a List hands it to the header's FIRST element, which
+            // was the icon, so the title itself read as plain text.
+            Group {
+                if accentTitle {
+                    Text(title)
+                        .foregroundStyle(appearance.accent)
+                } else {
+                    Text(title)
+                }
+            }
+            .accessibilityAddTraits(.isHeader)
+        }
+    }
+}
+
 struct SectionPillHeader: View {
     @Environment(\.appearance) private var appearance
 
@@ -2727,29 +2733,8 @@ struct SectionPillHeader: View {
         #endif
     }
 
-    @ViewBuilder
     private var titleLabel: some View {
-        HStack(spacing: 8) {
-            if let icon {
-                Image(systemName: icon)
-                    .foregroundStyle(appearance.accent)
-                    // Decoration beside the title: VoiceOver read the symbol's own name as a heading
-                    // of its own ("Question Mark In A Filled Circle", "Bookmark") before the title.
-                    .accessibilityHidden(true)
-            }
-
-            // The heading trait said explicitly: a List hands it to the header's FIRST element, which
-            // was the icon, so the title itself read as plain text.
-            Group {
-                if accentTitle {
-                    Text(title)
-                        .foregroundStyle(appearance.accent)
-                } else {
-                    Text(title)
-                }
-            }
-            .accessibilityAddTraits(.isHeader)
-        }
+        SectionIconHeader(title, icon: icon, accentTitle: accentTitle)
     }
 
     @ViewBuilder

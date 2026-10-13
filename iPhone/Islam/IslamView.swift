@@ -258,7 +258,10 @@ struct IslamView: View {
                                           "sound-alike", "quiz", "sun letters", "moon letters",
                                           "reading test", "qaida", "qaidah", "noorani", "spelling", "pronunciation"]
             case .tajweedFoundations: return ["recitation", "rules", "makharij", "sifaat", "ghunnah", "qalqalah", "madd",
-                                              "noon sakinah", "meem sakinah", "waqf", "hamzatul wasl", "sukoon", "reference", "tajwid"]
+                                              "noon sakinah", "meem sakinah", "waqf", "hamzatul wasl", "sukoon", "reference", "tajwid",
+                                              // The course's own words too, so "tajweed course" still lands here where
+                                              // the lesson pack is not bundled (`available` drops the course then).
+                                              "lessons", "course", "learn", "practice", "beginner", "step by step"]
             case .tajweedCourse: return ["lessons", "course", "learn", "practice", "beginner", "step by step", "quiz",
                                          "recitation", "tajwid", "tilawa"]
             case .commonAdhkar: return ["dhikr", "adhkar", "azkar", "remembrance", "tasbih", "subhanallah"]
@@ -473,6 +476,7 @@ struct IslamView: View {
             if #available(iOS 16.0, *), usesColumnNavigation {
                 NavigationSplitView {
                     islamSidebar
+                        .splitSidebarColumn()
                 } detail: {
                     // The detail needs its own NavigationStack so NavigationLinks inside a destination
                     // (e.g. tapping a letter in ArabicView) push within the detail column instead of
@@ -590,18 +594,16 @@ struct IslamView: View {
                 }
             }
             #endif
-            // The grid toggle, then the Islam Settings gear at the far right: one toolbar, so the
-            // order is declared (see `IslamSettingsToolbar`).
-            .islamSettingsToolbar {
-                if #available(iOS 16.0, *), query.isEmpty {
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation { settings.islamGridMode.toggle() }
-                    } label: {
-                        Image(systemName: settings.islamGridMode ? "list.bullet" : "square.grid.2x2")
+            // The Islam Settings gear at the far right (`IslamSettingsToolbar`), and the ⋯ More menu at
+            // the left, as on every tab (Abu, 2026-10-11). The grid toggle was a trailing button
+            // beside the gear until then; it is the menu's item now, hidden while a search is showing
+            // results as the button was.
+            .islamSettingsToolbar()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if #available(iOS 16.0, *), query.isEmpty {
+                        TabMoreMenu { islamGridMenuItem }
                     }
-                    .accessibilityLabel(settings.islamGridMode ? "Show list" : "Show grid")
-                    .tint(settings.accentColor.accent1)
                 }
             }
             // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
@@ -680,7 +682,7 @@ struct IslamView: View {
             AskAISearchSection(query: query)
 
             if !resources.isEmpty {
-                Section(header: SectionPillHeader(title: "RESOURCES", count: resources.count)) {
+                Section(header: SectionPillHeader(title: "RESOURCES", count: resources.count, icon: "magnifyingglass")) {
                     ForEach(resources, id: \.self) { item in
                         resourceSearchRow(item, query: query)
                     }
@@ -864,12 +866,14 @@ struct IslamView: View {
                     Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
                         resourceItems(items)
                     }
+                    // On the rows, not the List: `.listRowBackground` reaches the cells only from row
+                    // content (the helper's own note), so on the List the reading theme's wash was lost.
+                    .themedListRowBackground()
                 }
             }
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
-        .themedListRowBackground()
         .navigationTitle("More Resources")
     }
 
@@ -1168,18 +1172,23 @@ struct IslamView: View {
         .compactListSectionSpacing()
         .reminderCardDestination($reminderDoor)
         .navigationTitle("Al-Islam")
-        // The same control, on the same setting, as the iPhone list's - the iPad simply never had it,
-        // so the toggle was unreachable on the one layout where it is shown as a sidebar. The gear
-        // follows it, as on the iPhone.
-        .islamSettingsToolbar {
-            Button {
-                settings.hapticFeedback()
-                withAnimation { settings.islamGridMode.toggle() }
-            } label: {
-                Image(systemName: settings.islamGridMode ? "list.bullet" : "square.grid.2x2")
+        // The same More menu, on the same setting, as the iPhone list's: the iPad simply never had
+        // the toggle, so it was unreachable on the one layout where it is shown as a sidebar. The gear
+        // keeps its trailing slot, as on the iPhone.
+        .islamSettingsToolbar()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                TabMoreMenu { islamGridMenuItem }
             }
-            .accessibilityLabel(settings.islamGridMode ? "Show list" : "Show grid")
-            .tint(settings.accentColor.accent1)
+        }
+    }
+
+    /// The More menu's one item: the grid or list switch, worded and drawn as the other tabs' are.
+    private var islamGridMenuItem: some View {
+        TabMoreMenuItem(settings.islamGridMode ? "Show as List" : "Show as Grid",
+                        systemImage: settings.islamGridMode ? "list.bullet" : "square.grid.2x2") {
+            settings.hapticFeedback()
+            withAnimation { settings.islamGridMode.toggle() }
         }
     }
 
@@ -1267,7 +1276,7 @@ struct IslamView: View {
         case .miraclesOfProphets:
             ProphetMiraclesView()
         case .provingIslam:
-            ProvingIslamView()
+            ProvingIslamView().openScreen(.provingIslamLibrary)
         case .journal:
             JournalView()
         }
@@ -1275,7 +1284,7 @@ struct IslamView: View {
     #endif
 
     private var resourcesSection: some View {
-        Section(header: Text("ISLAMIC RESOURCES")) {
+        Section(header: SectionIconHeader("ISLAMIC RESOURCES", icon: "square.grid.2x2.fill")) {
             resourceLink(title: "Arabic Alphabet", systemImage: "textformat.size.ar", placesOwnSettingsGear: true) {
                 ArabicView()
             }
@@ -1365,7 +1374,7 @@ struct IslamView: View {
 
         let favorites = favoriteResources
         if !favorites.isEmpty {
-            Section(header: Text("FAVORITES")) {
+            Section(header: SectionIconHeader("FAVORITES", icon: "star.fill", accentTitle: true)) {
                 splitResourceItems(favorites)
             }
         }
@@ -1373,7 +1382,7 @@ struct IslamView: View {
         ForEach(ResourceGroup.allCases, id: \.self) { group in
             let items = group.resources
             if !items.isEmpty {
-                Section(header: Text(group.title)) {
+                Section(header: SectionIconHeader(group.title, icon: group.systemImage)) {
                     splitResourceItems(items)
                 }
             }
@@ -1401,7 +1410,9 @@ struct IslamView: View {
                 if !tiles.isEmpty {
                     // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                     // height on each self-sizing pass, which iOS 26 traps on (the sidebar's narrow rows).
-                    SummaryTileGrid(columns: dynamicTypeSize.isAccessibilitySize ? 2 : 3, spacing: 8) {
+                    // Two across, whatever the text size: the sidebar's 320 pt made three 86 pt tiles that
+                    // shrank "Dhikr & Remembrances" to a different size from its neighbours (2026-10-12).
+                    SummaryTileGrid(columns: 2, spacing: 8) {
                         ForEach(tiles, id: \.self) { item in
                             resourceGridStar(item, on: GridTileMenu {
                                 selectSplitResource(item)
@@ -1554,7 +1565,7 @@ struct ProphetQuote: View {
     private let attributionText2 = "Jumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
 
     var body: some View {
-        Section(header: Text("PROPHET MUHAMMAD ﷺ QUOTE")) {
+        Section(header: SectionIconHeader("PROPHET MUHAMMAD ﷺ QUOTE", icon: "quote.opening")) {
             ZStack {
                 if appearance.liquidGlass {
                     quoteCardBackground
@@ -1766,7 +1777,7 @@ struct AlIslamAppsSection: View {
     #endif
 
     var body: some View {
-        Section(header: Text("AL-ISLAMIC APPS")) {
+        Section(header: SectionIconHeader("AL-ISLAMIC APPS", icon: "apps.iphone")) {
             ZStack {
                 cardBackground
 

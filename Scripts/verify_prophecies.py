@@ -6,7 +6,7 @@ hadith shelf and Quran. Non-zero exit means do not ship.
     python3 Scripts/verify_prophecies.py --show       # also print each quote as the screen shows it
     python3 Scripts/verify_prophecies.py FILE ...     # check other files (a draft) instead
 
-Every article is data (`SignBlock` in iPhone/Islam/SignsAndProphets.swift), so the quotes are read
+Every article is data (`SignBlock` in iPhone/Islam/Proofs/SignsAndProphets.swift), so the quotes are read
 straight out of the Swift: each `.hadith("slug:citation", cite:, arabic: a...b, english: c...d)` and
 each `.quran("s:a-b")`. Nothing is listed here by hand, so the gate cannot drift from what ships
 (the 2026-09-19 version kept its own candidate list, and 35 of its 43 verified prophecies never
@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT / "Scripts"))
 from islam_packs import is_weak, _quran  # noqa: E402
 from hadith_spans import row as shelf_row, words as shelf_words  # noqa: E402
 
-LIBRARIES = [ROOT / "iPhone/Islam" / name for name in (
+LIBRARIES = [ROOT / "iPhone/Islam/Proofs" / name for name in (
     "PropheciesView.swift", "PropheciesContent.swift",
     "ProphetMiraclesView.swift", "ProphetMiraclesContent.swift",
     "SignsAndProphets.swift", "MiraclesView.swift")]
@@ -133,7 +133,12 @@ def main():
     parser.add_argument("files", nargs="*")
     parser.add_argument("--show", action="store_true")
     args = parser.parse_args()
-    paths = [Path(f).resolve() for f in args.files] or [p for p in LIBRARIES if p.exists()]
+    # A missing library is an error, not a smaller check: with the flat paths of before the 2026-10-07
+    # regrouping this filtered every file out and passed on "0 references checked in 0 files".
+    paths = [Path(f).resolve() for f in args.files] or LIBRARIES
+    missing = [p for p in paths if not p.exists()]
+    if missing:
+        sys.exit("ERROR: missing " + ", ".join(str(p) for p in missing) + " (moved? update LIBRARIES)")
     sys.exit(0 if check(paths, args.show) else 1)
 
 

@@ -692,7 +692,7 @@ struct MiracleArticleView: View {
             Button {
                 // One door at a time: a prose link's push in flight plus this one is two destinations
                 // on one stack in a frame (the Settings doors' blank screen, then crash).
-                guard !linkOpen else { return }
+                guard linkDoor == nil else { return }
                 Settings.shared.hapticFeedback()
                 openSibling = target
             } label: {
@@ -720,10 +720,14 @@ struct MiracleArticleView: View {
     /// two hidden links in the same List row both fired on any tap.
     @State private var openSibling: MiracleArticle?
 
-    /// An in-app link followed from the prose: another article, or a subject's index.
-    @State private var linkedArticle: MiracleArticle?
-    @State private var linkedCategory: MiracleCategory?
-    @State private var linkOpen = false
+    /// An in-app link followed from the prose: another article, or a subject's index. One state for
+    /// the target AND the push (`pushDestination(item:)`): a flag beside two targets built the page
+    /// before the target was readable (the Settings doors' 2026-10-11 blank push).
+    private enum LinkDoor {
+        case article(MiracleArticle)
+        case category(MiracleCategory)
+    }
+    @State private var linkDoor: LinkDoor?
     @State private var copied = false
 
     /// The one line the article argues, with its links.
@@ -875,9 +879,7 @@ struct MiracleArticleView: View {
             if url.host == "article", let slug = url.pathComponents.dropFirst().first,
                let target = MiraclesStore.shared.article(slug: slug) {
                 Settings.shared.hapticFeedback()
-                linkedArticle = target
-                linkedCategory = nil
-                linkOpen = true
+                linkDoor = .article(target)
             } else if url.host == "category", let raw = url.pathComponents.dropFirst().first,
                       let category = MiracleCategory(rawValue: raw) {
                 // Not if that category is already on the stack: a category lists its articles and an
@@ -889,9 +891,7 @@ struct MiracleArticleView: View {
                     OpenScreenInstance(screen: .miracleCategory, id: category.rawValue)
                 ) else { return .handled }
                 Settings.shared.hapticFeedback()
-                linkedCategory = category
-                linkedArticle = nil
-                linkOpen = true
+                linkDoor = .category(category)
             }
             return .handled
         })
@@ -902,11 +902,10 @@ struct MiracleArticleView: View {
         )) {
             if let openSibling { MiracleArticleView(article: openSibling) }
         }
-        .pushDestination(isPresented: $linkOpen) {
-            if let linkedArticle {
-                MiracleArticleView(article: linkedArticle)
-            } else if let linkedCategory {
-                MiracleCategoryView(category: linkedCategory)
+        .pushDestination(item: $linkDoor) { door in
+            switch door {
+            case .article(let article): MiracleArticleView(article: article)
+            case .category(let category): MiracleCategoryView(category: category)
             }
         }
         .task {

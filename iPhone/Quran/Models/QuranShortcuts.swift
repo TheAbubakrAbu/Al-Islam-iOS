@@ -71,6 +71,32 @@ struct PlaySurahAppIntent: AppIntent {
     }
 }
 
+#if os(iOS)
+/// Opens a surah in the reader without playing it (Abu, 2026-10-11: "have Siri intents also have just
+/// open Surah and it opens it in page if it was in one"). It takes the same route a Sunnah reminder's tap
+/// and an ayah widget take (`AppNavigation.open`), so the reader the listener last used opens: the
+/// mushaf page when page mode is on, the list otherwise.
+@available(iOS 16.0, *)
+struct OpenSurahAppIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Surah"
+    static var description = IntentDescription("Open a specific surah by name or number, in page mode if you read in it.")
+    static var openAppWhenRun = true
+    static var parameterSummary: some ParameterSummary { Summary("Open \(\.$surah)") }
+
+    @Parameter(
+        title: "Surah",
+        requestValueDialog: IntentDialog("Which surah would you like to open? You can say a name or a number.")
+    )
+    var surah: SurahEntity
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        AppNavigation.shared.open(.surah(surah.id))
+        return .result()
+    }
+}
+#endif
+
 @available(iOS 16.0, watchOS 9.0, *)
 struct PlayRandomSurahAppIntent: AppIntent {
     static var title: LocalizedStringResource = "Play Random Surah"

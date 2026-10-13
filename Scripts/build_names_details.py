@@ -31,7 +31,7 @@ from tilawa_ts import eval_consts, load_softener, xz_compress  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
-FALLBACK = ROOT / "iPhone" / "Islam" / "NamesOfAllahFallback.swift"
+FALLBACK = ROOT / "iPhone" / "Islam" / "Names" / "NamesOfAllahFallback.swift"
 OUT = ROOT / "Resources" / "Data" / "Islam" / "NamesDetails.json.xz"
 TILAWA = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "Tilawa"
 

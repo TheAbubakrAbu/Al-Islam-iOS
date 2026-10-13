@@ -104,10 +104,19 @@ final class SkyWeatherStore: ObservableObject {
         guard task == nil else { return }
         lastAttemptAt = now
         isFetching = true
-        task = Task { [weak self] in
-            await self?.fetch(latitude: location.latitude, longitude: location.longitude)
-            self?.task = nil
-            self?.isFetching = false
+        let fetch = Task { [weak self] in
+            guard let self else { return }
+            await self.fetch(latitude: location.latitude, longitude: location.longitude)
+        }
+        task = fetch
+        Task { [weak self] in
+            await fetch.value
+            // Only the fetch still on record clears the flags: `clear()` (the switch going off) drops a
+            // fetch mid-flight, and a refresh started after it must not be marked finished by the old one
+            // (which also let a third request start beside the second).
+            guard let self, self.task == fetch else { return }
+            self.task = nil
+            self.isFetching = false
         }
     }
 
@@ -115,6 +124,7 @@ final class SkyWeatherStore: ObservableObject {
     func clear() {
         task?.cancel()
         task = nil
+        isFetching = false
         weather = nil
         Self.store?.removeObject(forKey: SkyWeather.storageKey)
         Settings.shared.reloadWidgets(deferred: true)

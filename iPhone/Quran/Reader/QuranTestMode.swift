@@ -46,17 +46,17 @@ enum QuranTestHiding: String, CaseIterable, Identifiable {
 
 /// What a tap on an ayah shows. Stored as `Settings.quranTestModeReveals`.
 enum QuranTestReveal: String, CaseIterable, Identifiable {
+    /// The tapped ayah and everything before it in its surah (the default).
+    case throughSelected
     /// The tapped ayah alone: tapping another ayah hides this one again.
     case selected
-    /// The tapped ayah and everything before it in its surah.
-    case throughSelected
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .selected: return "Only the Selected Ayah"
         case .throughSelected: return "The Selected Ayah and Everything Before It"
+        case .selected: return "Only the Selected Ayah"
         }
     }
 }
@@ -71,7 +71,7 @@ enum QuranTestVeil: Equatable {
 
 extension Settings {
     var quranTestHiding: QuranTestHiding { QuranTestHiding(rawValue: quranTestModeHides) ?? .recitation }
-    var quranTestReveal: QuranTestReveal { QuranTestReveal(rawValue: quranTestModeReveals) ?? .selected }
+    var quranTestReveal: QuranTestReveal { QuranTestReveal(rawValue: quranTestModeReveals) ?? .throughSelected }
 }
 
 /// Test Mode's session: whether it is on, and which ayahs the listener has shown so far.

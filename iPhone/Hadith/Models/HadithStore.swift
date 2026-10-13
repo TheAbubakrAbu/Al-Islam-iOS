@@ -453,6 +453,11 @@ final class HadithStore: ObservableObject {
         /// happens, and it is main-actor isolated like the rest of the store, so the
         /// `didChangeNotification` it posts always goes out on the main thread.
         func writeNow() {
+            // Only a LOADED log may write. Before `loadIfNeeded` ran, `entries` is the empty default,
+            // and a backgrounding in the first second of a launch (CloudSnapshot.capture ->
+            // flushAllPendingWrites -> flushSynchronously) wrote that [] over the stored History, then
+            // backed the emptied log up. Nothing of ours can be pending before a load: `record` loads first.
+            guard didLoad else { return }
             guard let data = try? JSONEncoder().encode(entries) else { return }
             UserDefaults.standard.set(data, forKey: Self.key)
         }
@@ -910,9 +915,27 @@ final class HadithStore: ObservableObject {
 
     /// Kick off today's resolution. Called at APP LAUNCH (and again by the tab as a cheap no-op) so the
     /// pick is ready before the Hadith tab is ever opened.
-    func prepareDailyHadith(force: Bool = false) {
-        Task { await resolveDaily(force: force) }
+    /// One resolve at a time. The Reminder of the Day's resolver asks again on every Settings publish
+    /// while the pick is still pending (several a second at launch), and each ask used to start another
+    /// full-book worthiness scan beside the first. A forced ask (a shuffle) queues behind the running
+    /// pass and then runs its own, so the override it wrote is what ends up shown.
+    @discardableResult
+    func prepareDailyHadith(force: Bool = false) -> Task<Void, Never>? {
+        if let running = dailyResolveTask, !force { return running }
+        let previous = dailyResolveTask
+        let task = Task { @MainActor [weak self] in
+            await previous?.value
+            await self?.resolveDaily(force: force)
+        }
+        dailyResolveTask = task
+        Task { @MainActor [weak self] in
+            await task.value
+            if self?.dailyResolveTask == task { self?.dailyResolveTask = nil }
+        }
+        return task
     }
+
+    private var dailyResolveTask: Task<Void, Never>?
 
     private func parseDailyRef(_ raw: String?, dayKey: String) -> (book: HadithCatalogBook, idInBook: Int)? {
         guard let raw else { return nil }
@@ -1000,7 +1023,7 @@ final class HadithStore: ObservableObject {
             // shuffle before Fajr did nothing, and after Fajr yesterday's shuffle replaced the new
             // day's hadith (Quality Guide A10).
             UserDefaults.standard.set("\(Settings.shared.dailyDayKey())|\(candidate.slug)|\(pick.idInBook)", forKey: Self.dailyOverrideKey)
-            await resolveDaily(force: true)
+            await prepareDailyHadith(force: true)?.value
             return
         }
     }

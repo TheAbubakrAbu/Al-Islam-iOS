@@ -56,6 +56,18 @@ struct PrayerList: View {
             case .split: return "SPLIT"
             }
         }
+
+        /// The glyph beside each layout in the Adhan tab's ⋯ More menu (`AdhanView.adhanMoreItems`).
+        /// Not `square.grid.2x2.fill`: that symbol's name stood in for a menu item's title under
+        /// VoiceOver once (docs/Simple Mode Guide.md).
+        var menuSymbol: String {
+            switch self {
+            case .tiles: return "square.grid.2x2"
+            case .grid: return "tablecells"
+            case .list: return "list.bullet"
+            case .split: return "rectangle.split.2x1"
+            }
+        }
     }
 
     private var prayerDisplayMode: PrayerDisplayMode {
@@ -470,34 +482,18 @@ struct PrayerList: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The header is the title and, while traveling, the qasr badge. The layout picker (TILES / GRID /
+    /// LIST / SPLIT) that sat at its trailing edge moved into the tab's ⋯ More menu on 2026-10-11, in
+    /// both modes (`AdhanView.adhanMoreItems`; Abu: "remove it from where it was originally"), and
+    /// Settings > Prayer Settings keeps its Prayer Times Layout row.
     private var sectionHeader: some View {
         HStack {
-            Text("PRAYER TIMES")
+            SectionIconHeader("PRAYER TIMES", icon: "clock.fill")
 
             #if os(iOS)
             // The combined list labels itself, so a reader who scrolled past the banner still knows why.
             if settings.travelingMode {
                 QasrHeaderBadge()
-            }
-
-            Spacer()
-
-            // Simple Mode leaves the layout to Settings > Prayer Settings > Prayer Times Layout; the
-            // chosen layout explains itself on screen.
-            if !settings.simpleMode {
-                Picker("", selection: $prayerDisplayModeRawValue) {
-                    Section {
-                        ForEach(PrayerDisplayMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode.rawValue)
-                        }
-                    } header: {
-                        Text("Prayer Display")
-                    }
-                }
-                .font(.caption2)
-                .pickerStyle(MenuPickerStyle())
-                .padding(.vertical, -12)
-                .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
             }
             #endif
         }

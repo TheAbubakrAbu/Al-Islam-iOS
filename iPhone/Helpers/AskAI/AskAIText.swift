@@ -88,7 +88,11 @@ enum AskAIText {
     ]
     /// The proper nouns as compiled whole-word patterns: `capitalizing` runs on every stream flush,
     /// and rebuilt its twenty patterns each time.
-    private static let properNounRegexes: [(NSRegularExpression, String)] = properNouns.compactMap { lower, proper in
+    // Longest first: "sahih muslim" must run before "muslim" rewrites its inner word, or the compound
+    // entries never match and the answer reads "sahih Muslim".
+    private static let properNounRegexes: [(NSRegularExpression, String)] = properNouns
+        .sorted { $0.0.count > $1.0.count }
+        .compactMap { lower, proper in
         guard let regex = try? NSRegularExpression(pattern: "\\b" + NSRegularExpression.escapedPattern(for: lower) + "\\b") else { return nil }
         return (regex, NSRegularExpression.escapedTemplate(for: proper))
     }

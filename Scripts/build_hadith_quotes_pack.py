@@ -5,7 +5,7 @@ hadith the articles and the Dua screen quote by reference.
     ./Scripts/build_hadith_quotes_pack.py
 
 The phone reads a referenced narration ("bukhari:6306" plus token ranges, see
-iPhone/Islam/HadithQuote.swift) straight out of the bundled .hpk shelf. The Watch app compiles the
+iPhone/Islam/Daily/HadithQuote.swift) straight out of the bundled .hpk shelf. The Watch app compiles the
 same article files and the Dua screen but bundles no shelf (the collections are 12 MB it has no
 other use for), so it carries this: the referenced rows only, copied from the shelf at build time.
 It is the one derived copy of hadith text the project ships, it ships ONLY in the Watch target
@@ -27,12 +27,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from hadith_spans import row as shelf_row  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
+# Under iPhone/Islam/ and its subfolders (the 2026-10-07 regrouping). A listed file that is missing
+# stops the build (`links()`): it used to be skipped, and the stale flat paths produced an EMPTY shelf.
 SOURCES = [ROOT / "iPhone/Islam" / name for name in (
-    "PillarViews.swift", "BeliefsViews.swift", "HowToGuides.swift", "AqeedahViews.swift",
-    "SalafiyyahViews.swift", "AnswersViews.swift", "ScholarsViews.swift", "DuaView.swift",
+    "Beliefs/PillarViews.swift", "Beliefs/BeliefsViews.swift", "Fiqh/HowToGuides.swift", "Beliefs/AqeedahViews.swift",
+    "Beliefs/SalafiyyahViews.swift", "Beliefs/AnswersViews.swift", "Beliefs/ScholarsViews.swift", "Dua/DuaView.swift",
     # The Watch compiles these too (2026-09-29): the Hadith & Its Sciences articles and the Proving
     # Islam chapters, so their narrations must be in its copy of the shelf.
-    "HadithSciencesViews.swift", "ProvingIslamChapters.swift")]
+    "Content/HadithSciencesViews.swift", "Proofs/ProvingIslamChapters.swift")]
 OUT = ROOT / "Resources/Data/Islam/HadithQuotes.json.deflate"
 # `hadith: "slug:citation"` (ScriptureQuote, DuaItem) and `.hadith("slug:citation"` (article blocks).
 LINK_RE = re.compile(r'(?:hadith:\s*|(?<!\w)\.hadith\(\s*)"([a-z_0-9]+:(?:\d+[a-z]?|#\d+))"')
@@ -41,8 +43,9 @@ LINK_RE = re.compile(r'(?:hadith:\s*|(?<!\w)\.hadith\(\s*)"([a-z_0-9]+:(?:\d+[a-
 def links() -> list[str]:
     found = set()
     for path in SOURCES:
-        if path.exists():
-            found.update(LINK_RE.findall(path.read_text(encoding="utf-8")))
+        if not path.exists():
+            raise SystemExit(f"ERROR: {path.relative_to(ROOT)} is not there (moved? update SOURCES)")
+        found.update(LINK_RE.findall(path.read_text(encoding="utf-8")))
     return sorted(found)
 
 

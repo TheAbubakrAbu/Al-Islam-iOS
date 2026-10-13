@@ -183,18 +183,31 @@ struct QiraatChange {
         let harfLetters = Set(legend.filter { $0.key == "khilaf_harf" }.map(\.letter))
         var offset = 0
         for piece in riwayahPieces {
-            let count = QiraatWordDiff.tokens(of: piece.text).count
+            let tokens = QiraatWordDiff.tokens(of: piece.text)
             if !wordLetters.isEmpty || !harfLetters.isEmpty,
                let rules = store.wordRules(tag: tag, surah: surah, ayah: piece.own) {
+                // The pack counts words over UTF-16 spaces (`WordTokens`), where a lone stop sign between
+                // two spaces is a word of its own; the diff's tokens are graphemes, where that sign rides
+                // on the space before it. So each pack word is mapped to the diff token holding its first
+                // character rather than trusting the two counts to agree (ad-Duri's and as-Susi's 4:44
+                // differ by one after the sign, which put every later flag one word off).
+                let packRanges = WordTokens.ranges(in: piece.text)
+                func diffIndex(ofPackWord word: Int) -> Int? {
+                    guard packRanges.indices.contains(word),
+                          let start = Range(NSRange(location: packRanges[word].location, length: 0), in: piece.text)?.lowerBound
+                    else { return nil }
+                    return tokens.firstIndex { $0.range.contains(start) }
+                }
                 for (word, list) in rules {
+                    guard let index = diffIndex(ofPackWord: word) else { continue }
                     if list.contains(where: { wordLetters.contains($0.letter) }) {
-                        khilafWord.insert(offset + word)
+                        khilafWord.insert(offset + index)
                     } else if list.contains(where: { harfLetters.contains($0.letter) }) {
-                        khilafLetter.insert(offset + word)
+                        khilafLetter.insert(offset + index)
                     }
                 }
             }
-            offset += count
+            offset += tokens.count
         }
         func isWord(_ index: Int) -> Bool {
             diff.riwayah.indices.contains(index) && !diff.riwayah[index].folded.isEmpty

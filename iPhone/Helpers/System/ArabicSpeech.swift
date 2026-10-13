@@ -110,8 +110,16 @@ final class ArabicSpeech: NSObject, ObservableObject {
     @discardableResult
     private func resolveVoice(then: (@MainActor (AVSpeechSynthesisVoice?) -> Void)? = nil) -> AVSpeechSynthesisVoice? {
         if voiceResolved { return arabicVoice }
-        guard !voiceResolving else { return nil }
+        // A resolution already in flight (the one `init` starts, or a voices-changed re-run): the tap
+        // waits with the others and speaks when the voice lands. Until 2026-10-11 this returned nil
+        // WITHOUT keeping `then`, so every Listen tap during the first enumeration (22 s on a Mac, see
+        // above) did nothing, and the Reading Test's automatic prompt arrived silent.
+        if voiceResolving {
+            if let then { pendingVoiceContinuations.append(then) }
+            return nil
+        }
         voiceResolving = true
+        if let then { pendingVoiceContinuations.append(then) }
         Self.voiceQueue.async {
             let resolved = Self.bestArabicVoice()
             Task { @MainActor in
@@ -120,7 +128,19 @@ final class ArabicSpeech: NSObject, ObservableObject {
                 speech.voiceResolved = true
                 speech.voiceResolving = false
                 ArabicVoiceAvailability.shared.update(resolved != nil)
-                if let then { then(resolved) }
+                // The system's voice list changed while this pass ran: one more pass before anything
+                // speaks, so no continuation uses a voice the system has just withdrawn.
+                if speech.voiceResolveAgain {
+                    speech.voiceResolveAgain = false
+                    speech.voiceResolved = false
+                    speech.resolveVoice()
+                    return
+                }
+                // Each fires AFTER `voiceResolved` is set, so a caller coming back through
+                // `resolveVoice` gets the voice at once and never re-enters this path (the 10-06 recursion).
+                let continuations = speech.pendingVoiceContinuations
+                speech.pendingVoiceContinuations = []
+                continuations.forEach { $0(resolved) }
             }
         }
         return nil
@@ -128,6 +148,10 @@ final class ArabicSpeech: NSObject, ObservableObject {
 
     private var voiceResolved = false
     private var voiceResolving = false
+    /// Taps that arrived while the voice was resolving (see `resolveVoice`), spoken when it lands.
+    private var pendingVoiceContinuations: [@MainActor (AVSpeechSynthesisVoice?) -> Void] = []
+    /// The system's voice list changed mid-resolution: run one more pass before the continuations fire.
+    private var voiceResolveAgain = false
 
     /// Set while `speak`/`speakAll` is on the stack, so a continuation that calls back in cannot
     /// start a second pass on top of the first. `resolveVoice` no longer fires `then` synchronously,
@@ -155,8 +179,14 @@ final class ArabicSpeech: NSObject, ObservableObject {
             ) { _ in
                 Task { @MainActor in
                     let speech = ArabicSpeech.shared
-                    speech.voiceResolved = false
-                    speech.resolveVoice()
+                    if speech.voiceResolving {
+                        // Mid-pass: `resolveVoice` would return without re-resolving and leave the
+                        // stale voice. The landing block runs the extra pass instead.
+                        speech.voiceResolveAgain = true
+                    } else {
+                        speech.voiceResolved = false
+                        speech.resolveVoice()
+                    }
                 }
             }
         }
@@ -331,6 +361,12 @@ final class ArabicSpeech: NSObject, ObservableObject {
         isSpeakingQueue = false
         currentText = nil
         utteranceOwners.removeAll()
+        // On main, like every synthesizer call here: `isSpeaking` and `stopSpeaking` each hop to
+        // TextToSpeech's thread and wait for it, and with that thread busy this held the main thread
+        // for 28 s on the iPad stress walk (2026-10-13). Moving these onto a GCD lane made it WORSE
+        // (TextToSpeech performs its own waits on the calling thread's run loop, which a GCD thread
+        // does not have; the walks gained 12-second stalls). A fix needs a run-loop thread of its
+        // own for the synthesizer; until then the wait stays, and stays rare (a busy voice thread).
         guard synthesizer.isSpeaking else { return }
         synthesizer.stopSpeaking(at: .immediate)
     }

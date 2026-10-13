@@ -1350,6 +1350,11 @@ struct ArabicLetterPage: View {
             .background(Color.white.opacity(0.00001))
         }
         #endif
+        #if os(watchOS)
+        // The watch has no floating bottom bar to order against, so it is styled here (the iOS branch
+        // styles before its bottom bar; the 2026-10-07 reorder had dropped the watch's call).
+        .applyConditionalListStyle()
+        #endif
         .navigationTitle(letterData.letter)
         .onDisappear {
             ArabicSpeech.shared.stop()

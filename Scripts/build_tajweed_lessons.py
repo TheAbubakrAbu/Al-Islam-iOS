@@ -95,8 +95,8 @@ QURAN_JSON = ROOT.parent / "Quran-Tajweed-Engine" / "sources" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 PACK_VERSION = 5
-LETTER_TRAITS_SWIFT = ROOT / "iPhone" / "Islam" / "ArabicLetterTraits.swift"
-TAJWEED_RULES_SWIFT = ROOT / "iPhone" / "Quran" / "TajweedRules.swift"
+LETTER_TRAITS_SWIFT = ROOT / "iPhone" / "Islam" / "Arabic" / "ArabicLetterTraits.swift"
+TAJWEED_RULES_SWIFT = ROOT / "iPhone" / "Quran" / "Tajweed" / "TajweedRules.swift"
 ASSETS = ROOT / "Resources" / "Images.xcassets"
 
 # The list fields a Foundations merge may reorder or extend (see tajweed_foundations.py).

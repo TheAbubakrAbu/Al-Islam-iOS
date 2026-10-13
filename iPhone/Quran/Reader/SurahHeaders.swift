@@ -9,14 +9,17 @@ struct SurahsHeader: View {
     @AppStorage("simpleMode") private var simpleMode = false
 
     var headerText: String
+    /// The glyph leading the title; REVELATION ORDER passes its own.
+    var icon: String
 
-    init(text: String = "SURAHS") {
+    init(text: String = "SURAHS", icon: String = "book.fill") {
         headerText = text
+        self.icon = icon
     }
 
     var body: some View {
         HStack {
-            Text(headerText)
+            SectionIconHeader(headerText, icon: icon)
 
             #if os(iOS)
             Spacer()
@@ -87,7 +90,7 @@ struct JuzHeader: View {
 
     var body: some View {
         HStack {
-            Text("JUZ \(juz.id)")
+            SectionIconHeader("JUZ \(juz.id)", icon: "square.grid.3x3.fill")
                 .lineLimit(1)
 
             Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
@@ -208,7 +211,7 @@ struct PageHeader: View {
 
     var body: some View {
         HStack {
-            Text("PAGE \(page)")
+            SectionIconHeader("PAGE \(page)", icon: "doc.text.fill")
                 .lineLimit(1)
 
             Spacer()

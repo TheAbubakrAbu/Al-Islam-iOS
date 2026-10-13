@@ -853,9 +853,16 @@ struct SurahView: View {
     #endif
 
     private func markKhatmViewedIfNeeded(_ ayahID: Int) {
-        guard settings.quranSortMode == .khatm,
-              settings.automaticKhatmCompletion,
-              !isSearchingAyahs else { return }
+        guard !isSearchingAyahs else { return }
+        #if os(iOS)
+        // The Revision plan counts an ayah of its set as revised when it is read, in EVERY sort mode
+        // (a reader revising is rarely in Khatm mode) and whatever the Automatic Khatm Completion
+        // switch says: that switch is the khatm's, and the planner's footer promises the count for
+        // any reading in the app. A no-op without a plan. iOS only: the plan lives in
+        // QuranRevisionPlan.swift, which the watch does not compile.
+        settings.noteRevisionAyahRead(surah: surah.id, ayah: ayahID)
+        #endif
+        guard settings.automaticKhatmCompletion, settings.quranSortMode == .khatm else { return }
         settings.markKhatmAyahComplete(surah: surah.id, ayah: ayahID)
     }
 

@@ -12,14 +12,15 @@ struct HadithTrailingToolbar: ViewModifier {
     @Binding var showHadithSettings: Bool
     /// A jump's one-visit list (`HadithView.listForJump`, `HadithBookView.listForJump`).
     var listForJump: Binding<Bool> = .constant(false)
-    /// Simple Mode's More menu items (`HadithView.simpleMoreItems`), nil in Full Mode and on a book's
-    /// screen. While set, the grid toggle moves into the menu and the gear keeps its own slot.
-    var simpleMoreItems: AnyView? = nil
+    /// The tab root's ⋯ More menu items (`HadithView.moreMenuItems`), in both modes since 2026-10-11
+    /// (Abu: "for settings and hadith too put it on the left as a menu"); nil on a book's screen, which
+    /// keeps its chapter grid toggle up here. While set, the menu leads and the gear keeps its own slot.
+    var moreMenuItems: AnyView? = nil
 
     func body(content: Content) -> some View {
-        if let simpleMoreItems {
+        if let moreMenuItems {
             content.toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { SimpleMoreMenu { simpleMoreItems } }
+                ToolbarItem(placement: .navigationBarLeading) { TabMoreMenu { moreMenuItems } }
                 ToolbarItem(placement: .navigationBarTrailing) { gearButton }
             }
         } else if #available(iOS 26.0, *) {
@@ -86,8 +87,8 @@ struct HadithView: View {
     /// this, and the `onChange` on `content` turns it into a `bookPath` push (iOS 16 is the floor since
     /// 2026-10-09, so the hidden `NavigationLink` that once did the push on iOS 15 is gone).
     @State private var pushedBook: HadithCatalogBook?
-    /// Which summary door was tapped (Topics / Encyclopedia / History). One piece of state driving one
-    /// destination: three hidden links in the same List row all fired together. See `encyclopediaDoors`.
+    /// Which summary door was tapped (Today / Topics / Encyclopedia / History, the About cards). One
+    /// piece of state driving one destination: see `SummaryDoor`.
     @State private var openDoor: SummaryDoor?
     #if DEBUG
     /// `-launchHadithEncyclopedia`: the Hadith Encyclopedia pushed on launch, the headless way in.
@@ -568,6 +569,7 @@ struct HadithView: View {
                             routeDestination(route, columns: true)
                         }
                 }
+                .splitSidebarColumn()
             } detail: {
                 HadithDetailColumn()
             }
@@ -622,13 +624,11 @@ struct HadithView: View {
                     // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
                         // Summary tiles are the only form now (the old full-row sections went with the
-                        // removed Summary Mode setting), and the three doors - topics, history, the
-                        // encyclopedia - hang off the bottom of this same section (Abu, 2026-09-07),
-                        // the way Browse by Theme hangs off the Quran tab's summary. So it renders even
-                        // before there is a Last Read: the doors are always worth showing.
-                        // Simple Mode moves the doors into the More menu, so with no tile to show
+                        // removed Summary Mode setting). The three doors (topics, the encyclopedia,
+                        // history) hung off the bottom of this section from 2026-09-07 to 2026-10-11;
+                        // they are items of the ⋯ More menu now, in both modes, so with no tile to show
                         // there is nothing left in the section.
-                        if !settings.simpleMode || showSummaryTiles {
+                        if showSummaryTiles {
                             boxed(summaryTilesSection)
                         }
                         // Need a Hand?: one language or both, and the name of Allah in red, right
@@ -646,7 +646,7 @@ struct HadithView: View {
                             [$0.englishTitle, $0.arabicTitle]
                         }
                         if !results.isEmpty {
-                            boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
+                            boxed(bookSection(title: "MATCHING BOOKS", books: results, icon: "magnifyingglass", shuffle: false))
                         } else if referenceResult == nil, numberQuery == nil,
                                   globalChapterResults.isEmpty, globalHadithResults.isEmpty,
                                   globalRankedHits.isEmpty, globalAIResults.isEmpty {
@@ -655,7 +655,7 @@ struct HadithView: View {
                             // A bare number never matches a book title - the numbered chapter/hadith
                             // sections below are the answer, so skip the "no books" noise for it.
                             boxed(
-                                Section(header: SectionPillHeader(title: "MATCHING BOOKS", count: 0)) {
+                                Section(header: SectionPillHeader(title: "MATCHING BOOKS", count: 0, icon: "magnifyingglass")) {
                                     Text("No books match your search.")
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
@@ -687,7 +687,7 @@ struct HadithView: View {
                         ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
                             let books = filteredBooks(in: group)
                             if !books.isEmpty {
-                                boxed(bookSection(title: group.rawValue, books: books))
+                                boxed(bookSection(title: group.rawValue, books: books, icon: group.systemImage))
                             }
                         }
                     }
@@ -765,6 +765,12 @@ struct HadithView: View {
                 }
                 bookPath = [.book(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
             }
+            // Apple Music-style: the bottom search bar minimizes while scrolling down. On the List
+            // itself, BEFORE the help overlay and the filter row join the tree: `onScrollGeometryChange`
+            // watches every scroll view under it, and with the filter buttons (a horizontal ScrollView)
+            // mounted for a search it logged "Multiple scroll views were found. Picking the first one"
+            // on every scroll (the stress walk, 2026-10-13) and could end up watching the chips.
+            .collapseBarsOnScroll($barsCollapsed)
             // The search help floats over the list top while the field is focused and empty.
             .overlay(alignment: .top) {
                 searchHelpOverlay
@@ -796,8 +802,6 @@ struct HadithView: View {
                 HadithSearchFilterSheet(filters: $searchFilters)
                     .smallMediumSheetPresentation()
             }
-            // Apple Music-style: the bottom search bar minimizes while scrolling down.
-            .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
                 // The Quran tab's exact bottom-bar grammar: just the field. (Recent searches used to
                 // stack above it as chips; they live in the search-help card over the list now.)
@@ -837,7 +841,7 @@ struct HadithView: View {
                 hadithGridMode: $hadithGridMode,
                 showHadithSettings: $showHadithSettings,
                 listForJump: $listForJump,
-                simpleMoreItems: settings.simpleMode ? AnyView(simpleMoreItems) : nil
+                moreMenuItems: AnyView(moreMenuItems)
             ))
             .sheet(isPresented: $showHadithSettings) {
                 SettingsHadithView()
@@ -1077,8 +1081,8 @@ struct HadithView: View {
             }
             .foregroundColor(settings.accentColor.color)
         ) {
-            // The grid only when there is something in it: before any reading the section is just the
-            // three doors, and an empty grid would still draw its own padded row.
+            // The grid only when there is something in it: an empty grid would still draw its own
+            // padded row.
             if showSummaryTiles {
                 // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different height
                 // on each self-sizing pass, which iOS 26 traps on.
@@ -1140,14 +1144,10 @@ struct HadithView: View {
                 }
             }
 
-            if !settings.simpleMode {
-                encyclopediaDoors
-            }
         }
     }
 
-    /// Whether there is anything to put in the tile grid at all. The section renders regardless - the
-    /// three doors below the grid are always worth showing.
+    /// Whether there is anything to put in the tile grid at all; the section renders only then.
     private var showSummaryTiles: Bool {
         dailyHadith != nil || store.lastRead != nil
     }
@@ -1251,52 +1251,15 @@ struct HadithView: View {
     }
 
 
-    // MARK: The doors under the summary
+    // MARK: The summary's doors
 
-    /// The three doors under the summary tiles: browse by topic, the Hadith Encyclopedia, and the
-    /// history. Rows, not a section of their own (Abu, 2026-09-07): they hang off the bottom of
-    /// "Your Summary" the way Browse by Theme hangs off the Quran tab's, in the same order the Quran
-    /// uses, with History last. No caption under any of the three names either, and no Arabic name
-    /// beside them (Abu, 2026-09-08): plain rows, and each screen introduces itself in its own first
-    /// section instead.
-    @ViewBuilder
-    private var encyclopediaDoors: some View {
-        // Three chips on one row (2026-09-16: three full rows were most of the summary's height).
-        //
-        // BUTTONS, not three `chevronlessLink`s. A `NavigationLink` - hidden or not - activates with
-        // EVERY other link in the same List row, so tapping any one of these three pushed all three
-        // at once (Abu, 2026-09-19: "opening Browse by Theme or History or Topics/Encyclopedia/
-        // History opens all 3"). Each chip now just records which door was tapped, and ONE
-        // `navigationDestination` on the List pushes that one. See `openDoor`.
-        //
-        // `EvenChipRows` from iOS 16: an iPad sidebar has no room for three ("Topi...", "En..."), so the
-        // row breaks where each name would.
-        Group {
-            if #available(iOS 16.0, *) {
-                EvenChipRows(maximumPerRow: dynamicTypeSize.isAccessibilitySize ? 1 : 3) {
-                    encyclopediaDoorButtons
-                }
-            } else {
-                HStack(spacing: 10) { encyclopediaDoorButtons }
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var encyclopediaDoorButtons: some View {
-        if HadithTopicsStore.isBundled {
-            doorButton(.topics, title: "Topics", systemImage: "square.grid.2x2.fill")
-        }
-
-        if HadeethEncStore.isBundled {
-            doorButton(.encyclopedia, title: "Encyclopedia", systemImage: "books.vertical.fill")
-        }
-
-        doorButton(.history, title: "History", systemImage: "clock.arrow.circlepath")
-    }
-
-    /// The doors under the summary. One `@State` + one destination, so exactly one screen opens.
+    /// The screens the summary opens through one `@State` + one destination (`openDoor`,
+    /// `summaryDoorDestination`), so exactly one screen opens. Topics, the Encyclopedia and History
+    /// were three chips under the summary tiles from 2026-09-07 to 2026-10-11 (one row from
+    /// 2026-09-16); they are items of the ⋯ More menu now, in both modes (Abu: "put these top left no
+    /// matter simple or normal and remove it from summary"). The one-destination plumbing is older
+    /// than the menu: a NavigationLink activates with EVERY other link in the same List row, so three
+    /// links in one row pushed all three at once (Abu, 2026-09-19).
     enum SummaryDoor: String, Identifiable, Hashable {
         /// `daily` is the Today screen: Full Mode opens it from the summary header's pill, Simple Mode
         /// from the More menu (a toolbar menu cannot hold a NavigationLink).
@@ -1313,7 +1276,8 @@ struct HadithView: View {
         pushedBook != nil || pushedReference != nil || !bookPath.isEmpty
     }
 
-    /// One "About Hadith" card: a Button, for the same reason the summary doors are.
+    /// One "About Hadith" card: a Button through the summary's one door, not a NavigationLink (see
+    /// `SummaryDoor`).
     private func aboutDoorButton(_ title: String, door: SummaryDoor) -> some View {
         Button {
             guard !bookPushInFlight else { return }
@@ -1336,10 +1300,11 @@ struct HadithView: View {
         .buttonStyle(.plain)
     }
 
-    /// Simple Mode's ⋯ menu (docs/Simple Mode Guide.md): the Today pill and the three doors under the
-    /// summary, then the grid. Each item raises the same door as its chip, through the same guard.
+    /// The tab's ⋯ More menu (docs/Simple Mode Guide.md), the same in both modes: the Today pill, then
+    /// Topics, the Encyclopedia and History (this menu is their only door since 2026-10-11), then the
+    /// grid. Each item raises its door through the one guard.
     @ViewBuilder
-    var simpleMoreItems: some View {
+    var moreMenuItems: some View {
         menuDoor(.daily, title: "Today", systemImage: "sun.horizon.fill")
         if HadithTopicsStore.isBundled {
             menuDoor(.topics, title: "Topics", systemImage: "tag.fill")
@@ -1352,7 +1317,7 @@ struct HadithView: View {
         Divider()
 
         let showsGrid = hadithGridMode && !listForJump
-        SimpleMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
+        TabMoreMenuItem(showsGrid ? "Show as List" : "Show as Grid", systemImage: showsGrid ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation {
                 if listForJump { listForJump = false } else { hadithGridMode.toggle() }
@@ -1361,22 +1326,11 @@ struct HadithView: View {
     }
 
     private func menuDoor(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
-        SimpleMoreMenuItem(title, systemImage: systemImage) {
+        TabMoreMenuItem(title, systemImage: systemImage) {
             guard !bookPushInFlight else { return }
             settings.hapticFeedback()
             openDoor = door
         }
-    }
-
-    private func doorButton(_ door: SummaryDoor, title: String, systemImage: String) -> some View {
-        Button {
-            guard !bookPushInFlight else { return }
-            settings.hapticFeedback()
-            openDoor = door
-        } label: {
-            doorChip(title: title, systemImage: systemImage)
-        }
-        .buttonStyle(.plain)
     }
 
     /// The destination for `openDoor`, attached to the LIST (a lazy row's own destination never
@@ -1395,27 +1349,6 @@ struct HadithView: View {
         case .hadithRejectors:    HadithRejectorsView()
         case .none:         EmptyView()
         }
-    }
-
-    /// One door chip: the accent symbol and the name on glass. Deliberately the twin of the Quran
-    /// tab's `summaryDoorChip`, so the two summaries read the same.
-    private func doorChip(title: String, systemImage: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(settings.accentColor.color)
-
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .padding(.vertical, 9)
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity)
-        .conditionalGlassEffect(clear: true, rectangle: true)
-        .contentShape(Rectangle())
     }
 
     // MARK: About hadith
@@ -1627,7 +1560,7 @@ struct HadithView: View {
             // Matching chapters sit ABOVE the AI/keyword switch, the Quran search's surah-list rule:
             // they are navigation, not a competing result kind, so they show in both modes.
             if !globalChapterResults.isEmpty {
-                Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: globalChapterResults.count, overflow: globalHasMoreChapters)) {
+                Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: globalChapterResults.count, icon: "magnifyingglass", overflow: globalHasMoreChapters)) {
                     ForEach(globalChapterResults) { hit in
                         NavigationLink {
                             LazyDestination {
@@ -1715,7 +1648,8 @@ struct HadithView: View {
                 // The pill counts what can be reached (the engine keeps its best forty), with a + when
                 // more matched than that: it used to print the whole tally over forty rows.
                 Section(header: SectionPillHeader(title: bestMatch ? "HADITHS BY BEST MATCH" : "TOP HADITH RESULTS",
-                                                  count: rankedRows.count, overflow: globalRankedTotal > rankedRows.count)) {
+                                                  count: rankedRows.count, icon: "magnifyingglass",
+                                                  overflow: globalRankedTotal > rankedRows.count)) {
                     rankedHadithNotice
                     ForEach(rankedRows.prefix(globalRankedLimit)) { row in
                         let hit = row.hit
@@ -1752,7 +1686,7 @@ struct HadithView: View {
             if keywordVisible, !bestMatch, !globalHadithResults.isEmpty {
                 // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
                 // own count - so results from different books never read as one undifferentiated list.
-                Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, overflow: globalHasMoreHadiths)) {
+                Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, icon: "magnifyingglass", overflow: globalHasMoreHadiths)) {
                     EmptyView()
                 }
                 .padding(.bottom, -12)

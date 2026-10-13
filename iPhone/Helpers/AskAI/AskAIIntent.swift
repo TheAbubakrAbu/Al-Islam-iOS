@@ -483,8 +483,11 @@ enum AskAILexicon {
         pattern: #"(?i)^(what (is|are|was|were) (a |an |the )?|whats (a |an |the )?|what does .* mean|meaning of|define|definition of|who (is|are) (the )?|explain (what|the meaning|the term|the concept)|what do (you|we|muslims) mean by|what is meant by|tell me what)"#)
     static let referenceRegex = try! NSRegularExpression(
         pattern: #"(?i)(?<![\d:])\d{1,3}\s*:\s*\d{1,3}(?![\d:])|\b(surah|surat|soorah|sura|chapter)\s+(?:[\p{L}'’\-]+|\d{1,3}\b)|\b(ayah|ayat|aya|verse)\s+\d{1,3}\b|\bayat?u?l?[ -]?kursi\b|\bthrone verse\b|\bverse of (the )?(throne|light)\b|\bal[- ][a-z]+ (verse|ayah|surah)\b"#)
+    /// A WHOLE-message match: the recap words, then nothing but filler ("summarize that, please").
+    /// Anchored at the start alone, "summarize the story of Yusuf" and "briefly explain zakat" were
+    /// read as recaps of the previous answer instead of new questions.
     static let recapRegex = try! NSRegularExpression(
-        pattern: #"^(summari[sz]e|sum up|tldr|tl;dr|shorter|simpler|simplify|in short|briefly|make (it|that) (shorter|simpler|brief)|say (that|it) again|repeat that|rephrase|reword|explain (that|it) again|(can|could) you (summari[sz]e|simplify|shorten|rephrase))\b"#)
+        pattern: #"^(?:please\s+)?(summari[sz]e|sum up|tldr|tl;dr|shorter|simpler|simplify|in short|briefly|make (it|that) (shorter|simpler|brief)|say (that|it) again|repeat that|rephrase|reword|explain (that|it) again|(can|could) you (summari[sz]e|simplify|shorten|rephrase))(?:\s+(?:that|this|it|please|again|for me|a bit|more|the answer|your answer|the above|what you said))*\s*[.!?]*\s*$"#)
     /// About the previous answer's sources. The narrator forms need a back-reference ("who
     /// narrated THAT"): "Who narrated the hadith of Jibril?" is a new question, and used to be
     /// answered from the previous turn's sources.

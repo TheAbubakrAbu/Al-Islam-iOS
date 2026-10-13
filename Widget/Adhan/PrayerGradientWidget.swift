@@ -122,19 +122,12 @@ struct PrayerGradientEntryView: View {
 
                 Spacer(minLength: 0)
 
-                // The city at the foot of this column, level with the Hijri date at the foot of the
-                // right one: together they are the layout's date-and-place line.
-                if !entry.currentCity.isEmpty {
-                    HStack(spacing: 3) {
-                        Image(systemName: "location.fill")
-
-                        Text(entry.currentCity)
-                    }
+                // The city (and the weather to its right) at the foot of this column, level with the
+                // Hijri date at the foot of the right one: together they are the layout's date-and-place
+                // line. The city truncates before the temperature gives way.
+                WidgetCityWeatherLine(city: entry.currentCity, weather: entry.weather)
                     .font(.caption2)
                     .opacity(0.75)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
@@ -153,11 +146,6 @@ struct PrayerGradientEntryView: View {
                     .opacity(0.9)
 
                 Spacer(minLength: 0)
-
-                // The weather over the date, in the column's trailing stack (SkyWeather.swift).
-                WidgetWeatherChip(weather: entry.weather)
-                    .font(.caption2)
-                    .opacity(0.9)
 
                 Text(hijriDate)
                     .font(.caption2)

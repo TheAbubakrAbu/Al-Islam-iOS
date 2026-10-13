@@ -551,7 +551,7 @@ struct PrayerTrackerSection: View {
 
     private var header: some View {
         HStack {
-            Text("PRAYER TRACKER")
+            SectionIconHeader("PRAYER TRACKER", icon: "checkmark.circle.fill")
 
             Spacer()
 

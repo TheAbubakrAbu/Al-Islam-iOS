@@ -149,11 +149,7 @@ struct SurahRow: View, Equatable {
     }
 
     private var pageCountLabel: String {
-        let count = max(surah.pageCount, 1)
-        if count == 1, surah.isLessThanOnePage == true {
-            return "<1 Page"
-        }
-        return count == 1 ? "1 Page" : "\(count) Pages"
+        SurahPageLength.label(twelfths: surah.pageLengthTwelfths)
     }
 
     private var startPageNumber: Int {

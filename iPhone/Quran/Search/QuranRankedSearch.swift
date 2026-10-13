@@ -328,9 +328,12 @@ enum QuranRankedSearch {
             -> (translation: [String], transliteration: [String]) {
             let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
             guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return ([], []) }
-            let ayah = snapshot.surahs[si].ayahs[ai]
+            // The Latin an entry was built from: its own ayah's on Hafs, the aligned Hafs ayah(s)' under
+            // another riwayah (what the index does, 2026-10-04). Read off the own-NUMBERED ayah instead,
+            // these lanes credited the row one ayah off under Warsh and wrote that to Caches.
+            let transliteration = snapshot.latinAyahs(of: entry).map(\.textTransliteration).joined(separator: " ")
             let tokens = entry.englishTokens
-            if let shape = transliterationShape(ayah.textTransliteration), !shape.isEmpty {
+            if let shape = transliterationShape(transliteration), !shape.isEmpty {
                 let count = shape.count
                 let start = tokens.count - 2 * count
                 if start >= 0,
@@ -421,9 +424,9 @@ enum QuranRankedSearch {
         fileprivate static func translationTokens(_ entry: VerseIndexEntry, snapshot: QuranData.VerseSearchSnapshot) -> [String] {
             let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
             guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return [] }
-            let ayah = snapshot.surahs[si].ayahs[ai]
-            return Settings.shared.cleanSearch(ayah.textEnglishSaheeh + " " + ayah.textEnglishMustafa, whitespace: true)
-                .split(separator: " ").map(String.init)
+            let latin = snapshot.latinAyahs(of: entry)
+            let text = latin.map(\.textEnglishSaheeh).joined(separator: " ") + " " + latin.map(\.textEnglishMustafa).joined(separator: " ")
+            return Settings.shared.cleanSearch(text, whitespace: true).split(separator: " ").map(String.init)
         }
 
         /// The folded words of the ayah's transliteration, its pause hints ("Salaah,(ti)") left out:
@@ -433,7 +436,7 @@ enum QuranRankedSearch {
             guard snapshot.surahs.indices.contains(si), snapshot.surahs[si].ayahs.indices.contains(ai) else { return [] }
             var text = ""
             var depth = 0
-            for character in snapshot.surahs[si].ayahs[ai].textTransliteration {
+            for character in snapshot.latinAyahs(of: entry).map(\.textTransliteration).joined(separator: " ") {
                 if character == "(" { depth += 1; continue }
                 if character == ")" { depth = Swift.max(0, depth - 1); continue }
                 if depth == 0 { text.append(character) }
@@ -914,11 +917,15 @@ enum QuranRankedSearch {
         let isArabic = raw.containsArabicLetters
         var rest = raw
         var required: [String] = []
+        /// The quoted words as typed, for the per-word maps below (their folds are what `used` holds
+        /// when nothing stands outside the quotes).
+        var quotedWords: [String] = []
         // Quoted phrases every result must carry, pulled out first so their words are not also loose tokens.
         if let regex = try? NSRegularExpression(pattern: "\"([^\"]+)\"|“([^”]+)”") {
             let matches = regex.matches(in: raw, range: NSRange(raw.startIndex..., in: raw))
             for match in matches.reversed() {
                 let inner = (1...2).compactMap { Range(match.range(at: $0), in: raw) }.first.map { String(raw[$0]) } ?? ""
+                quotedWords.append(contentsOf: inner.split(whereSeparator: { $0.isWhitespace }).map(String.init))
                 let folded = Settings.shared.cleanSearch(inner, whitespace: true)
                 if !folded.isEmpty { required.insert(folded, at: 0) }
                 if let whole = Range(match.range, in: rest) { rest.replaceSubrange(whole, with: " ") }
@@ -934,13 +941,17 @@ enum QuranRankedSearch {
         var spellings: [String: [String]] = [:]
         var hamzaFilters: [String: Settings.HamzaPrecisionFilter] = [:]
         if isArabic {
-            for piece in rest.split(whereSeparator: { $0.isWhitespace }) {
-                let word = String(piece)
+            // The quoted words too: a query that is ONLY a quoted word has an empty `rest`, and its
+            // tokens come from `required` below, which looked these maps up and found nothing (so the
+            // bare-hamza rule never fired for "ماء" in quotes). A raw word whose fold is two words (a
+            // dash reads as a break) files its hamza filter under each of them.
+            for word in rest.split(whereSeparator: { $0.isWhitespace }).map(String.init) + quotedWords {
                 let folded = Settings.shared.cleanSearch(word, whitespace: true)
                 guard !folded.isEmpty else { continue }
-                if spellings[folded] == nil { spellings[folded] = SearchFoldTables.arabicQueryVariants(of: word) }
-                if hamzaFilters[folded] == nil, let filter = Settings.HamzaPrecisionFilter(query: word) {
-                    hamzaFilters[folded] = filter
+                let parts = folded.split(separator: " ").map(String.init)
+                if parts.count == 1, spellings[folded] == nil { spellings[folded] = SearchFoldTables.arabicQueryVariants(of: word) }
+                if let filter = Settings.HamzaPrecisionFilter(query: word) {
+                    for key in parts where hamzaFilters[key] == nil { hamzaFilters[key] = filter }
                 }
             }
         }

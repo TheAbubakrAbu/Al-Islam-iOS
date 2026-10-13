@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build iPhone/Islam/ArabicReadingBank.swift: the graded word bank behind the Reading Test
+"""Build iPhone/Islam/Arabic/ArabicReadingBank.swift: the graded word bank behind the Reading Test
 (Arabic Alphabet > Reading Test).
 
 WHY A BUILD STEP
@@ -54,7 +54,7 @@ QURAN_JSON = SOURCES / "Quran.json"
 NAMES_JSON = SOURCES / "NamesOfAllah.json"
 WBW_PACK = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 HADITH_DB = ROOT.parent / "Hadith-JSON-Engine" / "db" / "by_book"
-OUT = ROOT / "iPhone" / "Islam" / "ArabicReadingBank.swift"
+OUT = ROOT / "iPhone" / "Islam" / "Arabic" / "ArabicReadingBank.swift"
 
 # --------------------------------------------------------------------------------------------
 # The reader

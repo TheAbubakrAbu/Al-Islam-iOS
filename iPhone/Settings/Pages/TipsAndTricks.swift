@@ -138,9 +138,9 @@ struct AppTip: Identifiable {
 // MARK: - The catalogue
 
 enum TipCatalog {
-    /// A tip about a control Simple Mode takes off the screen (the PRAYER TIMES layout menu, the
-    /// shuffles, the summary doors, Need a Hand?) is not offered while Simple Mode is on: it would
-    /// teach a button the reader cannot see (docs/Simple Mode Guide.md).
+    /// A tip about a control Simple Mode takes off the screen (the Optional Times pill, the date
+    /// picker, the shuffles, the summary doors, Need a Hand?) is not offered while Simple Mode is on:
+    /// it would teach a button the reader cannot see (docs/Simple Mode Guide.md).
     static let outsideSimpleMode: () -> Bool = { !Settings.shared.simpleMode }
 
     static func tips(in area: TipArea) -> [AppTip] {
@@ -316,8 +316,8 @@ enum TipCatalog {
                place: "Adhan tab", tour: true),
         AppTip(id: "adhan.layouts", area: .adhan, group: "THE PRAYER LIST", systemImage: "square.grid.2x2",
                title: "Four layouts for the prayer list",
-               detail: "The menu in the PRAYER TIMES header switches between Prayer Tiles, Prayer Grid, Prayer List, and Prayer Split.",
-               place: "Adhan tab", isAvailable: TipCatalog.outsideSimpleMode),
+               detail: "The ⋯ menu at the top of the Adhan tab switches between Prayer Tiles, Prayer Grid, Prayer List, and Prayer Split. Prayer Settings offers the same choice.",
+               place: "Adhan tab"),
         AppTip(id: "adhan.optionalpill", area: .adhan, group: "THE PRAYER LIST", systemImage: "moon.stars",
                title: "Optional times without leaving the tab",
                detail: "The Optional Times pill under the prayer list turns on Duhaa, Islamic Midnight, and the Last Third of the Night right there. They show in the app only, never in widgets.",
@@ -642,7 +642,7 @@ enum TipCatalog {
                place: "Quran tab"),
         AppTip(id: "quran.planner", area: .quran, group: "THE QURAN TAB", systemImage: "calendar.badge.clock",
                title: "Plan a khatm",
-               detail: "The Quran Planner, the calendar button at the top of the Quran tab, sets a goal of one, two, or three months and can remind you daily.",
+               detail: "The Quran Planner, in the ⋯ menu at the top of the Quran tab, sets a goal of one, two, or three months and can remind you daily.",
                place: "Quran tab"),
         AppTip(id: "quran.themes", area: .quran, group: "THE QURAN TAB", systemImage: "paintbrush.pointed.fill",
                title: "Highlight Themes",
@@ -747,8 +747,8 @@ enum TipCatalog {
                place: "Hadith tab", isAvailable: TipCatalog.outsideSimpleMode),
         AppTip(id: "hadith.doors", area: .hadith, group: "YOUR SUMMARY", systemImage: "rectangle.3.group",
                title: "Topics, Encyclopedia, History",
-               detail: "Three doors under your summary: hadiths gathered by topic, an encyclopedia of explained narrations, and everything you have opened or searched. Tapping a past search in History runs it again.",
-               place: "Hadith tab", isAvailable: TipCatalog.outsideSimpleMode),
+               detail: "Three doors in the ⋯ menu at the top of the Hadith tab: hadiths gathered by topic, an encyclopedia of explained narrations, and everything you have opened or searched. Tapping a past search in History runs it again.",
+               place: "Hadith tab, ⋯ menu"),
         AppTip(id: "hadith.ai", area: .hadith, group: "YOUR SUMMARY", systemImage: "sparkles",
                title: "Summaries, on your device",
                detail: "A hadith's menu offers Summarize with AI, and search offers Ask AI about what you typed. Both run on the iPhone itself.",
@@ -1470,7 +1470,7 @@ struct SettingsSpotlightSection: View {
         let tips = TipCatalog.spotlight
         // Simple Mode keeps the one row to every tip and leaves the twelve cards out
         // (docs/Simple Mode Guide.md).
-        Section(header: Text(settings.simpleMode ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())")) {
+        Section(header: SectionIconHeader(settings.simpleMode ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())", icon: "lightbulb.fill")) {
             if settings.simpleMode {
                 EmptyView()
             } else if rows {

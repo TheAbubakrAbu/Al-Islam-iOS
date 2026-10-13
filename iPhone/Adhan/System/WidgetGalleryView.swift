@@ -327,4 +327,67 @@ struct WidgetGalleryView: View {
         }
     }
 }
+#if HAS_WEATHER
+/// "-weatherGallery": every `-fakeWeather` preset over every prayer's sky, drawn with the widgets' own
+/// sky fill (gradient, stars, the weather overlay, the scrim), rendered offscreen to one PNG in the app's
+/// Documents folder (the path is printed as "WEATHER GALLERY"). A review sheet for the weather's look
+/// (Abu, 2026-10-11: "can I see a preview of what they all look like?"), with no tapping or scrolling.
+enum WeatherGalleryExport {
+    static let presets = ["clear", "partly", "cloudy", "overcast", "rain", "storm", "snow", "fog", "hot"]
+    static let periods = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+
+    @MainActor
+    static func runIfRequested() async {
+        guard ProcessInfo.processInfo.arguments.contains("-weatherGallery") else { return }
+        guard #available(iOS 16.0, *) else { return }
+        await AppReveal.waitUntilRevealed()
+        let renderer = ImageRenderer(content: sheet)
+        renderer.scale = 2
+        guard let data = renderer.uiImage?.pngData(),
+              let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("WEATHER GALLERY failed")
+            return
+        }
+        let url = folder.appendingPathComponent("weather-gallery.png")
+        try? data.write(to: url)
+        print("WEATHER GALLERY \(url.path)")
+    }
+
+    @MainActor
+    private static var sheet: some View {
+        let settings = Settings.shared
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("").frame(width: 90)
+                ForEach(periods, id: \.self) { period in
+                    Text(period).font(.headline).frame(width: 240)
+                }
+            }
+            ForEach(presets, id: \.self) { preset in
+                HStack(spacing: 8) {
+                    Text(preset.capitalized).font(.headline).frame(width: 90, alignment: .leading)
+                    ForEach(periods, id: \.self) { period in
+                        tile(preset: preset, period: period, settings: settings)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .foregroundColor(.black)
+        .environment(\.colorScheme, .light)
+    }
+
+    @MainActor
+    private static func tile(preset: String, period: String, settings: Settings) -> some View {
+        var weather = SkyWeather.fake(preset: preset, celsius: nil, latitude: 0, longitude: 0)
+        weather?.isDaylight = SkyStars.opacity(forPeriod: period) < 0.5
+        let stars = SkyStars.opacity(forPeriod: period) * (weather?.look.starFactor ?? 1)
+        return PrayerSkyBackground.fill(colors: settings.skyGradientColors(forPrayer: period, weather: weather),
+                                        starOpacity: stars, weather: weather)
+            .frame(width: 240, height: 150)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+#endif
 #endif

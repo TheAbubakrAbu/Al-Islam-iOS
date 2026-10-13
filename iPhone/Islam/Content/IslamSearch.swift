@@ -925,7 +925,11 @@ struct ArticleDoorRow: View {
             #endif
         case .provingIslam:
             #if os(iOS)
-            NavigationLink(destination: LazyDestination { ProvingIslamView() }) {
+            // Guarded like the three signs libraries: a chapter's door back to the index that pushed it
+            // is greyed instead of starting a second lap (the no-infinite-chains rule).
+            OpenScreenLink(screen: .provingIslamLibrary) {
+                ProvingIslamView().openScreen(.provingIslamLibrary)
+            } label: {
                 label(title: "Proving Islam: The Complete Case",
                       subtitle: "The case that Islam is true, one line of evidence at a time",
                       systemImage: IslamArticleHome.proving.systemImage)

@@ -49,7 +49,19 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         // These tests are about the catch-up window, not about Qasr: pin the full five.
         settings.travelAutomatic = false
         settings.travelingMode = false
-        ForegroundAdhanPlayer.shared.clearPendingOffer()
+        // The host app shares this player, and inside the five minutes after a prayer its own activation
+        // catch-up has started the adhan by the time the suite runs (16:41 on 2026-10-11: both
+        // `isPlaying` assertions failed with nothing of the tests' playing). Quiet it first; no test
+        // here is about an adhan the host began, and the fade clears `playingPrayerName` within half a second.
+        let player = ForegroundAdhanPlayer.shared
+        player.clearPendingOffer()
+        if player.isPlaying {
+            player.stopAdhan()
+            let deadline = Date().addingTimeInterval(3)
+            while player.isPlaying, Date() < deadline {
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+        }
     }
 
     override func tearDown() async throws {

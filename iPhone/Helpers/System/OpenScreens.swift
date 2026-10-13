@@ -71,6 +71,9 @@ enum OpenScreen: String, Hashable, CaseIterable {
     case miraclesLibrary
     case propheciesLibrary
     case prophetMiraclesLibrary
+    /// Proving Islam's index: its chapters door into the pillar articles, and those articles door
+    /// back into the index.
+    case provingIslamLibrary
 
     /// What a disabled row says in place of its caption, when the row itself does not supply one.
     var alreadyHereCaption: String {
@@ -98,6 +101,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .miraclesLibrary:        return "You came here from Miracles of the Quran"
         case .propheciesLibrary:      return "You came here from Prophecies of the Prophet"
         case .prophetMiraclesLibrary: return "You came here from Miracles of the Prophets"
+        case .provingIslamLibrary:    return "You came here from Proving Islam"
         }
     }
 }

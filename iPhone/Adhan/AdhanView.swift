@@ -181,6 +181,56 @@ struct AdhanView: View {
     private var fillsSky: Bool {
         settings.showSkyView && settings.skyFillsAdhanTab && live.prayers != nil && live.currentLocation != nil
     }
+
+    /// The prayer list's layout: the key `PrayerList` draws from and Prayer Settings' Prayer Times Layout
+    /// row writes. The watch always draws tiles, so the choice is the phone's alone.
+    @AppStorage("prayerDisplayModeV2") private var prayerDisplayModeRawValue: String = PrayerList.PrayerDisplayMode.tiles.rawValue
+
+    /// The tab's ⋯ More menu: the Prayer and Hijri calendars (pushed through `GlanceCalendarPushes`,
+    /// the same doors the glance tiles use, so the menu and the tiles can never stack two pushes), then
+    /// the prayer list's layout as a submenu (Abu, 2026-10-11: "have it be a menu that opens the
+    /// other"), the current one ticked inside it and named under the row.
+    @ViewBuilder
+    private var adhanMoreItems: some View {
+        TabMoreMenuItem("Prayer Calendar", systemImage: "calendar") {
+            settings.hapticFeedback()
+            if pushedCalendar == nil { pushedCalendar = .prayerCalendar }
+        }
+        TabMoreMenuItem("Hijri Calendar", systemImage: "moon.stars") {
+            settings.hapticFeedback()
+            if pushedCalendar == nil { pushedCalendar = .hijriCalendar }
+        }
+
+        Divider()
+
+        let layout = PrayerList.PrayerDisplayMode(rawValue: prayerDisplayModeRawValue) ?? .tiles
+        Menu {
+            Picker("Prayer Times Layout", selection: prayerLayoutSelection) {
+                ForEach(PrayerList.PrayerDisplayMode.allCases) { mode in
+                    Label(mode.displayName.capitalized, systemImage: mode.menuSymbol).tag(mode.rawValue)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            // The second Text is the row's subtitle (the Files app's Sort By): which layout is on,
+            // without opening the submenu.
+            Label("Prayer Times Layout", systemImage: layout.menuSymbol)
+            Text(layout.displayName.capitalized)
+        }
+    }
+
+    /// The picker's binding, with the haptic the header picker's `onChange` used to give: a modifier on
+    /// a view inside a menu is not reliably alive, so the binding's setter taps instead.
+    private var prayerLayoutSelection: Binding<String> {
+        Binding(
+            get: { prayerDisplayModeRawValue },
+            set: { newValue in
+                guard newValue != prayerDisplayModeRawValue else { return }
+                settings.hapticFeedback()
+                prayerDisplayModeRawValue = newValue
+            }
+        )
+    }
     #endif
 
     private var adhanContent: some View {
@@ -236,7 +286,7 @@ struct AdhanView: View {
                 // Simple Mode leaves the glance wall out: each tile is a shortcut to a door the tab
                 // already has (the calendar button, the compass, the city pill, the sky's moon).
                 if !settings.simpleMode {
-                    Section(header: Text("AT A GLANCE")) {
+                    Section(header: SectionIconHeader("AT A GLANCE", icon: "rectangle.grid.2x2.fill")) {
                         GlanceCard(onSelect: handleGlance)
                     }
                 }
@@ -282,6 +332,9 @@ struct AdhanView: View {
         .onAppear {
             isOnScreen = true
             if appRevealed {
+                #if os(iOS)
+                openPendingQiblaIfAny()
+                #endif
                 askLocationThenRefresh()
                 settings.refreshLocationIfStale()
             } else {
@@ -294,12 +347,19 @@ struct AdhanView: View {
         }
         .onChange(of: appRevealed) { revealed in
             guard revealed else { return }
+            LaunchClock.mark("adhan root: reveal refresh")
             // The location question waits for this tab to be in front (a learner's welcome lands on
             // the Islam tab); the refresh runs either way, as it always has.
             if isOnScreen {
+                #if os(iOS)
+                openPendingQiblaIfAny()
+                #endif
                 askLocationThenRefresh()
             } else {
-                prayerTimeRefresh(force: false)
+                // Off screen (a learner's welcome lands on the Islam tab): the times refresh, but no
+                // system prompt. The permissions sheet is the one door to both prompts since
+                // 2026-10-11, and it is offered the first time this tab comes in front.
+                prayerTimeRefresh(force: false, askNotifications: false)
             }
             settings.refreshLocationIfStale()
         }
@@ -328,24 +388,23 @@ struct AdhanView: View {
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
-            // Leading toolbar is the first accent, trailing is the second - the same split the app uses for
-            // sections. With a single-color accent the two are identical, so nothing changes visually there.
+            // The leading slot is the ⋯ More menu, in both modes (Abu, 2026-10-11: "for prayer have it
+            // contain a menu to switch between tiles and grid and whatnot"): the two calendars, then the
+            // prayer list's layout, which until then was a picker in the PRAYER TIMES header. The gear
+            // keeps the trailing slot. Leading tints the first accent, trailing the second, the same
+            // split the app uses for sections.
             ToolbarItem(placement: .navigationBarLeading) {
-                NavigationLink {
-                    LazyDestination {
-                        PrayerCalendarView()
-                    }
-                } label: {
-                    Image(systemName: "calendar")
-                }
-                .simultaneousGesture(TapGesture().onEnded { settings.hapticFeedback() })
-                .tint(settings.accentColor.accent1)
-                // Icon-only: name where it goes, not the glyph ("Calendar" could be either calendar).
-                .accessibilityLabel("Prayer Times Calendar")
+                TabMoreMenu { adhanMoreItems }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     settings.hapticFeedback()
+                    // One sheet at a time: the glance sheets and this one are two `.sheet` bridges on
+                    // the same List, and raising this one while the Qibla sheet was coming up (a
+                    // Control Center tap, then the gear within a second) left SwiftUI holding a second
+                    // sheet it could never show ("only presenting a single sheet is supported", logged
+                    // on every update for the rest of the session; the stress walk, 2026-10-12).
+                    guard glanceSheet == nil, !showPermissionsSheet else { return }
                     settingsSheet = .root
                 } label: {
                     Image(systemName: "gear")
@@ -373,6 +432,12 @@ struct AdhanView: View {
         // The Control Center Qibla control, on the List for the same reason (`openQiblaFromControl`).
         .onReceive(AppNavigation.shared.$pendingAdhan) { target in
             guard case .qibla = target else { return }
+            // The tab switch (MainTabView) and this publish land in one update: with the tab not in
+            // the window yet, a sheet raised now is deferred by SwiftUI with a fault ("A sheet was
+            // presented but its presenter is not yet in the window"; the stress walk, 2026-10-13).
+            // The target stays pending, and `onAppear` opens it once the tab is in front (behind the
+            // launch cover, the reveal does).
+            guard isOnScreen, appRevealed else { return }
             openQiblaFromControl()
         }
         .sheet(item: $glanceSheet) { sheet in
@@ -437,6 +502,13 @@ struct AdhanView: View {
     /// A glance tile was tapped: sheets for the place, compass and settings screens, pushes for the
     /// two calendars (the same destinations the tab's own controls reach, so a tile is a shortcut,
     /// never a second copy of a screen).
+    /// A Control Center Qibla request that arrived while this tab was off screen or behind the launch
+    /// cover (see the `.onReceive` on the List): opened the moment the tab is in front.
+    private func openPendingQiblaIfAny() {
+        guard case .qibla = AppNavigation.shared.pendingAdhan else { return }
+        openQiblaFromControl()
+    }
+
     /// The Control Center "Open Qibla" control (ControlIntents), answered on this always-mounted list:
     /// the glance card that used to answer it is not on screen in Simple Mode, and as the last row of a
     /// lazy list it was not always built in Full Mode either. Cleared on arrival, so the control works
@@ -450,24 +522,27 @@ struct AdhanView: View {
     }
 
     private func handleGlance(_ action: GlanceAction) {
+        // One sheet at a time (see the gear button): a second request while one is up is dropped,
+        // the way a second tap on a door is dropped everywhere else in the app.
+        let sheetIsUp = glanceSheet != nil || settingsSheet != nil || showPermissionsSheet
         switch action {
         case .cityPrayerTimes:
-            glanceSheet = .cityPrayerTimes
+            if !sheetIsUp { glanceSheet = .cityPrayerTimes }
         case .homeLocation:
-            glanceSheet = .homeLocation
+            if !sheetIsUp { glanceSheet = .homeLocation }
         case let .qibla(bearing, distance):
-            glanceSheet = .qibla(bearing: bearing, distance: distance)
+            if !sheetIsUp { glanceSheet = .qibla(bearing: bearing, distance: distance) }
         // One calendar at a time: flipping to the other mid-push swaps two isPresented flags on one stack.
         case .prayerCalendar:
             if pushedCalendar == nil { pushedCalendar = .prayerCalendar }
         case .hijriCalendar:
             if pushedCalendar == nil { pushedCalendar = .hijriCalendar }
         case .prayerCalculation:
-            settingsSheet = .prayerCalculation
+            if !sheetIsUp { settingsSheet = .prayerCalculation }
         case .travelingMode:
-            settingsSheet = .travelingMode
+            if !sheetIsUp { settingsSheet = .travelingMode }
         case .weather:
-            glanceSheet = .weather
+            if !sheetIsUp { glanceSheet = .weather }
         }
     }
 
@@ -624,8 +699,15 @@ struct AdhanView: View {
                     // mid-dissolve; the refresh follows its dismissal. `AppReveal.revealed` is the
                     // live mirror of `appRevealed`: a captured environment value would be stale here.
                     try? await Task.sleep(nanoseconds: 450_000_000)
-                    guard isOnScreen, AppReveal.revealed, !showPermissionsSheet else {
-                        askLocationThenRefresh()
+                    guard isOnScreen, AppReveal.revealed, !showPermissionsSheet,
+                          glanceSheet == nil, settingsSheet == nil else {
+                        // The tab left the screen in that beat (or the cover is still up, or another
+                        // sheet of this tab is up: a glance tile or a deep link in that beat raised one,
+                        // and two sheets on one List is the fault the gear button describes): the sheet
+                        // is offered again the next time the tab asks, and nothing prompts meanwhile.
+                        // Falling through to the refresh here raised the two bare system prompts over
+                        // whatever tab the user had gone to, and the sheet never came (checked once).
+                        permissionsSheetChecked = false
                         return
                     }
                     showPermissionsSheet = true

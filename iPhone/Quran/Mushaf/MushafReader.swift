@@ -7,6 +7,25 @@ import PDFKit
 
 #if os(iOS)
 
+/// The window the reader is in, as far as the app can tell without a view in hand: the key window of a
+/// foreground scene. With several scenes up (iPad Split View or Stage Manager, two windows on a Mac)
+/// each has a key window, so the WIDEST foreground one is taken. Its width only ever rejects a band
+/// wider than any window and caps a stale measurement, so the widest window is the one bound that is
+/// safe for every reader (the first scene found clipped a wider second window's text to a column).
+fileprivate func mushafKeyWindow() -> UIWindow? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let foreground = scenes.filter { $0.activationState == .foregroundActive || $0.activationState == .foregroundInactive }
+    return (foreground.isEmpty ? scenes : foreground)
+        .flatMap(\.windows)
+        .filter(\.isKeyWindow)
+        .max { $0.bounds.width < $1.bounds.width }
+}
+
+/// `mushafKeyWindow()`'s width; zero when no scene is on screen.
+fileprivate func mushafWindowWidth() -> CGFloat {
+    mushafKeyWindow()?.bounds.width ?? 0
+}
+
 struct MushafPage: Identifiable {
     struct Segment: Identifiable {
         let surah: Surah
@@ -401,11 +420,7 @@ private struct MushafPagerSizeReader: ViewModifier {
     @State private var interfaceWidth: CGFloat = MushafPagerSizeReader.windowWidth
 
     private static var windowWidth: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }?
-            .bounds.width ?? 0
+        mushafWindowWidth()
     }
 
     func body(content: Content) -> some View {
@@ -441,10 +456,8 @@ private struct MushafPagerSizeReader: ViewModifier {
         // bars, which is what `report` expects, so the window's size minus the safe-area insets the
         // scene reports is the band - and `updatePagerSize` rounds and de-duplicates it anyway, so a
         // slightly early value is corrected by the geometry pass that follows.
-        if let window = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .flatMap(\.windows)
-            .first(where: { $0.isKeyWindow }) {
+        // The same window `windowWidth` measured (see `mushafKeyWindow`), not the first scene found.
+        if let window = mushafKeyWindow() {
             let insets = window.safeAreaInsets
             report(CGSize(width: window.bounds.width - insets.left - insets.right,
                           height: window.bounds.height - insets.top - insets.bottom))
@@ -455,7 +468,7 @@ private struct MushafPagerSizeReader: ViewModifier {
     private func measured(_ content: Content) -> some View {
         if #available(iOS 16.0, *) {
             content
-                .onGeometryChange(for: CGSize.self, of: { $0.size }, action: report)
+                .onGeometryChange(for: CGSize.self, of: { Self.band(of: $0) }, action: report)
                 // Re-run the reader on a rotation the geometry pass missed: a changed id rebuilds the
                 // modifier, which re-measures and reports the band the new orientation gives.
                 .id(interfaceWidth)
@@ -464,12 +477,124 @@ private struct MushafPagerSizeReader: ViewModifier {
                 .background(
                     GeometryReader { proxy in
                         Color.clear
-                            .onAppear { report(proxy.size) }
-                            .onChange(of: proxy.size) { report($0) }
+                            .onAppear { report(Self.band(of: proxy)) }
+                            .onChange(of: proxy.size) { _ in report(Self.band(of: proxy)) }
                     }
                 )
                 .id(interfaceWidth)
         }
+    }
+
+    /// The pager's band: its frame. (Measured 2026-10-12 on the 13-inch iPad: in a split view this
+    /// proxy's `safeAreaInsets.leading` is the WHOLE sidebar column, not the floating sidebar's overlap,
+    /// so it must not be subtracted here.)
+    private static func band(of proxy: GeometryProxy) -> CGSize {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-pageFitLog") {
+            let frame = proxy.frame(in: .global)
+            NSLog("PAGEFIT pager geo %.1fx%.1f global x=%.1f...%.1f safe l=%.1f r=%.1f",
+                  proxy.size.width, proxy.size.height, frame.minX, frame.maxX,
+                  proxy.safeAreaInsets.leading, proxy.safeAreaInsets.trailing)
+        }
+        #endif
+        return proxy.size
+    }
+}
+
+/// See the reader's `.modifier(ReaderSidebarClearance())`. The pad idiom only: a phone has no sidebar,
+/// and its landscape housing is `readerLandscapeWidth`'s.
+///
+/// Measured in UIKit, not SwiftUI: in an iPadOS 26 split view the detail column is the whole window
+/// with the floating sidebar's width (330 pt on the 13-inch) as its leading safe-area inset, and the
+/// SwiftUI layout under it settles on a stale mid-animation geometry (a root 12 pt wider than the
+/// window with an inset 11 pt short of the sidebar's edge) that a GeometryReader faithfully reports
+/// (`.ignoresSafeArea` + `safeAreaInsets` padded nothing and spread the pager under the sidebar).
+/// UIKit's own safe-area propagation knows the truth: the probe's `safeAreaInsets` say how far it
+/// lies under the sidebar, and its frame against the window says how far it runs past the edge. The
+/// reader pads itself by exactly those, measured on the frame OUTSIDE the padding (the probe is the
+/// padded view's background), so the pads never feed back into their own measurement. Zero on an
+/// iPad without a split (Slide Over, Stage Manager's compact windows) and in a Mac window that fits.
+private struct ReaderSidebarClearance: ViewModifier {
+    private static let applies: Bool = UIDevice.current.userInterfaceIdiom != .phone
+    @Environment(\.layoutDirection) private var layoutDirection
+    @State private var clearance = SidebarClearance()
+
+    func body(content: Content) -> some View {
+        if Self.applies {
+            content
+                .padding(.leading, layoutDirection == .rightToLeft ? clearance.right : clearance.left)
+                .padding(.trailing, layoutDirection == .rightToLeft ? clearance.left : clearance.right)
+                .background(SidebarClearanceProbe { measured in
+                    if measured != clearance { clearance = measured }
+                })
+        } else {
+            content
+        }
+    }
+}
+
+/// How far a view lies under the window's unsafe region on each side, in points, rounded.
+private struct SidebarClearance: Equatable {
+    var left: CGFloat = 0
+    var right: CGFloat = 0
+}
+
+/// See `ReaderSidebarClearance`. Inert: no size of its own, no touches.
+private struct SidebarClearanceProbe: UIViewRepresentable {
+    let report: (SidebarClearance) -> Void
+
+    final class ProbeView: UIView {
+        var report: (SidebarClearance) -> Void = { _ in }
+        private var last: SidebarClearance?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            measure()
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            measure()
+        }
+
+        override func safeAreaInsetsDidChange() {
+            super.safeAreaInsetsDidChange()
+            measure()
+        }
+
+        private func measure() {
+            guard let window else { return }
+            let frame = convert(bounds, to: window)
+            // Under the sidebar (or any leading inset): UIKit hands every view the part of its
+            // ancestors' safe-area inset that overlaps it. Past the window's edge: no inset says so,
+            // the frame does.
+            let left = max(safeAreaInsets.left, -frame.minX, 0).rounded()
+            let right = max(safeAreaInsets.right, frame.maxX - window.bounds.width, 0).rounded()
+            let measured = SidebarClearance(left: left, right: right)
+            guard measured != last else { return }
+            last = measured
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-pageFitLog") {
+                NSLog("PAGEFIT clearance left=%.0f right=%.0f (frame x=%.1f...%.1f window=%.1f safe l=%.1f r=%.1f)",
+                      left, right, frame.minX, frame.maxX, window.bounds.width, safeAreaInsets.left, safeAreaInsets.right)
+            }
+            #endif
+            // Off the layout pass: a state write during it is the "modifying state during view
+            // update" fault.
+            DispatchQueue.main.async { [report] in report(measured) }
+        }
+    }
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.report = report
+        return view
+    }
+
+    func updateUIView(_ view: ProbeView, context: Context) {
+        view.report = report
     }
 }
 
@@ -700,6 +825,18 @@ struct SurahPageReader<Controls: View>: View {
     @State private var suppressNextPageTurnClear = false
     @State private var activePicker: PickerTarget?
     @State private var pagePickerSelection = 0
+    /// The page wheel's row count for as long as it is open. The wheel's rows must not follow the live
+    /// pagination: a Mac window resize (the spread flips, the count halves) or a qiraah switch while
+    /// the wheel is still spinning rebuilt the picker with fewer rows, and when the spin ended UIKit
+    /// reported the old row to SwiftUI's picker coordinator, which indexed its options out of range
+    /// (`CoreCoordinator.pickerView(_:didSelectRow:)`, Index out of range; the Mac stress walk,
+    /// 2026-10-12). Seeded where the wheel is opened (the jump buttons' `seed`, the script hook) and
+    /// again when it appears; the commit clamps against the live pages anyway.
+    @State private var pickerPageCount = 0
+    /// The wheel's rows: the pinned count, or the live one for a first frame that beat the seeding
+    /// (a 0 here built a one-row wheel under a selection it did not hold, "Page 1" for a frame, and
+    /// then a 1-to-604 row rebuild: the very mismatch the pin exists to avoid).
+    private func pickerRowCount(_ pages: [MushafPage]) -> Int { pickerPageCount > 0 ? pickerPageCount : max(pages.count, 1) }
     @State private var juzPickerSelection = 1
     /// Bottom chrome folded away for a taller page (task: "collapse the bottom and bring it back").
     /// It folds the pinned surah header too - collapsed means the PAGE, nothing else.
@@ -964,11 +1101,7 @@ struct SurahPageReader<Controls: View>: View {
     /// The key window's width, for discarding a stale band from the other orientation. NOT
     /// `screen.bounds.width`, which is the physical panel and does not change on a rotation.
     fileprivate static var windowWidth: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }?
-            .bounds.width ?? 0
+        mushafWindowWidth()
     }
 
     /// The spread rule on a measured band (see `spreadActive`): wider than it is tall.
@@ -1556,6 +1689,12 @@ struct SurahPageReader<Controls: View>: View {
         // re-applies the REAL per-side clearance itself, so the notch side still keeps its room and
         // the other side reads to the edge. Portrait and the iPad/Mac are untouched.
         .readerLandscapeWidth(verticalSizeClass == .compact)
+        // An iPad split view: the detail column is the whole window with the floating sidebar's width
+        // as a leading safe-area inset, and the SwiftUI layout under it settles 11 pt off (measured
+        // 2026-10-12 on the 13-inch iPad: the pager 724.5 pt wide, centred in the 702 pt visible region,
+        // so the page ran 11 pt under the sidebar and 11 pt past the screen's right edge). The reader
+        // measures that overlap in UIKit and pads itself by it, pages and bars alike.
+        .modifier(ReaderSidebarClearance())
         // Over the PAGE only (before the insets), so the bars and the wheel itself stay tappable.
         .overlay { jumpPickerDismissScrim }
         // A hardware keyboard's arrows turn the page (iPad, Mac, a keyboard on the phone).
@@ -1696,6 +1835,7 @@ struct SurahPageReader<Controls: View>: View {
                         if action == "picker" {
                             pagePickerSelection = pageIndex
                             pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                            pickerPageCount = max(pages.count, 1)
                             withAnimation(.easeInOut) { activePicker = .page }
                         } else if action.hasPrefix("pick="), let i = Int(action.dropFirst(5)) {
                             pagePickerSelection = i
@@ -2839,7 +2979,12 @@ struct SurahPageReader<Controls: View>: View {
     /// The footer row's height. The info panel and the play control both take it, so the two read as one bar
     /// rather than a tall block next to a small button. (A computed property, not a `static let`: a generic type
     /// can't hold static stored properties.)
-    private var footerHeight: CGFloat { (62 * footerScale).rounded() }
+    ///
+    /// 62 in Full Mode, where the pill stacks two meters, two jumps and the progress bar. 44 in Simple
+    /// Mode, where it holds the two jump buttons alone (Abu, 2026-10-11: "make the height of the button
+    /// and the page/juz thing smaller"): the smallest comfortable tap target, and the play control
+    /// shrinks with it. Flipping the mode is one band change, which the page refits for once.
+    private var footerHeight: CGFloat { ((settings.simpleMode ? 44 : 62) * footerScale).rounded() }
 
     /// The footer's size under a two-page spread on an iPad or in a Mac window: 1.3 times, so its 10 pt
     /// figures become 13 (they read as specks under two full pages; Abu, 2026-09-29: "the page/juz thing
@@ -2857,8 +3002,8 @@ struct SurahPageReader<Controls: View>: View {
         VStack(spacing: 6 * footerScale) {
             if settings.simpleMode {
                 // Simple Mode: where this page is, as the two jumps; the meters, the percentages and
-                // the whole-mushaf bar step aside (docs/Simple Mode Guide.md). Same pill, same height,
-                // so the page above never re-fits when the switch flips.
+                // the whole-mushaf bar step aside (docs/Simple Mode Guide.md). A shorter pill too
+                // (`footerHeight`): two buttons need no more.
                 HStack(spacing: 12 * footerScale) {
                     jumpButton(
                         title: pageLabel(for: page, in: pages),
@@ -2868,6 +3013,7 @@ struct SurahPageReader<Controls: View>: View {
                         seed: {
                             pagePickerSelection = pageIndex
                             pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                            pickerPageCount = max(pages.count, 1)
                         }
                     )
 
@@ -2907,6 +3053,7 @@ struct SurahPageReader<Controls: View>: View {
                             seed: {
                                 pagePickerSelection = pageIndex
                                 pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                                pickerPageCount = max(pages.count, 1)
                             }
                         )
 
@@ -3102,7 +3249,7 @@ struct SurahPageReader<Controls: View>: View {
                     Picker("Page", selection: $pagePickerSelection) {
                         // A plain range, not `Array(...)`: materializing a 604-element array on every
                         // picker render was pure allocation waste.
-                        ForEach(0..<max(pages.count, 1), id: \.self) { i in
+                        ForEach(0..<pickerRowCount(pages), id: \.self) { i in
                             Text("Page \(pages.indices.contains(i) ? pages[i].page : i + 1)").tag(i)
                         }
                     }
@@ -3118,6 +3265,8 @@ struct SurahPageReader<Controls: View>: View {
             .pickerStyle(.wheel)
             .frame(height: 110)
             .clipped()
+            // The row count the wheel opened with (see `pickerPageCount`).
+            .onAppear { pickerPageCount = max(pages.count, 1) }
         }
         .frame(maxWidth: .infinity)
         .conditionalGlassEffect(rectangle: true)
@@ -3445,11 +3594,7 @@ private struct MushafPageContent: View {
     /// The key window's width, for clamping a stale band from the other orientation (see `body`). NOT
     /// `screen.bounds.width`, which is the physical panel and does not change on a rotation.
     fileprivate static var windowWidth: CGFloat {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .first { $0.isKeyWindow }?
-            .bounds.width ?? 0
+        mushafWindowWidth()
     }
 
     // (No sheet state here, on purpose. The long-press actions sheet, the secondaries it asks for, the
@@ -3531,12 +3676,23 @@ private struct MushafPageContent: View {
     var body: some View {
         RenderCounter.hit("MushafPageContent")
         return GeometryReader { geo in
+            // iPadOS 26 floats a split view's sidebar over the detail column's leading edge and hands
+            // the overlap down as a horizontal safe-area inset. A page in the paged TabView is laid out
+            // UNDER that inset (a List is not), so it comes out of the band here and the page is padded
+            // clear of it below: without this the 13-inch iPad's page ran 12 pt past the screen's right
+            // edge and its first 12 pt sat under the sidebar (2026-10-12). Zero everywhere else.
+            let sideInsets = geo.safeAreaInsets.leading + geo.safeAreaInsets.trailing
+            let fullWidth = max(geo.size.width - sideInsets, 1)
             // Clamp to the window: across a rotation this reader delivers its last LANDSCAPE width
             // LATE (Abu, 2026-10-07 - the page stayed laid out at 678pt inside a 402pt portrait screen
             // and its text ran off both edges). A page can never be wider than the window, so a report
             // that is belongs to the orientation we just left; the correct width follows a pass later.
-            let band = Self.windowWidth > 0 ? min(geo.size.width, Self.windowWidth) : geo.size.width
+            let band = Self.windowWidth > 0 ? min(fullWidth, Self.windowWidth) : fullWidth
             let width = max(band - Self.textPadding * 2, 1)
+            #if DEBUG
+            let _ = Self.logGeometry(page: page.page, size: geo.size, insets: geo.safeAreaInsets,
+                                     frame: geo.frame(in: .global))
+            #endif
             // The page's FRAME is the region it can show - every piece of reader chrome is already subtracted
             // from it. Measured on an iPhone 16 Pro (points, screen 874 tall) with the reader open:
             //
@@ -3585,6 +3741,9 @@ private struct MushafPageContent: View {
                         }
                 }
             }
+            // Clear of the floating sidebar's overlap (see `sideInsets` above).
+            .padding(.leading, geo.safeAreaInsets.leading)
+            .padding(.trailing, geo.safeAreaInsets.trailing)
             .overlay {
                 if exact == nil {
                     // `.task(id:)`, NOT `.onAppear`: if the geometry changes while the fit is in flight
@@ -3837,6 +3996,15 @@ private struct MushafPageContent: View {
     /// Mac report "the page goes under the bottom controls on certain pages", which no simulator
     /// geometry reproduced: run the Mac build with this argument and read the lines for the page.
     private static let pageFitLogEnabled = ProcessInfo.processInfo.arguments.contains("-pageFitLog")
+
+    /// With `-pageFitLog`: the page's proposed size and the safe-area insets it was handed, one line per
+    /// body pass (a floating iPad sidebar shows up here as a leading inset).
+    private static func logGeometry(page: Int, size: CGSize, insets: EdgeInsets, frame: CGRect) {
+        guard pageFitLogEnabled else { return }
+        NSLog("PAGEFIT geo page=%d size=%.1fx%.1f global x=%.1f...%.1f safe l=%.1f r=%.1f t=%.1f b=%.1f",
+              page, size.width, size.height, frame.minX, frame.maxX,
+              insets.leading, insets.trailing, insets.top, insets.bottom)
+    }
 
     private static func logFit(page: Int, rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat,
                                collapsed: Bool, scales: Bool) {
@@ -7005,7 +7173,36 @@ struct MushafPagerProbeView: UIViewRepresentable {
         override func layoutSubviews() {
             super.layoutSubviews()
             if window != nil { MushafPagerProbe.shared.locate(from: self) }
+            #if DEBUG
+            dumpChainIfAsked()
+            #endif
         }
+
+        #if DEBUG
+        private static var lastChainDump = ""
+        private static let dumpsChain = ProcessInfo.processInfo.arguments.contains("-pageFitLog")
+
+        /// "-pageFitLog": the UIKit view chain over the pager, each frame in window coordinates with its
+        /// safe-area insets, once per change: which layer a split view offsets the pager in.
+        private func dumpChainIfAsked() {
+            guard Self.dumpsChain, let window else { return }
+            var lines: [String] = []
+            var view: UIView? = self
+            var depth = 0
+            while let v = view, depth < 14 {
+                let f = v.convert(v.bounds, to: window)
+                let i = v.safeAreaInsets
+                lines.append(String(format: "%@ x=%.1f...%.1f w=%.1f safe l=%.1f r=%.1f",
+                                    String(describing: type(of: v)), f.minX, f.maxX, f.width, i.left, i.right))
+                view = v.superview
+                depth += 1
+            }
+            let dump = lines.joined(separator: " | ")
+            guard dump != Self.lastChainDump else { return }
+            Self.lastChainDump = dump
+            NSLog("PAGEFIT chain window=%.1f %@", window.bounds.width, dump)
+        }
+        #endif
     }
 
     func makeUIView(context: Context) -> ProbeView {
@@ -7689,6 +7886,8 @@ struct MushafPageTextView: UIViewRepresentable {
         /// When the actions sheet was last asked for here, so two routes answering one press (the long
         /// press, then the context-menu interaction's own hold) never present it twice.
         private var actedAt: Date = .distantPast
+        private var actedSurah = 0
+        private var actedAyah = 0
         /// Held for the text view: a layout manager does not retain its storage.
         var textStorage: NSTextStorage?
         var ranges: [MushafAyahRange] = []
@@ -7906,8 +8105,8 @@ struct MushafPageTextView: UIViewRepresentable {
         /// A pointer's secondary (right / two-finger) click: the Mac-and-trackpad twin of the long press,
         /// routed to the exact same per-ayah actions sheet.
         @objc func handleSecondaryClick(_ gesture: UITapGestureRecognizer) {
-            guard gesture.state == .ended, Date().timeIntervalSince(actedAt) > 1.5 else { return }
-            actOnAyah(at: gesture.location(in: textView))
+            guard gesture.state == .ended else { return }
+            actOnAyah(at: gesture.location(in: textView), dedupe: true)
         }
 
         /// A right click on a Mac or an iPad trackpad (see where the interaction is added). No menu: the
@@ -7919,17 +8118,23 @@ struct MushafPageTextView: UIViewRepresentable {
                press.numberOfTouches > 0 || press.state == .began || press.state == .changed {
                 return nil
             }
-            guard Date().timeIntervalSince(actedAt) > 1.5 else { return nil }
             let point = textView.map { $0.convert(location, from: interaction.view) } ?? location
-            DispatchQueue.main.async { [weak self] in self?.actOnAyah(at: point) }
+            DispatchQueue.main.async { [weak self] in self?.actOnAyah(at: point, dedupe: true) }
             return nil
         }
 
         /// The long press's work: the ayah's actions sheet, or a heading's tap (there are no per-ayah
         /// actions to offer on a heading).
-        private func actOnAyah(at point: CGPoint) {
+        /// `dedupe`: a right click arrives here twice (the secondary-click recognizer AND the context
+        /// menu interaction fire for one press), so a second arrival for the SAME ayah within a moment
+        /// is dropped. Keyed to the ayah, not to time alone: a flat 1.5 s window also swallowed a right
+        /// click on the NEXT ayah once the first sheet was dismissed.
+        private func actOnAyah(at point: CGPoint, dedupe: Bool = false) {
             guard let (surahID, ayahID) = ayah(at: point) else { return }
+            if dedupe, actedSurah == surahID, actedAyah == ayahID, Date().timeIntervalSince(actedAt) < 1.5 { return }
             actedAt = Date()
+            actedSurah = surahID
+            actedAyah = ayahID
             if ayahID <= 0 {
                 onTapHeading?(surahID)
             } else {

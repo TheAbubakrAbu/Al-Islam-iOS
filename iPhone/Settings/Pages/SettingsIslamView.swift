@@ -336,9 +336,16 @@ extension View {
 private struct IslamTextSizeModifier: ViewModifier {
     @AppStorage("islamTextSize") private var index = -1
     @Environment(\.dynamicTypeSize) private var inherited
+    @Environment(\.unboostedDynamicTypeSize) private var unboosted
 
     func body(content: Content) -> some View {
-        content.dynamicTypeSize(IslamTextSize.size(for: index) ?? inherited)
+        let chosen = IslamTextSize.size(for: index)
+        content
+            .dynamicTypeSize(chosen ?? inherited)
+            // A size the reader chose here is theirs everywhere on the tab: the iPad sidebar restores
+            // `unboostedDynamicTypeSize` (`splitSidebarColumn`), which would otherwise hand it the
+            // device's size instead. Following the device, the sidebar still sheds the pad boost.
+            .environment(\.unboostedDynamicTypeSize, chosen ?? unboosted)
     }
 }
 

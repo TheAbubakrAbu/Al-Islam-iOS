@@ -7,7 +7,7 @@ each other, so solid compression collapses 17.6 MB of JSON (3.5 MB as
 individual deflates) to ~0.44 MB. Individual per-file compression can never
 see that redundancy.
 
-Decompressed layout (what iPhone/Quran/QuranPack.swift's SolidPack reads):
+Decompressed layout (what iPhone/Quran/Models/QuranPack.swift's SolidPack reads):
     4 bytes  little-endian length N of the index JSON
     N bytes  index JSON: {"entries": [{"name", "offset", "length"}, ...]}
              offsets are relative to the byte right after the index

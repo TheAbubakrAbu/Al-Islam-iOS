@@ -132,7 +132,7 @@ struct PrayerCountdown: View {
 
     private var sectionHeader: some View {
         HStack {
-            Text("CURRENT")
+            SectionIconHeader("CURRENT", icon: "timer")
 
             Spacer()
 

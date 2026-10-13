@@ -118,7 +118,7 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
         // library's own subject; `AllahPillarView` is what the 99 Names card already points at.
         case .dhikrVirtue:          AllahPillarView()
         case .namesOfAllahArticle:  NamesOfAllahPillarView()
-        case .provingIslam:         ProvingIslamView()
+        case .provingIslam:         ProvingIslamView().openScreen(.provingIslamLibrary)
         }
     }
 }

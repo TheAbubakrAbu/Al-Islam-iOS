@@ -25,6 +25,17 @@ struct HadithCatalogBook: Identifiable, Hashable {
         case early = "EARLY COLLECTIONS"
         case forties = "THE FORTY COLLECTIONS"
         case other = "OTHER BOOKS"
+
+        /// The glyph leading the group's section header on the Hadith tab: every major section of a tab
+        /// root leads with one (2026-10-11).
+        var systemImage: String {
+            switch self {
+            case .six: return "books.vertical.fill"
+            case .early: return "scroll.fill"
+            case .forties: return "40.circle.fill"
+            case .other: return "book.closed.fill"
+            }
+        }
     }
 
     let slug: String

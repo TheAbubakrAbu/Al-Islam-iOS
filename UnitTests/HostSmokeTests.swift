@@ -1,5 +1,6 @@
 import XCTest
 import UIKit
+@testable import iPhone
 
 /// A crash sweep that needs no UI automation: the app is this bundle's test host, so a test run IS a
 /// launch of the real app, with the scheme's launch arguments (the Test action uses the Run
@@ -17,7 +18,28 @@ final class HostSmokeTests: XCTestCase {
             throw XCTSkip("set TEST_RUNNER_QA_SMOKE_SECONDS to run the host smoke sweep")
         }
         let name = ProcessInfo.processInfo.environment["QA_SMOKE_NAME"] ?? "host"
-        RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+        if ProcessInfo.processInfo.environment["QA_SMOKE_UNTIL_STRESS"] == "1" {
+            // The host was launched with "-stressWalk": keep it alive until the walk (or a
+            // "-stressRestore" pass) says it is done, the seconds being the ceiling. The trail file
+            // comes along as an attachment, so a result bundle tells the story without the container.
+            let deadline = Date().addingTimeInterval(seconds)
+            while !StressWalker.finished, Date() < deadline {
+                RunLoop.main.run(until: Date().addingTimeInterval(1))
+            }
+            XCTAssertTrue(StressWalker.finished, "\(name): the stress walk did not finish within \(Int(seconds)) s")
+            let trails = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("stress")
+            for file in (try? FileManager.default.contentsOfDirectory(at: trails, includingPropertiesForKeys: nil)) ?? []
+                where file.pathExtension == "log" {
+                if let text = try? String(contentsOf: file, encoding: .utf8) {
+                    let attachment = XCTAttachment(string: text)
+                    attachment.name = file.lastPathComponent
+                    attachment.lifetime = .keepAlways
+                    add(attachment)
+                }
+            }
+        } else {
+            RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+        }
 
         let windows = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

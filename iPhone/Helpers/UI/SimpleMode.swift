@@ -2,9 +2,16 @@ import SwiftUI
 
 // Simple Mode (docs/Simple Mode Guide.md, agreed with Abu 2026-10-10): one switch, `Settings.simpleMode`,
 // that keeps every tab to its essentials. Each site reads the switch itself; this file holds the ⋯ More
-// menu a tab carries in Simple Mode, and the catalog below. The pure rules (`enum SimpleMode`: the
+// menu that leads every tab's toolbar, and the catalog below. The pure rules (`enum SimpleMode`: the
 // tracker gate, the permission dialogs' snooze) live in SettingsAdhan.swift, which the widgets also
 // compile.
+//
+// The More menu is NOT a Simple Mode control any more (Abu, 2026-10-11: "always have the top left
+// button just be a more button that contains grid and everything else"). Every tab root (Adhan, Quran,
+// Hadith, Islam, Settings) leads with the one ⋯ menu in BOTH modes; it holds the tab's grid or list
+// switch and whatever else used to be a toolbar button (reading mode, the planner, the prayer layout,
+// the calendars) plus the doors Simple Mode takes off the screen. The gear keeps its trailing slot
+// everywhere. Simple Mode still decides what is on the SCREEN below the toolbar.
 //
 // The rules (the guide has the reasons):
 // 1. Hiding never changes what the app does. Every setting a hidden control drives keeps applying.
@@ -21,27 +28,33 @@ import SwiftUI
 // - Every tab: NEED A HAND? (Settings; `HelpDoorsSection`), section count pills, search and shuffle
 //   buttons (`SectionPillHeader`, `SurahsHeader`), the outline star on a non-favorite tile
 //   (long-press; `gridFavoriteStar`).
-// - Quran tab: reading mode, Planner and grid toolbar buttons, the door chips, the Today pill,
-//   Random Surah (More menu); the Last Listened and Word of the Day tiles (the play menu; More).
+// - Quran tab: the Today pill, Random Surah (More menu, which in both modes also holds reading
+//   mode, the Planner, the grid, and the summary's doors: Browse by Theme, History, the Qiraat
+//   Explorer and the Word of the Day, whose chips under the tiles are gone from both modes since
+//   2026-10-11); the Last Listened and Word of the Day tiles (the play menu; More).
 // - List reader: the top Previous/Next pair (the bottom pair), the per-ayah play menu and the long
 //   ayah menu (a five-action ayah menu plus More Actions, which opens the full actions sheet), the
 //   default translation's name caption, the pinned page/juz line, the Global button. (The muqatta'at
 //   header stays: it is its own only door, and a beginner's aid.)
 // - Page reader: the footer's meters, percentages and progress bar (the Page and Juz buttons stay).
-// - Adhan tab: the layout picker (Settings > Prayer Settings), Optional Times (Settings), the date
-//   stepper (the Prayer Calendar), At a Glance (its doors live elsewhere), the travel footer (the
-//   banner), the tracker until a prayer is marked within `trackerWindowDays`.
-// - Hadith tab: the grid toggle, Topics, Encyclopedia, History, Today (More menu); book stats and
-//   era lines (the book's own screen); chapter counts and ranges; the reader's top chapter pair.
+// - Adhan tab: Optional Times (Settings), the date stepper (the Prayer Calendar), At a Glance (its
+//   doors live elsewhere), the travel footer (the banner), the tracker until a prayer is marked within
+//   `trackerWindowDays`. (The layout picker is in the More menu in both modes since 2026-10-11, with
+//   the Prayer and Hijri calendars; the PRAYER TIMES header no longer carries it.)
+// - Hadith tab: the Today pill (More menu, which in both modes holds the grid switch and Topics,
+//   Encyclopedia and History, whose chips under the summary tiles are gone from both modes since
+//   2026-10-11); book stats and era lines (the book's own screen); chapter counts and ranges; the
+//   reader's top chapter pair.
 // - Islam tab: Tools, Signs & Proofs and Ask AI (one More Resources row), the quote card, the
 //   Al-Islamic Apps section (the Settings tab).
 // - Settings tab: the spotlight cards (the All Tips & Tricks row stays).
 
 #if os(iOS)
 
-/// The ⋯ menu that leads a tab's toolbar in Simple Mode, holding what the tab's toolbar buttons and
-/// door chips offer in Full Mode (rule 3). The gear never moves into it: it keeps its own slot.
-struct SimpleMoreMenu<Items: View>: View {
+/// The ⋯ menu that leads every tab's toolbar, in both modes: the tab's grid or list switch and its
+/// other former toolbar buttons, plus the doors Simple Mode takes off the screen (rule 3). The gear
+/// never moves into it: it keeps its own trailing slot.
+struct TabMoreMenu<Items: View>: View {
     /// Observed for the tint. Not `@Environment(\.appearance)`: this view lives in a toolbar, the
     /// hoisted context where environment objects have failed to arrive in this app before.
     @ObservedObject private var settings = Settings.shared
@@ -77,7 +90,7 @@ struct SimpleMoreMenu<Items: View>: View {
 /// symbol's name ("Large Grid") instead of "Topics", so no item here uses that symbol. And hiding the
 /// icon from accessibility (with an explicit label on the button) emptied EVERY item's label in the
 /// system menu, so neither is done.
-struct SimpleMoreMenuItem: View {
+struct TabMoreMenuItem: View {
     let title: String
     let systemImage: String
     let action: () -> Void

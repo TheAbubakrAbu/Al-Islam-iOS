@@ -34,7 +34,9 @@ One rule kept it that small: "a control that is the only way to reach something 
 
 ## The More menu
 
-In Simple, each tab that loses toolbar buttons or door chips gets one ⋯ (`ellipsis.circle`) toolbar menu in the leading slot; Full Mode never shows it. The gear keeps its trailing slot on every tab and reader, in both modes. Its items keep the exact behaviour of the controls they replace (the reading-mode switch still asks to confirm). Order: places to open, a divider, then view choices.
+**Since 2026-10-11 the ⋯ menu is every tab's leading button in BOTH modes** (Abu: "there are some things that I like that should always be there. for example always have the top left button just be a more button that contains grid and everything else"). `TabMoreMenu` (was `SimpleMoreMenu`) leads the Adhan, Quran, Hadith, Islam and Settings roots; the gear keeps its trailing slot on every tab and reader. What a tab's toolbar used to show as separate buttons is an item of its menu now, in both modes: the grid or list switch on every tab, the Quran tab's reading mode and Planner, the Adhan tab's Prayer and Hijri calendars and the prayer list's layout (a Prayer Times Layout submenu naming the layout in use, with TILES / GRID / LIST / SPLIT inside it; the PRAYER TIMES header no longer carries it). The doors Simple Mode takes off the screen (Today, History, Topics, ...) are items of the menu in both modes too. The Quran and Hadith summaries' door chips (Word of the Day, Browse by Theme, History; Topics, Encyclopedia, History) are gone in both modes since later that day (Abu: "put these top left no matter simple or normal and remove it from summary"): the menu is their only door now, and the Today pill is the one door left on the summary header in Full. Items keep the exact behaviour of the controls they replace (the reading-mode switch still asks to confirm). Order: places to open, a divider, then view choices. A pushed screen (a hadith book) keeps its own trailing buttons: its leading slot is Back.
+
+Before 2026-10-11: the menu showed in Simple only, and Full Mode kept the individual toolbar buttons. The tables below say "More menu" for both.
 
 ## Per screen
 
@@ -44,8 +46,8 @@ Each table lists what Simple hides and where its function lives while hidden. An
 
 | Hidden in Simple | Where it lives |
 |---|---|
-| Reading-mode button (`book`), Quran Planner button, Grid/List toggle | More menu |
-| Door chips: Word of the Day, Browse by Theme, History, Qiraat Explorer | More menu (Qiraat Explorer only while `showOtherQiraatReciters`, as now) |
+| Reading-mode button (`book`), Quran Planner button, Grid/List toggle | More menu (in both modes since 2026-10-11) |
+| Door chips: Word of the Day, Browse by Theme, History, Qiraat Explorer | More menu, in both modes since 2026-10-11 (the chips are gone from Full too; Qiraat Explorer only while `showOtherQiraatReciters`, as now) |
 | The Today pill on YOUR SUMMARY | More menu |
 | Last Listened Ayah, Last Listened Surah and Word of the Day tiles | the play menu's Play Last Listened Surah; Word of the Day in More |
 | +/− history buttons on the summary tiles | dropped (rule 3) |
@@ -80,13 +82,15 @@ Stays: the Legend and the riwayah picker under their existing rules, the Bismill
 |---|---|
 | The footer pill's Surah n/N and Juz n/N meters, its percentages and the whole-mushaf progress bar | dropped; the pill keeps "Page 42" and "Juz 3" as its two jump buttons |
 
+Since 2026-10-11 the Simple pill is 44 pt tall instead of 62 (`footerHeight`), and the Play button beside it, a square of the same height, shrinks with it (Abu: "make the height of the button and the page/juz thing smaller"). Flipping the mode is one band change the page refits for once.
+
 Everything else stays: the top strip, the controls row, search, play, the fold chevron.
 
 ### Adhan tab (AdhanView.swift, PrayerList.swift)
 
 | Hidden in Simple | Where it lives |
 |---|---|
-| Layout picker (TILES / GRID / LIST / SPLIT) on PRAYER TIMES | a new Prayer Times Layout picker in Settings › Prayer Settings, for everyone (today the header is its only home); same `prayerDisplayModeV2` key |
+| Layout picker (TILES / GRID / LIST / SPLIT) on PRAYER TIMES | since 2026-10-11 the header carries no picker in either mode: the tab's More menu holds it (an inline picker under the two calendars), and Settings › Prayer Settings' Prayer Times Layout row (built 2026-10-10) stays; same `prayerDisplayModeV2` key |
 | Optional Times pill | Settings › Prayer Settings › Optional Prayers (exists) |
 | "Showing prayers for" date stepper, with Compare Today | the Prayer Calendar (toolbar); Compare Today dropped (rule 3) |
 | AT A GLANCE (12 tiles) | each destination keeps another door: the calendar button, the Qibla compass, the city pill, the sky's moon; the figures are dropped (rule 3) |
@@ -102,8 +106,8 @@ The tracker gate must be cheap: the tab re-renders on every countdown tick. Read
 
 | Hidden in Simple | Where it lives |
 |---|---|
-| Grid/List toggle | More menu |
-| Door chips Topics, Encyclopedia and History; the Today pill | More menu (the chips are those screens' only doors today) |
+| Grid/List toggle | More menu (in both modes since 2026-10-11) |
+| Door chips Topics, Encyclopedia and History; the Today pill | More menu (the chips are gone from Full too since 2026-10-11; the Today pill stays on the header in Full) |
 | The +/− history toggle on YOUR SUMMARY | dropped (rule 3) |
 | NEED A HAND? | Settings |
 | Count and shuffle on every catalog header, BOOKMARKS and FAVORITES | dropped (rule 3) |
@@ -126,7 +130,7 @@ More menu: Today, Topics, Encyclopedia, History; divider; Show as Grid or Show a
 | NEED A HAND? | Settings |
 | AL-ISLAMIC APPS | the Settings tab's copy, which stays |
 
-Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FAITH & PRACTICE, More Resources, Reminder of the Day. The toolbar is unchanged (grid toggle, gear). The iPad and Mac sidebar keeps every section (as built 2026-10-10): its detail column cannot host the More Resources screen, whose tiles push onto the iPhone stack's path, and a sidebar is a list of places anyway. The quote card and AL-ISLAMIC APPS step aside there too.
+Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FAITH & PRACTICE, More Resources, Reminder of the Day. The toolbar is the same in both modes: since 2026-10-11 the leading ⋯ More menu (holding the grid toggle) and the gear. The iPad and Mac sidebar keeps every section (as built 2026-10-10): its detail column cannot host the More Resources screen, whose tiles push onto the iPhone stack's path, and a sidebar is a list of places anyway. The quote card and AL-ISLAMIC APPS step aside there too.
 
 ### Settings tab (SettingsView.swift)
 
@@ -134,7 +138,7 @@ Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FA
 |---|---|
 | The ONLY IN AL-ISLAM spotlight cards (12) | the section keeps its All Tips & Tricks row |
 
-For everyone: the SIMPLE MODE section moves up to sit directly under the SETTINGS hub, so the way back out is easy to find. The settings pages are not touched by Simple Mode; their per-screen Advanced switches already do that job.
+For everyone: the SIMPLE MODE section moves up to sit directly under the SETTINGS hub, so the way back out is easy to find. Since 2026-10-11 the tab's grid toggle is the one item of a leading ⋯ More menu, in both modes (it was a trailing button). The settings pages are not touched by Simple Mode; their per-screen Advanced switches already do that job.
 
 ### Section headers (`SectionPillHeader`, ViewExtensions.swift)
 
@@ -260,6 +264,22 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 Each phase ends with a Debug build and its screens' Simple and Full screenshots. Phase 7 does not depend on Simple Mode and can ship on its own.
 
 ## Progress log
+
+- **2026-10-11, the More menu for everyone (Abu: "Go through simple mode. there are some things that I like that should always be there").**
+  - **Every tab root leads with the ⋯ menu in both modes.** `SimpleMoreMenu` and `SimpleMoreMenuItem` are `TabMoreMenu` and `TabMoreMenuItem` (SimpleMode.swift). Quran: `QuranLeadingToolbar` lost its Full Mode branches (the book button and the planner button are gone; the planner stays mounted buttonless behind the menu in both modes), `QuranTrailingToolbar` lost its grid button and `listForJump`. Hadith: `HadithTrailingToolbar.moreMenuItems` is always set by the root; the book screen passes nil and keeps its chapter grid toggle. Settings: `settingsMoreMenu` (leading) replaces `settingsGridButton` (trailing). Islam: the stack and the sidebar each put `TabMoreMenu { islamGridMenuItem }` in the leading slot and call `islamSettingsToolbar()` for the gear alone. Islam was not named in the ask; it got the menu so no tab is the odd one out.
+  - **Adhan.** `adhanMoreItems`: Prayer Calendar and Hijri Calendar (through `pushedCalendar`, the glance tiles' pushes, so the menu and a tile can never stack two), a divider, a "Prayer Times Layout" title and an inline `Picker` over `PrayerList.PrayerDisplayMode` (new `menuSymbol`), the current layout ticked. The haptic lives in the binding's setter (`prayerLayoutSelection`): an `onChange` on a view inside a menu is not reliably alive. `PrayerList.sectionHeader` keeps only the title and the qasr badge ("remove it from where it was originally"). The calendar toolbar button is gone; its tip and the layout tip were reworded, and the layout tip is offered in both modes again.
+  - **Page reader.** `footerHeight` is 44 in Simple, 62 in Full; the Play button follows.
+  - **Settings tiles.** `SettingsGridTile`'s caption is one line at the standard sizes (`minimumScaleFactor` 0.75), wrapping only at the accessibility sizes, as `toolLabel`'s captions already did ("make sure each caption line is line limit 1").
+  - **Tests.** `SimpleModeUITests` gained `testQuranMoreMenuLeadsInFullMode`, `testAdhanMoreMenuHoldsTheCalendarsAndTheLayout`, `testIslamMoreMenuHoldsTheGridSwitch` and `testSettingsAndHadithMoreMenusHoldTheGridSwitch`. The Settings one failed twice in sequenced runs on the iOS 27 simulator (the tap opened no menu; the recording shows none), then passed four times running with the same code; the Adhan one then failed once with the cause in the log: "Found 1 interrupting element: NotificationShortLookView", a notification banner (the app's own prayer alerts, frequent with the simulator's clock and city) over the toolbar at the moment of the tap. XCUITest checks for interruptions BEFORE it taps, so a banner arriving a fraction of a second later eats the tap unseen. Every More-menu tap in the suite now goes through `openMoreMenu`, which retries up to three times and swipes a banner away first. Not a product bug: a trailing probe menu, the conditional wrapper (the Islam tab's, which passes) and the test order were each ruled out before the banner was caught.
+  - **Screenshots (iPhone 17 Pro, dark):** Adhan, Quran, Hadith, Islam and Settings roots in Full with the ⋯ leading; Adhan in Simple; the page reader in both modes (the Simple footer row is visibly shorter, Play included); the Settings grid with one-line captions.
+
+- **2026-10-11, later: the chips go, the layout becomes a submenu, the captions shorten (Abu, with two screenshots of the chip rows: "put these top left no matter simple or normal and remove it from summary").**
+  - **Quran and Hadith summaries.** The door chips under the tiles (Word of the Day, Browse by Theme, History, Qiraat Explorer; Topics, Encyclopedia, History) are gone in BOTH modes. The ⋯ menu already held every one of them, so nothing moved: `summaryTilesSection` lost its `doors` row and `QuranView` its `SummaryDoorChip`, `summaryDoors`, `summaryDoorButton`, `openDoor(_:)` and `summaryDoorChip`; `HadithView` lost `encyclopediaDoors`, `encyclopediaDoorButtons`, `doorButton` and `doorChip`, and its summary section now renders only with a tile in it (`showSummaryTiles`) in both modes, as Simple already did. `EvenChipRows` (ViewExtensions.swift) had no other user and is gone. The Today pill stays on the summary header in Full. The Word of the Day still fills an odd grid as a tile; with an even grid it is in the menu alone.
+  - **Adhan.** The layout is a submenu now ("for adhan for top left the prayer layout have it be a menu that opens the other"): a nested `Menu` whose label is `Label("Prayer Times Layout", systemImage:)` plus a second `Text` naming the layout in use (iOS draws it as the row's subtitle, the Files app's Sort By), with the inline `Picker` inside. The recording shows the row as "Prayer Times Layout › / Tiles" and the submenu unfolding under it with Tiles ticked.
+  - **Settings tiles.** The captions were still truncating at the 0.75 floor ("looks chopped so shorten the actual text"), so they are shorter now and the rows say the same words: "Calculation, offsets, travel, sky", "Fonts, tajweed, reciters, themes", "Arabic and English, reading view", "Arabic font, libraries, reminders", "Background, accent, the glow", "Opening tab, Liquid Glass, haptics" (companions: "List style, Liquid Glass, haptics"). The 0.75 floor was already there; the screenshot shows every caption whole on one line.
+  - **Tips.** The Hadith "Topics, Encyclopedia, History" tip points at the ⋯ menu and shows in both modes.
+  - **Tests.** `testAdhanMoreMenuHoldsTheCalendarsAndTheLayout` opens the submenu first and seeds `travelAutomatic=0` with the two "ask me" flags cleared: the first run found Tiles and Grid, then the app's own "Traveling Mode On" card (this simulator sits 382 mi from its saved home) closed the menu before List was checked, and a second run met the card again from the persisted flag. `tearDown` seeds `travelAutomatic=1` back.
+  - **The blank Look and Feel (not Simple Mode, but reported with it: "Look and feel opened a couple times as a blank tab then after a couple loaded properly").** Reproduced by UI test on the first try once the test tapped the tile: four tile taps in five opened nothing. The simulator log, with temporary NSLogs on the doors, showed each tap raising `gridDoor` + `openGridDoor` and `EmptyDoor` closing the push ten milliseconds later: `navigationDestination(isPresented:)` built the destination the moment the Bool flag turned true and read the separately stored target stale (nil, or an earlier tap's door, which is why the fifth tap "worked" and why Abu saw it load "after a couple"). On a device the cancelled push is a blank page sliding back. The three Settings doors (profile tiles, grid tiles, spotlight cards and search results) are one optional each now, pushed with the new `pushDestination(item:)` (`PushItemDestination`, Globals.swift); `anyDoorOpen` compares them to nil. Sweep of every `pushDestination` / `navigationDestination(isPresented:)` site in the app: only `MiraclesView`'s prose-link door had the same flag-plus-target shape, and it is converted; the rest were already item-shaped (Quran/Hadith summary doors, Arabic, Dua, Pillars, Hadith book) or fixed destinations. `EmptyDoor` stays as the floor and logs in DEBUG if it ever fires again. Regression tests: `testSettingsGridTilesPush` (every tile opens on the first tap) and `testLookAndFeelOpensFromEveryDoor` (tile, list row, straight after a pop, after a grid switch, search result).
 
 - **2026-10-11, the Adhan tab's sky.** Three things Abu asked for the same day, none of them Simple Mode but all on this tab: Sky Fills the Screen (`skyFillsAdhanTab`, off; `SkyPageBackground` under the whole List, rows on `SkyPageFill.rowColor`, dark scheme on the content only), Apple Weather on the sky (`skyShowsWeather`, OFF and opt-in because the location string promises the location stays on the device; SkyWeather.swift is the shared model and tint, SkyWeatherStore.swift the app-only fetch with a half-hour cadence and the app-group cache the widgets read; Al-Islam ONLY behind the project-level `HAS_WEATHER` flag, which both sync manifests skip, so the companion apps compile none of it and the splash names it among Al-Islam's exclusives with iCloud Backup, Tips & Tricks and the stickers), and the permissions sheet above. The automatic-change dialogs were rewritten to one short sentence and two plain buttons (`Settings.AutoChangeCard`).
 

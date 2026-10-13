@@ -37,6 +37,10 @@ struct QiraatExplorerView: View {
     @State private var seekFirstPlace: Bool
     /// A surah picked in the place picker: Compare Two moves to its first place once that is known.
     @State private var seekInSurah = false
+    /// The riwayah a narrator's page opened this walk with, until the first build writes the pair.
+    @State private var pendingSurahWalk: String?
+    /// Counts builds, so a superseded build's `defer` cannot put away the spinner its successor raised.
+    @State private var buildGeneration = 0
 
     @AppStorage("qiraatExplorerFontSize") private var fontSize: Double = 24
     /// Off: step by word-level changes (another word form, added or dropped letters, other vowels).
@@ -89,9 +93,11 @@ struct QiraatExplorerView: View {
     /// Walks one riwayah against Hafs (a narrator's page in the Qiraat guide): Compare Two with Hafs on
     /// one side and the riwayah on the other, remembered exactly as if picked here.
     init(surahWalk tag: String) {
-        UserDefaults.standard.set(Settings.Riwayah.hafsTag, forKey: "qiraatExplorerDuelA")
-        UserDefaults.standard.set(tag, forKey: "qiraatExplorerDuelB")
         self.init(mode: .duel)
+        // Applied by the first build (see `rebuild`), not here: a View initializer runs again on every
+        // re-render of the pushing page (any Settings publish), and writing the defaults from it
+        // snapped the pair the user had since picked back to Hafs and the narrator.
+        _pendingSurahWalk = State(initialValue: tag)
     }
 
     // MARK: Inputs
@@ -876,9 +882,13 @@ struct QiraatExplorerView: View {
                 surahID = surah
                 hafsAyah = store.variantAyahs(surah: surah, tags: tags, everyDifference: every).first ?? 1
             } else {
+                // Seek the surah's first place only when that is a NEW build: the same surah picked
+                // again leaves `buildKey` unchanged, and a flag left armed (or set outside Compare
+                // Two, which alone consumes it) hijacked a later, unrelated rebuild.
+                let changes = surahID != surah || hafsAyah != 1
                 surahID = surah
                 hafsAyah = 1
-                seekInSurah = true
+                seekInSurah = mode == .duel && changes
             }
         }
     }
@@ -901,19 +911,31 @@ struct QiraatExplorerView: View {
         let currentMode = mode
         let a = duelA
         let b = duelB
+        if let tag = pendingSurahWalk {
+            // A narrator's page opened this walk: its pair is written here, on the first build. When the
+            // derived pair changes, the changed key cancels this build and starts the right one; when it
+            // does not (the riwayah is not enabled, so `duelB` falls back as before), this build is it.
+            pendingSurahWalk = nil
+            if duelARaw != Settings.Riwayah.hafsTag { duelARaw = Settings.Riwayah.hafsTag }
+            if duelBRaw != tag { duelBRaw = tag }
+        }
         #if DEBUG
         if RenderCounter.enabled { NSLog("EXPLORER build start %d:%d", surah, ayah) }
         #endif
 
         // A spinner by the caption only when a build is slow enough to see (a cold surah, a debug
         // build): a step that lands in a few milliseconds never flashes one.
+        buildGeneration &+= 1
+        let generation = buildGeneration
         let busy = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 180_000_000)
             if !Task.isCancelled { showBusy = true }
         }
         defer {
             busy.cancel()
-            showBusy = false
+            // Only the build still current puts the spinner away: a superseded build landing late
+            // switched off the one its successor's timer had just raised.
+            if buildGeneration == generation { showBusy = false }
         }
 
         async let index: Void = Self.loadIndex(store, needed: !store.isIndexLoaded)
