@@ -3206,6 +3206,9 @@ struct SurahPageReader<Controls: View>: View {
                     Button {
                         settings.hapticFeedback()
                         typedJumpText = ""
+                        // UIKit's alert traps on a text size change while it presents; the windows
+                        // keep theirs until it is gone (DynamicTypeCoalescer.swift).
+                        DynamicTypeCoalescer.holdForAlert()
                         showTypedJump = true
                     } label: {
                         Image(systemName: "keyboard")

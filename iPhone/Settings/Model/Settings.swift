@@ -1205,8 +1205,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// backed up: `CloudManifest.deviceOnlyKeys`) and for a keep-content reset (spared, like the
     /// content: "Reset Settings, Keep My Content" used to wipe `THEfirstLaunch` and the About You
     /// version, so the splash came back over the Settings tab and About You treated the user as new,
-    /// and every one-shot guard ran again; Quality Guide G10). Location first: the permission prompt promises "your location stays on your
-    /// device", so nothing derived from it leaves, the saved home city and favorite locations
+    /// and every one-shot guard ran again; Quality Guide G10). Location first: the permission prompt promises that only the app and
+    /// Apple ever see the location, so nothing derived from it leaves, the saved home city and favorite locations
     /// included. Then what describes THIS install rather than the person: prompts already shown,
     /// migrations already run, what was last scheduled, what was last drawn.
     static let deviceOnlyStorageKeys: [String] = [
@@ -1910,8 +1910,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     /// Apple Weather on the sky (Abu, 2026-10-11): clouds, rain and fog tint the gradient and the
     /// temperature, UV index and humidity sit on the card, in the glance wall and on the sky widgets.
-    /// OFF by default and opt-in: the location prompt promises "your location stays on your device",
-    /// and a weather request sends the coordinates to Apple's weather service. Mirrored to the app
+    /// OFF by default and opt-in: the location prompt promises that only the app and Apple ever see
+    /// the location, and a weather request sends the coordinates to Apple's weather service. Mirrored to the app
     /// group because the widgets read it there, and the sky layouts reload so the tint lands at once.
     @AppStorage("skyShowsWeather") var skyShowsWeather: Bool = false {
         didSet {

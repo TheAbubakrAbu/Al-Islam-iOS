@@ -252,3 +252,67 @@ final class PrecomputedPackTests: XCTestCase {
         NSLog("PRECOMPUTED EXPORT %@ (%d KB) and %@ (%d KB)", searchURL.path, search.count / 1024, lexiconURL.path, lexicon.count / 1024)
     }
 }
+
+// MARK: - The daily cards' blocked-word scan (2026-10-13)
+
+/// `Settings.containsDailyBlockedWord` clears most texts from their bytes before the split that decides
+/// (the watch reads every ayah live, and the split alone outran watchOS's 2 s background CPU limit on a
+/// Series 5). Whatever the scan clears, the split must clear too, or the phone (precomputed flags) and the
+/// watch (live) pick different Ayahs of the Day. The reference below is the split as it was before the scan.
+extension PrecomputedPackTests {
+    private static func splitDecides(_ text: String) -> Bool {
+        text.lowercased()
+            .split(whereSeparator: { !$0.isLetter })
+            .contains { Settings.dailyCardBlockedWords.contains(String($0)) }
+    }
+
+    func testDailyBlockedWordsFitTheByteScan() {
+        XCTAssertNotNil(Settings.dailyCardBlockedKeys, "every blocked word must be 1 to \(Settings.dailyCardBlockedMaxLetters) lower-case ASCII letters, or the byte scan switches itself off")
+    }
+
+    @MainActor
+    func testDailyBlockedWordScanAgreesWithTheSplit() async {
+        // The graphemes that make a byte scan and a grapheme split disagree, and the plain cases.
+        let cases = [
+            "He was killed.", "KILLED", "skill", "Killers", "killer\u{2019}s", "war-time", "warner", "whitehit",
+            "kill\u{301}", "\u{301}kill", "\u{06DD}kill", "\u{06DD}xkill", "\u{0600}hit", "\u{212A}ill", "\u{212A}",
+            "\u{0130}t", "M\u{016B}s\u{0101} struck", "slave\u{200D}girl", "smite\u{FE0F}", "hit2", "2hit", "",
+            "struck\u{2014}then", "Allah\u{0331}hit", "\u{0627}\u{0644}\u{0644}\u{0647} kill", "a\u{06DD}hit", "slaughtering", "xslaughtering",
+        ]
+        for text in cases {
+            XCTAssertEqual(Settings.containsDailyBlockedWord(text), Self.splitDecides(text), "\(text.unicodeScalars.map { String($0.value, radix: 16) })")
+        }
+
+        // Seeded random texts from the same pieces, so the rules meet in combinations nobody wrote down.
+        let pieces = ["kill", "hit", "war", "slave", "struck", "slaughtering", "Kill", "HIT", "a", "x", "s", "er", "ing",
+                      " ", "-", ".", "\u{2019}", "\u{2014}", "2", "\u{301}", "\u{0331}", "\u{200D}", "\u{FE0F}", "\u{06DD}",
+                      "\u{0600}", "\u{212A}", "\u{0130}", "\u{0101}", "\u{0627}", "\u{064E}", "\n", "\r\n"]
+        var state: UInt64 = 0x9E37_79B9_7F4A_7C15
+        func next(_ bound: Int) -> Int {
+            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Int((state >> 33) % UInt64(bound))
+        }
+        for _ in 0..<20_000 {
+            let text = (0..<(1 + next(12))).map { _ in pieces[next(pieces.count)] }.joined()
+            XCTAssertEqual(Settings.containsDailyBlockedWord(text), Self.splitDecides(text), "\(text.unicodeScalars.map { String($0.value, radix: 16) })")
+        }
+
+        // Every translation the app ships, alone and joined the way the Ayah of the Day joins them.
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        var checked = 0
+        var cleared = 0
+        for surah in data.quran {
+            for ayah in surah.ayahs {
+                for text in [ayah.textEnglishSaheeh, ayah.textEnglishMustafa, ayah.textEnglishSaheeh + " " + ayah.textEnglishMustafa] {
+                    XCTAssertEqual(Settings.containsDailyBlockedWord(text), Self.splitDecides(text), "\(surah.id):\(ayah.id)")
+                    if !Settings.mayContainDailyBlockedWord(text) { cleared += 1 }
+                    checked += 1
+                }
+            }
+        }
+        XCTAssertGreaterThanOrEqual(checked, 6236 * 3)
+        XCTAssertGreaterThan(cleared, checked * 3 / 4, "the scan should settle most texts without the split")
+    }
+}
+

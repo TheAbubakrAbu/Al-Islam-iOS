@@ -17,6 +17,14 @@ import UIKit
 /// iPhone's bar has no such loop: the same flips in hundreds of walks never hung it), iOS 18 and later
 /// (the floating bar). Everything under the window follows the override, so the app reads one size,
 /// a beat late during a drag.
+///
+/// It also never moves the category under an alert. A bare trait change (what this override is) under
+/// UIKit's alert traps in its text field layout: the reader's Go to Page / Go to Juz prompt, an `.alert`
+/// with a TextField, threw `NSRangeException` in `-[_UIFlowLayoutInfo setSizes:forItemsAtIndexPaths:]`
+/// under `UIAlertController viewDidLayoutSubviews` (2026-10-13: the stress walk's flips, a change held
+/// here and released with the prompt up, a system change while it presented). So a change waits while
+/// any alert is up and lands once it is gone. The iPhone has no override, but a system change landing
+/// while the prompt presents traps there too, so the prompt calls `holdForAlert()` first.
 @MainActor
 enum DynamicTypeCoalescer {
     /// Longer than the bar's animations, with margin: 0.8 s between two changes hung, 1.4 s did not; a
@@ -30,6 +38,10 @@ enum DynamicTypeCoalescer {
     private static var pending: UIContentSizeCategory?
     private static var releaseTask: Task<Void, Never>?
     private static var installed = false
+    /// The windows `holdForAlert()` pinned where the coalescer does not run, and the task that lets
+    /// them go.
+    private static var alertPinned: [UIWindow] = []
+    private static var alertHoldTask: Task<Void, Never>?
 
     static var isActive: Bool {
         guard #available(iOS 18.0, *) else { return false }
@@ -60,11 +72,46 @@ enum DynamicTypeCoalescer {
         if pending != nil { request(pending!) }
     }
 
+    /// A text-entry alert is about to come up (the reader's Go to Page / Go to Juz prompt). Where the
+    /// coalescer runs (the iPad) the managed override already waits for the alert. Elsewhere every
+    /// window is pinned to the category it shows now, so a system change cannot reach the alert, and
+    /// let go once the alert has come and gone: the windows then follow the system again, the held
+    /// change landing with no alert up.
+    static func holdForAlert() {
+        guard !isActive, #available(iOS 17.0, *) else { return }
+        if alertPinned.isEmpty {
+            for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+                for window in scene.windows where !window.traitOverrides.contains(UITraitPreferredContentSizeCategory.self) {
+                    window.traitOverrides.preferredContentSizeCategory = window.traitCollection.preferredContentSizeCategory
+                    alertPinned.append(window)
+                }
+            }
+        }
+        alertHoldTask?.cancel()
+        alertHoldTask = Task { @MainActor in
+            // Up to 3 s for the alert to arrive, then for as long as it is up.
+            var waited = 0
+            while !Task.isCancelled, !alertIsUp, waited < 6 {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                waited += 1
+            }
+            while !Task.isCancelled, alertIsUp {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            for window in alertPinned {
+                window.traitOverrides.remove(UITraitPreferredContentSizeCategory.self)
+            }
+            alertPinned = []
+        }
+    }
+
     /// A new category from the system (or the stress walk's flips): applied now when the bar last
-    /// animated `settle` seconds ago or more, else held until the burst (or the tab switch) rests.
+    /// animated `settle` seconds ago or more and no alert is up, else held until the burst (or the tab
+    /// switch) rests and the alert is gone.
     static func request(_ category: UIContentSizeCategory) {
         guard isActive else { return }
-        if Date().timeIntervalSince(lastBarAnimation) >= settle, pending == nil {
+        if Date().timeIntervalSince(lastBarAnimation) >= settle, pending == nil, !alertIsUp {
             apply(category)
             return
         }
@@ -72,6 +119,10 @@ enum DynamicTypeCoalescer {
         releaseTask?.cancel()
         releaseTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(settle * 1_000_000_000))
+            // An alert keeps it until the alert is gone (dismissal animation included).
+            while !Task.isCancelled, alertIsUp {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+            }
             guard !Task.isCancelled, let category = pending else { return }
             pending = nil
             apply(category)
@@ -82,6 +133,19 @@ enum DynamicTypeCoalescer {
         shown = category
         lastBarAnimation = Date()
         pinWindows()
+    }
+
+    /// An alert (SwiftUI's `.alert` and `.confirmationDialog` are `UIAlertController`s) presented in
+    /// any window, on its way in or out included: the category must not move under it.
+    static var alertIsUp: Bool {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).contains { window in
+            var controller = window.rootViewController?.presentedViewController
+            while let current = controller {
+                if current is UIAlertController { return true }
+                controller = current.presentedViewController
+            }
+            return false
+        }
     }
 
     private static func pinWindows() {

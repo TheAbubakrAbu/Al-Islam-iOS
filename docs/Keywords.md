@@ -20,10 +20,10 @@ Keep this in sync whenever a major feature ships (e.g. Hadith, Tafsir).
 ## Recommended keyword field (primary)
 
 ```
-quran,tafsir,hadith,sunnah,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dhikr,ramadan,muslim
+quran,tafsir,hadith,hifz,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dhikr,ramadan,muslim
 ```
 
-**98 / 100 characters.** Covers the app's five biggest search surfaces (Quran, Tafsir, Hadith, prayer/adhan/tracker, and the everyday-tools terms) while avoiding the name/subtitle words. (4.6.0: `tracker` replaced `masjid`; `prayer` + `tracker` auto-combine to rank for "prayer tracker," the new headline feature, while the Masjid Locator remains a secondary feature covered by the description.)
+**96 / 100 characters.** Covers the app's five biggest search surfaces (Quran, Tafsir, Hadith, prayer/adhan/tracker, and the everyday-tools terms) while avoiding the name/subtitle words. (4.6.0: `tracker` replaced `masjid`; `prayer` + `tracker` auto-combine to rank for "prayer tracker," the new headline feature, while the Masjid Locator remains a secondary feature covered by the description.) (4.6.5: `hifz` replaced `sunnah`. Test Mode and the Revision plan make memorization a real feature, and `hifz` is the term students of the Quran search; `hadith` and `bukhari` still carry the Sunnah intent.)
 
 ### Why each term
 
@@ -32,7 +32,7 @@ quran,tafsir,hadith,sunnah,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dh
 | `quran` | Core term; also auto-combines with others (e.g. `quran` + `arabic`). Covers the largest single audience. |
 | `tafsir` | New in this release; Ibn Kathir, al-Tabari, as-Sa'di, Maarif, Tazkirul. Low-competition, high-intent. |
 | `hadith` | New Hadith tab; also stems toward "hadiths." |
-| `sunnah` | Pairs with Hadith intent; searched by users looking for authenticated narrations. |
+| `hifz` | New in 4.6.5 (Test Mode and the Revision plan); memorization intent, the term students of the Quran search most. |
 | `bukhari` | The single most-searched Hadith collection name; stands in for the whole Nine Books. |
 | `prayer` | Auto-combines to "prayer times," "prayer app." Highest-volume prayer term in English. |
 | `tracker` | New in 4.6.0 (Prayer Tracker); auto-combines with `prayer` for "prayer tracker", a high-intent, fast-growing search. |
@@ -73,10 +73,10 @@ quran,tafsir,hadith,ramadan,fasting,iftar,suhoor,eid,prayer,salah,adhan,qibla,du
 Ranked roughly by value to this app. Bold = currently in the primary field.
 
 ### Quran
-**quran**, **tafsir**, koran, mushaf, surah, ayah, juz, tajweed, transliteration, translation, saheeh, recitation, reciter, quran audio, quran offline, beginner quran
+**quran**, **tafsir**, **hifz**, koran, mushaf, surah, ayah, juz, tajweed, transliteration, translation, saheeh, recitation, reciter, quran audio, quran offline, beginner quran
 
 ### Hadith / Sunnah (new)
-**hadith**, **sunnah**, **bukhari**, muslim (Sahih Muslim), nawawi, tirmidhi, riyad, hadith qudsi, narrations, prophet, muhammad
+**hadith**, sunnah, **bukhari**, muslim (Sahih Muslim), nawawi, tirmidhi, riyad, hadith qudsi, narrations, prophet, muhammad
 
 ### Prayer
 **prayer**, **tracker**, **salah**, **adhan**, **namaz**, **qibla**, salat, salaat, azan, athan, iqama, prayer times, prayer reminder, prayer tracker, fajr, dhuhr, asr, maghrib, isha

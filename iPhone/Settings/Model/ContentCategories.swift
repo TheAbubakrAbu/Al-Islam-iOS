@@ -161,7 +161,7 @@ struct ContentCategory: Identifiable {
     /// What the categories never include, in the user's words, for the What's Included page and
     /// the dialogs. Location first: the permission prompt's own promise.
     static let neverIncluded: [(title: String, detail: String, systemImage: String)] = [
-        ("Your location and saved places", "The app promises that your location stays on your device, so your home city, favorite locations and the prayer times computed from them are never backed up. A restored device finds its own.", "location.slash.fill"),
+        ("Your location and saved places", "Your home city, favorite locations and the prayer times computed from them are never backed up: your location goes no further than it has to. A restored device finds its own.", "location.slash.fill"),
         ("Downloaded recitations", "Audio you downloaded can be downloaded again, so it stays out of the backup.", "arrow.down.circle"),
         ("Notifications scheduled here", "Each device schedules its own adhans and reminders from your settings; the schedule itself is not copied.", "bell.slash.fill"),
         ("Prompts you have answered", "Which permissions and welcome screens this device has shown. A restored device is asked again where it needs to be.", "questionmark.circle"),

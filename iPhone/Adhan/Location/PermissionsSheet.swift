@@ -95,14 +95,10 @@ struct PermissionsSheet: View {
 
     // MARK: Pieces
 
-    /// The sky's weather is Al-Islam's alone (`HAS_WEATHER`), and the one thing that ever sends the
-    /// location anywhere; the companion apps keep the promise unqualified.
+    /// The system prompt's own promise: only Apple's services ever receive the location (the city
+    /// name, nearby places, and on Al-Islam the opt-in sky weather), never anyone else.
     private static var footnote: String {
-        #if HAS_WEATHER
-        return "You can change either later in the Settings app. Your location never leaves your device unless you turn on the sky's weather."
-        #else
-        return "You can change either later in the Settings app. Your location never leaves your device."
-        #endif
+        "You can change either later in the Settings app. Only \(AppIdentifiers.appName) and Apple ever see your location, and it is never shared with anyone else."
     }
 
     private var header: some View {

@@ -609,7 +609,14 @@ struct SkyCard: View {
 
     /// Opens the moon viewer for the moment the footer's moon shows when nothing is being dragged:
     /// the browsed day, or now.
+    ///
+    /// One viewer at a time: a second request while one is up (two taps in one turn, or both moons at
+    /// once) is dropped. Each request is a new item, and a new item swapped into the zooming cover
+    /// mid-presentation made SwiftUI dismiss it while UIKit was still morphing it out of the moon,
+    /// which traps ("Cannot morph from a view that is not in the hierarchy", stress walk seed 35,
+    /// 2026-10-13; reproduced by `-stressScript 'tab:adhan;wait:4;double:percent_illuminated'`).
     private func openMoonViewer(from source: String) {
+        guard moonViewer == nil else { return }
         settings.hapticFeedback()
         moonViewer = MoonViewerRequest(date: selectedDay.date ?? now, isLive: selectedDay.date == nil, source: source)
     }

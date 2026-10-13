@@ -5,9 +5,9 @@ the product page for the current release. Changing it requires a new build (unli
 
 ## Guidelines
 
-- **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.0` heading and
+- **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.5` heading and
   the `**n / 4,000**` tally line are for this file, not the store). Verify before shipping:
-  `awk '/^# Version 4.6.0$/{f=1;next} /^# Version /{f=0} f' "Docs/Whats New.md" | grep -v '^\*\*' | wc -m`
+  `awk '/^# Version 4.6.5$/{f=1;next} /^# Version /{f=0} f' "Docs/Whats New.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~2,000-2,500.** Nobody reads a wall of text on a phone; the description sells the app,
   this field just says what changed. Shorter beats complete.
 - **One line per bullet, one idea per line.** Cut "now", "new", and every clause after a dash that
@@ -18,6 +18,52 @@ the product page for the current release. Changing it requires a new build (unli
 - Lead with a one-sentence summary of the release, then the biggest feature first.
 - Plain text only: no markdown, emoji, or links; the store renders none of it.
 - Keep past versions below for reference; only the top section ships.
+
+# Version 4.6.5
+
+Simple Mode, iCloud Backup, Test Mode and a Revision plan for memorizing, Word Study for every word, and weather on your prayer sky.
+
+Al-Quran:
+- Test Mode hides the text until you tap, so you can recite from memory and check each ayah.
+- The Quran Planner adds a Revision plan: a juz range or chosen surahs, revised every few days.
+- Word Study: double tap any word for its meaning, grammar, root, themes, tajweed and qiraat.
+- Play From Ayah now plays to the end of the page, surah, juz, or the whole Quran.
+- Repeat Forever for an ayah, a surah or a custom range, downloaded once and replayed offline.
+- Two mushaf pages side by side in landscape, and both readers use the full width.
+- Tajweed colors the heavy and light laam in the name of Allah, and you can pick your own color for every rule.
+- A rebuilt Qiraat Explorer: see every riwayah at once, or compare two.
+
+Al-Adhan:
+- Weather on the sky: clouds, rain, snow and fog, with temperature, UV and wind. Optional and off by default.
+- Tap the moon for a 3D moon you can turn, at its true phase, above a skyline of pyramids and a mosque.
+- Tapping a prayer notification asks "Did you pray?", and Nagging Mode has its own settings.
+- More accurate times for many calculation methods, and a Qibla needle that turns smoothly at every size.
+
+Al-Hadith:
+- Filter rows over search results, and chapter lookups like "1:4" inside a book.
+- Hadith & Its Sciences: how the hadith were preserved, checked and graded.
+
+Widgets and Controls:
+- Chosen Ayah widget: pin any ayah or bookmark to your Home or Lock Screen.
+- Control Center controls to resume a recitation, see prayer times, or find the Qibla.
+- Islamic stickers for iMessage.
+
+Islamic Tools:
+- Today: the ayah, hadith, dua and Name of the day on one screen.
+- A Reading Test with 21 levels, from single letters to text without vowels.
+- Tajweed Foundations is now a 58-lesson course with quizzes and Quran examples.
+- New libraries: Proving Islam, Miracles of the Prophets, and Prophecies of the Prophet.
+
+Settings:
+- Simple Mode keeps only the essentials on screen. Switch to Full any time.
+- iCloud Backup saves named profiles to your own iCloud, ready to restore on any device.
+- A search bar on every settings page, and 150 Tips & Tricks.
+
+Bug fixes and optimizations:
+- Faster search, smoother playback, and dozens of crash fixes across iPhone, iPad, Mac and Apple Watch.
+
+**2,384 / 4,000 characters.**
+
 
 # Version 4.6.0
 

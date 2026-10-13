@@ -1483,13 +1483,87 @@ extension Settings {
     ]
 
     /// Whole-word check against `dailyCardBlockedWords` - tokens, not substrings.
+    ///
+    /// The exact rule is the split below, but most texts never reach it: `mayContainDailyBlockedWord`
+    /// clears them from their bytes first. The split lower-cases the text and walks its graphemes,
+    /// and reading both translations of every ayah that way, on the main actor when the day's ayah is
+    /// picked, cost an Apple Watch Series 5 more than the 2 s of CPU watchOS allows a background
+    /// launch: the watchdog killed the app there in 4.6.2 and 4.6.4 (the precomputed flags ship with
+    /// the phone app alone, so the watch reads the texts).
     static func containsDailyBlockedWord(_ text: String) -> Bool {
-        text.lowercased()
+        guard mayContainDailyBlockedWord(text) else { return false }
+        return text.lowercased()
             .split(whereSeparator: { !$0.isLetter })
             .contains { dailyCardBlockedWords.contains(String($0)) }
     }
 
+    /// The blocked words as `mayContainDailyBlockedWord` spells a run: five bits a letter (a = 1 ...
+    /// z = 26), so a word of up to `dailyCardBlockedMaxLetters` letters is one UInt64. Nil when a word
+    /// is anything else (a hyphen, an apostrophe, a 13th letter): the scan then clears nothing and every
+    /// text goes to the split. `testDailyBlockedWordsFitTheByteScan` keeps the list scannable.
+    static let dailyCardBlockedKeys: Set<UInt64>? = {
+        var keys = Set<UInt64>()
+        for word in dailyCardBlockedWords {
+            let bytes = Array(word.utf8)
+            guard !bytes.isEmpty, bytes.count <= dailyCardBlockedMaxLetters,
+                  bytes.allSatisfy({ $0 >= 0x61 && $0 <= 0x7A }) else { return nil }
+            keys.insert(bytes.reduce(UInt64(0)) { $0 << 5 | UInt64($1 - 0x60) })
+        }
+        return keys
+    }()
+
+    /// 12 letters fill 60 of a key's 64 bits.
+    static let dailyCardBlockedMaxLetters = 12
+
+    /// Whether `text` might hold a blocked word, from its UTF-8 bytes alone: some run of ASCII letters,
+    /// either case, spells one. False means the split cannot find one either. Every blocked word is
+    /// lower-case ASCII, so a match is a token of single ASCII letters. Of every scalar outside ASCII
+    /// (checked over all of Unicode, 2026-10-13), two lower-case into an ASCII letter: U+0130, whose
+    /// "i" keeps a combining dot and so never matches, and the KELVIN SIGN U+212A, which sends the
+    /// text to the split. And 27 prepended signs such as U+06DD join the letter after them into their
+    /// own grapheme, one letter each, so a run right after a non-ASCII byte is also tried without its
+    /// first letter. A false alarm costs only the split.
+    static func mayContainDailyBlockedWord(_ text: String) -> Bool {
+        guard let keys = dailyCardBlockedKeys else { return true }
+        var key: UInt64 = 0
+        var letters = 0
+        var afterNonASCII = false
+        var previous1: UInt8 = 0
+        var previous2: UInt8 = 0
+        for byte in text.utf8 {
+            let lower = byte | 0x20
+            if lower >= 0x61 && lower <= 0x7A {
+                key = key << 5 | UInt64(lower - 0x60)
+                letters += 1
+            } else {
+                if letters > 0 {
+                    if runIsBlocked(key: key, letters: letters, afterNonASCII: afterNonASCII, in: keys) { return true }
+                    key = 0
+                    letters = 0
+                }
+                afterNonASCII = byte >= 0x80
+                if byte == 0xAA && previous1 == 0x84 && previous2 == 0xE2 { return true }   // U+212A
+            }
+            previous2 = previous1
+            previous1 = byte
+        }
+        return letters > 0 && runIsBlocked(key: key, letters: letters, afterNonASCII: afterNonASCII, in: keys)
+    }
+
+    /// One run of `letters` letters (the last 12 in `key`); after a non-ASCII byte its first letter may
+    /// belong to the grapheme before it, so the run without that letter is tried too.
+    private static func runIsBlocked(key: UInt64, letters: Int, afterNonASCII: Bool, in keys: Set<UInt64>) -> Bool {
+        if letters <= dailyCardBlockedMaxLetters, keys.contains(key) { return true }
+        guard afterNonASCII, letters >= 2, letters - 1 <= dailyCardBlockedMaxLetters else { return false }
+        return keys.contains(key & ((1 << UInt64(5 * (letters - 1))) - 1))
+    }
+
     private static func isAyahGentle(_ ayah: Ayah) -> Bool {
+        // Each translation is scanned in place; only an ayah the scan flags pays for the joined text and
+        // the split (the bytes of the joined text are both texts' runs, the space between them a break).
+        guard mayContainDailyBlockedWord(ayah.textEnglishSaheeh) || mayContainDailyBlockedWord(ayah.textEnglishMustafa) else {
+            return true
+        }
         let combined = [ayah.textEnglishSaheeh, ayah.textEnglishMustafa]
             .joined(separator: " ")
         return !containsDailyBlockedWord(combined)
@@ -1515,7 +1589,8 @@ extension Settings {
     /// this build's blocked-word list (Phase 10.15): lower-casing and word-splitting both translations
     /// of 6,236 ayahs ran on the MAIN thread inside the Quran tab's first body, 200 ms of the launch.
     /// An ayah the pack has no record for (one only another riwayah numbers) is still read live, so
-    /// the list is the one the texts give in every case.
+    /// the list is the one the texts give in every case. The Watch has no pack and reads every ayah
+    /// live, inside the 2 s of CPU a background launch gets: see `containsDailyBlockedWord`.
     private static func gentleAyahRefs(_ data: QuranData) -> [(surahID: Int, ayahID: Int)] {
         if let cached = gentleAyahRefsCache { return cached }
         let pack = VerseSearchPack.dailyFlagsPack()
@@ -1532,7 +1607,8 @@ extension Settings {
                 if let pack, let index = pack.recordIndex(surah: surah.id, ayah: ayah.id) {
                     eligible = pack.record(at: index).flags & both == both
                 } else {
-                    eligible = isAyahGentle(ayah) && isAyahShort(ayah)
+                    // Short first: the long ayahs, most of the text, drop out before the word scan.
+                    eligible = isAyahShort(ayah) && isAyahGentle(ayah)
                 }
                 if eligible { refs.append((surah.id, ayah.id)) }
             }
@@ -1955,7 +2031,7 @@ extension Settings {
             attempts += 1
             // Same gentle + short filter as the in-app Ayah of the Day pool, so the widget's fallback matches.
             guard let surah = data.quran.randomElement(),
-                  let ayah = surah.ayahs.filter({ !$0.textHafs.isEmpty && Self.isAyahGentle($0) && Self.isAyahShort($0) }).randomElement()
+                  let ayah = surah.ayahs.filter({ !$0.textHafs.isEmpty && Self.isAyahShort($0) && Self.isAyahGentle($0) }).randomElement()
             else { continue }
             cards.append(quranWidgetAyahCard(surah: surah, ayah: ayah))
         }

@@ -2,13 +2,13 @@
 
 The **Promotional Text** field in App Store Connect: up to **170 characters**, shown above the description, updatable any time **without a new build**. Use it to spotlight the current release.
 
-## 4.6.0
+## 4.6.5
 
 ```
-New: the major Hadith collections, AI search everywhere, a prayer tracker, tafsir, a living sky over your prayer times, and a gallery of Sky, Solar, and Moon widgets.
+New: Simple Mode, iCloud Backup, Test Mode and a Revision plan for memorizing, Word Study for every word, and weather on your prayer sky.
 ```
 
-**165 / 170 characters.**
+**137 / 170 characters.**
 
 ## Guidelines
 

@@ -22,53 +22,51 @@ under the screenshots. Changing it requires a new build (unlike Promotional Text
 
 Al-Islam is your complete companion for practicing Islam, whether you are a lifelong believer, a new convert, or exploring the faith. The Quran, the major Hadith collections, tafsir, prayer times, a prayer tracker, and on-device AI search in one simple app: completely free, ad free, and private.
 
-ON-DEVICE AI SEARCH
-- Search the Quran and Hadith by meaning, not keywords: "patience in hardship" finds ayahs about sabr.
-- It runs everywhere: the Quran, any hadith book, the 99 Names, duas, adhkar, and even Settings.
-- Fully on-device: private, offline, and free. With Apple Intelligence, Ask AI answers from the ayahs and hadiths it cites, never with a religious ruling.
-
-PRAYER TRACKER
-- Mark each prayer with a tap: streaks, perfect days, and a calendar heatmap.
-- Jumuah and combined traveling prayers count correctly, and a menstruation and postpartum pause protects your streak.
-- Nagging Mode reminds you every 15 minutes until you pray, and answer right from the notification.
-
-UNIQUE FEATURES
-- Traveling Mode: shorten prayers while traveling, automatically or manually, synced to your Watch.
-- Arabic Beginner Mode: spaces out letters so they are easier to recognize as you learn.
-- Verse Sharing: share any verse as clean text or a beautiful image.
-- Siri Shortcuts: play any surah, resume your last listen, or ask "When is Maghrib?" in English or Arabic.
-
 THE COMPLETE QURAN
-- Read by Surah, Juz, or page, with dividers and a marker that always shows where you are.
-- Arabic, transliteration, and translation side by side, with optional color coded tajweed and a reference.
+- Read by Surah, Juz, or page, as a scrolling list or a mushaf, with two pages side by side in landscape.
+- Arabic, transliteration, and translation side by side, with color coded tajweed in colors you can choose.
 - Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic, saved offline.
-- Find any verse by Surah:Ayah (like 5:27), page, Juz, or keyword.
-- Listen to over 60 reciters, with full Surah and verse by verse playback, offline.
+- Word Study: tap any word twice for its meaning, grammar, root, and every place it appears.
+- Over 60 reciters, offline downloads, Repeat Forever, and Play From Ayah to the end of the page, surah, juz, or Quran.
+- Hafs and nineteen more riwayat of the Ten Qiraat, compared side by side in the Qiraat Explorer.
+- Similar Ayahs, Browse by Theme, a Word of the Day, bookmarks, and notes.
+
+MEMORIZE AND REVISE
+- Quran Planner: pick a finish date for your khatm, and add a Revision plan for the surahs you know.
+- Test Mode hides the text until you tap, so you can recite from memory and check each ayah.
 
 THE MAJOR HADITH COLLECTIONS
-- All the major books: the Nine (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, Ibn Majah, Muwatta Malik, ad-Darimi, Musnad Ahmad), the forty-hadith collections, and classics like Riyad as-Salihin.
-- Arabic with English translation and narrator chains, a Hadith of the Day, bookmarks, favorites, and lookups like "Bukhari 5".
-- Search one book or all 50,000+ hadiths at once. Every collection is built in and works offline.
+- The Nine books (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, Ibn Majah, Muwatta Malik, ad-Darimi, Musnad Ahmad), the forty-hadith collections, and classics like Riyad as-Salihin.
+- Arabic with English translation and narrator chains, a Hadith of the Day, bookmarks, and lookups like "Bukhari 5".
+- Search one book or all 50,000+ hadiths. Every collection is built in and works offline.
 
-PRAYER TIMES AND QIBLA
-- Accurate prayer times calculated privately on your device, with a method suggested for your region.
-- A living sky above your prayer times: a real sun arc, night stars, and the true moon phase. Drag to preview any moment.
-- Qibla compass, adhan sounds, pre alerts, and an At a Glance board with distance to Makkah, daylight, and your fasting window.
-- A full widget gallery: every prayer widget in a standard look and a Sky twin, plus Solar Arc, Moon Phase, and Day & Night, with full Apple Watch support.
-- A Rakaah Guide with every prayer's fard and sunnah counts.
+ON-DEVICE AI
+- Search the Quran and Hadith by meaning: "patience in hardship" finds ayahs about sabr.
+- With Apple Intelligence, Ask AI answers from the ayahs and hadiths it cites, never with a religious ruling.
 
-ESSENTIAL TOOLS AND LEARNING
-- Hijri date and Islamic calendar with events like Ramadan and Eid, plus date notifications.
-- Authenticated adhkar and dua collections, with Listen buttons that read the Arabic aloud.
-- Tasbih counter, the 99 Names of Allah, Masjid and Halal Food locators, a Hijri converter, and Islamic wallpapers.
-- Learn the Arabic alphabet, the Five Pillars, the Six Pillars of Faith, and core beliefs, explained simply for beginners.
+PRAYER TIMES, QIBLA, AND TRACKER
+- Accurate prayer times calculated on your device, with a method suggested for your region.
+- A living sky over your prayer times: the sun on its arc, stars at night, a 3D moon at its true phase, and optional weather.
+- Qibla compass, adhan sounds, pre alerts, Traveling Mode, and Nagging Mode, which reminds you until you pray.
+- Prayer Tracker: mark each prayer with a tap, with streaks, perfect days, and a calendar heatmap.
+- Prayer widgets, a Chosen Ayah widget, Control Center controls, a Ramadan Live Activity, and Apple Watch.
+
+DAILY WORSHIP AND LEARNING
+- Today: the ayah, hadith, dua, and Name of the day, a daily reminder card, and Sunnah Reminders.
+- Adhkar, Hisn al-Muslim, and dua collections with sources and audio, a tasbih counter, and a journal.
+- The 99 Names in depth, Miracles of the Quran, Proving Islam, and Hadith & Its Sciences.
+- Learn the Arabic alphabet with a 21-level Reading Test, and tajweed with a 58-lesson course.
+- How-To Guides, the Pillars of Islam and Faith, Zakah and inheritance calculators, the Hijri calendar, and Masjid and Halal Food locators.
 
 MADE YOUR WAY
-- Customize text sizes, Arabic fonts, accent and sky colors. Settings search jumps to any option.
+- Simple Mode keeps the essentials on screen. Switch to Full any time.
+- Back up named profiles to your own iCloud and restore them on any device.
+- Text sizes, Arabic fonts, accent and sky colors, and a search on every settings page.
+- iPhone, iPad, Mac, and Apple Watch, plus Islamic stickers for iMessage.
 
 FREE, AD FREE, AND PRIVATE
-Al-Islam is completely free. No ads, no fees, and no subscriptions. Your data never leaves your device.
+Al-Islam is completely free. No ads, no accounts, no subscriptions, and no tracking: nothing you do is collected or shared.
 
 Whether you seek prayer times, the Quran, the Hadith of the Prophet Muhammad (peace be upon him), or a deeper understanding of Islam, download Al-Islam today.
 
-**3,801 / 4,000 characters.**
+**3,678 / 4,000 characters.**
