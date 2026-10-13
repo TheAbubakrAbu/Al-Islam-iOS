@@ -496,8 +496,9 @@ struct HelpDoorsSection: View {
     /// collapsed have a button to trash remove it"). The dialog hangs off the header, the one view of
     /// the section that is on screen while it is folded.
     private func header(count: Int) -> some View {
+        // Accent title as well as icon (Abu, 2026-10-13: "NEED A HAND should be accent color").
         SectionPillHeader(title: "NEED A HAND?", count: count, icon: "questionmark.circle.fill",
-                          isExpanded: expanded, onRemove: { confirmingRemove = true })
+                          accentTitle: true, isExpanded: expanded, onRemove: { confirmingRemove = true })
             .confirmationDialog("Remove Need a Hand?", isPresented: $confirmingRemove, titleVisibility: .visible) {
                 Button("Remove", role: .destructive) {
                     settings.hapticFeedback()
