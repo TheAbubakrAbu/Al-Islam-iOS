@@ -977,10 +977,21 @@ struct HighlightedSnippet: View {
 
     private func highlightArabicAllah(source: String, attributed: inout AttributedString) {
         for range in Self.arabicAllahRanges(in: source) {
-            if let start = AttributedString.Index(range.lowerBound, within: attributed),
-               let end = AttributedString.Index(range.upperBound, within: attributed) {
-                attributed[start..<end].foregroundColor = .red
+            guard let start = AttributedString.Index(range.lowerBound, within: attributed),
+                  let end = AttributedString.Index(range.upperBound, within: attributed) else { continue }
+            #if os(iOS)
+            // Over tajweed, a letter of the name a rule colored (the heavy laam of اللَّه after a fatha
+            // or damma) keeps its rule color; only the plain letters turn red. The painters color
+            // through NSAttributedString, so their colors are in the UIKit scope (see `renderDigest`).
+            if preStyledSource != nil {
+                let plainRuns = attributed[start..<end].runs
+                    .filter { !AllahNameInk.isRuleColor($0.uiKit.foregroundColor) }
+                    .map(\.range)
+                for run in plainRuns { attributed[run].foregroundColor = .red }
+                continue
             }
+            #endif
+            attributed[start..<end].foregroundColor = .red
         }
     }
 
@@ -1260,6 +1271,41 @@ private extension UnicodeScalar {
         }
     }
 }
+
+#if os(iOS)
+/// "Highlight Allah" over tajweed colors (Abu, 2026-10-14: "if highlight Allah and a tajweed color
+/// appears in Allah's name then put the tajweed color on it"). The tajweed and riwayah painters lay
+/// `UIColor.label` under the whole ayah and a rule's color over the letters it covers, so any other
+/// color on a letter of the name is a rule's, and the red goes on the remaining letters only.
+enum AllahNameInk {
+    /// Resolved under a FIXED trait: only "same color as label or not" matters, and the share
+    /// renderers call this off the main thread, where `UITraitCollection.current` is unspecified.
+    private static let traits = UITraitCollection(userInterfaceStyle: .light)
+
+    /// Whether `color` is a rule's paint rather than the plain text color (`plain`, label by default).
+    static func isRuleColor(_ color: UIColor?, plain: UIColor = .label) -> Bool {
+        guard let color else { return false }
+        var r1: CGFloat = 0, g1: CGFloat = 0, b1: CGFloat = 0, a1: CGFloat = 0
+        var r2: CGFloat = 0, g2: CGFloat = 0, b2: CGFloat = 0, a2: CGFloat = 0
+        guard color.resolvedColor(with: traits).getRed(&r1, green: &g1, blue: &b1, alpha: &a1),
+              plain.resolvedColor(with: traits).getRed(&r2, green: &g2, blue: &b2, alpha: &a2) else {
+            return false
+        }
+        return abs(r1 - r2) >= 0.01 || abs(g1 - g2) >= 0.01 || abs(b1 - b2) >= 0.01 || abs(a1 - a2) >= 0.01
+    }
+
+    /// Paints `color` over `range` of `attributed`, leaving every code unit a rule already colored.
+    static func paint(_ attributed: NSMutableAttributedString, range: NSRange, color: UIColor,
+                      plain: UIColor = .label) {
+        guard range.location >= 0, range.location + range.length <= attributed.length else { return }
+        var plainRuns: [NSRange] = []
+        attributed.enumerateAttribute(.foregroundColor, in: range) { value, run, _ in
+            if !isRuleColor(value as? UIColor, plain: plain) { plainRuns.append(run) }
+        }
+        for run in plainRuns { attributed.addAttribute(.foregroundColor, value: color, range: run) }
+    }
+}
+#endif
 
 extension Text {
     /// Text on the Islam tab (a dua, a dhikr, a name's description, an article's quote) with the name

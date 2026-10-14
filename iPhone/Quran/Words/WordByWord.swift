@@ -1582,7 +1582,8 @@ struct WordByWordText: View {
                 for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
                     let utf16 = NSRange(range, in: displayText)
                     guard utf16.location + utf16.length <= ns.length else { continue }
-                    body.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
+                    // A tajweed-colored letter of the name keeps its rule color (`AllahNameInk`).
+                    AllahNameInk.paint(body, range: utf16, color: .systemRed)
                 }
             }
 
@@ -1771,7 +1772,7 @@ struct WordByWordInlineText: View {
             for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
                 let utf16 = NSRange(range, in: displayText)
                 guard utf16.location + utf16.length <= ns.length else { continue }
-                base.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
+                AllahNameInk.paint(base, range: utf16, color: .systemRed)
             }
         }
 

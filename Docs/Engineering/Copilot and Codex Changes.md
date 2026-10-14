@@ -27,6 +27,9 @@ Al-Quran, and Al-Adhan repositories so another engineer or reviewer can verify t
 - Moved the “Need a Hand?” section above the Prophet Muhammad quote.
 - Changed appearance-related Settings, Tips & Tricks, Custom Colors, and Look & Feel tinting
   from fixed purple to the selected accent color.
+- Added a default-collapsed “Show More” control to every Hadith book. The collapsed view shows
+  the chapter count, hadith count, and compilation date; the expanded view shows the translated
+  book name and full description.
 
 ## Al-Quran
 

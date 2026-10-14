@@ -29,6 +29,7 @@ private struct HadithBookHero: View {
     let chapters: Int
     let hadiths: Int
     let showsStory: Bool
+    @State private var showMore = false
 
     var body: some View {
         let era = book.eraStat
@@ -63,17 +64,100 @@ private struct HadithBookHero: View {
                     ResourceHeroStat(hadiths.formatted(), "hadiths"),
                     ResourceHeroStat(era.value, era.label),
                 ])
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, \(book.eraAccessibilityLabel)")
+                    .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, compiled \(book.eraAccessibilityLabel)")
 
                 if showsStory {
-                    SelectableProse(text: book.longDescription,
-                                    textStyle: .subheadline,
-                                    secondary: true)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showMore.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: showMore ? "chevron.up.circle.fill" : "info.circle.fill")
+                                .font(.title3)
+                            Text(showMore ? "Show Less" : "Show More")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Image(systemName: showMore ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundStyle(appearance.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(appearance.accent.opacity(0.10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(appearance.accent.opacity(0.22), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(showMore ? "Hides the book's full name and description." :
+                                       "Shows the book's full name and description.")
+
+                    if showMore {
+                        HadithBookNameBlock(name: book.name)
+                        SelectableProse(text: book.longDescription,
+                                        textStyle: .subheadline,
+                                        secondary: true)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
             }
         }
         .articleCardRow()
+    }
+}
+
+/// What the book's name says: the short title in English, then the full title its compiler gave it,
+/// in Arabic, transliterated, and translated. Part of the story, so it folds away with it in a search.
+private struct HadithBookNameBlock: View {
+    @Environment(\.appearance) private var appearance
+
+    let name: HadithCatalogBook.Name
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                label("THE NAME MEANS")
+                Text("“\(name.meaning)”")
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                label("FULL TITLE")
+                Text(name.fullArabic)
+                    .font(appearance.islamArabicFont(base: 19, relativeTo: .subheadline))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundColor(appearance.accent)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(name.fullTransliteration)
+                    .font(.subheadline.italic())
+                    .foregroundColor(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("“\(name.fullMeaning)”")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.bold))
+            .tracking(1.1)
+            .foregroundColor(.secondary)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -301,7 +385,7 @@ struct HadithBookView: View {
 
     /// Everything the chapter rows read per render, computed ONCE per book. It is now built from the
     /// CHAPTER table alone - each chapter carries the row range the packer measured, so this is one
-    /// pass over ~97 chapters instead of the 7,500-hadith walk it used to be (which itself replaced a
+    /// pass over ~97 chapters instead of the 7,277-hadith walk it used to be (which itself replaced a
     /// walk per row, per render).
     struct ChapterStats {
         let counts: [Int: Int]
@@ -374,7 +458,7 @@ struct HadithBookView: View {
 
     /// Book-wide hadith search (English text/narrator + diacritic-insensitive Arabic), the Quran
     /// search's way: scan only until one PAST the shown page, so finding page one of a common word
-    /// in Bukhari never walks all 7,500 hadiths. `hasMore` renders the count pill as "5+".
+    /// in Bukhari never walks all 7,277 hadiths. `hasMore` renders the count pill as "5+".
     /// The debounced, off-main scan feeding `inBookMatches` - the body reads state, never scans.
     private func runInBookSearch(_ data: HadithBookData) {
         inBookSearchTask?.cancel()
@@ -574,7 +658,7 @@ struct HadithBookView: View {
 
     private func loadedBody(_ data: HadithBookData) -> some View {
         // Matches come from STATE, filled by `runInBookSearch`'s debounced, off-main scan. Computing
-        // them here walked up to the whole book (Bukhari ~7,500 hadiths of `.contains`) synchronously
+        // them here walked up to the whole book (Bukhari's 7,277 hadiths of `.contains`) synchronously
         // on the main thread on every keystroke - the one search path that never got the global
         // sweep's detached treatment.
         let matches = isSearchActive

@@ -58,6 +58,19 @@ struct HadithCatalogBook: Identifiable, Hashable {
     /// `HadithReferenceParser` folds them (hamza carriers, ta marbuta, tashkeel, the article) exactly
     /// as it folds the query, so no spelling of a hamza or a final ha needs listing twice.
     let arabicAliases: [String]
+    /// What the book's name says, shown above its story (Abu, 2026-10-14: "for each Hadith book
+    /// translate the name of the shortened book and mention the full name in Arabic and English and
+    /// translation"). The story no longer opens with "Its full title is ...": this carries it.
+    let name: Name
+    struct Name: Hashable {
+        /// The short title (`englishTitle`) in English: "The Authentic Collection of al-Bukhari".
+        let meaning: String
+        /// The title its compiler gave it, vocalized the way `arabicTitle` is.
+        let fullArabic: String
+        let fullTransliteration: String
+        /// `fullArabic` in English.
+        let fullMeaning: String
+    }
 
     var id: String { slug }
 
@@ -102,9 +115,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations.",
-            longDescription: "Its full title is al-Jami’ al-Musnad as-Sahih al-Mukhtasar min Umur Rasul Allah ﷺ wa Sunanihi wa Ayyamihi, “the abridged, authentically-chained collection of the affairs, practice, and times of the Messenger of Allah ﷺ.” Compiled over sixteen years by Imam al-Bukhari (الإِمَامُ البُخَارِيُّ), who sifted its 7,563 hadiths (about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity.\n\nMuslims across every generation have regarded it as the most authentic book after the Quran itself.",
+            longDescription: "Compiled over sixteen years by Imam al-Bukhari (الإِمَامُ البُخَارِيُّ), who sifted its 7,277 hadiths (numbered up to 7,563 in the sunnah.com numbering this app uses, and about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity.\n\nMuslims across every generation have regarded it as the most authentic book after the Quran itself.",
             aliases: ["bukhari", "bukharee", "bukhary", "albukhari", "bokhari", "buhari", "bukhaari"],
-            arabicAliases: ["البخاري", "صحيح البخاري", "بخاري"]
+            arabicAliases: ["البخاري", "صحيح البخاري", "بخاري"],
+            name: Name(
+                meaning: "The Authentic Collection of al-Bukhari, “the man from Bukhara”",
+                fullArabic: "الجامِع المُسنَد الصَحِيح المُختَصَر مِن أُمُور رَسُولِ اللَّه ﷺ وَسُنَنِه وَأَيّامِه",
+                fullTransliteration: "al-Jami’ al-Musnad as-Sahih al-Mukhtasar min Umur Rasul Allah ﷺ wa Sunanihi wa Ayyamihi",
+                fullMeaning: "The Abridged, Authentic, Comprehensive Collection with Connected Chains, of the Affairs of the Messenger of Allah ﷺ, His Sunnah, and His Days"
+            )
         ),
         HadithCatalogBook(
             slug: "muslim",
@@ -113,9 +132,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muslim ibn al-Hajjaj", authorArabic: "الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ",
             era: "d. 261 AH / 875 CE",
             shortDescription: "The second most authentic collection, every hadith gathered with its chains side by side.",
-            longDescription: "Its full title is al-Musnad as-Sahih al-Mukhtasar bi-Naql al-‘Adl ‘an al-‘Adl ila Rasul Allah ﷺ. Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ النَّيسَابُورِيُّ), a student of Imam al-Bukhari.\n\nAlongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith, this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
+            longDescription: "Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإِمَامُ مُسلِمُ بنُ الحَجَّاجِ النَّيسَابُورِيُّ), a student of Imam al-Bukhari.\n\nAlongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith, this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
             aliases: ["muslim", "sahihmuslim", "muslem", "moslem"],
-            arabicAliases: ["مسلم", "صحيح مسلم"]
+            arabicAliases: ["مسلم", "صحيح مسلم"],
+            name: Name(
+                meaning: "The Authentic Collection of Muslim, Imam Muslim ibn al-Hajjaj",
+                fullArabic: "المُسنَد الصَحِيح المُختَصَر بِنَقل العَدل عَن العَدل إِلَى رَسُولِ اللَّه ﷺ",
+                fullTransliteration: "al-Musnad as-Sahih al-Mukhtasar bi-Naql al-‘Adl ‘an al-‘Adl ila Rasul Allah ﷺ",
+                fullMeaning: "The Abridged, Authentic Collection with Connected Chains, Transmitted by the Upright from the Upright up to the Messenger of Allah ﷺ"
+            )
         ),
         HadithCatalogBook(
             slug: "ibnmajah",
@@ -124,9 +149,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Yazid ibn Majah", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ يَزِيدَ بنِ مَاجَه",
             era: "d. 273 AH / 887 CE",
             shortDescription: "The sixth of the Six Books, preserving many hadiths found in none of the other five.",
-            longDescription: "Its full title is Sunan Ibn Majah.\n\nCompiled by Imam Ibn Majah of Qazwin (الإِمَامُ ابنُ مَاجَه القَزوِينِيُّ), it completes the famous Six Books (al-Kutub as-Sittah), and its particular value is the many hadiths (the zawa’id) it preserves that appear in none of the other five.",
+            longDescription: "Compiled by Imam Ibn Majah of Qazwin (الإِمَامُ ابنُ مَاجَه القَزوِينِيُّ), it completes the famous Six Books (al-Kutub as-Sittah), and its particular value is the many hadiths (the zawa’id) it preserves that appear in none of the other five.",
             aliases: ["ibnmajah", "majah", "ibnmaja", "maja"],
-            arabicAliases: ["ابن ماجه", "سنن ابن ماجه", "ماجه"]
+            arabicAliases: ["ابن ماجه", "سنن ابن ماجه", "ماجه"],
+            name: Name(
+                meaning: "The Sunan of Ibn Majah: the Prophet’s ﷺ practices (sunan, the plural of sunnah), arranged by legal topic",
+                fullArabic: "كِتاب السُنَن",
+                fullTransliteration: "Kitab as-Sunan",
+                fullMeaning: "The Book of the Sunnahs"
+            )
         ),
         HadithCatalogBook(
             slug: "abudawud",
@@ -134,10 +165,16 @@ struct HadithCatalogBook: Identifiable, Hashable {
             group: .six,
             authorEnglish: "Imam Abu Dawud as-Sijistani", authorArabic: "الإِمَامُ أَبُو دَاوُدَ السِّجِستَانِيُّ",
             era: "d. 275 AH / 889 CE",
-            shortDescription: "The Sunan of legal rulings, about 4,800 hadiths chosen from 500,000.",
-            longDescription: "Its full title is Sunan Abi Dawud. Imam Abu Dawud (الإِمَامُ أَبُو دَاوُدَ) selected roughly 4,800 hadiths from the 500,000 he had collected: the Sunan of legal rulings, focused on the narrations jurists build upon.\n\nHe remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”",
+            shortDescription: "The Sunan of legal rulings, its hadiths chosen from 500,000 he collected.",
+            longDescription: "Imam Abu Dawud (الإِمَامُ أَبُو دَاوُدَ) selected its hadiths (4,800 by his own count; this edition carries 5,276 narrations) from the 500,000 he had collected: the Sunan of legal rulings, focused on the narrations jurists build upon.\n\nHe remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”",
             aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood", "dawoud", "daood", "abu"],
-            arabicAliases: ["أبو داود", "أبي داود", "سنن أبي داود", "داود", "أبو داوود", "أبي داوود"]
+            arabicAliases: ["أبو داود", "أبي داود", "سنن أبي داود", "داود", "أبو داوود", "أبي داوود"],
+            name: Name(
+                meaning: "The Sunan of Abu Dawud (“Abi” is “Abu” after “of” in Arabic): the Prophet’s ﷺ practices, arranged by legal topic",
+                fullArabic: "كِتاب السُنَن",
+                fullTransliteration: "Kitab as-Sunan",
+                fullMeaning: "The Book of the Sunnahs"
+            )
         ),
         HadithCatalogBook(
             slug: "tirmidhi",
@@ -146,9 +183,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ عِيسَى التِّرمِذِيُّ",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The graded collection, noting each hadith's strength and the jurists' positions.",
-            longDescription: "Its full title is al-Jami’ al-Kabir, known everywhere as Jami’ at-Tirmidhi. Compiled by Imam at-Tirmidhi (الإِمَامُ التِّرمِذِيُّ), a student of Imam al-Bukhari.\n\nIts distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it, as much a manual of hadith science as a collection.",
+            longDescription: "Also known as al-Jami’ al-Kabir, “the great comprehensive collection.” Compiled by Imam at-Tirmidhi (الإِمَامُ التِّرمِذِيُّ), a student of Imam al-Bukhari.\n\nIts distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it, as much a manual of hadith science as a collection.",
             aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi", "tirmidi", "termizi", "termidhi", "tirmithi", "tirmizee"],
-            arabicAliases: ["الترمذي", "جامع الترمذي", "سنن الترمذي"]
+            arabicAliases: ["الترمذي", "جامع الترمذي", "سنن الترمذي"],
+            name: Name(
+                meaning: "The Comprehensive Collection of at-Tirmidhi, “the man from Tirmidh”",
+                fullArabic: "الجامِع المُختَصَر مِن السُنَن عَن رَسُولِ اللَّه ﷺ وَمَعرِفَة الصَحِيح وَالمَعلُول وَما عَلَيه العَمَل",
+                fullTransliteration: "al-Jami’ al-Mukhtasar min as-Sunan ‘an Rasul Allah ﷺ wa Ma’rifat as-Sahih wa’l-Ma’lul wa ma ‘alayhi al-‘Amal",
+                fullMeaning: "The Abridged Comprehensive Collection of the Sunnahs from the Messenger of Allah ﷺ, and Knowing the Authentic, the Defective, and What Is Acted Upon"
+            )
         ),
         HadithCatalogBook(
             slug: "nasai",
@@ -157,9 +200,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Ahmad ibn Shu'ayb an-Nasa'i", authorArabic: "الإِمَامُ أَحمَدُ بنُ شُعَيبٍ النَّسَائِيُّ",
             era: "d. 303 AH / 915 CE",
             shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
-            longDescription: "Its full title is al-Mujtaba, also called as-Sunan as-Sughra, Imam an-Nasa’i’s (الإِمَامُ النَّسَائِيُّ) own refinement of his larger Sunan, keeping the narrations he judged strongest.\n\nHis conditions for accepting narrators were the most rigorous among the authors of the four Sunan.",
+            longDescription: "Also called as-Sunan as-Sughra, “the smaller Sunan”: Imam an-Nasa’i’s (الإِمَامُ النَّسَائِيُّ) own refinement of his larger Sunan, keeping the narrations he judged strongest.\n\nHis conditions for accepting narrators were the most rigorous among the authors of the four Sunan.",
             aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai", "nasaai", "nassai", "nasayi"],
-            arabicAliases: ["النسائي", "سنن النسائي"]
+            arabicAliases: ["النسائي", "سنن النسائي"],
+            name: Name(
+                meaning: "The Sunan of an-Nasa’i, “the man from Nasa”: the Prophet’s ﷺ practices, arranged by legal topic",
+                fullArabic: "المُجتَبَى مِن السُنَن",
+                fullTransliteration: "al-Mujtaba min as-Sunan",
+                fullMeaning: "The Selection from the Sunan"
+            )
         ),
         // The early collections - all compiled before the Six Books - chronologically.
         HadithCatalogBook(
@@ -169,9 +218,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Malik ibn Anas", authorArabic: "الإِمَامُ مَالِكُ بنُ أَنَسٍ",
             era: "d. 179 AH / 795 CE",
             shortDescription: "The earliest collection of all, joining hadith with the practice of Madinah.",
-            longDescription: "Its full title is al-Muwatta, “the well-trodden path.” The Muwatta of Imam Malik (الإِمَامُ مَالِكٌ), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim.\n\nIt weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time.",
+            longDescription: "The Muwatta of Imam Malik (الإِمَامُ مَالِكٌ), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim.\n\nIt weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time.",
             aliases: ["malik", "muwatta", "muwattamalik", "almuwatta", "muatta", "mowatta", "muwata"],
-            arabicAliases: ["مالك", "الموطأ", "موطأ مالك", "موطأ الإمام مالك"]
+            arabicAliases: ["مالك", "الموطأ", "موطأ مالك", "موطأ الإمام مالك"],
+            name: Name(
+                meaning: "Malik’s Well-Trodden Path",
+                fullArabic: "المُوَطَّأ",
+                fullTransliteration: "al-Muwatta",
+                fullMeaning: "The Well-Trodden Path"
+            )
         ),
         HadithCatalogBook(
             slug: "ahmed",
@@ -180,9 +235,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Ahmad ibn Hanbal", authorArabic: "الإِمَامُ أَحمَدُ بنُ حَنبَلٍ",
             era: "d. 241 AH / 855 CE",
             shortDescription: "The great Musnad, arranged by the Companion who narrates each hadith.",
-            longDescription: "Its full title is Musnad al-Imam Ahmad ibn Hanbal. The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection.",
+            longDescription: "The great Musnad of Imam Ahmad (الإِمَامُ أَحمَدُ بنُ حَنبَلٍ), founder of the Hanbali school and the towering hadith scholar of his age.\n\nUnlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection of 1,374.",
             aliases: ["ahmad", "ahmed", "musnadahmad", "musnadahmed"],
-            arabicAliases: ["أحمد", "مسند أحمد", "مسند الإمام أحمد"]
+            arabicAliases: ["أحمد", "مسند أحمد", "مسند الإمام أحمد"],
+            name: Name(
+                meaning: "The Musnad of Ahmad: hadiths arranged by the Companion who narrates them",
+                fullArabic: "مُسنَد الإِمام أَحمَد بن حَنبَل",
+                fullTransliteration: "Musnad al-Imam Ahmad ibn Hanbal",
+                fullMeaning: "Imam Ahmad ibn Hanbal’s Collection, Arranged by Companion"
+            )
         ),
         HadithCatalogBook(
             slug: "darimi",
@@ -191,9 +252,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Abdullah ibn Abd ar-Rahman ad-Darimi", authorArabic: "الإِمَامُ عَبدُ اللَّهِ بنُ عَبدِ الرَّحمَنِ الدَّارِمِيُّ",
             era: "d. 255 AH / 869 CE",
             shortDescription: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi.",
-            longDescription: "Its full title is Musnad ad-Darimi, widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإِمَامُ الدَّارِمِيُّ), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi.\n\nHis Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge.",
+            longDescription: "Widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإِمَامُ الدَّارِمِيُّ), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi.\n\nHis Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge.",
             aliases: ["darimi", "daremi", "addarimi", "aldarimi"],
-            arabicAliases: ["الدارمي", "سنن الدارمي", "مسند الدارمي"]
+            arabicAliases: ["الدارمي", "سنن الدارمي", "مسند الدارمي"],
+            name: Name(
+                meaning: "The Sunan of ad-Darimi, “the man of the tribe of Darim”: the Prophet’s ﷺ practices, arranged by legal topic",
+                fullArabic: "مُسنَد الدارِمِي",
+                fullTransliteration: "Musnad ad-Darimi",
+                fullMeaning: "The Musnad of ad-Darimi, a Collection with Connected Chains"
+            )
         ),
         // The forties - short, foundational collections, usually the first hadith book a student studies.
         HadithCatalogBook(
@@ -207,7 +274,13 @@ struct HadithCatalogBook: Identifiable, Hashable {
             shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
             longDescription: "A hadith qudsi (حَدِيثٌ قُدسِيٌّ) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording, distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud).",
             aliases: ["qudsi", "qudsi40", "hadithqudsi", "kudsi", "qudsee"],
-            arabicAliases: ["القدسي", "القدسية", "الحديث القدسي", "الأحاديث القدسية", "الأربعون القدسية"]
+            arabicAliases: ["القدسي", "القدسية", "الحديث القدسي", "الأحاديث القدسية", "الأربعون القدسية"],
+            name: Name(
+                meaning: "Forty Sacred Hadiths: qudsi means “holy,” words whose meaning is from Allah",
+                fullArabic: "الأَربَعُون القُدسِيَّة",
+                fullTransliteration: "al-Arba’un al-Qudsiyyah",
+                fullMeaning: "The Forty Sacred Hadiths"
+            )
         ),
         HadithCatalogBook(
             slug: "nawawi40",
@@ -216,9 +289,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإِمَامُ يَحيَى بنُ شَرَفٍ النَّوَوِيُّ",
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
-            longDescription: "Its full title is al-Arba’un an-Nawawiyyah. Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ) gathered forty-two foundational hadiths (mostly from Bukhari and Muslim), each chosen because scholars described it as an axis the religion turns upon.\n\nMemorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
+            longDescription: "Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ) gathered forty-two foundational hadiths (mostly from Bukhari and Muslim), each chosen because scholars described it as an axis the religion turns upon.\n\nMemorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
             aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi", "nawawee", "nawawy"],
-            arabicAliases: ["النووي", "النووية", "الأربعون النووية", "الأربعين النووية"]
+            arabicAliases: ["النووي", "النووية", "الأربعون النووية", "الأربعين النووية"],
+            name: Name(
+                meaning: "The Forty of Imam an-Nawawi, “the man from Nawa”",
+                fullArabic: "الأَربَعِين فِي مَبانِي الإِسلام وَقَواعِد الأَحكام",
+                fullTransliteration: "al-Arba’in fi Mabani al-Islam wa Qawa’id al-Ahkam",
+                fullMeaning: "The Forty on the Foundations of Islam and the Principles of Its Rulings"
+            )
         ),
         HadithCatalogBook(
             slug: "shahwaliullah40",
@@ -229,7 +308,13 @@ struct HadithCatalogBook: Identifiable, Hashable {
             shortDescription: "The forty concise hadiths with the shortest, most elevated chains.",
             longDescription: "Collected by Shah Waliullah of Delhi (شَاه وَلِيُّ اللَّهِ الدِّهلَوِيُّ), the reviver of hadith studies in the Indian subcontinent.\n\nHe chose forty concise hadiths distinguished by their short, elevated chains of transmission: comprehensive words gathered in the briefest form.",
             aliases: ["shahwaliullah", "waliullah", "shahwaliullah40"],
-            arabicAliases: ["شاه ولي الله", "ولي الله الدهلوي", "الدهلوي"]
+            arabicAliases: ["شاه ولي الله", "ولي الله الدهلوي", "الدهلوي"],
+            name: Name(
+                meaning: "The Forty of Shah Waliullah: Waliullah means “friend of Allah”",
+                fullArabic: "الأَربَعِين",
+                fullTransliteration: "al-Arba’in",
+                fullMeaning: "The Forty"
+            )
         ),
         // Other books, chronologically.
         HadithCatalogBook(
@@ -239,9 +324,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ إِسمَاعِيلَ البُخَارِيُّ",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The book of manners, Imam al-Bukhari's own work on family and character.",
-            longDescription: "Its full title is al-Adab al-Mufrad, “the singular book of manners.”\n\nImam al-Bukhari’s (الإِمَامُ البُخَارِيُّ) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught; the gentler companion to his Sahih.",
+            longDescription: "Imam al-Bukhari’s (الإِمَامُ البُخَارِيُّ) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught; the gentler companion to his Sahih.",
             aliases: ["adab", "adabmufrad", "adabalmufrad", "aladabalmufrad"],
-            arabicAliases: ["الأدب المفرد", "الأدب"]
+            arabicAliases: ["الأدب المفرد", "الأدب"],
+            name: Name(
+                meaning: "The Book of Manners, Standing on Its Own: mufrad means “singled out,” apart from the chapter on manners in his Sahih",
+                fullArabic: "الأَدَب المُفرَد",
+                fullTransliteration: "al-Adab al-Mufrad",
+                fullMeaning: "Manners, Singled Out in a Book of Their Own"
+            )
         ),
         HadithCatalogBook(
             slug: "shamail_muhammadiyah",
@@ -250,9 +341,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإِمَامُ مُحَمَّدُ بنُ عِيسَى التِّرمِذِيُّ",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The portrait of the Prophet ﷺ, his appearance, habits, and character.",
-            longDescription: "Its full title is ash-Shama’il al-Muhammadiyyah wa’l-Khasa’il al-Mustafawiyyah, “the noble qualities of Muhammad ﷺ and the characteristics of the Chosen One.”\n\nImam at-Tirmidhi’s (الإِمَامُ التِّرمِذِيُّ) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character, gathered so that those who never saw him ﷺ could almost see him.",
+            longDescription: "Imam at-Tirmidhi’s (الإِمَامُ التِّرمِذِيُّ) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character, gathered so that those who never saw him ﷺ could almost see him.",
             aliases: ["shamail", "shamaail", "shamailmuhammadiyah"],
-            arabicAliases: ["الشمائل", "الشمائل المحمدية"]
+            arabicAliases: ["الشمائل", "الشمائل المحمدية"],
+            name: Name(
+                meaning: "The Noble Traits of Muhammad ﷺ",
+                fullArabic: "الشَمائِل المُحَمَّدِيَّة وَالخَصائِل المُصطَفَوِيَّة",
+                fullTransliteration: "ash-Shama’il al-Muhammadiyyah wa’l-Khasa’il al-Mustafawiyyah",
+                fullMeaning: "The Noble Qualities of Muhammad ﷺ and the Characteristics of the Chosen One"
+            )
         ),
         HadithCatalogBook(
             slug: "riyad_assalihin",
@@ -261,9 +358,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإِمَامُ يَحيَى بنُ شَرَفٍ النَّوَوِيُّ",
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
-            longDescription: "Its full title is Riyad as-Salihin min Kalam Sayyid al-Mursalin, “Gardens of the Righteous, from the words of the Master of the Messengers.” By Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran.\n\nPerhaps the most widely read hadith book in the world, a practical guide to living the Sunnah day by day.",
+            longDescription: "By Imam an-Nawawi (الإِمَامُ النَّوَوِيُّ): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran.\n\nPerhaps the most widely read hadith book in the world, a practical guide to living the Sunnah day by day.",
             aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen", "riad", "riadh"],
-            arabicAliases: ["رياض الصالحين", "رياض"]
+            arabicAliases: ["رياض الصالحين", "رياض"],
+            name: Name(
+                meaning: "Gardens of the Righteous",
+                fullArabic: "رِياض الصالِحِين مِن كَلام سَيِّد المُرسَلِين",
+                fullTransliteration: "Riyad as-Salihin min Kalam Sayyid al-Mursalin",
+                fullMeaning: "Gardens of the Righteous, from the Words of the Master of the Messengers ﷺ"
+            )
         ),
         HadithCatalogBook(
             slug: "mishkat_almasabih",
@@ -272,9 +375,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam al-Khatib at-Tabrizi", authorArabic: "الإِمَامُ الخَطِيبُ التِّبرِيزِيُّ",
             era: "d. c. 741 AH / 1340 CE",
             shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
-            longDescription: "Its full title is Mishkat al-Masabih, “the niche of the lamps.”\n\nAl-Khatib at-Tabrizi (الخَطِيبُ التِّبرِيزِيُّ) expanded al-Baghawi’s Masabih as-Sunnah: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
+            longDescription: "Al-Khatib at-Tabrizi (الخَطِيبُ التِّبرِيزِيُّ) expanded al-Baghawi’s Masabih as-Sunnah, “the lamps of the Sunnah”: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
             aliases: ["mishkat", "mishkaat", "mishkatalmasabih", "meshkat"],
-            arabicAliases: ["مشكاة المصابيح", "المشكاة", "مشكاة"]
+            arabicAliases: ["مشكاة المصابيح", "المشكاة", "مشكاة"],
+            name: Name(
+                meaning: "The Niche of the Lamps",
+                fullArabic: "مِشكاة المَصابِيح",
+                fullTransliteration: "Mishkat al-Masabih",
+                fullMeaning: "The Niche of the Lamps"
+            )
         ),
         HadithCatalogBook(
             slug: "bulugh_almaram",
@@ -283,9 +392,15 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Ibn Hajar al-Asqalani", authorArabic: "الإِمَامُ ابنُ حَجَرٍ العَسقَلَانِيُّ",
             era: "d. 852 AH / 1449 CE",
             shortDescription: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh.",
-            longDescription: "Its full title is Bulugh al-Maram min Adillat al-Ahkam, “attainment of the objective from the evidences of the rulings.”\n\nBy Ibn Hajar al-Asqalani (ابنُ حَجَرٍ العَسقَلَانِيُّ), the commentator of Sahih al-Bukhari: around 1,580 hadiths that serve as the evidences for Islamic legal rulings, each with its source noted; studied wherever fiqh is taught.",
+            longDescription: "By Ibn Hajar al-Asqalani (ابنُ حَجَرٍ العَسقَلَانِيُّ), the commentator of Sahih al-Bukhari: 1,767 hadiths in this edition that serve as the evidences for Islamic legal rulings, each with its source noted; studied wherever fiqh is taught.",
             aliases: ["bulugh", "buloogh", "bulughalmaram", "bulughmaram"],
-            arabicAliases: ["بلوغ المرام", "بلوغ"]
+            arabicAliases: ["بلوغ المرام", "بلوغ"],
+            name: Name(
+                meaning: "Attaining the Goal",
+                fullArabic: "بُلُوغ المَرام مِن أَدِلَّة الأَحكام",
+                fullTransliteration: "Bulugh al-Maram min Adillat al-Ahkam",
+                fullMeaning: "Attaining the Goal from the Evidences of the Rulings"
+            )
         ),
     ]
 
