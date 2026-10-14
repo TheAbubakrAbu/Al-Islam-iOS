@@ -323,6 +323,33 @@ private enum PageFindMemo {
 }
 
 /// Everything that names where the page reader should land, as ONE `onChange` value (see the handler).
+/// Where the page reader last stood, for page mode to re-open on (`QuranView.openMushafWhereLeftOff`).
+///
+/// Not the last-read ayah: that one is a DISPLAY preference ("Show Last Read Ayah"), and with it off
+/// (or after the Last Read row's "Delete Forever", which turns it off) nothing was recorded at all, so
+/// every re-open - leaving the tab, the app, a relaunch - landed back on al-Fatiha (Abu, 2026-10-14:
+/// "I go to Tawbah then leave the app then come back it goes to Fatiha"). Plain defaults, no publish:
+/// nothing on screen shows it, so it is written on every page turn without the debounce last read needs.
+enum MushafResumePosition {
+    private static let surahKey = "mushafResumeSurah"
+    private static let ayahKey = "mushafResumeAyah"
+
+    static func save(surah: Int, ayah: Int) {
+        guard surah > 0, ayah > 0 else { return }
+        let defaults = UserDefaults.standard
+        guard defaults.integer(forKey: surahKey) != surah || defaults.integer(forKey: ayahKey) != ayah else { return }
+        defaults.set(surah, forKey: surahKey)
+        defaults.set(ayah, forKey: ayahKey)
+    }
+
+    static func load() -> (surah: Int, ayah: Int)? {
+        let defaults = UserDefaults.standard
+        let surah = defaults.integer(forKey: surahKey)
+        let ayah = defaults.integer(forKey: ayahKey)
+        return surah > 0 && ayah > 0 ? (surah, ayah) : nil
+    }
+}
+
 private struct ReseedKey: Equatable {
     let surahID: Int
     let ayahID: Int?
@@ -2724,6 +2751,8 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     private func saveLastRead(surahID: Int, ayahID: Int) {
+        // Where page mode re-opens, kept whatever "Show Last Read Ayah" says (see `MushafResumePosition`).
+        MushafResumePosition.save(surah: surahID, ayah: ayahID)
         // Debounced: the AppStorage write + widget snapshot + reloadAllTimelines ran inline on every page
         // turn, which was the single biggest per-swipe cost in page mode. Only where the flipping STOPS
         // matters, so page turns just note the position and the write settles ~0.8s after the last one.

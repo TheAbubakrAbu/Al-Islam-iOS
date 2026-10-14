@@ -1036,15 +1036,31 @@ struct QuranView: View {
         #if os(iOS)
         guard usesColumnNavigation || path.isEmpty else { return }
 
-        if reading.lastReadSurah > 0,
-           reading.lastReadAyah > 0,
-           quranData.surah(reading.lastReadSurah) != nil {
-            push(surahID: reading.lastReadSurah, ayahID: reading.lastReadAyah)
+        // A page turned in the last 0.8 s still has its last-read write on the debounce timer: the
+        // tab-exit re-open (0.35 s after leaving) read the position BEFORE it.
+        settings.flushPendingLastRead()
+        if let resume = mushafResumePosition {
+            push(surahID: resume.surah, ayahID: resume.ayah)
         } else {
             push(surahID: 1)
         }
         #endif
     }
+
+    #if os(iOS)
+    /// Where page mode re-opens: the last-read ayah while it is being kept, else where the page reader
+    /// itself last stood (`MushafResumePosition`, kept even with "Show Last Read Ayah" off or the Last
+    /// Read row removed), else a stale last-read left from before it was turned off. Nil means al-Fatiha.
+    private var mushafResumePosition: (surah: Int, ayah: Int)? {
+        let lastRead: (surah: Int, ayah: Int)? = reading.lastReadSurah > 0
+            && reading.lastReadAyah > 0
+            && quranData.surah(reading.lastReadSurah) != nil
+            ? (reading.lastReadSurah, reading.lastReadAyah) : nil
+        if settings.saveLastReadAyah, let lastRead { return lastRead }
+        if let resume = MushafResumePosition.load(), quranData.surah(resume.surah) != nil { return resume }
+        return lastRead
+    }
+    #endif
 
     // Both fetchers split the work by thread-safety, not by cost: the snapshot HANDOFF happens on the main
     // actor (it reads live index arrays whose writers publish on main - reading them from this Task's
