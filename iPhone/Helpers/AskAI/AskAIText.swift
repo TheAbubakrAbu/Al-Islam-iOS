@@ -655,7 +655,9 @@ enum AskAIText {
             }
         case .scripture, .hadith, .general:
             if let topic {
+                #if HAS_HADITH
                 if question.intent != .hadith { add("What do the hadith say about \(topic)?") }
+                #endif
                 add("Is there a dua about \(topic)?")
                 if let firstAyah { add("Explain \(firstAyah.title) in more detail") }
                 add("Which surah speaks most about \(topic)?")

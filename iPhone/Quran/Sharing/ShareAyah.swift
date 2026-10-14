@@ -1,17 +1,8 @@
 #if os(iOS)
 import SwiftUI
 
-enum ActionMode: String {
-    case text
-    case image
-}
-
-enum ShareAyahRender {
-    /// The widest layout measure a share image is drawn at. iPhones are all narrower than this, so
-    /// they render at their real screen width as always; iPad/Mac (where `UIScreen.main` reports the
-    /// full 800-1400pt display regardless of the window) clamp down to a phone-proportioned card.
-    static let maxImageWidth: CGFloat = 440
-}
+// `ActionMode`, `ShareAyahRender` and the Allah ink (`ShareAllahInk`) are in
+// iPhone/Helpers/UI/ShareSupport.swift, shared with the hadith and Name of Allah sheets.
 
 /// The share sheet's Smart Ayah Matching switch (`smartAyahMatching` below), and what the static Copy
 /// Image path reads for the same answer: one key, so the two can never drift apart.
@@ -209,36 +200,12 @@ struct ShareAyahSheet: View {
         return ranges
     }
 
-    private static func allahHighlightNSRanges(in source: String) -> [NSRange] {
-        var ranges: [NSRange] = []
-
-        var englishStart = source.startIndex
-        while englishStart < source.endIndex,
-              let match = source.range(
-                of: "Allah",
-                options: [.caseInsensitive, .diacriticInsensitive],
-                range: englishStart..<source.endIndex
-              ) {
-            ranges.append(NSRange(match, in: source))
-            englishStart = match.upperBound
-        }
-
-        for range in HighlightedSnippet.arabicAllahRanges(in: source) {
-            ranges.append(NSRange(range, in: source))
-        }
-
-        return ranges
-    }
-
     // Internal (not private): HadithShareSheet applies the SAME Allah-name reddening to its share card
     // and text preview, so the two share surfaces render the names identically.
     /// `color`: the share card passes its backdrop's own Allah ink (`ShareBackdrop.Palette.allah`).
     static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool,
                                     color: UIColor = .red) {
-        guard enabled, attributed.length > 0 else { return }
-        for range in allahHighlightNSRanges(in: source) {
-            attributed.addAttribute(.foregroundColor, value: color, range: range)
-        }
+        ShareAllahInk.apply(to: attributed, source: source, enabled: enabled, color: color)
     }
 
     private static func allahHighlightedAttributedString(
@@ -253,14 +220,7 @@ struct ShareAyahSheet: View {
     }
 
     static func allahHighlightedSwiftUIText(_ string: String, baseColor: Color, enabled: Bool) -> AttributedString {
-        var attributed = AttributedString(string)
-        attributed.foregroundColor = baseColor
-        guard enabled else { return attributed }
-        let mutable = NSMutableAttributedString(attributedString: NSAttributedString(attributed))
-        for range in allahHighlightNSRanges(in: string) {
-            mutable.addAttribute(.foregroundColor, value: UIColor.red, range: range)
-        }
-        return AttributedString(mutable)
+        ShareAllahInk.swiftUIText(string, baseColor: baseColor, enabled: enabled)
     }
 
     private static func shareArabicImageAttributedText(
@@ -1482,7 +1442,7 @@ extension ShareAyahSheet {
 }
 #endif
 
-extension Color { var uiColor: UIColor { UIColor(self) } }
+// `Color.uiColor` is in iPhone/Helpers/UI/ShareSupport.swift (ShareName.swift draws with it too).
 
 private extension UIColor {
     func isVisuallyEqual(to other: UIColor) -> Bool {

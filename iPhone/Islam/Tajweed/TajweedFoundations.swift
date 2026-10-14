@@ -210,9 +210,11 @@ struct TajweedFoundationsView: View {
 
                 referenceSection
 
+                #if HAS_QURAN
                 if TajweedLessonsStore.isBundled {
                     courseSection
                 }
+                #endif
 
                 learnMoreSection
 
@@ -233,6 +235,7 @@ struct TajweedFoundationsView: View {
         )) {
             if let heroTopic { heroTopic.destination }
         }
+        #if HAS_QURAN
         .sheet(isPresented: $showTajweedLegend) {
             NavigationView {
                 TajweedLegendView()
@@ -240,6 +243,7 @@ struct TajweedFoundationsView: View {
             .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
+        #endif
         #endif
         #if DEBUG
         .debugPushDestination(isPresented: $debugOpenTopic) {
@@ -259,7 +263,8 @@ struct TajweedFoundationsView: View {
     /// alphabet's two indexes of the letters tajweed is about.
     private var referenceSection: some View {
         Section(header: Text("QUICK REFERENCE")) {
-            #if os(iOS)
+            // The legend is the Quran reader's colors, so it comes with the reader.
+            #if os(iOS) && HAS_QURAN
             Button {
                 Settings.shared.hapticFeedback()
                 showTajweedLegend = true
@@ -288,6 +293,7 @@ struct TajweedFoundationsView: View {
 
     // MARK: The course
 
+    #if HAS_QURAN
     /// The other tajweed resource: the same rules taught in order. The course links back here, so the
     /// row greys out when the course is already on the stack.
     private var courseSection: some View {
@@ -310,6 +316,7 @@ struct TajweedFoundationsView: View {
         TajweedLinkLabel(systemImage: "graduationcap.fill", title: "Tajweed Course",
                          caption: "The same rules taught in order, lesson by lesson, with ayahs to play and a quiz in each")
     }
+    #endif
 
     // MARK: Learn more
 

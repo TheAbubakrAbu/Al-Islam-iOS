@@ -51,6 +51,7 @@ struct DailyReminderEntry: Identifiable, Equatable {
         /// "1923" -> (1923, nil); "35a" -> (35, "a"); "1211aa" -> (1211, "aa").
         var parts: (number: Int, suffix: String?) { HadithCitation.parts(citation) }
 
+        #if HAS_HADITH
         /// A link by row ("#7393", the shelf's own convention in `HadithQuoteReference`): what the
         /// Hadith of the Day writes, because a citation does not always name one row (Tirmidhi and
         /// Bulugh repeat some; Muslim's Introduction shares its numbers with Book 1). Reopened by
@@ -67,6 +68,7 @@ struct DailyReminderEntry: Identifiable, Equatable {
             let parts = self.parts
             return data.hadith(referenced: parts.number, suffix: parts.suffix)
         }
+        #endif
     }
 
     let id: String
@@ -122,8 +124,15 @@ struct DailyReminderEntry: Identifiable, Equatable {
 
 /// The screen a card opens.
 enum DailyReminderTarget: Equatable {
+    // The verse opens the Quran tab and the hadith door the Hadith tab, so each exists only where
+    // its tab ships (`IslamOpenTarget.hadithTab` is HAS_QURAN || HAS_HADITH, like here). Elsewhere
+    // those cards carry no "Open" button.
+    #if HAS_QURAN
     case ayah(Int, Int)
+    #endif
+    #if HAS_QURAN || HAS_HADITH
     case hadithTab
+    #endif
     case duas
     case adhkar
     case names(Int?)
@@ -132,10 +141,14 @@ enum DailyReminderTarget: Equatable {
         guard let encoded else { return nil }
         let parts = encoded.split(separator: ":").map(String.init)
         switch parts.first {
+        #if HAS_QURAN
         case "ayah":
             guard parts.count == 3, let s = Int(parts[1]), let a = Int(parts[2]) else { return nil }
             self = .ayah(s, a)
+        #endif
+        #if HAS_QURAN || HAS_HADITH
         case "hadith": self = .hadithTab
+        #endif
         case "duas": self = .duas
         case "adhkar": self = .adhkar
         case "names": self = .names(parts.count > 1 ? Int(parts[1]) : nil)
@@ -145,8 +158,12 @@ enum DailyReminderTarget: Equatable {
 
     var buttonLabel: String {
         switch self {
+        #if HAS_QURAN
         case .ayah: return "Read in the Quran"
+        #endif
+        #if HAS_QURAN || HAS_HADITH
         case .hadithTab: return "Open Hadith"
+        #endif
         case .duas: return "Open Duas"
         case .adhkar: return "Open Dhikr"
         case .names: return "Open the 99 Names"
@@ -157,8 +174,12 @@ enum DailyReminderTarget: Equatable {
     @MainActor
     func open() {
         switch self {
+        #if HAS_QURAN
         case .ayah(let s, let a): AppNavigation.shared.open(.ayah(s, a))
+        #endif
+        #if HAS_QURAN || HAS_HADITH
         case .hadithTab: AppNavigation.shared.openIslam(.hadithTab)
+        #endif
         case .duas: AppNavigation.shared.openIslam(.duas)
         case .adhkar: AppNavigation.shared.openIslam(.adhkar)
         case .names(let n): AppNavigation.shared.openIslam(.names(n))
@@ -236,6 +257,11 @@ final class DailyReminderStore: ObservableObject {
     /// root that reads the corpus; safe to call again from anywhere.
     func prewarm() {
         guard Self.isBundled else { return }
+        #if !HAS_QURAN
+        // A verse card's words come from the quote pack here (`texts(for:)`): read it off-main now,
+        // so it is in by the time the Islam tab draws today's card.
+        Task.detached(priority: .utility) { await QuranQuoteSource.waitUntilReady() }
+        #endif
         lock.lock()
         let needed = cached == nil && !loadFailed && !loading
         if needed {
@@ -299,18 +325,35 @@ final class DailyReminderStore: ObservableObject {
 
     /// The Arabic and English a card shows: a verse from the Quran itself (an O(1) lookup, in the
     /// Hafs text every face carries), everything else as written.
+    /// (Without the Quran text, Al-Adhan's case, a verse is read from the sibling quote pack,
+    /// `QuranQuoteSource`, which Scripts/build_sibling_quote_packs.py cuts from Al-Islam's own Quran.)
     func texts(for entry: DailyReminderEntry) -> (arabic: String, english: String) {
+        #if !HAS_QURAN
+        // A verse card carries only its reference (pack v3); the quote pack has the words, once read
+        // (`prewarm` starts that read at app init, beside the corpus parse).
+        if entry.kind == .ayah, entry.arabic.isEmpty, entry.english.isEmpty,
+           let s = entry.surah, let a = entry.ayah,
+           let reference = QuranQuoteReference("\(s):\(a)"),
+           let quote = QuranQuoteSource.resolve(reference) {
+            return (quote.arabic, quote.english)
+        }
+        #endif
+        #if HAS_QURAN
         // A verse card, or a dua that is an ayah: the Quran itself.
         if let s = entry.surah, let a = entry.ayah, entry.kind == .ayah || entry.kind == .dua,
            let ayah = QuranData.shared.ayah(surah: s, ayah: a) {
             return (ayah.displayArabicText(surahId: s, clean: false, qiraahOverride: ""),
                     entry.kind == .ayah ? ayah.textEnglishSaheeh : entry.english)
         }
+        #endif
         return (entry.arabic, entry.english)
     }
 
     // MARK: Widgets
 
+    // The Reminder of the Day and Name of Allah widgets are in the Quran widget bundle (Widget/Quran),
+    // so the blob they read is written only where that bundle ships.
+    #if HAS_QURAN
     static let widgetKinds = ["DailyReminderWidget", "NameOfAllahWidget"]
     private var widgetWriteInFlight = false
     /// Every write of the daily blob goes through here, so the once-a-day rebuild and the resolved
@@ -451,6 +494,7 @@ final class DailyReminderStore: ObservableObject {
             Settings.reloadWidgetKinds(Self.widgetKinds)
         }
     }
+    #endif
 
     // MARK: Parsing
 
@@ -510,6 +554,7 @@ final class DailyReminderStore: ObservableObject {
     /// nothing downstream (the card, the widget blob, a saved reflection) knows the difference.
     /// A reference that cannot be read leaves the card's text empty rather than stale.
     private static func resolveReferences(_ entries: [DailyReminderEntry]) -> [DailyReminderEntry] {
+        #if HAS_HADITH
         var books: [String: HadithBookData] = [:]
         func book(_ slug: String) -> HadithBookData? {
             if let open = books[slug] { return open }
@@ -518,6 +563,20 @@ final class DailyReminderStore: ObservableObject {
             books[slug] = data
             return data
         }
+        func narration(_ link: DailyReminderEntry.HadithLink) -> (arabic: String, english: String)? {
+            guard let data = book(link.slug), let hadith = link.resolve(in: data) else { return nil }
+            let text = hadith.allText
+            return (text.arabic, text.text)
+        }
+        #else
+        // An app without the hadith shelf reads the narration from HadithQuotes.json.deflate
+        // (`HadithQuoteSource`), which carries the reminder links as well as the articles'.
+        func narration(_ link: DailyReminderEntry.HadithLink) -> (arabic: String, english: String)? {
+            guard let reference = HadithQuoteReference("\(link.slug):\(link.citation)"),
+                  let text = HadithQuoteSource.read(reference) else { return nil }
+            return (text.arabic, text.text)
+        }
+        #endif
         var fortress: HisnDuasStore.Library?
         var fortressAsked = false
         func words(_ text: String, _ span: ClosedRange<Int>) -> String {
@@ -529,10 +588,9 @@ final class DailyReminderStore: ObservableObject {
             var arabic = entry.arabic
             var english = entry.english
             if let link = entry.hadith, entry.arabicWords != nil || entry.englishWords != nil {
-                if let data = book(link.slug), let hadith = link.resolve(in: data) {
-                    let text = hadith.allText
+                if let text = narration(link) {
                     if let span = entry.arabicWords { arabic = words(text.arabic, span) }
-                    if let span = entry.englishWords { english = words(text.text, span) }
+                    if let span = entry.englishWords { english = words(text.english, span) }
                 }
             }
             if let duaID = entry.dua {
@@ -557,6 +615,56 @@ final class DailyReminderStore: ObservableObject {
         }
     }
 }
+
+#if !HAS_QURAN
+// MARK: - Cross-tab navigation (an app without the Quran)
+
+// In an app with the Quran these live in the Quran module beside the Sunnah reminders
+// (SunnahReminders.swift), which also publish a Quran target. Without it, the Adhan and Islam halves
+// live here.
+
+/// Where a Control Center control lands on the Adhan tab. `tab` is the tab itself (today's prayer
+/// times, which is what the tab already opens on); `qibla` raises the compass sheet.
+enum AdhanOpenTarget: Equatable {
+    case tab
+    case qibla
+}
+
+/// Where a Reminder of the Day card opens on the Islam tab.
+enum IslamOpenTarget: Equatable {
+    /// The Islam tab itself, nothing pushed: where About You lands someone who is there to learn,
+    /// on the Start Here guide.
+    case tab
+    case duas
+    case adhkar
+    case names(Int?)
+}
+
+/// Cross-tab navigation requests. A card's "Open" or a control has no view in hand; it drops the
+/// target here, the tab view switches tabs on the publish, and the tab pushes and clears it.
+/// `@Published` replays its value to a late subscriber, so a cold launch from a card still lands.
+@MainActor
+final class AppNavigation: ObservableObject {
+    static let shared = AppNavigation()
+    private init() {}
+
+    /// The Adhan tab's pending destination. Only the Control Center controls set it (2026-10-07):
+    /// `MainTabView` switches to the tab on the publish, and the tab opens the matching sheet and
+    /// clears it, so a control reaches the SAME sheet a tile does rather than a second copy of it.
+    @Published var pendingAdhan: AdhanOpenTarget?
+
+    func openAdhan(_ target: AdhanOpenTarget) {
+        pendingAdhan = target
+    }
+
+    /// The Islam tab's pending destination: MainTabView switches tabs, IslamView pushes and clears it.
+    @Published var pendingIslam: IslamOpenTarget?
+
+    func openIslam(_ target: IslamOpenTarget) {
+        pendingIslam = target
+    }
+}
+#endif
 
 // MARK: - Today's card, resolved against the app's own daily picks
 
@@ -592,8 +700,10 @@ final class DailyReminderResolver: ObservableObject {
 
     private var cancellables: Set<AnyCancellable> = []
     /// The Hadith of the Day's text, read off the main actor once per pick (the pack decompresses).
+    #if HAS_HADITH
     private var hadithText: (key: String, arabic: String, english: String)?
     private var hadithTextInFlight: String?
+    #endif
     private enum HisnLoad { case idle, loading, loaded, failed }
     private var hisnLoad: HisnLoad = .idle
     private var rolloverTimer: Timer?
@@ -603,14 +713,18 @@ final class DailyReminderResolver: ObservableObject {
         let onMain = DispatchQueue.main
         DailyReminderStore.shared.$isLoaded.receive(on: onMain)
             .sink { [weak self] _ in self?.resolveSoon() }.store(in: &cancellables)
+        #if HAS_HADITH
         HadithStore.shared.$daily.receive(on: onMain)
             .sink { [weak self] _ in self?.resolveSoon() }.store(in: &cancellables)
+        #endif
         NamesViewModel.shared.$namesOfAllah.receive(on: onMain)
             .sink { [weak self] _ in self?.resolveSoon() }.store(in: &cancellables)
         NamesDetailsStore.shared.readiness.$isLoaded.receive(on: onMain)
             .sink { [weak self] _ in self?.resolveSoon() }.store(in: &cancellables)
+        #if HAS_QURAN
         QuranData.shared.$loadState.receive(on: onMain)
             .sink { [weak self] _ in self?.resolveSoon() }.store(in: &cancellables)
+        #endif
         // The ayah shuffle, the Fajr rollover setting, a location that moves Fajr: all `Settings`
         // publishes. Throttled, and a resolve that lands on the same card publishes nothing, so
         // the prayer countdown's ticks cost a handful of lookups and an equality check each.
@@ -635,8 +749,20 @@ final class DailyReminderResolver: ObservableObject {
         }
         let pick: Pick
         switch base.kind {
+        #if HAS_QURAN
         case .ayah: pick = ayahOfTheDayCard()
+        #else
+        // No Quran tab here, so a verse day keeps the pack's own card (its words from the quote
+        // pack, `texts(for:)`) rather than the reader's Ayah of the Day.
+        case .ayah: pick = .unavailable
+        #endif
+        #if HAS_HADITH
         case .hadith: pick = hadithOfTheDayCard()
+        #else
+        // No Hadith tab here, so a hadith day keeps the pack's own card rather than the reader's
+        // Hadith of the Day (`.unavailable` publishes `base`).
+        case .hadith: pick = .unavailable
+        #endif
         case .dua: pick = duaOfTheDayCard()
         case .name: pick = nameOfTheDayCard()
         case .sunnah, .dhikr: pick = .unavailable
@@ -661,8 +787,10 @@ final class DailyReminderResolver: ObservableObject {
               Settings.shared.dailyDayIndex(), entry?.kind.rawValue ?? "-", entry?.id ?? "-",
               appPick ? 1 : 0, entry?.source ?? "-")
         #endif
+        #if HAS_QURAN
         guard syncWidget else { return }
         DailyReminderStore.shared.writeResolvedWidgetCard(appPick ? entry : nil)
+        #endif
     }
 
     /// One shot at the day's turn (plus a little), so a card left on screen overnight changes with
@@ -679,6 +807,7 @@ final class DailyReminderResolver: ObservableObject {
 
     // MARK: The four picks
 
+    #if HAS_QURAN
     /// The Quran tab's Ayah of the Day (shuffle included); the text is read at render time.
     private func ayahOfTheDayCard() -> Pick {
         let quran = QuranData.shared
@@ -695,7 +824,9 @@ final class DailyReminderResolver: ObservableObject {
             target: "ayah:\(ref.surahID):\(ref.ayahID)", surah: ref.surahID, ayah: ref.ayahID,
             repeatCount: nil, hadith: nil))
     }
+    #endif
 
+    #if HAS_HADITH
     /// The Hadith tab's Hadith of the Day (shuffle included), once its text has been read off-main.
     private func hadithOfTheDayCard() -> Pick {
         let store = HadithStore.shared
@@ -734,6 +865,7 @@ final class DailyReminderResolver: ObservableObject {
             self.resolve()
         }
     }
+    #endif
 
     /// The Dua screen's Dua of the Day, from the Fortress of the Muslim.
     private func duaOfTheDayCard() -> Pick {
@@ -938,7 +1070,9 @@ struct ReminderOfTheDayCard: View {
     /// Reflections or Today screen by itself (Quality Guide G2).
     @Binding var openDoor: HeaderDoor?
 
+    #if HAS_HADITH
     @State private var hadithLink: DailyReminderEntry.HadithLink?
+    #endif
 
     /// Which header pill was tapped. One piece of state driving ONE destination - see the note in
     /// the header above.
@@ -949,8 +1083,17 @@ struct ReminderOfTheDayCard: View {
 
     private var accent: Color { appearance.accent }
 
+    #if !HAS_QURAN
+    /// Flips once the quote pack has been read, so a verse card drawn before it redraws with its
+    /// words (`DailyReminderStore.texts(for:)` reads the pack in an app without the Quran).
+    @State private var quotesRead = false
+    #endif
+
     var body: some View {
         let _ = RenderCounter.hit("ReminderOfTheDayCard")
+        #if !HAS_QURAN
+        let _ = quotesRead
+        #endif
         let texts = DailyReminderStore.shared.texts(for: entry)
         let target = DailyReminderTarget(encoded: entry.target)
         let kept = reflections.has(entry.reflectionKey)
@@ -1004,6 +1147,7 @@ struct ReminderOfTheDayCard: View {
             }
 
             HStack(spacing: 16) {
+                #if HAS_HADITH
                 if let link = entry.hadith {
                     Button {
                         Settings.shared.hapticFeedback()
@@ -1021,6 +1165,17 @@ struct ReminderOfTheDayCard: View {
                     }
                     .buttonStyle(.plain)
                 }
+                #else
+                if let target {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        target.open()
+                    } label: {
+                        Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                    }
+                    .buttonStyle(.plain)
+                }
+                #endif
 
                 Button {
                     Settings.shared.hapticFeedback()
@@ -1037,9 +1192,18 @@ struct ReminderOfTheDayCard: View {
             .padding(.top, 2)
         }
         .padding(.vertical, 6)
+        #if HAS_HADITH
         .sheet(item: $hadithLink) { link in
             ReminderHadithSheet(link: link)
         }
+        #endif
+        #if !HAS_QURAN
+        .task {
+            guard entry.kind == .ayah, !quotesRead else { return }
+            await QuranQuoteSource.waitUntilReady()
+            quotesRead = true
+        }
+        #endif
     }
 }
 
@@ -1178,8 +1342,10 @@ private struct ReminderOfTheDayHeader: View {
 
 struct SavedReflectionsView: View {
     @ObservedObject private var reflections = SavedReflectionsStore.shared
+    #if HAS_HADITH
     /// The one sheet host for the rows' "Read the hadith" doors (one host per List, the app's rule).
     @State private var hadithLink: DailyReminderEntry.HadithLink?
+    #endif
 
     var body: some View {
         let _ = RenderCounter.hit("SavedReflectionsView")
@@ -1200,7 +1366,7 @@ struct SavedReflectionsView: View {
             } else {
                 Section(header: SectionPillHeader(title: "SAVED REFLECTIONS", count: reflections.items.count)) {
                     ForEach(reflections.items) { item in
-                        SavedReflectionRow(item: item) { link in hadithLink = link }
+                        savedRow(item)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     reflections.remove(id: item.id)
@@ -1216,17 +1382,29 @@ struct SavedReflectionsView: View {
         .applyConditionalListStyle()
         .navigationTitle("Saved Reflections")
         .navigationBarTitleDisplayMode(.inline)
+        #if HAS_HADITH
         .sheet(item: $hadithLink) { link in
             ReminderHadithSheet(link: link)
         }
+        #endif
+    }
+
+    private func savedRow(_ item: SavedReflection) -> SavedReflectionRow {
+        #if HAS_HADITH
+        SavedReflectionRow(item: item) { link in hadithLink = link }
+        #else
+        SavedReflectionRow(item: item)
+        #endif
     }
 }
 
 private struct SavedReflectionRow: View {
     @Environment(\.appearance) private var appearance
     let item: SavedReflection
+    #if HAS_HADITH
     /// Opens the narration a kept hadith card cites, in the List's sheet host.
     let onOpenHadith: (DailyReminderEntry.HadithLink) -> Void
+    #endif
 
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -1264,6 +1442,7 @@ private struct SavedReflectionRow: View {
             Text(item.source)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+            #if HAS_HADITH
             if let link = item.hadithLink {
                 Button {
                     Settings.shared.hapticFeedback()
@@ -1285,6 +1464,19 @@ private struct SavedReflectionRow: View {
                 }
                 .buttonStyle(.plain)
             }
+            #else
+            if let target, item.kind != "hadith" {
+                Button {
+                    Settings.shared.hapticFeedback()
+                    target.open()
+                } label: {
+                    Label(target.buttonLabel, systemImage: "arrow.up.right.square")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(appearance.accent)
+                }
+                .buttonStyle(.plain)
+            }
+            #endif
         }
         .padding(.vertical, 4)
     }
@@ -1292,6 +1484,7 @@ private struct SavedReflectionRow: View {
 
 // MARK: - The hadith behind a card
 
+#if HAS_HADITH
 /// The narration a hadith card cites, in the Hadith tab's own row, so the reader sees the grading
 /// and can bookmark or share it from here.
 struct ReminderHadithSheet: View {
@@ -1342,6 +1535,7 @@ struct ReminderHadithSheet: View {
     }
 }
 #endif
+#endif
 
 extension Settings {
     /// What follows the "Turn Over at Fajr" switch, from whichever screen flipped it: the Ayah of
@@ -1349,7 +1543,9 @@ extension Settings {
     /// and the day just changed its boundary. (Only the Quran settings page did this; flipped from
     /// the Islam settings or a help door, the widgets kept the old boundary until the next day.)
     func dailyRolloverSwitchChanged() {
+        #if HAS_QURAN
         refreshQuranWidgets(.ayahOfTheDay)
         DailyReminderStore.shared.refreshWidgets(force: true)
+        #endif
     }
 }

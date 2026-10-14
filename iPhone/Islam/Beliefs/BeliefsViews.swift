@@ -1399,6 +1399,8 @@ struct TajweedView: View {
                     ArticleLead("In short: Tajweed is the science of reciting the Quran correctly: giving each letter its proper articulation and every rule its due.")
                 }
 
+                // The legend is the Quran reader's (TajweedLegendView.swift), so the door ships with it.
+                #if HAS_QURAN
                 Section(header: ArticleHeader("TAJWEED LEGEND")) {
                     #if os(iOS)
                     Button {
@@ -1418,6 +1420,7 @@ struct TajweedView: View {
                     }
                     #endif
                 }
+                #endif
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     Text(articleMarkdown: "Tajweed (تَجوِيد) means “to make well, beautify, or improve,” from the root **j-w-d (ج و د)**. In the context of the Quran, it refers to the set of rules for proper pronunciation during Quran recitation, ensuring each letter is articulated with precision.")
@@ -1472,6 +1475,7 @@ struct TajweedView: View {
                         tajweedRowLabel("Tajweed Foundations", caption: "Every rule on a page of its own, with examples and the letters it applies to")
                     }
 
+                    #if HAS_QURAN
                     if TajweedLessonsStore.isBundled {
                         OpenScreenLink(screen: .tajweedCourse) {
                             TajweedCourseView()
@@ -1479,16 +1483,19 @@ struct TajweedView: View {
                             tajweedRowLabel("Tajweed Course", caption: "The rules taught in order, lesson by lesson, with ayahs to play and a quiz in each")
                         }
                     }
+                    #endif
                     #else
                     NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
                         tajweedRowLabel("Tajweed Foundations", caption: "Every rule on a page of its own, with examples and the letters it applies to")
                     }
 
+                    #if HAS_QURAN
                     if TajweedLessonsStore.isBundled {
                         NavigationLink(destination: LazyDestination { TajweedCourseView() }) {
                             tajweedRowLabel("Tajweed Course", caption: "The rules taught in order, lesson by lesson")
                         }
                     }
+                    #endif
                     #endif
                 }
 
@@ -1510,7 +1517,7 @@ struct TajweedView: View {
         .openScreen(.tajweedArticle)
         #endif
         .selectableArticleList(article: "TajweedView")
-        #if os(iOS)
+        #if os(iOS) && HAS_QURAN
         .sheet(isPresented: $showTajweedLegend) {
             NavigationView {
                 TajweedLegendView()
@@ -1579,6 +1586,8 @@ struct JuzView: View {
                     ScriptureQuote(hadith: "abudawud:1394", cite: "Sunan Abu Dawud 1394", arabic: 39...47, english: 4...19)
                 }
 
+                // The juz names are the Quran model's table (`QuranData.juzList`), so the list ships with it.
+                #if HAS_QURAN
                 // Each Juz is named for the word it opens with, and that name is Arabic. Listing them by number
                 // alone (which is all this screen used to do) leaves out the thing they are actually called.
                 Section(header: ArticleHeader("THE THIRTY JUZ")) {
@@ -1617,6 +1626,7 @@ struct JuzView: View {
                         .padding(.vertical, 2)
                     }
                 }
+                #endif
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("The thirty Juz are a practical division for reading and memorization, not part of the revelation's meaning, helping Muslims complete the Quran regularly.")
@@ -1829,6 +1839,8 @@ struct QiraatView: View {
                 // the riwayat actually differ, ayah by ayah, with every reading side by side.
                 #if os(iOS)
                 Section(header: ArticleHeader("EXPLORE")) {
+                    // The explorer reads every riwayah's text, so it comes with the Quran.
+                    #if HAS_QURAN
                     OpenScreenLink(screen: .qiraatExplorer) {
                         QiraatExplorerView()
                     } label: {
@@ -1841,6 +1853,7 @@ struct QiraatView: View {
                         QiraatDoorRow(systemImage: "arrow.left.arrow.right", title: "Compare Two Riwayat",
                                       subtitle: "Pick any two riwayat and step through the places where they part ways")
                     }
+                    #endif
                     OpenScreenLink(screen: .qiraatIsnadIndex) {
                         QiraatIsnadIndexView()
                     } label: {
@@ -2196,6 +2209,7 @@ struct QiraatView: View {
             .themedListRowBackground()
         }
         #if DEBUG && os(iOS)
+        #if HAS_QURAN
         .debugPushDestination(isPresented: $debugOpenExplorer) {
             // "-qiraatExplorerMode duel" opens Compare Two instead of All Riwayat.
             if let place = Self.debugExplorerPlace {
@@ -2208,6 +2222,7 @@ struct QiraatView: View {
                 QiraatExplorerView()
             }
         }
+        #endif
         .debugPushDestination(isPresented: $debugOpenNarrator) {
             if let tag = Self.debugNarratorTag, let profile = QiraatProfiles.narrator(tag: tag) {
                 RiwayahNarratorDetailView(profile: profile)

@@ -8,6 +8,7 @@ import SwiftUI
 
 // MARK: - The pages a result can land on
 
+#if HAS_QURAN
 /// The Quran settings' sub-screens, each a row on the Quran Settings root.
 enum SettingsQuranPage: String, CaseIterable, Hashable {
     case recitation, readingView, arabicText, englishText, testMode, highlightThemes, sunnahReminders, favorites
@@ -52,7 +53,9 @@ enum SettingsQuranPage: String, CaseIterable, Hashable {
         }
     }
 }
+#endif
 
+#if HAS_ADHAN
 /// The prayer settings' sub-screens.
 enum SettingsAdhanPage: String, CaseIterable, Hashable {
     case prayerCalculation, travelingMode, optionalPrayers, manualOffsets, customPrayerNames, sky, skyColors
@@ -96,13 +99,18 @@ enum SettingsAdhanPage: String, CaseIterable, Hashable {
 
 /// The notification settings' sub-screens.
 enum SettingsNotificationsPage: String, CaseIterable, Hashable {
-    case prayerReminders, naggingMode, sunnahReminders
+    case prayerReminders, naggingMode
+    #if HAS_QURAN
+    case sunnahReminders
+    #endif
 
     var title: String {
         switch self {
         case .prayerReminders: return "Prayer Reminders"
         case .naggingMode: return "Nagging Mode"
+        #if HAS_QURAN
         case .sunnahReminders: return "Sunnah Reminders"
+        #endif
         }
     }
 
@@ -110,7 +118,9 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
         switch self {
         case .prayerReminders: return "bell.and.waves.left.and.right.fill"
         case .naggingMode: return "exclamationmark.bubble.fill"
+        #if HAS_QURAN
         case .sunnahReminders: return "bell.badge"
+        #endif
         }
     }
 
@@ -118,11 +128,15 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
         switch self {
         case .prayerReminders: return "Per-prayer alerts and early warnings"
         case .naggingMode: return "Asks \u{201C}Did you pray?\u{201D} until you answer"
+        #if HAS_QURAN
         case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
+        #endif
         }
     }
 }
+#endif
 
+#if HAS_HADITH
 /// The hadith settings' sub-screens.
 enum SettingsHadithPage: String, CaseIterable, Hashable {
     case readingView, arabicText, englishText
@@ -151,11 +165,15 @@ enum SettingsHadithPage: String, CaseIterable, Hashable {
         }
     }
 }
+#endif
 
 /// A sub-screen of Islam Settings - the fourth area, for everything that is not the Quran, the prayer
 /// times or the hadith books.
 enum SettingsIslamPage: String, CaseIterable, Hashable {
-    case arabicText, textSize, alphabet, libraries, sunnahReminders
+    case arabicText, textSize, alphabet, libraries
+    #if HAS_QURAN
+    case sunnahReminders
+    #endif
 
     var title: String {
         switch self {
@@ -163,7 +181,9 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         case .textSize: return "Text Size"
         case .alphabet: return "Arabic Alphabet"
         case .libraries: return "Libraries"
+        #if HAS_QURAN
         case .sunnahReminders: return "Sunnah Reminders"
+        #endif
         }
     }
 
@@ -173,7 +193,9 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         case .textSize: return "textformat.size"
         case .alphabet: return "abc"
         case .libraries: return "square.grid.2x2"
+        #if HAS_QURAN
         case .sunnahReminders: return "bell.badge"
+        #endif
         }
     }
 
@@ -182,10 +204,21 @@ enum SettingsIslamPage: String, CaseIterable, Hashable {
         case .arabicText: return "The face for duas, dhikr, names, letters; Highlight Allah"
         case .textSize: return "How large the Islam tab's text reads"
         case .alphabet: return "Arabic size, English readings, sukoon"
+        #if HAS_ADHAN && HAS_QURAN
         case .libraries: return "Grid or rows, Word of the Day, Fajr"
+        #elseif HAS_ADHAN
+        // Word of the Day is a Quran feature (its switch on the page is HAS_QURAN), so without the
+        // Quran the page holds the layout and the Fajr turnover.
+        case .libraries: return "Grid or rows, the Fajr turnover"
+        #else
+        // The Fajr turnover is a prayer-times switch, on this page only where prayer times ship.
+        case .libraries: return "Grid or rows, Word of the Day"
+        #endif
+        #if HAS_QURAN
         // The same words the Quran and Notifications rows carry: it is the same screen, reached
         // from a third door.
         case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"
+        #endif
         }
     }
 }
@@ -329,14 +362,29 @@ struct SettingsRowLabel: View {
 enum SettingsSearchScope: Hashable {
     /// `general` is the Settings tab's own root (About You, every Tips & Tricks list): no page
     /// searches that slice, the root's search covers it.
-    case notifications, prayer, quran, hadith, islam, appearance, credits, general
+    #if HAS_ADHAN
+    case notifications, prayer
+    #endif
+    #if HAS_QURAN
+    case quran
+    #endif
+    #if HAS_HADITH
+    case hadith
+    #endif
+    case islam, appearance, credits, general
 
     var placeholder: String {
         switch self {
+        #if HAS_ADHAN
         case .notifications: return "Search notifications"
         case .prayer: return "Search prayer settings"
+        #endif
+        #if HAS_QURAN
         case .quran: return "Search Quran settings"
+        #endif
+        #if HAS_HADITH
         case .hadith: return "Search hadith settings"
+        #endif
         case .islam: return "Search Islam settings"
         case .appearance: return "Search appearance"
         case .credits: return "Search credits"
@@ -347,10 +395,16 @@ enum SettingsSearchScope: Hashable {
     /// The title of the entry that IS the page ("Quran Settings"), left out of that page's results.
     var rootTitle: String {
         switch self {
+        #if HAS_ADHAN
         case .notifications: return "Notification Settings"
         case .prayer: return "Prayer Settings"
+        #endif
+        #if HAS_QURAN
         case .quran: return "Quran Settings"
+        #endif
+        #if HAS_HADITH
         case .hadith: return "Hadith Settings"
+        #endif
         case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits & Contact"
@@ -361,10 +415,16 @@ enum SettingsSearchScope: Hashable {
     /// The breadcrumb prefix a page's results drop, because the reader is already on that page.
     var pathPrefix: String {
         switch self {
+        #if HAS_ADHAN
         case .notifications: return "Notifications"
         case .prayer: return "Prayer Settings"
+        #endif
+        #if HAS_QURAN
         case .quran: return "Quran Settings"
+        #endif
+        #if HAS_HADITH
         case .hadith: return "Hadith Settings"
+        #endif
         case .islam: return "Islam Settings"
         case .appearance: return "Appearance"
         case .credits: return "Credits"
@@ -378,17 +438,32 @@ extension SettingsSearchEntry.Destination {
     /// has nowhere to push and says "this page" instead.
     var isPageRoot: Bool {
         switch self {
-        case .notifications, .prayerSettings, .quranSettings, .hadithSettings, .islamSettings, .appearance, .credits: return true
+        #if HAS_ADHAN
+        case .notifications, .prayerSettings: return true
+        #endif
+        #if HAS_QURAN
+        case .quranSettings: return true
+        #endif
+        #if HAS_HADITH
+        case .hadithSettings: return true
+        #endif
+        case .islamSettings, .appearance, .credits: return true
         default: return false
         }
     }
 
     var scope: SettingsSearchScope {
         switch self {
+        #if HAS_ADHAN
         case .notifications, .notificationReminders, .notificationsPage: return .notifications
         case .prayerSettings, .prayerTracker, .travelingMode, .prayerCalculation, .skyColors, .prayerPage: return .prayer
+        #endif
+        #if HAS_QURAN
         case .quranSettings, .reciters, .quranPage: return .quran
+        #endif
+        #if HAS_HADITH
         case .hadithSettings, .hadithPage: return .hadith
+        #endif
         case .islamSettings, .islamPage: return .islam
         case .appearance, .appearancePage: return .appearance
         case .aboutYou, .simpleMode: return .general
@@ -398,12 +473,28 @@ extension SettingsSearchEntry.Destination {
         // A page's own tips belong to that page's search; the door to all of them, to the root's.
         case .tips(let area):
             switch area {
+            #if HAS_ADHAN
             case .adhan: return .prayer
             case .notifications: return .notifications
+            #endif
+            #if HAS_QURAN
             case .quran: return .quran
+            #endif
+            #if HAS_HADITH
             case .hadith: return .hadith
+            #endif
             case .islam: return .islam
             case .app, .none: return .general
+            // The tips of a domain this app does not ship (TipsAndTricks.swift lists none of them).
+            #if !HAS_ADHAN
+            case .adhan, .notifications: return .general
+            #endif
+            #if !HAS_QURAN
+            case .quran: return .general
+            #endif
+            #if !HAS_HADITH
+            case .hadith: return .general
+            #endif
             }
         case .credits, .credit: return .credits
         }
@@ -412,18 +503,19 @@ extension SettingsSearchEntry.Destination {
 
 extension SettingsSearchEntry {
     /// The whole index, composed from the per-screen lists that live next to the screens they describe.
-    static let all: [SettingsSearchEntry] =
-        notificationEntries
-        + adhanEntries
-        + prayerCalculationEntries
-        + quranEntries
-        + hadithEntries
-        + islamEntries
-        + appearanceEntries
-        + aboutYouEntries
-        + backupEntries
-        + tipsEntries
-        + creditEntries
+    static let all: [SettingsSearchEntry] = {
+        var entries: [SettingsSearchEntry] = []
+        #if HAS_ADHAN
+        entries += notificationEntries + adhanEntries + prayerCalculationEntries
+        #endif
+        #if HAS_QURAN
+        entries += quranEntries
+        #endif
+        #if HAS_HADITH
+        entries += hadithEntries
+        #endif
+        return entries + islamEntries + appearanceEntries + aboutYouEntries + backupEntries + tipsEntries + creditEntries
+    }()
 
     /// iCloud Backup's entries, which only Al-Islam has (`HAS_ICLOUD_BACKUP`): the companion apps never
     /// receive CloudBackupViews.swift, where `cloudBackupEntries` lives.
@@ -495,6 +587,7 @@ enum SettingsSearchDestinationView {
     @ViewBuilder
     static func view(for destination: SettingsSearchEntry.Destination) -> some View {
         switch destination {
+        #if HAS_ADHAN
         case .notifications: NotificationView()
         case .notificationReminders: MoreNotificationView()
         case .notificationsPage(let page): NotificationView(openPage: page)
@@ -504,11 +597,16 @@ enum SettingsSearchDestinationView {
         case .prayerCalculation: SettingsAdhanView(showNotifications: false, openPage: .prayerCalculation)
         case .skyColors: SettingsAdhanView(showNotifications: false, openPage: .skyColors)
         case .prayerPage(let page): SettingsAdhanView(showNotifications: false, openPage: page)
+        #endif
+        #if HAS_QURAN
         case .quranSettings: SettingsQuranView()
         case .reciters: ReciterListView()
         case .quranPage(let page): SettingsQuranView(openPage: page)
+        #endif
+        #if HAS_HADITH
         case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
         case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, openPage: page)
+        #endif
         case .islamSettings: SettingsIslamView()
         case .islamPage(let page): SettingsIslamView(openPage: page)
         case .appearance: AppearanceSettingsScreen()
@@ -532,13 +630,19 @@ enum SettingsSearchDestinationView {
     @ViewBuilder
     static func page(for destination: SettingsSearchEntry.Destination) -> some View {
         switch destination {
+        #if HAS_ADHAN
         case .travelingMode: SettingsAdhanView(showNotifications: false, standalonePage: .travelingMode)
         case .prayerCalculation: SettingsAdhanView(showNotifications: false, standalonePage: .prayerCalculation)
         case .skyColors: SkyColorsView()
         case .prayerPage(.skyColors): SkyColorsView()
         case .prayerPage(let page): SettingsAdhanView(showNotifications: false, standalonePage: page)
+        #endif
+        #if HAS_QURAN
         case .quranPage(let page): SettingsQuranView(standalonePage: page)
+        #endif
+        #if HAS_HADITH
         case .hadithPage(let page): SettingsHadithView(presentedAsSheet: false, standalonePage: page)
+        #endif
         case .islamPage(let page): SettingsIslamView(standalonePage: page)
         default: view(for: destination)
         }

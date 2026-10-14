@@ -45,6 +45,7 @@ struct TajweedAyahWords {
     /// The words at `span`, read out of the ayah's own text.
     func words(in ayahText: String) -> String { Self.cut(span, from: ayahText) }
 
+    #if HAS_QURAN
     /// The words, read from the loaded Quran (the ayah's Hafs display text, the text the example
     /// rows show); empty until the Quran has loaded.
     func words(in quran: QuranData) -> String {
@@ -52,6 +53,7 @@ struct TajweedAyahWords {
               let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return "" }
         return words(in: ayah.rawArabicText(surahId: surah.id, qiraahOverride: ""))
     }
+    #endif
 
     /// The tokens of `ayahText` at `span`, joined; empty when the span falls outside the text. A token
     /// is a run of non-whitespace, `WordTokens.tokens` (phone-only) spelled out so the watch cuts the
@@ -98,8 +100,10 @@ struct TajweedLessonDrill: Identifiable {
 
     var id: String { (ayah?.key ?? text) + caption }
 
+    #if HAS_QURAN
     /// The Arabic to show: the practice text, or the ayah's words from the loaded Quran.
     func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? text }
+    #endif
 }
 
 struct TajweedLessonFragment: Identifiable {
@@ -110,8 +114,10 @@ struct TajweedLessonFragment: Identifiable {
 
     var id: String { (ayah?.key ?? text) + caption }
 
+    #if HAS_QURAN
     /// The Arabic to show: the fragment as written, or the ayah's words from the loaded Quran.
     func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? text }
+    #endif
 }
 
 struct TajweedLessonDefinition {
@@ -171,8 +177,10 @@ struct TajweedQuizQuestion: Identifiable {
 
     var id: String { prompt }
 
+    #if HAS_QURAN
     /// The Arabic to show: as written, or the ayah's words from the loaded Quran.
     func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? arabic }
+    #endif
 }
 
 /// One word of a Foundations word list: the Arabic (as written, or located in an ayah when the words
@@ -185,7 +193,9 @@ struct TajweedLessonWord: Identifiable {
 
     var id: String { (ayah?.key ?? text) + translit }
 
+    #if HAS_QURAN
     func arabic(in quran: QuranData) -> String { ayah?.words(in: quran) ?? text }
+    #endif
 }
 
 /// A labelled group of words ("Moon letters: the lam is read").
@@ -651,10 +661,17 @@ struct TajweedLessonScreen: View {
     var body: some View {
         Group {
             if let lesson {
+                #if HAS_QURAN
                 #if os(iOS)
                 TajweedLessonDetailView(lesson: lesson)
                 #else
                 TajweedLessonWatchView(lesson: lesson)
+                #endif
+                #else
+                // The lesson pages need the Quran's text for their ayahs (TajweedLessons.swift and
+                // TajweedView.swift ship with it), and without it the pack is not bundled either
+                // (`TajweedLessonsStore.isBundled`), so no lesson ever loads here.
+                Text(lesson.titleEn)
                 #endif
             } else if missing {
                 Text("This lesson could not be loaded.")

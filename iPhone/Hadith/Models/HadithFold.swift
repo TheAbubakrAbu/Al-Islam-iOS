@@ -3,7 +3,7 @@ import Foundation
 // The search fold, and the fingerprints that keep it honest.
 //
 // THIS FILE IS THE ORIGINAL. `tools/pack/build.sh` copies it verbatim into
-// Al-Islam-iOS/iPhone/Hadith/HadithFold.swift - edit it HERE, never there.
+// Al-Islam-iOS/iPhone/Hadith/Models/HadithFold.swift: edit it HERE, never there.
 //
 // Why it exists in two places at all: the packs ship text that was folded at BUILD time, and a query
 // is only ever found in that text if the query folds through the exact same rules at RUN time. The

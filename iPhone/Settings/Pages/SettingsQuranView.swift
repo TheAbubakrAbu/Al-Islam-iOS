@@ -511,6 +511,8 @@ struct SettingsQuranView: View {
                 }
             }
 
+            // Fajr comes from the prayer calculation, which only an app with prayer times has.
+            #if HAS_ADHAN
             if settings.advanced(.quranReadingView) {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Daily Cards Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
@@ -527,6 +529,7 @@ struct SettingsQuranView: View {
                     .padding(.vertical, 2)
             }
             }
+            #endif
             #endif
 
             if settings.advanced(.quranReadingView) {

@@ -73,10 +73,23 @@ is a compile error waiting to happen. There are three ways to fix one, best firs
    cleanly. Rebuild Al-Islam after gating.
 3. **Strip it in the sibling** only when 1 and 2 do not fit; every later sync then has to merge around it.
 
-Known false positive: a `.sheet(...)` modifier read as a local named `sheet` declared inside a block the
-sibling compiles out (`let sheet` in `CarPlayScene.swift`, and `WidgetGalleryView.swift:357`). The report
-says "`sheet` (declared in ..., inside a block this app compiles out)". Those lines compile fine; skip them,
-or teach `check_feature_isolation.py` that a name after a `.` is a member, not that local.
+Since 2026-10-13 the check also counts what the sibling STRIPPED: a declaration on a line Al-Islam has had
+since BASE is available only if the sibling's own copy still declares it, so a new line that uses a property
+the sibling deleted from its `Settings.swift` (`notificationFajr` in Al-Quran, `showTransliteration` in
+Al-Adhan) is a LEAK "declared in ..., which Al-Quran-iOS stripped from its copy". Before, those passed the
+check and failed the build. The same day it stopped flagging `private`/`fileprivate` declarations, locals,
+nested types and argument labels (the old `.sheet(` false positive was WidgetGalleryView's
+`private static var sheet`).
+
+**Gating idioms that worked** (all no-ops in Al-Islam, which defines every flag):
+- An enum whose cases are per domain (`SettingsSearchEntry.Destination`, `HelpDoorArea`, the search scopes):
+  `#if` around the cases AND around every `case` arm that names them.
+- An array literal cannot hold `#if`: split it (`shared + prayerList`, with `#else let prayerList: [T] = []`)
+  or build it in a closure (`{ var x: [T] = []; #if HAS_X; x += [...]; #endif; return x }()`).
+- A switch that must stay exhaustive without a `default` that warns in Al-Islam: add
+  `#if !HAS_X  case .x: return .general  #endif` arms.
+- Copy that names another app's feature ("hadith", "Quran Settings", "Al-Islam's own article"): a small
+  `#if`/`#elseif` string enum (`AskAICopy`, `IslamSettingsCopy`), or `AppIdentifiers.appName`.
 
 ## 5. The procedure
 
@@ -95,19 +108,25 @@ or teach `check_feature_isolation.py` that a name after a `.` is a member, not t
    their project references are applied by the script.
 4. **Resolve every conflict:** `grep -rln '^<<<<<<<' Al-Quran-iOS --include='*.swift' --include='*.plist' --include='*.json'`.
    Take Al-Islam's logic; keep the sibling's own name, strings and stripped features; never bring back a
-   feature the sibling withholds. `BIN-CONFL HadithQuotes.json.deflate`: the sibling kept its copy; decide
-   whether Al-Islam's newer pack should replace it (it feeds `Islam/Daily/HadithQuote.swift`, the daily quote,
-   not the Hadith tab).
+   feature the sibling withholds. When Al-Islam's side of a hunk is already gated so it compiles right in the
+   sibling, take Al-Islam's side: the sibling converges and the next sync merges clean.
+   `BIN-CONFL HadithQuotes.json.deflate` (and Al-Adhan's `QuranQuotes.json.deflate`): never copy Al-Islam's;
+   run `Al-Islam-iOS/Scripts/build_sibling_quote_packs.py` once the conflicts are resolved (it writes BOTH
+   siblings, then `--check` must pass). It cuts every ayah and narration the sibling's Islam tab quotes,
+   plus the Reminder of the Day's links and verses.
 5. **Register the NEW files** with the `register_in_pbxproj.py` command printed under "next steps" in the
    report, then `./membership_diff.py Al-Quran-iOS`. Widget files need the Widget target;
    `Widget/Quran/ResumeListeningIntent.swift` needs the app AND the widget; Control Center control stubs must
    live in a widget-only file.
 6. **Fix the remaining LEAKs** (section 4), plus any FLAG-ERROR. `FLAG-ADD` lines are applied by `--apply`
    (Al-Quran has never defined HAS_QURAN until this lands).
-7. **ROOT-WARN:** `.adhanBannerHost(...)` is missing from both siblings' iPhone roots. Read
-   `iPhone/Helpers/UI/BannerWindow.swift`: it is one window for the adhan banner AND achievement banners, so
-   a sibling that shows either needs it. Otherwise add `ROOT_SKIP=adhanBannerHost`. Same for the watch
-   root's `.environment(...)`.
+7. **Roots by hand.** The per-app roots are never merged, so anything Al-Islam wired into ITS roots since
+   BASE has to be ported: `git -C Al-Islam-iOS diff <base> HEAD -- iPhone/Al-IslamApp.swift "Apple Watch/Al-IslamApp.swift"`.
+   On 2026-10-13 that was the About You root stage, the warm walk, the deep-link receivers, the post-reveal
+   schedule (`ReminderScheduler.rearmAfterLaunch()` lives there, not in AppDelegate), the adhan catch-up at
+   launch, and the watch's `quranData.ensureLoading()`. `check_root_wiring.py` only compares modifiers.
+   ROOT-WARN `.adhanBannerHost(...)`: Al-Adhan needs it (the adhan banner); Al-Quran records
+   `ROOT_SKIP=adhanBannerHost` (its achievement banners go through `.achievementTracking()`).
 8. **DELETE and PER-APP:** the `Palestine Poster` deletes are inside an `.xcassets`, so there is no project
    reference to remove. PER-APP entitlements stay as they are (the siblings have no iCloud, WeatherKit or
    CarPlay keys). The siblings got their own privacy manifests by hand on 2026-10-13; touch them only if
@@ -133,45 +152,54 @@ or teach `check_feature_isolation.py` that a name after a `.` is a member, not t
     notification, Simple Mode and the accuracy work. Confirm each one landed and works, or tell Abu which
     line to cut.
 
-## 6. Where things stood on 2026-10-13 (dry run, base `60cd3c0`, 2026-09-16, 24 commits behind)
+## 6. The 2026-10-13 port (base `60cd3c0` -> Al-Islam `522c2f3` plus that session's uncommitted gates)
 
-| | Al-Quran | Al-Adhan |
-|---|---:|---:|
-| Moved | 111 | 84 |
-| New | 62 | 56 |
-| Updated | 99 | 70 |
-| Merged cleanly | 11 | 13 |
-| Conflicts (16 of Al-Quran's and most of Al-Adhan's are moved files) | 24 | 26 |
-| Binary conflicts | 1 | 1 |
-| Per-app changes to port by hand | 6 | 7 |
-| **LEAKs** | **87** | **112** |
+Before the apply, Al-Islam was gated by flag until both dry runs showed 0 LEAKs (Al-Quran 87 -> 0,
+Al-Adhan 112 -> 0 on the stricter count of section 4). Fully gated, so a sibling can take Al-Islam's file
+as is: `AppDelegate`, `AppLifecycle`, `AboutYouView`, `HelpDoors`, `SettingsSearch`, `SettingsView`,
+`Widget/Widgets.swift`, `ControlWidgets`/`ControlSupport`/`ControlIntents`, `AppIntents`. Partly gated:
+`Settings.swift` (its app-group preference list is `shared + prayer`), `DailyReminders` (the hadith shelf
+path has a `#else` that reads `HadithQuoteSource`; without the Quran it declares its own
+`IslamOpenTarget`/`AppNavigation`), `DateView`, `IslamView`, `BeliefsViews`, `TajweedCourse`,
+`TajweedFoundations`, `SettingsIslamView`, `SettingsQuranView`, `SettingsAdhanView`, `TipsAndTricks`,
+`ViewExtensions`, `RemovalConfirmation`, the Ask AI files, `SplashScreen`, `LaunchScreen`,
+`ProfileDashboard`. Moved so every app has them: `AudioSessionLane` (into `ArabicSpeech.swift`),
+`dayKey(_:)` (into `Settings.swift`), and `ActionMode`, `ShareAyahRender`, `ShareAllahInk` and
+`Color.uiColor` (into the new `iPhone/Helpers/UI/ShareSupport.swift`). Al-Adhan's 99 Names share sheet needs
+these.
 
-Conflicts outside the moves, both siblings: `Settings/SettingsView.swift` (11 and 12 hunks),
-`Settings/SettingsSearch.swift` (9 and 13), `AppLifecycle.swift`, `LaunchScreen.swift`, `AppDelegate.swift`,
-`Widget/Widgets.swift`, `Resources/Info-Main.plist`, `Resources/Data/Hadith/manifest.json`; Al-Adhan also
-`Islam/IslamView.swift` (7).
+Manifest changes: both exclude `StressWalker.swift` (Al-Islam's root alone runs it); Al-Quran excludes
+`NaggingModeView.swift` and `Resources/Data/Moon`; Al-Adhan excludes `iPhone/Islam/Tajweed/TajweedView.swift`
+(the Tajweed COURSE screen: its lessons need the Quran text; Foundations ships, and the course's model
+ships with its pack left out, so no course door is drawn), `iPhone/CarPlay` and the two weather-only Sky files.
 
-**Al-Quran's LEAKs are prayer code reaching Quran-only builds.** 60 of 87 name symbols from
-`Settings/Model/SettingsAdhan.swift`. By file: `Settings/Pages/NaggingModeView.swift` 24 (a NEW, prayer-only
-page: the first `EXCLUDE` candidate), `Settings/Model/Settings.swift` 18, `AppDelegate.swift` 14 (prayer
-notification actions, the foreground adhan player, the fasting Live Activity), `Settings/SettingsSearch.swift` 7,
-`Settings/Pages/HelpDoors.swift` 6, `Settings/SettingsView.swift` 4, then 1 to 3 each in `DailyReminders`,
-`AppLifecycle`, `TasbihView`, `DateView`, `Widget/ControlWidgets.swift` (`PrayersProvider`), `SettingsQuran`,
-`QuranPlayer`.
+Then both siblings were applied on top of their uncommitted 2026-10-13 work (Abu's choice). All conflicts
+were resolved, the new files registered, the roots ported, and both build green (Release device and Debug
+simulator, iPhone + Watch + Widget, and Al-Adhan's Complication). Each was run on its own iPhone 17 Pro
+simulator ("Claude Sync Quran", "Claude Sync Adhan"). Every shared fix found while building was mirrored
+back into Al-Islam, which builds green with all of it.
 
-**Al-Adhan's LEAKs are Quran code reaching prayer-only builds,** and 16 of the 112 are the `sheet` false
-positive (section 4), so about 96 are real. Sources: `QuranData` 14, `QuranPlayer` 13, `SettingsQuran` 10,
-`ShareAyah` 8, `SunnahReminders` 7, tajweed 8. By file (false positives included):
-`Helpers/System/StressWalker.swift` 22 (the DEBUG-only crash walker: exclude it from the siblings or gate its
-Quran steps), `Settings/Model/Settings.swift` 11, `Islam/Names/ShareName.swift` 10, `Settings/SettingsView.swift` 9,
-`AppLifecycle.swift` 8, `HelpDoors` 6, `Tajweed/TajweedCourse` 6, `Daily/DailyReminders` 6,
-`Settings/System/ControlIntents.swift` 4, `Tajweed/TajweedView` 4, `Helpers/ViewExtensions` 4, and a long tail
-of 1 to 3.
+**Still to do (step 10):** commit Al-Islam's gates, then write that commit into BOTH siblings' `.sync-base`
+(not `522c2f3`: the gates landed after it). Until then a dry run re-reports this whole port.
 
-Both: `HAS_TIPS` (and Al-Quran's `HAS_QURAN`, Al-Adhan's `HAS_ADHAN`) are pending `FLAG-ADD`s; two
-`ROOT-WARN`s each (step 7); 0 FLAG-ERRORs and 0 ROOT-ERRORs.
+Store copy the port did NOT make true (step 11, Abu to decide): both siblings' Whats New say "150 Tips &
+Tricks" (Al-Quran shows 78, Al-Adhan 83); Al-Adhan's "a Free Palestine poster with the Dome of the Rock" is
+not new (the poster was deleted by this sync, the wallpaper is 2.6.4's); Al-Quran's "Tajweed Foundations is
+now a 58-lesson course" (the course is a separate Tajweed Course tile); Al-Quran's App Store Description says
+Ask AI cites "only the ayahs it shows" (it now cites tafsir, articles and duas too).
 
 ## 7. Traps from earlier syncs
+
+- **MOVE-EXCL leaves the old file behind.** Excluding a moved file's NEW path keeps the sibling's copy at the
+  OLD path, which then duplicates declarations that moved into other new files (Al-Adhan's
+  `iPhone/Islam/TajweedView.swift` vs `Tajweed/TajweedFoundations.swift`). Delete it and its project
+  reference by hand.
+- **A flag the sibling never had.** Al-Adhan defined no `HAS_ADHAN` before 2026-10-13, so every
+  `#if HAS_ADHAN` block in its own files compiled in for the first time with that apply.
+- **`add_membership.py`** took the FIRST target's build phases for any target name until 2026-10-13 (a
+  Watch resource landed in the Widget target); it now reads one target block at a time.
+- **Widget-only intent stubs** must sit in a file the sibling receives: the Qibla and Prayer Times halves are
+  in `Widget/Adhan/FastingLiveActivity.swift`, the recitation toggle's in `Widget/Quran/LastListenedSurahWidget.swift`.
 
 - **Moves.** Al-Islam's 2026-10-07 subfolder move would have made ~150 files NEW beside the siblings' old
   copies; the sync has been move-aware since 2026-10-11. If a moved file shows up as NEW plus DELETE, the

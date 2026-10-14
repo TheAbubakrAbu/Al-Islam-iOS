@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
 
 struct LastListenedSurahWidget: Widget {
     let kind: String = "LastListenedSurahWidget"
@@ -133,12 +134,5 @@ extension ToggleRecitationIntent {
     func setRecitationPlaying(_ playing: Bool) async {}
 }
 
-@available(iOSApplicationExtension 18.0, *)
-extension OpenQiblaIntent {
-    func openQibla() async {}
-}
-
-@available(iOSApplicationExtension 18.0, *)
-extension OpenPrayerTimesIntent {
-    func openPrayerTimes() async {}
-}
+// (The Qibla and Prayer Times controls' halves are in Widget/Adhan/FastingLiveActivity.swift, the
+// prayer side's widget-only file, so an app without the Quran widgets still has them.)

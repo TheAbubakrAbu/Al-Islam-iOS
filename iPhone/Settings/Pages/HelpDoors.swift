@@ -32,15 +32,31 @@ import SwiftUI
 // No em dashes and no spaced hyphens in any of this text (house rule); quoted labels are the app's own.
 
 /// The tab a run of doors belongs to.
+/// Each app lists only the tabs it has: Al-Adhan and Al-Quran share this file.
 enum HelpDoorArea: String, CaseIterable {
-    case adhan, quran, hadith, islam
+    #if HAS_ADHAN
+    case adhan
+    #endif
+    #if HAS_QURAN
+    case quran
+    #endif
+    #if HAS_HADITH
+    case hadith
+    #endif
+    case islam
 
     /// The tab's name as its tab bar item reads.
     var tabName: String {
         switch self {
+        #if HAS_ADHAN
         case .adhan: return "Adhan"
+        #endif
+        #if HAS_QURAN
         case .quran: return "Quran"
+        #endif
+        #if HAS_HADITH
         case .hadith: return "Hadith"
+        #endif
         case .islam: return "Islam"
         }
     }
@@ -48,9 +64,15 @@ enum HelpDoorArea: String, CaseIterable {
     /// The settings page that carries this tab's switch.
     var settingsPageName: String {
         switch self {
+        #if HAS_ADHAN
         case .adhan: return "Prayer Settings"
+        #endif
+        #if HAS_QURAN
         case .quran: return "Quran Settings"
+        #endif
+        #if HAS_HADITH
         case .hadith: return "Hadith Settings"
+        #endif
         case .islam: return "Islam Settings"
         }
     }
@@ -58,8 +80,15 @@ enum HelpDoorArea: String, CaseIterable {
     /// Where the section sits on its tab, for the switch's caption.
     var placement: String {
         switch self {
+        #if HAS_ADHAN
         case .adhan: return "under the prayer tracker"
-        case .quran, .hadith: return "under Your Summary"
+        #endif
+        #if HAS_QURAN
+        case .quran: return "under Your Summary"
+        #endif
+        #if HAS_HADITH
+        case .hadith: return "under Your Summary"
+        #endif
         case .islam: return "under the Islamic resources"
         }
     }
@@ -173,17 +202,24 @@ extension Settings {
 /// Main actor: the doors are built inside a view body, and the Sunnah store they read is main-actor bound.
 @MainActor
 enum HelpDoorCatalog {
-    static func doors(for area: HelpDoorArea, settings: Settings, sunnah: SunnahReminderStore) -> [HelpDoor] {
+    static func doors(for area: HelpDoorArea, settings: Settings) -> [HelpDoor] {
         switch area {
+        #if HAS_ADHAN
         case .adhan: return adhan(settings)
-        case .quran: return quran(settings, sunnah: sunnah)
+        #endif
+        #if HAS_QURAN
+        case .quran: return quran(settings, sunnah: SunnahReminderStore.shared)
+        #endif
+        #if HAS_HADITH
         case .hadith: return hadith(settings)
+        #endif
         case .islam: return islam(settings)
         }
     }
 
     private static func onOff(_ on: Bool) -> String { on ? "On" : "Off" }
 
+    #if HAS_ADHAN
     /// Prayer times: praying on time, praying away from home, and the sky above the times (or, with
     /// the sky off, the names the prayers go by).
     private static func adhan(_ settings: Settings) -> [HelpDoor] {
@@ -244,7 +280,9 @@ enum HelpDoorCatalog {
         }
         return doors
     }
+    #endif
 
+    #if HAS_QURAN
     /// The Quran: reading the script, reading along before knowing it, and the surahs of the week.
     private static func quran(_ settings: Settings, sunnah: SunnahReminderStore) -> [HelpDoor] {
         // Beginner Mode spaces out the Arabic, so with the Arabic hidden it has nothing to do (its
@@ -288,7 +326,9 @@ enum HelpDoorCatalog {
                      isOn: sunnah.enabledCount > 0),
         ]
     }
+    #endif
 
+    #if HAS_HADITH
     /// The hadith books: one language or both, and the name of Allah in red.
     private static func hadith(_ settings: Settings) -> [HelpDoor] {
         let language = HadithReadingLanguage.current(settings)
@@ -318,6 +358,7 @@ enum HelpDoorCatalog {
                      }]),
         ]
     }
+    #endif
 
     /// The Islam tab: getting started (only while the Start Here guide is not already on the tab),
     /// the tab's own text size, and when its day turns over.
@@ -352,6 +393,7 @@ enum HelpDoorCatalog {
                               secondaryTint: SettingsTint.islamSecondary,
                               landing: .screen { AnyView(IslamTextSizeSettingsView()) },
                               value: textSize.map(IslamTextSize.name) ?? "Device", isOn: textSize != nil))
+        #if HAS_ADHAN
         let atFajr = settings.dailyRolloverAtFajr
         doors.append(HelpDoor(id: "islam.fajr", title: "When Does Your Day Begin?",
                               caption: "Daily cards turn over at Fajr, or midnight.",
@@ -372,10 +414,12 @@ enum HelpDoorCatalog {
                                     settings.dailyRolloverSwitchChanged()
                                 },
                               ]))
+        #endif
         return doors
     }
 }
 
+#if HAS_HADITH
 /// The hadith books' two languages as ONE choice: the answer to "Reading in One Language?". On the
 /// settings pages they are two switches on two pages that refuse to both be off; here they are the
 /// three states those switches can actually be in.
@@ -426,6 +470,7 @@ enum HadithReadingLanguage: String, CaseIterable, Identifiable {
         if settings.showHadithEnglish != english { settings.showHadithEnglish = english }
     }
 }
+#endif
 
 // MARK: - The section on each tab
 
@@ -434,8 +479,10 @@ enum HadithReadingLanguage: String, CaseIterable, Identifiable {
 /// values, so the cards do not each re-render on every Settings publish.
 struct HelpDoorsSection: View {
     @ObservedObject private var settings = Settings.shared
+    #if HAS_QURAN
     /// The Quran run's Sunnah Reminders count belongs to the store, not to Settings.
     @ObservedObject private var sunnah = SunnahReminderStore.shared
+    #endif
 
     let area: HelpDoorArea
 
@@ -462,7 +509,7 @@ struct HelpDoorsSection: View {
         // Not while one of its sheets is up: "Too Much on Screen?" turns Simple Mode on from inside its
         // own sheet, and removing the section would take the sheet's presenter with it mid-tap.
         if settings.showsHelpDoors(area), !settings.simpleMode || openDoor != nil {
-            let listed = HelpDoorCatalog.doors(for: area, settings: settings, sunnah: sunnah)
+            let listed = HelpDoorCatalog.doors(for: area, settings: settings)
             let doors = keepingOpenDoor(listed)
             if !doors.isEmpty {
                 Section(header: header(count: doors.count)) {
@@ -705,11 +752,17 @@ private struct HelpDoorPageLabel: View {
 
     private static func describe(_ destination: SettingsSearchEntry.Destination) -> (title: String, systemImage: String, caption: String?) {
         switch destination {
+        #if HAS_QURAN
         case .quranPage(let page): return (page.title, page.systemImage, page.caption)
+        #endif
+        #if HAS_HADITH
         case .hadithPage(let page): return (page.title, page.systemImage, page.caption)
+        #endif
         case .islamPage(let page): return (page.title, page.systemImage, page.caption)
+        #if HAS_ADHAN
         case .prayerPage(let page): return (page.title, page.systemImage, page.caption)
         case .notificationsPage(let page): return (page.title, page.systemImage, page.caption)
+        #endif
         default: return ("More Settings", destination.icon, nil)
         }
     }
@@ -717,6 +770,7 @@ private struct HelpDoorPageLabel: View {
 
 // MARK: - The answers
 
+#if HAS_QURAN
 /// "Need Help Reading?": Arabic Beginner Mode, the switch Arabic Text keeps below its fonts and sizes.
 private struct BeginnerModeAnswer: View {
     @ObservedObject private var settings = Settings.shared
@@ -738,7 +792,9 @@ private struct BeginnerModeAnswer: View {
         }
     }
 }
+#endif
 
+#if HAS_HADITH
 /// "Reading in One Language?": the hadith's Arabic and English as one three-way choice.
 private struct HadithLanguageAnswer: View {
     @ObservedObject private var settings = Settings.shared
@@ -776,7 +832,9 @@ private struct HadithLanguageAnswer: View {
         }
     }
 }
+#endif
 
+#if HAS_ADHAN
 /// "When Does Your Day Begin?": the daily cards' turnover, which Libraries shows only with Advanced
 /// Settings on. Answered here, so opening the question does not have to turn that switch on.
 private struct DayBeginsAnswer: View {
@@ -799,6 +857,7 @@ private struct DayBeginsAnswer: View {
         }
     }
 }
+#endif
 
 // MARK: - On each tab's settings page
 
@@ -817,13 +876,18 @@ struct HelpDoorsSettingsSection: View {
     /// The search help's switch on the two tabs that have one, nil elsewhere.
     private var searchHelpShown: Binding<Bool>? {
         switch area {
+        #if HAS_QURAN
         case .quran:
             return Binding(get: { !quranSearchHelpRemoved },
                            set: { shown in settings.hapticFeedback(); quranSearchHelpRemoved = !shown })
+        #endif
+        #if HAS_HADITH
         case .hadith:
             return Binding(get: { !hadithSearchHelpRemoved },
                            set: { shown in settings.hapticFeedback(); hadithSearchHelpRemoved = !shown })
-        case .adhan, .islam:
+        #endif
+        default:
+            // The Adhan and Islam tabs have no search help.
             return nil
         }
     }
@@ -840,7 +904,7 @@ struct HelpDoorsSettingsSection: View {
 
     var body: some View {
         // Only the titles are read here, so the Sunnah store is not observed.
-        let doors = HelpDoorCatalog.doors(for: area, settings: settings, sunnah: SunnahReminderStore.shared)
+        let doors = HelpDoorCatalog.doors(for: area, settings: settings)
         Section(header: Text("NEED A HAND?")) {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading) {

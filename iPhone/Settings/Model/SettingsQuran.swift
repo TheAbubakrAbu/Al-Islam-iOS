@@ -1426,28 +1426,7 @@ extension Settings {
 
     // MARK: Ayah of the Day
 
-    /// Stable yyyy-MM-dd key for a date, used to seed the Ayah of the Day and gate "Hide for Today".
-    ///
-    /// From calendar components, not a formatter: it built a new DateFormatter on every call (about
-    /// 110 µs each), and the activity summary asks for some two hundred keys a pass, on every tasbih
-    /// tap (Quality Guide F3). The calendar is Gregorian in the auto-updating zone, so a trip across
-    /// time zones moves the key with the device (a static calendar holding `.current` froze it, P1).
-    static func dayKey(_ date: Date = Date()) -> String {
-        let parts = dayKeyCalendar.dateComponents([.year, .month, .day], from: date)
-        return paddedDayKey(year: parts.year ?? 0, month: parts.month ?? 0, day: parts.day ?? 0)
-    }
-
-    private static let dayKeyCalendar: Calendar = {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .autoupdatingCurrent
-        return calendar
-    }()
-
-    private static func paddedDayKey(year: Int, month: Int, day: Int) -> String {
-        func two(_ n: Int) -> String { n < 10 ? "0\(n)" : "\(n)" }
-        let y = String(year)
-        return String(repeating: "0", count: max(0, 4 - y.count)) + y + "-" + two(month) + "-" + two(day)
-    }
+    // `dayKey(_:)` is in Settings.swift: the daily boundary and the activity log key on it in every app.
 
     /// True when the user tapped "Hide for Today" on the Ayah of the Day card for the current day.
     var isAyahOfTheDayHiddenToday: Bool {

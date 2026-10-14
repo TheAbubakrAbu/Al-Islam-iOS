@@ -6,9 +6,14 @@ import UIKit
 import UserNotifications
 
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    #if HAS_ADHAN
     private let taskID = AppIdentifiers.backgroundFetchPrayerTimesTaskIdentifier
+    #endif
+    #if HAS_QURAN
     private let reciterDownloadsSessionID = AppIdentifiers.reciterDownloadsBackgroundSessionIdentifier
+    #endif
     
+    #if HAS_QURAN
     // Connects iOS background URL session wakeups to the reciter download manager.
     func application(
         _ application: UIApplication,
@@ -22,6 +27,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
         ReciterDownloadManager.shared.backgroundSessionCompletionHandler(completionHandler)
     }
+    #endif
 
     // Performs startup setup: registers background refresh, schedules first refresh, and notification delegate.
     func application(
@@ -33,6 +39,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // iPad: two Dynamic Type changes inside a second hang UIKit's floating tab bar for good
         // (DynamicTypeCoalescer.swift); the windows follow a managed, settled copy of the category.
         DynamicTypeCoalescer.install()
+        #if HAS_ADHAN
         registerBackgroundRefreshTask()
         // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
         // Every backgrounding re-arms them (below); the first arm waits for the launch cover to lift.
@@ -42,8 +49,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             // (The reminders' launch pass, the Sunnah presets and the extra kinds together, runs
             // from MainTabView's post-reveal schedule at +1.5 s: `ReminderScheduler.rearmAfterLaunch`.)
         }
+        #endif
         UNUserNotificationCenter.current().delegate = self
 
+        #if HAS_ADHAN
         // The selected adhan's notification cuts live in Library/Sounds, rendered from the bundled
         // recording (AdhanClipStore). Start that now so the launch's scheduling pass, which runs a few
         // seconds later, finds them; if they land after it, only the notification schedule reruns with
@@ -95,6 +104,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         #if DEBUG
         PrayerNotificationPrompt.handleLaunchArguments()
         #endif
+        #endif
         return true
     }
 
@@ -106,6 +116,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        #if HAS_ADHAN
         // An adhan (or any prayer alert) belongs to its MOMENT. The system can deliver scheduled local
         // notifications late while the app is open (a suspended runloop, Mac/Catalyst, a slept device) -
         // if this delivery is well past the instant it was scheduled for, keep it silently in the list
@@ -121,6 +132,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             completionHandler([.banner, .list])
             return
         }
+        #endif
         completionHandler([.banner, .list, .sound])
     }
 
@@ -133,16 +145,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let request = response.notification.request
-        let content = request.content
+        #if HAS_QURAN
         // A Sunnah reminder: open the Quran where the reminder points (`SunnahReminderStore`). The
         // target is parked on `AppNavigation`; the tab view and the Quran tab take it from there.
-        if let encoded = content.userInfo[SunnahReminderStore.targetUserInfoKey] as? String,
+        if let encoded = response.notification.request.content.userInfo[SunnahReminderStore.targetUserInfoKey] as? String,
            let target = QuranOpenTarget(encoded: encoded) {
             DispatchQueue.main.async { AppNavigation.shared.open(target) }
             completionHandler()
             return
         }
+        #endif
+        #if HAS_ADHAN
+        let request = response.notification.request
         guard let moment = Settings.tappedPrayerNotification(from: request, deliveredAt: response.notification.date) else {
             completionHandler()
             return
@@ -173,8 +187,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             }
             completionHandler()
         }
+        #else
+        completionHandler()
+        #endif
     }
 
+    #if HAS_ADHAN
     // Registers both background task handlers: the opportunistic app refresh and its overnight
     // BGProcessingTask twin. Both run the same refresh; they differ only in when the system grants them
     // time (short daytime windows vs. the nightly maintenance window that lines up with pre-Fajr).
@@ -308,6 +326,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             }
         }
     }
+    #endif
 
     #if DEBUG
     /// `-forceLandscape` / `-forcePortrait`: pins the whole app to one orientation for the run.
@@ -329,6 +348,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     #endif
 }
 
+#if HAS_ADHAN
 // MARK: - "Did you pray X?" after a notification tap
 
 /// The question a tapped prayer notification raises once the app is open (Abu, 2026-09-20: "always
@@ -488,4 +508,5 @@ enum PrayerNotificationPrompt {
     }
     #endif
 }
+#endif
 #endif

@@ -88,9 +88,11 @@ struct SettingsIslamView: View {
             // reminders should also be in islam settings"). The reminders are acts of worship
             // across the whole day, not only Quran reading, so this is a door they were missing,
             // not a copy: one `SunnahRemindersView`, three ways in.
+            #if HAS_QURAN
             Section(header: Text("REMINDERS")) {
                 islamPageLink(.sunnahReminders) { SunnahRemindersView() }
             }
+            #endif
 
             // Last on the page (Abu, 2026-10-10): a page opens on its own settings, and the tips and
             // the Need a Hand? switch wait at the foot.
@@ -119,7 +121,9 @@ struct SettingsIslamView: View {
         case .textSize: IslamTextSizeSettingsView()
         case .alphabet: alphabetDestination
         case .libraries: librariesDestination
+        #if HAS_QURAN
         case .sunnahReminders: SunnahRemindersView()
+        #endif
         }
     }
 
@@ -141,7 +145,7 @@ struct SettingsIslamView: View {
                 Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption)) {
                     IslamArabicFontPicker()
 
-                    Text("The Arabic face used by the duas, the dhikr and remembrances, the 99 Names of Allah, and the Arabic alphabet. The Quran and the hadith books keep their own fonts, in Quran Settings and Hadith Settings.")
+                    Text("The Arabic face used by the duas, the dhikr and remembrances, the 99 Names of Allah, and the Arabic alphabet. \(IslamSettingsCopy.ownFonts)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -157,7 +161,7 @@ struct SettingsIslamView: View {
                             .tint(settings.accentColor.color)
                             .onChange(of: settings.highlightAllahNamesIslam) { _ in settings.hapticFeedback() }
 
-                        Text("Shows the name of Allah in red in the duas, the dhikr and remembrances, the tasbih, the 99 Names, the daily cards, and the quotes in the articles and guides. The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings.")
+                        Text("Shows the name of Allah in red in the duas, the dhikr and remembrances, the tasbih, the 99 Names, the daily cards, and the quotes in the articles and guides. \(IslamSettingsCopy.ownSwitches)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -250,42 +254,67 @@ struct SettingsIslamView: View {
                     }
                 }
 
+                // DAILY: Word of the Day where the Quran ships, the Fajr turnover where the prayer times
+                // do (it needs a Fajr), behind Advanced Settings.
+                #if HAS_QURAN
                 Section(header: Text("DAILY")) {
-                    VStack(alignment: .leading) {
-                        Toggle("Word of the Day", isOn: $settings.showWordOfTheDay.animation(.easeInOut))
-                            .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
-
-                        Text("One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
-
+                    wordOfTheDayToggle
+                    #if HAS_ADHAN
                     if settings.advanced(.islamLibraries) {
-                    VStack(alignment: .leading) {
-                        Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
-                            .onChange(of: settings.dailyRolloverAtFajr) { _ in
-                                settings.hapticFeedback()
-                                settings.dailyRolloverSwitchChanged()
-                            }
-
-                        Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
+                        fajrTurnoverToggle
                     }
+                    #endif
+                }
+                #elseif HAS_ADHAN
+                if settings.advanced(.islamLibraries) {
+                    Section(header: Text("DAILY")) {
+                        fajrTurnoverToggle
                     }
                 }
+                #endif
 
+                #if HAS_ADHAN
                 AdvancedSettingsSection(screen: .islamLibraries, hides: "the daily features turning over at Fajr")
+                #endif
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
         .navigationTitle("Libraries")
     }
+
+    #if HAS_QURAN
+    private var wordOfTheDayToggle: some View {
+        VStack(alignment: .leading) {
+            Toggle("Word of the Day", isOn: $settings.showWordOfTheDay.animation(.easeInOut))
+                .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
+
+            Text("One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+        }
+    }
+    #endif
+
+    #if HAS_ADHAN
+    private var fajrTurnoverToggle: some View {
+        VStack(alignment: .leading) {
+            Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
+                .onChange(of: settings.dailyRolloverAtFajr) { _ in
+                    settings.hapticFeedback()
+                    settings.dailyRolloverSwitchChanged()
+                }
+
+            Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 2)
+        }
+    }
+    #endif
 }
 
 // MARK: - Text Size
@@ -362,7 +391,7 @@ struct IslamTextSizeSettingsView: View {
         List {
             Group {
                 Section(header: Text("TEXT SIZE"),
-                        footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. The Quran and the hadith books keep their own text sizes, in Quran Settings and Hadith Settings.")) {
+                        footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. \(IslamSettingsCopy.ownTextSizes)")) {
                     Toggle("Use Device Text Size", isOn: Binding(
                         get: { followsDevice },
                         set: { follow in
@@ -526,10 +555,43 @@ extension SettingsSearchEntry {
         .init(title: "Hide English Readings", path: "Islam Settings → Arabic Alphabet", keywords: "hide english transliteration readings tashkeel letters practice ba bi bu", destination: .islamPage(.alphabet), advanced: true),
         .init(title: "Use Quranic Sukoon", path: "Islam Settings → Arabic Alphabet", keywords: "quranic sukoon uthmani jazm letter practice mark", destination: .islamPage(.alphabet), advanced: true),
         .init(title: "Grid Mode (Al-Islam)", path: "Islam Settings → Libraries", keywords: "grid list tiles rows islam resources layout", destination: .islamPage(.libraries)),
+    ] + quranIslamEntries + prayerIslamEntries
+
+    /// The Libraries and Reminders controls of the domains an app may not ship.
+    #if HAS_QURAN
+    private static let quranIslamEntries: [SettingsSearchEntry] = [
         .init(title: "Word of the Day", path: "Islam Settings → Libraries", keywords: "word of the day arabic daily vocabulary root", destination: .islamPage(.libraries)),
-        .init(title: "Turn Over at Fajr", path: "Islam Settings → Libraries", keywords: "daily rollover fajr midnight day boundary of the day", destination: .islamPage(.libraries), advanced: true),
         .init(title: "Sunnah Reminders (Islam)", path: "Islam Settings → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat reminder notification dua", destination: .islamPage(.sunnahReminders)),
     ]
+    #else
+    private static let quranIslamEntries: [SettingsSearchEntry] = []
+    #endif
+    #if HAS_ADHAN
+    private static let prayerIslamEntries: [SettingsSearchEntry] = [
+        .init(title: "Turn Over at Fajr", path: "Islam Settings → Libraries", keywords: "daily rollover fajr midnight day boundary of the day", destination: .islamPage(.libraries), advanced: true),
+    ]
+    #else
+    private static let prayerIslamEntries: [SettingsSearchEntry] = []
+    #endif
 }
 
 #endif
+
+/// The readers that keep their own font and text size, named by what this app ships: the hadith
+/// books are HAS_HADITH (Al-Quran and Al-Adhan have no Hadith Settings to point at), the Quran
+/// reader HAS_QURAN.
+enum IslamSettingsCopy {
+    #if HAS_QURAN && HAS_HADITH
+    static let ownFonts = "The Quran and the hadith books keep their own fonts, in Quran Settings and Hadith Settings."
+    static let ownTextSizes = "The Quran and the hadith books keep their own text sizes, in Quran Settings and Hadith Settings."
+    static let ownSwitches = "The Quran and the hadith books have their own switches, in Quran Settings and Hadith Settings."
+    #elseif HAS_QURAN
+    static let ownFonts = "The Quran keeps its own fonts, in Quran Settings."
+    static let ownTextSizes = "The Quran keeps its own text sizes, in Quran Settings."
+    static let ownSwitches = "The Quran has its own switch, in Quran Settings."
+    #else
+    static let ownFonts = ""
+    static let ownTextSizes = ""
+    static let ownSwitches = ""
+    #endif
+}

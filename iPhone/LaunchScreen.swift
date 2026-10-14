@@ -256,6 +256,7 @@ struct LaunchScreen: View {
         //    window, so background-init contention is invisible; the screen simply rests on the icon for as
         //    long as it takes. This is the "keep Al-Islam there and wait" behavior.
         async let settingsReady: Void = Settings.shared.waitUntilReady()
+        #if HAS_QURAN
         async let quranReady: Void = {
             if QuranData.shared.shouldWaitForFullLaunchReadiness {
                 await QuranData.shared.waitUntilLoaded()
@@ -263,10 +264,16 @@ struct LaunchScreen: View {
                 await QuranData.shared.waitUntilCoreLoaded()
             }
         }()
+        #endif
         // Only what the landing tab needs. The player and the 99 Names used to be in this group too;
         // neither is on the Adhan tab, and the Names parse (8 s cap, a background-QoS task) lost the
         // race under Low Power Mode and held the icon for whole seconds after the Quran was in.
+        // (Without the Quran, Al-Adhan's case, the Adhan tab needs only Settings.)
+        #if HAS_QURAN
         _ = await (settingsReady, quranReady)
+        #else
+        _ = await settingsReady
+        #endif
         LaunchClock.mark("stores ready")
 
         #if os(iOS)

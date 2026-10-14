@@ -1027,6 +1027,8 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
+                // The Sunnah Reminders schedule recitations in the Quran reader, so they ship with it.
+                #if HAS_QURAN
                 Section(header: Text("QURAN AND SUNNAH")) {
                     NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
                         SettingsRowLabel(title: "Sunnah Reminders", systemImage: "bell.and.waves.left.and.right.fill",
@@ -1034,6 +1036,7 @@ struct NotificationView: View {
                     }
                     .tint(settings.accentColor.color)
                 }
+                #endif
 
                 Section(header: Text("ADHAN SOUND")) {
                     Picker("Adhan Sound", selection: $settings.adhanNotificationSound) {
@@ -1180,7 +1183,9 @@ struct NotificationView: View {
         switch page {
         case .prayerReminders: MoreNotificationView()
         case .naggingMode: NaggingModeView()
+        #if HAS_QURAN
         case .sunnahReminders: SunnahRemindersView()
+        #endif
         }
     }
 
@@ -1884,7 +1889,7 @@ struct NotificationSettingsSection: View {
 #if os(iOS)
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
-    static let notificationEntries: [SettingsSearchEntry] = [
+    static let notificationEntries: [SettingsSearchEntry] = sunnahReminderEntries + [
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
         .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
@@ -1892,7 +1897,6 @@ extension SettingsSearchEntry {
         .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications, advanced: true),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
         .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications, advanced: true),
-        .init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders)),
         .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert all prayers prenotification", destination: .notificationsPage(.prayerReminders)),
         .init(title: "Per-Prayer Notifications & Adhan", path: "Notifications → Prayer Reminders", keywords: "per prayer each fajr dhuhr asr maghrib isha own sound short adhan play adhan prenotification duhaa midnight last third", destination: .notificationsPage(.prayerReminders), advanced: true),
         .init(title: "Nagging Mode", path: "Notifications → Nagging Mode", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq struggle lazy miss prayers accountability", destination: .notificationsPage(.naggingMode)),
@@ -1904,6 +1908,15 @@ extension SettingsSearchEntry {
         .init(title: "Pause Nagging", path: "Notifications → Nagging Mode", keywords: "pause snooze silence hold sick travel flight day week resume nag", destination: .notificationsPage(.naggingMode)),
         .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
+
+    /// The Sunnah Reminders' entry, where the Quran reader ships (`HAS_QURAN`): Al-Adhan has no such page.
+    private static var sunnahReminderEntries: [SettingsSearchEntry] {
+        #if HAS_QURAN
+        return [.init(title: "Sunnah Reminders (Notifications)", path: "Notifications → Sunnah Reminders", keywords: "al-kahf friday al-mulk sleep muawwidhat hadith reminder", destination: .notificationsPage(.sunnahReminders))]
+        #else
+        return []
+        #endif
+    }
 
     /// The weather's entry, in Al-Islam alone (`HAS_WEATHER`): the companion apps have no switch to find.
     private static var weatherEntries: [SettingsSearchEntry] {

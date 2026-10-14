@@ -1,6 +1,18 @@
 import AVFoundation
 import SwiftUI
 
+/// The one serial queue every blocking AVAudioSession call in the app goes through. `setActive`,
+/// `setCategory` and `setPreferredIOBufferDuration` all talk to mediaserverd and routinely block their
+/// caller for tens to hundreds of milliseconds; off the main thread that is invisible, on it that is a
+/// hang. Serial, not concurrent, because the calls are order-dependent: an activation must not overtake
+/// the deactivation of the sound before it.
+///
+/// Here rather than beside the Quran player, its busiest user, because every app has the speech
+/// engine and the adhan previews (SettingsAdhanView) but only two have the player.
+enum AudioSessionLane {
+    static let queue = DispatchQueue(label: "com.alislam.audio-session", qos: .userInitiated)
+}
+
 /// Whether an Arabic voice is installed, published on its own.
 ///
 /// The voice resolves off the main thread (`ArabicSpeech.resolveVoice`), usually after the first rows
@@ -198,7 +210,7 @@ final class ArabicSpeech: NSObject, ObservableObject {
     /// when it already is; a tap that arrives meanwhile supersedes an older continuation.
     private var sessionActive = false
     private var speakGeneration = 0
-    /// `AudioSessionLane` (QuranPlayer.swift), not a lane of its own: speech and recitation share one
+    /// `AudioSessionLane` (above), not a lane of its own: speech and recitation share one
     /// AVAudioSession, so their category changes and activations have to be ordered against each other
     /// too, not just against themselves.
     private static var sessionQueue: DispatchQueue { AudioSessionLane.queue }

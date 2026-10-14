@@ -675,6 +675,7 @@
 		FACE11012D42DDF100871A6A /* WatchConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE962D42DDF100871A6A /* WatchConnectivity.swift */; };
 		FACE11022D42DDF100871A6A /* WatchConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE962D42DDF100871A6A /* WatchConnectivity.swift */; };
 		FEE1B4282E2F4ED0AA03ED9D /* QuranRankedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3F924E746F407ABF466CE4 /* QuranRankedSearch.swift */; };
+		990446BB8D13220C30355807 /* ShareSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB27302E307C42377A39670 /* ShareSupport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1218,6 +1219,7 @@
 		F9C3B6F6C0E04927991AF898 /* DailyReminders.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DailyReminders.swift; sourceTree = "<group>"; };
 		FACE00012F7CB0E10066FBA9 /* Muqattaat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Muqattaat.swift; sourceTree = "<group>"; };
 		FFE176521E9FC2BED65552FF /* SkyScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyScene.swift; sourceTree = "<group>"; };
+		5DB27302E307C42377A39670 /* ShareSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSupport.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1871,6 +1873,7 @@
 				72CCAEA22D42DF5700871A6A /* SearchBar.swift */,
 				72A7C00C2FB1000000AA100C /* SelectableText.swift */,
 				72E100012F79000000AAF700 /* FocusOverlay.swift */,
+				5DB27302E307C42377A39670 /* ShareSupport.swift */,
 				72AD00032FB0000000AAF001 /* BannerWindow.swift */,
 				8E7B169528DF4CBA89FB3EF4 /* SimpleMode.swift */,
 				B926A41D233C40C28EE859B5 /* RemovalConfirmation.swift */,
@@ -2748,6 +2751,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				990446BB8D13220C30355807 /* ShareSupport.swift in Sources */,
 				0346161AFF0D5D02EA745ABB /* ResumeListeningIntent.swift in Sources */,
 				7CA4000000000000000000B1 /* CarPlayContent.swift in Sources */,
 				7CA4000000000000000000B2 /* CarPlayScene.swift in Sources */,

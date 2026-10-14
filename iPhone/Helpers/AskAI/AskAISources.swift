@@ -372,7 +372,7 @@ enum AskAISourceFactory {
 
     static func article(_ article: IslamArticle, section: IslamArticle.Section, maxCharacters: Int = 700) -> AskAISource {
         let home = IslamArticleCatalog.all.first(where: { $0.id == article.id })?.home.title
-        var provenance = ["Al-Islam\u{2019}s own article \u{201C}\(article.title)\u{201D}" + (home.map { " in \($0)" } ?? "")]
+        var provenance = ["\(AppIdentifiers.appName)\u{2019}s own article \u{201C}\(article.title)\u{201D}" + (home.map { " in \($0)" } ?? "")]
         if !section.heading.isEmpty { provenance.append("Section: \(section.heading.capitalized)") }
         let text = section.heading.isEmpty ? section.text : "\(section.heading.capitalized): \(section.text)"
         // The reference names the SECTION too: two sections of one guide ("Nisab" and "Calculate
@@ -419,7 +419,7 @@ enum AskAISourceFactory {
         guard !translation.isEmpty else { return nil }
         let identity = item.identity ?? item.id
         let occasion = collection.title
-        var provenance = ["Dua from Al-Islam\u{2019}s \u{201C}\(collection.title)\u{201D} collection"]
+        var provenance = ["Dua from \(AppIdentifiers.appName)\u{2019}s \u{201C}\(collection.title)\u{201D} collection"]
         if let reference = item.reference, !reference.isEmpty { provenance.append(reference) }
         return AskAISource(
             kind: .dua(collection: collection.title, identity: identity),

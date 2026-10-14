@@ -526,7 +526,7 @@ struct SunnahRemindersView: View {
                 .padding(.vertical, 4)
 
                 if permissionDenied {
-                    Label("Notifications are off for Al-Islam in iPhone Settings, so these reminders cannot arrive.", systemImage: "bell.slash")
+                    Label("Notifications are off for \(AppIdentifiers.appName) in iPhone Settings, so these reminders cannot arrive.", systemImage: "bell.slash")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

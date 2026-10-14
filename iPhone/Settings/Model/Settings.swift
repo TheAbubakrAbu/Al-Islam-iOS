@@ -629,6 +629,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     // in the old color afterwards is a stale accent reader.
                     case "accentColor": shared.accentColor = AccentColor(rawValue: kv[1]) ?? shared.accentColor
                     case "customAccentColorHex": shared.customAccentColorHex = kv[1]
+                    #if HAS_QURAN
                     // A tajweed rule's custom color, through the setter the legend's long-description
                     // cards use: "tajweedColor=hafs.qalqalah:FF00FF" ("hafs.<category>" or
                     // "riwayah.<rule key>"; a hex of "-" returns the rule to its canonical color). An
@@ -639,6 +640,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                         if parts.count == 2 {
                             shared.setTajweedCustomColor(parts[1] == "-" ? nil : parts[1], forKey: parts[0])
                         }
+                    #endif
                     // The reader's riwayah chip, headlessly. Canonical tags ("Warsh an Nafi"); pass
                     // "Hafs" to return to the default - a step with an empty value never reaches here
                     // (the split above drops empty pieces).
@@ -701,8 +703,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         if Self.isAppProcess {
             LaunchClock.mark("settings init: before migrations")
+            #if HAS_QURAN
             runQuranStartupMigrations()
             LaunchClock.mark("settings init: quran migrations done")
+            #endif
             runAdhanSoundStartupMigrations()
             runWatchSyncKeyMigration()
             LaunchClock.mark("settings init: migrations done")
@@ -752,6 +756,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // on first launch, throws the permission dialog up before the UI is even visible). The stored
         // currentLocation (decoded above) is enough for the launch fetch; this refreshes it a tick later.
         if Self.isAppProcess {
+            #if HAS_ADHAN
             // One-time seeds of the App Group mirrors, for values stored before each mirror existed
             // (the didSets keep them current from then on). Guarded by a flag so the eight cfprefsd
             // round-trips run once per install, not on every launch.
@@ -774,10 +779,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 }
                 appGroupUserDefaults?.set(true, forKey: seedKey)
             }
+            #endif
 
             // Widgets read the app-group location; they must not touch CoreLocation authorization.
             // An install that has never answered is asked on the Adhan tab after the welcome, not here
             // over the launch animation (Abu, 2026-10-10; `requestLocationIfUndetermined`).
+            #if HAS_ADHAN
             DispatchQueue.main.async { [weak self] in
                 #if os(iOS)
                 self?.startLocationAtLaunch()
@@ -785,6 +792,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 self?.requestLocationAuthorization()
                 #endif
             }
+            #endif
         }
     }
 
@@ -926,9 +934,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @MainActor
     static func flushAllPendingWrites() {
         guard isAppProcess else { return }
+        #if HAS_QURAN
         shared.flushPendingLastRead()
         shared.flushPendingKhatmProgress()
         shared.flushPendingRevisionProgress()
+        #endif
         NotificationCenter.default.post(name: flushPendingWritesNotification, object: nil)
     }
 
@@ -951,15 +961,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         remirrorAppGroupPreferences()
 
         // The presence-checked caches (the byte-keyed memos heal themselves).
+        #if HAS_QURAN
         loadKhatmProgressCacheFromStorage()
         reloadRevisionProgressCacheFromStorage()
+        #endif
+        #if HAS_ADHAN
         Self.invalidateTrackerCaches()
+        #endif
         // And the generation-keyed memos (the day's canonical marks, the tracker's stats, the profile
         // totals): a restore or an erase writes the tracker's bytes without going through a setter,
         // so the counter never moved and the memos kept serving the marks that were just replaced.
+        #if HAS_ADHAN
         bumpTrackerGeneration()
+        #else
+        // No prayer tracker here: the profile totals' counter alone.
+        bumpContentGeneration()
+        #endif
+        #if HAS_ADHAN
         Self.invalidatePrayerComputationCache()
         Self.invalidateAdhanSoundResourceCache()
+        #endif
 
         NotificationCenter.default.post(name: Self.storedContentReplacedNotification, object: nil)
 
@@ -970,9 +991,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // snapshot and stamps what moved). A key the write REMOVED stays as it was on the watch: the
         // protocol reads an absent key as "no opinion", never as a delete (guide, section 6d).
         objectWillChange.send()
+        #if HAS_ADHAN
         updateDates()
         // Recomputes the times, reschedules every notification and reloads the widgets (deferred).
         fetchPrayerTimes(force: true)
+        #endif
     }
 
     /// One of the preferences that live ONLY in the app group (the widgets and the complication read
@@ -1012,7 +1035,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         var defaultValue: Any { read(nil) }
     }
 
-    static let appGroupPreferences: [AppGroupPreference] = [
+    /// The appearance preferences every app has, then the prayer preferences where the prayer times
+    /// ship (Al-Quran has none of them; Swift cannot put an `#if` inside an array literal).
+    static let appGroupPreferences: [AppGroupPreference] = sharedAppGroupPreferences + prayerAppGroupPreferences
+
+    private static let sharedAppGroupPreferences: [AppGroupPreference] = [
         AppGroupPreference(
             key: "accentColor", backedUp: true, watch: .both,
             read: { $0?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString },
@@ -1040,6 +1067,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 settings.customBackgroundColorHex = hex
                 return true
             }),
+    ]
+
+    #if HAS_ADHAN
+    private static let prayerAppGroupPreferences: [AppGroupPreference] = [
         AppGroupPreference(
             key: "travelingMode", backedUp: false, watch: .phoneToWatch,
             read: { $0?.bool(forKey: "travelingMode") ?? false },
@@ -1095,6 +1126,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 return true
             }),
     ]
+    #else
+    private static let prayerAppGroupPreferences: [AppGroupPreference] = []
+    #endif
 
     /// Reads the app-group-only preferences back from the group store and assigns each through its
     /// setter (the `init` hydration, replayed). Only what differs is assigned: every one of these
@@ -1111,11 +1145,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// complication compute in their own processes and read them there. Each property's `didSet`
     /// keeps its mirror; a raw `UserDefaults` write (a watch sync apply, a restore) goes underneath
     /// the `didSet`, so whoever writes raw calls `remirrorAppGroupPreferences()` afterwards.
-    static let appGroupMirroredStorageKeys: [String] = prayerOffsetKeys + [
-        "switchHijriDateAtMaghrib", "skyGradients", "showSkyScene", "skySceneStyle", "skyShowsWeather",
-        "customFajrAngle", "customIshaAngle",
-        "lastListenedAyahData", "lastListenedSurahData",
-    ]
+    static let appGroupMirroredStorageKeys: [String] = {
+        var keys: [String] = []
+        #if HAS_ADHAN
+        keys += prayerOffsetKeys + [
+            "switchHijriDateAtMaghrib", "skyGradients", "showSkyScene", "skySceneStyle", "skyShowsWeather",
+            "customFajrAngle", "customIshaAngle",
+        ]
+        #endif
+        #if HAS_QURAN
+        keys += ["lastListenedAyahData", "lastListenedSurahData"]
+        #endif
+        return keys
+    }()
 
     /// Copies every mirrored key from standard defaults into the app group, in the form its own
     /// `didSet` writes (typed for the scalars, so a key that was never set mirrors its default
@@ -1123,6 +1165,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func remirrorAppGroupPreferences() {
         guard Self.isAppProcess, let group = appGroupUserDefaults else { return }
         let store = UserDefaults.standard
+        #if HAS_ADHAN
         for key in Self.prayerOffsetKeys {
             group.setValue(store.integer(forKey: key), forKey: key)
         }
@@ -1134,6 +1177,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         group.setValue(skyShowsWeather, forKey: "skyShowsWeather")
         group.setValue(customFajrAngle, forKey: "customFajrAngle")
         group.setValue(customIshaAngle, forKey: "customIshaAngle")
+        #endif
+        #if HAS_QURAN
         for key in ["lastListenedAyahData", "lastListenedSurahData"] {
             if let data = store.data(forKey: key) {
                 group.set(data, forKey: key)
@@ -1141,6 +1186,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 group.removeObject(forKey: key)
             }
         }
+        #endif
     }
 
     /// Restores every *preference* (appearance, prayer, and Quran options) to its default while keeping the
@@ -1761,9 +1807,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// was never revisited at all. The identifier now carries a content signature
     /// (`notificationContentSignature`), so flipping this changes every id and the whole schedule is
     /// genuinely rebuilt.
+    #if HAS_ADHAN
     @AppStorage("prayerNotificationEnglishNames") var prayerNotificationEnglishNames = false {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
+    #endif
 
     @AppStorage("switchHijriDateAtMaghrib") var switchHijriDateAtMaghrib: Bool = false {
         didSet {
@@ -1779,6 +1827,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
+    #if HAS_ADHAN
     @AppStorage("naggingMode") var naggingMode: Bool = false {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
@@ -1833,6 +1882,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("naggingPausedUntil") var naggingPausedUntil: Double = 0 {
         didSet { self.fetchPrayerTimesDebounced(notification: true) }
     }
+    #endif
 
     @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
         didSet {
@@ -2122,6 +2172,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// (not view state) because the COUNTDOWN and the sky card's current/next columns must follow it too -
     /// with the flag on, passing Asr time makes Asr the current prayer even in traveling mode. Reset whenever
     /// traveling mode itself flips (PrayerList owns that), so a new trip always starts on the Qasr view.
+    #if HAS_ADHAN
     @AppStorage("travelingShowFullPrayers") var travelingShowFullPrayers: Bool = false {
         didSet {
             guard oldValue != travelingShowFullPrayers else { return }
@@ -2133,6 +2184,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             reloadWidgets(deferred: true)
         }
     }
+    #endif
 
     /// When the traveling-mode auto-toggle last announced itself. Persisted, so the cooldown survives a relaunch
     /// - the app is relaunched constantly in the background, and an in-memory timestamp would reset with it and
@@ -2212,6 +2264,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Any dismissal of the Adhan tab's location or notification dialog but Never Ask Again quiets it
     /// until then, in seconds since 1970 (0: not snoozed). It used to return on the very next app open
     /// (Abu, 2026-10-10: "for ignore snoozing make it wait a day"). Device-only: permission is per device.
+    #if HAS_ADHAN
     @AppStorage("locationAlertSnoozedUntil") var locationAlertSnoozedUntil: Double = 0
     @AppStorage("notificationAlertSnoozedUntil") var notificationAlertSnoozedUntil: Double = 0
 
@@ -2224,6 +2277,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             notificationAlertSnoozedUntil = until
         }
     }
+    #endif
 
     @AppStorage("showPrayerInfo") var showPrayerInfo: Bool = false
 
@@ -2281,6 +2335,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
+    #if HAS_QURAN
     @AppStorage("favoriteQiraahTagsData") private var favoriteQiraahTagsData = Data()
     private static var favoriteQiraahTagsCache: (data: Data, value: [String])?
     var favoriteQiraahTags: [String] {
@@ -2299,6 +2354,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             favoriteQiraahTagsData = encoded
         }
     }
+    #endif
 
     @AppStorage("favoriteEnglishTranslationIDsData") private var favoriteEnglishTranslationIDsData = Data()
     private static var favoriteEnglishTranslationIDsCache: (data: Data, value: [String])?
@@ -2437,6 +2493,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// refresh synchronously and leave this false).
     var khatmProgressRefreshPending = false
 
+    #if HAS_QURAN
     var khatmCompletedAyahs: [String] {
         get {
             ensureKhatmCacheLoaded()
@@ -2446,6 +2503,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             applyKhatmCompletedAyahKeys(newValue, persistImmediately: true)
         }
     }
+    #endif
 
     // Raw storage only; the typed `bookmarkedAyahs: [BookmarkedAyah]` accessor lives in SettingsQuran.swift
     // so this core file names no Quran model type (ports to sibling apps without the Quran module). Not
@@ -2476,7 +2534,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     var resolvedMushafPageLanguage: MushafPageLanguage {
         let base = MushafPageLanguage(rawValue: mushafPageLanguage) ?? .arabic
-        #if os(iOS)
+        #if os(iOS) && HAS_QURAN
         // A beta riwayah whose text hasn't been opted into: the composed Arabic page
         // would show the unaccepted transcription, so page mode reads the riwayah's
         // own printed mushaf instead - the exact print, nothing beta about it.
@@ -2571,13 +2629,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         guard let pending = pendingLastRead else { return }
         pendingLastRead = nil
 
+        #if HAS_QURAN
         let surahChanged = lastReadSurah != pending.surah
+        #endif
         recordLastRead(surah: pending.surah, ayah: pending.ayah)
         // The Last Read widget names the surah; the ayah within it reaches the widget on the next
         // backgrounding flush (AppLifecycle), which is when the widget is next visible. Rebuilding the
         // snapshot and reloading four timelines on every 0.8 s reading pause burned the WidgetKit
         // budget in a single long session.
+        #if HAS_QURAN
         if surahChanged { refreshQuranWidgets(.lastRead) }
+        #endif
     }
 
     // MARK: - [Al-Quran] Surah stats (times opened / played)
@@ -2674,6 +2736,31 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// 30-day table per day, both read on the main thread only. Plain stored vars: never published.
     var dailyFajrMemo: (day: Date, signature: String, fajr: Date?)?
     var fajrTableMemo: (day: Date, days: Int, signature: String, table: [String: TimeInterval])?
+
+    /// Stable yyyy-MM-dd key for a date: the daily boundary (DailyRollover.swift), the activity log and
+    /// the Ayah of the Day all key on it. Here, not in SettingsQuran.swift, because the daily boundary
+    /// and the activity log ship in every app and the Quran model does not.
+    ///
+    /// From calendar components, not a formatter: it built a new DateFormatter on every call (about
+    /// 110 µs each), and the activity summary asks for some two hundred keys a pass, on every tasbih
+    /// tap (Quality Guide F3). The calendar is Gregorian in the auto-updating zone, so a trip across
+    /// time zones moves the key with the device (a static calendar holding `.current` froze it, P1).
+    static func dayKey(_ date: Date = Date()) -> String {
+        let parts = dayKeyCalendar.dateComponents([.year, .month, .day], from: date)
+        return paddedDayKey(year: parts.year ?? 0, month: parts.month ?? 0, day: parts.day ?? 0)
+    }
+
+    private static let dayKeyCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }()
+
+    private static func paddedDayKey(year: Int, month: Int, day: Int) -> String {
+        func two(_ n: Int) -> String { n < 10 ? "0\(n)" : "\(n)" }
+        let y = String(year)
+        return String(repeating: "0", count: max(0, 4 - y.count)) + y + "-" + two(month) + "-" + two(day)
+    }
     /// The Reminder of the Day presented once a day when the app opens (from the second day on).
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
@@ -2725,7 +2812,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    #if os(iOS)
+    #if os(iOS) && HAS_QURAN
     /// A riwayah switch inflates its text and tajweed packs on whoever asks first, which was the first
     /// row or page to render (17.6 MB inflated, then a 1.45 MB JSON parse, on main). Kick both loads
     /// on a background task the moment the setting changes (Phase 5 step 8); the stores are
@@ -2767,6 +2854,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet {
             guard oldValue != betaQiraatEnabled else { return }
             // The beta switch changes which ayahs "exist" in a beta riwayah (`existsInQiraah`).
+            #if HAS_QURAN
             QiraahAyahCountCache.purge()
             if !betaQiraatEnabled {
                 if Self.Riwayah.isBeta(displayQiraah) {
@@ -2776,6 +2864,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                 BetaQiraatStore.shared.unloadAll()
                 #endif
             }
+            #endif
         }
     }
 
@@ -2797,6 +2886,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set { showOtherQiraatReciters = newValue }
     }
 
+    #if HAS_QURAN
     /// Pass to Ayah.displayArabicText(surahId:clean:qiraahOverride:). Nil means Hafs.
     /// Memoized on the main thread until the next publish (Phase 10.3): an ayah row read this 12-15
     /// times per body pass, each a `@AppStorage` read, a trim and a switch.
@@ -2817,10 +2907,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return normalized.isEmpty ? nil : normalized
     }
 
+    #if HAS_QURAN
     /// When false, only Arabic is shown (no transliteration or English), since those are for Hafs an Asim only.
     var isHafsDisplay: Bool {
         displayQiraahForArabic == nil
     }
+    #endif
 
     /// Arabic riwayah line for settings section headers (matches on-screen Arabic text riwayah).
     var displayQiraahArabicCaption: String {
@@ -2848,7 +2940,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         guard let tag = displayQiraahForArabic else { return false }
         return Self.Riwayah.isBeta(Self.Riwayah.canonicalTag(tag)) && !betaQiraatEnabled
     }
+    #endif
 
+    #if HAS_QURAN
     /// Hidden riwayah tajweed rules, by rule KEY ("idgham", "silah_meem", ...), comma-joined.
     /// Keys are meaning-stable across riwayat, so hiding "idgham" hides it in every riwayah.
     @AppStorage("riwayahTajweedHiddenRules") var riwayahTajweedHiddenRules: String = ""
@@ -2872,12 +2966,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         if visible { set.remove(key) } else { set.insert(key) }
         riwayahTajweedHiddenRules = set.sorted().joined(separator: ",")
     }
+    #endif
 
     /// The reader's own tajweed rule colors, for Hafs and every riwayah: "key=RRGGBB" comma-joined and
     /// key-sorted (`TajweedColorOverrides` owns the format and the keys). Changed only from a rule's
     /// long-description card in the Tajweed Legend.
     @AppStorage("tajweedCustomColors") var tajweedCustomColors: String = ""
 
+    #if HAS_QURAN
     /// Sets (`hex` = "RRGGBB") or clears (nil) one rule's custom color. The stored string publishes,
     /// and every signature that bakes tajweed colors in folds it, so both readers repaint.
     func setTajweedCustomColor(_ hex: String?, forKey key: String) {
@@ -2894,6 +2990,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         tajweedCustomColors = next
         TajweedColorOverrides.shared.adopt(raw: next)
     }
+    #endif
 
     @AppStorage("showArabicText") var showArabicText: Bool = true
     /// ON by default, like the tajweed colors (user rule): the divine name reads red out of the box.
@@ -2991,6 +3088,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
+    #if HAS_HADITH
     // The Hadith tab's recent searches - the Quran search history's exact twin (chips over the search bar).
     @AppStorage("hadithSearchHistoryData") private var hadithSearchHistoryData = Data()
     /// Memoized like `favoriteSurahs`: the chips row stays mounted and reads this on every render pass.
@@ -3019,6 +3117,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func removeHadithSearchHistory(_ query: String) {
         hadithSearchHistory.removeAll { $0.caseInsensitiveCompare(query) == .orderedSame }
     }
+    #endif
 
     /// The reader's default point sizes, iPad and Mac: the same 28 pt Arabic / 17 pt English that
     /// fill an iPhone column sit in an 800 pt one there, so a fresh install starts 15% larger. Only

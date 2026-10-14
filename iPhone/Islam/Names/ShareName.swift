@@ -91,7 +91,7 @@ struct NameShareSheet: View {
     private var composed: String { Self.composedText(name) }
 
     private var composedAttributedText: AttributedString {
-        ShareAyahSheet.allahHighlightedSwiftUIText(
+        ShareAllahInk.swiftUIText(
             composed,
             baseColor: .white,
             enabled: settings.highlightAllahNamesIslam
@@ -515,7 +515,7 @@ struct NameShareSheet: View {
             let piece = NSMutableAttributedString(string: str, attributes: attrs)
             // The Share Ayah card's Allah-name reddening - the live rows highlight the names, so the
             // shared image must too.
-            ShareAyahSheet.applyAllahHighlight(
+            ShareAllahInk.apply(
                 to: piece,
                 source: str,
                 enabled: highlightAllah && input.highlightAllahNames

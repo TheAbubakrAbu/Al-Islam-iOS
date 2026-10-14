@@ -577,7 +577,7 @@ struct SplashScreen: View {
             VStack(spacing: 10) {
                 modeCard(simple: true,
                          title: "Simple",
-                         text: "Prayer times, the Quran and the essentials, with the extras tucked away until you want them.",
+                         text: simpleModeSummary,
                          systemImage: "rectangle.compress.vertical")
                 modeCard(simple: false,
                          title: "Full",
@@ -591,6 +591,18 @@ struct SplashScreen: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// What Simple keeps on screen, named by the domains this app ships (Al-Quran has no prayer
+    /// times, Al-Adhan no Quran reader).
+    private var simpleModeSummary: String {
+        #if HAS_ADHAN && HAS_QURAN
+        return "Prayer times, the Quran and the essentials, with the extras tucked away until you want them."
+        #elseif HAS_ADHAN
+        return "Prayer times and the essentials, with the extras tucked away until you want them."
+        #else
+        return "The Quran and the essentials, with the extras tucked away until you want them."
+        #endif
     }
 
     private func modeCard(simple: Bool, title: String, text: String, systemImage: String) -> some View {

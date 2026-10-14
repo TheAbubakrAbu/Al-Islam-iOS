@@ -4,6 +4,7 @@ import AppIntents
 struct AppShortcutsRoot: AppShortcutsProvider {
     @AppShortcutsBuilder
     static var appShortcuts: [AppShortcut] {
+        #if HAS_QURAN
         AppShortcut(
             intent: PlaySurahAppIntent(),
             phrases: [
@@ -107,7 +108,9 @@ struct AppShortcutsRoot: AppShortcutsProvider {
             shortTitle: "Last Listened Surah",
             systemImageName: "gobackward"
         )
+        #endif
 
+        #if HAS_ADHAN
         AppShortcut(
             intent: WhenIsPrayerIntent(),
             phrases: [
@@ -166,5 +169,6 @@ struct AppShortcutsRoot: AppShortcutsProvider {
             shortTitle: "Next Prayer",
             systemImageName: "forward.end"
         )
+        #endif
     }
 }

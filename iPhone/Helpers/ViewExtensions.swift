@@ -1740,6 +1740,8 @@ struct CalculatorResultCard<Detail: View>: View {
     }
 }
 
+// The reciter's menu rows and picker: the Quran player's.
+#if HAS_QURAN
 /// The "Choose Reciter" row every play menu opens with, captioned with who is reciting right now
 /// (Abu, 2026-09-19: the menu said only "Choose Reciter", so the current reciter was invisible until
 /// you opened the picker).
@@ -1806,6 +1808,7 @@ struct ReciterPickerSheet: ViewModifier {
         }
     }
 }
+#endif
 
 /// A grid tile that taps to act and PRESSES-AND-HOLDS to open its row's menu.
 ///
@@ -2281,10 +2284,12 @@ struct EqualColumnsLayout: Layout {
 
 extension View {
     #if os(iOS)
+    #if HAS_QURAN
     /// See `ReciterPickerSheet`.
     func reciterPickerSheet(isPresented: Binding<Bool>) -> some View {
         modifier(ReciterPickerSheet(isPresented: isPresented))
     }
+    #endif
 
     /// Wraps this view as a `GridTileMenu`'s label. See that type for the whole story.
     func gridTileMenu<MenuContent: View>(
@@ -2450,6 +2455,8 @@ private struct SidebarCellProbe: UIViewRepresentable {
             }
             guard let cell = ancestor as? UICollectionViewListCell else { return }
             if isSelected { cell.focusEffect = nil }
+            // `defaultBackgroundConfiguration()` is iOS 16; on 15 the shape keeps its default radius.
+            guard #available(iOS 16.0, *) else { return }
             var state = cell.configurationState
             state.isSelected = true
             let radius = cell.defaultBackgroundConfiguration().updated(for: state).cornerRadius

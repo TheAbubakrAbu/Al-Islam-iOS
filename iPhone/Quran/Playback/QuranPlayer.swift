@@ -159,15 +159,6 @@ final class NowPlayingState: ObservableObject {
     #endif
 }
 
-/// The one serial queue every blocking AVAudioSession call in the app goes through. `setActive`,
-/// `setCategory` and `setPreferredIOBufferDuration` all talk to mediaserverd and routinely block their
-/// caller for tens to hundreds of milliseconds; off the main thread that is invisible, on it that is a
-/// hang. Serial, not concurrent, because the calls are order-dependent: an activation must not overtake
-/// the deactivation of the sound before it.
-enum AudioSessionLane {
-    static let queue = DispatchQueue(label: "com.alislam.audio-session", qos: .userInitiated)
-}
-
 final class QuranPlayer: ObservableObject {
     static let shared = QuranPlayer()
 
@@ -403,7 +394,7 @@ final class QuranPlayer: ObservableObject {
         // nil in sibling apps that don't compile this module.
         PlaybackVisibility.shared.barContent = { AnyView(NowPlayingView()) }
         ArabicSpeech.recitationOwnsSession = { QuranPlayer.shared.isPlaying || QuranPlayer.shared.isPaused }
-        #if os(iOS)
+        #if os(iOS) && HAS_ADHAN
         // The foreground adhan pauses recitation while it plays; installed here (same seam) so its file in
         // the Adhan module names no Quran type. iOS only - the watch has no foreground adhan player.
         ForegroundAdhanPlayer.pauseRecitationIfPlaying = {

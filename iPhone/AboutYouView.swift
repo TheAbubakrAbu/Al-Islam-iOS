@@ -84,6 +84,15 @@ enum StartHere {
     }
 
     static func steps(for background: UserBackground) -> [StartHereStep] {
+        #if HAS_QURAN
+        return catalog(for: background)
+        #else
+        // The one step that leaves for the Quran tab, which this app does not have.
+        return catalog(for: background).filter { $0.id != "quran" }
+        #endif
+    }
+
+    private static func catalog(for background: UserBackground) -> [StartHereStep] {
         switch background {
         case .exploring:
             return [
@@ -298,7 +307,32 @@ struct AboutYouView: View {
                              secondaryTint: SettingsTint.islamSecondary,
                              title: "Islam", text: islamText(background))
         // Someone here to learn meets the two learning tabs first; everyone else, the tab bar's order.
-        return background == .raised ? [adhan, quran, hadith, islam] : [islam, quran, adhan, hadith]
+        let ordered = background == .raised ? [adhan, quran, hadith, islam] : [islam, quran, adhan, hadith]
+        return ordered.filter { Self.appTabs.contains($0.id) }
+    }
+
+    /// The tabs this app has: Al-Adhan and Al-Quran share this file, and a welcome that described a
+    /// tab the reader cannot find would send them looking for it.
+    private static let appTabs: Set<String> = {
+        var tabs: Set<String> = ["islam"]
+        #if HAS_ADHAN
+        tabs.insert("adhan")
+        #endif
+        #if HAS_QURAN
+        tabs.insert("quran")
+        #endif
+        #if HAS_HADITH
+        tabs.insert("hadith")
+        #endif
+        return tabs
+    }()
+
+    private static var tabCountPhrase: String {
+        switch appTabs.count {
+        case 4: return "Four tabs"
+        case 3: return "Three tabs"
+        default: return "Two tabs"
+        }
     }
 
     private func islamText(_ background: UserBackground) -> String {
@@ -351,7 +385,7 @@ struct AboutYouView: View {
                     .font(.title.bold())
                     .multilineTextAlignment(.center)
 
-                Text("Four tabs, and where you might begin.")
+                Text("\(Self.tabCountPhrase), and where you might begin.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -400,10 +434,13 @@ struct AboutYouView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundColor(.secondary)
 
+            #if HAS_QURAN
             suggestionToggle("Transliteration under the Arabic",
                              "The Quran in Latin letters beneath each ayah, for reading along before you know the script.",
                              isOn: $transliteration)
+            #endif
 
+            #if HAS_ADHAN
             suggestionToggle("What each prayer's name means",
                              "Notifications that read \u{201C}Time for Maghrib (sunset)\u{201D}.",
                              isOn: $englishMeanings)
@@ -413,6 +450,7 @@ struct AboutYouView: View {
                                  "Off if you are only here to read. You can bring them back in Settings.",
                                  isOn: $prayerNotifications)
             }
+            #endif
 
             // No "Open the app on the Islam tab" switch here any more (Abu, 2026-09-25): which tab
             // the app opens on is chosen in one place only, Appearance > Look and Feel. Finishing the
@@ -492,10 +530,14 @@ struct AboutYouView: View {
     private func seedSuggestions() {
         guard !didSeedSuggestions else { return }
         didSeedSuggestions = true
+        #if HAS_QURAN
         transliteration = settings.showTransliteration || isNewInstall
+        #endif
+        #if HAS_ADHAN
         englishMeanings = settings.prayerNotificationEnglishNames || isNewInstall
         prayerNotifications = settings.notificationFajr || settings.notificationDhuhr || settings.notificationAsr
             || settings.notificationMaghrib || settings.notificationIsha
+        #endif
     }
 
     private func finish(saving: Bool) {
@@ -504,9 +546,14 @@ struct AboutYouView: View {
             if choice.wantsStartHere { settings.startHereHidden = false }
 
             if choice != .raised {
+                #if HAS_QURAN
                 if transliteration != settings.showTransliteration { settings.showTransliteration = transliteration }
+                #endif
+                #if HAS_ADHAN
                 if englishMeanings != settings.prayerNotificationEnglishNames { settings.prayerNotificationEnglishNames = englishMeanings }
+                #endif
             }
+            #if HAS_ADHAN
             if choice == .exploring, !prayerNotifications {
                 settings.notificationFajr = false
                 settings.notificationSunrise = false
@@ -515,6 +562,7 @@ struct AboutYouView: View {
                 settings.notificationMaghrib = false
                 settings.notificationIsha = false
             }
+            #endif
         }
 
         if presentedAsSheet {

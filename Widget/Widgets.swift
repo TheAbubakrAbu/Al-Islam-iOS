@@ -4,11 +4,12 @@ import WidgetKit
 @main
 struct Widgets: WidgetBundle {
     var body: some Widget {
+        #if HAS_ADHAN
         // Al-Adhan: home screen, in gallery order - every layout on the current prayer's sky
         // gradient first, then the same layouts again - every one - on the standard background.
         // Both blocks share an order so a sky widget and its no-sky twin are easy to match up in
         // the gallery.
-        // (Companion apps: delete the domains you don't ship; the Quran widgets are the block below.)
+        // (Each app compiles the domains it ships: HAS_ADHAN here, HAS_QURAN for the Quran block below.)
         PrayerGradientWidget()          // the sky twin of Prayer Glance
         SolarArcSkyWidget()
         MoonSkyWidget()
@@ -34,8 +35,10 @@ struct Widgets: WidgetBundle {
         PrayersWidget()
         Prayers2Widget()
         FastingCountdownWidget()
+        #endif
 
         #if os(iOS)
+        #if HAS_ADHAN
         // Lock screen: the two circulars, then the rectangulars from richest to plainest.
         if #available(iOS 16.1, *) {
             PrayerProgressRingWidget()
@@ -60,15 +63,21 @@ struct Widgets: WidgetBundle {
         if #available(iOS 16.2, *) {
             FastingLiveActivity()
         }
+        #endif
         // Control Center (iOS 18+), which is also the Lock Screen's bottom corners and the Action
         // button. See `ControlWidgets.swift` for why these three and no more.
         if #available(iOS 18.0, *) {
+            #if HAS_QURAN
             ResumeRecitationControl()
+            #endif
+            #if HAS_ADHAN
             PrayerTimesControl()
             QiblaControl()
+            #endif
         }
         #endif
         
+        #if HAS_QURAN
         // Al-Quran: the reading/listening widgets.
         LastListenedSurahWidget()
         LastListenedAyahWidget()
@@ -82,6 +91,7 @@ struct Widgets: WidgetBundle {
         if #available(iOS 17.0, *) {
             ChosenAyahWidget()
         }
+        #endif
         #endif
     }
 }

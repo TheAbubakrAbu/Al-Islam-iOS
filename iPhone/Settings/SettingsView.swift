@@ -22,7 +22,9 @@ struct SettingsSearchEntry: Identifiable {
 
     var id: String { path + title }
 
+    /// Each app's own areas: Al-Adhan and Al-Quran share this file.
     enum Destination {
+        #if HAS_ADHAN
         case notifications
         case notificationReminders
         case prayerSettings
@@ -32,9 +34,14 @@ struct SettingsSearchEntry: Identifiable {
         case travelingMode
         case prayerCalculation
         case skyColors
+        #endif
+        #if HAS_QURAN
         case quranSettings
         case reciters
+        #endif
+        #if HAS_HADITH
         case hadithSettings
+        #endif
         /// Islam Settings: the fourth area, for everything outside the Quran, the prayer times and
         /// the hadith books (the Arabic face, the alphabet controls, the Al-Islam tab itself).
         case islamSettings
@@ -55,16 +62,23 @@ struct SettingsSearchEntry: Identifiable {
         /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
         case credit(String)
         /// A page's own sub-screen, pushed directly (the page enums live in SettingsSearch.swift).
+        #if HAS_ADHAN
         case notificationsPage(SettingsNotificationsPage)
         case prayerPage(SettingsAdhanPage)
+        #endif
+        #if HAS_QURAN
         case quranPage(SettingsQuranPage)
+        #endif
+        #if HAS_HADITH
         case hadithPage(SettingsHadithPage)
+        #endif
         case islamPage(SettingsIslamPage)
         case appearancePage(SettingsAppearancePage)
 
         /// The chip icon a search result renders with - derived here so entries never repeat it.
         var icon: String {
             switch self {
+            #if HAS_ADHAN
             case .notifications: return "bell.badge.fill"
             case .notificationReminders: return "bell.and.waves.left.and.right.fill"
             case .prayerSettings: return "safari.fill"
@@ -72,9 +86,14 @@ struct SettingsSearchEntry: Identifiable {
             case .travelingMode: return "airplane"
             case .prayerCalculation: return "globe.europe.africa.fill"
             case .skyColors: return "sunset.fill"
+            #endif
+            #if HAS_QURAN
             case .quranSettings: return "character.book.closed.ar"
             case .reciters: return "headphones"
+            #endif
+            #if HAS_HADITH
             case .hadithSettings: return "text.book.closed.fill"
+            #endif
             case .islamSettings: return "moon.stars.fill"
             case .appearance: return "paintpalette.fill"
             case .aboutYou: return "person.crop.circle.fill"
@@ -85,10 +104,16 @@ struct SettingsSearchEntry: Identifiable {
             case .tips: return "lightbulb.fill"
             case .credits: return "scroll.fill"
             case .credit: return "link"
+            #if HAS_ADHAN
             case .notificationsPage(let page): return page.systemImage
             case .prayerPage(let page): return page.systemImage
+            #endif
+            #if HAS_QURAN
             case .quranPage(let page): return page.systemImage
+            #endif
+            #if HAS_HADITH
             case .hadithPage(let page): return page.systemImage
+            #endif
             case .islamPage(let page): return page.systemImage
             case .appearancePage(let page): return page.systemImage
             }
@@ -166,17 +191,32 @@ struct SettingsView: View {
 
     /// What a grid-mode tile opens: the pages the list's rows push, by name.
     private enum SettingsGridDoor: Hashable {
-        case notifications, prayer, quran, hadith, islam
+        #if HAS_ADHAN
+        case notifications, prayer
+        #endif
+        #if HAS_QURAN
+        case quran
+        #endif
+        #if HAS_HADITH
+        case hadith
+        #endif
+        case islam
         case appearance(SettingsAppearancePage)
     }
 
     @ViewBuilder
     private func gridDestination(_ door: SettingsGridDoor) -> some View {
         switch door {
+        #if HAS_ADHAN
         case .notifications: NotificationView()
         case .prayer: SettingsAdhanView(showNotifications: false)
+        #endif
+        #if HAS_QURAN
         case .quran: SettingsQuranView()
+        #endif
+        #if HAS_HADITH
         case .hadith: SettingsHadithView(presentedAsSheet: false)
+        #endif
         case .islam: SettingsIslamView()
         case .appearance(let page): AppearancePageView(page: page)
         }
@@ -278,10 +318,16 @@ struct SettingsView: View {
     private static let defaultDestination: SettingsDestination = .islamSettings
 
     private enum SettingsDestination: Hashable {
+        #if HAS_ADHAN
         case notification
         case prayerSettings
+        #endif
+        #if HAS_QURAN
         case quranSettings
+        #endif
+        #if HAS_HADITH
         case hadithSettings
+        #endif
         case islamSettings
         /// A spotlight card's screen in the iPad/Mac detail column, by tip id. A SELECTION like the
         /// rows, deliberately: no row is tagged with it, so the hub rows show no highlight while a
@@ -481,20 +527,26 @@ struct SettingsView: View {
 
     private static var debugSettingsPage: SettingsSearchEntry.Destination? {
         switch launchValue("-settingsOpen") {
+        #if HAS_ADHAN
         case "prayer": return .prayerSettings
         case "prayerSky": return .prayerPage(.sky)
         case "notifications": return .notifications
+        case "prayerReminders": return .notificationsPage(.prayerReminders)
+        case "nagging": return .notificationsPage(.naggingMode)
+        #endif
+        #if HAS_QURAN
         case "quran": return .quranSettings
+        case "islamReminders": return .islamPage(.sunnahReminders)
+        #endif
+        #if HAS_HADITH
         case "hadith": return .hadithSettings
+        #endif
         case "islam": return .islamSettings
         // The Islam sub-pages, so each can be screenshotted without a tap.
         case "islamArabic": return .islamPage(.arabicText)
         case "islamTextSize": return .islamPage(.textSize)
         case "islamAlphabet": return .islamPage(.alphabet)
         case "islamLibraries": return .islamPage(.libraries)
-        case "islamReminders": return .islamPage(.sunnahReminders)
-        case "prayerReminders": return .notificationsPage(.prayerReminders)
-        case "nagging": return .notificationsPage(.naggingMode)
         case "aboutYou": return .aboutYou
         case "simpleMode": return .simpleMode
         #if HAS_ICLOUD_BACKUP
@@ -647,14 +699,20 @@ struct SettingsView: View {
     private var settingsSplitDetail: some View {
         Group {
             switch selectedDestination ?? Self.defaultDestination {
+            #if HAS_ADHAN
             case .notification:
                 NotificationView()
             case .prayerSettings:
                 SettingsAdhanView(showNotifications: false)
+            #endif
+            #if HAS_QURAN
             case .quranSettings:
                 SettingsQuranView()
+            #endif
+            #if HAS_HADITH
             case .hadithSettings:
                 SettingsHadithView(presentedAsSheet: false)
+            #endif
             case .islamSettings:
                 SettingsIslamView()
             case .spotlight(let id):
@@ -820,6 +878,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsHubSection: some View {
         Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
+            #if HAS_ADHAN
             resourceLink(title: "Notifications", systemImage: "bell.badge.fill",
                          subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications) {
                 NotificationView()
@@ -828,15 +887,20 @@ struct SettingsView: View {
                          subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer) {
                 SettingsAdhanView(showNotifications: false)
             }
+            #endif
+            #if HAS_QURAN
             resourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
                          subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran) {
                 SettingsQuranView()
             }
+            #endif
             #if os(iOS)
+            #if HAS_HADITH
             resourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
                          subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith) {
                 SettingsHadithView(presentedAsSheet: false)
             }
+            #endif
             // The fourth area, for what belongs to none of the three above. It wears BOTH brand
             // colours rather than one of its own, because it is not one tab (see `SettingsTint.islam`).
             resourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
@@ -857,32 +921,63 @@ struct SettingsView: View {
     private var settingsHubGridSection: some View {
         Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
             VStack(spacing: 8) {
+                #if HAS_ADHAN
                 SettingsGridBanner(title: "Notifications", systemImage: "bell.badge.fill",
                                    caption: "Prayer alerts, adhan sounds, reminders",
                                    tint: SettingsTint.notifications) { openGrid(.notifications) }
+                #endif
 
+                #if HAS_ADHAN && HAS_QURAN && HAS_HADITH
                 SettingsGridTileRow {
-                    SettingsGridTile(title: "Prayer Settings", systemImage: "safari.fill",
-                                     caption: "Calculation, offsets, travel, sky",
-                                     tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
-                    SettingsGridTile(title: "Quran Settings", systemImage: "character.book.closed.ar",
-                                     caption: "Fonts, tajweed, reciters, themes",
-                                     tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
+                    prayerGridTile
+                    quranGridTile
                 }
 
                 SettingsGridTileRow {
                     SettingsGridTile(title: "Hadith Settings", systemImage: "text.book.closed.fill",
                                      caption: "Arabic and English, reading view",
                                      tint: SettingsTint.hadith, prominent: true) { openGrid(.hadith) }
-                    // Both brand colours, as on its row (see `SettingsTint.islam`).
-                    SettingsGridTile(title: "Islam Settings", systemImage: "moon.stars.fill",
-                                     caption: "Arabic font, libraries, reminders",
-                                     tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
-                                     prominent: true) { openGrid(.islam) }
+                    islamGridTile
                 }
+                #else
+                // A companion app's one area beside Islam Settings, on one row.
+                SettingsGridTileRow {
+                    #if HAS_ADHAN
+                    prayerGridTile
+                    #endif
+                    #if HAS_QURAN
+                    quranGridTile
+                    #endif
+                    islamGridTile
+                }
+                #endif
             }
             .padding(.vertical, 1)
         }
+    }
+
+    #if HAS_ADHAN
+    private var prayerGridTile: some View {
+        SettingsGridTile(title: "Prayer Settings", systemImage: "safari.fill",
+                         caption: "Calculation, offsets, travel, sky",
+                         tint: SettingsTint.prayer, prominent: true) { openGrid(.prayer) }
+    }
+    #endif
+
+    #if HAS_QURAN
+    private var quranGridTile: some View {
+        SettingsGridTile(title: "Quran Settings", systemImage: "character.book.closed.ar",
+                         caption: "Fonts, tajweed, reciters, themes",
+                         tint: SettingsTint.quran, prominent: true) { openGrid(.quran) }
+    }
+    #endif
+
+    /// Both brand colours, as on its row (see `SettingsTint.islam`).
+    private var islamGridTile: some View {
+        SettingsGridTile(title: "Islam Settings", systemImage: "moon.stars.fill",
+                         caption: "Arabic font, libraries, reminders",
+                         tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary,
+                         prominent: true) { openGrid(.islam) }
     }
     #endif
 
@@ -890,14 +985,20 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsHubSectionSplit: some View {
         Section(header: SectionIconHeader("SETTINGS", icon: "gearshape.fill")) {
+            #if HAS_ADHAN
             splitResourceLink(title: "Notifications", systemImage: "bell.badge.fill",
                               subtitle: "Prayer alerts, adhan sounds, reminders", tint: SettingsTint.notifications, value: .notification)
             splitResourceLink(title: "Prayer Settings", systemImage: "safari.fill",
                               subtitle: "Calculation, offsets, travel, sky", tint: SettingsTint.prayer, value: .prayerSettings)
+            #endif
+            #if HAS_QURAN
             splitResourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar",
                               subtitle: "Fonts, tajweed, reciters, themes", tint: SettingsTint.quran, value: .quranSettings)
+            #endif
+            #if HAS_HADITH
             splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed.fill",
                               subtitle: "Arabic and English, reading view", tint: SettingsTint.hadith, value: .hadithSettings)
+            #endif
             splitResourceLink(title: "Islam Settings", systemImage: "moon.stars.fill",
                               subtitle: "Arabic font, libraries, reminders",
                               tint: SettingsTint.islam, secondaryTint: SettingsTint.islamSecondary, value: .islamSettings)
@@ -1869,10 +1970,14 @@ struct SettingsGridTileRow<Content: View>: View {
 /// where it would push inside the narrow column): the same three screens as ordinary rows.
 struct ProfileTilesSection: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
     /// Observed for the same reason `ProfileSettingsRow` observes them: the deferred last-read load
     /// and a badge unlocked elsewhere must both re-render this row's caption.
+    #if HAS_QURAN
+    @ObservedObject private var quranData = QuranData.shared
+    #endif
+    #if HAS_HADITH
     @ObservedObject private var hadithStore = HadithStore.shared
+    #endif
     @ObservedObject private var achievements = AchievementsStore.shared
     #if HAS_ICLOUD_BACKUP
     @ObservedObject private var cloud = CloudBackupManager.shared
@@ -1919,13 +2024,21 @@ struct ProfileTilesSection: View {
     /// Your Progress' one live number, short enough for a third of a screen: the streak first, then
     /// the khatm, then badges, and the invitation when there is nothing recorded yet.
     private var progressValue: String {
+        #if HAS_QURAN
         let stats = ProfileStats.current(settings: settings, quranData: quranData)
+        #else
+        let stats = ProfileStats.current(settings: settings)
+        #endif
+        #if HAS_ADHAN
         if stats.prayer.currentStreak > 0 {
             return "\(stats.prayer.currentStreak)-day streak"
         }
+        #endif
+        #if HAS_QURAN
         if stats.khatmCompleted > 0 {
             return "\(Int((stats.khatmFraction * 100).rounded()))% read"
         }
+        #endif
         let earned = achievements.unlockedCount(stats)
         if earned > 0 {
             return "\(earned) badge\(earned == 1 ? "" : "s")"
@@ -2199,6 +2312,7 @@ struct VersionNumber: View {
 ///
 /// The surah and reciter are real (`QuranData.shared`), so the card shows the shipped Arabic name and
 /// a title of realistic length rather than a short placeholder that would never reveal a clipping bug.
+#if HAS_QURAN
 #Preview("Settings - player sits ABOVE the search bar") {
     let surah = AlIslamPreviewData.quranData.quran.first(where: { $0.id == 55 })
         ?? AlIslamPreviewData.surah
@@ -2237,4 +2351,5 @@ struct VersionNumber: View {
         SettingsView()
     }
 }
+#endif
 #endif

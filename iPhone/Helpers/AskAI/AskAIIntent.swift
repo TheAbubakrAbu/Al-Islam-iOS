@@ -58,21 +58,33 @@ enum AskAIIntent: String, Codable, CaseIterable {
     var taskLine: String {
         switch self {
         case .greeting:
+            #if HAS_QURAN
             return "The reader is greeting you. Greet them back warmly in one or two sentences (return a salam with a salam) and offer to help with the Quran, the hadith, prayer, or the app. No sources, no list."
+            #else
+            return "The reader is greeting you. Greet them back warmly in one or two sentences (return a salam with a salam) and offer to help with prayer, Islam, or the app. No sources, no list."
+            #endif
         case .thanks:
             return "The reader is thanking you. Reply briefly and warmly, one sentence or two, and offer to help further."
         case .farewell:
             return "The reader is saying goodbye. Reply briefly and warmly, one sentence or two."
         case .capabilities:
+            #if HAS_QURAN
             return "The reader is asking what you can do. Say, warmly and briefly, what you can help with here: explaining verses and surahs, what the Quran and the hadith say on a subject, the Names of Allah, duas, how to pray, fast and perform other acts of worship, Islamic history and the prophets, and using this app (reciters, fonts, notifications, widgets). Invite a question. No sources."
+            #else
+            return "The reader is asking what you can do. Say, warmly and briefly, what you can help with here: today's prayer times, the Names of Allah, duas, how to pray, fast and perform other acts of worship, Islamic history and the prophets, and using this app (prayer times, the adhan, notifications, widgets). Invite a question. No sources."
+            #endif
         case .smallTalk:
+            #if HAS_QURAN
             return "The reader is making small talk. Reply naturally and briefly, as a friendly assistant inside a Quran app would, then offer help."
+            #else
+            return "The reader is making small talk. Reply naturally and briefly, as a friendly assistant inside a prayer times app would, then offer help."
+            #endif
         case .sourceQuestion:
             return "The reader is asking about the sources of the previous answer (who narrated it, which collection or surah it comes from, how it is graded, where to find it). Answer in a sentence or two per source asked about, from the details written beside that source above: the collection and its compiler, the chapter, the narrator, the grade; for a verse, its surah and translation. Cite by number. If the reader calls a source a hadith but it is a verse of the Quran (or the other way round), say so. If the details do not say, say so plainly rather than guessing."
         case .recap:
             return "The reader wants your previous answer reworked as asked (a summary, a shorter or simpler version, a restatement). Rework ONLY that answer, keeping its citations by number; add no new subjects."
         case .appHelp:
-            return "The question is about using THIS app (Al-Islam). Answer only from the setting and tip sources: name the exact place (the tab, then the screen, then the setting, in the app's own words, for example Settings, then Quran Settings, then Recitation) and what the control does, as short steps if there are several. Do not invent screens or controls. If no source covers it, say you are not sure the app has that and suggest searching in Settings."
+            return "The question is about using THIS app (\(AppIdentifiers.appName)). Answer only from the setting and tip sources: name the exact place (the tab, then the screen, then the setting, in the app's own words, for example Settings, then Quran Settings, then Recitation) and what the control does, as short steps if there are several. Do not invent screens or controls. If no source covers it, say you are not sure the app has that and suggest searching in Settings."
         case .prayerTimes:
             return "The question is about today's prayer schedule. Answer from the \u{201C}Prayer times today\u{201D} source exactly as written (times and rakah counts), doing any arithmetic the question needs from the current time it states."
         case .reference:

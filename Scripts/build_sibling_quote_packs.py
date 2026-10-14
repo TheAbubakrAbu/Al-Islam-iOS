@@ -66,15 +66,26 @@ def deflate(payload: dict) -> bytes:
 
 
 def swift_sources(sibling: Path) -> list[Path]:
-    return sorted((sibling / "iPhone/Islam").glob("*.swift"))
+    # Recursive: the Islam tab's files live in subfolders since the 2026-10-07 move (Beliefs/, Daily/,
+    # Proofs/...), and a top-level glob found almost none of them.
+    return sorted((sibling / "iPhone/Islam").rglob("*.swift"))
 
 
 # ---------------------------------------------------------------- Quran
 
 def quran_references(sibling: Path) -> list[str]:
+    """Article/Dua quotes plus the Reminder of the Day's verses: a verse card in the reminder pack
+    carries only its surah and ayah, and an app without the Quran text reads the words from here
+    (`DailyReminderStore.texts(for:)`). Without them a verse day showed "Qur'an 31:17" and nothing else."""
     found: set[str] = set()
     for path in swift_sources(sibling):
         found.update(m.strip() for m in QURAN_RE.findall(path.read_text(encoding="utf-8")))
+    reminders = sibling / "Resources/Data/Islam/DailyReminders.json.xz"
+    if reminders.exists():
+        pack = json.loads(lzma.open(reminders).read())
+        for entry in pack.get("entries", []):
+            if entry.get("s") and entry.get("a"):
+                found.add(f"{entry['s']}:{entry['a']}")
     return sorted(found)
 
 

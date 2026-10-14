@@ -664,7 +664,7 @@ final class TajweedColorOverrides: @unchecked Sendable {
 ///   Tanwin:                     fathatayn U+064B, dammatayn U+064C, kasratayn U+064D (+ Uthmani variants)
 ///   Iqlaab/ikhfaa tiny marks:   small high meem U+06E2, small low meem U+06ED (silent tanwin carriers)
 ///   Waqf ornaments:             U+06D6…U+06ED skipped for coloring EXCEPT {U+06E1, U+06E2, U+06E5,
-///                               U+06E6, U+06ED} which are parts of letters, not stop symbols.
+///                               U+06E6, U+06E7, U+06ED} which are parts of letters, not stop symbols.
 ///
 /// --------------------------------------------------------------------------------------------
 /// 3. RULE TAXONOMY (category · trigger · length)
@@ -754,7 +754,7 @@ final class TajweedColorOverrides: @unchecked Sendable {
 ///        over generic tafkhim on overlap.
 ///   6.11 STOP-BASED MADD NOT PAINTED. `maddSukoon` (aarid + leen) is fully detected but kept out of the
 ///        painted text for now (`stopBasedCategories`); the legend still documents it.
-///   6.12 WAQF ORNAMENTS. Pause symbols in U+06D6…U+06ED are not colored, except the five exception
+///   6.12 WAQF ORNAMENTS. Pause symbols in U+06D6…U+06ED are not colored, except the six exception
 ///        scalars that are letter components (`waqfScalarExceptions`).
 ///
 /// --------------------------------------------------------------------------------------------
@@ -822,7 +822,9 @@ struct TajweedRules {
     static let stopSignUTF16: Set<UInt16> = Set(stopSignScalars.map { UInt16($0) })
 
     /// A few Uthmani marks in the same block must stay paintable because they are part of letters, not stop symbols.
-    static let waqfScalarExceptions: Set<UInt32> = [0x06E1, 0x06E2, 0x06E5, 0x06E6, 0x06ED]
+    /// The small high yeh (U+06E7, the ـۧ of إِبۡرَٰهِـۧمَ, 38 places) was missing until 2026-10-14, so its
+    /// madd painted only the tatweel under it and the yeh itself stayed in the text color.
+    static let waqfScalarExceptions: Set<UInt32> = [0x06E1, 0x06E2, 0x06E5, 0x06E6, 0x06E7, 0x06ED]
 
     /// Tree-driven annotations decoded from JSON, mapped to the public legend categories.
     static let treeDrivenRuleMap: [String: TajweedLegendCategory] = [

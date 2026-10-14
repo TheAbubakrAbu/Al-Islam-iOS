@@ -134,9 +134,14 @@ struct SkyWeather: Codable, Equatable {
     }
     /// "1,013 hPa"
     var pressureText: String {
-        Measurement(value: pressureHPa, unit: UnitPressure.hectopascals)
-            .formatted(.measurement(width: .abbreviated, usage: .barometric,
-                                    numberFormatStyle: .number.precision(.fractionLength(0))))
+        let pressure = Measurement(value: pressureHPa, unit: UnitPressure.hectopascals)
+        // `.barometric` is iOS 16; the companions' floor is iOS 15, where the reading shows as given.
+        if #available(iOS 16.0, *) {
+            return pressure.formatted(.measurement(width: .abbreviated, usage: .barometric,
+                                                   numberFormatStyle: .number.precision(.fractionLength(0))))
+        }
+        return pressure.formatted(.measurement(width: .abbreviated, usage: .asProvided,
+                                               numberFormatStyle: .number.precision(.fractionLength(0))))
     }
     /// "30%" or nil when the hourly forecast was not available.
     var precipitationChanceText: String? {
@@ -144,9 +149,14 @@ struct SkyWeather: Codable, Equatable {
     }
     /// "0.2 mm" (inches where the region uses them).
     var precipitationText: String {
-        Measurement(value: precipitationMm, unit: UnitLength.millimeters)
-            .formatted(.measurement(width: .abbreviated, usage: .rainfall,
-                                    numberFormatStyle: .number.precision(.fractionLength(0...1))))
+        let amount = Measurement(value: precipitationMm, unit: UnitLength.millimeters)
+        // `.rainfall` is iOS 16, like `.barometric` above; on iOS 15 the reading shows as given.
+        if #available(iOS 16.0, *) {
+            return amount.formatted(.measurement(width: .abbreviated, usage: .rainfall,
+                                                 numberFormatStyle: .number.precision(.fractionLength(0...1))))
+        }
+        return amount.formatted(.measurement(width: .abbreviated, usage: .asProvided,
+                                             numberFormatStyle: .number.precision(.fractionLength(0...1))))
     }
     /// "UV 3"
     var uvShortText: String { "UV \(uvIndex)" }

@@ -209,4 +209,18 @@ private struct FastingLockScreenView: View {
         .padding()
     }
 }
+// The extension's do-nothing halves of the Qibla and Prayer Times controls' intents
+// (`Widget/ControlWidgets.swift`), here because this file compiles into the Widget target ALONE: the
+// app's real bodies are in iPhone/Settings/System/ControlIntents.swift, and an `openAppWhenRun` intent
+// always runs in the app, so these are never reached. (The recitation toggle's half is beside the
+// Quran widgets, in LastListenedSurahWidget.swift.)
+@available(iOSApplicationExtension 18.0, *)
+extension OpenQiblaIntent {
+    func openQibla() async {}
+}
+
+@available(iOSApplicationExtension 18.0, *)
+extension OpenPrayerTimesIntent {
+    func openPrayerTimes() async {}
+}
 #endif

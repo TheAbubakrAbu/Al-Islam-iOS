@@ -62,12 +62,19 @@ enum AppLifecycle {
     @MainActor
     static func scenePhaseChanged(to phase: ScenePhase) {
         installMemoryWarningPurge()
+        #if HAS_ADHAN
         adhanScenePhaseChanged(to: phase)
+        #endif
+        #if HAS_QURAN
         quranScenePhaseChanged(to: phase)
+        #endif
+        #if HAS_HADITH
         hadithScenePhaseChanged(to: phase)
+        #endif
         sharedScenePhaseChanged(to: phase)
     }
 
+    #if HAS_ADHAN
     // MARK: - Al-Adhan (prayer times, adhan playback, fasting, location)
 
     @MainActor
@@ -130,7 +137,9 @@ enum AppLifecycle {
         #endif
         ForegroundAdhanPlayer.shared.playMissedAdhan()
     }
+    #endif
 
+    #if HAS_QURAN
     // MARK: - Al-Quran (playback persistence, Quran widgets, reading progress)
 
     @MainActor
@@ -170,7 +179,9 @@ enum AppLifecycle {
             settings.refreshQuranWidgets(.backgrounding)
         }
     }
+    #endif
 
+    #if HAS_HADITH
     // MARK: - Al-Hadith (daily hadith)
 
     @MainActor
@@ -185,6 +196,7 @@ enum AppLifecycle {
         // No-ops within the same day.
         HadithStore.shared.prepareDailyHadith()
     }
+    #endif
 
     // MARK: - Memory pressure (Phase 5 step 13)
 
@@ -247,12 +259,14 @@ enum AppLifecycle {
 
     @MainActor
     private static func purgeQuranSessionCaches() {
+        #if HAS_QURAN
         QiraahComparison.purgeCaches()
         MushafPageRenderCache.purgeFallbackRenders()
         MushafPrintLines.purge()
         AyahHighlightColor.purgeSwatchCache()
         MushafPDFLibrary.purgeMeasuredCrops()
         SolidPack.purgeInflatedBodies()
+        #endif
         MemoryTrim.trimAll()
     }
 
@@ -309,13 +323,18 @@ enum AppFootprint {
 enum MemoryTrim {
     @MainActor
     static func trimAll() {
+        #if HAS_HADITH
         // The Hadith Encyclopedia's header, parsed blocks and search folds: rebuilt on the next open.
         HadeethEncStore.shared.unload()
+        #endif
         // The Miracles library and its decoded illustrations (a 40-frame animation is ~27 MB).
         MiraclesStore.shared.unload()
         MiracleImageLoader.purgeDecodedImages()
+        #if HAS_HADITH
         // The long-narration chunk memo (rebuilt per row on demand).
         HadithArabicChunks.purgeCache()
+        #endif
+        #if HAS_QURAN
         // The explorer's computed place tables and counts.
         QiraatPlacesStore.shared.purgeComputed()
         // The mushaf fit's fonts (bounded, but a page fit's probes fill it; rebuilt on the next fit).
@@ -330,6 +349,7 @@ enum MemoryTrim {
         AyahThemesStore.shared.unload()
         QiraatVariantsStore.shared.unload()
         QiraahTajweedStore.shared.purgePaintCache()
+        #endif
         #if DEBUG
         MemoryFootprint.logLater("memory warning trim", delay: 2)
         #endif
@@ -351,19 +371,25 @@ enum AppLifecycle {
         let settings = Settings.shared
 
         if phase == .active {
+            #if HAS_ADHAN
             // The watch senses its own location (location is never synced from the phone), but its
             // continuous updates stop the moment the app suspends - so after a flight, raising the
             // wrist showed the departure city indefinitely. One immediate one-shot fix on wake, then
             // the same low-frequency cadence the iPhone uses while frontmost.
             settings.refreshLocationIfStale()
             settings.beginForegroundLocationCadence()
+            #endif
         } else {
+            #if HAS_ADHAN
             settings.endForegroundLocationCadence()
+            #endif
+            #if HAS_QURAN
             // A page flip within the last second may still have its last-read write pending.
             settings.flushPendingLastRead()
             // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
             // the system can suspend or kill the process.
             settings.flushPendingKhatmProgress()
+            #endif
             // Flush any just-made setting change before suspension so it reliably reaches the iPhone.
             WatchConnectivityManager.shared.flushPendingSync()
         }

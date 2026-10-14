@@ -47,6 +47,7 @@ struct AskAIChatView: View {
     @State private var debugQueue: [String] = []
     #endif
 
+    #if HAS_QURAN
     private static let starterPool = [
         "What does the Quran say about patience in hardship?",
         "How do I make up a missed prayer?",
@@ -61,6 +62,25 @@ struct AskAIChatView: View {
         "What are the signs of the Day of Judgment?",
         "How do I change the reciter in this app?",
     ]
+    #else
+    // Without the Quran reader (Al-Adhan): the same pool, with the four starters that lean on the
+    // Quran's text or its reciters swapped for ones this app's own sources answer (its prayer times,
+    // articles, duas, Names and tips).
+    private static let starterPool = [
+        "When does the time for Isha end tonight?",
+        "How do I make up a missed prayer?",
+        "What are the sunnahs of Friday?",
+        "What did the Prophet say about kindness to parents?",
+        "What should I say after the adhan?",
+        "What is the difference between zakat and sadaqah?",
+        "Tell me the story of Prophet Yusuf",
+        "Is there a dua for anxiety?",
+        "What does Al-Wadud mean?",
+        "How do I perform wudu?",
+        "What are the signs of the Day of Judgment?",
+        "How do I change the adhan sound in this app?",
+    ]
+    #endif
 
     /// Four starters, rotated by the day so the empty screen does not read the same every time.
     private var starters: [String] {
@@ -230,7 +250,7 @@ struct AskAIChatView: View {
                 eyebrow: "ASK AI",
                 systemImage: "sparkles",
                 headline: "Ask anything about Islam.",
-                message: "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
+                message: AskAICopy.heroMessage
             )
 
             VStack(alignment: .leading, spacing: 8) {
@@ -267,7 +287,7 @@ struct AskAIChatView: View {
                 welcomeLabel("HOW IT WORKS")
 
                 VStack(alignment: .leading, spacing: 12) {
-                    howItWorksRow(icon: "magnifyingglass", text: "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips.")
+                    howItWorksRow(icon: "magnifyingglass", text: AskAICopy.searchedAcross)
                     howItWorksRow(icon: cloudOffered ? "icloud" : "iphone", text: cloudOffered
                                   ? "What it finds goes to Apple Intelligence on your device, or to Apple\u{2019}s Private Cloud Compute if you choose it in the menu, which answers in its own words and cites each source by number, saying where it comes from."
                                   : "What it finds goes to Apple Intelligence on your device, which answers in its own words and cites each source by number, saying where it comes from. Nothing leaves your phone.")
@@ -353,7 +373,7 @@ struct AskAIChatView: View {
                     .font(.body)
                     .foregroundStyle(settings.accentColor.color)
 
-                TextField("Ask about the Quran, hadith, or Islam", text: $draft, axis: .vertical)
+                TextField(AskAICopy.composerPrompt, text: $draft, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($inputFocused)
                     .textFieldStyle(.plain)
@@ -424,6 +444,29 @@ struct AskAIChatView: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+/// The copy that names what Ask AI searches. Each app names only the libraries it ships: the hadith
+/// collections are compiled in with HAS_HADITH, so an app without them never promises them.
+private enum AskAICopy {
+    #if HAS_HADITH
+    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, hadith, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
+    static let searchedAcross = "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, hadith collections, tafsir, articles, duas, Names of Allah and tips."
+    static let composerPrompt = "Ask about the Quran, hadith, or Islam"
+    static let lookingThrough = "Looking through the Quran, hadith and articles\u{2026}"
+    #elseif HAS_QURAN
+    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own Quran, tafsir, articles and duas, with every source quoted beneath the reply and a line saying where it comes from."
+    static let searchedAcross = "Your question is understood first (a greeting, a verse, a how-to, a question about the app), then searched across this app\u{2019}s own Quran, tafsir, articles, duas, Names of Allah and tips."
+    static let composerPrompt = "Ask about the Quran or Islam"
+    static let lookingThrough = "Looking through the Quran and articles\u{2026}"
+    #else
+    // No Quran and no hadith shelf (Al-Adhan): the prayer times, the articles, the duas, the Names
+    // and the tips are what AskAIRetrieval.swift searches here.
+    static let heroMessage = "A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered by Apple Intelligence from this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips, with every source quoted beneath the reply and a line saying where it comes from."
+    static let searchedAcross = "Your question is understood first (a greeting, a how-to, a question about the app), then searched across this app\u{2019}s own prayer times, articles, duas, Names of Allah and tips."
+    static let composerPrompt = "Ask about prayer or Islam"
+    static let lookingThrough = "Looking through the app\u{2019}s articles\u{2026}"
+    #endif
 }
 
 /// The chat presented as a sheet (from the search screens), in its own navigation stack so the
@@ -618,8 +661,10 @@ private struct AskAIAnswerCard: View {
             switch message.intent {
             case .appHelp: return "Looking through the app\u{2019}s tips\u{2026}"
             case .dua: return "Looking through the duas\u{2026}"
+            #if HAS_HADITH
             case .hadith: return "Looking through the hadith collections\u{2026}"
-            default: return "Looking through the Quran, hadith and articles\u{2026}"
+            #endif
+            default: return AskAICopy.lookingThrough
             }
         }
         return message.engine == .privateCloud ? "Thinking on Private Cloud Compute\u{2026}" : "Thinking\u{2026}"

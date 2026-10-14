@@ -15,7 +15,17 @@ enum ControlWidgetKind {
     static let qibla = "AlIslamQiblaControl"
     static let prayerTimes = "AlIslamPrayerTimesControl"
 
-    static let all = [resumeRecitation, qibla, prayerTimes]
+    /// The controls this app ships: Al-Adhan and Al-Quran share this file.
+    static let all: [String] = {
+        var kinds: [String] = []
+        #if HAS_QURAN
+        kinds.append(resumeRecitation)
+        #endif
+        #if HAS_ADHAN
+        kinds += [qibla, prayerTimes]
+        #endif
+        return kinds
+    }()
 }
 
 /// The App Group keys the controls read. The app owns the writes; the control process only reads.

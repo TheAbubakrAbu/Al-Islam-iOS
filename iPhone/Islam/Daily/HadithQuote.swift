@@ -87,11 +87,13 @@ enum WordRange {
     }
 }
 
-#if os(watchOS)
+#if os(watchOS) || !HAS_HADITH
 /// Where a referenced narration gets its words on the Watch, which compiles the article files and
-/// the Dua screen but bundles no shelf: `HadithQuotes.json.deflate`, the referenced rows alone, cut
-/// from the shelf at build time by Scripts/build_hadith_quotes_pack.py and gated byte-identical to a
-/// fresh build by Scripts/verify_islam_corpus.py. The phone never bundles it.
+/// the Dua screen but bundles no shelf, and in an app without the hadith shelf (HAS_HADITH off, so
+/// no `HadithPack` code to open one): `HadithQuotes.json.deflate`, the referenced rows alone, cut
+/// from the shelf at build time by Scripts/build_hadith_quotes_pack.py (the companions' copy by
+/// Scripts/build_sibling_quote_packs.py) and gated byte-identical to a fresh build by
+/// Scripts/verify_islam_corpus.py. Al-Islam's phone never bundles it.
 enum HadithQuoteSource {
     private static let lock = NSLock()
     nonisolated(unsafe) private static var rows: [String: HadithQuoteText]?

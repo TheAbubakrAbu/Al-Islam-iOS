@@ -1,4 +1,6 @@
 import XCTest
+import SwiftUI
+import UIKit
 @testable import iPhone
 
 /// The Hafs tajweed painter, one letter at a time (Quality Guide, Phase 8).
@@ -287,6 +289,39 @@ final class TajweedPaintTests: XCTestCase {
         let allahumma = Site(surah: 3, ayah: 26, word: "\u{0671}\u{0644}\u{0644}\u{0651}\u{064E}\u{0647}\u{064F}\u{0645}\u{0651}\u{064E}", scalar: 0x0644, occurrence: 1)
         let found = try await rules(at: allahumma)
         XCTAssertFalse(found.contains(.tafkhim), "3:26: قُلِ's kasra makes it light")
+    }
+
+    /// The small high yeh of إِبۡرَٰهِـۧمَ (U+06E7, 38 places) sits in the waqf band but is part of a
+    /// letter, not a stop sign. Until 2026-10-14 the paint skipped it, so its Tiny Madd colored only
+    /// the tatweel under it and the yeh itself stayed in the text color. Reads the DRAWN color, since
+    /// `ruleCategories` resolves the ops and never saw the skip.
+    func testSmallHighYehIsPaintedLikeItsTatweel() async throws {
+        XCTAssertFalse(TajweedRules.shouldSkipWaqfColoring(UnicodeScalar(0x06E7)!))
+        for stop in TajweedRules.stopSignScalars {
+            XCTAssertTrue(TajweedRules.shouldSkipWaqfColoring(UnicodeScalar(stop)!), String(format: "U+%04X is painted", stop))
+        }
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        guard TajweedLegendCategory.allCases.allSatisfy(Settings.shared.isTajweedCategoryVisible) else {
+            throw XCTSkip("a tajweed category is hidden in this simulator's settings")
+        }
+        let ayah = try XCTUnwrap(data.ayah(surah: 2, ayah: 124), "no ayah 2:124")
+        let raw = ayah.rawArabicText(surahId: 2, qiraahOverride: "")
+        let units = Array(raw.utf16)
+        let yeh = try XCTUnwrap(units.firstIndex(of: 0x06E7), "2:124: no small high yeh")
+        XCTAssertEqual(units[yeh - 1], 0x0640, "2:124: the small high yeh rides a tatweel")
+        let styled = try XCTUnwrap(TajweedStore.shared.attributedText(surah: 2, ayah: 124, text: raw, removeArabicDots: false))
+        let painted = NSAttributedString(styled)
+        let traits = UITraitCollection(userInterfaceStyle: .light)
+        func rgba(_ color: UIColor?) -> [CGFloat] {
+            var r: CGFloat = -1, g: CGFloat = -1, b: CGFloat = -1, a: CGFloat = -1
+            color?.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+            return [r, g, b, a].map { ($0 * 255).rounded() }
+        }
+        func drawn(_ i: Int) -> [CGFloat] { rgba(painted.attribute(.foregroundColor, at: i, effectiveRange: nil) as? UIColor) }
+        let tiny = rgba(UIColor(TajweedLegendCategory.maddNaturalMiniature.color))
+        XCTAssertEqual(drawn(yeh - 1), tiny, "2:124: the tatweel is not Tiny Madd")
+        XCTAssertEqual(drawn(yeh), tiny, "2:124: the small high yeh is not Tiny Madd")
     }
 
     /// Not a rule check: writes the whole Quran's painted rules, one JSON line per ayah

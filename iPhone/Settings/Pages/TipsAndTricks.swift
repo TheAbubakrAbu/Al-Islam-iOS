@@ -474,17 +474,26 @@ enum TipCatalog {
                title: "Never surprised by Ramadan",
                detail: "Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced.",
                place: "Notifications", destination: .notifications, advanced: true),
-        // Its screen lives in the Quran domain (iPhone/Quran/Models/SunnahReminders.swift), which
-        // Al-Adhan never receives, and a reminder's tap opens the surah in the reader.
-        AppTip(id: "notif.sunnah", area: .notifications, group: "WORDING AND DATES", systemImage: "bell.badge",
-               title: "Sunnah Reminders",
-               detail: "Al-Kahf on Friday, al-Mulk before sleep, and more, each at a time you choose and each with the hadith it comes from. Tapping one opens the surah.",
-               place: "Notifications, Sunnah Reminders", destination: .notificationsPage(.sunnahReminders), card: ("Sunnah Reminders", "Al-Kahf on Friday, al-Mulk before sleep, each with its hadith."), isAvailable: { shipsQuran }),
+    ] + sunnahReminderTips + [
         AppTip(id: "notif.focus", area: .notifications, group: "WORDING AND DATES", systemImage: "moon.zzz.fill",
                title: "Through a Focus, if you allow it",
                detail: "Prayer notifications are marked Time Sensitive. Allow Time Sensitive notifications for \(app) in a Focus such as Sleep or Do Not Disturb and they still come through.",
                place: "iPhone Settings, Focus"),
     ]
+
+    // Its screen lives in the Quran domain (iPhone/Quran/Models/SunnahReminders.swift), which
+    // Al-Adhan never receives, and a reminder's tap opens the surah in the reader. Its own list, so the
+    // page it names (`SettingsNotificationsPage.sunnahReminders`) compiles out with it.
+    #if HAS_QURAN
+    private static let sunnahReminderTips: [AppTip] = [
+        AppTip(id: "notif.sunnah", area: .notifications, group: "WORDING AND DATES", systemImage: "bell.badge",
+               title: "Sunnah Reminders",
+               detail: "Al-Kahf on Friday, al-Mulk before sleep, and more, each at a time you choose and each with the hadith it comes from. Tapping one opens the surah.",
+               place: "Notifications, Sunnah Reminders", destination: .notificationsPage(.sunnahReminders), card: ("Sunnah Reminders", "Al-Kahf on Friday, al-Mulk before sleep, each with its hadith."), isAvailable: { shipsQuran }),
+    ]
+    #else
+    private static let sunnahReminderTips: [AppTip] = []
+    #endif
     #else
     private static let adhan: [AppTip] = []
     private static let notifications: [AppTip] = []

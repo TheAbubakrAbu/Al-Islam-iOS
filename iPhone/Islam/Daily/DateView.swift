@@ -106,6 +106,7 @@ struct DateView: View {
             ArticleCallout(paragraphs: ["Conversions use the Umm al-Qura Hijri method, with the Hijri offset set in app settings."],
                            title: "Umm al-Qura", systemImage: "moon.stars.fill")
 
+            #if HAS_ADHAN
             // Forced to `.events`: this row promises the dates, so it must not land on the month grid
             // just because that is the half the reader last had open.
             //
@@ -117,6 +118,7 @@ struct DateView: View {
             } label: {
                 hijriDoorLabel("See All Hijri Events", systemImage: "star.circle")
             }
+            #endif
 
             OpenScreenLink(screen: .hijriArticle) {
                 HijriCalendarView()
@@ -124,11 +126,13 @@ struct DateView: View {
                 hijriDoorLabel("Learn About the Hijri Calendar", systemImage: "book.pages")
             }
 
+            #if HAS_ADHAN
             OpenScreenLink(screen: .hijriCalendar) {
                 CalendarView(mode: .calendar)
             } label: {
                 hijriDoorLabel("Open Hijri Calendar", systemImage: "calendar")
             }
+            #endif
         }
     }
 

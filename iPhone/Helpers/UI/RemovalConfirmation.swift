@@ -66,6 +66,7 @@ enum RemovalConfirmation {
 // MARK: - Ayah bookmarks and surah favorites
 
 extension Settings {
+    #if HAS_QURAN
     /// Bookmarks the ayah, or asks before removing an existing bookmark. The note, when there is one,
     /// goes with the bookmark, and the dialog says so.
     @MainActor
@@ -105,6 +106,7 @@ extension Settings {
             self?.toggleSurahFavorite(surah: surah)
         }
     }
+    #endif
 
     /// Favorites the letter, or asks before removing it from the favorites.
     @MainActor
@@ -143,6 +145,7 @@ extension Settings {
 
 // MARK: - Hadith bookmarks and favorites
 
+#if HAS_HADITH
 extension HadithUserData {
     /// Bookmarks the hadith, or asks before removing an existing bookmark (with its note, when it has
     /// one). `reference` is the citation the dialog names; the saved bookmark's own when not given, so
@@ -215,6 +218,7 @@ extension HadithStore {
         HadithUserData.shared.toggleChapterFavoriteOrConfirm(book: book, chapter: chapter)
     }
 }
+#endif
 #else
 import SwiftUI
 
@@ -224,6 +228,7 @@ import SwiftUI
 /// immediate - the confirmation is an iPhone rule (its bookmark and favorite screens), and the watch
 /// only ever offers the header star.
 extension Settings {
+    #if HAS_QURAN
     func toggleBookmarkOrConfirm(surah: Int, ayah: Int) {
         toggleBookmark(surah: surah, ayah: ayah)
     }
@@ -231,6 +236,7 @@ extension Settings {
     func toggleSurahFavoriteOrConfirm(surah: Int) {
         toggleSurahFavorite(surah: surah)
     }
+    #endif
 
     func toggleLetterFavoriteOrConfirm(letterData: LetterData) {
         toggleLetterFavorite(letterData: letterData)

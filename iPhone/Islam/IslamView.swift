@@ -305,8 +305,11 @@ struct IslamView: View {
             case .pillarsAndBasics, .howToGuides, .namesOfAllah: return .faith
             case .commonAdhkar, .commonDuas, .tasbihCounter: return .remembrance
             case .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets, .provingIslam: return .signs
-            case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter,
-                 .masjidLocator, .halalFoodLocator, .islamicWallpapers: return .tools
+            case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter, .islamicWallpapers: return .tools
+            // The two location tools come with the prayer times' location (not in Al-Quran).
+            #if HAS_ADHAN
+            case .masjidLocator, .halalFoodLocator: return .tools
+            #endif
             // Ask AI is last, alone (Abu, 2026-10-04): it is a conversation, not a reference page,
             // so it closes the resources rather than sitting inside TOOLS where its banner split
             // that section's tiles in two.
@@ -431,7 +434,10 @@ struct IslamView: View {
                 case .names(let number):
                     NamesViewModel.shared.pendingNameNumber = number
                     destination = .namesOfAllah
-                case .hadithTab, .tab: destination = nil
+                #if HAS_QURAN || HAS_HADITH
+                case .hadithTab: destination = nil
+                #endif
+                case .tab: destination = nil
                 }
                 guard let destination else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
@@ -1120,7 +1126,9 @@ struct IslamView: View {
                 NavigationLink(value: resource) { label }
             }
         } else {
-            // The one step that leaves the tab: the Quran. `AppNavigation` switches tabs.
+            // The one step that leaves the tab: the Quran. `AppNavigation` switches tabs. (Only an app
+            // with the Quran lists that step: `StartHere.steps` drops it elsewhere.)
+            #if HAS_QURAN
             Button {
                 settings.hapticFeedback()
                 StartHere.markVisited(resource: nil)
@@ -1136,6 +1144,7 @@ struct IslamView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            #endif
         }
     }
 
@@ -1244,7 +1253,10 @@ struct IslamView: View {
             TajweedFoundationsView()
             #endif
         case .tajweedCourse:
+            // Listed only where the course's pack ships (`available`), which is with the Quran.
+            #if HAS_QURAN
             TajweedCourseView()
+            #endif
         case .commonAdhkar:
             AdhkarView()
         case .commonDuas:
@@ -1293,11 +1305,13 @@ struct IslamView: View {
                 TajweedFoundationsView()
             }
 
+            #if HAS_QURAN
             if TajweedLessonsStore.isBundled {
                 resourceLink(title: "Tajweed Course", systemImage: "graduationcap") {
                     TajweedCourseView()
                 }
             }
+            #endif
 
             resourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed") {
                 AdhkarView()

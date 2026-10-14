@@ -15,11 +15,14 @@ private enum ActivityGoal {
     /// enough for a value that changes from the planner screen.
     @MainActor
     static func read() -> Int {
+        // The reading plan is the Quran planner's (HAS_QURAN); without it the default stands.
+        #if HAS_QURAN
         if let plan = Settings.shared.quranPlan {
             let total = QuranPlannerMath.totalAyahs(quran: QuranData.shared.quran)
             let target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: total, dayStartCompleted: plan.dayStartCompleted)
             if target > 0 { return target }
         }
+        #endif
         return 10
     }
     static let listen = 1
@@ -478,7 +481,7 @@ struct ActivityAnalyticsView: View {
                 }
 
                 Section(footer:
-                    Text("One action is one ayah marked read, one surah played, one count of dhikr, or one hadith opened. Days turn over with the daily features (at Fajr by default). One missed day a month is forgiven by the streak. Reading and listening on your Apple Watch count too, once it syncs.")
+                    Text(analyticsActionFootnote)
                         .font(.caption2)
                 ) { EmptyView() }
             }
@@ -566,4 +569,26 @@ private struct TrendBars: View, Equatable {
         }
     }
 }
+
+/// The Analytics page's footnote: what counts as one action, and when a day turns over, naming only
+/// what this app ships (the hadith reader is HAS_HADITH; the Fajr boundary needs prayer times).
+private let analyticsActionFootnote: String = {
+    var actions: [String] = []
+    #if HAS_QURAN
+    actions += ["one ayah marked read", "one surah played"]
+    #endif
+    actions.append("one count of dhikr")
+    #if HAS_HADITH
+    actions.append("one hadith opened")
+    #endif
+    let list = actions.count > 1
+        ? actions.dropLast().joined(separator: ", ") + ", or " + actions[actions.count - 1]
+        : actions.joined()
+    #if HAS_ADHAN
+    let turnover = "Days turn over with the daily features (at Fajr by default)."
+    #else
+    let turnover = "Days turn over at midnight, with the daily features."
+    #endif
+    return "One action is \(list). \(turnover) One missed day a month is forgiven by the streak. Reading and listening on your Apple Watch count too, once it syncs."
+}()
 #endif

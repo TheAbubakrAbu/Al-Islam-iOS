@@ -11,6 +11,7 @@ import WidgetKit
 // runs here. Either way these bodies only ever execute in the app process, where the player and the
 // navigation object exist.
 
+#if HAS_QURAN
 @available(iOS 18.0, *)
 extension ToggleRecitationIntent {
     /// Play or pause. Playing reuses `ResumeListeningIntent.resumeListening()` rather than repeating its
@@ -28,7 +29,9 @@ extension ToggleRecitationIntent {
         QuranPlayer.shared.mirrorPlaybackStateForControls()
     }
 }
+#endif
 
+#if HAS_ADHAN
 @available(iOS 18.0, *)
 extension OpenQiblaIntent {
     @MainActor
@@ -44,4 +47,5 @@ extension OpenPrayerTimesIntent {
         AppNavigation.shared.openAdhan(.tab)
     }
 }
+#endif
 #endif

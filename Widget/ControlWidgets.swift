@@ -19,6 +19,7 @@ import WidgetKit
 // reads the SAME App Group snapshot the home-screen widgets do (`AppIdentifiers.appGroupSuiteName`), so
 // it can never disagree with them about the next prayer.
 
+#if HAS_QURAN
 // MARK: - Resume Recitation
 
 /// The one control that does not open anything: `AudioPlaybackIntent` runs in the app, launching it in
@@ -72,7 +73,9 @@ struct ToggleRecitationIntent: SetValueIntent, AudioPlaybackIntent {
         return .result()
     }
 }
+#endif
 
+#if HAS_ADHAN
 // MARK: - Qibla
 
 /// Opens the Qibla compass. An `OpenIntent`-style control: finding the direction is inherently a look at
@@ -177,4 +180,5 @@ struct OpenPrayerTimesIntent: AppIntent {
         return .result()
     }
 }
+#endif
 #endif

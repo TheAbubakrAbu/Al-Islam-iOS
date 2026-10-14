@@ -654,7 +654,7 @@ struct QiraatIsnadShareCard: View {
 
             QiraatIsnadDiagram(chain: chain, forImage: true)
 
-            Text("Al-Islam · The Ten Qiraat")
+            Text("\(AppIdentifiers.appName) · The Ten Qiraat")
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(Color.black.opacity(0.45))
         }
