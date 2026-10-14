@@ -3,7 +3,7 @@
 #if HAS_ICLOUD_BACKUP
 import Foundation
 
-/// What an iCloud backup carries, key by key (docs/iCloud Sync Guide.md, section 5a).
+/// What an iCloud backup carries, key by key (Docs/Engineering/iCloud Sync Guide.md, section 5a).
 ///
 /// A backup is an explicit list and never "whatever is in UserDefaults": restoring a device-only
 /// key onto another phone (a migration flag, the armed-notification signature, a cached location)

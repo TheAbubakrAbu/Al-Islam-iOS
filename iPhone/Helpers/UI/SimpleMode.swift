@@ -1,6 +1,6 @@
 import SwiftUI
 
-// Simple Mode (docs/Simple Mode Guide.md, agreed with Abu 2026-10-10): one switch, `Settings.simpleMode`,
+// Simple Mode (Docs/Product/Simple Mode Guide.md, agreed with Abu 2026-10-10): one switch, `Settings.simpleMode`,
 // that keeps every tab to its essentials. Each site reads the switch itself; this file holds the ⋯ More
 // menu that leads every tab's toolbar, and the catalog below. The pure rules (`enum SimpleMode`: the
 // tracker gate, the permission dialogs' snooze) live in SettingsAdhan.swift, which the widgets also
@@ -62,21 +62,30 @@ struct TabMoreMenu<Items: View>: View {
     /// Pages): the label spins, as the reading-mode button it stands in for did.
     private let isBusy: Bool
     private let items: Items
+    private let doubleTap: MenuShortcut?
+    private let hold: MenuShortcut?
 
-    init(isBusy: Bool = false, @ViewBuilder items: () -> Items) {
+    init(isBusy: Bool = false, doubleTap: MenuShortcut? = nil, hold: MenuShortcut? = nil,
+         @ViewBuilder items: () -> Items) {
         self.isBusy = isBusy
+        self.doubleTap = doubleTap
+        self.hold = hold
         self.items = items()
     }
 
     var body: some View {
-        Menu {
+        ShortcutMenu(doubleTap: doubleTap, hold: hold) {
             items
         } label: {
-            if isBusy {
-                ProgressView()
-            } else {
-                Image(systemName: "ellipsis.circle")
+            Group {
+                if isBusy {
+                    ProgressView()
+                } else {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .accessibilityLabel("More")
         .accessibilityIdentifier("tabMoreMenu")

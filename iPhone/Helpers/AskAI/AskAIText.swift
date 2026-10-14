@@ -714,7 +714,7 @@ enum AskAIText {
 
 #if DEBUG
 /// "-askAITextProbe": the chat's pure text functions run on the inputs that broke them in the
-/// 2026-09-28 audit (Docs/Quality Guide.md, Phase 0), one NSLog line per case with PASS or FAIL.
+/// 2026-09-28 audit (Docs/Engineering/Quality Guide.md, Phase 0), one NSLog line per case with PASS or FAIL.
 /// No model, no retrieval: read with `log stream --predicate 'eventMessage CONTAINS "ASKAI PROBE"'`.
 enum AskAITextProbe {
     static func runIfRequested() {

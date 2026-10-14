@@ -18,7 +18,7 @@ struct SplashScreen: View {
     /// or Full, before the app opens. A sheet never leaves step one.
     @State private var step = 1
     /// The step's choice, Full preselected: the 10-07 "off by default for everyone" stands, so the
-    /// question offers Simple Mode rather than deciding it (docs/Simple Mode Guide.md).
+    /// question offers Simple Mode rather than deciding it (Docs/Product/Simple Mode Guide.md).
     @State private var choosesSimple = false
     @State private var popCenter = false
     @State private var popLeft = false
@@ -558,7 +558,7 @@ struct SplashScreen: View {
     // MARK: The Simple or Full step
 
     /// "How much would you like to see?": two cards in About You's option grammar, then where to change
-    /// it later. The copy is the guide's (docs/Simple Mode Guide.md, Splash).
+    /// it later. The copy is the guide's (Docs/Product/Simple Mode Guide.md, Splash).
     private func modeChoice(scale s: CGFloat) -> some View {
         VStack(spacing: 18 * s) {
             VStack(spacing: 8) {

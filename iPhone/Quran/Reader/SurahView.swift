@@ -1928,7 +1928,7 @@ struct SurahView: View {
                 // mushaf page is unmounted whenever it leaves the pager's window, and a view that owns a
                 // live `.sheet` takes that sheet down with it when it goes. The page reports which sheet
                 // it wants and for which ayah; `presentRowSheet` does the rest, "Keep Sheet Open" included.
-                // (Docs/Page Mode Sheet Ownership.md)
+                // (Docs/Quran/Page Mode Sheet Ownership.md)
                 onRequestSheet: { kind, surah, ayah in
                     presentRowSheet(kind, surah: surah, ayah: ayah)
                 },
@@ -2601,7 +2601,7 @@ struct SurahView: View {
         // separate opt-in setting for it anymore.
         // Simple Mode drops the pinned page/juz line; the inline dividers keep marking the pages, and the
         // divider rows keep counting toward the top-visible anchor (the last-read position must not
-        // move with the switch, rule 1 of docs/Simple Mode Guide.md).
+        // move with the switch, rule 1 of Docs/Product/Simple Mode Guide.md).
         let pageJuzOverlayApplies = showBoundaryDividers && searchText.isEmpty
         let shouldShowFloatingPageJuzOverlay = pageJuzOverlayApplies && !settings.simpleMode
         let shouldUpdateFloatingPageJuzOverlay = pageJuzOverlayApplies && surah.pageOrJuzChangesWithinSurah
@@ -2690,7 +2690,7 @@ struct SurahView: View {
                 }
 
                 #if !os(watchOS)
-                // Simple Mode keeps one pair, the one below the last ayah (docs/Simple Mode Guide.md).
+                // Simple Mode keeps one pair, the one below the last ayah (Docs/Product/Simple Mode Guide.md).
                 // `surahListTopTargetID` mirrors this condition, so a swap never scrolls to a row that
                 // is not there.
                 if !settings.simpleMode, previousSurah != nil || nextSurah != nil {
@@ -3916,7 +3916,17 @@ struct SurahView: View {
         let repeatCounts  = [20, 15, 10, 5, 3, 2]
 
         if playerIdle {
-            Menu {
+            ShortcutMenu(
+                doubleTap: MenuShortcut("Play Surah") {
+                    settings.hapticFeedback()
+                    quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
+                },
+                hold: MenuShortcut(settings.isHafsDisplay ? "Play Custom Range" : "Choose Reciter") {
+                    settings.hapticFeedback()
+                    if settings.isHafsDisplay { showCustomRangeSheet = true }
+                    else { showReciterPickerSheet = true }
+                }
+            ) {
                 // Reciter picker pinned to the very top, with a divider under it - the page-mode play
                 // menu's placement, mirrored here so the reciter is the first thing the menu offers.
                 Button {

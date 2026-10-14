@@ -169,7 +169,7 @@ struct AdhanView: View {
     }
 
     /// Simple Mode shows the tracker to someone who tracks: any prayer marked in the last
-    /// `SimpleMode.trackerWindowDays` (docs/Simple Mode Guide.md). Marking one from a prayer's detail
+    /// `SimpleMode.trackerWindowDays` (Docs/Product/Simple Mode Guide.md). Marking one from a prayer's detail
     /// brings it back. At most fourteen lookups into the cached tracker, so the countdown tick can ask.
     private var showsTracker: Bool {
         !settings.simpleMode || settings.trackerMarkedRecently()

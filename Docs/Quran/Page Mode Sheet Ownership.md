@@ -13,10 +13,10 @@ card all stayed up with page 31 behind them.
 **App:** Al-Islam (`Al-Islam-iOS`). Al-Quran carries the same reader and the same defect; port with
 `./sync_from_islam.sh quran --apply` once this is committed here.
 
-**Files:** [`iPhone/Quran/MushafReader.swift`](../iPhone/Quran/MushafReader.swift),
-[`iPhone/Quran/SurahView.swift`](../iPhone/Quran/SurahView.swift),
-[`iPhone/Quran/AyahSheets.swift`](../iPhone/Quran/AyahSheets.swift),
-[`iPhone/Quran/AyahRow.swift`](../iPhone/Quran/AyahRow.swift) (`AyahSheetPresence`, list reader only now).
+**Files:** [`iPhone/Quran/MushafReader.swift`](../../iPhone/Quran/MushafReader.swift),
+[`iPhone/Quran/SurahView.swift`](../../iPhone/Quran/SurahView.swift),
+[`iPhone/Quran/AyahSheets.swift`](../../iPhone/Quran/AyahSheets.swift),
+[`iPhone/Quran/AyahRow.swift`](../../iPhone/Quran/AyahRow.swift) (`AyahSheetPresence`, list reader only now).
 
 ---
 
@@ -121,7 +121,7 @@ inside the page's actions sheet with `-seedBool keepAyahSheetOpen=1` stacks the 
 
 ## Related
 
-- `Docs/Mushaf Page Turn Glitch.md`: the swipe resistance / blank panel defect, fixed the same day by
+- `Docs/Quran/Mushaf Page Turn Glitch.md`: the swipe resistance / blank panel defect, fixed the same day by
   making window changes wait for the pager to rest. The two share a root (the moving window) and were
   fixed together; a sheet no longer depends on the window at all.
-- `Docs/Mushaf Justification.md`: how a page's text is composed and fitted, and why it is expensive.
+- `Docs/Quran/Mushaf Justification.md`: how a page's text is composed and fitted, and why it is expensive.

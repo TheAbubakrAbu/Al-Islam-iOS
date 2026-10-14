@@ -505,7 +505,7 @@ struct HelpDoorsSection: View {
 
     var body: some View {
         // Simple Mode keeps every tab to its essentials, and each door's answer already lives in
-        // Settings (docs/Simple Mode Guide.md), so the section steps aside on all four tabs at once.
+        // Settings (Docs/Product/Simple Mode Guide.md), so the section steps aside on all four tabs at once.
         // Not while one of its sheets is up: "Too Much on Screen?" turns Simple Mode on from inside its
         // own sheet, and removing the section would take the sheet's presenter with it mid-tap.
         if settings.showsHelpDoors(area), !settings.simpleMode || openDoor != nil {

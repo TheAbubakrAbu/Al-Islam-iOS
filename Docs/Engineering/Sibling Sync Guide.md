@@ -145,8 +145,8 @@ nested types and argument labels (the old `.sheet(` false positive was WidgetGal
    features that compiled but are not wired: a root missing `.appearanceEnvironment()` shows a stale accent.
 10. **Advance the base by hand** once the sibling is green and Abu has looked:
     `echo <the Al-Islam HEAD from step 3> > Al-Quran-iOS/.sync-base`. Then repeat steps 3 to 10 for Al-Adhan.
-11. **Check the store copy.** The siblings' `Docs/Whats New.md`, `Promotional Text.md` and
-    `App Store Description.md` (rewritten 2026-10-13) describe features that only arrive with this sync.
+11. **Check the store copy.** The siblings' `Docs/App Store/Whats New.md`, `Docs/App Store/Promotional Text.md` and
+    `Docs/App Store/App Store Description.md` (rewritten 2026-10-13) describe features that only arrive with this sync.
     Al-Quran claims Test Mode, the Revision plan, Word Study, Simple Mode and recitation that plays to the
     end of the juz or the Quran; Al-Adhan claims the 3D moon, the skyline, "Did you pray?" from a prayer
     notification, Simple Mode and the accuracy work. Confirm each one landed and works, or tell Abu which
@@ -218,3 +218,13 @@ Ask AI cites "only the ayahs it shows" (it now cites tafsir, articles and duas t
 Both siblings build for device (Release) and simulator with 0 errors, launch on the iPhone 17 Pro simulator
 with every tab working, `sync-report-<app>.txt` shows 0 LEAKs, 0 FLAG-ERRORs and 0 ROOT-ERRORs, `.sync-base`
 is advanced, and the store copy matches what shipped. Then tell Abu what changed in each repo, uncommitted.
+# Target-specific navigation chrome
+
+Al-Quran and Al-Adhan use ordinary Settings tabs. Do not assign the Settings tab a
+`.prominent` or `.search` `TabRole` in either companion app. Al-Islam may keep its
+own role behavior when that behavior is intentionally different.
+
+Al-Adhan's Learn section has exactly three grid tiles: Arabic Alphabet, Tajweed
+Foundations, and Islamic Journal. Al-Adhan does not currently ship the Tajweed Course.
+Islamic Journal should not be rendered as a separate full-width Learn banner. Keep this
+rule synchronized if the companion Islam resource catalog is copied or regenerated.

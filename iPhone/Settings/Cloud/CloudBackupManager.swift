@@ -6,7 +6,7 @@ import Combine
 import UIKit
 #endif
 
-/// The iCloud half of the backup (docs/iCloud Sync Guide.md, sections 4 and 8): profiles in the
+/// The iCloud half of the backup (Docs/Engineering/iCloud Sync Guide.md, sections 4 and 8): profiles in the
 /// user's private CloudKit database, one record each, and this device's claim on one of them.
 ///
 /// The rules that matter, from the guide:

@@ -140,7 +140,7 @@ struct AppTip: Identifiable {
 enum TipCatalog {
     /// A tip about a control Simple Mode takes off the screen (the Optional Times pill, the date
     /// picker, the shuffles, the summary doors, Need a Hand?) is not offered while Simple Mode is on:
-    /// it would teach a button the reader cannot see (docs/Simple Mode Guide.md).
+    /// it would teach a button the reader cannot see (Docs/Product/Simple Mode Guide.md).
     static let outsideSimpleMode: () -> Bool = { !Settings.shared.simpleMode }
 
     static func tips(in area: TipArea) -> [AppTip] {
@@ -504,6 +504,13 @@ enum TipCatalog {
     // Al-Adhan has no Quran reader.
     #if HAS_QURAN
     private static let quran: [AppTip] = [
+        AppTip(id: "quran.menushortcuts", area: .quran, group: "READING", systemImage: "hand.tap.fill",
+               title: "Double tap for a shortcut",
+               detail: "Tap an ayah's play button for its menu, double tap to play just that ayah, or hold to choose a custom range. Double tap its ellipsis to copy; hold to share. Hadith ellipsis buttons use the same copy and share shortcuts. A Copied badge confirms when the copy is ready. With VoiceOver, use the named actions or the menu.",
+               place: "Ayah and hadith controls", isAvailable: {
+                   if #available(iOS 17.4, *) { return true }
+                   return false
+               }),
         AppTip(id: "quran.holdtitle", area: .quran, group: "MOVING AROUND", systemImage: "hand.tap.fill",
                title: "Hold the title to choose a surah",
                detail: "In the reader, touch and hold the title at the top to go straight to Choose Surah. In page mode, holding the pill at the foot of the page does the same. A plain tap on the title opens its whole menu.",
@@ -1478,7 +1485,7 @@ struct SettingsSpotlightSection: View {
     var body: some View {
         let tips = TipCatalog.spotlight
         // Simple Mode keeps the one row to every tip and leaves the twelve cards out
-        // (docs/Simple Mode Guide.md).
+        // (Docs/Product/Simple Mode Guide.md).
         Section(header: SectionIconHeader(settings.simpleMode ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())", icon: "lightbulb.fill")) {
             if settings.simpleMode {
                 EmptyView()

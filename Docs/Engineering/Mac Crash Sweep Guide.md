@@ -220,7 +220,7 @@ process is left (step 2.6).
 5. **Fix the root cause** in the app (superpowers:systematic-debugging), never a guard around the
    walker. Add a unit test when the failure can be expressed, run UnitTests on the iPhone 17 Pro
    simulator, rerun the seed that found it, then the batch.
-6. **Log it** in `docs/Quality Guide.md` (Progress log) in the shape of the 2026-10-12 entry: the tool,
+6. **Log it** in `Docs/Engineering/Quality Guide.md` (Progress log) in the shape of the 2026-10-12 entry: the tool,
    the runs, fixed, not the app, open.
 
 ## 6. A HANG showed up (`hung=1` or `HANG markers: n`)
@@ -267,7 +267,7 @@ driver samples the process at the first HANG line (`sample-hang.txt`, 3 s), wait
    says `restore pass: restored` or `restore pass: nothing pending`.
 2. `git status --short Resources/Entitlements-Main.entitlements` is empty; no `iPhone` process is left;
    `git status --short` shows only Abu's work plus your fixes.
-3. Record the runs, the fixes and the open items in `docs/Quality Guide.md` (Progress log), and anything
+3. Record the runs, the fixes and the open items in `Docs/Engineering/Quality Guide.md` (Progress log), and anything
    non-obvious in memory (`stress-walker.md`, `mac-launch-only-through-xcode.md`).
 4. Report to Abu: the runs (seeds x steps), real crashes fixed with file names, walker-induced crashes
    explained, HANGs classified, open items, the UnitTests result, and that nothing is committed (say what

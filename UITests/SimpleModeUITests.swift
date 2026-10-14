@@ -417,6 +417,113 @@ final class SimpleModeUITests: XCTestCase {
         add(shot)
     }
 
+    // Menu shortcuts must not also trigger the native menu or the containing row's hold action.
+    func testAyahMenuDoubleTapCopiesWithoutOpeningMenu() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0",
+                          "-shareAyahLastActionMode", "text"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15))
+        menu.doubleTap()
+        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Copy Ayah"].exists, "double tap also opened the menu")
+        XCTAssertFalse(app.buttons["Select Text"].exists, "double tap opened the row actions")
+    }
+
+    func testAyahMenuHoldOpensShare() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15))
+        menu.press(forDuration: 0.7)
+        let shareOpened = app.buttons["Share"].waitForExistence(timeout: 5)
+        if !shareOpened {
+            attachScreenshot("Ayah share hold")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(shareOpened, "hold did not open the share editor")
+        XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
+    }
+
+    func testAyahPlaybackDoubleTapStartsPlayback() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,nowPlayingExpanded=1"])
+        let play = app.buttons["ayahPlaybackMenu"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 15))
+        play.doubleTap()
+        XCTAssertTrue(app.buttons["Stop playing"].waitForExistence(timeout: 10), "double tap did not start playback")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap also opened the playback menu")
+        app.buttons["Stop playing"].tap()
+    }
+
+    func testAyahPlaybackTapAndHold() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let play = app.buttons["ayahPlaybackMenu"].firstMatch
+        XCTAssertTrue(play.waitForExistence(timeout: 15))
+        play.tap()
+        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5))
+        // Dismiss the menu without selecting a playback action.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.15)).tap()
+        play.press(forDuration: 0.7)
+        XCTAssertTrue(app.navigationBars["Custom Ayah Range"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
+    }
+
+    func testHadithMenuCopyAndShareShortcuts() {
+        let app = launch(["-launchTabHadith", "-launchHadithOpen", "bukhari:20",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        XCTAssertTrue(app.buttons["hadithActionsMenu"].firstMatch.waitForExistence(timeout: 15))
+        guard let menu = app.buttons.matching(identifier: "hadithActionsMenu")
+            .allElementsBoundByIndex.first(where: { $0.isHittable }) else {
+            return XCTFail("no visible hadith action control")
+        }
+        menu.doubleTap()
+        XCTAssertTrue(app.staticTexts["Copied"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Copy Hadith"].exists, "double tap also opened the menu")
+        menu.press(forDuration: 0.7)
+        let shareOpened = app.buttons["Share"].waitForExistence(timeout: 5)
+        if !shareOpened {
+            attachScreenshot("Hadith share hold")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(shareOpened)
+    }
+
+    func testAyahTextStillOpensActionsOnHold() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15))
+        // The first ayah's text, below its reference and action controls.
+        let point = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: app.frame.midX, dy: menu.frame.maxY + 40))
+        point.press(forDuration: 0.7)
+        // The trailing action tiles are lazy and below the fold in the medium sheet.
+        let keepOpen = app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", "Keep Sheet Open")).firstMatch
+        let opened = keepOpen.waitForExistence(timeout: 5)
+        if !opened {
+            attachScreenshot("Ayah text hold")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(opened, "holding the text did not open the ayah actions sheet")
+    }
+
+    func testMoreMenuDoubleTapChangesLayout() {
+        let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=0,THEfirstLaunch=0,quranGridMode=0"])
+        let more = app.buttons["tabMoreMenu"]
+        XCTAssertTrue(more.waitForExistence(timeout: 15))
+        more.doubleTap()
+        XCTAssertFalse(app.buttons["Open a Random Surah"].exists, "double tap also opened More")
+        more.tap()
+        let changedToGrid = app.buttons["Show as List"].waitForExistence(timeout: 5)
+        if !changedToGrid {
+            attachScreenshot("More after layout shortcut")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(changedToGrid, "double tap did not switch to grid")
+    }
+
     /// The ayah's ⋯ keeps to five actions and a way to the rest; the long list waits behind More Actions.
     func testAyahMenuIsFiveActionsInSimple() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1", "-seedBool", "simpleMode=1"])

@@ -59,7 +59,7 @@ struct PrayerList: View {
 
         /// The glyph beside each layout in the Adhan tab's ⋯ More menu (`AdhanView.adhanMoreItems`).
         /// Not `square.grid.2x2.fill`: that symbol's name stood in for a menu item's title under
-        /// VoiceOver once (docs/Simple Mode Guide.md).
+        /// VoiceOver once (Docs/Product/Simple Mode Guide.md).
         var menuSymbol: String {
             switch self {
             case .tiles: return "square.grid.2x2"
@@ -282,7 +282,7 @@ struct PrayerList: View {
         // The selected day only highlights a "current" prayer when it is actually today; on any other
         // day the concept doesn't apply, so render its prayers in the neutral primary color.
         prayerModeContent(prayers: displayedPrayers, highlightsCurrent: !isShowingDifferentDay)
-        // Simple Mode (docs/Simple Mode Guide.md): the traveling banner atop the tab already says what
+        // Simple Mode (Docs/Product/Simple Mode Guide.md): the traveling banner atop the tab already says what
         // the footer says, and other days live in the Prayer Calendar. The stepper stays while another
         // day is on screen, so the list is never left unexplained.
         #if os(iOS)

@@ -1884,6 +1884,84 @@ struct GridTileMenu<Label: View, Menu: View>: View {
     }
 }
 
+/// A menu with optional, explicitly named shortcuts. Single tap always opens the original menu.
+/// VoiceOver keeps native menu activation; shortcuts are also exposed as named accessibility actions.
+struct MenuShortcut {
+    let title: String
+    let action: () -> Void
+
+    init(_ title: String, action: @escaping () -> Void) {
+        self.title = title
+        self.action = action
+    }
+}
+
+struct ShortcutMenu<Content: View, Label: View>: View {
+    var doubleTap: MenuShortcut? = nil
+    var hold: MenuShortcut? = nil
+    @ViewBuilder let content: () -> Content
+    @ViewBuilder let label: () -> Label
+
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverOn
+    @StateObject private var availability = GridTileMenuHold()
+    @State private var isPressed = false
+    @State private var menuRequest = 0
+
+    private var hint: String {
+        var parts = ["Tap for menu."]
+        if let doubleTap { parts.append("Double tap to \(doubleTap.title.lowercased()).") }
+        if let hold { parts.append("Hold to \(hold.title.lowercased()).") }
+        return parts.joined(separator: " ")
+    }
+
+    var body: some View {
+        control
+            .accessibilityHint(voiceOverOn ? "Actions are also available in the menu." : hint)
+            .modifier(MenuShortcutAccessibilityAction(shortcut: doubleTap))
+            .modifier(MenuShortcutAccessibilityAction(shortcut: hold))
+    }
+
+    @ViewBuilder private var control: some View {
+        if #available(iOS 17.4, *), !voiceOverOn, !availability.isUnavailable,
+           doubleTap != nil || hold != nil {
+            label()
+                .opacity(isPressed ? 0.55 : 1)
+                .background(
+                    SwiftUI.Menu { content() } label: { Color.clear }
+                        .fixedMenuOrder()
+                        .menuIndicator(.hidden)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                )
+                .overlay(
+                    GridTileHoldLayer(isEnabled: isEnabled, isPressed: $isPressed, onTap: {},
+                                      tapOpensMenu: true, onDoubleTap: doubleTap?.action,
+                                      onHold: hold?.action, menuRequest: menuRequest,
+                                      onUnavailable: { availability.markUnavailable() })
+                )
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { menuRequest += 1 }
+        } else {
+            SwiftUI.Menu { content() } label: { label() }
+                .fixedMenuOrder()
+        }
+    }
+}
+
+private struct MenuShortcutAccessibilityAction: ViewModifier {
+    let shortcut: MenuShortcut?
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if let shortcut {
+            content.accessibilityAction(named: Text(shortcut.title), shortcut.action)
+        } else {
+            content
+        }
+    }
+}
+
 /// The fast hold's one tunable and its kill switch. See `GridTileMenu`.
 final class GridTileMenuHold: ObservableObject {
     static let shared = GridTileMenuHold()
@@ -1915,6 +1993,11 @@ private struct GridTileHoldLayer: UIViewRepresentable {
     let isEnabled: Bool
     @Binding var isPressed: Bool
     let onTap: () -> Void
+    var tapOpensMenu = false
+    var onDoubleTap: (() -> Void)? = nil
+    var onHold: (() -> Void)? = nil
+    var menuRequest = 0
+    var onUnavailable: () -> Void = { GridTileMenuHold.shared.markUnavailable() }
 
     func makeUIView(context: Context) -> HoldView {
         let view = HoldView()
@@ -1924,15 +2007,30 @@ private struct GridTileHoldLayer: UIViewRepresentable {
     }
 
     func updateUIView(_ view: HoldView, context: Context) {
+        view.onUnavailable = onUnavailable
+        view.tapOpensMenu = tapOpensMenu
+        view.onDoubleTap = onDoubleTap
+        view.onHold = onHold
+        view.doubleTapRecognizer?.isEnabled = onDoubleTap != nil
         view.onTap = onTap
+        if view.menuRequest != menuRequest {
+            view.menuRequest = menuRequest
+            DispatchQueue.main.async { [weak view] in view?.openMenu() }
+        }
         view.isUserInteractionEnabled = isEnabled
         view.onPressChange = { pressed in
             if isPressed != pressed { isPressed = pressed }
         }
     }
 
-    final class HoldView: UIView, UIContextMenuInteractionDelegate {
+    final class HoldView: UIView, UIContextMenuInteractionDelegate, UIGestureRecognizerDelegate {
         var onTap: () -> Void = {}
+        var tapOpensMenu = false
+        var onDoubleTap: (() -> Void)?
+        var onHold: (() -> Void)?
+        var menuRequest = 0
+        var onUnavailable: () -> Void = {}
+        weak var doubleTapRecognizer: UITapGestureRecognizer?
         var onPressChange: (Bool) -> Void = { _ in }
         private weak var holdRecognizer: UILongPressGestureRecognizer?
         /// When the menu last opened here, by any route. Two routes answering one press (the fast hold,
@@ -1943,12 +2041,20 @@ private struct GridTileHoldLayer: UIViewRepresentable {
         func install() {
             let hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
             hold.minimumPressDuration = GridTileMenuHold.duration
+            hold.delegate = self
             addGestureRecognizer(hold)
             holdRecognizer = hold
 
-            // Waiting on the hold costs a tap nothing: the hold fails the moment the finger lifts early.
+            let doubleTap = UITapGestureRecognizer(target: self, action: #selector(doubleTapped))
+            doubleTap.numberOfTapsRequired = 2
+            doubleTap.require(toFail: hold)
+            addGestureRecognizer(doubleTap)
+            doubleTapRecognizer = doubleTap
+
+            // The single tap waits for the double tap only on controls offering that shortcut.
             let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
             tap.require(toFail: hold)
+            tap.require(toFail: doubleTap)
             addGestureRecognizer(tap)
 
             // Never after a hold: on the iPadOS 26.5 simulator this recognizer also took a finger held
@@ -1964,6 +2070,18 @@ private struct GridTileHoldLayer: UIViewRepresentable {
             if UIDevice.current.userInterfaceIdiom == .pad {
                 addInteraction(UIContextMenuInteraction(delegate: self))
             }
+        }
+
+        // SwiftUI installs a row's context menu on its UIKit cell, even when the modifier is on
+        // just the text. That recognizer must wait for a control's sheet shortcut. Panning stays
+        // independent so scrolling still cancels a hold as soon as the finger moves.
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                               shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            guard onHold != nil, gestureRecognizer === holdRecognizer,
+                  let owner = otherGestureRecognizer.view, owner !== self,
+                  isDescendant(of: owner), !(otherGestureRecognizer is UIPanGestureRecognizer) else { return false }
+            return otherGestureRecognizer is UILongPressGestureRecognizer
+                || owner.interactions.contains { $0 is UIContextMenuInteraction }
         }
 
         /// A right click: the anchor's own menu at the pointer when its button exposes one, else the
@@ -1984,21 +2102,33 @@ private struct GridTileHoldLayer: UIViewRepresentable {
             return nil
         }
 
-        @objc private func tapped() { onTap() }
+        @objc private func tapped() {
+            if tapOpensMenu { openMenu() } else { onTap() }
+        }
+
+        @objc private func doubleTapped() { onDoubleTap?() }
 
         @objc private func secondaryClicked() {
             if !openedJustNow { openMenu() }
         }
 
         @objc private func held(_ recognizer: UILongPressGestureRecognizer) {
-            if recognizer.state == .began { openMenu() }
+            guard recognizer.state == .began else { return }
+            onPressChange(false)
+            if let onHold {
+                // Suppress a later pointer context-menu callback for the same physical hold.
+                openedAt = Date()
+                onHold()
+            } else {
+                openMenu()
+            }
         }
 
-        private func openMenu() {
+        func openMenu() {
             openedAt = Date()
             onPressChange(false)
             guard #available(iOS 17.4, *), let button = anchorButton() else {
-                GridTileMenuHold.shared.markUnavailable()
+                onUnavailable()
                 return
             }
             // The system's hold buzzes as its menu opens; a programmatic open is silent without this.
@@ -2017,9 +2147,16 @@ private struct GridTileHoldLayer: UIViewRepresentable {
                 if let control = view as? UIControl, control.showsMenuAsPrimaryAction,
                    control.contextMenuInteraction != nil {
                     let theirs = control.convert(control.bounds, to: nil)
-                    let distance = abs(theirs.midX - mine.midX) + abs(theirs.midY - mine.midY)
-                        + abs(theirs.width - mine.width) + abs(theirs.height - mine.height)
-                    if distance < 4, distance < (best?.distance ?? .greatestFiniteMagnitude) {
+                    let centerDistance = abs(theirs.midX - mine.midX) + abs(theirs.midY - mine.midY)
+                    let sizeDistance = abs(theirs.width - mine.width) + abs(theirs.height - mine.height)
+                    let distance = centerDistance + sizeDistance
+                    // Toolbars inset the native menu button (e.g. 48×36 around a 44×44 label).
+                    // Match its center while allowing those insets, without accepting a neighboring
+                    // control. Grid tiles retain their original exact-frame match.
+                    let matches = tapOpensMenu
+                        ? centerDistance < 4 && sizeDistance < 40
+                        : distance < 4
+                    if matches, distance < (best?.distance ?? .greatestFiniteMagnitude) {
                         best = (control, distance)
                     }
                 }
@@ -2470,7 +2607,7 @@ private struct SidebarCellProbe: UIViewRepresentable {
 #endif
 
 /// The corner star of `gridFavoriteStar`. A view of its own so it can watch Simple Mode itself: in
-/// Simple Mode a tile that is not a favorite draws no star (docs/Simple Mode Guide.md; every tile's
+/// Simple Mode a tile that is not a favorite draws no star (Docs/Product/Simple Mode Guide.md; every tile's
 /// press-and-hold menu still offers Favorite), and an Equatable tile around it may not redraw when the
 /// switch flips, where this view does.
 private struct GridFavoriteStar: View {
@@ -2714,7 +2851,7 @@ struct SectionPillHeader: View {
     var onRemove: (() -> Void)? = nil
 
     /// Simple Mode keeps a header to its title and its arrow: the count, search and shuffle step aside
-    /// (docs/Simple Mode Guide.md, rule 3). The one key is observed here rather than read off
+    /// (Docs/Product/Simple Mode Guide.md, rule 3). The one key is observed here rather than read off
     /// `Settings.shared`, so a header redraws when the switch flips without observing every setting.
     @AppStorage("simpleMode") private var simpleMode = false
 

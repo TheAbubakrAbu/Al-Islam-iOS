@@ -73,6 +73,38 @@ final class BannerWindow {
     }
 }
 
+/// Copy completion feedback, including asynchronous image copies. Repeated copies restart the timer.
+@MainActor
+final class CopyConfirmation {
+    static let shared = CopyConfirmation()
+    private var dismissal: Task<Void, Never>?
+    private lazy var banner = BannerWindow {
+        VStack {
+            Label("Copied", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(.regularMaterial, in: Capsule())
+                .accessibilityIdentifier("copyConfirmation")
+                .padding(.top, 8)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .allowsHitTesting(false)
+    }
+
+    func show() {
+        dismissal?.cancel()
+        banner.present()
+        UIAccessibility.post(notification: .announcement, argument: "Copied")
+        dismissal = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_600_000_000)
+            guard !Task.isCancelled else { return }
+            banner.dismiss()
+        }
+    }
+}
+
 private final class PassthroughWindow: UIWindow {
     var interactiveFrame: CGRect = .zero
 

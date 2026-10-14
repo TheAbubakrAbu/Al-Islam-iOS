@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Every saved key must be a decision: content, preference, or device-only.
 
-The iCloud backup (docs/iCloud Sync Guide.md) carries an explicit manifest instead of "everything
+The iCloud backup (Docs/Engineering/iCloud Sync Guide.md) carries an explicit manifest instead of "everything
 in UserDefaults", because restoring a device-only key onto another phone (a migration flag, a
 notification signature, a cached location) breaks things quietly. The price of an explicit list is
 that a NEW key is silently left out of every backup, and a new CONTENT key is also silently deleted

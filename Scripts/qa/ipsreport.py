@@ -3,7 +3,7 @@
 simulator, by path; a simulator report carries the HOST's macOS version), version and build, the exception,
 the runtime message (a Swift "Fatal error", an abort reason), the crashing thread's frames with symbols, the
 last exception backtrace, and whether a StressWalker frame is on any stack (the walk drove that step: judge
-the ACTION, see docs/Mac Crash Sweep Guide.md). With no argument: the newest iPhone-*.ips report."""
+the ACTION, see Docs/Engineering/Mac Crash Sweep Guide.md). With no argument: the newest iPhone-*.ips report."""
 import glob, json, os, sys
 
 paths = sys.argv[1:] or sorted(glob.glob(os.path.expanduser('~/Library/Logs/DiagnosticReports/iPhone-*.ips')),

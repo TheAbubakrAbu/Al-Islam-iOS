@@ -4,7 +4,7 @@
 import Foundation
 
 /// The user's things, grouped the way a person would name them, over the manifest's content keys
-/// and files (docs/iCloud Sync Guide.md, section 13). One table, five readers: the Reset dialog says
+/// and files (Docs/Engineering/iCloud Sync Guide.md, section 13). One table, five readers: the Reset dialog says
 /// what it keeps, the Erase dialog says what it deletes, the iCloud page's What's Included shows what
 /// this device would back up right now (with counts and the size), a restore previews the backup
 /// against this device category by category, and a profile's one-line summary is the top of the same

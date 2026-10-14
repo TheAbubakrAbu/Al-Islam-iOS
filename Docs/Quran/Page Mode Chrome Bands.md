@@ -100,7 +100,7 @@ change shows the clipped fallback for one fit).
   wide with big side margins for the whole sweep, then cut to its new fit, smaller text with new line
   breaks. That is the "awful". The keyboard was never the cause: the reader already ignores it.
 
-What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+What changed (all in [`MushafReader.swift`](../../iPhone/Quran/MushafReader.swift)):
 
 - **Room and opacity are separate state.** `bottomBarsCollapsed` is the fold's ROOM, `barsFaded` its
   opacity (and the intent, which the chevron shows); `findBarRoom` / `findBarVisible` do the same for the
@@ -169,7 +169,7 @@ withdrawn on 2026-08-31, so a page always reflows to its band). While the band s
 No scale of one layout ever matches the other, so the sweep could only show a wrong-size page and then a
 jump. The clean version is ONE switch, at the tap, with only the chrome moving.
 
-What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+What changed (all in [`MushafReader.swift`](../../iPhone/Quran/MushafReader.swift)):
 
 - **The pager does not animate through a fold**: `.animation(nil, value: bottomBarsCollapsed)` on the
   TabView. The header and bars still animate (now ease-out 0.25 s, so they arrive or clear at once), but
@@ -224,7 +224,7 @@ same recipe as below). What differed:
    mount and settle it at 529. `noteVisibleGeometry` took each at once, and the reader's own opening
    prewarms swept eight pages at each passing height, on every open, landing while the push animated.
 
-What changed (all in [`MushafReader.swift`](../iPhone/Quran/MushafReader.swift)):
+What changed (all in [`MushafReader.swift`](../../iPhone/Quran/MushafReader.swift)):
 
 - The fold is `@State`, seeded from the stored preference (`mushafBottomBarsCollapsed`, still persisted
   and still in the iCloud manifest) and written back by `setBarsCollapsed` 0.35 s after the fold, so the
@@ -268,9 +268,9 @@ render scaling with the band, or one crossfade.
 mid-work and holds an intermediate version (an `anticipateBand` mechanism that was later removed, and a
 fold estimate with its sign inverted); the working tree after it is the finished one.
 
-**Files:** [`iPhone/Quran/MushafReader.swift`](../iPhone/Quran/MushafReader.swift) (`SurahPageReader`'s
+**Files:** [`iPhone/Quran/MushafReader.swift`](../../iPhone/Quran/MushafReader.swift) (`SurahPageReader`'s
 chrome-state block, `MushafPageContent.body`, `MushafPageRenderCache`'s fallback and twin sections,
-`MushafPageTextView.updateUIView`), [`iPhone/Quran/NowPlayingView.swift`](../iPhone/Quran/NowPlayingView.swift)
+`MushafPageTextView.updateUIView`), [`iPhone/Quran/NowPlayingView.swift`](../../iPhone/Quran/NowPlayingView.swift)
 (`transportRowWithProgress`).
 
 ---
@@ -363,6 +363,6 @@ Final pass (run 7): blank frames 0 / 0 / 0 / 0 / 0 / 0; `STALE` lines only where
 
 ## Related
 
-- `docs/Mushaf Page Turn Glitch.md`: the pager's window and why it only changes at rest.
-- `docs/Page Mode Sheet Ownership.md`: why a page never presents a sheet.
-- `docs/Mushaf Justification.md`: how a page is composed and fitted.
+- `Docs/Quran/Mushaf Page Turn Glitch.md`: the pager's window and why it only changes at rest.
+- `Docs/Quran/Page Mode Sheet Ownership.md`: why a page never presents a sheet.
+- `Docs/Quran/Mushaf Justification.md`: how a page is composed and fitted.

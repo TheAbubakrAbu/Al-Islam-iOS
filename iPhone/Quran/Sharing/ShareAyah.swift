@@ -1071,6 +1071,7 @@ extension ShareAyahSheet {
         case .text:
             let text = buildShareText(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText)
             UIPasteboard.general.string = text
+            CopyConfirmation.shared.show()
         case .image:
             // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
             // Same phone-like clamp as the share-sheet render - see `ShareAyahRender.maxImageWidth`.
@@ -1097,6 +1098,7 @@ extension ShareAyahSheet {
                                       backdrop: .stored)
                 DispatchQueue.main.async {
                     UIPasteboard.general.image = img
+                    CopyConfirmation.shared.show()
                 }
             }
         }

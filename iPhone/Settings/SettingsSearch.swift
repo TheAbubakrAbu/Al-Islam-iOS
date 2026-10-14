@@ -273,7 +273,7 @@ enum SettingsTint {
     /// (Abu, 2026-09-19). Same two colours as the Top Accent Glow option in Appearance.
     static let islam = Color(red: 0.98, green: 0.75, blue: 0.18)
     static let islamSecondary = Color.green
-    static let appearance = Color(red: 0.62, green: 0.40, blue: 0.93)
+    static var appearance: Color { Settings.shared.accentColor.color }
     static let credits = Color(white: 0.55)
     static let sky = Color(red: 0.98, green: 0.58, blue: 0.24)
 }

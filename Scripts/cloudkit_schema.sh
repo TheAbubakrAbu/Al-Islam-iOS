@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The CloudKit schema for iCloud Backup, from the terminal (docs/iCloud Sync Guide.md, section 2).
+# The CloudKit schema for iCloud Backup, from the terminal (Docs/Engineering/iCloud Sync Guide.md, section 2).
 #
 # CloudKit has two environments. A build run from Xcode talks to DEVELOPMENT, where a record type
 # is created the first time a record of it is saved. A TestFlight or App Store build (Xcode Cloud's

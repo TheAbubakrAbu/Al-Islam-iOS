@@ -3800,7 +3800,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// 2026-10-10 (Abu: "right now its worthless"): the only-door rule became a MOVE, not a veto.
     /// Anything hidden from a tab stays one tap away, in that tab's ⋯ More menu or in Settings, and a
     /// short list of details is dropped outright. The rules and the catalog of every trim are in
-    /// docs/Simple Mode Guide.md and atop iPhone/Helpers/UI/SimpleMode.swift. New installs choose it
+    /// Docs/Product/Simple Mode Guide.md and atop iPhone/Helpers/UI/SimpleMode.swift. New installs choose it
     /// on the splash's second step (Full preselected); existing installs are never asked.
     @AppStorage("simpleMode") var simpleMode: Bool = false
 

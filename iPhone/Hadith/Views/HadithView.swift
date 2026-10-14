@@ -20,7 +20,14 @@ struct HadithTrailingToolbar: ViewModifier {
     func body(content: Content) -> some View {
         if let moreMenuItems {
             content.toolbar {
-                ToolbarItem(placement: .navigationBarLeading) { TabMoreMenu { moreMenuItems } }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    TabMoreMenu(doubleTap: MenuShortcut(hadithGridMode && !listForJump.wrappedValue ? "Show as List" : "Show as Grid") {
+                        Settings.shared.hapticFeedback()
+                        withAnimation {
+                            if listForJump.wrappedValue { listForJump.wrappedValue = false } else { hadithGridMode.toggle() }
+                        }
+                    }) { moreMenuItems }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) { gearButton }
             }
         } else if #available(iOS 26.0, *) {
@@ -1061,7 +1068,7 @@ struct HadithView: View {
             } controls: {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
                 // Simple Mode keeps the tiles alone: Today moves into the More menu, and the history
-                // expander steps aside (docs/Simple Mode Guide.md).
+                // expander steps aside (Docs/Product/Simple Mode Guide.md).
                 if !settings.simpleMode {
                     NavigationLink(destination: LazyDestination { DailyHubView() }) {
                         DailyHubDoorLabel()
@@ -1300,7 +1307,7 @@ struct HadithView: View {
         .buttonStyle(.plain)
     }
 
-    /// The tab's ⋯ More menu (docs/Simple Mode Guide.md), the same in both modes: the Today pill, then
+    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md), the same in both modes: the Today pill, then
     /// Topics, the Encyclopedia and History (this menu is their only door since 2026-10-11), then the
     /// grid. Each item raises its door through the one guard.
     @ViewBuilder

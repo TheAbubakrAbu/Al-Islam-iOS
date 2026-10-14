@@ -350,7 +350,7 @@ final class JournalStore: ObservableObject {
 }
 
 /// Where the journal is kept, in a sentence that is true either way: on the device only, or in the
-/// user's iCloud Backup profile as well (docs/iCloud Sync Guide.md, decision 7).
+/// user's iCloud Backup profile as well (Docs/Engineering/iCloud Sync Guide.md, decision 7).
 @MainActor
 private var journalKeepingLine: String {
     #if HAS_ICLOUD_BACKUP

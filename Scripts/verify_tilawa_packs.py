@@ -35,7 +35,7 @@ build_daily_reminders.py, build_word_of_day.py, build_hadith_topics.py, build_na
 build_qiraat_variant_audio.py, build_tajweed_lessons.py, build_miracles_pack.py, build_hisn_duas.py,
 build_hadeethenc_pack.py (needs node for brotli), then this script and verify_tajweed_lessons.py,
 then `git diff --stat Resources/Data`, a Debug build, and a screenshot of every surface (the recipes
-are in docs/Tilawa Guide.md, section 17). The place index is exported from the app itself
+are in Docs/Tilawa/Tilawa Guide.md, section 17). The place index is exported from the app itself
 (`-exportQiraatPlaces`), not built here.
 """
 

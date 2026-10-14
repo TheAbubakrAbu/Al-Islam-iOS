@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 // MARK: - The welcome offer (a root stage, after About You)
 
 /// "Save your progress to iCloud?": one screen, once, right after the About You welcome
-/// (docs/iCloud Sync Guide.md, section 8). Optional; "Not Now" is never asked again, the page in
+/// (Docs/Engineering/iCloud Sync Guide.md, section 8). Optional; "Not Now" is never asked again, the page in
 /// Settings takes over from there. A stage and not a sheet for the reason About You is one: every
 /// launch prompt waits behind it instead of racing it.
 ///

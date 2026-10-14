@@ -7,7 +7,7 @@ under the screenshots. Changing it requires a new build (unlike Promotional Text
 
 - **Hard cap 4,000 characters**: everything below the `## Description` heading ships (the `**n /
   4,000**` tally line does not). Verify before submitting:
-  `awk '/^## Description$/{f=1;next} f' "Docs/App Store Description.md" | grep -v '^\*\*' | wc -m`
+  `awk '/^## Description$/{f=1;next} f' "Docs/App Store/App Store Description.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~3,800** so a new feature can be added later without a rewrite.
 - Only the first ~3 lines show before "more", so the opening paragraph has to sell the app alone.
 - **One line per bullet.** Cut "Fully", "complete", "at once", and any clause after a dash that
