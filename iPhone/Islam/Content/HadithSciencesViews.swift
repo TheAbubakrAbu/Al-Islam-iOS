@@ -293,7 +293,7 @@ struct HadithPreservationView: View {
             .bullet("**Sunan Ibn Majah**, by Muhammad ibn Yazid ibn Majah of Qazwin (d. 273 AH)"),
             .text("Only the first two set out to include nothing but sahih hadith. The four Sunan gathered the hadith that jurists use, sound and weaker together, and their authors often said which was which; at-Tirmidhi, as we saw, graded most of his hadith himself. That is why the Sunan carry the graders’ verdicts on this app’s shelf and the two Sahihs do not. Counts of al-Bukhari’s book differ because they count different things:"),
             .stats([
-                ArticleStat("7,563", "numbered narrations in Sahih al-Bukhari, in the numbering this app uses"),
+                ArticleStat("7,277", "narrations in this app’s Sahih al-Bukhari, numbered up to 7,563 in the sunnah.com numbering"),
                 ArticleStat("9,082", "all its Prophetic reports, repeats and chapter-heading reports included, by Ibn Hajar’s count"),
                 ArticleStat("7,397", "its connected hadiths counting repeats, by Ibn Hajar’s count"),
                 ArticleStat("2,602", "its distinct connected hadiths without repeats, by Ibn Hajar’s count"),

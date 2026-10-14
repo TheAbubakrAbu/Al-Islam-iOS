@@ -46,11 +46,17 @@ enum ShareAllahInk {
     }
 
     /// `color`: the share card passes its backdrop's own Allah ink (`ShareBackdrop.Palette.allah`).
+    /// `plainColor`: on tajweed-colored text, the card's plain text color - any other color on a letter
+    /// of the name is a rule's and stays (`AllahNameInk`). Nil reddens the whole name.
     static func apply(to attributed: NSMutableAttributedString, source: String, enabled: Bool,
-                      color: UIColor = .red) {
+                      color: UIColor = .red, plainColor: UIColor? = nil) {
         guard enabled, attributed.length > 0 else { return }
         for range in nsRanges(in: source) {
-            attributed.addAttribute(.foregroundColor, value: color, range: range)
+            if let plainColor {
+                AllahNameInk.paint(attributed, range: range, color: color, plain: plainColor)
+            } else {
+                attributed.addAttribute(.foregroundColor, value: color, range: range)
+            }
         }
     }
 

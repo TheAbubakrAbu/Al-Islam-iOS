@@ -4606,9 +4606,9 @@ struct MushafPageComposer {
     }
 
     /// "Highlight Allah" on the composed page - the list rows' red divine name, page-mode edition.
-    /// Painted AFTER the tajweed/riwayah colors so the red wins on overlap, exactly like the list
-    /// (`HighlightedSnippet` applies it over the pre-styled tajweed text). Arabic goes through the
-    /// SAME shared scanner the list and word-by-word renderers use - one detector, and it already
+    /// Painted AFTER the tajweed/riwayah colors, and only on the letters no rule colored, exactly like
+    /// the list (`HighlightedSnippet` and `AllahNameInk`): the name's heavy laam keeps its tajweed color.
+    /// Arabic goes through the SAME shared scanner the list and word-by-word renderers use - one detector, and it already
     /// stops the red before a trailing stop-sign ornament; English matches "Allah" case-insensitively.
     /// A foreground color never moves a glyph, so the fitted layout is untouched.
     private func paintAllahNames(in ns: NSMutableAttributedString, enabled: Bool) {
@@ -4625,7 +4625,7 @@ struct MushafPageComposer {
             return
         }
         for range in HighlightedSnippet.arabicAllahRanges(in: text) {
-            ns.addAttribute(.foregroundColor, value: UIColor.systemRed, range: NSRange(range, in: text))
+            AllahNameInk.paint(ns, range: NSRange(range, in: text), color: .systemRed)
         }
     }
 

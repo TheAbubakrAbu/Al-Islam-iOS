@@ -2482,7 +2482,9 @@ struct HadithView: View {
 
     /// Sharing a BOOK sends its identity and story, not megabytes of text.
     private func bookShareText(_ book: HadithCatalogBook) -> String {
-        "\(book.englishTitle) (\(book.arabicTitle))\n\n\(book.authorEnglish) - \(book.era)\n\n\(book.longDescription)"
+        let name = book.name
+        return "\(book.englishTitle) (\(book.arabicTitle)): “\(name.meaning)”\n\n\(book.authorEnglish) - \(book.era)\n\n"
+            + "Full title: \(name.fullArabic)\n\(name.fullTransliteration)\n“\(name.fullMeaning)”\n\n\(book.longDescription)"
     }
 
     /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths). The surah rows lead with ayah
