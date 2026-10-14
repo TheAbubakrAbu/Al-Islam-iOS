@@ -29,6 +29,7 @@ private struct HadithBookHero: View {
     let chapters: Int
     let hadiths: Int
     let showsStory: Bool
+    @State private var showMore = false
 
     var body: some View {
         let era = book.eraStat
@@ -63,14 +64,47 @@ private struct HadithBookHero: View {
                     ResourceHeroStat(hadiths.formatted(), "hadiths"),
                     ResourceHeroStat(era.value, era.label),
                 ])
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, \(book.eraAccessibilityLabel)")
+                    .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, compiled \(book.eraAccessibilityLabel)")
 
                 if showsStory {
-                    HadithBookNameBlock(name: book.name)
-                    SelectableProse(text: book.longDescription,
-                                    textStyle: .subheadline,
-                                    secondary: true)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showMore.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: showMore ? "chevron.up.circle.fill" : "info.circle.fill")
+                                .font(.title3)
+                            Text(showMore ? "Show Less" : "Show More")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Image(systemName: showMore ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundStyle(appearance.accent)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(appearance.accent.opacity(0.10))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .strokeBorder(appearance.accent.opacity(0.22), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(showMore ? "Hides the book's full name and description." :
+                                       "Shows the book's full name and description.")
+
+                    if showMore {
+                        HadithBookNameBlock(name: book.name)
+                        SelectableProse(text: book.longDescription,
+                                        textStyle: .subheadline,
+                                        secondary: true)
+                            .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
             }
         }

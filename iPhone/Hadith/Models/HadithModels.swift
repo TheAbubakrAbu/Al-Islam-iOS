@@ -62,8 +62,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
     /// translate the name of the shortened book and mention the full name in Arabic and English and
     /// translation"). The story no longer opens with "Its full title is ...": this carries it.
     let name: Name
-
-    struct Name {
+    struct Name: Hashable {
         /// The short title (`englishTitle`) in English: "The Authentic Collection of al-Bukhari".
         let meaning: String
         /// The title its compiler gave it, vocalized the way `arabicTitle` is.
