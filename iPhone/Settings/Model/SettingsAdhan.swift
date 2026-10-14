@@ -4678,7 +4678,7 @@ extension Settings {
     }
 }
 
-// MARK: - Simple Mode's rules (docs/Simple Mode Guide.md)
+// MARK: - Simple Mode's rules (Docs/Product/Simple Mode Guide.md)
 
 /// The rules Simple Mode's views share, kept pure so they are tested on their own (SimpleModeTests).
 /// Here rather than beside the More menu in SimpleMode.swift because the widgets compile this file

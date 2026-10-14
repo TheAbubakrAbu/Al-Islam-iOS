@@ -7,7 +7,7 @@ the product page for the current release. Changing it requires a new build (unli
 
 - **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.5` heading and
   the `**n / 4,000**` tally line are for this file, not the store). Verify before shipping:
-  `awk '/^# Version 4.6.5$/{f=1;next} /^# Version /{f=0} f' "Docs/Whats New.md" | grep -v '^\*\*' | wc -m`
+  `awk '/^# Version 4.6.5$/{f=1;next} /^# Version /{f=0} f' "Docs/App Store/Whats New.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~2,000-2,500.** Nobody reads a wall of text on a phone; the description sells the app,
   this field just says what changed. Shorter beats complete.
 - **One line per bullet, one idea per line.** Cut "now", "new", and every clause after a dash that
@@ -24,6 +24,7 @@ the product page for the current release. Changing it requires a new build (unli
 Simple Mode, iCloud Backup, Test Mode and a Revision plan for memorizing, Word Study for every word, and weather on your prayer sky.
 
 Al-Quran:
+- Ask Siri to open any surah in its current reading mode, or say “list mode” or “page mode” to choose.
 - Test Mode hides the text until you tap, so you can recite from memory and check each ayah.
 - The Quran Planner adds a Revision plan: a juz range or chosen surahs, revised every few days.
 - Word Study: double tap any word for its meaning, grammar, root, themes, tajweed and qiraat.

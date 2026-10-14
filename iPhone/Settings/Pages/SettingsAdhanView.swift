@@ -321,7 +321,7 @@ struct SettingsAdhanView: View {
             #if os(iOS)
             // The tracker's own page (History & Insights). Simple Mode shows the tab's tracker only to
             // someone who marked a prayer in the last fourteen days, so this is its door the rest of the
-            // time (docs/Simple Mode Guide.md, rule 3); in Full Mode it is a second way in.
+            // time (Docs/Product/Simple Mode Guide.md, rule 3); in Full Mode it is a second way in.
             NavigationLink(destination: LazyDestination { PrayerTrackerView() }) {
                 SettingsRowLabel(title: "Prayer Tracker", systemImage: "checklist",
                                  subtitle: "History, streaks and insights", tint: SettingsTint.prayer)

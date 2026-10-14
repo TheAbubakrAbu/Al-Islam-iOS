@@ -726,7 +726,7 @@ struct SurahPageReader<Controls: View>: View {
     /// present itself - the actions sheet, tafsir and the other secondaries, the word cards - could
     /// therefore vanish on a page turn, including the automatic turn that follows the recitation. The
     /// host outlives every page, exactly as it does for the list rows (`AyahRow.onRequestSheet`, Phase 5
-    /// step 6). See `Docs/Page Mode Sheet Ownership.md`.
+    /// step 6). See `Docs/Quran/Page Mode Sheet Ownership.md`.
     var onRequestSheet: ((AyahRowSheetKind, Surah, Ayah) -> Void)? = nil
     /// The ayah whose ACTIONS sheet the host has up, if any: the page keeps it tinted while the sheet is
     /// open. It used to read the page's own sheet state; the host owns that state now.
@@ -1167,7 +1167,7 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     /// Follows the selection with the mounted window - and NEVER while a page turn is in flight
-    /// (`Docs/Mushaf Page Turn Glitch.md`). The pager writes the selection when the finger lifts, while
+    /// (`Docs/Quran/Mushaf Page Turn Glitch.md`). The pager writes the selection when the finger lifts, while
     /// its slide is still running; re-centring right there changed the pager's child set under the live
     /// transition, and the UIKit pager reloads its children for that: the page being LEFT vanished for a
     /// few frames mid-slide (the blank panel on the side the swipe heads towards, every third page - the
@@ -3002,7 +3002,7 @@ struct SurahPageReader<Controls: View>: View {
         VStack(spacing: 6 * footerScale) {
             if settings.simpleMode {
                 // Simple Mode: where this page is, as the two jumps; the meters, the percentages and
-                // the whole-mushaf bar step aside (docs/Simple Mode Guide.md). A shorter pill too
+                // the whole-mushaf bar step aside (Docs/Product/Simple Mode Guide.md). A shorter pill too
                 // (`footerHeight`): two buttons need no more.
                 HStack(spacing: 12 * footerScale) {
                     jumpButton(
@@ -3319,7 +3319,23 @@ struct SurahPageReader<Controls: View>: View {
 
         return Group {
             if idle {
-                Menu {
+                ShortcutMenu(
+                    doubleTap: MenuShortcut("Play Surah") {
+                        settings.hapticFeedback()
+                        quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
+                    },
+                    hold: settings.isHafsDisplay && onPlayCustomRange != nil
+                        ? MenuShortcut("Play Custom Range") {
+                            settings.hapticFeedback()
+                            onPlayCustomRange?()
+                        }
+                        : onChooseReciter.map { choose in
+                            MenuShortcut("Choose Reciter") {
+                                settings.hapticFeedback()
+                                choose()
+                            }
+                        }
+                ) {
                     // Reciter picker pinned to the very top, with a divider under it - the same placement
                     // as the list reader's play menu, so all the play menus read identically.
                     if let onChooseReciter {
@@ -3604,7 +3620,7 @@ private struct MushafPageContent: View {
     // surah-info sheet and the double-tapped word cards are all presented by the HOST through
     // `onRequestSheet` / `onShowSurahInfo`: a page that owned a `.sheet` lost it whenever it left the
     // pager's window - on a manual swipe, or on the turn that follows the recitation - which was "the
-    // sheet dismissed itself" in every one of its forms. See `Docs/Page Mode Sheet Ownership.md`.)
+    // sheet dismissed itself" in every one of its forms. See `Docs/Quran/Page Mode Sheet Ownership.md`.)
 
     private func ayahRef(surahID: Int, ayahID: Int) -> (Surah, Ayah)? {
         for segment in page.segments where segment.surah.id == surahID {
@@ -6971,7 +6987,7 @@ extension AyahHighlightColor {
 // MARK: - Page mode: the pager's rest state
 
 /// Whether the UIKit pager behind the reader's paged `TabView` is mid-turn, for the window mutations that
-/// must wait for it (`SurahPageReader.whenPagerRests`; `Docs/Mushaf Page Turn Glitch.md`). SwiftUI exposes
+/// must wait for it (`SurahPageReader.whenPagerRests`; `Docs/Quran/Mushaf Page Turn Glitch.md`). SwiftUI exposes
 /// no "transition ended" hook for a paged TabView, so the pager's own scroll view is found in the view
 /// hierarchy from a probe the reader plants behind the TabView (`MushafPagerProbeView`), and rest is read
 /// off it: no finger down, no deceleration or slide running, and the content sitting exactly on a page

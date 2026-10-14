@@ -12,7 +12,7 @@ import Foundation
 /// The PAGE reader no longer consults it (2026-09-20): `SurahView` hosts every page-mode sheet, so a
 /// page turn dismisses nothing and the recitation can keep turning pages behind an open sheet. The
 /// counter is still driven by the host's `rowSheet` hooks in both modes; only the list scroll reads it.
-/// See `Docs/Page Mode Sheet Ownership.md`.
+/// See `Docs/Quran/Page Mode Sheet Ownership.md`.
 final class AyahSheetPresence: ObservableObject {
     static let shared = AyahSheetPresence()
     private init() {}
@@ -176,6 +176,16 @@ struct AyahRow: View, Equatable {
 
     private func requestSheet(_ kind: AyahRowSheetKind) {
         onRequestSheet?(kind)
+    }
+
+    /// High priority makes the sheet open during the hold, before the reading surface's tap ends.
+    /// Apply only to the text and reference pill, so each menu control owns its own gestures.
+    private var actionsHoldGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.45)
+            .onEnded { _ in
+                settings.hapticFeedback()
+                requestSheet(.actions)
+            }
     }
 
     private var openWordIndex: Int? {
@@ -974,6 +984,10 @@ struct AyahRow: View, Equatable {
                             }
                         }
 
+                    #if os(iOS)
+                    .highPriorityGesture(actionsHoldGesture, including: isSelecting ? .subviews : .all)
+                    #endif
+
                     Spacer()
 
                     #if os(iOS)
@@ -1005,9 +1019,18 @@ struct AyahRow: View, Equatable {
                     }
 
                     // Simple Mode folds the play menu into the one ayah menu, whose first action is
-                    // Play This Ayah (docs/Simple Mode Guide.md).
+                    // Play This Ayah (Docs/Product/Simple Mode Guide.md).
                     if settings.isHafsDisplay, !settings.simpleMode {
-                        Menu {
+                        ShortcutMenu(
+                            doubleTap: MenuShortcut("Play This Ayah Only") {
+                                settings.hapticFeedback()
+                                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
+                            },
+                            hold: MenuShortcut("Play Custom Range") {
+                                settings.hapticFeedback()
+                                requestSheet(.secondary(.customRange))
+                            }
+                        ) {
                             Text("Ayah Playback")
                                 .foregroundStyle(.secondary)
 
@@ -1021,9 +1044,21 @@ struct AyahRow: View, Equatable {
                                 .conditionalGlassEffect()
                                 .frame(width: 28, height: 28)
                         }
+                        .accessibilityLabel("Ayah Playback")
+                        .accessibilityIdentifier("ayahPlaybackMenu")
                     }
 
-                    Menu {
+                    ShortcutMenu(
+                        doubleTap: MenuShortcut("Copy Ayah") {
+                            settings.hapticFeedback()
+                            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
+                                                              settings: settings, quranData: quranData)
+                        },
+                        hold: MenuShortcut("Share Ayah") {
+                            settings.hapticFeedback()
+                            requestSheet(.secondary(.share))
+                        }
+                    ) {
                         Text("Ayah Actions")
                             .foregroundStyle(.secondary)
 
@@ -1090,6 +1125,12 @@ struct AyahRow: View, Equatable {
                 )
                 .padding(.bottom, 2)
                 .fixedSize(horizontal: false, vertical: true)
+                #if os(iOS)
+                // Keep the row's actions hold on the reading surface. Putting it on the whole row
+                // lets SwiftUI's high-priority recognizer steal holds from the play/ellipsis controls.
+                .contentShape(Rectangle())
+                .highPriorityGesture(actionsHoldGesture, including: isSelecting ? .subviews : .all)
+                #endif
             }
         }
         .lineLimit(nil)
@@ -1151,30 +1192,6 @@ struct AyahRow: View, Equatable {
             }
         }
         #if os(iOS)
-        // Long press opens the SAME ayah actions sheet page mode's long press shows (user rule: one
-        // grammar for "act on this ayah" in both modes) - the old .contextMenu is retired. The row's
-        // ellipsis menu keeps the inline menu for discoverability.
-        //
-        // `highPriorityGesture`, not `.onLongPressGesture`: as a plain modifier the press ranked BELOW
-        // the row's own tap, so it had to wait for that tap to fail - and a tap only fails when the
-        // finger LIFTS. The sheet arrived on release, while the same press on a mushaf page (a UIKit
-        // recognizer acting at `.began`) opens it mid-hold; one gesture, two feels (user report).
-        // Higher precedence is SwiftUI's `tap.require(toFail: press)`: the press wins the moment its
-        // 0.45 s is up, with the finger still down, and the tap is the one that gets cancelled.
-        // `LongPressGesture.onEnded` fires at that duration, not at the lift. 0.45 s is what the
-        // boundary-divider presses in this reader already use.
-        //
-        // Masked off while multi-selecting: there a tap on the row IS the interaction, and a winning
-        // press would swallow it. `.subviews` disables only this gesture, so the row keeps its
-        // identity (and its position in the list) when select mode turns on.
-        .highPriorityGesture(
-            LongPressGesture(minimumDuration: 0.45)
-                .onEnded { _ in
-                    settings.hapticFeedback()
-                    requestSheet(.actions)
-                },
-            including: isSelecting ? .subviews : .all
-        )
         // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
         // to that ayah in the full list.
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -1623,7 +1640,7 @@ struct AyahRow: View, Equatable {
                         extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
                     // Always named, Simple Mode or not: it is the translation someone chose over the
-                    // default, so the screen says which one it is (docs/Simple Mode Guide.md, rule 2).
+                    // default, so the screen says which one it is (Docs/Product/Simple Mode Guide.md, rule 2).
                     Text("Clear Quran (Mustafa Khattab)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -1805,7 +1822,7 @@ struct AyahRow: View, Equatable {
     }
     #endif
 
-    /// Simple Mode's ayah menu (docs/Simple Mode Guide.md): the five actions a reader reaches for, then
+    /// Simple Mode's ayah menu (Docs/Product/Simple Mode Guide.md): the five actions a reader reaches for, then
     /// More Actions, which opens the long-press sheet holding every action there is. Each item is the
     /// full menu's own action, so the two can never drift in what a tap does.
     @ViewBuilder

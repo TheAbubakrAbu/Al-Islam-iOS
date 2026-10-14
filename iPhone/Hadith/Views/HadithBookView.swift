@@ -1960,7 +1960,7 @@ struct HadithChapterView: View {
     private var showsChapterNav: Bool { bookData.chapters.count > 1 }
 
     /// The pair ABOVE the first hadith. Simple Mode keeps only the one below the last
-    /// (docs/Simple Mode Guide.md), and the two scrolls that land "at the literal top" target the
+    /// (Docs/Product/Simple Mode Guide.md), and the two scrolls that land "at the literal top" target the
     /// first hadith instead of a pair that is not there.
     private var showsTopChapterNav: Bool { showsChapterNav && !settings.simpleMode }
 

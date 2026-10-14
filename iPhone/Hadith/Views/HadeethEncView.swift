@@ -1107,25 +1107,24 @@ struct HadeethEncHadithView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
+                ShortcutMenu(
+                    doubleTap: MenuShortcut("Copy Hadith", action: copyHadith),
+                    hold: MenuShortcut("Share Hadith", action: shareHadith)
+                ) {
                     Button {
-                        guard let hadith else { return }
-                        Settings.shared.hapticFeedback()
-                        UIPasteboard.general.string = hadith.plainText
-                        withAnimation { copied = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
+                        copyHadith()
                     } label: {
                         Label(copied ? "Copied" : "Copy Hadith", systemImage: copied ? "checkmark" : "doc.on.doc")
                     }
                     Button {
-                        guard let hadith else { return }
-                        Settings.shared.hapticFeedback()
-                        presentSystemShareSheet(items: [hadith.plainText])
+                        shareHadith()
                     } label: {
                         Label("Share Hadith", systemImage: "square.and.arrow.up")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .tint(appearance.accent)
                 .disabled(hadith == nil)
@@ -1143,6 +1142,21 @@ struct HadeethEncHadithView: View {
             hadith = loaded.0
             topics = loaded.1
         }
+    }
+
+    private func copyHadith() {
+        guard let hadith else { return }
+        Settings.shared.hapticFeedback()
+        UIPasteboard.general.string = hadith.plainText
+        CopyConfirmation.shared.show()
+        withAnimation { copied = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
+    }
+
+    private func shareHadith() {
+        guard let hadith else { return }
+        Settings.shared.hapticFeedback()
+        presentSystemShareSheet(items: [hadith.plainText])
     }
 
     private func paragraphs(_ text: String, separator: String = "\n\n") -> [String] {

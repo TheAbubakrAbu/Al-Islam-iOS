@@ -8,10 +8,10 @@ killed it on a device).
 **App:** Al-Islam (`Al-Islam-iOS`). Al-Quran carries the same reader; port with
 `./sync_from_islam.sh quran --apply` once this is committed here.
 
-**Files:** [`iPhone/Quran/MushafReader.swift`](../iPhone/Quran/MushafReader.swift)
+**Files:** [`iPhone/Quran/MushafReader.swift`](../../iPhone/Quran/MushafReader.swift)
 (`SurahPageReader.jumpToReference`, `SurahPageReader.updatePagerSize`, `MushafPageRenderCache.lastGeometry`,
 `MushafPageRenderCache.noteVisibleGeometry`, `MushafPageRenderCache.renderedIfAvailable`),
-[`iPhone/Settings/Settings.swift`](../iPhone/Settings/Settings.swift) (the `-publishStacks` probe).
+[`iPhone/Settings/Settings.swift`](../../iPhone/Settings/Settings.swift) (the `-publishStacks` probe).
 
 ---
 
@@ -107,4 +107,4 @@ names the bodies in the loop, and SwiftUI's change log needs debug level:
 ## Related
 
 - `Docs/Page Mode Chrome Bands.md`: the band bookkeeping this loop ran through.
-- `Docs/Mushaf Page Turn Glitch.md`: the pager's window and why it only changes at rest.
+- `Docs/Quran/Mushaf Page Turn Glitch.md`: the pager's window and why it only changes at rest.

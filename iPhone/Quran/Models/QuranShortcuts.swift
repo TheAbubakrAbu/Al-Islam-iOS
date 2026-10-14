@@ -95,6 +95,48 @@ struct OpenSurahAppIntent: AppIntent {
         return .result()
     }
 }
+
+@available(iOS 16.0, *)
+struct OpenSurahInListModeAppIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Surah in List Mode"
+    static var description = IntentDescription("Open a specific surah in list mode.")
+    static var openAppWhenRun = true
+    static var parameterSummary: some ParameterSummary { Summary("Open \(\.$surah) in list mode") }
+
+    @Parameter(
+        title: "Surah",
+        requestValueDialog: IntentDialog("Which surah would you like to open? You can say a name or a number.")
+    )
+    var surah: SurahEntity
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        Settings.shared.quranPageMode = false
+        AppNavigation.shared.open(.surah(surah.id))
+        return .result()
+    }
+}
+
+@available(iOS 16.0, *)
+struct OpenSurahInPageModeAppIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Surah in Page Mode"
+    static var description = IntentDescription("Open a specific surah in page mode.")
+    static var openAppWhenRun = true
+    static var parameterSummary: some ParameterSummary { Summary("Open \(\.$surah) in page mode") }
+
+    @Parameter(
+        title: "Surah",
+        requestValueDialog: IntentDialog("Which surah would you like to open? You can say a name or a number.")
+    )
+    var surah: SurahEntity
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        Settings.shared.quranPageMode = true
+        AppNavigation.shared.open(.surah(surah.id))
+        return .result()
+    }
+}
 #endif
 
 @available(iOS 16.0, watchOS 9.0, *)
@@ -244,4 +286,3 @@ enum QuranPlaybackRouter {
         return folded.count == 1 ? folded.first : nil
     }
 }
-

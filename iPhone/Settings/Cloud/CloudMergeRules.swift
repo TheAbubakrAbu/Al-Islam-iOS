@@ -4,7 +4,7 @@
 import Foundation
 
 /// How a Merge restore combines a backup's content with what this device already holds
-/// (docs/iCloud Sync Guide.md, section 7). One rule per content key, applied to the JSON (or the
+/// (Docs/Engineering/iCloud Sync Guide.md, section 7). One rule per content key, applied to the JSON (or the
 /// plain property-list value) inside each blob, generically: nothing here names a bookmark or a
 /// prayer mark type, which is what lets the file compile in the sibling apps that lack them.
 ///

@@ -1,7 +1,7 @@
 #if DEBUG && HAS_ICLOUD_BACKUP
 import Foundation
 
-/// Headless checks for the iCloud backup's local half (docs/iCloud Sync Guide.md, section 10). None
+/// Headless checks for the iCloud backup's local half (Docs/Engineering/iCloud Sync Guide.md, section 10). None
 /// of them touches iCloud: a snapshot is written to, and restored from, a file in Documents, which
 /// is everything except the network hop. Results go to Documents too, because `NSLog` is not always
 /// readable from `simctl` on this machine; read them with `simctl get_app_container <udid> <bid> data`.

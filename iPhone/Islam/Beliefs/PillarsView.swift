@@ -584,7 +584,7 @@ struct IslamPillarsHero: View {
                     .accessibilityLabel("\(pillar.name), a pillar of Islam")
                 }
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 0)
             .padding(.vertical, 6)
 
             // The foundation: the six of iman.

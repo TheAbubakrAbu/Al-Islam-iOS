@@ -16,7 +16,7 @@ Measured on the iPhone 17 Pro simulator with real swipes (idb) and a frame scan 
 **App:** Al-Islam (`Al-Islam-iOS`). Al-Quran carries the same reader and the same defect; port with
 `./sync_from_islam.sh quran --apply` once this is committed here.
 
-**File:** [`iPhone/Quran/MushafReader.swift`](../iPhone/Quran/MushafReader.swift):
+**File:** [`iPhone/Quran/MushafReader.swift`](../../iPhone/Quran/MushafReader.swift):
 `SurahPageReader.recentreWindow`, `whenPagerRests`, `MushafPagerProbe`, `MushafPagerProbeView`.
 
 ---
@@ -53,7 +53,7 @@ selection when the finger lifts, while its slide is still running, so every thir
 children mid-slide. The frame scan of the old build shows the blank at exactly that cadence.
 
 **Why the first word card after a page change vanished** (the other half of this story, in
-`Docs/Page Mode Sheet Ownership.md`): the *deferred* re-centre, 0.6 s after a swipe, rebuilt the
+`Docs/Quran/Page Mode Sheet Ownership.md`): the *deferred* re-centre, 0.6 s after a swipe, rebuilt the
 children under a sheet the page itself owned.
 
 ---
@@ -253,6 +253,6 @@ and the spread draws a fold shadow down its gutter. Band after: 160 pt with the 
 
 ## Related
 
-- `Docs/Page Mode Sheet Ownership.md`: the same window churn killed any sheet a PAGE presented; fixed the
+- `Docs/Quran/Page Mode Sheet Ownership.md`: the same window churn killed any sheet a PAGE presented; fixed the
   same day by moving every page-mode sheet to the host.
-- `Docs/Mushaf Justification.md`: how a page's text is composed and fitted, and why it is expensive.
+- `Docs/Quran/Mushaf Justification.md`: how a page's text is composed and fitted, and why it is expensive.

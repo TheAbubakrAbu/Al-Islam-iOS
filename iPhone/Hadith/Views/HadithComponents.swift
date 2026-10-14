@@ -546,7 +546,17 @@ struct HadithRow: View, Equatable {
                 // The context menu, reachable without a long-press - the AyahRow actions button's exact
                 // sizing (icon in a glass square matching the pill's height). Always the ellipsis:
                 // bookmark state lives on the pill (tint + corner badge), the Quran rows' grammar.
-                Menu {
+                ShortcutMenu(
+                    doubleTap: MenuShortcut("Copy Hadith") {
+                        settings.hapticFeedback()
+                        UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+                        CopyConfirmation.shared.show()
+                    },
+                    hold: MenuShortcut("Share Hadith") {
+                        settings.hapticFeedback()
+                        showShareSheet = true
+                    }
+                ) {
                     menuContent
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -558,6 +568,8 @@ struct HadithRow: View, Equatable {
                         .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
                         .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Hadith Actions")
+                .accessibilityIdentifier("hadithActionsMenu")
             }
 
             // A field that matched (or carries the guaranteed span) is forced visible even when its
@@ -690,6 +702,7 @@ struct HadithRow: View, Equatable {
             Button {
                 settings.hapticFeedback()
                 UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+                CopyConfirmation.shared.show()
             } label: {
                 Image(systemName: "doc.on.doc")
             }
@@ -805,6 +818,7 @@ struct HadithRow: View, Equatable {
         Button {
             settings.hapticFeedback()
             UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+            CopyConfirmation.shared.show()
         } label: {
             Label("Copy Hadith", systemImage: "doc.on.doc")
         }
@@ -1297,6 +1311,7 @@ struct HadithBookmarkMenu: ViewModifier {
             settings.hapticFeedback()
             if let hadith = fullHadith {
                 UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+                CopyConfirmation.shared.show()
             }
         } label: {
             Label("Copy Hadith", systemImage: "doc.on.doc")

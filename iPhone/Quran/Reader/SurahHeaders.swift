@@ -4,7 +4,7 @@ struct SurahsHeader: View {
     @ObservedObject var quranData = QuranData.shared
 
     @State private var randomSurah: Surah?
-    /// Simple Mode drops the count and the shuffle (docs/Simple Mode Guide.md); Random Surah moves to
+    /// Simple Mode drops the count and the shuffle (Docs/Product/Simple Mode Guide.md); Random Surah moves to
     /// the tab's More menu.
     @AppStorage("simpleMode") private var simpleMode = false
 

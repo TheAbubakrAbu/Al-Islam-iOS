@@ -419,7 +419,7 @@ struct QuranPlannerToolbarButton: View {
     let openReader: (Int, Int) -> Void
     /// Simple Mode: the planner stays mounted (its settle hooks below stamp a finished plan, which is
     /// what the planner DOES, so they must keep running) but draws no button; the Quran tab's More menu
-    /// opens it through `presentRequest` (docs/Simple Mode Guide.md, rule 1).
+    /// opens it through `presentRequest` (Docs/Product/Simple Mode Guide.md, rule 1).
     var hidesButton = false
     var presentRequest: Binding<Bool> = .constant(false)
 

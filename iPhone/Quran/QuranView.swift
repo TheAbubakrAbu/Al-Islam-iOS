@@ -88,6 +88,7 @@ private struct QuranLeadingToolbar: ViewModifier {
     let push: (Int, Int?) -> Void
     /// The More menu's items (`QuranView.moreMenuItems`).
     let moreMenuItems: AnyView
+    let gridShortcut: MenuShortcut
     /// The More menu's Quran Planner item, for the planner that stays mounted without its button.
     @Binding var plannerRequest: Bool
 
@@ -99,7 +100,11 @@ private struct QuranLeadingToolbar: ViewModifier {
         } else {
             content.toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    TabMoreMenu(isBusy: isPreparingPageMode) { moreMenuItems }
+                    TabMoreMenu(isBusy: isPreparingPageMode, doubleTap: gridShortcut,
+                                hold: settings.isHafsDisplay ? MenuShortcut("Open Quran Planner") {
+                                    settings.hapticFeedback()
+                                    plannerRequest = true
+                                } : nil) { moreMenuItems }
                         // The planner without its button: its settle hooks keep stamping a finished
                         // plan, and its sheet opens from the menu (`plannerRequest`).
                         .background {
@@ -2020,6 +2025,12 @@ struct QuranView: View {
             performReadingModeToggle: performReadingModeToggle,
             push: { surahID, ayahID in push(surahID: surahID, ayahID: ayahID) },
             moreMenuItems: AnyView(moreMenuItems),
+            gridShortcut: MenuShortcut(settings.gridMode && !listForJump ? "Show as List" : "Show as Grid") {
+                settings.hapticFeedback()
+                withAnimation {
+                    if listForJump { listForJump = false } else { settings.gridMode.toggle() }
+                }
+            },
             plannerRequest: $plannerRequest
         ))
         // The trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers between
@@ -2590,7 +2601,19 @@ struct QuranView: View {
                     }
                 }
             } else {
-                Menu {
+                ShortcutMenu(
+                    doubleTap: settings.lastListenedSurah.map { last in
+                        MenuShortcut("Play Last Listened") {
+                            settings.hapticFeedback()
+                            quranPlayer.playSurah(surahNumber: last.surahNumber, surahName: last.surahName,
+                                                  certainReciter: true)
+                        }
+                    },
+                    hold: MenuShortcut("Choose Reciter") {
+                        settings.hapticFeedback()
+                        showReciterPickerSheet = true
+                    }
+                ) {
                     Text("Quran Playback")
                         .foregroundColor(.secondary)
 
@@ -2890,7 +2913,7 @@ struct QuranView: View {
         // beside three.
         // Simple Mode keeps the two tiles a reader comes back for, Last Read and the Ayah of the Day;
         // the listening tiles, the Word of the Day and the history expanders step aside (the play menu
-        // resumes listening). docs/Simple Mode Guide.md.
+        // resumes listening). Docs/Product/Simple Mode Guide.md.
         let simple = settings.simpleMode
         let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
         let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
@@ -3005,7 +3028,7 @@ struct QuranView: View {
         }
     }
 
-    /// The tab's ⋯ More menu (docs/Simple Mode Guide.md), the same in both modes: the summary doors
+    /// The tab's ⋯ More menu (Docs/Product/Simple Mode Guide.md), the same in both modes: the summary doors
     /// (Browse by Theme, History, the Qiraat Explorer while "Show Riwayah / Qiraah" is on, and the
     /// Word of the Day when it is not a tile), the Today pill, the planner and Random Surah, then the
     /// reading mode and the grid. The menu is the doors' only door since 2026-10-11: the chips under

@@ -239,7 +239,10 @@ struct SettingsView: View {
     @ViewBuilder
     private var settingsMoreMenu: some View {
         if Self.canPushProgrammatically, settingsSearchText.isEmpty {
-            TabMoreMenu {
+            TabMoreMenu(doubleTap: MenuShortcut(settings.settingsGridMode ? "Show as List" : "Show as Grid") {
+                settings.hapticFeedback()
+                withAnimation { settings.settingsGridMode.toggle() }
+            }) {
                 TabMoreMenuItem(settings.settingsGridMode ? "Show as List" : "Show as Grid",
                                 systemImage: settings.settingsGridMode ? "list.bullet" : "square.grid.2x2") {
                     settings.hapticFeedback()
@@ -646,7 +649,7 @@ struct SettingsView: View {
 
         // Directly under the settings rows, in both modes (Abu, 2026-10-10): the switch that changes
         // how busy every tab is has to be the first thing found here, and in Simple Mode it is also
-        // the way back out (docs/Simple Mode Guide.md). iPhone, iPad and Mac only: the watch's screens
+        // the way back out (Docs/Product/Simple Mode Guide.md). iPhone, iPad and Mac only: the watch's screens
         // do not read it.
         #if os(iOS)
         SimpleModeSection()

@@ -7,7 +7,7 @@ import CryptoKit
 import UIKit
 #endif
 
-/// One device's backup as it travels (docs/iCloud Sync Guide.md, section 5): the manifest's keys out
+/// One device's backup as it travels (Docs/Engineering/iCloud Sync Guide.md, section 5): the manifest's keys out
 /// of standard defaults, the app-group-only preferences, and the user's Documents files.
 ///
 /// A property list, because that is exactly what `UserDefaults` holds: `Data` stays `Data`, a `Bool`

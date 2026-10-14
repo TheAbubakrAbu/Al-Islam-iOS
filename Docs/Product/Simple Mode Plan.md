@@ -8,7 +8,7 @@
 
 **Tech Stack:** SwiftUI (iOS 16 floor for Al-Islam, siblings on iOS 15), XCTest (hosted UnitTests, XCUITest UITests), hand-maintained project.pbxproj.
 
-**Spec:** `docs/Simple Mode Guide.md`. Read it first; this plan argues from it, and its tables are the source of truth for what hides and where it goes.
+**Spec:** `Docs/Product/Simple Mode Guide.md`. Read it first; this plan argues from it, and its tables are the source of truth for what hides and where it goes.
 
 ## Global Constraints
 
@@ -345,7 +345,7 @@
 ### Task 15: Verification sweep, review and memory
 
 **Files:**
-- Modify: `docs/Simple Mode Guide.md` (status table, progress log)
+- Modify: `Docs/Product/Simple Mode Guide.md` (status table, progress log)
 - Modify: the memory files `simple-mode.md` and `MEMORY.md`
 
 - [ ] **Step 1: The full screenshot matrix** from the guide's Verification section: Simple and Full, dark and light, plus one accessibility size per tab. Read every image; fix anything clipped or misaligned before moving on.

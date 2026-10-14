@@ -57,6 +57,30 @@ struct AppShortcutsRoot: AppShortcutsProvider {
             shortTitle: "Open Surah",
             systemImageName: "text.book.closed"
         )
+
+        AppShortcut(
+            intent: OpenSurahInListModeAppIntent(),
+            phrases: [
+                "Open surah \(\.$surah) in list mode in \(.applicationName)",
+                "Read surah \(\.$surah) in list mode in \(.applicationName)",
+                "\(.applicationName), open surah \(\.$surah) in list mode",
+                "\(.applicationName), read surah \(\.$surah) in list mode"
+            ],
+            shortTitle: "Open Surah in List Mode",
+            systemImageName: "list.bullet"
+        )
+
+        AppShortcut(
+            intent: OpenSurahInPageModeAppIntent(),
+            phrases: [
+                "Open surah \(\.$surah) in page mode in \(.applicationName)",
+                "Read surah \(\.$surah) in page mode in \(.applicationName)",
+                "\(.applicationName), open surah \(\.$surah) in page mode",
+                "\(.applicationName), read surah \(\.$surah) in page mode"
+            ],
+            shortTitle: "Open Surah in Page Mode",
+            systemImageName: "book.pages"
+        )
         #endif
 
         AppShortcut(

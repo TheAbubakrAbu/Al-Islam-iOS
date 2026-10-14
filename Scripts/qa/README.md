@@ -1,6 +1,6 @@
 # QA scripts
 
-The tools behind the 2026-09-28 quality audit (`Docs/Quality Guide.md`, Appendix A), kept so any session
+The tools behind the 2026-09-28 quality audit (`Docs/Engineering/Quality Guide.md`, Appendix A), kept so any session
 can rerun the baseline. Every script writes under `QA_OUT` (a scratch folder you choose) and targets the
 iPhone 17 Pro simulator on the newest runtime (`device.sh`; `QA_UDID` overrides it).
 
@@ -47,4 +47,4 @@ container around the walk, so a Mac run leaves the installed app's data as it fo
 to the Run scheme to watch a walk in Xcode. On this Mac only Xcode's launcher gets a development build past
 `_dyld_start`; `stress-mac.sh` strips WeatherKit from the entitlements for the build and restores the file.
 The step-by-step procedure for a Mac sweep (checks, batches, how to judge a crash or a HANG, the traps) is
-`docs/Mac Crash Sweep Guide.md`.
+`Docs/Engineering/Mac Crash Sweep Guide.md`.

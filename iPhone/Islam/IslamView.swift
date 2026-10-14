@@ -118,7 +118,7 @@ struct IslamView: View {
         case provingIslam
         case askAI
         /// Simple Mode's one row standing in for the sections it folds (TOOLS, SIGNS & PROOFS, ASK AI;
-        /// docs/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
+        /// Docs/Product/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
         /// screen stacks on the same path; never `available`, so search, favorites and the grids
         /// never list it.
         case moreResources
@@ -378,7 +378,7 @@ struct IslamView: View {
         }
 
         /// Simple Mode keeps the study, remembrance and faith groups on the tab and folds these into
-        /// one More Resources row (docs/Simple Mode Guide.md); search still finds every resource.
+        /// one More Resources row (Docs/Product/Simple Mode Guide.md); search still finds every resource.
         var foldsInSimpleMode: Bool {
             self == .tools || self == .signs || self == .assistant
         }
@@ -554,11 +554,7 @@ struct IslamView: View {
             #endif
 
             // Simple Mode keeps one daily card on the tab (the Reminder of the Day), and leaves the
-            // other apps to the Settings tab's copy of that card (docs/Simple Mode Guide.md).
-            if !settings.simpleMode {
-                ProphetQuote()
-            }
-
+            // other apps to the Settings tab's copy of that card (Docs/Product/Simple Mode Guide.md).
             #if os(iOS)
             // Need a Hand?: getting started (while the Start Here guide is not on the tab), the tab's
             // own text size, and when its day turns over. Above the other apps (Abu, 2026-10-04):
@@ -566,6 +562,10 @@ struct IslamView: View {
             // sends you elsewhere closes the screen.
             HelpDoorsSection(area: .islam)
             #endif
+
+            if !settings.simpleMode {
+                ProphetQuote()
+            }
 
             if !settings.simpleMode {
                 AlIslamAppsSection()
@@ -608,7 +608,10 @@ struct IslamView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if #available(iOS 16.0, *), query.isEmpty {
-                        TabMoreMenu { islamGridMenuItem }
+                        TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
+                            settings.hapticFeedback()
+                            withAnimation { settings.islamGridMode.toggle() }
+                        }) { islamGridMenuItem }
                     }
                 }
             }
@@ -1187,7 +1190,10 @@ struct IslamView: View {
         .islamSettingsToolbar()
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                TabMoreMenu { islamGridMenuItem }
+                TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
+                    settings.hapticFeedback()
+                    withAnimation { settings.islamGridMode.toggle() }
+                }) { islamGridMenuItem }
             }
         }
     }

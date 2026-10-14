@@ -3,7 +3,7 @@
 # each, then the restore pass. Needs QA_OUT; GAP= sets the seconds between steps (0.3). Per seed the driver's
 # full output is $QA_OUT/mac/w<steps>-<seed>-run.txt and the run's files are in $QA_OUT/mac/w<steps>-<seed>/.
 # Run it in the background (20 seeds of 400 steps take about an hour) and read the -run.txt files as they land.
-# Needs a shell that may launch GUI apps (the harness sandbox off): see docs/Mac Crash Sweep Guide.md.
+# Needs a shell that may launch GUI apps (the harness sandbox off): see Docs/Engineering/Mac Crash Sweep Guide.md.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="${QA_OUT:?set QA_OUT to a scratch folder}"; mkdir -p "$OUT/mac"
 STEPS="$1"; shift
