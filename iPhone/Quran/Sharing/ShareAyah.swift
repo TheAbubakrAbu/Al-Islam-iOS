@@ -204,8 +204,8 @@ struct ShareAyahSheet: View {
     // and text preview, so the two share surfaces render the names identically.
     /// `color`: the share card passes its backdrop's own Allah ink (`ShareBackdrop.Palette.allah`).
     static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool,
-                                    color: UIColor = .red) {
-        ShareAllahInk.apply(to: attributed, source: source, enabled: enabled, color: color)
+                                    color: UIColor = .red, plainColor: UIColor? = nil) {
+        ShareAllahInk.apply(to: attributed, source: source, enabled: enabled, color: color, plainColor: plainColor)
     }
 
     private static func allahHighlightedAttributedString(
@@ -282,7 +282,9 @@ struct ShareAyahSheet: View {
                 attributed.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: range)
             }
         }
-        Self.applyAllahHighlight(to: attributed, source: displayText, enabled: settings.highlightAllahNames, color: allahColor)
+        // Every plain run is `textColor` by now, so any other color on the name is a tajweed rule's.
+        Self.applyAllahHighlight(to: attributed, source: displayText, enabled: settings.highlightAllahNames,
+                                 color: allahColor, plainColor: textColor)
         return attributed
     }
 
