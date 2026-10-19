@@ -237,18 +237,6 @@ struct AdhanView: View {
         List {
             Group {
                 #if os(iOS)
-                // Traveling mode leads the tab, above the date and the sky: readers who missed the
-                // caption under the list took the four combined prayers for a bug (see
-                // TravelingModeBanner.swift).
-                if settings.travelingMode {
-                    Section {
-                        TravelingModeBanner(openTravelSettings: { settingsSheet = .travelingMode })
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
                 // Date/location and the sky are their own sections again - sharing one made the sky's rounded
                 // card fight the rows above it. `compactListSectionSpacing` below closes the gap between them
                 // so they still read as one stacked header rather than two floating islands.
@@ -490,6 +478,13 @@ struct AdhanView: View {
             Task { @MainActor in
                 await AppReveal.waitUntilRevealed()
                 try? await Task.sleep(nanoseconds: 700_000_000)
+                // A launch dialog (the calculation or traveling card, a permission question) can be up
+                // for the first second or two after the reveal, and a sheet raised under it is refused
+                // by UIKit ("Attempt to present ... which is already presenting"): wait for the screen
+                // to be free, as the real tap on a tile always is.
+                for _ in 0..<40 where ModalPresence.isPresenting {
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                }
                 handleGlance(action)
             }
         }
@@ -560,7 +555,14 @@ struct AdhanView: View {
                 PrayerCountdown()
                     .equatable()
             }
+            // Traveling mode sits right under the countdown, above the list it explains - one compact
+            // row (Abu, 2026-10-19: "smaller and simpler ... before or after prayer countdown"; it was
+            // a loud card leading the whole tab). With the sky on, the countdown rides in the sky
+            // card, so this is the first row beneath it either way.
+            travelingSection
             PrayerList()
+        } else {
+            travelingSection
         }
         #else
         if live.prayers != nil {
@@ -570,6 +572,22 @@ struct AdhanView: View {
         }
         #endif
     }
+
+    #if os(iOS)
+    /// The traveling-mode row: what Qasr changed, how far from home, and the door to Travel Settings
+    /// (see TravelingModeBanner.swift). "View Full Prayers" stays in the footer under the list.
+    @ViewBuilder
+    private var travelingSection: some View {
+        if settings.travelingMode {
+            Section {
+                TravelingModeBanner(openTravelSettings: { settingsSheet = .travelingMode })
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
+        }
+    }
+    #endif
 
     #if os(watchOS)
     /// The watch's traveling-mode lead: plane, the mode's name and what it does, on a solid accent row.

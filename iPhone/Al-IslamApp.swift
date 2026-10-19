@@ -99,6 +99,9 @@ struct AlIslamApp: App {
                 // chrome modifier reads - one live snapshot instead of ~400 per-view Settings subscribers.
                 .appearanceEnvironment()
                 .appReviewPrompt()
+                // A newer version on the App Store is offered when the app opens (AppUpdateCheck.swift);
+                // it waits for the reveal and for the screen to be free, like the review ask above.
+                .appUpdatePrompt()
                 // Set ABOVE (outside) `.appReviewPrompt()` too, or its `@Environment(\.appRevealed)`
                 // reads the key's default (true): the copy inside `rootContent` sits BELOW the review
                 // modifier in the tree, and environment only flows down - the launch-cover gate on the

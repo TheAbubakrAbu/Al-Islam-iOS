@@ -23,7 +23,7 @@ struct ZakahCalculatorView: View {
             }
         }
 
-        /// Ibn Baz's figures: twenty mithqal of gold and a hundred and forty of silver.
+        /// Twenty mithqal of gold and a hundred and forty of silver, at Ibn Uthaymeen's weights (Majmu' al-Fatawa 18/138). Ibn Baz weighed them at 92 g and 644 g.
         var grams: Double {
             switch self {
             case .silver: return 595
@@ -362,7 +362,7 @@ struct ZakahCalculatorView: View {
 
             ExplainerButton(
                 title: "Why a lunar year",
-                body_: "Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). Dipping below in the middle of the year does not restart it, on the view most scholars take; only the two ends matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days.",
+                body_: "Zakah falls due when wealth has been at or above the nisab for one full lunar year (hawl). If it drops below the nisab during the year, the year starts again once it reaches the nisab: the view of Malik, ash-Shafi‘i, Ahmad and most scholars. Abu Hanifa held that only the two ends of the year matter. If you count your year on the Gregorian calendar instead, the rate is raised to 2.577% to make up the eleven extra days.",
                 caption: yearBasis == .lunar ? "A fortieth, once the wealth has sat a lunar year." : "2.577%, to make up the eleven days a solar year adds."
             )
         }

@@ -226,7 +226,7 @@ struct RiwayatDifferencesView: View {
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text(articleMarkdown: "**Is a mushaf without the hamzah missing something?**")
                         .font(.body)
-                    Text(verbatim: "No. The rasm is identical. A riwayah that eases or drops a hamzah is pronouncing the word as it was taught from the Prophet (peace and blessings be upon him), and its mushaf writes down what is pronounced. Each of the twenty is the complete Quran.")
+                    Text(verbatim: "No. The rasm of the word is the same. A riwayah that eases or drops a hamzah is pronouncing the word as it was taught from the Prophet (peace and blessings be upon him), and its mushaf writes down what is pronounced. Each of the twenty is the complete Quran.")
                         .font(.body)
 
                     Text(articleMarkdown: "**Why does Hafs’s mushaf look like the “normal” one?**")
@@ -250,7 +250,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("KEY TERMS")) {
-                    ArticleTermCard("Rasm", arabic: "رَسم", meaning: "The skeleton of the mushaf as the Companions wrote it, without dots or vowels. It is the same in every riwayah.")
+                    ArticleTermCard("Rasm", arabic: "رَسم", meaning: "The skeleton of the mushaf as the Companions wrote it, without dots or vowels. It is the same in every riwayah, apart from a few dozen places where the copies Uthman sent to the cities differ by a letter or a word, each reading agreeing with one of those copies.")
                     ArticleTermCard("Dabt", arabic: "ضَبط", meaning: "From **ض-ب-ط**, to make exact: the marks added to the rasm (vowels, sukoon, shadda, madd and the signs for hamzah and wasl), which differ from one riwayah’s mushaf to another.")
                     ArticleTermCard("Tas-hil", arabic: "تَسهِيل", meaning: "From **س-ه-ل**, to make easy: pronouncing a hamzah between itself and the long vowel it leans towards. Its mushafs draw a dot in its place.")
                     ArticleTermCard("Ibdal", arabic: "إِبدَال", meaning: "From **ب-د-ل**, to exchange: turning a hamzah into a long vowel, as in يُومِنُونَ.")

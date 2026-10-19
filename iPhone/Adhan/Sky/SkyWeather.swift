@@ -438,38 +438,121 @@ struct SkyWeatherOverlay: View {
     }
 }
 
+// MARK: - Trying a condition on
+
+/// A condition the weather sheet can try on the sky (Abu, 2026-10-19: "allow me to preview somehow all
+/// the other conditions"): WeatherKit's raw value, the sentence and symbol Apple Weather gives it, and
+/// the cloud cover that goes with it. The sky paints from `SkyWeatherLook(condition:cloudCover:)`, so
+/// this list names every look that initializer can produce, once each; conditions that paint the same
+/// sky (windy, hot and frigid are all a clear one) are left out.
+struct SkyWeatherCondition: Identifiable, Equatable {
+    let condition: String
+    let text: String
+    let symbolName: String
+    let cloudCover: Double
+
+    var id: String { condition }
+
+    static let all: [SkyWeatherCondition] = [
+        .init(condition: "clear", text: "Clear", symbolName: "sun.max.fill", cloudCover: 0.03),
+        .init(condition: "mostlyClear", text: "Mostly Clear", symbolName: "sun.min.fill", cloudCover: 0.2),
+        .init(condition: "partlyCloudy", text: "Partly Cloudy", symbolName: "cloud.sun.fill", cloudCover: 0.45),
+        .init(condition: "mostlyCloudy", text: "Mostly Cloudy", symbolName: "cloud.fill", cloudCover: 0.75),
+        .init(condition: "cloudy", text: "Cloudy", symbolName: "cloud.fill", cloudCover: 0.98),
+        .init(condition: "drizzle", text: "Drizzle", symbolName: "cloud.drizzle.fill", cloudCover: 0.85),
+        .init(condition: "rain", text: "Rain", symbolName: "cloud.rain.fill", cloudCover: 0.95),
+        .init(condition: "heavyRain", text: "Heavy Rain", symbolName: "cloud.heavyrain.fill", cloudCover: 1.0),
+        .init(condition: "isolatedThunderstorms", text: "Isolated Thunderstorms", symbolName: "cloud.bolt.fill", cloudCover: 0.7),
+        .init(condition: "thunderstorms", text: "Thunderstorms", symbolName: "cloud.bolt.rain.fill", cloudCover: 1.0),
+        .init(condition: "flurries", text: "Flurries", symbolName: "cloud.snow.fill", cloudCover: 0.8),
+        .init(condition: "snow", text: "Snow", symbolName: "cloud.snow.fill", cloudCover: 0.95),
+        .init(condition: "heavySnow", text: "Heavy Snow", symbolName: "snowflake", cloudCover: 1.0),
+        .init(condition: "sleet", text: "Sleet", symbolName: "cloud.sleet.fill", cloudCover: 0.95),
+        .init(condition: "hail", text: "Hail", symbolName: "cloud.hail.fill", cloudCover: 0.95),
+        .init(condition: "foggy", text: "Fog", symbolName: "cloud.fog.fill", cloudCover: 0.6),
+        .init(condition: "haze", text: "Haze", symbolName: "sun.haze.fill", cloudCover: 0.3),
+        .init(condition: "smoky", text: "Smoky", symbolName: "smoke.fill", cloudCover: 0.4),
+        .init(condition: "blowingDust", text: "Blowing Dust", symbolName: "sun.dust.fill", cloudCover: 0.3),
+    ]
+
+    static func named(_ condition: String) -> SkyWeatherCondition? {
+        all.first { $0.condition == condition }
+    }
+
+    /// Whether `precipitation` falls in this condition, for the sample numbers.
+    var isWet: Bool {
+        let look = SkyWeatherLook(condition: condition, cloudCover: cloudCover)
+        return look.precipitation != .none
+    }
+}
+
+extension SkyWeather {
+    /// This reading wearing `condition`: the numbers stay (the temperature is still today's), only the
+    /// sky changes. What the sheet's preview paints, so the chip and the card say "Rain" over the real
+    /// degrees rather than inventing a day.
+    func wearing(_ condition: SkyWeatherCondition) -> SkyWeather {
+        var out = self
+        out.condition = condition.condition
+        out.conditionText = condition.text
+        out.symbolName = condition.symbolName
+        out.cloudCover = condition.cloudCover
+        if condition.isWet {
+            out.precipitationChance = max(out.precipitationChance ?? 0, 0.8)
+            if out.precipitationMm < 0.5 { out.precipitationMm = condition.condition.contains("heavy") ? 5 : 2.4 }
+        } else {
+            out.precipitationChance = out.precipitationChance.map { min($0, 0.05) }
+            out.precipitationMm = 0
+        }
+        return out
+    }
+
+    /// A made-up reading in `condition` for a place, when there is no real one to dress: the sheet's
+    /// preview before the first fetch, the DEBUG `-fakeWeather` seed and the `-weatherGallery` sheet.
+    static func sample(_ condition: SkyWeatherCondition, celsius: Double? = nil, latitude: Double, longitude: Double,
+                       now: Date = Date()) -> SkyWeather {
+        let wet = condition.isWet
+        let foggy = condition.condition == "foggy"
+        let temp = celsius ?? (condition.condition.contains("snow") || condition.condition == "flurries" || condition.condition == "sleet" ? -2
+                               : wet ? 13 : condition.cloudCover > 0.7 ? 16 : 23)
+        let humidity = foggy ? 0.97 : wet ? 0.88 : 0.35 + 0.35 * condition.cloudCover
+        let uv = wet || foggy ? 1 : max(1, Int((7 * (1 - condition.cloudCover)).rounded()))
+        return SkyWeather(
+            fetchedAt: now, latitude: latitude, longitude: longitude,
+            temperatureC: temp, apparentC: temp + (humidity > 0.7 ? 1.5 : -1), highC: temp + 4, lowC: temp - 7,
+            humidity: humidity, dewPointC: temp - 8, uvIndex: uv,
+            uvCategory: uv >= 8 ? "Very High" : uv >= 6 ? "High" : uv >= 3 ? "Moderate" : "Low",
+            cloudCover: condition.cloudCover, condition: condition.condition, conditionText: condition.text,
+            symbolName: condition.symbolName,
+            windKph: 14, windDirection: "NW", visibilityKm: foggy ? 0.8 : 16,
+            pressureHPa: 1013, pressureTrend: "Steady",
+            precipitationChance: wet ? 0.8 : 0.05,
+            precipitationMm: wet ? (condition.condition.contains("heavy") || condition.condition == "thunderstorms" ? 5 : 2.4) : 0,
+            isDaylight: true
+        )
+    }
+}
+
 #if DEBUG
 extension SkyWeather {
     /// `-fakeWeather <preset>[,<celsius>]`: a reading for screenshots, since the simulator's Apple
     /// Weather needs the App ID's capability to answer. Presets: clear, partly, cloudy, overcast,
-    /// rain, storm, snow, fog, hot.
+    /// rain, storm, snow, fog, hot (and any `SkyWeatherCondition` raw value).
     static func fake(preset: String, celsius: Double?, latitude: Double, longitude: Double, now: Date = Date()) -> SkyWeather? {
-        let base: (condition: String, text: String, symbol: String, cover: Double, temp: Double, uv: Int, humidity: Double)
+        let condition: SkyWeatherCondition?
+        var temperature = celsius
         switch preset {
-        case "clear":    base = ("clear", "Clear", "sun.max.fill", 0.05, 24, 6, 0.35)
-        case "partly":   base = ("partlyCloudy", "Partly Cloudy", "cloud.sun.fill", 0.40, 21, 4, 0.45)
-        case "cloudy":   base = ("mostlyCloudy", "Mostly Cloudy", "cloud.fill", 0.75, 18, 2, 0.60)
-        case "overcast": base = ("cloudy", "Cloudy", "cloud.fill", 0.98, 15, 1, 0.70)
-        case "rain":     base = ("rain", "Rain", "cloud.rain.fill", 0.95, 13, 1, 0.88)
-        case "storm":    base = ("thunderstorms", "Thunderstorms", "cloud.bolt.rain.fill", 1.0, 19, 1, 0.85)
-        case "snow":     base = ("snow", "Snow", "cloud.snow.fill", 0.95, -2, 1, 0.80)
-        case "fog":      base = ("foggy", "Foggy", "cloud.fog.fill", 0.6, 9, 1, 0.97)
-        case "hot":      base = ("hot", "Hot", "thermometer.sun.fill", 0.02, 41, 11, 0.12)
-        default: return nil
+        case "partly":   condition = .named("partlyCloudy")
+        case "cloudy":   condition = .named("mostlyCloudy")
+        case "overcast": condition = .named("cloudy")
+        case "storm":    condition = .named("thunderstorms")
+        case "fog":      condition = .named("foggy")
+        case "hot":
+            condition = SkyWeatherCondition(condition: "hot", text: "Hot", symbolName: "thermometer.sun.fill", cloudCover: 0.02)
+            temperature = temperature ?? 41
+        default:         condition = .named(preset)
         }
-        let temp = celsius ?? base.temp
-        return SkyWeather(
-            fetchedAt: now, latitude: latitude, longitude: longitude,
-            temperatureC: temp, apparentC: temp + (base.humidity > 0.7 ? 1.5 : -1), highC: temp + 4, lowC: temp - 7,
-            humidity: base.humidity, dewPointC: temp - 8, uvIndex: base.uv,
-            uvCategory: base.uv >= 8 ? "Very High" : base.uv >= 6 ? "High" : base.uv >= 3 ? "Moderate" : "Low",
-            cloudCover: base.cover, condition: base.condition, conditionText: base.text, symbolName: base.symbol,
-            windKph: 14, windDirection: "NW", visibilityKm: base.condition == "foggy" ? 0.8 : 16,
-            pressureHPa: 1013, pressureTrend: "Steady",
-            precipitationChance: base.condition.contains("rain") || base.condition == "snow" || base.condition == "thunderstorms" ? 0.8 : 0.05,
-            precipitationMm: base.condition == "rain" ? 2.4 : base.condition == "thunderstorms" ? 5 : 0,
-            isDaylight: true
-        )
+        guard let condition else { return nil }
+        return sample(condition, celsius: temperature, latitude: latitude, longitude: longitude, now: now)
     }
 }
 #endif

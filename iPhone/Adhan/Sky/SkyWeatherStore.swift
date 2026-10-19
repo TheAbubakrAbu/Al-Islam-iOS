@@ -29,6 +29,11 @@ final class SkyWeatherStore: ObservableObject {
     /// Apple's legal page for the attribution, from the service when it has answered, else the
     /// published address.
     @Published private(set) var legalURL = URL(string: "https://weatherkit.apple.com/legal-attribution.html")!
+    /// A condition being tried on from the weather sheet (SkyWeatherCondition, Abu 2026-10-19: "allow
+    /// me to preview somehow all the other conditions"). While set, every sky in the app paints the
+    /// reading wearing it (`freshWeather`), whatever the switch and the reading's age say; the widgets
+    /// never see it, since nothing is written to the cache. The sheet clears it on its way out.
+    @Published var preview: SkyWeatherCondition?
 
     private var task: Task<Void, Never>?
     private var lastAttemptAt: Date?
@@ -65,8 +70,15 @@ final class SkyWeatherStore: ObservableObject {
         })
     }
 
-    /// The reading while it is still fresh and the switch is on; nil paints a plain sky.
+    /// The reading while it is still fresh and the switch is on; nil paints a plain sky. A preview
+    /// from the sheet wins while it stands: the real reading wearing the chosen condition, or a sample
+    /// in it when nothing has been fetched yet.
     var freshWeather: SkyWeather? {
+        if let preview {
+            if let weather { return weather.wearing(preview) }
+            let location = Settings.shared.currentLocation
+            return SkyWeather.sample(preview, latitude: location?.latitude ?? 21.4225, longitude: location?.longitude ?? 39.8262)
+        }
         guard Settings.shared.skyShowsWeather, let weather, weather.isFresh() else { return nil }
         return weather
     }
@@ -126,6 +138,7 @@ final class SkyWeatherStore: ObservableObject {
         task = nil
         isFetching = false
         weather = nil
+        preview = nil
         Self.store?.removeObject(forKey: SkyWeather.storageKey)
         Settings.shared.reloadWidgets(deferred: true)
     }

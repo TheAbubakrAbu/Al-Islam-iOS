@@ -429,12 +429,10 @@ struct HadithView: View {
 
                 if !hadithSearchHelpCollapsed {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("• Books, chapters & hadith text (English or Arabic)")
-                        Text("• Reference: 'bukhari 5103' or 'muslim 3:12' (just '3:12' inside a book)")
-                        Text("• AI: meaning search, 'controlling anger'")
-                        Text("• Ask: questions get an on-device AI answer")
-                        Text("• The buttons above narrow it: books, Sahih / Hasan / Da'if, Best Match, and More for the rest")
-                        Text("• Text and AI search cover all 17 collections")
+                        Text("• Books, chapters or hadith text, in English or Arabic")
+                        Text("• A reference: 'bukhari 5103' or 'muslim 3:12'")
+                        Text("• By meaning: 'controlling anger', or ask a question")
+                        Text("• The buttons above narrow it by book and grade")
                     }
                     .font(.caption)
                     .foregroundStyle(.primary)
@@ -1609,7 +1607,7 @@ struct HadithView: View {
                 // The keyword matches' grammar for the semantic list too: the sparkles TOTAL pill up
                 // top, then one section per book with its own count - AI matches from different books
                 // never read as one undifferentiated list.
-                Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles", accentTitle: true)) {
+                Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles")) {
                     EmptyView()
                 }
                 .padding(.bottom, -12)
@@ -1750,7 +1748,6 @@ struct HadithView: View {
 
             Spacer()
         }
-        .foregroundStyle(settings.accentColor.color)
     }
 
     /// The one-tap Ask entry: press to open the Ask AI chat with exactly what's typed as its first

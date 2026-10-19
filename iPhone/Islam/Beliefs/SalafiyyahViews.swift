@@ -12,7 +12,7 @@ struct TawhidView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT IS TAWHID?")) {
-                    Text(articleMarkdown: "**Tawhid (تَوحِيد)** is the verbal noun of **wahhada**, from the root **و-ح-د**, “to make one“ or “to single out.” It does not mean believing that Allah exists, nor merely that He is one in number. It means to single Him out in everything that is His right alone, and to give none of it to anyone else.")
+                    Text(articleMarkdown: "**Tawhid (تَوحِيد)** is the verbal noun of **wahhada**, from the root **و-ح-د**, “to make one” or “to single out.” It does not mean believing that Allah exists, nor merely that He is one in number. It means to single Him out in everything that is His right alone, and to give none of it to anyone else.")
                         .font(.body)
 
                     Text(verbatim: "The word is the Prophet’s own. When he sent Mu‘adh ibn Jabal (may Allah be pleased with him) to Yemen, he named tawhid as the first thing to be called to, before prayer and before zakah:")
@@ -226,7 +226,7 @@ struct TawhidView: View {
                 }
 
                 Section(header: ArticleHeader("HOW TO GUARD IT")) {
-                    Text(verbatim: "Learn it, because a person cannot avoid what he cannot recognise; the Prophet (peace be upon him) made tawhid the heart of thirteen years of calling in Makkah before most of the detailed law came down in Madinah. Ask Allah for it, as Ibrahim (peace be upon him) did after a lifetime upon it: “And keep me and my sons away from worshipping idols” (Quran 14:35). Guard the means, because shirk never begins as shirk; it begins as exaggeration in a righteous man. And close the day with the words the Prophet (peace be upon him) taught Abu Bakr for it: “O Allah, I seek refuge in You from associating anything with You knowingly, and I seek Your forgiveness for what I do not know” (al-Adab al-Mufrad 716; graded sahih by al-Albani).")
+                    Text(verbatim: "Learn it, because a person cannot avoid what he cannot recognise; the Prophet (peace be upon him) made tawhid the heart of thirteen years of calling in Makkah before most of the detailed law came down in Madinah. Ask Allah for it, as Ibrahim (peace be upon him) did after a lifetime upon it: “And keep me and my sons away from worshipping idols” (Quran 14:35). Guard the means, because shirk never begins as shirk; it begins as exaggeration in a righteous man. And say often the words the Prophet (peace be upon him) taught Abu Bakr for it, promising that the little and the much of it would leave the one who says them: “O Allah, I seek refuge in You from associating anything with You knowingly, and I seek Your forgiveness for what I do not know” (al-Adab al-Mufrad 716; graded sahih by al-Albani).")
                         .font(.body)
                     ScriptureQuote(quran: "14:35")
                 }
@@ -350,14 +350,14 @@ struct SalafiyyahView: View {
             .text("In short: Salafiyyah is following the Quran and the Sunnah upon the understanding of the Salaf, the first three generations. It is not a new sect or a party; it is the name for the original Islam, and its creed is the Athari creed."),
         ]),
         ArticleSection("WHO ARE THE SALAF?", [
-            .markdown("**Salaf (سَلَف)** means “those who came before.“ In the religion it means **as-Salaf as-Salih (السَّلَف الصَّالِح)**, the Righteous Predecessors: the Companions (**Sahabah**), their students (**Tabi‘un**), and the students of those (**Atba‘ at-Tabi‘in**), the three generations the Prophet (peace be upon him) praised:"),
+            .markdown("**Salaf (سَلَف)** means “those who came before.” In the religion it means **as-Salaf as-Salih (السَّلَف الصَّالِح)**, the Righteous Predecessors: the Companions (**Sahabah**), their students (**Tabi‘un**), and the students of those (**Atba‘ at-Tabi‘in**), the three generations the Prophet (peace be upon him) praised:"),
             .hadith("bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...37, english: [4...23]),
             .markdown("A **Salafi (سَلَفِي)** is simply one who ascribes himself to the Salaf: who takes his creed, worship, and understanding from them rather than from later opinions. **Salafiyyah (السَّلَفِيَّة)** is that way. It is another name for **Ahl as-Sunnah wal-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة)**, the people of the Sunnah and of the united body; **Ahl al-Hadith (أَهل الحَدِيث)**, the people of hadith; and **Ahl al-Athar (أَهل الأَثَر)**, the people of narration, from the root أ-ث-ر, a track or trace left behind."),
         ]),
         ArticleSection("WHY THE SALAF?", [
             .text("Because Allah (Glorified and Exalted be He) made their way the standard, and made following anything else a way to the Fire:"),
             .ayah("4:115"),
-            .text("“The way of the believers“ when this verse came down was the way of the Companions. Allah then declared Himself pleased with them and with those who follow them:"),
+            .text("“The way of the believers” when this verse came down was the way of the Companions. Allah then declared Himself pleased with them and with those who follow them:"),
             .ayah("9:100", words: 0...12),
             .text("The Prophet (peace be upon him) named the one saved group by exactly this standard:"),
             .hadith("tirmidhi:2641", cite: "Sunan al-Tirmidhi 2641; graded hasan by al-Albani", arabic: 91...94, english: [47...92]),
@@ -369,16 +369,16 @@ struct SalafiyyahView: View {
             .hadith("darimi:207", cite: "Sunan al-Darimi 207; al-Haythami: its narrators are those of the Sahih, Majma' az-Zawa'id 1/181", arabic: 23...27, text: "“Follow, and do not innovate, for you have been sufficed”"),
             .text("Imam al-Awza‘i (may Allah have mercy on him), the imam of Syria (d. 157 AH), said:"),
             .quote(text: "“Hold to the narrations of those who came before, even if the people reject you, and beware of the opinions of men, even if they beautify them for you with speech” (al-Khatib al-Baghdadi, Sharaf Ashab al-Hadith 6; al-Ajurri, ash-Shari'ah 127).", arabic: "عَلَيكَ بِآثَارِ مَن سَلَفَ وَإِن رَفَضَكَ النَّاسُ، وَإِيَّاكَ وَآرَاءَ الرِّجَالِ وَإِن زَخرَفُوهُ لَكَ بِالقَولِ", dimmed: true),
-            .text("A saying attributed to Imam Abu Hanifah (may Allah have mercy on him), recorded by Ibn Qudamah and as-Suyuti:"),
-            .quote(text: "“Hold to the narrations and the way of the Salaf, and beware of every newly invented matter, for it is an innovation” (attributed to Abu Hanifah; Ibn Qudamah, Dhamm at-Ta'wil 13; as-Suyuti, Sawn al-Mantiq, p. 32).", arabic: "عَلَيكَ بِالأَثَرِ وَطَرِيقَةِ السَّلَفِ، وَإِيَّاكَ وَكُلَّ مُحدَثَةٍ فَإِنَّهَا بِدعَةٌ", dimmed: true),
+            .text("Imam Abu Hanifah (may Allah have mercy on him) said:"),
+            .quote(text: "“It is not permitted for anyone to take our saying as long as he does not know where we took it from” (Ibn Abd al-Barr, al-Intiqa’ fi Fada’il al-A’immah ath-Thalathah al-Fuqaha’, p. 145; quoted by al-Albani in the introduction to Sifat Salat an-Nabi).", arabic: "لَا يَحِلُّ لِأَحَدٍ أَن يَأخُذَ بِقَولِنَا مَا لَم يَعلَم مِن أَينَ أَخَذنَاهُ", dimmed: true),
             .text("Imam al-Barbahari (may Allah have mercy on him) (d. 329 AH) opened his creed with:"),
             .quote(text: "“Know that Islam is the Sunnah and the Sunnah is Islam, and neither of them stands without the other” (al-Barbahari, Sharh as-Sunnah 1).", arabic: "اعلَمُوا أَنَّ الإِسلَامَ هُوَ السُّنَّةُ، وَالسُّنَّةُ هِيَ الإِسلَامُ، وَلَا يَقُومُ أَحَدُهُمَا إِلَّا بِالآخَرِ", dimmed: true),
             .text("And Shaykh al-Islam Ibn Taymiyyah (may Allah have mercy on him) wrote:"),
             .quote(text: "“There is no blame on the one who manifests the way of the Salaf, ascribes himself to it, and takes pride in it; rather it is obligatory to accept that from him by agreement, for the way of the Salaf can be nothing but the truth” (Majmu' al-Fatawa 4/149).", arabic: "لَا عَيبَ عَلَى مَن أَظهَرَ مَذهَبَ السَّلَفِ وَانتَسَبَ إِلَيهِ وَاعتَزَى إِلَيهِ، بَل يَجِبُ قَبُولُ ذَلِكَ مِنهُ بِالِاتِّفَاقِ، فَإِنَّ مَذهَبَ السَّلَفِ لَا يَكُونُ إِلَّا حَقًّا", dimmed: true),
-            .markdown("The word itself is old. Imam adh-Dhahabi (d. 748 AH) wrote that a hadith master must be “pious, intelligent, a grammarian, a linguist, upright, modest, and **Salafi**“ (Siyar A‘lam an-Nubala’ 13/380), and used “Salafi“ as a description of many scholars in his biographies."),
+            .markdown("The word itself is old. Imam adh-Dhahabi (d. 748 AH) wrote that a hadith master must be “pious, intelligent, a grammarian, a linguist, upright, modest, and **Salafi**” (Siyar A‘lam an-Nubala’ 13/380), and used “Salafi” as a description of many scholars in his biographies."),
         ]),
         ArticleSection("WHY THE ATHARI CREED IS THE TRUTH", [
-            .markdown("The creed of Salafiyyah is the **Athari** creed, the creed of narration (see “The Madhahib of Aqeedah“). It is the truth for four reasons."),
+            .markdown("The creed of Salafiyyah is the **Athari** creed, the creed of narration (see “The Madhahib of Aqeedah”). It is the truth for four reasons."),
             .markdown("**1. Creed can only come from revelation.** The existence and perfection of the Creator are known by the fitrah and by reason, but the detail of His names, His attributes, the unseen, and the Hereafter can only be told; it is revealed, or it is not known. So the only sound creed is the one taken from the texts as they are:"),
             .ayah("53:3-4"),
             .markdown("**2. The religion was completed in the Companions’ time.** Whatever belief they did not hold was not part of Islam then, and cannot be part of it now:"),
@@ -529,7 +529,7 @@ struct SalafiyyahView: View {
             .markdown("**Ahl as-Sunnah wal-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة)**: “the People of the Sunnah and the Congregation.” Sunnah is the way of the Prophet (peace be upon him); Jama‘ah, from ج-م-ع, to gather, is the body of the Companions and whoever gathers upon what they were upon. The name is taken from the Prophet’s own description of the one group that is saved:"),
             .hadith("ibnmajah:3993", cite: "Sunan Ibn Majah 3993; graded sahih by al-Albani", arabic: 29...50, english: [0...29]),
             .markdown("**Ahl al-Hadith (أَهل الحَدِيث)** and **Ahl al-Athar (أَهل الأَثَر)**: “the People of Hadith” and “the People of Narration.” Athar, from أ-ث-ر, is a trace or footprint, and so a transmitted report from the Prophet (peace be upon him) or from the Salaf. These are the names the early imams used for those who built their religion on transmitted reports rather than on opinion. When at-Tirmidhi recorded the hadith of the aided group, he related that his teacher Imam al-Bukhari said, from his own teacher Ali ibn al-Madini (may Allah have mercy on them both):"),
-            .quote(text: "“They are the people of hadith” (Sunan al-Tirmidhi, the words of al-Bukhari recorded after hadith 2229).", arabic: "هُم أَصحَابُ الحَدِيثِ", dimmed: true),
+            .quote(text: "“They are the people of hadith” (Sunan al-Tirmidhi, the words of al-Bukhari from Ali ibn al-Madini recorded after hadiths 2192 and 2229).", arabic: "هُم أَصحَابُ الحَدِيثِ", dimmed: true),
             .text("Imam Ahmad (may Allah have mercy on him) said the same: if the aided group is not the people of hadith, he did not know who they are (al-Hakim, Ma‘rifat Ulum al-Hadith; al-Khatib al-Baghdadi, Sharaf Ashab al-Hadith)."),
             .markdown("**At-Ta’ifah al-Mansurah (الطَّائِفَة المَنصُورَة)**: “the Aided Group,” from ta’ifah, a group, and nasr, help and victory. The Prophet (peace be upon him) said:"),
             .hadith("bukhari:3641", cite: "Sahih al-Bukhari 3641, Sahih Muslim 1920", arabic: 26...47, english: [6...53]),
@@ -602,7 +602,7 @@ struct QuranSunnahView: View {
                 }
 
                 Section(header: ArticleHeader("THE TWO ARE NEVER SEPARATED")) {
-                    Text(verbatim: "Anyone who says “the Quran is enough“ has rejected the Quran, because the Quran commands obedience to the Messenger in dozens of verses. And anyone who accepts hadith but reinterprets the Quran by opinion has left the Sunnah, because the Sunnah is the explanation of the Quran. The Prophet (peace be upon him) foretold both errors:")
+                    Text(verbatim: "Anyone who says “the Quran is enough” has rejected the Quran, because the Quran commands obedience to the Messenger in dozens of verses. And anyone who accepts hadith but reinterprets the Quran by opinion has left the Sunnah, because the Sunnah is the explanation of the Quran. The Prophet (peace be upon him) foretold both errors:")
                         .font(.body)
                     ScriptureQuote(hadith: "bukhari:7288", cite: "Sahih al-Bukhari 7288, Sahih Muslim 1337", arabic: 21...44, english: 4...58)
 
@@ -790,7 +790,7 @@ struct ShirkView: View {
             .text("In short: shirk is giving any of Allah's rights to other than Him. It is the one sin Allah does not forgive if a person dies upon it, and the opposite of the tawhid every prophet called to."),
         ]),
         ArticleSection("WHAT IS SHIRK?", [
-            .markdown("**Shirk (شِرك)** means “association“: making a partner (**sharik**) for Allah in what belongs only to Him. Its opposite is **tawhid (تَوحِيد)**, singling Allah out. Tawhid has three parts, and shirk can enter each:"),
+            .markdown("**Shirk (شِرك)** means “association”: making a partner (**sharik**) for Allah in what belongs only to Him. Its opposite is **tawhid (تَوحِيد)**, singling Allah out. Tawhid has three parts, and shirk can enter each:"),
             .markdown("• **In lordship (rububiyyah)**: believing that anyone besides Allah creates, provides, or controls the universe."),
             .markdown("• **In worship (uluhiyyah)**: directing any act of worship to other than Allah: supplication, sacrifice, vows, prostration, fear, hope, reliance, seeking help from the dead or absent in what only Allah can do."),
             .markdown("• **In names and attributes**: giving creation what belongs to Allah alone, such as knowledge of the unseen, or giving Allah the qualities of creation."),
@@ -818,7 +818,7 @@ struct ShirkView: View {
             .markdown("**Major shirk (الشِّرك الأَكبَر)** takes a person out of Islam. It includes: calling upon the dead, saints, or prophets for help, rescue, or children; sacrificing or vowing to other than Allah; prostrating to a grave or a shaykh; believing that anyone besides Allah knows the unseen or controls the universe; and giving anyone the right to make lawful and unlawful in place of Allah:"),
             .ayah("46:5"),
             .ayah("9:31"),
-            .markdown("**Minor shirk (الشِّرك الأَصغَر)** does not take one out of Islam but is greater than every other sin: showing off in worship (**riya’ (رِيَاء)**, from ر-أ-ي, to see: doing an act so that people will see it), swearing by other than Allah, and saying “what Allah wills and you will.“ The Prophet (peace be upon him) said:"),
+            .markdown("**Minor shirk (الشِّرك الأَصغَر)** does not take one out of Islam but is greater than every other sin: showing off in worship (**riya’ (رِيَاء)**, from ر-أ-ي, to see: doing an act so that people will see it), swearing by other than Allah, and saying “what Allah wills and you will.” The Prophet (peace be upon him) said:"),
             .quote(text: "“The thing I fear most for you is minor shirk.” They said: And what is minor shirk, O Messenger of Allah? He said: “Showing off” (Musnad Ahmad 23630; graded sahih by al-Albani, Sahih al-Jami' 1555).", arabic: "إِنَّ أَخوَفَ مَا أَخَافُ عَلَيكُمُ الشِّركُ الأَصغَرُ. قَالُوا: وَمَا الشِّركُ الأَصغَرُ يَا رَسُولَ اللَّهِ؟ قَالَ: الرِّيَاءُ", dimmed: true),
             .text("Amulets, charms, omens, and going to fortune-tellers also fall under shirk, because they attach the heart to other than Allah for benefit and protection."),
         ]),
@@ -838,7 +838,7 @@ struct ShirkView: View {
             .markdown("**Tawassul (تَوَسُّل)**, from و-س-ل, to seek a means of drawing near, is seeking a means to Allah. Allowed, as the Key Terms explain: by Allah’s names and attributes, by one’s own faith and righteous deeds, and by asking a living righteous person to make du‘a (دُعَاء, from د-ع-و, to call upon) for you. Forbidden and shirk: calling on the dead or absent themselves, asking them for needs, or making them intermediaries who carry requests to Allah, for that is exactly what the pagans did. Between the two lies asking Allah “by the right” or “by the status” of the Prophet or a saint. The Companions did not do it after his death, the scholars differed over it, and Ibn Taymiyyah in Qa‘idah Jalilah and al-Albani in at-Tawassul held it to be an innovation rather than shirk in itself, while warning that it is the door through which shirk enters. Allah answered those who took the righteous as a means:"),
             .ayah("17:56-57"),
             .markdown("**Are amulets shirk?**"),
-            .text("Yes. The Prophet (peace be upon him) said, as quoted above, that whoever hangs an amulet has committed shirk (Musnad Ahmad 17422), and the Key Terms explain when that is major shirk and when it is minor. Amulets made from the Quran are not excepted: the companions of Ibn Mas‘ud disliked them all (reported by Ibn Abi Shaybah in al-Musannaf), and this is the view chosen by Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them), because it closes the door to the rest and because the Quran was revealed to be recited, not hung. Protection is sought through the ruqyah the Sunnah taught, the morning and evening remembrances, and reliance on Allah:"),
+            .text("Yes. The Prophet (peace be upon him) said, as quoted in the Key Terms below, that whoever hangs an amulet has committed shirk (Musnad Ahmad 17422; graded sahih by al-Albani), and the Key Terms explain when that is major shirk and when it is minor. Amulets made from the Quran are not excepted: the companions of Ibn Mas‘ud disliked them all (reported by Ibn Abi Shaybah in al-Musannaf), and this is the view chosen by Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them), because it closes the door to the rest and because the Quran was revealed to be recited, not hung. Protection is sought through the ruqyah the Sunnah taught, the morning and evening remembrances, and reliance on Allah:"),
             .ayah("39:38", words: 8...35),
             .markdown("**Is visiting graves shirk?**"),
             .text("No. Visiting graves to remember death and to make du‘a for the dead is Sunnah. The Prophet (peace be upon him) said:"),
@@ -858,7 +858,7 @@ struct ShirkView: View {
             .text("So sending salam upon him reaches him. But asking him, at his grave or from afar, for provision, cure, children, or forgiveness is the shirk of du‘a. Even in his lifetime he did not own that:"),
             .ayah("7:188", words: 0...10),
             .ayah("72:21"),
-            .text("The Companions knew him best and loved him most, and when drought came after his death Umar did not go to his grave to ask him for rain; he asked al-Abbas, a living man, to make du‘a (Sahih al-Bukhari 1010, above). Had asking the Prophet after his death been lawful, they would have been the first to do it."),
+            .text("The Companions knew him best and loved him most, and when drought came after his death Umar did not go to his grave to ask him for rain; he asked al-Abbas, a living man, to make du‘a (Sahih al-Bukhari 1010, quoted in the Key Terms below). Had asking the Prophet after his death been lawful, they would have been the first to do it."),
             .markdown("**Is it shirk to praise the Prophet?**"),
             .text("Loving the Prophet (peace be upon him) more than oneself, praising him with what Allah praised him, and sending salawat upon him are worship of Allah and a sign of faith:"),
             .ayah("33:56"),
@@ -875,7 +875,7 @@ struct ShirkView: View {
             .markdown("**Are fortune-tellers, astrology, and magic shirk?**"),
             .markdown("Claiming to know the unseen is a claim to what belongs to Allah alone, and seeking it from a fortune-teller (**kahin**), an astrologer, or a magician attaches the heart to other than Him. The Prophet (peace be upon him) said:"),
             .hadith("muslim:2230", cite: "Sahih Muslim 2230", arabic: 36...47, english: [0...20]),
-            .quote(text: "“Whoever ... goes to a fortune-teller and believes what he says has disbelieved in that which was revealed to Muhammad” (Sunan Ibn Majah 639; graded sahih by al-Albani).", arabic: "مَن أَتَى ... كَاهِنًا فَصَدَّقَهُ بِمَا يَقُولُ فَقَد كَفَرَ بِمَا أُنزِلَ عَلَى مُحَمَّدٍ", dimmed: true),
+            .hadith("ibnmajah:639", cite: "Sunan Ibn Majah 639; graded sahih by al-Albani", arabic: 38...55, english: [5...39]),
             .hadith("abudawud:3905", cite: "Sunan Abi Dawud 3905; graded hasan by al-Albani", arabic: 40...51, english: [4...29]),
             .text("Magic itself is counted with shirk among the seven destroyers:"),
             .hadith("bukhari:2766", cite: "Sahih al-Bukhari 2766", arabic: 35...68, english: [4...93]),
@@ -910,7 +910,7 @@ struct ShirkView: View {
             .ayah("9:6", words: 0...9),
             .text("The ayah goes on: then deliver him to his place of safety, “That is because they are a people who do not know.” Ibn Taymiyyah (may Allah have mercy on him) wrote:"),
             .quote(text: "“I am among the people most forbidding of attributing disbelief, sin, or disobedience to a specific person, unless it is known that the proof of the message has been established against him” (Ibn Taymiyyah, Majmu‘ al-Fatawa 3/229).", arabic: "أَنَا مِن أَعظَمِ النَّاسِ نَهيًا عَن أَن يُنسَبَ مُعَيَّنٌ إِلَى تَكفِيرٍ وَتَفسِيقٍ وَمَعصِيَةٍ، إِلَّا إِذَا عُلِمَ أَنَّهُ قَد قَامَت عَلَيهِ الحُجَّةُ الرِّسَالِيَّةُ", dimmed: true),
-            .text("The scholars differ over the details: who counts as having received the proof, and whether a Muslim living among the Muslims, with the Quran in his hands, can claim ignorance of the tawhid that is its first message. Ibn Baz, al-Albani, and Ibn al-Uthaymin (may Allah have mercy on them) all held that the ruling on a specific person requires the conditions to be met and the impediments (ignorance, mistake, coercion, misinterpretation) to be absent, and that this judgement belongs to the people of knowledge. The duty of the ordinary Muslim is to hate the act, teach the truth gently, and leave the ruling on individuals to those qualified."),
+            .text("The scholars differ over the details: who counts as having received the proof, and whether a Muslim living among the Muslims, with the Quran in his hands, can claim ignorance of the tawhid that is its first message. Ibn Baz (may Allah have mercy on him) held that one who lives among the Muslims, with the Quran and the Sunnah within his reach, is not excused by ignorance in calling on the dead and the like, because he neglected to ask and learn. Ibn al-Uthaymin and al-Albani (may Allah have mercy on them) gave more weight to the impediments (ignorance, mistake, coercion, misinterpretation) in judging a specific person. All three held that this judgement belongs to the people of knowledge. The duty of the ordinary Muslim is to hate the act, teach the truth gently, and leave the ruling on individuals to those qualified."),
         ]),
         ArticleSection("IN SUMMARY", [
             .text("Shirk is the one sin that is not forgiven if a person dies upon it, and it is not only bowing to idols: it is every invocation, sacrifice, vow, and hope directed to other than Allah. Tawhid is its cure and the first message of every prophet."),
@@ -993,7 +993,7 @@ struct KufrView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT IS KUFR?")) {
-                    Text(articleMarkdown: "**Kufr (كُفر)** means “to cover“: the farmer who covers the seed is called a **kafir** in the Arabic language. In the religion it is covering the truth: rejecting, denying, doubting, or turning away from what the Messenger (peace be upon him) brought. Its opposite is **iman (إِيمَان)**, faith.")
+                    Text(articleMarkdown: "**Kufr (كُفر)** means “to cover”: the farmer who covers the seed is called a **kafir** in the Arabic language. In the religion it is covering the truth: rejecting, denying, doubting, or turning away from what the Messenger (peace be upon him) brought. Its opposite is **iman (إِيمَان)**, faith.")
                         .font(.body)
 
                     ScriptureQuote(quran: "4:136")
@@ -1002,7 +1002,7 @@ struct KufrView: View {
                 }
 
                 Section(header: ArticleHeader("MAJOR AND MINOR KUFR")) {
-                    Text(articleMarkdown: "**Major kufr (الكُفر الأَكبَر)** takes a person out of Islam. **Minor kufr (الكُفر الأَصغَر)** is a grave sin the texts called “kufr“ without meaning apostasy, such as ingratitude to a husband or fighting a fellow Muslim. Ahl as-Sunnah keep the two apart, unlike the Khawarij, who made every major sin major kufr, and unlike the extreme Murji’ah, who said no sin harms one who believes.")
+                    Text(articleMarkdown: "**Major kufr (الكُفر الأَكبَر)** takes a person out of Islam. **Minor kufr (الكُفر الأَصغَر)** is a grave sin the texts called “kufr” without meaning apostasy, such as ingratitude to a husband or fighting a fellow Muslim. Ahl as-Sunnah keep the two apart, unlike the Khawarij, who made every major sin major kufr, and unlike the extreme Murji’ah, who said no sin harms one who believes.")
                         .font(.body)
                 }
 
@@ -1037,18 +1037,18 @@ struct KufrView: View {
                     Text(articleMarkdown: "**8. Supporting the disbelievers against the Muslims** out of loyalty to their religion.")
                         .font(.body)
 
-                    Text(articleMarkdown: "**9. Believing that anyone may leave the Shari‘ah of Muhammad** (peace be upon him), as some Sufis claimed of their “saints.“")
+                    Text(articleMarkdown: "**9. Believing that anyone may leave the Shari‘ah of Muhammad** (peace be upon him), as some Sufis claimed of their “saints.”")
                         .font(.body)
 
                     Text(articleMarkdown: "**10. Turning away from the religion entirely**, neither learning it nor acting on it.")
                         .font(.body)
 
-                    Text(verbatim: "To these the Companions added abandoning the prayer. The Prophet (peace be upon him) said:")
+                    Text(verbatim: "Beside these stands abandoning the prayer, which the Companions counted as disbelief. The Prophet (peace be upon him) said:")
                         .font(.body)
                     ScriptureQuote(hadith: "muslim:82a", cite: "Sahih Muslim 82", arabic: 34...41, english: 21...33)
                     ScriptureQuote(hadith: "tirmidhi:2621", cite: "Sunan al-Tirmidhi 2621; graded sahih by al-Albani", arabic: 77...85, english: 7...23)
 
-                    Text(verbatim: "Abdullah ibn Shaqiq, a Successor, said: “The Companions of Muhammad did not consider the abandonment of any action to be disbelief except the prayer“ (Sunan al-Tirmidhi 2622). The strongest position, that of Imam Ahmad, is that leaving it entirely is major kufr.")
+                    Text(verbatim: "Abdullah ibn Shaqiq, a Successor, said: “The Companions of Muhammad did not consider the abandonment of any action to be disbelief except the prayer” (Sunan al-Tirmidhi 2622). The strongest position, that of Imam Ahmad, is that leaving it entirely is major kufr.")
                         .font(.body)
                 }
 
@@ -1176,7 +1176,7 @@ struct KufrView: View {
                     Text(verbatim: "Prayer is the greatest outward mark of Islam, but it is not a guarantee against the nullifiers. The hypocrites of Madinah prayed behind the Prophet (peace be upon him) while Allah counted them among the disbelievers:")
                         .font(.body)
                     ScriptureQuote(quran: "4:142")
-                    Text(verbatim: "And another wording of the hadith of the three signs of hypocrisy, quoted above, adds:")
+                    Text(verbatim: "And another wording of the hadith of the three signs of hypocrisy, quoted in the Key Terms below, adds:")
                         .font(.body)
                     ScriptureQuote(hadith: "muslim:59c", cite: "Sahih Muslim 59", arabic: 25...33, english: 0...20)
                     Text(verbatim: "Likewise, one who prays but calls upon the dead for what only Allah gives, or practises magic, or mocks the religion, has fallen into what breaks Islam, as the list above shows; shirk voids the deeds it enters (39:65). That is the ruling on the deed itself, and whether a particular person who does it has left Islam still turns on the conditions and impediments already explained, which only the people of knowledge weigh for a given man. In dealing with people the matter is reversed: whoever prays and shows Islam is treated as a Muslim with a Muslim’s full rights, and no one may search his heart:")
@@ -1287,7 +1287,7 @@ struct BidahView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT IS BID'AH?")) {
-                    Text(articleMarkdown: "**Bid‘ah (بِدعَة)** comes from **bada‘a**, to originate something without precedent; Allah is **al-Badi‘**, the Originator of the heavens and the earth. In the religion, a bid‘ah is a newly invented way in worship, intended to draw near to Allah, that has no basis in the Quran, the Sunnah, or the practice of the Companions. Imam al-Shatibi defined it as “an invented way in the religion, resembling the Shari‘ah, by which drawing near to Allah is intended“ (al-I‘tisam 1/37).")
+                    Text(articleMarkdown: "**Bid‘ah (بِدعَة)** comes from **bada‘a**, to originate something without precedent; Allah is **al-Badi‘**, the Originator of the heavens and the earth. In the religion, a bid‘ah is a newly invented way in worship, intended to draw near to Allah, that has no basis in the Quran, the Sunnah, or the practice of the Companions. Imam al-Shatibi defined it as “an invented way in the religion, resembling the Shari‘ah, by which drawing near to Allah is intended” (al-I‘tisam 1/37).")
                         .font(.body)
 
                     Text(articleMarkdown: "It is not about cars, phones, or medicine; those are worldly matters, and the default in worldly things is permission. Bid‘ah is about **worship**, where the default is prohibition until the text permits. Worship is what Allah legislated, not what people find beautiful:")
@@ -1318,7 +1318,7 @@ struct BidahView: View {
                 }
 
                 Section(header: ArticleHeader("THE COMPANIONS IN ACTION")) {
-                    Text(verbatim: "Abu Musa al-Ash‘ari (may Allah be pleased with him) came to Ibn Mas‘ud and told him he had seen, in the mosque of Kufah, circles of people sitting with pebbles in their hands while a man said, “Say Allahu akbar a hundred times,“ “Say la ilaha illallah a hundred times,“ “Say subhanallah a hundred times.“ Ibn Mas‘ud went to them and said:")
+                    Text(verbatim: "Abu Musa al-Ash‘ari (may Allah be pleased with him) came to Ibn Mas‘ud and told him he had seen, in the mosque of Kufah, circles of people sitting with pebbles in their hands while a man said, “Say Allahu akbar a hundred times,” “Say la ilaha illallah a hundred times,” “Say subhanallah a hundred times.” Ibn Mas‘ud went to them and said:")
                         .font(.body)
                     ScriptureQuote(hadith: "darimi:206", cite: "Sunan al-Darimi 206; graded sahih by al-Albani, as-Silsilah as-Sahihah 2005", arabic: 196...266, text: "“Count your sins, and I guarantee that nothing of your good deeds will be lost. Woe to you, O nation of Muhammad, how quickly is your destruction! These are the Companions of your Prophet, plentiful; these are his garments not yet worn out and his vessels not yet broken. By the One in whose hand is my soul, either you are upon a religion more guided than the religion of Muhammad, or you are opening a door of misguidance.” They said: By Allah, O Abu Abd al-Rahman, we intended nothing but good. He said: “How many intend good and never reach it”")
 
@@ -1327,11 +1327,11 @@ struct BidahView: View {
                 }
 
                 Section(header: ArticleHeader("“BUT UMAR CALLED TARAWIH A GOOD BID'AH”")) {
-                    Text(verbatim: "When Umar (may Allah be pleased with him) gathered the people behind one reciter in Ramadan, he said, “What an excellent bid‘ah this is“ (Sahih al-Bukhari 2010). This is the usual argument for “good innovation,“ and it fails, because the Prophet (peace be upon him) had himself led the people in Tarawih for three nights and then stopped only for fear it would be made obligatory:")
+                    Text(verbatim: "When Umar (may Allah be pleased with him) gathered the people behind one reciter in Ramadan, he said, “What an excellent bid‘ah this is” (Sahih al-Bukhari 2010). This is the usual argument for “good innovation,” and it fails, because the Prophet (peace be upon him) had himself led the people in Tarawih for three nights and then stopped only for fear it would be made obligatory:")
                         .font(.body)
                     ScriptureQuote(hadith: "bukhari:1129", cite: "Sahih al-Bukhari 1129, Sahih Muslim 761", arabic: 65...79, english: 54...80)
 
-                    Text(articleMarkdown: "Once revelation ended, that fear was gone, so Umar revived a Sunnah the Prophet (peace be upon him) had established. He called it a bid‘ah in the **linguistic** sense, something not seen for a while, not in the religious sense. The Prophet’s words “every innovation is misguidance“ are not contradicted by a Companion reviving the Prophet’s own practice.")
+                    Text(articleMarkdown: "Once revelation ended, that fear was gone, so Umar revived a Sunnah the Prophet (peace be upon him) had established. He called it a bid‘ah in the **linguistic** sense, something not seen for a while, not in the religious sense. The Prophet’s words “every innovation is misguidance” are not contradicted by a Companion reviving the Prophet’s own practice.")
                         .font(.body)
                 }
 
@@ -1349,7 +1349,7 @@ struct BidahView: View {
                 }
 
                 Section(header: ArticleHeader("EXAMPLES")) {
-                    Text(verbatim: "Celebrating the Prophet’s birthday (see “The Mawlid“); set congregational dhikr chanted in unison or with movements; fixing acts of worship to times and numbers the Sunnah did not fix, such as special prayers for the night of the fifteenth of Sha‘ban; building over graves and travelling to them for blessing; reciting the intention aloud before prayer; and adding words to the adhan. Each was measured by the Salaf against the same question: did the Prophet and his Companions do it, when they could have?")
+                    Text(verbatim: "Celebrating the Prophet’s birthday (see “The Mawlid”); set congregational dhikr chanted in unison or with movements; fixing acts of worship to times and numbers the Sunnah did not fix, such as special prayers for the night of the fifteenth of Sha‘ban; building over graves and travelling to them for blessing; reciting the intention aloud before prayer; and adding words to the adhan. Each was measured by the Salaf against the same question: did the Prophet and his Companions do it, when they could have?")
                         .font(.body)
                 }
 
@@ -1399,7 +1399,7 @@ struct BidahView: View {
                     Text(verbatim: "Dhikr chanted together at a set count is the very thing Ibn Mas‘ud condemned in the Kufah mosque, as related above, and he did not accept “we intended nothing but good” as an answer. What the Prophet (peace be upon him) taught was counting on the fingers:")
                         .font(.body)
                     ScriptureQuote(hadith: "abudawud:1501", cite: "Sunan Abi Dawud 1501; graded hasan by al-Albani", arabic: 18...35, english: 0...51)
-                    Text(verbatim: "The report praising the rosary is not authentic; al-Albani judged it fabricated (as-Silsilah ad-Da‘ifah 83). The gatherings of remembrance that the Prophet (peace be upon him) praised are real, but they are gatherings of the Quran, of knowledge, and of each person remembering Allah as he taught, not invented chants:")
+                    Text(verbatim: "The report praising the rosary is not authentic; al-Albani judged it fabricated (as-Silsilah ad-Da‘ifah 83). On counting with beads itself the scholars differed: al-Albani counted it an innovation, while Ibn Baz and Ibn al-Uthaymin held it permissible and counting on the fingers better, and all agree the fingers are the Sunnah. The gatherings of remembrance that the Prophet (peace be upon him) praised are real, but they are gatherings of the Quran, of knowledge, and of each person remembering Allah as he taught, not invented chants:")
                         .font(.body)
                     ScriptureQuote(hadith: "muslim:2700a", cite: "Sahih Muslim 2700", arabic: 42...60, english: 25...62)
                     Text(verbatim: "The Companions sat in such gatherings, and none of them swayed, chanted a fixed number in one voice, or appointed a leader to call out the count. Remember Allah as much as you can, in your own voice, and you have the whole of that reward.")
@@ -1451,7 +1451,7 @@ struct BidahView: View {
                     Text(verbatim: "Learn the Sunnah, for a person avoids what he can recognise. Take the Quran and the authentic hadith as the reference in every dispute:")
                         .font(.body)
                     ScriptureQuote(quran: "4:59", words: 10...23)
-                    Text(verbatim: "Ask of every act of worship one question: did the Prophet (peace be upon him) and his Companions do it, when they could have? If they did not, leave it, as Hudhayfah said above. Remember that the religion was completed in the Prophet’s lifetime, as the verse quoted at the top of this page says, so nothing that came later can be part of it. Hold to the counsel of Sunan Abi Dawud 4607 quoted above, to beware of newly invented matters, and keep to one path:")
+                    Text(verbatim: "Ask of every act of worship one question: did the Prophet (peace be upon him) and his Companions do it, when they could have? If they did not, leave it. Remember that the religion was completed in the Prophet’s lifetime, as the verse quoted at the top of this page says, so nothing that came later can be part of it. Hold to the counsel of Sunan Abi Dawud 4607 quoted above, to beware of newly invented matters, and keep to one path:")
                         .font(.body)
                     ScriptureQuote(quran: "6:153", words: 0...11)
                     Text(verbatim: "Keep the company of people of the Sunnah, take knowledge from scholars known for it, and ask Allah every day in al-Fatihah for the straight path of those He favoured, not the path of those who went astray.")
@@ -1497,7 +1497,7 @@ struct BidahView: View {
                     Text(articleMarkdown: "**Muhdath (مُحدَث)** and **ahdatha (أَحدَثَ)**: from **hadatha**, to come into being anew. A **muhdath** is a newly brought thing, and **ahdatha** is to introduce it. This is the very verb of the hadith quoted above, “whoever introduces (ahdatha) into this matter of ours what is not from it, it is rejected” (Sahih al-Bukhari 2697, Sahih Muslim 1718), and the Prophet (peace be upon him) called the worst of matters their **muhdathat**, their newly invented things.")
                         .font(.body)
 
-                    Text(articleMarkdown: "**Bid‘ah lughawiyyah (بِدعَة لُغَوِيَّة)** and **bid‘ah shar‘iyyah (بِدعَة شَرعِيَّة)**: the linguistic and the religious senses of the word. Linguistically, anything not seen before is a bid‘ah, even a revived Sunnah; religiously, only what has no basis in the Shari‘ah is a bid‘ah. This distinction is the key to two famous statements. The first is Umar’s “what an excellent bid‘ah this is” about Tarawih (Sahih al-Bukhari 2010), explained in its own section below. The second is the saying of Imam ash-Shafi‘i (may Allah have mercy on him):")
+                    Text(articleMarkdown: "**Bid‘ah lughawiyyah (بِدعَة لُغَوِيَّة)** and **bid‘ah shar‘iyyah (بِدعَة شَرعِيَّة)**: the linguistic and the religious senses of the word. Linguistically, anything not seen before is a bid‘ah, even a revived Sunnah; religiously, only what has no basis in the Shari‘ah is a bid‘ah. This distinction is the key to two famous statements. The first is Umar’s “what an excellent bid‘ah this is” about Tarawih (Sahih al-Bukhari 2010), explained in its own section above. The second is the saying of Imam ash-Shafi‘i (may Allah have mercy on him):")
                         .font(.body)
                     ScriptureQuote(text: "“Innovation is of two kinds: praiseworthy innovation and blameworthy innovation. What agrees with the Sunnah is praiseworthy, and what opposes the Sunnah is blameworthy” (Abu Nu'aym, Hilyat al-Awliya' 9/113).", arabic: "البِدعَةُ بِدعَتَانِ: بِدعَةٌ مَحمُودَةٌ، وَبِدعَةٌ مَذمُومَةٌ، فَمَا وَافَقَ السُّنَّةَ فَهُوَ مَحمُودٌ، وَمَا خَالَفَ السُّنَّةَ فَهُوَ مَذمُومٌ", dimmed: true)
 
@@ -1512,7 +1512,7 @@ struct BidahView: View {
                         .font(.body)
                     ScriptureQuote(hadith: "muslim:8a", cite: "Sahih Muslim 8", arabic: 132...162, english: 132...223)
 
-                    Text(verbatim: "Judging an innovation to be kufr is one thing; judging a particular person to have left Islam is another, and the second requires that the proof reach him and that no excuse of ignorance, misinterpretation, or compulsion stand in the way. Ahl as-Sunnah are careful here, as the questions below explain.")
+                    Text(verbatim: "Judging an innovation to be kufr is one thing; judging a particular person to have left Islam is another, and the second requires that the proof reach him and that no excuse of ignorance, misinterpretation, or compulsion stand in the way. Ahl as-Sunnah are careful here, as the questions above explain.")
                         .font(.body)
 
                     Text(articleMarkdown: "**Bid‘ah haqiqiyyah (بِدعَة حَقِيقِيَّة)** and **bid‘ah idafiyyah (بِدعَة إِضَافِيَّة)**: ash-Shatibi’s division in al-I‘tisam. The **real** innovation has no basis in the Shari‘ah at all, like the monasticism of the Christians:")
@@ -1522,14 +1522,14 @@ struct BidahView: View {
                     Text(articleMarkdown: "The **relative** innovation is legislated in its origin but invented in its manner, time, number, or place: dhikr is legislated, but dhikr chanted in unison at a fixed count on a fixed night is not. Most innovations in the Muslim world are of this second kind, and ash-Shatibi explains that they are still innovations, because the added specification is itself a claim about the religion that the Lawgiver never made.")
                         .font(.body)
 
-                    Text(articleMarkdown: "**Maslahah mursalah (مَصلَحَة مُرسَلَة)**: an unrestricted benefit, a means that the texts neither commanded nor forbade in particular, adopted to protect what the Shari‘ah does demand. Ash-Shatibi separates it from bid‘ah in al-I‘tisam: it belongs to means, not to worship, and it serves an established objective. The clearest example is the gathering of the written Quran into one Mushaf under Abu Bakr and Uthman, explained in the questions below. Another is that when the people became many, Uthman (may Allah be pleased with him) added a call before the Friday prayer:")
+                    Text(articleMarkdown: "**Maslahah mursalah (مَصلَحَة مُرسَلَة)**: an unrestricted benefit, a means that the texts neither commanded nor forbade in particular, adopted to protect what the Shari‘ah does demand. Ash-Shatibi separates it from bid‘ah in al-I‘tisam: it belongs to means, not to worship, and it serves an established objective. The clearest example is the gathering of the written Quran into one Mushaf under Abu Bakr and Uthman, explained in the questions above. Another is that when the people became many, Uthman (may Allah be pleased with him) added a call before the Friday prayer:")
                         .font(.body)
                     ScriptureQuote(hadith: "bukhari:912", cite: "Sahih al-Bukhari 912", arabic: 14...53, english: 0...45)
 
                     Text(verbatim: "That was the act of a rightly guided caliph whose Sunnah we were commanded to hold to, done as a means of gathering people for a legislated prayer. It is not a licence to invent worship.")
                         .font(.body)
 
-                    Text(articleMarkdown: "**Sunnah hasanah (سُنَّة حَسَنَة)**: a good practice, from the hadith “whoever starts in Islam a good practice” (Sahih Muslim 1017). Its context settles its meaning: a Companion of the Ansar was the first to bring a purse of silver in charity after the Prophet (peace be upon him) had urged the people, and the rest followed him. So the good practice was the reviving of a legislated act, charity, not the invention of a new one. The hadith is quoted and explained in the questions below.")
+                    Text(articleMarkdown: "**Sunnah hasanah (سُنَّة حَسَنَة)**: a good practice, from the hadith “whoever starts in Islam a good practice” (Sahih Muslim 1017). Its context settles its meaning: a Companion of the Ansar was the first to bring a purse of silver in charity after the Prophet (peace be upon him) had urged the people, and the rest followed him. So the good practice was the reviving of a legislated act, charity, not the invention of a new one. The hadith is quoted and explained in the questions above.")
                         .font(.body)
 
                     Text(articleMarkdown: "**Ahl al-Bid‘ah (أَهل البِدعَة)**: the people of innovation, those whose way in belief or worship departs from the way of the Prophet and his Companions, in contrast to Ahl as-Sunnah wal-Jama‘ah. The Salaf used the term for groups like the Khawarij, the Qadariyyah, and the Murji’ah, while still distinguishing between a caller to innovation and an ordinary Muslim who fell into something without knowing.")
@@ -1547,7 +1547,7 @@ struct BidahView: View {
                         .font(.body)
                     ScriptureQuote(quran: "7:3", words: 0...10)
 
-                    Text(articleMarkdown: "**Istihsan (استِحسَان)**: deeming a thing good. Among the jurists it is a technical term for preferring one ruling over an apparent analogy because of a stronger proof, and its scope is disputed. In the mouth of the innovator it means “I see this as good,” the very word Imam Malik answered in the section “Why it is so serious” below. Ash-Shafi‘i (may Allah have mercy on him) said, as al-Ghazali reports in al-Mustasfa:")
+                    Text(articleMarkdown: "**Istihsan (استِحسَان)**: deeming a thing good. Among the jurists it is a technical term for preferring one ruling over an apparent analogy because of a stronger proof, and its scope is disputed. In the mouth of the innovator it means “I see this as good,” the very word Imam Malik answered in the section “Why it is so serious” above. Ash-Shafi‘i (may Allah have mercy on him) said, as al-Ghazali reports in al-Mustasfa:")
                         .font(.body)
                     ScriptureQuote(text: "“Whoever deems a thing good has legislated” (al-Ghazali, al-Mustasfa, quoting ash-Shafi'i; ash-Shafi'i's own wording in ar-Risalah is “whoever deems good has sought to be a legislator”).", arabic: "مَنِ استَحسَنَ فَقَد شَرَّعَ", dimmed: true)
                     Text(verbatim: "In worship, what is good is what Allah and His Messenger called good, and nothing else.")

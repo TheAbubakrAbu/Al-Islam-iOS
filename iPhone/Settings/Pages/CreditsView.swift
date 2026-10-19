@@ -187,7 +187,7 @@ struct CreditItem: Identifiable, Hashable {
                    detail: "Credit for the Hisn al-Muslim texts, transliterations, translations and references goes to the Dhikr API of islamic.app; the recitations stream from hisnmuslim.com; the library came to the app from Tilawa, by my friend Jamil Hammoudeh, with his permission",
                    url: "https://www.hisnmuslim.com/", group: .islam, keywords: "fortress of the muslim dua dhikr audio tilawa"),
         CreditItem(id: "miracles-of-quran", title: "Miracles of the Quran: miracles-of-quran.com and Tilawa",
-                   detail: "Credit for the two hundred Miracles of the Quran articles goes to miracles-of-quran.com, whose author waived rights on the site's own prose; the illustrations stream from Tilawa's copy, by my friend Jamil Hammoudeh, with his permission, and third-party excerpts are kept short and attributed to their sources",
+                   detail: "Credit for the Miracles of the Quran articles goes to miracles-of-quran.com, whose author waived rights on the site's own prose; the illustrations stream from Tilawa's copy, by my friend Jamil Hammoudeh, with his permission, and third-party excerpts are kept short and attributed to their sources",
                    url: "https://www.miracles-of-quran.com/", group: .islam, keywords: "science miracles articles tilawa"),
         CreditItem(id: "islamqa", title: "Islam articles further reading: IslamQA",
                    detail: "Credit for the further-reading answers the Islam articles link out to goes to IslamQA; the articles themselves are written for this app and cite the classical works by name",

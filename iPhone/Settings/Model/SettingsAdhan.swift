@@ -2257,6 +2257,14 @@ extension Settings {
 
         if currentPrayer != resolvedCurrent {
             currentPrayer = resolvedCurrent
+            #if os(iOS)
+            // A new prayer has come in: everything delivered about the one before it is over (Abu,
+            // 2026-10-19: "get rid of them all once a new prayer comes in"). Its own adhan fires AT
+            // this instant and stays.
+            if let began = resolvedCurrent?.time {
+                removeDeliveredPrayerNotifications(firedBefore: began)
+            }
+            #endif
         }
         if nextPrayer != resolvedNext {
             nextPrayer = resolvedNext
@@ -2936,6 +2944,12 @@ extension Settings {
         }
         logger.debug("Scheduling prayer time notifications")
         let center = UNUserNotificationCenter.current()
+        #if os(iOS)
+        // The lock-screen buttons name each prayer in the user's own spelling (see
+        // `prayerNotificationCategories`), so the categories go out with every pass: a rename or a
+        // traveling flip changes the titles.
+        center.setNotificationCategories(prayerNotificationCategories())
+        #endif
 
         // iOS keeps at most 64 pending notifications and silently drops the rest. The app can build far
         // more than that (multiple prayers × offsets × days × nags + events), which is why adhan /
@@ -3467,9 +3481,26 @@ extension Settings {
         "Fajr", "Shurooq", "Dhuhr", "Dhuhr/Asr", "Jumuah", "Asr", "Maghrib", "Maghrib/Isha", "Isha"
     ]
 
+    /// The category every nag carried until 2026-10-19 ("Yes, on time" / "Yes, but late"). Still
+    /// registered, so the notifications an older build already scheduled keep their buttons.
     static let nagCategoryIdentifier = "PRAYER_NAG"
+    /// The two action identifiers are shared by every category below: the delegate only needs to
+    /// know "prayed" from "prayed late", whichever notification the button sat on.
     static let nagActionMarkPrayedIdentifier = "PRAYER_NAG_MARK_PRAYED"
     static let nagActionMarkPrayedLateIdentifier = "PRAYER_NAG_MARK_PRAYED_LATE"
+
+    /// The per-prayer categories (Abu, 2026-10-19: every prayer notification, not only the nags,
+    /// answers "Did you pray X?" when pressed and held). The asked prayer's tracker name follows the
+    /// prefix - "PRAYER_ASK:Dhuhr", "PRAYER_ASK_LATE:Dhuhr/Asr" - because the button titles name
+    /// the prayer, and a title is fixed per category.
+    private static let prayerAskCategoryPrefix = "PRAYER_ASK:"
+    private static let prayerAskLateCategoryPrefix = "PRAYER_ASK_LATE:"
+
+    /// The category a notification asking about `prayerName` carries: one "Yes, I prayed X" button,
+    /// or "on time" / "late" when `offersLate`.
+    static func prayerCategoryIdentifier(asking prayerName: String, offersLate: Bool) -> String {
+        (offersLate ? prayerAskLateCategoryPrefix : prayerAskCategoryPrefix) + prayerName
+    }
 
     private static let prayerTrackerDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -3624,6 +3655,12 @@ extension Settings {
             || (Calendar.current.isDateInYesterday(date) && target.contains("Isha"))
 
         if mark != nil {
+            #if os(iOS)
+            // The ones already shown go first: the adhan, the follow-up and any nags still sitting in
+            // Notification Center asked this very question (Abu, 2026-10-19: "it's annoying seeing a
+            // million notifications").
+            removeDeliveredPrayerNotifications(asking: prayerName, on: date)
+            #endif
             // Any answer settles the question the nags keep asking - prayed on time, prayed late, or
             // missed - so today's remaining ones go silent (they live under the NEXT prayer's
             // identifier).
@@ -3951,17 +3988,17 @@ extension Settings {
     }
     #endif
 
-    /// Whether a tracker slot can be marked yet, honouring `trackerRequiresPrayerTime`.
+    /// Whether a tracker slot can be marked yet: not before its time has come in.
     ///
     /// Only TODAY is ever gated. Past days must stay editable - filling in what you forgot to mark at
     /// the time is what the history views are for - and future days are already blocked a whole day at
-    /// a time by `isFuture`. With the setting off this is always true, which is the behaviour the
-    /// tracker has always had.
+    /// a time by `isFuture`. This was a switch ("Mark Only After the Time Begins", off by default)
+    /// until 2026-10-19; it is the one behaviour now (Abu), so the row reads as "what is left to
+    /// pray" rather than "what is left to tick".
     ///
     /// Takes the slot's own `time` rather than looking the prayer up by name, so combined traveling
     /// rows ("Dhuhr/Asr") and Jumuah gate off the time actually shown for them.
     func canMarkPrayer(startingAt start: Date, on date: Date, at now: Date = Date()) -> Bool {
-        guard trackerRequiresPrayerTime else { return true }
         guard Calendar.current.isDate(date, inSameDayAs: now) else { return true }
         return start <= now
     }
@@ -3976,6 +4013,106 @@ extension Settings {
             cancelNagCascade(before: moment.name, at: moment.prayerTime)
         }
     }
+
+    #if os(iOS)
+    /// The category set handed to `setNotificationCategories`: the buttons a prayer notification
+    /// shows when it is pressed and held.
+    ///
+    /// A category's buttons are fixed when the notification is SCHEDULED - iOS cannot add or drop
+    /// one after delivery - so "late" is decided per notification from when it fires (see
+    /// `makePrayerNotificationRequest`), and the prayer's name is in every title: "30m until Asr"
+    /// asks about Dhuhr, and a bare "Yes, I prayed it" under it would be read as Asr. One pair of
+    /// categories per tracker name, titled with the user's own spelling; every scheduling pass
+    /// re-registers them, so a rename or a traveling flip reaches the titles. No `.foreground`
+    /// option: answering from the lock screen marks the tracker and silences the remaining
+    /// reminders without ever opening the app.
+    func prayerNotificationCategories() -> Set<UNNotificationCategory> {
+        func action(_ identifier: String, _ title: String) -> UNNotificationAction {
+            UNNotificationAction(identifier: identifier, title: title, options: [])
+        }
+        var categories: Set<UNNotificationCategory> = [
+            UNNotificationCategory(
+                identifier: Self.nagCategoryIdentifier,
+                actions: [
+                    action(Self.nagActionMarkPrayedIdentifier, "Yes, on time"),
+                    action(Self.nagActionMarkPrayedLateIdentifier, "Yes, but late"),
+                ],
+                intentIdentifiers: [],
+                options: []
+            ),
+        ]
+        for name in Self.trackablePrayerNames.sorted() {
+            let shown = customDisplayName(forPrayerKey: name) ?? name
+            categories.insert(UNNotificationCategory(
+                identifier: Self.prayerCategoryIdentifier(asking: name, offersLate: false),
+                actions: [action(Self.nagActionMarkPrayedIdentifier, "Yes, I prayed \(shown)")],
+                intentIdentifiers: [],
+                options: []
+            ))
+            categories.insert(UNNotificationCategory(
+                identifier: Self.prayerCategoryIdentifier(asking: name, offersLate: true),
+                actions: [
+                    action(Self.nagActionMarkPrayedIdentifier, "Prayed \(shown) on time"),
+                    action(Self.nagActionMarkPrayedLateIdentifier, "Prayed \(shown) late"),
+                ],
+                intentIdentifiers: [],
+                options: []
+            ))
+        }
+        return categories
+    }
+
+    /// Removes the delivered (already shown) prayer notifications that ask about `prayerName` on
+    /// `day`. Once it is marked, the adhan, the follow-up and any nags still sitting in Notification
+    /// Center are answered, and a stack of them was the "million notifications" (Abu, 2026-10-19).
+    /// Acting on one of them removes that one by itself; this takes the rest. Resolved through the
+    /// same question a tap asks, so it finds a traveling day's "Dhuhr/Asr" for "Dhuhr" and never
+    /// touches the Hijri events, the Sunnah reminders or the planner (none of them read as a prayer
+    /// notification to `tappedPrayerNotification`).
+    func removeDeliveredPrayerNotifications(asking prayerName: String, on day: Date) {
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard !target.isEmpty else { return }
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications { delivered in
+            guard !delivered.isEmpty else { return }
+            // The resolver reads Settings and the prayer cache: main-confined.
+            DispatchQueue.main.async {
+                let ids = delivered.filter { notification in
+                    guard let moment = Self.tappedPrayerNotification(from: notification.request, deliveredAt: notification.date),
+                          let question = self.prayerQuestion(for: moment) else { return false }
+                    return Calendar.current.isDate(question.trackerDay, inSameDayAs: day)
+                        && !Self.canonicalCoverage(of: question.prayerName).isDisjoint(with: target)
+                }.map(\.request.identifier)
+                if !ids.isEmpty {
+                    center.removeDeliveredNotifications(withIdentifiers: ids)
+                }
+            }
+        }
+    }
+
+    /// Removes every delivered prayer notification that fired before `boundary`, the start of the
+    /// prayer that has just come in: "get rid of them all once a new prayer comes in" (Abu,
+    /// 2026-10-19). The new prayer's own adhan fires AT the boundary and stays; everything about the
+    /// prayer before it - its adhan, its reminders, the nags that asked about it - is over. Runs when
+    /// the current prayer rolls over while the app is open, and on the next launch or refresh
+    /// otherwise; nothing of the app runs on the lock screen in between.
+    func removeDeliveredPrayerNotifications(firedBefore boundary: Date) {
+        let center = UNUserNotificationCenter.current()
+        center.getDeliveredNotifications { delivered in
+            let ids = delivered.filter { notification in
+                guard Self.tappedPrayerNotification(from: notification.request, deliveredAt: notification.date) != nil else {
+                    return false
+                }
+                let fired = (notification.request.content.userInfo[Self.intendedFireDateUserInfoKey] as? TimeInterval)
+                    .map(Date.init(timeIntervalSince1970:)) ?? notification.date
+                return fired < boundary
+            }.map(\.request.identifier)
+            if !ids.isEmpty {
+                center.removeDeliveredNotifications(withIdentifiers: ids)
+            }
+        }
+    }
+    #endif
 
     /// Cancels the pending nags leading up to `prayerTime`. A cascade can straddle civil midnight
     /// (Islamic Midnight at 00:10 starts nagging at 23:40), and its identifiers carry the day each nag
@@ -4209,11 +4346,17 @@ extension Settings {
         let stamp = Calendar.current.dateComponents([.year, .month, .day], from: day)
         let id = "\(name)-\(Self.nagFollowUpMarker)\(after)-\(stamp.year ?? 0)-\(stamp.month ?? 0)-\(stamp.day ?? 0)"
             + Self.notificationContentSignature(self)
+        // Its buttons follow the rule every prayer notification follows (see
+        // `makePrayerNotificationRequest`): it fires inside the window, so one "Yes, I prayed X".
+        let followUpMoment = PrayerNotificationMoment(name: name, minutesBefore: 0, prayerTime: prayer.time)
+        let category = prayerQuestion(for: followUpMoment).map {
+            Self.prayerCategoryIdentifier(asking: $0.prayerName, offersLate: $0.allowsLateAnswer(at: fireDate))
+        } ?? Self.nagCategoryIdentifier
         let spec = PendingNotificationSpec(
             identifier: id,
             body: body,
             soundFile: prayerNotificationSoundFile(for: prayer, minutesBefore: after, nag: (true, false)),
-            categoryIdentifier: Self.nagCategoryIdentifier,
+            categoryIdentifier: category,
             intendedFireDate: fireDate,
             trigger: trigger
         )
@@ -4262,26 +4405,36 @@ extension Settings {
 
         guard triggerTime > Date() else { return nil }
 
-        // Nag-cascade deliveries carry the "Did you pray?" category: the notification gains a
-        // "Yes, I prayed it" action, and tapping it in asks the same question in-app. Only actual
-        // cascade offsets - the plain pre-notification and the at-time adhan stay plain.
+        // Every prayer notification carries the "Did you pray X?" buttons, not only the nags (Abu,
+        // 2026-10-19): the adhan, a plain pre-notification and a nag alike answer from the lock
+        // screen. The question comes from the same resolver a tap uses, so the buttons, the body and
+        // the in-app question can never name different prayers.
+        //
+        // WHICH buttons is settled here, because iOS fixes a notification's actions when it is
+        // scheduled and cannot add or drop one after delivery. "Late" is offered only when the asked
+        // prayer's window has already closed by the time this fires (a pre-Fajr reminder asking
+        // about Isha, Shurooq asking about Fajr, Islamic Midnight asking about Isha); until then a
+        // prayer that was prayed was prayed on time, so there is one "yes". Read after the window
+        // closes, that single button still records on time; the in-app question a tap raises is the
+        // one that can offer "late" then (`PrayerNotificationPrompt`).
         var categoryIdentifier: String?
         /// Set for a nag delivery: the body names the prayer being asked about instead of only the
         /// approaching time (see `nagBody`).
         var nagAskedName: String?
         let nag = nagDelivery(minutes: minutes, before: prayer, firingAt: triggerTime)
         #if os(iOS)
-        if let m = minutes, nag.isNag {
-            categoryIdentifier = Self.nagCategoryIdentifier
+        let moment = PrayerNotificationMoment(name: prayer.nameTransliteration, minutesBefore: minutes ?? 0, prayerTime: prayer.time)
+        if let question = prayerQuestion(for: moment) {
+            categoryIdentifier = Self.prayerCategoryIdentifier(
+                asking: question.prayerName,
+                offersLate: question.allowsLateAnswer(at: triggerTime)
+            )
             // Already answered (prayed, late, or recorded missed): the cascade is still scheduled for
             // tomorrow, but TODAY's remaining nags must not ask again - that is the nagging the mark
             // was meant to end. `cancelPendingNags` handles the live case; this covers a reschedule
-            // that happens after the answer. The same resolver a tap uses, so the body and the
-            // in-app question can never name different prayers.
-            let moment = PrayerNotificationMoment(name: prayer.nameTransliteration, minutesBefore: m, prayerTime: prayer.time)
-            if let asked = askedPrayer(for: moment),
-               !isPrayerMarked(asked.prayer.nameTransliteration, on: asked.day) {
-                nagAskedName = asked.prayer.nameTransliteration
+            // that happens after the answer.
+            if nag.isNag, !isPrayerMarked(question.prayerName, on: question.trackerDay) {
+                nagAskedName = question.prayerName
             }
         }
         #endif

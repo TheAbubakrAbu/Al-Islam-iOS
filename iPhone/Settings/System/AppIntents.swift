@@ -79,7 +79,7 @@ struct AppShortcutsRoot: AppShortcutsProvider {
                 "\(.applicationName), read surah \(\.$surah) in page mode"
             ],
             shortTitle: "Open Surah in Page Mode",
-            systemImageName: "book.pages"
+            systemImageName: "book.fill"
         )
         #endif
 

@@ -483,7 +483,9 @@ struct PlayCustomRangeSheet: View {
                 Divider()
 
                 // Bottom layer: first/last ayah + summary always visible, and scrolling this pane
-                // reveals EVERY ayah the range will play, each on its own row (user request).
+                // reveals EVERY ayah the range will play, each on its own row (user request). Only
+                // from three ayahs: one or two are already in the preview above in full, so listing
+                // them again just repeated it (Abu, 2026-10-19).
                 List {
                     Section {
                         arabicVersesPreview
@@ -491,7 +493,7 @@ struct PlayCustomRangeSheet: View {
                         Label("Preview", systemImage: "text.quote")
                     }
 
-                    if ayahCount > 0 {
+                    if ayahCount > 2 {
                         Section {
                             ForEach(rangeAyahs, id: \.id) { ayah in
                                 fullVerseRow(ayah: ayah)
@@ -937,7 +939,8 @@ struct PlayCustomRangeSheet: View {
 
     /// Compact, read-only preview (the main List's last section): the first & last ayah followed by
     /// a summary line (count, repeats, total plays). Line-limited (no minimum scale factor) so it
-    /// stays small regardless of ayah length.
+    /// stays small regardless of ayah length, except for a range of one or two ayahs: those have no
+    /// all-ayahs section under it, so the preview shows them in full.
     private var arabicVersesPreview: some View {
         Group {
             if let first = surah.ayahs.first(where: { $0.id == startAyah }),
@@ -1003,7 +1006,7 @@ struct PlayCustomRangeSheet: View {
                 .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
-                .lineLimit(2)
+                .lineLimit(ayahCount > 2 ? 2 : nil)
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }

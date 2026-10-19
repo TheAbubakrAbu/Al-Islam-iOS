@@ -1,7 +1,9 @@
 import SwiftUI
 
 // The banner that floats over the whole app while the adhan sounds in-app, so the recording can
-// always be stopped from wherever you happen to be (Abu, 2026-10-06). The sky card's footer button
+// always be stopped from wherever you happen to be (Abu, 2026-10-06), and while an adhan is on
+// OFFER, so the Play button is reachable from any tab too (Abu, 2026-10-19: "all adhans if playing
+// should have a banner", and the button "where stop adhan would be"). The sky card's footer button
 // is the other half of this and stays: dismissing the banner must never strand a playing adhan
 // with no way to stop it.
 
@@ -16,38 +18,40 @@ import SwiftUI
 final class AdhanBannerPresenter: ObservableObject {
     static let shared = AdhanBannerPresenter()
 
-    /// Set when the user dismisses the banner for the adhan currently playing. The adhan keeps
-    /// going; only the card goes away. Cleared when the adhan stops, so the NEXT one banners again.
-    @Published private(set) var dismissedPrayer: String?
+    /// The banner the user dismissed, by the player's key ("pending:Dhuhr", "playing:Dhuhr"). The
+    /// adhan keeps going; only the card goes away. Keyed on the STATE as well as the prayer, so hiding
+    /// the Play offer never hides the PLAYING card that follows a tap on the footer: every adhan that
+    /// sounds gets its banner. Cleared when the player goes quiet, so the next adhan banners again.
+    @Published private(set) var dismissedKey: String?
 
     private let window = BannerWindow { AdhanBannerHost() }
 
     private init() {}
 
     /// Whether the card should be on screen for this player state.
-    func shouldShow(playing: String?, dismissed: String?) -> Bool {
-        guard let playing else { return false }
-        return playing != dismissed
+    func shouldShow(key: String?, dismissed: String?) -> Bool {
+        guard let key else { return false }
+        return key != dismissed
     }
 
-    func sync(playingPrayerName: String?) {
-        if let playing = playingPrayerName {
-            if shouldShow(playing: playing, dismissed: dismissedPrayer) {
+    func sync(key: String?) {
+        if let key {
+            if shouldShow(key: key, dismissed: dismissedKey) {
                 window.present()
             } else {
                 window.dismiss()
             }
         } else {
-            // The adhan ended (finished, or stopped from anywhere): forget the dismissal so the next
-            // adhan raises its own banner.
-            dismissedPrayer = nil
+            // The adhan ended (finished, stopped from anywhere, or the offer lapsed): forget the
+            // dismissal so the next adhan raises its own banner.
+            dismissedKey = nil
             window.dismiss()
         }
     }
 
-    /// Hides the card without touching the audio.
-    func dismiss(prayerName: String?) {
-        dismissedPrayer = prayerName
+    /// Hides the card without touching the audio or the offer.
+    func dismiss(key: String?) {
+        dismissedKey = key
         window.dismiss()
     }
 
@@ -62,10 +66,14 @@ struct AdhanBannerHost: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let prayerName = player.playingPrayerName,
-               presenter.shouldShow(playing: prayerName, dismissed: presenter.dismissedPrayer) {
-                AdhanBannerCard(prayerName: prayerName)
-                    .id(prayerName)
+            if let key = player.bannerKey,
+               presenter.shouldShow(key: key, dismissed: presenter.dismissedKey),
+               let prayerName = player.playingPrayerName ?? player.pendingPrayerName {
+                AdhanBannerCard(prayerName: prayerName,
+                                isPlaying: player.isPlaying,
+                                reason: player.pendingReason,
+                                key: key)
+                    .id(key)
                     .transition(
                         .asymmetric(
                             insertion: .move(edge: .top).combined(with: .opacity),
@@ -79,25 +87,35 @@ struct AdhanBannerHost: View {
         // Clears the Dynamic Island the way a system notification does, rather than tucking up
         // against it. Same inset as the achievement banner, so the two read as one family.
         .padding(.top, 16)
-        .animation(.spring(response: 0.48, dampingFraction: 0.78), value: player.playingPrayerName)
+        .animation(.spring(response: 0.48, dampingFraction: 0.78), value: player.bannerKey)
         .onDisappear { AdhanBannerPresenter.shared.setInteractiveFrame(.zero) }
     }
 }
 
 private struct AdhanBannerCard: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var player = ForegroundAdhanPlayer.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let prayerName: String
+    let isPlaying: Bool
+    let reason: ForegroundAdhanPlayer.OfferReason?
+    let key: String
 
-    /// What the card says under the prayer name. On `.ambient` the recording obeys the ringer switch,
-    /// so a silenced phone shows this banner over silence - the line names the switch instead of
-    /// claiming sound, because that is the only thing that explains it (Abu, 2026-10-08).
+    private var kicker: String { isPlaying ? "ADHAN PLAYING" : "ADHAN TIME" }
+
+    /// What the card says under the prayer name: how to end a playing adhan, or why an offered one
+    /// did not start by itself.
     private var subtitle: String {
-        player.followsRingerSwitch
-            ? "Silent if the ringer switch is off"
-            : "Tap Stop to end the adhan"
+        guard !isPlaying else { return "Tap Stop to end the adhan" }
+        switch reason {
+        case .silenced: return "In Silent Mode · Tap Play to hear it"
+        case .manual, .none: return "Tap Play to hear the adhan"
+        }
+    }
+
+    private var iconName: String {
+        if isPlaying { return "speaker.wave.2.fill" }
+        return reason == .silenced ? "speaker.slash.fill" : "play.fill"
     }
 
     @State private var pulse = false
@@ -110,7 +128,7 @@ private struct AdhanBannerCard: View {
             icon(accent)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("ADHAN PLAYING")
+                Text(kicker)
                     .font(.system(size: 10, weight: .heavy))
                     .tracking(0.8)
                     .foregroundStyle(accent)
@@ -130,7 +148,7 @@ private struct AdhanBannerCard: View {
 
             Spacer(minLength: 0)
 
-            stopButton(accent)
+            actionButton(accent)
             dismissButton
         }
         .padding(.horizontal, 14)
@@ -161,19 +179,25 @@ private struct AdhanBannerCard: View {
         // buttons here do different things, and a stray tap that hid the stop control would be the
         // opposite of what this banner is for.
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(prayerName) adhan playing")
+        .accessibilityLabel(isPlaying ? "\(prayerName) adhan playing" : "Time for \(prayerName)")
         .background(BannerFrameReporter { AdhanBannerPresenter.shared.setInteractiveFrame($0) })
         .onAppear(perform: animateIn)
     }
 
     // MARK: Pieces
 
-    private func stopButton(_ accent: Color) -> some View {
+    /// Stop while the adhan sounds; Play while it is on offer. The same place on the card for both,
+    /// the way the sky-card footer swaps the one capsule for the other.
+    private func actionButton(_ accent: Color) -> some View {
         Button {
             settings.hapticFeedback()
-            ForegroundAdhanPlayer.shared.stopAdhan()
+            if isPlaying {
+                ForegroundAdhanPlayer.shared.stopAdhan()
+            } else {
+                ForegroundAdhanPlayer.shared.playOfferedAdhan()
+            }
         } label: {
-            Text("Stop")
+            Text(isPlaying ? "Stop" : "Play")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 12)
@@ -181,7 +205,7 @@ private struct AdhanBannerCard: View {
                 .background(Capsule().fill(accent))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Stop adhan")
+        .accessibilityLabel(isPlaying ? "Stop adhan" : "Play adhan")
     }
 
     private var dismissButton: some View {
@@ -197,11 +221,12 @@ private struct AdhanBannerCard: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Hide banner")
-        .accessibilityHint("The adhan keeps playing")
+        .accessibilityHint(isPlaying ? "The adhan keeps playing" : "The Play button stays on the prayer card")
     }
 
     /// A speaker whose rings breathe while the recording runs, so the card reads as something
-    /// currently making sound rather than as a notification about something that happened.
+    /// currently making sound rather than as a notification about something that happened. Still
+    /// while the adhan is only on offer.
     private func icon(_ accent: Color) -> some View {
         ZStack {
             Circle()
@@ -216,7 +241,7 @@ private struct AdhanBannerCard: View {
                 .shadow(color: accent.opacity(0.45), radius: 7, y: 2)
                 .scaleEffect(pulse ? 1.06 : 1)
 
-            Image(systemName: "speaker.wave.2.fill")
+            Image(systemName: iconName)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(.white)
         }
@@ -240,11 +265,11 @@ private struct AdhanBannerCard: View {
     }
 
     private func dismiss() {
-        AdhanBannerPresenter.shared.dismiss(prayerName: prayerName)
+        AdhanBannerPresenter.shared.dismiss(key: key)
     }
 
     private func animateIn() {
-        guard !reduceMotion else { return }
+        guard isPlaying, !reduceMotion else { return }
         withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { pulse = true }
     }
 }
@@ -263,8 +288,13 @@ private struct AdhanBannerTracker: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: player.playingPrayerName) { name in
-                AdhanBannerPresenter.shared.sync(playingPrayerName: name)
+            .onChange(of: player.bannerKey) { key in
+                AdhanBannerPresenter.shared.sync(key: key)
+            }
+            // `.onChange` has no previous value on the first body: an adhan already sounding when the
+            // root mounts (a cold launch inside the window) would otherwise never get its banner.
+            .onAppear {
+                AdhanBannerPresenter.shared.sync(key: player.bannerKey)
             }
     }
 }

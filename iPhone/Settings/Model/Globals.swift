@@ -231,6 +231,11 @@ enum AppIdentifiers {
     /// Main iOS bundle ID and OSLog subsystem prefix (matches `PRODUCT_BUNDLE_IDENTIFIER` for the app target).
     static let bundleIdentifier = "com.Quran.Elmallah.Islamic-Pillars"
 
+    /// The app's App Store id (the number in its store URL): the review links and the update dialog
+    /// (AppUpdateCheck.swift) open the store page by it.
+    static let appStoreID = "6449729655"
+    static var appStoreURL: URL { URL(string: "https://apps.apple.com/app/id\(appStoreID)")! }
+
     static let backgroundFetchPrayerTimesTaskIdentifier = "\(bundleIdentifier).fetchPrayerTimes"
     /// The overnight BGProcessingTask twin of the refresh above. Processing tasks get the system's
     /// nightly maintenance windows (typically while charging) - the slot that actually lines up with

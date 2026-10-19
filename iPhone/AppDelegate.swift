@@ -72,25 +72,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             self.scheduleBackgroundRefreshes()
         }
 
-        // The nag cascade's "Did you pray?" action. No .foreground option: answering from the lock
-        // screen marks the tracker and silences the remaining nags without ever opening the app.
-        let markPrayed = UNNotificationAction(
-            identifier: Settings.nagActionMarkPrayedIdentifier,
-            title: "Yes, on time",
-            options: []
-        )
-        let markPrayedLate = UNNotificationAction(
-            identifier: Settings.nagActionMarkPrayedLateIdentifier,
-            title: "Yes, but late",
-            options: []
-        )
-        let nagCategory = UNNotificationCategory(
-            identifier: Settings.nagCategoryIdentifier,
-            actions: [markPrayed, markPrayedLate],
-            intentIdentifiers: [],
-            options: []
-        )
-        UNUserNotificationCenter.current().setNotificationCategories([nagCategory])
+        // The "Did you pray X?" buttons every prayer notification carries (see
+        // `Settings.prayerNotificationCategories`; each scheduling pass registers them again, since
+        // the titles carry the user's own prayer spellings).
+        UNUserNotificationCenter.current().setNotificationCategories(Settings.shared.prayerNotificationCategories())
         // A time-zone change (landing after a flight, DST) invalidates every scheduled prayer trigger:
         // the times must be recomputed and the whole schedule rebuilt for the new zone immediately, not
         // whenever the next fetch happens to run - stale triggers are how a "Dhuhr/Asr" adhan sounds at
@@ -173,9 +158,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             settings.fetchPrayerTimes()
             switch actionIdentifier {
             case Settings.nagActionMarkPrayedIdentifier, Settings.nagActionMarkPrayedLateIdentifier:
-                // Both actions stay on the notification whatever the hour: a category's buttons are
-                // fixed when it is registered, so they cannot follow the window closing the way the
-                // in-app question does. The answer is recorded as given.
+                // Which buttons this notification has was settled when it was scheduled (see
+                // `makePrayerNotificationRequest`): a category's buttons are fixed, so they cannot
+                // follow the window closing the way the in-app question does. The answer is
+                // recorded as given.
                 if let question = settings.prayerQuestion(for: moment) {
                     let late = actionIdentifier == Settings.nagActionMarkPrayedLateIdentifier
                     settings.answer(question, mark: late ? .late : .onTime, from: moment)

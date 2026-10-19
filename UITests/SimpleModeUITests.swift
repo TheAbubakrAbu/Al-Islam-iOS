@@ -24,6 +24,20 @@ final class SimpleModeUITests: XCTestCase {
         super.tearDown()
     }
 
+    /// The welcome's permissions page: Skip while something is unanswered (notifications under
+    /// -skipNotificationPrompt, unless this simulator answered them in an earlier run), else Continue.
+    private func leavePermissionsPage(_ app: XCUIApplication) {
+        let skip = app.buttons["welcomeSkip"]
+        let proceed = app.buttons["Continue"]
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline {
+            if skip.exists, skip.isHittable { skip.tap(); return }
+            if proceed.exists, proceed.isEnabled, proceed.isHittable { proceed.tap(); return }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        XCTFail("the permissions page offered neither Skip nor an enabled Continue")
+    }
+
     private func launch(_ arguments: [String]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-skipNotificationPrompt", "-travelingMode", "0"] + arguments
@@ -229,14 +243,24 @@ final class SimpleModeUITests: XCTestCase {
                       "More Resources does not list the Zakah Calculator")
     }
 
-    /// A first launch can choose Simple on the splash's second step, and the app opens in Simple Mode.
+    /// A first launch walks the welcome's pages (2026-10-19: what the app is, About You, Location and
+    /// Notifications, A lot to discover), each skippable on its own, and the last can choose Simple:
+    /// the app then opens in Simple Mode.
     func testSplashCanChooseSimple() {
-        let app = launch(["-seedBool", "THEfirstLaunch=1,simpleMode=0"])
+        // Page mode off: with it on, the Quran tab opens straight onto the mushaf (the reader hides
+        // the root's More button this test looks for), which has nothing to do with the welcome.
+        let app = launch(["-seedBool", "THEfirstLaunch=1,simpleMode=0,quranPageMode=0"])
         let getStarted = app.buttons["Get Started"]
         XCTAssertTrue(getStarted.waitForExistence(timeout: 15), "no splash on a first launch")
         getStarted.tap()
-        XCTAssertTrue(app.staticTexts["How much would you like to see?"].waitForExistence(timeout: 5),
-                      "Get Started did not move to the Simple or Full step")
+        XCTAssertTrue(app.staticTexts["Which describes you best?"].waitForExistence(timeout: 5),
+                      "Get Started did not move to About You")
+        app.buttons["welcomeSkip"].tap()
+        XCTAssertTrue(app.staticTexts["Prayer times for where you are"].waitForExistence(timeout: 5),
+                      "skipping About You did not move to the permissions page")
+        leavePermissionsPage(app)
+        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5),
+                      "leaving the permissions did not move to the discover page")
         app.buttons["splashChoiceSimple"].tap()
         app.buttons["Continue"].tap()
         let quranTab = app.tabBars.buttons["Quran"].firstMatch
@@ -246,7 +270,37 @@ final class SimpleModeUITests: XCTestCase {
                       "choosing Simple on the splash did not turn Simple Mode on")
     }
 
-    /// Launch no longer asks for location over the welcome; the Adhan tab asks once it is in front.
+    /// Every page of the welcome has a Skip of its own, and Skip moves one page on, never out of the
+    /// whole walk (Abu, 2026-10-19: "have each page option have a skip button but don't have way to
+    /// leave the tutorial completely"). About You's tailored page carries Skip with Back beside it.
+    func testEveryWelcomePageSkipsOnlyItself() {
+        let app = launch(["-seedBool", "THEfirstLaunch=1,simpleMode=0,quranPageMode=0"])
+        let skip = app.buttons["welcomeSkip"]
+        XCTAssertTrue(app.buttons["Get Started"].waitForExistence(timeout: 15), "no splash on a first launch")
+        XCTAssertTrue(skip.exists, "the first page has no Skip")
+        skip.tap()
+        XCTAssertTrue(app.staticTexts["Which describes you best?"].waitForExistence(timeout: 5),
+                      "Skip on the first page did not move to About You")
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Revert'")).firstMatch.tap()
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.buttons["welcomeBack"].waitForExistence(timeout: 5), "About You's second step has no Back")
+        XCTAssertTrue(skip.exists, "About You's second step has no Skip")
+        skip.tap()
+        XCTAssertTrue(app.staticTexts["Prayer times for where you are"].waitForExistence(timeout: 5),
+                      "Skip on About You did not move to the permissions page")
+        XCTAssertTrue(skip.waitForExistence(timeout: 5), "the permissions page has no Skip")
+        skip.tap()
+        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5),
+                      "Skip on the permissions page did not move to the discover page")
+        XCTAssertTrue(skip.exists, "the discover page has no Skip")
+        skip.tap()
+        XCTAssertTrue(app.tabBars.buttons["Quran"].firstMatch.waitForExistence(timeout: 10),
+                      "Skip on the last page did not end the welcome")
+    }
+
+    /// Nothing asks for location over the welcome's first pages; the permissions page asks when its own
+    /// Allow Location button is tapped, and a skipped permission is not asked again by the Adhan tab
+    /// the moment the welcome ends (its sheet is snoozed a day, like its Not Now).
     func testLocationPromptWaitsForTheWelcome() {
         let app = XCUIApplication()
         app.resetAuthorizationStatus(for: .location)
@@ -259,11 +313,23 @@ final class SimpleModeUITests: XCTestCase {
         Thread.sleep(forTimeInterval: 2)
         XCTAssertFalse(springboard.alerts.firstMatch.exists, "a system prompt stands over the welcome")
         getStarted.tap()
-        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.buttons["welcomeSkip"].waitForExistence(timeout: 5), "no About You page")
+        app.buttons["welcomeSkip"].tap()
+        let allowLocation = app.buttons["permissionsAllowLocation"]
+        XCTAssertTrue(allowLocation.waitForExistence(timeout: 5), "no Allow Location button on the permissions page")
+        XCTAssertFalse(springboard.alerts.firstMatch.exists, "a system prompt rose before Allow Location was tapped")
+        allowLocation.tap()
         let prompt = springboard.alerts.firstMatch
-        XCTAssertTrue(prompt.waitForExistence(timeout: 15), "the Adhan tab never asked for location")
+        XCTAssertTrue(prompt.waitForExistence(timeout: 15), "Allow Location did not ask")
         let allow = prompt.buttons["Allow While Using App"]
         if allow.exists { allow.tap() } else { prompt.buttons.firstMatch.tap() }
+        leavePermissionsPage(app)
+        XCTAssertTrue(app.staticTexts["A lot to discover"].waitForExistence(timeout: 5), "no discover page")
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Quran"].firstMatch.waitForExistence(timeout: 10), "the splash did not end")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertFalse(springboard.alerts.firstMatch.exists, "the tab asked again right after the welcome")
+        XCTAssertFalse(app.buttons["permissionsPrimary"].exists, "the permissions sheet followed the welcome")
     }
 
     /// A folded Quick Search Help can be put away for good, after asking (Abu, 2026-10-10: "when a tips

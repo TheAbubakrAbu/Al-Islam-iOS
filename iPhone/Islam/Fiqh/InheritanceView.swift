@@ -225,7 +225,7 @@ enum Faraid {
         }
 
         // Grandmothers take a sixth between them: "the Prophet (peace be upon him) gave the
-        // grandmother a sixth" (Abu Dawud 2894, at-Tirmidhi 2101, sahih). The mother shuts out
+        // grandmother a sixth" (Abu Dawud 2894, at-Tirmidhi 2101; al-Albani grades it da'if, so the rule rests on the consensus Ibn al-Mundhir reports in al-Ijma'). The mother shuts out
         // both of them; the father shuts out only his own mother, never the mother's mother.
         var maternalGrandmother = n(.maternalGrandmother) > 0
         var paternalGrandmother = n(.paternalGrandmother) > 0
@@ -366,8 +366,8 @@ enum Faraid {
         if grandmothers > 0 {
             let each = Fraction(1, 6) / Fraction(grandmothers)
             let basis = grandmothers == 1
-                ? "1/6 as grandmother (Abu Dawud 2894)"
-                : "1/6 shared between the two grandmothers (Abu Dawud 2894)"
+                ? "1/6 as grandmother (by consensus: Ibn al-Mundhir, al-Ijma')"
+                : "1/6 shared between the two grandmothers (by consensus: Ibn al-Mundhir, al-Ijma')"
             if maternalGrandmother { fard[.maternalGrandmother] = (each, basis) }
             if paternalGrandmother { fard[.paternalGrandmother] = (each, basis) }
         }
@@ -732,7 +732,7 @@ struct InheritanceCalculatorView: View {
                 if shows("heirs") {
                 heirSection("SPOUSE", heirs: [.husband, .wives])
                 heirSection("PARENTS & GRANDPARENTS", heirs: [.father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother],
-                            footer: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother.")
+                            footer: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother (the view of Malik, ash-Shafi'i and Abu Hanifa; Ahmad, in one of his two reports, let her inherit beside her son).")
                 heirSection("CHILDREN & GRANDCHILDREN", heirs: [.sons, .daughters, .grandsons, .granddaughters],
                             footer: "Son's sons and son's daughters inherit only when there is no surviving son.")
                 heirSection("SIBLINGS", heirs: [.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings],
@@ -907,7 +907,7 @@ struct InheritanceCalculatorView: View {
 
                 ExplainerButton(
                     title: "Who counts as a wider relative",
-                    body_: "Half here always means through the father: a maternal half-brother's sons are not heirs at all, and neither is a maternal uncle. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.",
+                    body_: "Half here always means through the father: a maternal half-brother's sons and a maternal uncle are not among these residuaries. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him.\n\nA sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.",
                     caption: "Half always means through the father."
                 )
             }
@@ -1140,7 +1140,7 @@ struct InheritanceCalculatorView: View {
 
     static let scopeCaution = "This is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings."
 
-    static let scopeClosing = "Inheritance is the branch of knowledge the Prophet (peace be upon him) singled out for careful learning, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
+    static let scopeClosing = "Inheritance is a branch of knowledge whose shares Allah Himself set out in detail, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
 }
 
 #Preview {

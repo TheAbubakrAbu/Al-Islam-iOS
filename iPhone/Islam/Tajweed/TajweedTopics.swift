@@ -1505,7 +1505,7 @@ struct TajweedWaqfView: View {
                                       "Shows respect for the words of Allah"],
                                      title: "Correct waqf:")
 
-                    Text(verbatim: "Ali ibn Abi Talib (may Allah be pleased with him) defined tartil as: \"the tajweed of the letters and knowledge of the places of stopping.\"")
+                    Text(verbatim: "A well-known definition attributed to Ali ibn Abi Talib (may Allah be pleased with him) calls tartil \"the tajweed of the letters and knowledge of the places of stopping.\" The tajweed books quote it without a chain (al-Hudhali, al-Waqf wa al-Ibtida', p. 377; Ibn al-Jazari, an-Nashr 1/225), so it is best held as the scholars' definition rather than a proven saying of his.")
                         .font(.body)
                 }
 

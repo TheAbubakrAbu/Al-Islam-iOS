@@ -43,7 +43,7 @@ enum CloudManifest {
     }()
 
     static let listedPreferenceKeys: [String] = [
-        "THEfontArabic", "acceptedBetaQiraatNotice", "adhanNotificationSound", "adhanOverridesSilentMode",
+        "THEfontArabic", "acceptedBetaQiraatNotice", "adhanAutoPlayInApp", "adhanNotificationSound", "adhanOverridesSilentMode",
         "adhanSoundAsr", "adhanSoundDhuhr", "adhanSoundFajr", "adhanSoundIsha", "adhanSoundMaghrib",
         "alIslamGlow", "alertToneSound", "arabicFilterMode", "arabicLetterSizeIndex",
         "arabicShelfAxisQualities", "arabicShelfAxisRules", "askAIEngine",
@@ -59,7 +59,7 @@ enum CloudManifest {
         "hadithSearchHelpCollapsed", "hadithSearchHelpRemoved", "hapticOn", "helpDoorsCollapsed", "helpDoorsHidden",
         "hideEnglishInArabicLetters", "highlightAllahNames",
         "highlightAllahNamesHadith", "highlightAllahNamesIslam", "hijriCalendarDisplayMode",
-        "islamArabicFontFace", "islamTextSize", "keepAyahSheetOpen", "khatmGroupByJuz", "launchTab", "launchTabChosen",
+        "islamArabicFontFace", "islamGroupResources", "islamTextSize", "keepAyahSheetOpen", "khatmGroupByJuz", "launchTab", "launchTabChosen",
         "mushafBottomBarsCollapsed", "mushafFitPage", "mushafPDFAppearance", "mushafPageLanguage",
         "mushafTwoPageSpread", "naggingAsr", "naggingAyahInLastCall", "naggingDeadlineStarts",
         "naggingDhuhr", "naggingDuha", "naggingFajr", "naggingFollowUpMinutes", "naggingInterval",
@@ -107,7 +107,7 @@ enum CloudManifest {
         "splitMurattalRecitersByGroup",
         "startHereHidden",
         "startHereVisited", "sunnahReminders", "switchHijriDateAtMaghrib", "tajweedCompareGrouping",
-        "tajweedCustomColors", "tasbihFreeCycle", "trackerRequiresPrayerTime", "travelAutomatic",
+        "tajweedCustomColors", "tasbihFreeCycle", "travelAutomatic",
         "travelingShowFullPrayers", "useFontArabic", "userBackground", "wordByWordInline",
         "wordByWordInlineTranslation", "wordByWordInlineTransliteration", "wordByWordMeanings",
         "zakahNisabBasis", "zakahYearBasis",

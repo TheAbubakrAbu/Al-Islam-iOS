@@ -64,10 +64,12 @@ private struct HadithBookHero: View {
                     ResourceHeroStat(hadiths.formatted(), "hadiths"),
                     ResourceHeroStat(era.value, era.label),
                 ])
-                    .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, compiled \(book.eraAccessibilityLabel)")
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(chapters) chapters, \(hadiths) hadiths, \(book.eraAccessibilityLabel)")
 
                 if showsStory {
                     Button {
+                        Settings.shared.hapticFeedback()
                         withAnimation(.easeInOut(duration: 0.2)) {
                             showMore.toggle()
                         }
@@ -1064,7 +1066,7 @@ struct HadithBookView: View {
             .conditionalGlassEffect()
     }
 
-    /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`, for this book.
+    /// "ASK AI" with the sparkles glyph in the header gray, as the Quran search's `askAIHeader` draws it, for this book.
     private var askAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
@@ -1072,7 +1074,6 @@ struct HadithBookView: View {
 
             Spacer()
         }
-        .foregroundStyle(settings.accentColor.color)
     }
 
     /// The AI (semantic) matches for the live query, shown automatically: build progress the first time,
@@ -1087,7 +1088,7 @@ struct HadithBookView: View {
                     // The keyword matches' grammar: the sparkles TOTAL pill up top, then one section
                     // per chapter with its own count - the same split `hadithMatchesSections` gives
                     // the keyword hits, so both lists read identically.
-                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")) {
                         EmptyView()
                     }
                     .padding(.bottom, -12)
@@ -2614,7 +2615,7 @@ struct HadithChapterView: View {
                     let shownRows = Set(matches.map(\.row)).union(numbered.map(\.hadith.row))
                     let aiOnly = chapterAIHits.filter { !shownRows.contains($0.row) }
                     if !aiOnly.isEmpty {
-                        Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles", accentTitle: true)) {}
+                        Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles")) {}
                             .padding(.bottom, -12)
 
                         ForEach(aiOnly, id: \.row) { hadith in

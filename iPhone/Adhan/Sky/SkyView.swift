@@ -1128,11 +1128,10 @@ struct SkyCard: View {
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
-    /// Offered for five minutes after a prayer whose adhan the app could not sound in-app, when the
-    /// Silent Mode override is on. That override makes the recording ignore the ringer switch, and iOS
-    /// gives no way to read that switch, so the catch-up cannot know whether playing would be quiet or
-    /// would fill a room (Abu, 2026-10-06: it went off in class). A tap is the only thing that starts
-    /// it, and the button goes away once it does.
+    /// Offered, for five minutes from the prayer's time, in place of an adhan the app chose not to start
+    /// by itself: the phone is in Silent Mode (and "Play In-App Adhan in Silent Mode" is off), or "Play
+    /// Automatically" is off (Abu, 2026-10-19). A tap always sounds it, through Silent Mode, and the
+    /// button goes away once it does. The banner carries the same button, for the other tabs.
     private func adhanPlayButton(prayerName: String) -> some View {
         Button {
             settings.hapticFeedback()
@@ -1152,14 +1151,13 @@ struct SkyCard: View {
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .accessibilityHint("Plays the adhan you missed a moment ago")
+        .accessibilityHint("Plays the adhan, even in Silent Mode")
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
-    /// What the footer is showing, as one value, so the swap animates for either adhan branch.
-    private var footerAdhanState: String? {
-        adhanPlayer.playingPrayerName.map { "playing:\($0)" } ?? adhanPlayer.pendingPrayerName.map { "pending:\($0)" }
-    }
+    /// What the footer is showing, as one value, so the swap animates for either adhan branch. The
+    /// banner keys on the same value.
+    private var footerAdhanState: String? { adhanPlayer.bannerKey }
 
     // MARK: Interaction
 

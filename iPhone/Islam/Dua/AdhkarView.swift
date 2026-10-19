@@ -496,7 +496,7 @@ struct AdhkarView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
 
-    /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`.
+    /// "ASK AI" with the sparkles glyph in the header gray, as the Quran search's `askAIHeader` draws it.
     private var askAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
@@ -504,7 +504,6 @@ struct AdhkarView: View {
 
             Spacer()
         }
-        .foregroundStyle(settings.accentColor.color)
     }
 
     private var askPromptRow: some View {
@@ -575,7 +574,7 @@ struct AdhkarView: View {
                             .spokenRowWash(dhikr.arabicText)
                         }
                     } header: {
-                        SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)
+                        SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {

@@ -3,7 +3,8 @@ import SwiftUI
 import ImageIO
 import UIKit
 
-// Miracles of the Quran: the miracles-of-quran.com library (202 articles across fifteen subjects),
+// Miracles of the Quran: the miracles-of-quran.com library (72 of its 202 articles; the 2026-10-18 review
+// withheld the rest at build time, see WITHHELD in Scripts/build_miracles_pack.py),
 // ported from the Tilawa app by Jamil Hammoudeh, with permission. The data is
 // `Resources/Data/Islam/Miracles.json.xz` (Scripts/build_miracles_pack.py): the site's own prose, which
 // it waives copyright on; third-party excerpts trimmed at import to a short attributed quote that links
@@ -189,20 +190,21 @@ final class MiraclesStore: @unchecked Sendable {
     ///
     /// Chosen on ONE test: how little room the argument leaves for coincidence or hindsight. A claim
     /// scores highly when the Quran's wording is specific rather than poetic, when the fact was
-    /// genuinely unknown in 7th-century Arabia, and when the confirmation is a hard find - an
-    /// excavated city, a mummy, a measured structure - rather than a reading that only works once you
-    /// already know the answer. Archaeology leads because a buried city either is or is not where the
-    /// text said it was; the cosmology and embryology entries follow because their wording is
+    /// genuinely unknown in 7th-century Arabia, and when the confirmation is a hard find rather than a
+    /// reading that only works once you already know the answer. The 2026-10-18 review withheld six
+    /// of the old picks (Ubar, Petra, the mummy, iron, internal mountains, fetal development: see
+    /// WITHHELD in Scripts/build_miracles_pack.py), so the list now leads with the ruler's title in
+    /// Yusuf's and Musa's stories, then the cosmology, embryology and sea entries whose wording is
     /// unusually concrete.
     ///
     /// Deliberately short: a "best of" that runs to forty entries is just the library again. These
     /// are the app's own editorial pick, not the source site's - it publishes no ranking.
     static let strongestSlugs = [
-        "ubar", "petra", "mummy", "haman",
+        "pharaoh", "haman",
         "expanding_universe", "big_bang_crunch", "primordial_smoke",
-        "human_embryo", "fetal_development", "bones",
-        "internal_mountains", "mountains", "internal_waves", "photic_zone",
-        "iron", "fingerprints",
+        "human_embryo", "bones",
+        "mountains", "internal_waves", "photic_zone", "halocline",
+        "fingerprints",
     ]
 
     struct Library {
@@ -383,17 +385,17 @@ struct MiraclesView: View {
                         systemImage: "sparkle.magnifyingglass",
                         headline: "We will show them Our signs in the horizons and within themselves until it becomes clear to them that it is the truth.",
                         source: "Quran 41:53",
-                        message: "Two hundred short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafsir, and a scientific claim can move on. Read them as invitations to reflect.",
+                        message: "Short articles arguing that the Quran describes the world as science and history later found it: mountains with roots, the expanding universe, the stages of the embryo. Each argument is the site's own; the meaning of an ayah rests with the classical scholars of tafsir, and a scientific claim can move on. Articles that rest on counting letters or numbers, or that pull an ayah away from its context, are left out. Read the rest as invitations to reflect.",
                         stats: [
                             ResourceHeroStat("\(library.articles.count)", "articles"),
-                            ResourceHeroStat("\(MiracleCategory.allCases.count)", "fields"),
+                            ResourceHeroStat("\(MiracleCategory.allCases.filter { library.count(in: $0) > 0 }.count)", "fields"),
                             ResourceHeroStat("\(library.strongest.count)", "strongest"),
                         ]
                     ))
 
                     StrongestSection(
                         items: library.strongest,
-                        footer: "Where the Quran's wording is most specific and the confirmation hardest to argue with: an excavated city, a mummy, a measured structure. The app's own pick, not the source's."
+                        footer: "Where the Quran's wording is most specific and the fit with later findings closest: a ruler's title, the stages of the embryo, the darkness of the deep sea. The app's own pick, not the source's, and still a reading rather than tafsir."
                     ) { article in
                         NavigationLink(destination: LazyDestination {
                             MiracleArticleView(article: article)
@@ -404,7 +406,8 @@ struct MiraclesView: View {
 
                     ForEach(MiracleLevel.allCases) { level in
                         Section(header: Text(level.title.uppercased())) {
-                            ForEach(MiracleCategory.allCases.filter { $0.level == level }) { category in
+                            // A subject the review left empty (Mathematics: every article was a counting code) is not listed.
+                            ForEach(MiracleCategory.allCases.filter { $0.level == level && library.count(in: $0) > 0 }) { category in
                                 NavigationLink(destination: LazyDestination {
                                     MiracleCategoryView(category: category)
                                 }) {

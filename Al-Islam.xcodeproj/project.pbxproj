@@ -114,6 +114,7 @@
 		723DA45B2D59FC7000AC20B3 /* Complication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 724C667D2FF0836600C0E1BB /* Complication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7249B7000000000000BB0001 /* IslamArticlesFoldEquivalenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B7000000000000AA0001 /* IslamArticlesFoldEquivalenceTests.swift */; };
 		7249B78730770CAF007F1D04 /* AdhanCatchUpOfferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76630770CAF007F1D04 /* AdhanCatchUpOfferTests.swift */; };
+		821C4AE1554B448DB9D6DE5C /* PrayerNotificationCategoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40025D8E42E4EA1A4127E61 /* PrayerNotificationCategoryTests.swift */; };
 		7249B78830770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76730770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift */; };
 		7249B78930770CAF007F1D04 /* ArabicDotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76830770CAF007F1D04 /* ArabicDotsTests.swift */; };
 		7249B78A30770CAF007F1D04 /* ArabicSpeechRecursionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7249B76930770CAF007F1D04 /* ArabicSpeechRecursionTests.swift */; };
@@ -269,6 +270,7 @@
 		72AC00A12F7E000000AAFC00 /* ForegroundAdhanPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AC00A02F7E000000AAFC00 /* ForegroundAdhanPlayer.swift */; };
 		72AC94182E3F4DA900F7B2DF /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE0B2E394375002DD82E /* NowPlayingView.swift */; };
 		72AD00022FB0000000AAF001 /* AdhanBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AD00012FB0000000AAF001 /* AdhanBanner.swift */; };
+		72AD00042FB0000000AAF002 /* SilentSwitch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AD00032FB0000000AAF002 /* SilentSwitch.swift */; };
 		72AD00042FB0000000AAF001 /* BannerWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AD00032FB0000000AAF001 /* BannerWindow.swift */; };
 		72ADA0000000000000000001 /* serene.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000001 /* serene.caf */; };
 		72ADA0000000000000000004 /* aaqib.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000004 /* aaqib.caf */; };
@@ -676,6 +678,10 @@
 		FACE11022D42DDF100871A6A /* WatchConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE962D42DDF100871A6A /* WatchConnectivity.swift */; };
 		FEE1B4282E2F4ED0AA03ED9D /* QuranRankedSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C3F924E746F407ABF466CE4 /* QuranRankedSearch.swift */; };
 		990446BB8D13220C30355807 /* ShareSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DB27302E307C42377A39670 /* ShareSupport.swift */; };
+		F39F8D93A756D6B21CD235FD /* AppUpdateCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61E4A3BB6E6241023F29A11 /* AppUpdateCheck.swift */; };
+		1C5923440478B740006DF338 /* AppUpdateCheckTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3EFE6D71DB2410447F8FB79 /* AppUpdateCheckTests.swift */; };
+		BA0DDCF877E9F2EEA5768D4F /* WelcomePages.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C2D0B54D9A2ADE90663325 /* WelcomePages.swift */; };
+		E81ED68454E4883DF655F801 /* WelcomePages.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4C2D0B54D9A2ADE90663325 /* WelcomePages.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -845,6 +851,7 @@
 		723873432F37342E00D3A8CD /* CustomRangeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomRangeSheet.swift; sourceTree = "<group>"; };
 		7249B7000000000000AA0001 /* IslamArticlesFoldEquivalenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslamArticlesFoldEquivalenceTests.swift; sourceTree = "<group>"; };
 		7249B76630770CAF007F1D04 /* AdhanCatchUpOfferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhanCatchUpOfferTests.swift; sourceTree = "<group>"; };
+		E40025D8E42E4EA1A4127E61 /* PrayerNotificationCategoryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerNotificationCategoryTests.swift; sourceTree = "<group>"; };
 		7249B76730770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlefMaddaEquivalenceTests.swift; sourceTree = "<group>"; };
 		7249B76830770CAF007F1D04 /* ArabicDotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicDotsTests.swift; sourceTree = "<group>"; };
 		7249B76930770CAF007F1D04 /* ArabicSpeechRecursionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicSpeechRecursionTests.swift; sourceTree = "<group>"; };
@@ -961,6 +968,7 @@
 		72AC00032F7E000000AAFC00 /* FastingActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastingActivityController.swift; sourceTree = "<group>"; };
 		72AC00A02F7E000000AAFC00 /* ForegroundAdhanPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForegroundAdhanPlayer.swift; sourceTree = "<group>"; };
 		72AD00012FB0000000AAF001 /* AdhanBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhanBanner.swift; sourceTree = "<group>"; };
+		72AD00032FB0000000AAF002 /* SilentSwitch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SilentSwitch.swift; sourceTree = "<group>"; };
 		72AD00032FB0000000AAF001 /* BannerWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BannerWindow.swift; sourceTree = "<group>"; };
 		72ADF0000000000000000001 /* serene.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = serene.caf; sourceTree = "<group>"; };
 		72ADF0000000000000000004 /* aaqib.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = aaqib.caf; sourceTree = "<group>"; };
@@ -1220,6 +1228,9 @@
 		FACE00012F7CB0E10066FBA9 /* Muqattaat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Muqattaat.swift; sourceTree = "<group>"; };
 		FFE176521E9FC2BED65552FF /* SkyScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyScene.swift; sourceTree = "<group>"; };
 		5DB27302E307C42377A39670 /* ShareSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSupport.swift; sourceTree = "<group>"; };
+		E61E4A3BB6E6241023F29A11 /* AppUpdateCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateCheck.swift; sourceTree = "<group>"; };
+		E3EFE6D71DB2410447F8FB79 /* AppUpdateCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateCheckTests.swift; sourceTree = "<group>"; };
+		E4C2D0B54D9A2ADE90663325 /* WelcomePages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomePages.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -1445,6 +1456,7 @@
 				72AD00012FB0000000AAF001 /* AdhanBanner.swift */,
 				7E5A00000000000000000003 /* AdhanClipStore.swift */,
 				72AC00A02F7E000000AAFC00 /* ForegroundAdhanPlayer.swift */,
+				72AD00032FB0000000AAF002 /* SilentSwitch.swift */,
 			);
 			path = Playback;
 			sourceTree = "<group>";
@@ -1492,6 +1504,7 @@
 			isa = PBXGroup;
 			children = (
 				7249B76630770CAF007F1D04 /* AdhanCatchUpOfferTests.swift */,
+				E40025D8E42E4EA1A4127E61 /* PrayerNotificationCategoryTests.swift */,
 				7249B76730770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift */,
 				7249B76830770CAF007F1D04 /* ArabicDotsTests.swift */,
 				7249B76930770CAF007F1D04 /* ArabicSpeechRecursionTests.swift */,
@@ -1501,6 +1514,7 @@
 				974353BFEA224840BAC34D58 /* SurahPageLengthTests.swift */,
 				B0D4F3F91C2C4DD6A32CF563 /* QuranRevisionPlanTests.swift */,
 				136FA4CC58FB41038A067932 /* SkyWeatherTests.swift */,
+				E3EFE6D71DB2410447F8FB79 /* AppUpdateCheckTests.swift */,
 				AE46061D3FEE434BA3D5390D /* TipsCatalogTests.swift */,
 				6AAE39F203894EA69D662185 /* QuranTestModeTests.swift */,
 				273FF012EF8C455B8E1068DF /* SimpleModeTests.swift */,
@@ -1665,7 +1679,9 @@
 				7A9A000000000000000000E0 /* AppLifecycle.swift */,
 				72CCAE9F2D42DF5700871A6A /* AppDelegate.swift */,
 				72F7DB712F03FEE50037B059 /* AppReview.swift */,
+				E61E4A3BB6E6241023F29A11 /* AppUpdateCheck.swift */,
 				728D75E32F79D2E600502B8A /* SplashScreen.swift */,
+				E4C2D0B54D9A2ADE90663325 /* WelcomePages.swift */,
 				15C6C14446A74E4EA01ECB5D /* AboutYouView.swift */,
 				7260F9342A8715D600E8FF87 /* LaunchScreen.swift */,
 				7260F9192A8715D600E8FF87 /* Adhan */,
@@ -2751,6 +2767,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BA0DDCF877E9F2EEA5768D4F /* WelcomePages.swift in Sources */,
+				F39F8D93A756D6B21CD235FD /* AppUpdateCheck.swift in Sources */,
 				990446BB8D13220C30355807 /* ShareSupport.swift in Sources */,
 				0346161AFF0D5D02EA745ABB /* ResumeListeningIntent.swift in Sources */,
 				7CA4000000000000000000B1 /* CarPlayContent.swift in Sources */,
@@ -2954,6 +2972,7 @@
 				72AD00042FB0000000AAF001 /* BannerWindow.swift in Sources */,
 				740B5958F8C2495DA645346F /* SimpleMode.swift in Sources */,
 				72AD00022FB0000000AAF001 /* AdhanBanner.swift in Sources */,
+				72AD00042FB0000000AAF002 /* SilentSwitch.swift in Sources */,
 				720CCE172E394375002DD82E /* Highlighted.swift in Sources */,
 				72E100642F79000000AAF700 /* FocusOverlay.swift in Sources */,
 				58D9BFC4611D4DB3BB07992B /* RemovalConfirmation.swift in Sources */,
@@ -3007,6 +3026,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E81ED68454E4883DF655F801 /* WelcomePages.swift in Sources */,
 				58B7EB2DED78DFFCA94BAB98 /* SettingsSearch.swift in Sources */,
 				7E5A00000000000000000016 /* AnswersViews.swift in Sources */,
 				6BC3BA7721864963949CE2B7 /* IslamArticles.swift in Sources */,
@@ -3173,7 +3193,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1C5923440478B740006DF338 /* AppUpdateCheckTests.swift in Sources */,
 				7249B78730770CAF007F1D04 /* AdhanCatchUpOfferTests.swift in Sources */,
+				821C4AE1554B448DB9D6DE5C /* PrayerNotificationCategoryTests.swift in Sources */,
 				7249B78830770CAF007F1D04 /* AlefMaddaEquivalenceTests.swift in Sources */,
 				7249B78930770CAF007F1D04 /* ArabicDotsTests.swift in Sources */,
 				7249B78A30770CAF007F1D04 /* ArabicSpeechRecursionTests.swift in Sources */,
@@ -3296,7 +3318,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.watchkitapp.complication1";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -3333,7 +3355,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.watchkitapp.complication1";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -3359,7 +3381,7 @@
 				INFOPLIST_KEY_NSStickerSharingLevel = OS;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Stickers";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -3384,7 +3406,7 @@
 				INFOPLIST_KEY_NSStickerSharingLevel = OS;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Stickers";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -3417,7 +3439,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -3451,7 +3473,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.Widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -3634,7 +3656,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3682,7 +3704,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3721,7 +3743,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -3759,7 +3781,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.watchkitapp";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -3780,7 +3802,7 @@
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -3802,7 +3824,7 @@
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UnitTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -3823,7 +3845,7 @@
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -3844,7 +3866,7 @@
 				DEVELOPMENT_TEAM = 8HQMC4MQ59;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
-				MARKETING_VERSION = 4.6.5;
+				MARKETING_VERSION = 4.6.6;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.Quran.Elmallah.Islamic-Pillars.UITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -112,7 +112,7 @@ struct LastListenedSurahRow: View {
         return AnyView(
             Section(header:
                 HStack {
-                    Text("LAST LISTENED SURAH")
+                    SectionIconHeader("LAST LISTENED SURAH", icon: "headphones", accentTitle: true)
 
                     Spacer()
 
@@ -885,7 +885,7 @@ struct LastReadAyahRow: View {
     var body: some View {
         Section(header:
             HStack {
-                SectionIconHeader("LAST READ AYAH", icon: "clock.arrow.circlepath")
+                SectionIconHeader("LAST READ AYAH", icon: "clock.arrow.circlepath", accentTitle: true)
 
                 Spacer()
 
@@ -1106,7 +1106,7 @@ struct LastListenedAyahRow: View {
     var body: some View {
         Section(header:
             HStack {
-                Text("LAST LISTENED AYAH")
+                SectionIconHeader("LAST LISTENED AYAH", icon: "headphones", accentTitle: true)
 
                 Spacer()
 
@@ -1262,11 +1262,8 @@ struct AyahOfTheDayRow: View {
 
     var body: some View {
         Section(header:
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text("AYAH OF THE DAY")
-            }
-            .foregroundColor(settings.accentColor.color)
+            // Gray: the day's pick, not one of yours (`SectionIconHeader.accentTitle`'s rule).
+            SectionIconHeader("AYAH OF THE DAY", icon: "sparkles")
         ) {
             Group {
                 if let onSelectAyah {

@@ -115,11 +115,11 @@ struct ZakatAlFitrView: View {
                 }
 
                 Section(header: Text("WHEN TO GIVE IT")) {
-                    Text(verbatim: "Before the Eid prayer. Ibn \u{2018}Abbas said the Prophet (peace and blessings be upon him) made it obligatory as a purification for the fasting person from idle talk and obscenity, and as food for the poor: whoever gives it before the prayer, it is an accepted zakah, and whoever gives it after the prayer, it is one charity among charities.")
+                    Text(verbatim: "Before the Eid prayer. Ibn \u{2018}Abbas said the Prophet (peace and blessings be upon him) made it obligatory as a purification for the fasting person from idle talk and obscenity, and as food for the poor: whoever gives it before the prayer, it is an accepted zakah, and whoever gives it after the prayer, it is one charity among charities (Sunan Abi Dawud 1609; graded hasan by al-Albani).")
                         .font(.body)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    ArticleCallout(paragraphs: ["It may be given a day or two early, as Ibn \u{2018}Umar used to do, so that it reaches the poor in time for the day itself."],
+                    ArticleCallout(paragraphs: ["It may be given a day or two early, as Ibn \u{2018}Umar and the people of his time used to do (Sahih al-Bukhari 1511), so that it reaches the poor in time for the day itself."],
                                    title: "A Day or Two Early", systemImage: "calendar.badge.clock")
                 }
             }

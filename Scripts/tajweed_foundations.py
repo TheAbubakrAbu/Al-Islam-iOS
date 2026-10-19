@@ -218,6 +218,40 @@ NEW_LESSONS = [
 ]
 
 # ---------------------------------------------------------------------------------------------
+# Corrections to Tilawa's own wording, applied to the evaluated chapters before the merges
+# (2026-10-18 review of every religious claim in the Islam tab). Each is (old, new): `old` must
+# occur exactly once across all of Tilawa's lesson text or the build fails, so a Tilawa update that
+# rewrites the sentence surfaces here instead of silently shipping the old claim.
+
+CORRECTIONS: list[tuple[str, str]] = [
+    # The ruling of tajweed: Ibn Uthaymeen's position on the fine points belongs beside the others,
+    # and the couplet's source is named (Liqa' al-Bab al-Maftuh 1/177; IslamQA 125106).
+    ("Most scholars treat falling short there as a deficiency rather than a sin; some, reading Ibn al-Jazari's couplet ",
+     "Many scholars treat falling short there as a deficiency rather than a sin, and Ibn Uthaymeen held that reciting by the detailed rules is not obligatory, tajweed being for beautifying the recitation (Liqa' al-Bab al-Maftuh 1/177); others, reading the couplet of Ibn al-Jazari's al-Muqaddimah "),
+    ("Ibn al-Jazari put it in one line:", "Ibn al-Jazari put it in one line of his al-Muqaddimah:"),
+    # Lahn khafi: there is no consensus that it may never be left (Ibn Uthaymeen, as above).
+    ("Nobody holds that it can be left alone.",
+     "Ibn Uthaymeen held that the detailed rules are not obligatory at all and serve to beautify the recitation (Liqa' al-Bab al-Maftuh 1/177); perfecting them is still the better course."),
+    ("Most call it a deficiency, some call it prohibited, none call it fine.",
+     "Most call it a deficiency, some call it prohibited, and Ibn Uthaymeen held the detailed rules a beautification rather than an obligation."),
+    # "Tajwid al-huruf wa ma'rifat al-wuquf" has no known chain to Ali (al-Hudhali, al-Waqf wa
+    # al-Ibtida' p. 377, and Ibn al-Jazari, an-Nashr 1/225, quote it without one; IslamQA 265364).
+    ("Ali ibn Abi Talib's definition, which the tajweed books adopted as their own:",
+     "The definition the tajweed books attribute to Ali ibn Abi Talib, quoted there without a chain (al-Hudhali, al-Waqf wa al-Ibtida', p. 377; Ibn al-Jazari, an-Nashr 1/225), so it is held as the scholars' definition rather than a proven saying of his:"),
+    ("What matters is Ali's definition:",
+     "What matters is the definition the tajweed books attribute to Ali, though without a known chain:"),
+    ("Ali's definition, giving the letters their dues and knowing the stops,",
+     "The definition attributed to Ali, giving the letters their dues and knowing the stops,"),
+    # Uncited or under-cited narrations, now with their source and grade.
+    ("whose chain the scholars discuss,",
+     "which al-Albani graded sahih by its routes (Sahih al-Jami' 7780) though some weakened it,"),
+    ("and is reported of the Prophet's household.",
+     "and the Prophet ﷺ himself would recite leaning on A'ishah's lap (Sahih al-Bukhari 297)."),
+    ("because stopping at an ayah end is itself something the Prophet is reported to have done ayah by ayah.",
+     "because the Prophet ﷺ is reported to have stopped at the end of each ayah (Sunan Abi Dawud 4001; graded sahih by al-Albani)."),
+]
+
+# ---------------------------------------------------------------------------------------------
 # The merges, in course order.
 
 MERGES: dict[str, dict] = {}
@@ -308,9 +342,9 @@ MERGES["what-is-tajweed"] = {
         "Pronunciation in that tradition is governed by two things: makharij (مَخَارِجُ الحُرُوفِ), the points of articulation where each letter is made in the throat or mouth, and sifat (صِفَاتُ الحُرُوفِ), the characteristics it is made with, such as heaviness (tafkhim), lightness (tarqiq) or the echo of qalqalah. Together they keep every letter distinct, and they matter because even a slight change in pronunciation can change a meaning. That is why tajweed preserves the accuracy and the integrity of the Quran as well as its beauty. The Quran was revealed to be recited, and Allah commands: and recite the Quran with measured recitation (tartil), 73:4.",
         "@2",
         "@3",
-        "The Prophet ﷺ encouraged reciting the Quran beautifully, saying: \"He is not one of us who does not recite the Quran melodiously\" (Sahih al-Bukhari 7527). Beauty of voice is a sunnah of its own, and it rests on the correctness this course teaches: a beautiful voice on a broken letter is still a broken letter.",
+        "The Prophet ﷺ encouraged reciting the Quran beautifully, saying: \"Whoever does not recite Qur'an in a nice voice is not from us\" (Sahih al-Bukhari 7527). Beauty of voice is a sunnah of its own, and it rests on the correctness this course teaches: a beautiful voice on a broken letter is still a broken letter.",
         "@4",
-        "Hafs an Asim is the most widely recited riwayah in the world today, and the standard riwayah of most printed mushafs. Other riwayat, such as Warsh an Nafi and Khalaf an Hamzah, differ in places in how they apply the rules: the lengths of the madd, the treatment of the hamzah, and some finer points of pronunciation. These differences are authentic. They are rooted in the dialects of classical Arabic, they were recited and approved by the Prophet ﷺ, and they have been preserved exactly through continuous chains of recitation. So a rule in this course may not apply identically in another riwayah, and that reflects the richness, flexibility and authenticity of the recitation tradition rather than any contradiction in it.",
+        "Hafs an Asim is the most widely recited riwayah in the world today, and the standard riwayah of most printed mushafs. Other riwayat, such as Warsh an Nafi and Khalaf an Hamzah, differ in places in how they apply the rules: the lengths of the madd, the treatment of the hamzah, and some finer points of pronunciation. These differences are authentic. They are rooted in the dialects of the Arabs in which the Quran was revealed; the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and they have been preserved exactly through continuous chains of recitation. So a rule in this course may not apply identically in another riwayah, and that reflects the richness, flexibility and authenticity of the recitation tradition rather than any contradiction in it.",
     ],
     "keyPoints+": [
         "Pronunciation rests on makharij (where a letter is made) and sifat (how it is made).",
@@ -331,7 +365,7 @@ MERGES["what-is-tajweed"] = {
             "prompt": "A reciter of Warsh an Nafi lengthens a madd differently from this course. What does that mean?",
             "choices": ["They are making a mistake", "Warsh is a later invention", "Each riwayah was transmitted with its own authentic way of applying some rules", "Tajweed rules are a matter of personal taste"],
             "answer": 2,
-            "explain": "The riwayat differ in places such as madd lengths and the treatment of the hamzah. Each difference was recited and approved by the Prophet ﷺ and reached us through continuous transmission, so none of them is a mistake.",
+            "explain": "The riwayat differ in places such as madd lengths and the treatment of the hamzah. Each difference was revealed, taught by the Prophet ﷺ and reached us through continuous transmission, so none of them is a mistake.",
         },
     ],
     "related": ["tajweed-principles-errors", "improving-recitation", "levels-of-recitation", "manners-reading"],

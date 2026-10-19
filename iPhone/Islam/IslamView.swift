@@ -384,6 +384,27 @@ struct IslamView: View {
         }
     }
 
+    /// One section of resources as drawn: a subject group, or the single ISLAMIC RESOURCES section.
+    private struct ResourceSection: Identifiable {
+        let id: String
+        let systemImage: String
+        let items: [IslamDestination]
+    }
+
+    /// The resource sections, in order. One section by default, every resource in the groups' order
+    /// (so switching the grouping never reshuffles them), with the three banners closing it; one per
+    /// subject while `islamGroupResources` is on. `foldsSimple`: Simple Mode leaves the folded groups
+    /// to More Resources (the iPad sidebar lists every group regardless).
+    private func resourceSections(foldsSimple: Bool) -> [ResourceSection] {
+        let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.simpleMode && $0.foldsInSimpleMode) }
+        guard !settings.islamGroupResources else {
+            return groups.map { ResourceSection(id: $0.title, systemImage: $0.systemImage, items: $0.resources) }
+                .filter { !$0.items.isEmpty }
+        }
+        let all = groups.flatMap(\.resources)
+        return all.isEmpty ? [] : [ResourceSection(id: "ISLAMIC RESOURCES", systemImage: "square.grid.2x2.fill", items: all)]
+    }
+
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showIslamFavorites") private var showIslamFavorites = true
 
@@ -611,7 +632,7 @@ struct IslamView: View {
                         TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
                             settings.hapticFeedback()
                             withAnimation { settings.islamGridMode.toggle() }
-                        }) { islamGridMenuItem }
+                        }) { islamMoreMenuItems }
                     }
                 }
             }
@@ -814,12 +835,9 @@ struct IslamView: View {
             }
         }
 
-        ForEach(ResourceGroup.allCases, id: \.self) { group in
-            let items = group.resources
-            if !items.isEmpty, !(settings.simpleMode && group.foldsInSimpleMode) {
-                Section(header: SectionPillHeader(title: group.title, count: items.count, icon: group.systemImage)) {
-                    resourceItems(items)
-                }
+        ForEach(resourceSections(foldsSimple: true)) { section in
+            Section(header: SectionPillHeader(title: section.id, count: section.items.count, icon: section.systemImage)) {
+                resourceItems(section.items)
             }
         }
 
@@ -1193,17 +1211,24 @@ struct IslamView: View {
                 TabMoreMenu(doubleTap: MenuShortcut(settings.islamGridMode ? "Show as List" : "Show as Grid") {
                     settings.hapticFeedback()
                     withAnimation { settings.islamGridMode.toggle() }
-                }) { islamGridMenuItem }
+                }) { islamMoreMenuItems }
             }
         }
     }
 
-    /// The More menu's one item: the grid or list switch, worded and drawn as the other tabs' are.
-    private var islamGridMenuItem: some View {
+    /// The More menu's items: the grid or list switch, worded and drawn as the other tabs' are, and
+    /// the resources in one section or one per subject (`islamGroupResources`).
+    @ViewBuilder
+    private var islamMoreMenuItems: some View {
         TabMoreMenuItem(settings.islamGridMode ? "Show as List" : "Show as Grid",
                         systemImage: settings.islamGridMode ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()
             withAnimation { settings.islamGridMode.toggle() }
+        }
+        TabMoreMenuItem(settings.islamGroupResources ? "Show in One Section" : "Group by Subject",
+                        systemImage: settings.islamGroupResources ? "rectangle.stack" : "rectangle.3.group") {
+            settings.hapticFeedback()
+            withAnimation { settings.islamGroupResources.toggle() }
         }
     }
 
@@ -1399,12 +1424,9 @@ struct IslamView: View {
             }
         }
 
-        ForEach(ResourceGroup.allCases, id: \.self) { group in
-            let items = group.resources
-            if !items.isEmpty {
-                Section(header: SectionIconHeader(group.title, icon: group.systemImage)) {
-                    splitResourceItems(items)
-                }
+        ForEach(resourceSections(foldsSimple: false)) { section in
+            Section(header: SectionIconHeader(section.id, icon: section.systemImage)) {
+                splitResourceItems(section.items)
             }
         }
     }
@@ -1580,9 +1602,9 @@ struct ProphetQuote: View {
     @State private var sweepOffset: CGFloat = -600
     @State private var rotateRing = false
 
-    private let quoteText = "“O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).“"
-    private let attributionText1 = "Farewell Sermon\nMusnad Ahmad 22978"
-    private let attributionText2 = "Jumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
+    private let quoteText = "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).”"
+    private let attributionText1 = "Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)"
+    private let attributionText2 = "Mina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
 
     var body: some View {
         Section(header: SectionIconHeader("PROPHET MUHAMMAD ﷺ QUOTE", icon: "quote.opening")) {
@@ -1618,7 +1640,7 @@ struct ProphetQuote: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    UIPasteboard.general.string = "O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Sermon\nMusnad Ahmad 22978\n\nJumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
+                    UIPasteboard.general.string = "O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa (piety, righteousness, and God-consciousness).\n\n– Farewell Pilgrimage\nMusnad Ahmad 23489 (sahih, al-Albani)\n\nMina, the middle day of Tashriq\n12 Dhul-Hijjah 10 AH, March 632 CE"
                 } label: {
                     Label("Copy Text", systemImage: "doc.on.doc")
                 }

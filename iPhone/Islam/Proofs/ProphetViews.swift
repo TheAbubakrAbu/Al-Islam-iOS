@@ -133,7 +133,7 @@ struct ProphetIdrisView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT IS AND IS NOT ESTABLISHED")) {
-                    Text(verbatim: "Idris is commonly identified with Enoch, and he is often said to have been the first to write with the pen, the first to sew garments, and to have been raised alive to the heavens. None of that is established from the Quran or from an authentic narration. It comes from the reports of the People of the Scripture, and the position of the Salaf toward such reports is neither to affirm nor to deny them.")
+                    Text(verbatim: "Idris is commonly identified with Enoch, and he is often said to have been the first to write with the pen, the first to sew garments, and to have been raised alive to the heavens. None of that is established from the Quran or from an authentic narration. It comes from the reports of the People of the Scripture, and the position of the Salaf toward such reports is neither to affirm nor to deny them. What is authentic is that the Prophet ﷺ met him in the fourth heaven on the night of the Mi'raj (Sahih Muslim 162).")
                         .font(.body)
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said about these reports:").font(.body)
@@ -207,8 +207,8 @@ struct ProphetNuhView: View {
                     Text(verbatim: "His son drowned. This is the hardest and most important part of the story: prophethood in a father does not save a son who rejects. Nuh asked his Lord about him, and Allah corrected him plainly, telling him not to ask about what he had no knowledge of.")
                         .font(.body)
 
-                    Text(verbatim: "The believers who boarded with him were few, and from them the earth was repopulated:").font(.body)
-                    ScriptureQuote(quran: "23:28")
+                    Text(verbatim: "Allah made his descendants the ones who remained on the earth (Quran 37:77), and those who believed with him and boarded the ark were few:").font(.body)
+                    ScriptureQuote(quran: "11:40")
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
@@ -276,7 +276,7 @@ struct ProphetHudView: View {
                 Section(header: ArticleHeader("LESSONS")) {
                     ArticleStep("1. **Strength is a test, not a proof.** 'Aad measured themselves by what they could build and lift, and asked who was stronger than them. The wind answered.")
 
-                    ArticleStep("2. **“Our fathers did it“ is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
+                    ArticleStep("2. **“Our fathers did it” is not a reason.** The Quran records this answer from nation after nation. Inheriting a practice does not make it true.")
 
                     ArticleStep("3. **What you long for can be what ruins you.** They welcomed the cloud as rain. Not everything a person hopes for is good for him.")
                 }
@@ -319,12 +319,12 @@ struct ProphetSalihView: View {
                 }
 
                 Section(header: ArticleHeader("HIS STORY")) {
-                    Text(verbatim: "They asked him for a sign, and Allah gave them one they had chosen themselves: a she-camel, with a share of the water on a known day that was hers alone. Salih warned them what touching her would mean:")
+                    Text(verbatim: "They asked him for a sign, and Allah sent them one as a trial (Quran 54:27): a she-camel, with a share of the water on a known day that was hers alone. Salih warned them what touching her would mean:")
                         .font(.body)
                     ScriptureQuote(quran: "7:73")
 
-                    Text(verbatim: "The Quran names the man who did it, and it names him as one man acting for the whole people:").font(.body)
-                    ScriptureQuote(quran: "26:155-156")
+                    Text(verbatim: "The Quran does not give his name; it describes one man whom the people called on to do it, acting for all of them:").font(.body)
+                    ScriptureQuote(quran: "54:29")
 
                     Text(verbatim: "The wretched one among them was roused to it, and they hamstrung her. Salih gave them three days, and on the third the cry seized them and they lay lifeless in their homes:")
                         .font(.body)
@@ -336,9 +336,9 @@ struct ProphetSalihView: View {
                 }
 
                 Section(header: ArticleHeader("LESSONS")) {
-                    ArticleStep("1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they“ hamstrung her, because they were pleased with it.")
+                    ArticleStep("1. **A people carries what its worst member does when it consents to it.** One man hamstrung the camel; the Quran says “they” hamstrung her, because they were pleased with it.")
 
-                    ArticleStep("2. **Signs do not create faith.** They asked for a sign, received exactly what they asked for, and killed it. Whoever has decided not to believe will not be argued into it.")
+                    ArticleStep("2. **Signs do not create faith.** They asked for a sign, were given one, and killed it. Whoever has decided not to believe will not be argued into it.")
 
                     ArticleStep("3. **The ruins of the punished are not tourist sites.** The Sunnah is to pass them weeping, in fear of Allah, not to wander them taking in the view.")
                 }
@@ -389,7 +389,7 @@ struct ProphetIbrahimView: View {
                         .font(.body)
                     ScriptureQuote(quran: "21:51-52")
 
-                    Text(verbatim: "He broke them all but the largest and hung the axe on it. When they accused him, he told them to ask the big one, and they were forced to admit that idols do not speak. Their answer was to build a fire:")
+                    Text(verbatim: "He broke them all but the largest. When they accused him, he said the largest had done it and told them to ask the idols, and they were forced to admit that idols do not speak. Their answer was to build a fire:")
                         .font(.body)
                     ScriptureQuote(quran: "21:68-69")
 
@@ -462,7 +462,7 @@ struct ProphetLutView: View {
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(articleMarkdown: "**Lut (لُوط)**, Lot, was the **nephew of Ibrahim** (the son of his brother Haran) and believed in him early. He is named 27 times in the Quran. Allah sent him to the people of Sodom, in the cities of the plain.")
+                    Text(articleMarkdown: "**Lut (لُوط)**, Lot, believed in Ibrahim early (Quran 29:26), and the historians report that he was his **nephew**, the son of his brother Haran. He is named 27 times in the Quran. Allah sent him to the people of Sodom, in the cities of the plain.")
                         .font(.body)
 
                     Text(verbatim: "He named their sin to them plainly, and the Quran records that no people had done it before them:").font(.body)
@@ -639,7 +639,7 @@ struct ProphetYaqubView: View {
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(articleMarkdown: "**Yaqub (يَعقُوب)**, Jacob, is the son of Ishaq and grandson of Ibrahim. Allah gave him the name **Israil (إِسرَائِيل)**, and his twelve sons are the twelve tribes: the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, are his descendants. He is named 16 times in the Quran.")
+                    Text(articleMarkdown: "**Yaqub (يَعقُوب)**, Jacob, is the son of Ishaq and grandson of Ibrahim. He is also called **Israil (إِسرَائِيل)**, and his twelve sons are the twelve tribes: the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, are his descendants. He is named 16 times in the Quran.")
                         .font(.body)
 
                     Text(verbatim: "He was given to Ibrahim as an addition beyond what was asked, and made a prophet:").font(.body)
@@ -667,7 +667,7 @@ struct ProphetYaqubView: View {
 
                     ArticleStep("2. **Despair of Allah's mercy is a disbelief of its own.** He sent his sons back to search after years, when everyone else had given up.")
 
-                    ArticleStep("3. **The last thing a father should worry about is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
+                    ArticleStep("3. **A father's greatest concern is his children's faith.** On his deathbed he asked them what they would worship after him. Nothing else was worth the question.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -719,7 +719,7 @@ struct ProphetYusufView: View {
                         .font(.body)
                     ScriptureQuote(quran: "12:33")
 
-                    Text(verbatim: "In prison he called two fellow prisoners to tawhid before he interpreted their dreams, and he stayed there years after he could have left. When the king's dream came and he was summoned, he refused to leave until his innocence was established. The women confessed:")
+                    Text(verbatim: "In prison he called two fellow prisoners to tawhid before he interpreted their dreams, and he remained there several years after the freed prisoner forgot to mention him (Quran 12:42). When the king's dream came and he was summoned, he refused to leave until his innocence was established. The women confessed:")
                         .font(.body)
                     ScriptureQuote(quran: "12:51")
 
@@ -783,7 +783,7 @@ struct ProphetAyyubView: View {
                     Text(verbatim: "And Allah's answer came with relief for the body and the family both:").font(.body)
                     ScriptureQuote(quran: "38:41-44")
 
-                    Text(articleMarkdown: "The detail of his wife, and the oath he had sworn, ends in mercy: he was told to take a bundle of grass and strike once with it so as not to break his oath. The Quran preserves it as an easing, not a punishment.")
+                    Text(articleMarkdown: "The oath he had sworn (the commentators report that it concerned his wife; the Quran does not give the detail) ends in mercy: he was told to take a bundle of grass and strike once with it so as not to break his oath. The Quran preserves it as an easing, not a punishment.")
                         .font(.body)
                 }
 
@@ -854,7 +854,7 @@ struct ProphetShuaybView: View {
 
                     ArticleStep("2. **Practise before you preach.** He said he did not want to contradict himself by doing what he forbade. A caller is measured against his own words first.")
 
-                    ArticleStep("3. **“Our wealth is our own business“ is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
+                    ArticleStep("3. **“Our wealth is our own business” is an old objection.** They mocked him for thinking prayer had anything to do with their money. It had everything to do with it.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -942,7 +942,7 @@ struct ProphetMusaView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Raised in the tyrant's house to bring down the tyrant, Musa was given the Torah, the sea, and the one honour of being spoken to by Allah directly.")
+                    ArticleClosing("Raised in the tyrant's house to bring down the tyrant, Musa was given the Torah, the sea, and the honour of being spoken to by Allah directly.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -973,7 +973,7 @@ struct ProphetHarunView: View {
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(articleMarkdown: "**Harun (هَارُون)**, Aaron, is the elder brother of Musa and a prophet in his own right. He is the answer to a dua: Musa asked for him by name, and Allah granted it.")
+                    Text(articleMarkdown: "**Harun (هَارُون)**, Aaron, is the brother of Musa (the commentators report that he was the elder) and a prophet in his own right. He is the answer to a dua: Musa asked for him by name, and Allah granted it.")
                         .font(.body)
 
                     ScriptureQuote(quran: "20:29-32")
@@ -1046,7 +1046,7 @@ struct ProphetDhulKiflView: View {
                 }
 
                 Section(header: ArticleHeader("WHAT IS AND IS NOT ESTABLISHED")) {
-                    Text(articleMarkdown: "His name is often explained as “the one of the portion“ or “the one who took on a guarantee,“ from **kifl (كِفل)**, a share or a pledge, and he is commonly identified with Ezekiel. He is also said to have pledged to fast by day, stand by night and judge without anger, and to have kept it.")
+                    Text(articleMarkdown: "His name is often explained as “the one of the portion” or “the one who took on a guarantee,” from **kifl (كِفل)**, a share or a pledge, and he is commonly identified with Ezekiel. He is also said to have pledged to fast by day, stand by night and judge without anger, and to have kept it.")
                         .font(.body)
 
                     Text(verbatim: "None of that is established from the Quran or from an authentic narration. Scholars even differed over whether he was a prophet at all or a righteous man, though the apparent meaning of the verses, since he is listed among prophets, is that he was one.")
@@ -1092,7 +1092,7 @@ struct ProphetDawudView: View {
 
                     ScriptureQuote(quran: "2:251")
 
-                    Text(verbatim: "He was a youth in the army of Talut when he killed Jalut, the giant, and Allah gave him kingship and wisdom afterwards.")
+                    Text(verbatim: "He was in the army of Talut when he killed Jalut, and Allah gave him kingship and wisdom afterwards.")
                         .font(.body)
                 }
 
@@ -1114,7 +1114,7 @@ struct ProphetDawudView: View {
                 Section(header: ArticleHeader("LESSONS")) {
                     ArticleStep("1. **Eat from the work of your own hands.** A prophet and a king made armour for a living. Work is not beneath anyone.")
 
-                    ArticleStep("2. **The best worship is what you can keep up.** Half the night in prayer, a day of fasting and a day off: the Prophet called this the most beloved to Allah, not the most extreme.")
+                    ArticleStep("2. **The best worship is what you can keep up.** Sleeping half the night, praying a third of it and sleeping its last sixth, and fasting every other day: the Prophet called this the most beloved to Allah, not the most extreme.")
 
                     ArticleStep("3. **A sincere judge who errs is not condemned.** Allah gave understanding to Sulayman in that case and praised both of them for judgement and knowledge.")
                 }
@@ -1192,7 +1192,7 @@ struct ProphetSulaymanView: View {
                 Section(header: ArticleHeader("LESSONS")) {
                     ArticleStep("1. **The greater the blessing, the greater the gratitude owed.** At every marvel in his story, Sulayman's first words are about thanking Allah and about his own soul.")
 
-                    ArticleStep("2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and this from a bird that had never lied to him.")
+                    ArticleStep("2. **Verify a report before you act on it.** He told the hoopoe he would see whether it had told the truth, and he checked before he acted.")
 
                     ArticleStep("3. **The jinn do not know the unseen.** They laboured on for a dead king leaning on a staff. This one verse closes the door on every claim built on their supposed knowledge.")
                 }
@@ -1249,7 +1249,7 @@ struct ProphetIlyasView: View {
                 Section(header: ArticleHeader("LESSONS")) {
                     ArticleStep("1. **Every idol has a name, and naming it is part of the call.** He did not speak about shirk in the abstract. He asked them why they called on Ba'l.")
 
-                    ArticleStep("2. **“Will you not fear Allah?“ is the whole message.** His opening question is the same one Nuh, Hud, Salih and Shu'ayb opened with.")
+                    ArticleStep("2. **“Will you not fear Allah?” is the whole message.** His opening question is the same one Nuh, Hud, Salih and Shu'ayb opened with.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1359,7 +1359,7 @@ struct ProphetYunusView: View {
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Yunus walked away, was swallowed by the sea, and called on Allah in a way that has been answering his descendants ever since.")
+                    ArticleClosing("Yunus walked away, was swallowed by the sea, and called on Allah in words that are answered for every Muslim who calls with them.")
                 }
 
                 // The other half of the bridge: his signs, in Miracles of the Prophets
@@ -1517,11 +1517,11 @@ struct ProphetIsaView: View {
                     Text(verbatim: "He was created without a father, and the Quran compares that creation to Adam's, who had neither father nor mother:").font(.body)
                     ScriptureQuote(quran: "3:59")
 
-                    Text(verbatim: "Maryam was told to withdraw, and she bore him alone under a palm tree. When she brought him to her people and they accused her, she pointed to the infant, and he spoke from the cradle:")
+                    Text(verbatim: "Maryam withdrew to a remote place, and she bore him alone under a palm tree. When she brought him to her people and they accused her, she pointed to the infant, and he spoke from the cradle:")
                         .font(.body)
                     ScriptureQuote(quran: "19:29-33")
 
-                    Text(articleMarkdown: "His first recorded words are **“Indeed, I am the servant of Allah“**, which is the answer to everything later claimed about him. Allah gave him signs by His permission: he formed a bird from clay and breathed into it, healed the blind and the leper, and revived the dead, and the Quran attaches **by Allah's permission** to each one:")
+                    Text(articleMarkdown: "His first recorded words are **“Indeed, I am the servant of Allah”**, which is the answer to everything later claimed about him. Allah gave him signs by His permission: he formed a bird from clay and breathed into it, healed the blind and the leper, and revived the dead, and the Quran attaches **by Allah's permission** to each one:")
                         .font(.body)
                     ScriptureQuote(quran: "3:49")
 
@@ -1546,7 +1546,7 @@ struct ProphetIsaView: View {
                     Text(verbatim: "And Allah will ask him on the Day of Judgement, and his answer clears him of all of it:").font(.body)
                     ScriptureQuote(quran: "5:116")
 
-                    Text(verbatim: "The Prophet (peace and blessings be upon him) warned against excess in praising him specifically:").font(.body)
+                    Text(verbatim: "The Prophet (peace and blessings be upon him) forbade his own followers the excess the Christians committed over Isa:").font(.body)
                     ScriptureQuote(hadith: "bukhari:3445", cite: "Sahih al-Bukhari 3445", english: 6...35)
                 }
 
@@ -1590,7 +1590,7 @@ struct ProphetMuhammadView: View {
                 }
 
                 Section(header: ArticleHeader("OVERVIEW")) {
-                    Text(articleMarkdown: "**Muhammad (مُحَمَّد)** is the last of the prophets and the only one sent to all people rather than to one nation. He was born in Makkah in the year 570 CE, received revelation at forty, and died in Madinah in 11 AH. He is named 4 times in the Quran by this name.")
+                    Text(articleMarkdown: "**Muhammad (مُحَمَّد)** is the last of the prophets and the only one sent to all people rather than to one nation. He was born in Makkah in the Year of the Elephant, around 570 CE, received revelation at forty, and died in Madinah in 11 AH. He is named 4 times in the Quran by this name.")
                         .font(.body)
 
                     ScriptureQuote(quran: "33:40", words: 0...11)
@@ -1614,7 +1614,7 @@ struct ProphetMuhammadView: View {
                 }
 
                 Section(header: ArticleHeader("LOVE WITHOUT EXCESS")) {
-                    Text(verbatim: "A Muslim must love him more than his own family and himself. The Prophet (peace and blessings be upon him) said:").font(.body)
+                    Text(verbatim: "A Muslim must love him more than his parents, his children and all people, and even more than himself (Sahih al-Bukhari 6632). The Prophet (peace and blessings be upon him) said:").font(.body)
                     ScriptureQuote(hadith: "bukhari:15", cite: "Sahih al-Bukhari 15", english: 4...22)
 
                     Text(articleMarkdown: "And that love is shown by **following him**, not by exceeding the bounds in praising him. He forbade that himself, in the clearest terms:")

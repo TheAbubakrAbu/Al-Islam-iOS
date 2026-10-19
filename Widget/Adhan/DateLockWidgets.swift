@@ -203,15 +203,17 @@ struct NextPrayerDateLockView: View {
                     }
 
                     Text(AdhanWidgetDateFormatting.hijriParts(for: entry, language: .english).dayMonthYear)
-                        .font(.caption)
+                        .font(.footnote)
 
+                    // The city a size under caption2, so the date above can be a size bigger (Abu,
+                    // 2026-10-18), the Current & Next widget's rule.
                     if !entry.currentCity.isEmpty {
                         HStack(spacing: 3) {
                             Image(systemName: "location.fill")
 
                             Text(entry.currentCity)
                         }
-                        .font(.caption2)
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                     }
                 }

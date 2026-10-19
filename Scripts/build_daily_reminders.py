@@ -333,6 +333,63 @@ def source_line(text: str) -> str:
     return re.sub(r"\s+[-–, ]\s+", " · ", text).strip()
 
 
+# Corrections to the finished cards (2026-10-18 review, Abu: every hadith in the Islam tab in the app's
+# own Arabic and English, and no da'if). Applied last, so each card below reads its words from the
+# shelf by range (the Dua screen's narrations and ranges for the dua cards), and the headline range
+# indexes the WHOLE narration's translation, as `shown_english` defines it. A value of None removes
+# the field. Grounds: Abu Dawud 5072, 5073 and 3893 are da'if and 5081 mawdu' (al-Albani); Tilawa's
+# own renderings sat beside a shelf reference on 41 cards; Muslim 246b's ghurrah clause is mudraj.
+CARD_FIXES = {
+    'hadith-best-of-people': {"hadith": "bukhari:5027", "arWords": [36, 40], "enWords": [4, 17], "shortWords": [4, 17], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-deeds-by-intentions': {"hadith": "bukhari:1", "arWords": [58, 65], "enWords": [6, 26], "shortWords": [6, 13], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-gentleness': {"hadith": "muslim:2593", "arWords": [48, 60], "enWords": [2, 29], "shortWords": [2, 8], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-good-words': {"hadith": "bukhari:2989", "arWords": [53, 55], "enWords": [70, 76], "shortWords": [70, 76], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-knowledge-path': {"hadith": "muslim:2699a", "arWords": [88, 100], "enWords": [90, 109], "shortWords": [90, 104], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-loved-by-allah': {"hadith": "bukhari:3209", "arWords": [56, 66], "enWords": [4, 20], "shortWords": [4, 20], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-modesty': {"hadith": "bukhari:24", "arWords": [48, 50], "enWords": [25, 30], "shortWords": [25, 30], "ar": None, "en": None, "dua": None, "short": None, "source": "Bukhari 24, Muslim 36"},
+    'hadith-night-prayer': {"hadith": "muslim:1163a", "arWords": [41, 46], "enWords": [11, 23], "shortWords": [11, 23], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-religion-easy': {"hadith": "bukhari:39", "arWords": [33, 35], "enWords": [4, 7], "shortWords": [4, 7], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-strong-believer': {"hadith": "muslim:2664", "arWords": [39, 50], "enWords": [0, 20], "shortWords": [0, 14], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-tongue-private-parts': {"hadith": "bukhari:6474", "arWords": [27, 38], "enWords": [4, 34], "shortWords": [4, 22], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-two-blessings': {"hadith": "bukhari:6412", "arWords": [34, 41], "enWords": [4, 18], "shortWords": [4, 18], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-water-of-mercy': {"hadith": "muslim:2699a", "arWords": [44, 59], "enWords": [0, 27], "shortWords": [0, 14], "ar": None, "en": None, "dua": None, "short": None},
+    'sunnah-mercy': {"hadith": "abudawud:4941", "arWords": [37, 39], "enWords": [4, 13], "shortWords": [4, 13], "ar": None, "en": None, "dua": None, "short": None},
+    'sunnah-smile': {"hadith": "tirmidhi:1956", "arWords": [38, 43], "enWords": [0, 9], "shortWords": [0, 9], "ar": None, "en": None, "dua": None, "short": None},
+    'hadith-muslim-246b': {"arWords": [53, 62], "enWords": [38, 56], "shortWords": [38, 56]},
+    'dua-al-islam-common-10': {"hadith": "ibnmajah:925", "arWords": [39, 47], "enWords": [11, 23], "shortWords": [11, 23], "ar": None, "en": None, "dua": None, "short": None, "source": "Sunan Ibn Majah 925 · Sahih (al-Albani)"},
+    'dua-al-islam-common-3': {"hadith": "muslim:2721a", "arWords": [34, 40], "enWords": [1, 17], "shortWords": [1, 17], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-distress-1': {"hadith": "muslim:2730a", "arWords": [43, 66], "enWords": [1, 42], "shortWords": [1, 10], "ar": None, "en": None, "dua": None, "short": None, "source": "Sahih Muslim 2730, Sahih al-Bukhari 6346"},
+    'dua-al-islam-distress-3': {"hadith": "tirmidhi:3505", "arWords": [42, 50], "enWords": [17, 34], "shortWords": [17, 34], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-food-drink-2': {"hadith": "abudawud:3767", "arWords": [64, 67], "enWords": [29, 42], "shortWords": [29, 42], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-food-drink-3': {"hadith": "abudawud:4023", "arWords": [43, 55], "enWords": [11, 34], "shortWords": [11, 34], "ar": None, "en": None, "dua": None, "short": None, "tr": "Alhamdu lillahil-ladhi at'amani hadhat-ta'ama wa razaqanihi min ghayri hawlin minni wa la quwwah"},
+    'dua-al-islam-food-drink-4': {"hadith": "tirmidhi:3455", "arWords": [100, 105], "enWords": [125, 136], "shortWords": [125, 136], "ar": None, "en": None, "dua": None, "short": None, "source": "Jami' at-Tirmidhi 3455 · Hasan (al-Albani)"},
+    'dua-al-islam-food-drink-5': {"hadith": "abudawud:2357", "arWords": [51, 59], "enWords": [32, 46], "shortWords": [32, 46], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-forgiveness-1': {"hadith": "abudawud:1516", "arWords": [37, 45], "enWords": [16, 29], "shortWords": [16, 29], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-forgiveness-3': {"hadith": "abudawud:1517", "arWords": [46, 56], "enWords": [7, 28], "shortWords": [7, 28], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-forgiveness-4': {"hadith": "muslim:483", "arWords": [43, 53], "enWords": [11, 26], "shortWords": [11, 26], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-home-mosque-3': {"hadith": "muslim:713a", "arWords": [43, 47], "enWords": [11, 20], "shortWords": [11, 20], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-home-mosque-4': {"hadith": "muslim:713a", "arWords": [52, 56], "enWords": [29, 36], "shortWords": [29, 36], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-morning-evening-3': {"hadith": "tirmidhi:3391", "arWords": [51, 61], "enWords": [76, 106], "shortWords": [76, 106], "ar": None, "en": None, "dua": None, "short": None, "tr": "Allahumma bika amsayna wa bika asbahna wa bika nahya wa bika namutu wa ilaykan-nushur"},
+    'dua-al-islam-morning-evening-4': {"hadith": "abudawud:5088", "arWords": [34, 49], "enWords": [25, 50], "shortWords": [25, 50], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-morning-evening-5': {"hadith": "abudawud:1529", "arWords": [42, 48], "enWords": [3, 19], "shortWords": [3, 19], "ar": None, "en": None, "dua": None, "short": None, "source": "Sunan Abi Dawud 1529", "repeat": None, "tr": "Raditu billahi Rabban, wa bil-Islami dinan, wa bi-Muhammadin rasula"},
+    'dua-al-islam-sleep-waking-1': {"hadith": "bukhari:6324", "arWords": [29, 32], "enWords": [17, 26], "shortWords": [17, 26], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-sleep-waking-3': {"hadith": "muslim:2714a", "arWords": [63, 83], "enWords": [71, 145], "shortWords": [71, 93], "ar": None, "en": None, "dua": None, "short": None, "source": "Sahih Muslim 2714, Sahih al-Bukhari 6320", "tr": "Subhanaka Allahumma Rabbi, bika wada'tu janbi wa bika arfa'uh, in amsakta nafsi faghfir laha, wa in arsaltaha fahfazha bima tahfazu bihi 'ibadakas-salihin"},
+    'dua-al-islam-sleep-waking-6': {"hadith": "abudawud:5045", "arWords": [43, 48], "enWords": [25, 40], "shortWords": [25, 40], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-travel-1': {"hadith": "muslim:1342", "arWords": [44, 56], "enWords": [0, 30], "shortWords": [0, 30], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-travel-3': {"hadith": "muslim:1342", "arWords": [85, 98], "enWords": [79, 105], "shortWords": [79, 105], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-travel-4': {"hadith": "muslim:1342", "arWords": [108, 112], "enWords": [120, 129], "shortWords": [120, 129], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-al-islam-travel-6': {"hadith": "abudawud:2600", "arWords": [35, 40], "enWords": [19, 33], "shortWords": [19, 33], "ar": None, "en": None, "dua": None, "short": None},
+    'dua-hisn-113': {"source": "Jami' at-Tirmidhi 3528 · Hasan (al-Albani)"},
+    'dhikr-hisn-196': {"source": "Jami' at-Tirmidhi 3433, Sunan Abi Dawud 4859"},
+    # Duas that are ayat: the whole ayah as the card shows it (its Arabic is read from the Quran), in
+    # Saheeh International, with the headline cut from it. Morning-evening-9 had rested on Abu Dawud
+    # 5081 (mawdu') for "seven times"; its words are Quran 9:129.
+    'dua-al-islam-distress-6': {"s": 3, "a": 173, "en": 'Those to whom hypocrites said, "Indeed, the people have gathered against you, so fear them." But it [merely] increased them in faith, and they said, "Sufficient for us is Allah, and [He is] the best Disposer of affairs."', "shortWords": [25, 37], "dua": None, "arWords": None, "ar": None, "repeat": None, "source": "Quran 3:173"},
+    'dua-al-islam-rabbana-3': {"s": 2, "a": 201, "en": 'But among them is he who says, "Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire."', "shortWords": [7, 25], "dua": None, "arWords": None, "ar": None, "repeat": None, "source": "Quran 2:201"},
+    'dua-al-islam-morning-evening-9': {"s": 9, "a": 129, "en": 'But if they turn away, [O Muhammad], say, "Sufficient for me is Allah; there is no deity except Him. On Him I have relied, and He is the Lord of the Great Throne."', "shortWords": [8, 18], "dua": None, "arWords": None, "ar": None, "repeat": None, "source": "Quran 9:129"},
+    'dua-al-islam-prophets-4': {"s": 28, "a": 24, "en": 'So he watered [their flocks] for them; then he went back to the shade and said, "My Lord, indeed I am, for whatever good You would send down to me, in need."', "shortWords": [16, 31], "dua": None, "arWords": None, "ar": None, "repeat": None, "source": "Quran 28:24"},
+}
+
 def main() -> None:
     soften = load_softener()
     source = TILAWA / "src" / "data" / "dailyReminders.ts"
@@ -429,6 +486,21 @@ def main() -> None:
         if ("short" in entry) == ("shortWords" in entry):
             problems.append(f"{row['id']}: a card carries either a headline or a headline range")
         entries.append(entry)
+
+    by_id = {entry["id"]: entry for entry in entries}
+    for card_id, fields in CARD_FIXES.items():
+        entry = by_id.get(card_id)
+        if entry is None:
+            problems.append(f"CARD_FIXES: no card {card_id}")
+            continue
+        for key, value in fields.items():
+            if value is None:
+                entry.pop(key, None)
+            else:
+                entry[key] = value
+        if ("short" in entry) == ("shortWords" in entry):
+            problems.append(f"CARD_FIXES {card_id}: a card carries either a headline or a headline range")
+    print(f"card fixes: {len(CARD_FIXES)} cards corrected")
 
     if problems:
         print(f"FAILED: {len(problems)} problem(s)", file=sys.stderr)

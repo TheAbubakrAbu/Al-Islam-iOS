@@ -81,6 +81,55 @@ enum WordRange {
         return out
     }
 
+    /// A slice of a translation, tidied to stand on its own (the Dua screen's rows, the Reminder of the
+    /// Day's cards and headlines): the slice is cut out of a
+    /// sentence, so it can open on a stray quote mark, end on the comma that led back into the
+    /// narration, or sit inside the parentheses the translator put around a rendering that follows
+    /// a transliteration. Words are never changed.
+    static func tidiedSentence(_ text: String) -> String {
+        let marks: Set<Character> = ["\"", "'", "\u{201C}", "\u{201D}", "\u{2018}", "\u{2019}"]
+        var chars = Array(text.trimmingCharacters(in: .whitespaces))
+        // A closing mark whose opening mark is inside the slice belongs to it ("saying, 'Love him.'").
+        func opens(_ closing: Character) -> Bool {
+            let openers: [Character] = closing == "\u{201D}" || closing == "\"" ? ["\u{201C}", "\""] : ["\u{2018}", "'"]
+            return zip(chars, chars.dropFirst()).contains { $0 == " " && openers.contains($1) }
+        }
+        var changed = true
+        while changed {
+            changed = false
+            while let first = chars.first, marks.contains(first) { chars.removeFirst(); changed = true }
+            while let last = chars.last, (marks.contains(last) && !opens(last)) || ",;:".contains(last) {
+                chars.removeLast(); changed = true
+            }
+            // `Thee".` : a closing mark left in front of the final stop.
+            if chars.count > 1, let last = chars.last, ".!".contains(last), marks.contains(chars[chars.count - 2]),
+               !opens(chars[chars.count - 2]) {
+                chars.remove(at: chars.count - 2)
+                changed = true
+            }
+        }
+        // "(O Allah, ... deeds)." : one pair of parentheses around the whole slice comes off.
+        var body = chars
+        var tail: [Character] = []
+        while let last = body.last, ".!".contains(last) { tail.insert(last, at: 0); body.removeLast() }
+        if body.first == "(", body.last == ")" {
+            var depth = 0
+            var wraps = true
+            for (index, character) in body.enumerated() {
+                if character == "(" { depth += 1 } else if character == ")" { depth -= 1 }
+                if depth == 0 && index < body.count - 1 { wraps = false; break }
+            }
+            if wraps { chars = Array(body.dropFirst().dropLast()) + tail }
+        } else if body.first == "(", !body.contains(")") {
+            chars.removeFirst()                 // "(O Allah, ..." cut before its closing parenthesis
+        } else if body.last == ")", !body.contains("(") {
+            chars = Array(body.dropLast()) + tail
+        }
+        // A slice that starts mid-sentence ("he who treads the path...") opens with a capital.
+        if let first = chars.first, first.isLowercase { chars[0] = Character(first.uppercased()) }
+        return String(chars).trimmingCharacters(in: .whitespaces)
+    }
+
     /// Several ranges read in order, joined by an ellipsis: a quote that skips part of the narration.
     static func words(_ text: String, _ ranges: [ClosedRange<Int>]) -> String {
         ranges.map { words(text, $0) }.filter { !$0.isEmpty }.joined(separator: " \u{2026} ")

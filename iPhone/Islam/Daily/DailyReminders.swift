@@ -587,10 +587,18 @@ final class DailyReminderStore: ObservableObject {
         return entries.map { entry in
             var arabic = entry.arabic
             var english = entry.english
+            // What `shortWords` indexes: the WHOLE translation (the narration's or the Fortress entry's)
+            // when the card shows a slice of it, the card's own English otherwise. That is how
+            // build_daily_reminders.py `shown_english` stores it and verify_tilawa_packs.py checks it;
+            // cutting it from the slice instead put a fragment, or nothing, on 34 cards (2026-10-18).
+            var headlineSource: String?
             if let link = entry.hadith, entry.arabicWords != nil || entry.englishWords != nil {
                 if let text = narration(link) {
                     if let span = entry.arabicWords { arabic = words(text.arabic, span) }
-                    if let span = entry.englishWords { english = words(text.english, span) }
+                    if let span = entry.englishWords {
+                        english = WordRange.tidiedSentence(words(text.english, span))
+                        headlineSource = text.english
+                    }
                 }
             }
             if let duaID = entry.dua {
@@ -600,7 +608,10 @@ final class DailyReminderStore: ObservableObject {
                 }
                 if let dua = fortress?.entryByID[duaID] {
                     arabic = entry.arabicWords.map { words(dua.arabic, $0) } ?? dua.arabic
-                    if let span = entry.englishWords { english = words(dua.translation, span) }
+                    if let span = entry.englishWords {
+                        english = WordRange.tidiedSentence(words(dua.translation, span))
+                        headlineSource = dua.translation
+                    }
                 }
             }
             var resolved = arabic == entry.arabic && english == entry.english
@@ -608,8 +619,10 @@ final class DailyReminderStore: ObservableObject {
                 : entry.resolved(arabic: arabic, english: english)
             // The headline, cut from the English the card ends up showing (pack v3). A verse card's
             // English is not known until render time, so its headline is cut there instead.
-            if entry.kind != .ayah, let span = entry.shortWords, !english.isEmpty {
-                resolved = resolved.resolved(short: words(english, span))
+            if entry.kind != .ayah, let span = entry.shortWords {
+                let source = headlineSource ?? english
+                // A range cut from a whole narration can open on its quote mark or end on a comma.
+                if !source.isEmpty { resolved = resolved.resolved(short: WordRange.tidiedSentence(words(source, span))) }
             }
             return resolved
         }
@@ -1299,8 +1312,9 @@ private struct ReminderOfTheDayHeader: View {
     var body: some View {
         AdaptiveSectionHeader {
             HStack(spacing: 8) {
+                // The header's gray, like its title: the day's pick, not one of yours
+                // (`SectionIconHeader.accentTitle`'s rule).
                 Image(systemName: entry.kind.symbol)
-                    .foregroundStyle(appearance.accent)
                     .accessibilityHidden(true)
 
                 Text("REMINDER OF THE DAY")
@@ -1364,7 +1378,7 @@ struct SavedReflectionsView: View {
                 }
                 .themedListRowBackground()
             } else {
-                Section(header: SectionPillHeader(title: "SAVED REFLECTIONS", count: reflections.items.count)) {
+                Section(header: SectionPillHeader(title: "SAVED REFLECTIONS", count: reflections.items.count, accentTitle: true)) {
                     ForEach(reflections.items) { item in
                         savedRow(item)
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {

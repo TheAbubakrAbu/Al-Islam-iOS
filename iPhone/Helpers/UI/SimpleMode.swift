@@ -74,18 +74,14 @@ struct TabMoreMenu<Items: View>: View {
     }
 
     var body: some View {
-        ShortcutMenu(doubleTap: doubleTap, hold: hold) {
+        ShortcutMenu(doubleTap: doubleTap, hold: hold, shortcutLabelSize: 36) {
             items
         } label: {
-            Group {
-                if isBusy {
-                    ProgressView()
-                } else {
-                    Image(systemName: "ellipsis.circle")
-                }
+            if isBusy {
+                ProgressView()
+            } else {
+                Image(systemName: "ellipsis.circle")
             }
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
         }
         .accessibilityLabel("More")
         .accessibilityIdentifier("tabMoreMenu")

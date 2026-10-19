@@ -15,6 +15,12 @@ import SwiftUI
 //
 // The answer never leaves the device. It is read in two places only: `StartHere` (the Islam tab's
 // guide) and the About You screen in Settings, which changes it.
+//
+// Since 2026-10-19 a new install meets it as the second page of the welcome (SplashScreen.swift,
+// `embedded`), with Skip in place of Not Now (Abu: "when it says not now replace that to skip and make
+// it skip just that screen"). Both steps carry Skip ("have each page option have a skip button"): on
+// the question it saves nothing, on the tailored page it keeps the answer and leaves the suggested
+// settings alone. Everyone who already had the app still meets the stage on its own.
 
 // MARK: - The answer
 
@@ -154,6 +160,11 @@ struct AboutYouView: View {
     /// switched on ahead of time; anyone who already had the app sees their own settings as they are,
     /// and nothing changes unless they change it.
     var isNewInstall = false
+    /// True as a page of the welcome (SplashScreen.swift): the splash draws the backdrop and moves on
+    /// through `onFinished` when the question is answered or skipped; the stage's flag is still set, so
+    /// the standalone stage never follows.
+    var embedded = false
+    var onFinished: (() -> Void)? = nil
 
     @State private var choice: UserBackground?
     @State private var page = 0
@@ -168,7 +179,7 @@ struct AboutYouView: View {
 
     var body: some View {
         ZStack {
-            backdrop
+            if !embedded { backdrop }
 
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
@@ -186,14 +197,14 @@ struct AboutYouView: View {
                     .frame(maxWidth: 560)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 22)
-                    .padding(.top, presentedAsSheet ? 24 : 36)
+                    .padding(.top, presentedAsSheet ? 24 : (embedded ? 8 : 36))
                     .padding(.bottom, 16)
                 }
 
                 actions
                     .frame(maxWidth: 560)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, embedded ? 16 : 24)
             }
         }
         .onAppear(perform: applyDebugArguments)
@@ -479,44 +490,33 @@ struct AboutYouView: View {
 
     // MARK: Actions
 
+    /// Continue (then Get Started or Start Learning) with Skip under it, and Back beside Skip on the
+    /// tailored page. The welcome's bar (WelcomePages.swift), so every page of it ends the same way.
     private var actions: some View {
-        VStack(spacing: 10) {
-            Button {
-                settings.hapticFeedback()
+        WelcomeActionBar(
+            primaryTitle: primaryTitle,
+            primaryEnabled: choice != nil,
+            primaryAction: {
                 if page == 0 {
                     seedSuggestions()
                     withAnimation(.easeInOut(duration: 0.3)) { page = 1 }
                 } else {
                     finish(saving: true)
                 }
-            } label: {
-                Text(primaryTitle)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-            }
-            .conditionalGlassEffect(rectangle: true, useColor: 0.38, customTint: AppIdentifiers.mainColor.color)
-            .disabled(choice == nil)
-            .opacity(choice == nil ? 0.5 : 1)
-
-            Button {
-                settings.hapticFeedback()
+            },
+            secondaryTitle: "Skip",
+            secondaryIdentifier: "welcomeSkip",
+            secondaryAction: {
                 if page == 0 {
                     finish(saving: false)
                 } else {
-                    withAnimation(.easeInOut(duration: 0.3)) { page = 0 }
+                    finish(saving: true, applyingSuggestions: false)
                 }
-            } label: {
-                Text(page == 0 ? "Not Now" : "Back")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 16)
-                    .contentShape(Rectangle())
+            },
+            backAction: page == 0 ? nil : {
+                withAnimation(.easeInOut(duration: 0.3)) { page = 0 }
             }
-            .buttonStyle(.plain)
-        }
+        )
     }
 
     private var primaryTitle: String {
@@ -540,11 +540,14 @@ struct AboutYouView: View {
         #endif
     }
 
-    private func finish(saving: Bool) {
+    /// `applyingSuggestions` false is Skip on the tailored page: the answer is kept, the page's toggles
+    /// and its jump to the Islam tab are not.
+    private func finish(saving: Bool, applyingSuggestions: Bool = true) {
         if saving, let choice {
             settings.userBackground = choice
             if choice.wantsStartHere { settings.startHereHidden = false }
-
+        }
+        if saving, applyingSuggestions, let choice {
             if choice != .raised {
                 #if HAS_QURAN
                 if transliteration != settings.showTransliteration { settings.showTransliteration = transliteration }
@@ -569,13 +572,19 @@ struct AboutYouView: View {
             dismiss()
             return
         }
-        // Ends the root stage: `RootAppearance` sees the version and the cover fades away.
-        withAnimation {
+        if embedded {
+            // A page of the welcome: the splash moves on, and the standalone stage never follows.
             settings.aboutYouVersionSeen = Settings.aboutYouCurrentVersion
+        } else {
+            // Ends the root stage: `RootAppearance` sees the version and the cover fades away.
+            withAnimation {
+                settings.aboutYouVersionSeen = Settings.aboutYouCurrentVersion
+            }
         }
-        if saving, choice?.landsOnIslamTab == true {
+        if saving, applyingSuggestions, choice?.landsOnIslamTab == true {
             AppNavigation.shared.openIslam(.tab)
         }
+        onFinished?()
     }
 
     // MARK: Backdrop

@@ -40,7 +40,7 @@ extension ProphetMiraclesView {
               sections: [
                   SignSection("A SIGN IS A CREDENTIAL", [
                       .text("A messenger arrives claiming to speak for God. Anyone can claim that. A miracle is the credential that cannot be forged: something outside the reach of the people being addressed, done openly, in front of those best placed to expose it."),
-                      .text("So the sign is always matched to the age. Egypt's court was full of expert magicians, and Musa was given a staff that swallowed their work. 'Isa came to a people who prized healing, and he healed the blind and the leper and raised the dead. The Arabs had no equal in language, and the sign given to Muhammad (peace and blessings be upon him) was a book."),
+                      .text("So the sign is always matched to the age. Egypt's court was full of expert magicians, and Musa was given a staff that swallowed their work. 'Isa came to a people who prized healing, and by Allah's permission he healed the blind and the leper and raised the dead. The Arabs had no equal in language, and the sign given to Muhammad (peace and blessings be upon him) was a book."),
                   ]),
                   SignSection("AND WHAT IT CANNOT DO", [
                       .text("A miracle compels no one. The Quran is blunt about this: people watched the sea split and still went back to a calf. A sign removes the excuse of ignorance; it does not remove the choice."),
@@ -89,7 +89,7 @@ extension ProphetMiraclesView {
                   SignSection("WHY IT MATTERS", [
                       .text("The Prophet set the two winds side by side, the one that helped him and the one that ended 'Ad:"),
                       .hadith("muslim:900a", cite: "Sahih Muslim 900a", arabic: 41...45, english: 0...16),
-                      .text("Al-Bukhari files the same saying under the Battle of the Trench, where a wind scattered the armies camped around Madinah (33:9). 'A'ishah said that when he saw a dark cloud his face would change and he would come and go until it rained; he told her he feared it might be like the cloud 'Ad had welcomed."),
+                      .text("Al-Bukhari files the same saying under the Battle of the Trench, where a wind scattered the armies camped around Madinah (33:9). 'A'ishah said that when he saw a dark cloud his face would change and he would come and go until it rained; he told her he feared it might be like the cloud 'Ad had welcomed (Sahih al-Bukhari 3206, Sahih Muslim 899)."),
                   ]),
               ]),
         .init(id: "salih-camel", title: "Salih and the she-camel",
@@ -418,7 +418,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Both creatures in this story are among the four the Prophet forbade killing:"),
-                      .hadith("ibnmajah:3224", cite: "Sunan Ibn Majah 3224", arabic: 23...40, english: 0...15),
+                      .hadith("ibnmajah:3224", cite: "Sunan Ibn Majah 3224; graded sahih by al-Albani", arabic: 23...40, english: 0...15),
                   ]),
               ]),
         .init(id: "sheba-throne", title: "The throne brought from Sheba",
@@ -589,7 +589,7 @@ extension ProphetMiraclesView {
                       .hadith("bukhari:4710", cite: "Sahih al-Bukhari 4710", arabic: 35...52, english: 4...44),
                   ]),
                   SignSection("WHY THE TEST MATTERS", [
-                      .text("This is the one sign he was made to defend in public, on the spot, to people who wanted him discredited. A liar says as little as possible; he answered a demand for verifiable detail about a place he had no way of having seen. When it was put to Abu Bakr he said that if the Prophet said it then it is true, and he was called as-Siddiq, the one who affirms."),
+                      .text("This is the one sign he was made to defend in public, on the spot, to people who wanted him discredited. A liar says as little as possible; he answered a demand for verifiable detail about a place he had no way of having seen. When it was put to Abu Bakr he said that if the Prophet said it then it is true, and he was called as-Siddiq, the one who affirms (al-Hakim, al-Mustadrak, from 'A'ishah; graded sahih by al-Albani in al-Silsilah al-Sahihah)."),
                   ]),
               ]),
         .init(id: "chest-opened", title: "The opening of his chest",
@@ -716,7 +716,7 @@ extension ProphetMiraclesView {
                   SignSection("WHAT HAPPENED", [
                       .text("On a journey the travellers overslept past sunrise, and by the time they moved on they were badly thirsty. Men sent ahead to look for water found a woman riding between two water-skins, who told them her people's water was a day and a night's travel away. They brought her to the Prophet. 'Imran ibn Husayn was among them:"),
                       .hadith("bukhari:3571", cite: "Sahih al-Bukhari 3571", arabic: 185...210, english: 283...347),
-                      .text("In another telling, from the same Companion, the call went out to the whole company to drink and water their animals. 'Imran swears by Allah that when her skins were handed back they looked fuller than when they began, and the Prophet told her they had taken nothing of her water: it was Allah who had given them to drink."),
+                      .text("In another telling, from the same Companion, the call went out to the whole company to drink and water their animals. 'Imran swears by Allah that when her skins were handed back they looked fuller than when they began, and the Prophet told her they had taken nothing of her water: it was Allah who had given them to drink (Sahih al-Bukhari 344)."),
                   ]),
                   SignSection("WHO SAW IT", [
                       .text("The woman stood and watched it done with her own water, and she was not a Muslim. What she told her people is the best witness in the story:"),
@@ -879,7 +879,7 @@ extension ProphetMiraclesView {
                       .hadith("bukhari:3584", cite: "Sahih al-Bukhari 3584", arabic: 55...93, english: 37...102),
                   ]),
                   SignSection("WHO HEARD IT", [
-                      .text("Those in the mosque heard it, and it is reported by several Companions, among them Jabir, Ibn 'Umar and Anas. Al-Hasan al-Basri used to weep at this hadith and say: a piece of wood yearns for the Messenger of Allah, and you have more right to yearn for him than it did."),
+                      .text("Those in the mosque heard it, and it is reported by several Companions, among them Jabir, Ibn 'Umar and Anas. Al-Hasan al-Basri used to weep at this hadith and say: a piece of wood yearns for the Messenger of Allah, and you have more right to yearn for him than it did (Ibn Kathir, al-Bidayah wa al-Nihayah, from al-Baghawi's narration)."),
                   ]),
               ]),
         .init(id: "stone-greeting", title: "The stone that greeted him",
@@ -943,7 +943,7 @@ extension ProphetMiraclesView {
                       .hadith("abudawud:2549", cite: "Sunan Abi Dawud 2549", arabic: 112...131, english: 132...164),
                   ]),
                   SignSection("WHY IT MATTERS", [
-                      .text("The sign is not left as a wonder; it is put to work at once as a rule. The animal is something Allah placed in the man's keeping, and its hunger and exhaustion are a matter of fearing Allah. The same concern runs through his teaching elsewhere: he told of a woman who entered the Fire over a cat she shut away and starved."),
+                      .text("The sign is not left as a wonder; it is put to work at once as a rule. The animal is something Allah placed in the man's keeping, and its hunger and exhaustion are a matter of fearing Allah. The same concern runs through his teaching elsewhere: he told of a woman who entered the Fire over a cat she shut away and starved (Sahih al-Bukhari 3482, Sahih Muslim 2242)."),
                   ]),
               ]),
         .init(id: "apostate-grave", title: "The grave that would not keep him",
@@ -1197,7 +1197,7 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("WHY IT IS HARD TO EXPLAIN AWAY", [
                       .text("The poison was real: a man who ate with him died of it. He named it at the meal, and the people who had prepared it confirmed it under questioning, giving their reason in their own words."),
-                      .text("He lived about four more years and completed his mission. Anas said the trace of the poison could still be seen in his mouth, and in his final illness he said he had felt its pain ever since."),
+                      .text("He lived about four more years and completed his mission. Anas said the trace of the poison could still be seen in his mouth (Sahih al-Bukhari 2617), and in his final illness he said he had felt its pain ever since (Sahih al-Bukhari 4428)."),
                   ]),
               ]),
         .init(id: "sees-behind", title: "He saw them from behind",

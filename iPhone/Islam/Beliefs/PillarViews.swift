@@ -15,7 +15,7 @@ struct GodPillarView: View {
 
                 Section(header: ArticleHeader("THE DOMINO EFFECT FRAMEWORK")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(verbatim: "The most honest way to approach truth is through a step-by-step method, what can be called the Domino Effect. Each answer leads logically to the next, and no step may be skipped:")
+                        Text(verbatim: "Every person is born knowing his Creator: the Prophet (peace and blessings be upon him) said every child is born upon the fitrah (Sahih al-Bukhari 1385), and the Quran's own argument is that creation could not have made itself (Quran 52:35). For the one whose fitrah has been clouded, a step-by-step method helps, what can be called the Domino Effect. Each answer leads logically to the next, and no step may be skipped:")
                             .font(.body)
                         Group {
                             ArticleBullet(verbatim: "• Does a higher power exist at all: something beyond the universe that brought it into being? This comes first. To ask whether God exists is already to assume a great deal about what that power is like.")
@@ -184,7 +184,7 @@ struct IslamPillarView: View {
                     ArticleStep("1. **Shahadah (شَهَادَة)**, from the root **sh-h-d (ش ه د)**, to witness or testify: the testimony of faith, “There is no god but Allah, and Muhammad is His Messenger.” You are not reporting an opinion; you are bearing witness. It is the foundation of a Muslim's faith.")
                     ArticleStep("2. **Salah (صَلَاة)**, from the root **s-l-w (ص ل و)**, to supplicate and to draw near: praying five times a day at prescribed times, a direct link between the believer and Allah.")
                     ArticleStep("3. **Zakah (زَكَاة)**, from the root **z-k-w (ز ك و)**, to purify and to grow: giving a portion of wealth to the needy (typically 2.5% of yearly savings). The word carries both meanings at once: wealth is purified by giving it away, and it grows by being purified.")
-                    ArticleStep("4. **Sawm (صَوم)**, from the root **s-w-m (ص و م)**, to abstain or hold back: fasting the month of **Ramadan (رَمَضَان)**, abstaining from food, drink, and sinful behavior from dawn to sunset, as spiritual reflection and self-discipline.")
+                    ArticleStep("4. **Sawm (صَوم)**, from the root **s-w-m (ص و م)**, to abstain or hold back: fasting the month of **Ramadan (رَمَضَان)**, abstaining from food, drink, and marital relations from dawn to sunset while guarding against sin, as spiritual reflection and self-discipline.")
                     ArticleStep("5. **Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)**, to set out with purpose toward something: pilgrimage to Makkah, a once-in-a-lifetime obligation for those physically and financially able, symbolizing unity and submission to Allah.")
                 }
 
@@ -280,7 +280,7 @@ struct MuslimPillarView: View {
                 }
 
                 Section(header: ArticleHeader("ALLAH KNOWS US BEST")) {
-                    Text(verbatim: "Before He calls us to worship Him, Allah reminds us that He created us, knows us completely, and is nearer to us than we imagine:")
+                    Text(verbatim: "Before He calls us to worship Him, Allah reminds us that He created us and knows even what our souls whisper. The scholars of tafsir explain the nearness in this verse as that of His angels, who record every word, or of His knowledge (Ibn Kathir, at this verse), while Allah Himself is above His Throne:")
                         .font(.body)
                     ScriptureQuote(quran: "50:16")
                     Text(verbatim: "Submission, then, is not to a stranger; it is to the Lord who made us and knows us better than we know ourselves.")
@@ -478,7 +478,7 @@ struct NamesOfAllahPillarView: View {
                     Text(verbatim: "The familiar numbered list of ninety-nine names, the one printed on posters and recited in songs, does not come from the narration in Bukhari and Muslim. Those two authentic reports state the count and the promise, and stop there.")
                         .font(.body)
 
-                    Text(articleMarkdown: "The enumerated list appears in **Jami at-Tirmidhi 3507**, and scholars of hadith grade that addition **daif (ضَعِيف)**, weak: Ahmad Shakir, al-Albani and Zubair Ali Zai all grade it so. The scholars, including at-Tirmidhi himself and later Ibn Taymiyyah and Ibn Hajar, held the enumeration to be the work of a narrator who gathered names from the Quran, not words the Prophet (peace and blessings be upon him) listed himself.")
+                    Text(articleMarkdown: "The enumerated list appears in **Jami at-Tirmidhi 3507**, and scholars of hadith grade that addition **daif (ضَعِيف)**, weak: Ahmad Shakir, al-Albani and Zubair Ali Zai all grade it so. At-Tirmidhi himself called the narration gharib and noted that the other routes of the hadith do not mention the names, and later scholars such as Ibn Taymiyyah and Ibn Hajar held the enumeration to be the work of a narrator who gathered names from the Quran, not words the Prophet (peace and blessings be upon him) listed himself.")
                         .font(.body)
 
                     Text(verbatim: "This is why different scholars' lists of the ninety-nine do not perfectly agree, and why some names on the common list are not found as names in the Quran at all. None of this touches the hadith itself, which is authentic. It only means that the exact roll of ninety-nine is a scholarly compilation, and is treated as one.")
@@ -581,7 +581,7 @@ struct QuranPillarView: View {
                 Section(header: ArticleHeader("UNIVERSAL MESSAGE")) {
                     Text(verbatim: "Unlike previous scriptures, which were sent to specific nations and for specific times, the Quran is meant for all of humanity, regardless of race, language, or geography. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(quran: "54:17")
+                    ScriptureQuote(quran: "25:1")
 
                     Text(verbatim: "The Quran’s universality and timeless guidance make it relevant to every generation, providing solutions to contemporary issues and inspiring billions of people worldwide.")
                         .font(.body)
@@ -947,7 +947,7 @@ struct HadithPillarView: View {
 
                 Section(header: ArticleHeader("RELATIONSHIP WITH THE QURAN")) {
                     Text(verbatim: "Hadiths are essential for interpreting and contextualizing the Quran. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(quran: "3:7", words: 0...12)
+                    ScriptureQuote(quran: "16:44")
 
                     Text(articleMarkdown: "While the Quran provides general principles, the Hadith clarifies how to implement these teachings. For example, the Quran commands Muslims to pray, and the Hadith describes how the Prophet (peace and blessings be upon him) performed **Salah (صَلَاة)**. He said:").font(.body)
                     ScriptureQuote(hadith: "bukhari:631", cite: "Sahih al-Bukhari 631", arabic: 73...76, english: 98...104)
@@ -985,7 +985,7 @@ struct HadithPillarView: View {
                     // builder reads too.
                     HadithGradeLadder()
 
-                    Text(articleMarkdown: "The highest rank of authentic hadith is known as **Muttafaqun Alayh (مُتَّفَق عَلَيه)**, meaning “agreed upon.“ These are hadiths narrated by both Imam Bukhari and Imam Muslim in their Sahih collections, indicating the highest level of authenticity.").font(.body)
+                    Text(articleMarkdown: "The highest rank of authentic hadith is known as **Muttafaqun Alayh (مُتَّفَق عَلَيه)**, meaning “agreed upon.” These are hadiths narrated by both Imam Bukhari and Imam Muslim in their Sahih collections, indicating the highest level of authenticity.").font(.body)
 
                     Text(verbatim: "This detailed grading system ensures that Muslims can confidently rely on the Hadiths as a source of guidance without the risk of fabricated or unreliable narrations.")
                         .font(.body)
@@ -1242,7 +1242,7 @@ struct SawmView: View {
                     ArticleStep(verbatim: "2. Travelers.")
                     ArticleStep(verbatim: "3. Pregnant or nursing women.")
                     ArticleStep(verbatim: "4. Women during menstruation.")
-                    Text(articleMarkdown: "Those exempted are required to make up the missed fasts later or pay **fidya (فِديَة)**, compensation, if they cannot fast.")
+                    Text(articleMarkdown: "Those who miss days for a passing reason make them up later; a woman in menstruation or postnatal bleeding must not fast, and makes the days up afterward. Someone who can never fast, such as the very elderly or the chronically ill with no hope of recovery, instead feeds a poor person for each day missed: the **fidya (فِديَة)**, compensation (Quran 2:184).")
                         .font(.body)
                 }
 
@@ -1383,12 +1383,12 @@ struct HajjView: View {
 
                 Section(header: ArticleHeader("RITUALS OF HAJJ")) {
                     Text(verbatim: "The key rituals of Hajj include:").font(.body)
-                    ArticleStep("1. **Ihram (إِحرَام)**: entering a state of purity and wearing special garments.")
+                    ArticleStep("1. **Ihram (إِحرَام)**: making the intention to enter the rites of Hajj, the sacred state in which certain things become forbidden, with men wearing two unstitched garments.")
                     ArticleStep("2. **Tawaf (طَوَاف)**: circling the Kaaba seven times in reverence.")
                     ArticleStep("3. **Sa'i (سَعي)**: walking between the hills of Safa and Marwah, commemorating Hajar’s (may Allah be pleased with her) search for water.")
                     ArticleStep("4. **Arafat (عَرَفَات)**: standing in prayer and supplication at the Plain of Arafat, seeking Allah’s forgiveness.")
                     ArticleStep("5. **Ramy al-Jamarat (رَمي الجَمَرَات)**: throwing pebbles at the pillars in Mina, symbolizing rejection of the devil’s temptations.")
-                    ArticleStep("6. **Qurbani (قُربَان)**: sacrificing an animal to commemorate Prophet Ibrahim’s (peace be upon him) willingness to sacrifice his son for Allah’s command.")
+                    ArticleStep("6. **Hady (هَدي)**: sacrificing an animal, owed by the pilgrim performing tamattu' or qiran (Quran 2:196), recalling Prophet Ibrahim’s (peace be upon him) willingness to sacrifice his son for Allah’s command.")
                     ArticleStep("7. **Tawaf al-Ifadah (طَوَاف الإِفَاضَة)**: the obligatory circumambulation of the Kaaba after the Day of Arafah, a pillar of Hajj. Before leaving Makkah the pilgrim also performs **Tawaf al-Wada' (طَوَاف الوَدَاع)**, the farewell tawaf.")
                 }
 
@@ -1445,7 +1445,7 @@ struct GodView: View {
                         .font(.body)
                     ArticleStep("1. **Tawhid al-Rububiyyah (تَوحِيد الرُّبُوبِيَّة)**, Oneness of Lordship: Believing that Allah alone is the Creator, Sustainer, and Manager of all that exists.")
                     ArticleStep("2. **Tawhid al-Uluhiyyah (تَوحِيد الأُلُوهِيَّة)**, Oneness of Worship: Worshiping Allah alone without associating partners with Him.")
-                    ArticleStep("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)**, Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distortion or anthropomorphism.")
+                    ArticleStep("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)**, Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distorting their meanings, denying them, asking how, or likening Him to His creation.")
                 }
 
                 Section(header: ArticleHeader("QURANIC EVIDENCE")) {
@@ -1496,7 +1496,7 @@ struct AngelsView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(hadith: "muslim:2996", cite: "Sahih Muslim 2996", arabic: 34...48, english: 0...6)
+                    ScriptureQuote(hadith: "muslim:2996", cite: "Sahih Muslim 2996; English from Riyad as-Salihin 1846", arabic: 34...48, text: "“Angels were created from light, jinns were created from a smokeless flame of fire, and 'Adam was created from that which you have been told.”")
                 }
 
                 Section(header: ArticleHeader("CHARACTERISTICS OF ANGELS")) {
@@ -1519,7 +1519,7 @@ struct AngelsView: View {
 
                     ArticleStep("2. **Mikail (مِيكَائِيل)**, Michael: Responsible for provisions, including rain and sustenance.")
 
-                    ArticleStep("3. **The Bearer of the Horn (صَاحِب الصُّور)**: the angel entrusted with the Trumpet, who will blow it to end the world and again for the resurrection (Sunan al-Tirmidhi 2431; graded sahih by al-Albani). The name “Israfil” is common in later works but is not established in the Quran or the authentic Sunnah.")
+                    ArticleStep("3. **The Bearer of the Horn (صَاحِب الصُّور)**: the angel entrusted with the Trumpet, who will blow it to end the world and again for the resurrection (Sunan al-Tirmidhi 2431; graded sahih by al-Albani). That he is Israfil is the well-known position, on which al-Halimi reported agreement (Ibn Hajar, Fath al-Bari, Book of ar-Riqaq), though the reports that name Israfil as the one who blows are not sound. Israfil himself is named in the night-prayer supplication of the Prophet (peace and blessings be upon him): “O Allah, Lord of Gabriel, and Michael, and Israfil” (Sahih Muslim 770).")
 
                     ArticleStep("4. **Malik (مَالِك)**: The guardian of Hellfire. Allah says:")
                     ScriptureQuote(quran: "43:77")
@@ -1548,7 +1548,7 @@ struct AngelsView: View {
                 }
 
                 Section(header: ArticleHeader("CONCLUSION")) {
-                    Text(verbatim: "Angels are integral to the Islamic understanding of the unseen world. Their obedience, dedication, and specific roles serve as a reminder of Allah’s omnipotence and meticulous care in organizing creation. Belief in angels strengthens a Muslim’s faith, instilling awe and awareness of the divine presence in all aspects of life.")
+                    Text(verbatim: "Angels are integral to the Islamic understanding of the unseen world. Their obedience, dedication, and specific roles serve as a reminder of Allah’s omnipotence and meticulous care in organizing creation. Belief in angels strengthens a Muslim’s faith, instilling awe of Allah and the awareness that He sees every deed and His angels record it.")
                         .font(.body)
                 }
 
@@ -1770,7 +1770,7 @@ struct ProphetsView: View {
                     Text(articleMarkdown: "Belief in the prophets is a pillar of **Iman (إِيمَان)**, faith. The Prophet Muhammad said:").font(.body)
                     ScriptureQuote(hadith: "muslim:8a", cite: "Sahih Muslim 8a", arabic: 273...284, english: 399...442)
 
-                    Text(verbatim: "Muslims respect and honor all prophets equally, as they all conveyed the same message: to worship Allah alone. Allah (Glorified and Exalted be He) says:").font(.body)
+                    Text(verbatim: "Muslims believe in every prophet without distinction, rejecting none of them, since they all conveyed the same message: to worship Allah alone. This does not make them equal in rank: Allah raised some above others (Quran 2:253), and Muhammad (peace and blessings be upon him) is the best of them. Allah (Glorified and Exalted be He) says:").font(.body)
                     ScriptureQuote(quran: "2:285", words: 0...13)
                 }
 
@@ -1940,7 +1940,7 @@ struct QadarView: View {
                     ScriptureQuote(quran: "22:70")
 
                     ArticleStep("3. **Allah’s Will, Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:")
-                    ScriptureQuote(quran: "3:54")
+                    ScriptureQuote(quran: "81:29")
 
                     ArticleStep("4. **Allah’s Creation, Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:")
                     ScriptureQuote(quran: "39:62")

@@ -1899,6 +1899,12 @@ struct MenuShortcut {
 struct ShortcutMenu<Content: View, Label: View>: View {
     var doubleTap: MenuShortcut? = nil
     var hold: MenuShortcut? = nil
+    /// The square the label fills while the shortcut layer draws it, for a toolbar item: that item is
+    /// not a button, so its glass takes the label's size plus the bar's 4 pt a side (36 makes the 44 pt
+    /// circle the gear beside it wears; 44 made a 52 x 44 ellipse, measured 2026-10-18). Never on the
+    /// native menu, whose toolbar button already sizes its glass: a 44 pt label inside it stretched the
+    /// Adhan tab's circle the same way.
+    var shortcutLabelSize: CGFloat? = nil
     @ViewBuilder let content: () -> Content
     @ViewBuilder let label: () -> Label
 
@@ -1926,6 +1932,11 @@ struct ShortcutMenu<Content: View, Label: View>: View {
         if #available(iOS 17.4, *), !voiceOverOn, !availability.isUnavailable,
            doubleTap != nil || hold != nil {
             label()
+                .frame(width: shortcutLabelSize, height: shortcutLabelSize)
+                .contentShape(Rectangle())
+                // A native menu tints its label; this one is drawn outside any button, so it says so
+                // (the ⋯ of every tab with a shortcut came out white beside the Adhan tab's accent one).
+                .foregroundStyle(.tint)
                 .opacity(isPressed ? 0.55 : 1)
                 .background(
                     SwiftUI.Menu { content() } label: { Color.clear }
@@ -2796,7 +2807,11 @@ struct SectionIconHeader: View {
     let title: String
     /// nil draws the bare title: `SectionPillHeader` without an icon.
     let icon: String?
-    /// Accent the title as well as the icon (the favorites style); false keeps the header gray.
+    /// Accent the title AND its icon; false keeps both the header's gray. The rule (Abu, 2026-10-18,
+    /// "make it consistent which ones are and which ones aren't"): a section that is YOURS is accent
+    /// (Your Summary, Favorites, Bookmarks, Saved Reflections, notes, Last Read, Khatm Progress, the
+    /// Prayer Tracker, Start Here, Need a Hand?); a catalog, a setting or a search result is gray. The
+    /// icon follows its title ("it looks weird with colored sf symbols and non colored text").
     var accentTitle = false
 
     init(_ title: String, icon: String?, accentTitle: Bool = false) {
@@ -2808,11 +2823,19 @@ struct SectionIconHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             if let icon {
-                Image(systemName: icon)
-                    .foregroundStyle(appearance.accent)
-                    // Decoration beside the title: VoiceOver read the symbol's own name as a heading
-                    // of its own ("Question Mark In A Filled Circle", "Bookmark") before the title.
-                    .accessibilityHidden(true)
+                // Unstyled when the title is: it then takes whatever the header gives its title
+                // (`.foreground` resolved to black, not the header's gray).
+                Group {
+                    if accentTitle {
+                        Image(systemName: icon)
+                            .foregroundStyle(appearance.accent)
+                    } else {
+                        Image(systemName: icon)
+                    }
+                }
+                // Decoration beside the title: VoiceOver read the symbol's own name as a heading
+                // of its own ("Question Mark In A Filled Circle", "Bookmark") before the title.
+                .accessibilityHidden(true)
             }
 
             // The heading trait said explicitly: a List hands it to the header's FIRST element, which
@@ -2836,7 +2859,8 @@ struct SectionPillHeader: View {
     let title: String
     let count: Int
     var icon: String? = nil
-    /// Accent the icon + title (the Quran favorites style); false keeps the standard header gray.
+    /// Accent the icon + title, for a section that is yours (`SectionIconHeader.accentTitle`'s rule);
+    /// false keeps both the standard header gray.
     var accentTitle: Bool = false
     var isExpanded: Binding<Bool>? = nil
     var onShuffle: (() -> Void)? = nil

@@ -319,8 +319,33 @@ def normalise_words(groups, where: str, problems: list[str]) -> list[dict]:
     return out
 
 
+def apply_corrections(chapters: list[dict], problems: list[str]) -> None:
+    """tajweed_foundations.CORRECTIONS: each `old` must sit in exactly one string of Tilawa's text."""
+    for old, new in foundations.CORRECTIONS:
+        hits = []
+
+        def walk(node, setter):
+            if isinstance(node, str):
+                if old in node:
+                    hits.append((node, setter))
+            elif isinstance(node, dict):
+                for key in node:
+                    walk(node[key], lambda value, n=node, k=key: n.__setitem__(k, value))
+            elif isinstance(node, list):
+                for index in range(len(node)):
+                    walk(node[index], lambda value, n=node, i=index: n.__setitem__(i, value))
+
+        walk(chapters, None)
+        if len(hits) != 1 or hits[0][0].count(old) != 1:
+            problems.append(f"foundations: correction {old[:60]!r} matches {len(hits)} Tilawa strings (needs exactly one)")
+            continue
+        text, setter = hits[0]
+        setter(text.replace(old, new))
+
+
 def apply_foundations(chapters: list[dict], problems: list[str]) -> dict:
     """Fold tajweed_foundations.py into the evaluated chapters, in place."""
+    apply_corrections(chapters, problems)
     by_id = {chapter["id"]: chapter for chapter in chapters}
     for cid, edit in foundations.CHAPTERS.items():
         if cid in by_id:

@@ -217,12 +217,12 @@ enum QiraatProfiles {
             city: "Madinah", bornAH: nil, diedAH: 130, diedCE: 748,
             summary: "The senior Madinan reader, and Nafi's own teacher.",
             paragraphs: [
-                "Abu Ja'far was among the senior Successors (tabi'in) of Madinah and the earliest of the ten imams to die. He learned from Companions of the Prophet (peace and blessings be upon him) directly, and taught in the Prophet's Mosque for decades.",
+                "Abu Ja'far was among the senior Successors (tabi'in) of Madinah and one of the earliest of the ten imams. He learned from Companions of the Prophet (peace and blessings be upon him) directly, and taught in the Prophet's Mosque for decades.",
                 "He is the teacher of Nafi al-Madani, which places him a generation above most of the ten: the Madinan reading that later spread through Qalun and Warsh was shaped by what Abu Ja'far taught. His own reading was added to the canonical ten by Ibn al-Jazari alongside Ya'qub and Khalaf.",
                 "He was known for his piety as much as his recitation, and the reports about him dwell on how carefully he held to what he had been taught rather than on any innovation of his own.",
             ],
             hallmarks: [
-                "The oldest of the ten readings by generation.",
+                "Among the oldest of the ten readings by generation.",
                 "Distinctive treatment of the hamzah and of the letters at the openings of surahs.",
             ],
             companions: "Transmitted from Zayd ibn Thabit, Ubayy ibn Ka'b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).",
@@ -236,7 +236,7 @@ enum QiraatProfiles {
             summary: "Imam of Basra, and one of the founders of Arabic grammar.",
             paragraphs: [
                 "Abu Amr was born in Makkah and settled in Basra, where he became both the imam of recitation and one of the founding figures of the Basran school of Arabic grammar. That double authority is why his reading is so often cited in discussions of Arabic usage as well as of recitation.",
-                "He was famous for the breadth of his study: he is reported to have said that what he memorised would fill a house, and he travelled widely to read on the Successors. His students Yahya al-Yazidi and then ad-Duri and as-Susi carried the reading forward.",
+                "He was famous for the breadth of his study: his notebooks are reported to have filled a house to the ceiling before he turned to worship and burned them, and he travelled widely to read on the Successors. His students Yahya al-Yazidi and then ad-Duri and as-Susi carried the reading forward.",
                 "Both of his canonical narrators read on al-Yazidi rather than on Abu Amr himself, so the riwayat of ad-Duri and as-Susi meet one generation below the imam.",
             ],
             hallmarks: [
@@ -523,9 +523,9 @@ enum QiraatProfiles {
             id: Settings.Riwayah.hisham, name: "Hisham", arabic: "هِشَام",
             fullName: "Abu al-Walid Hisham ibn Ammar ad-Dimashqi",
             masterID: Settings.Riwayah.ibnAmirTeacher, city: "Damascus", bornAH: 153, diedAH: 245,
-            summary: "Preacher, judge and imam of the Umayyad Mosque in Damascus.",
+            summary: "Khatib, mufti and teacher of recitation in Damascus.",
             paragraphs: [
-                "Hisham ibn Ammar was the khatib of Damascus and later its judge, as well as a hadith scholar of standing. He received the Damascene reading through the chain from Ibn Amir and taught it in the Umayyad Mosque.",
+                "Hisham ibn Ammar was the khatib of Damascus and its mufti, as well as a hadith scholar of standing from whom al-Bukhari narrates. He received the Damascene reading through the chain from Ibn Amir and taught it in the Umayyad Mosque.",
                 "He and Ibn Dhakwan are the two narrators through whom the reading of Sham survived, at a distance of roughly a century from the imam himself.",
             ],
             hallmarks: [
@@ -613,7 +613,7 @@ enum QiraatProfiles {
             summary: "A Madinan who read on both Abu Ja'far and Nafi.",
             paragraphs: [
                 "Ibn Wardan read on Abu Ja'far and also on Nafi, which places him inside both Madinan traditions. He is counted the first of Abu Ja'far's two narrators.",
-                "He died a generation before most of the other narrators of the twenty, which is consistent with Abu Ja'far being the earliest of the ten imams.",
+                "He died a generation before most of the other narrators of the twenty, which is consistent with Abu Ja'far being among the earliest of the ten imams.",
             ],
             hallmarks: [
                 "Preserves the older Madinan practice Abu Ja'far taught.",

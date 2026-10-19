@@ -2744,7 +2744,7 @@ struct SurahView: View {
                             }
                         }
                     } header: {
-                        SectionPillHeader(title: "AI MATCHES", count: surahAIHits.count, icon: "sparkles", accentTitle: true)
+                        SectionPillHeader(title: "AI MATCHES", count: surahAIHits.count, icon: "sparkles")
                     }
                 }
                 #endif
@@ -3204,7 +3204,7 @@ struct SurahView: View {
                     .padding(.vertical, 4)
                 }
             } header: {
-                Text("KHATM PROGRESS")
+                SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered", accentTitle: true)
             }
             .onReceive(settings.objectWillChange) { _ in computeKhatmOverviewIfNeeded(force: false) }
             .id(Self.khatmTopAnchorID)

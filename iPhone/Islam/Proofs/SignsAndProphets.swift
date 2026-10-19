@@ -411,7 +411,7 @@ struct StrongestSection<Item: Identifiable, Row: View>: View {
     var body: some View {
         if !items.isEmpty {
             Section(
-                header: SectionPillHeader(title: "STRONGEST", count: items.count, icon: "star.fill", accentTitle: true),
+                header: SectionPillHeader(title: "STRONGEST", count: items.count, icon: "star.fill"),
                 footer: Text(footer)
             ) {
                 ForEach(showAll ? items : Array(items.prefix(Self.collapsedCount))) { item in
@@ -511,7 +511,7 @@ enum ProphetSignsIndex {
         .init(id: "ProphetHarunView", name: "Harun", arabic: "\u{0647}\u{064E}\u{0627}\u{0631}\u{064F}\u{0648}\u{0646}",
               miracleEntries: ["musa-staff-hand", "musa-sea"], signs: "Beside his brother before Pharaoh and at the sea"),
         .init(id: "ProphetDawudView", name: "Dawud", arabic: "\u{062F}\u{064E}\u{0627}\u{0648}\u{064F}\u{0648}\u{062F}",
-              miracleEntries: ["dawud-iron"], signs: "Iron softened in his hands; the mountains echoing him"),
+              miracleEntries: ["dawud-iron"], signs: "Iron softened in his hands; the mountains glorifying Allah with him"),
         .init(id: "ProphetSulaymanView", name: "Sulayman", arabic: "\u{0633}\u{064F}\u{0644}\u{064E}\u{064A}\u{0645}\u{064E}\u{0627}\u{0646}",
               miracleEntries: ["sulayman-wind-jinn", "sulayman-ant-hoopoe", "sheba-throne"],
               signs: "The wind, the jinn, the speech of birds and ants, the throne of Sheba"),

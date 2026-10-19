@@ -418,8 +418,8 @@ private struct TrackerProgressRing: View {
 private struct TrackerPrayerToggle: View {
     @ObservedObject private var settings = Settings.shared
     /// Observed for the time gate only: `LiveState` republishes when a prayer window rolls over, which
-    /// is exactly the moment a slot becomes markable under `trackerRequiresPrayerTime`. Without it the
-    /// circle would stay inert until something else happened to redraw it.
+    /// is exactly the moment a slot becomes markable (`canMarkPrayer`). Without it the circle would
+    /// stay inert until something else happened to redraw it.
     @ObservedObject private var live = LiveState.shared
 
     let prayer: Prayer
@@ -551,7 +551,7 @@ struct PrayerTrackerSection: View {
 
     private var header: some View {
         HStack {
-            SectionIconHeader("PRAYER TRACKER", icon: "checkmark.circle.fill")
+            SectionIconHeader("PRAYER TRACKER", icon: "checkmark.circle.fill", accentTitle: true)
 
             Spacer()
 
@@ -680,7 +680,6 @@ struct PrayerTrackerView: View {
             statsSection
             historySection
             mensesSection
-            settingsSection
             guidanceSection
         }
         .environment(\.defaultMinListRowHeight, 1)
@@ -1294,10 +1293,9 @@ struct PrayerTrackerView: View {
     /// Whether `prayerName`'s time has come on `date`, for the week grid - which, unlike every other
     /// marking surface, holds only a name and a `DayRecord` and so has to look the time up.
     ///
-    /// Cheap in the common cases: the setting off, or any day but today, answers without a lookup. Only
-    /// today's row consults the slots, and those come from the already-decoded `prayers`.
+    /// Cheap in the common case: any day but today answers without a lookup. Only today's row
+    /// consults the slots, and those come from the already-decoded `prayers`.
     private func hasPrayerBegun(_ prayerName: String, on date: Date) -> Bool {
-        guard settings.trackerRequiresPrayerTime else { return true }
         guard calendar.isDateInToday(date) else { return true }
         // By coverage: on a Friday the Dhuhr row's slot is "Jumuah", and while traveling it is
         // "Dhuhr/Asr". Matched by name, neither was found and the row could be marked before its time.
@@ -1640,33 +1638,18 @@ struct PrayerTrackerView: View {
 
     // MARK: Guidance
 
-    /// The tracker's own settings, on the tracker (Abu, 2026-09-18: "move it to inside the actual
-    /// prayer tracker, not in settings"). It used to be a PRAYER TRACKER section under Prayer
-    /// Settings, two screens away from the rows it governs; the Settings search still finds it and
-    /// now lands here. `MoreNotificationView` is reached from `guidanceSection` below on the same
-    /// reasoning.
-    private var settingsSection: some View {
-        Section(header: Text("SETTINGS")) {
-            VStack(alignment: .leading) {
-                Toggle("Mark Only After the Time Begins", isOn: $settings.trackerRequiresPrayerTime.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.trackerRequiresPrayerTime) { _ in settings.hapticFeedback() }
-
-                Text("A prayer can only be marked once its time has come in, so the row shows what is still left to pray. Off, the whole day can be marked at any time. Past days can always be filled in either way.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
-        }
-    }
-
+    /// No SETTINGS section any more: "Mark Only After the Time Begins" was the tracker's one switch,
+    /// and since 2026-10-19 it is simply how the tracker works (the lock row below says so).
+    /// `MoreNotificationView` is reached from here on the same reasoning that once put the switch
+    /// here (Abu, 2026-09-18: the tracker's controls live on the tracker).
     private var guidanceSection: some View {
         Section(header: Text("GOOD TO KNOW")) {
             VStack(alignment: .leading, spacing: 12) {
                 guidanceRow(symbol: "hand.tap",
                             text: "Tap a prayer to mark it prayed on time, and tap again to clear it. Press and hold to record it as prayed late or missed; the Day view offers all three directly.")
+
+                guidanceRow(symbol: "lock",
+                            text: "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in here.")
 
                 guidanceRow(symbol: "person.3",
                             text: "Jumuah (Friday prayer) counts as Dhuhr; marking either one covers that day's noon prayer.")

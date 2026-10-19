@@ -4,12 +4,13 @@ import UniformTypeIdentifiers
 
 // MARK: - The welcome offer (a root stage, after About You)
 
-/// "Save your progress to iCloud?": one screen, once, right after the About You welcome
-/// (Docs/Engineering/iCloud Sync Guide.md, section 8). Optional; "Not Now" is never asked again, the page in
-/// Settings takes over from there. A stage and not a sheet for the reason About You is one: every
-/// launch prompt waits behind it instead of racing it.
+/// "Save your progress to iCloud?": one screen, once, right after the welcome (Docs/Engineering/iCloud
+/// Sync Guide.md, section 8). Optional; "Skip" (Not Now until 2026-10-19) is never asked again, the page
+/// in Settings takes over from there. A stage and not a sheet for the reason About You is one: every
+/// launch prompt waits behind it instead of racing it. On a new install it reads as the last page of the
+/// welcome (SplashScreen.swift), which fades onto it.
 ///
-/// Three states, one screen: no iCloud account (explains, offers Not Now), an account with no
+/// Three states, one screen: no iCloud account (explains, offers Continue), an account with no
 /// profiles yet (name this device, start), an account with profiles already in it (pick one to
 /// restore onto this device, or start a new one).
 struct CloudOfferView: View {
@@ -195,40 +196,23 @@ struct CloudOfferView: View {
         checked && manager.accountAvailable == true && !working && manager.profiles.count < CloudBackupManager.maxProfiles
     }
 
+    /// The welcome's bar (WelcomePages.swift): Save (or Start a New Backup) with Skip under it, or
+    /// Continue and Skip when there is no iCloud account to save to (every welcome page has a Skip).
+    @ViewBuilder
     private var actions: some View {
-        VStack(spacing: 10) {
-            if manager.accountAvailable != false {
-                Button {
-                    settings.hapticFeedback()
-                    start()
-                } label: {
-                    HStack(spacing: 8) {
-                        if working { ProgressView().tint(.primary) }
-                        Text(working ? "Saving..." : (manager.profiles.isEmpty ? "Save to iCloud" : "Start a New Backup"))
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                }
-                .conditionalGlassEffect(rectangle: true, useColor: 0.38, customTint: AppIdentifiers.mainColor.color)
-                .disabled(!canStart)
-                .opacity(canStart ? 1 : 0.5)
-            }
-
-            Button {
-                settings.hapticFeedback()
-                finish()
-            } label: {
-                Text(manager.accountAvailable == false ? "Continue" : "Not Now")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 16)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(working)
+        if manager.accountAvailable == false {
+            WelcomeActionBar(primaryTitle: "Continue", primaryAction: finish,
+                             secondaryTitle: "Skip", secondaryIdentifier: "welcomeSkip", secondaryAction: finish)
+        } else {
+            WelcomeActionBar(
+                primaryTitle: working ? "Saving..." : (manager.profiles.isEmpty ? "Save to iCloud" : "Start a New Backup"),
+                primaryEnabled: canStart || working,
+                primaryBusy: working,
+                primaryAction: start,
+                secondaryTitle: "Skip",
+                secondaryIdentifier: "welcomeSkip",
+                secondaryAction: finish
+            )
         }
     }
 

@@ -697,7 +697,7 @@ struct QiraatIsnadSection: View {
         } header: {
             Text("THE CHAIN TO THE PROPHET ﷺ")
         } footer: {
-            Text("From the Prophet ﷺ down through the Companions and the Successors who taught the imam to the imam himself, where the chain divides: his two narrators side by side, each with the link between them where there is one, and the students who carried each narration on. The isnad as the classical record gives it (al-Nashr, Ghayat al-Nihayah, and the turuq of al-Shatibiyyah and al-Durrah).")
+            Text("From the Prophet ﷺ down through the Companions and the imam's own teachers (for the later imams, the generations between those teachers and the Companions are not drawn) to the imam himself, where the chain divides: his two narrators side by side, each with the link between them where there is one, and the students who carried each narration on. The isnad as the classical record gives it (al-Nashr, Ghayat al-Nihayah, and the turuq of al-Shatibiyyah and al-Durrah).")
         }
     }
 
@@ -751,7 +751,7 @@ struct QiraatIsnadIndexView: View {
         List {
             Group {
                 Section {
-                    Text("Every one of the ten readings reaches the Prophet ﷺ through an unbroken chain: the narrator read on the imam (or on his students), the imam read on the Successors, the Successors on the Companions, and the Companions on the Prophet ﷺ himself. Tap a reading for its chain, or a narrator for his.")
+                    Text("Every one of the ten readings reaches the Prophet ﷺ through an unbroken chain: the narrator read on the imam (or on his students), the imam read on his teachers, they on theirs back to the Successors, the Successors on the Companions, and the Companions on the Prophet ﷺ himself. For the later imams the diagram shows the imam's own teachers and then the Companions, without the generation or two between them. Tap a reading for its chain, or a narrator for his.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

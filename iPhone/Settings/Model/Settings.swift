@@ -1679,14 +1679,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { bumpTrackerGeneration() }
     }
 
-    /// Gates the tracker to prayers whose time has actually begun. Off by default: the tracker has
-    /// always let you mark the whole day at once, and people who tick the five off in one sitting in
-    /// the evening are using it exactly as designed. On, a slot stays inert until its adhan, so the
-    /// row reads as "what is left to pray" rather than "what is left to tick".
-    ///
-    /// Today only. Past days stay fully editable - the whole point of the history views is filling in
-    /// what you forgot to mark at the time - and future days are already blocked a day at a time.
-    @AppStorage("trackerRequiresPrayerTime") var trackerRequiresPrayerTime: Bool = false
+    // No "Mark Only After the Time Begins" switch any more (2026-10-19): a slot waits for its adhan
+    // on every tracker, see `canMarkPrayer`. The old `trackerRequiresPrayerTime` default is simply
+    // no longer read.
 
     // MARK: - [Al-Adhan] Prayer - live state & hijri (app-storage persistence)
 
@@ -1928,8 +1923,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // notification with the system sound - a plain alert for Dhuhr at work, the full adhan for Maghrib.
     // Independent of `notification*` (which silences the prayer entirely) and of `shortAdhan*` (which picks
     // the clip once you've decided you do want one).
-    /// When true, the IN-APP adhan (the foreground player) uses a playback session that sounds even with
-    /// the ringer switch on silent. Off by default: silent mode silences the in-app adhan like any app.
+    /// Whether the IN-APP adhan (the foreground player) starts BY ITSELF when the app is open at prayer
+    /// time, or opened within five minutes of it. Off: the app only ever offers a Play button for it
+    /// (Abu, 2026-10-19). The notification outside the app is unaffected either way.
+    @AppStorage("adhanAutoPlayInApp") var adhanAutoPlayInApp: Bool = true
+
+    /// When true, the in-app adhan treats a silenced phone as audible: it plays through Silent Mode on
+    /// a `.playback` session. Off by default: the player reads Silent Mode first (`SilentSwitch`) and
+    /// offers a Play button instead of sounding on a silenced phone.
     @AppStorage("adhanOverridesSilentMode") var adhanOverridesSilentMode: Bool = false
 
     @AppStorage("adhanSoundFajr") var adhanSoundFajr: Bool = true {
@@ -3189,6 +3190,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set { gridModeIslamRaw = newValue ? 1 : 0 }
     }
 
+    /// The Islam tab's resources split into subject sections (Learn, Remembrance, Tools, Faith & Practice,
+    /// Signs & Proofs, Ask AI), or all of them in one ISLAMIC RESOURCES section, the default (Abu,
+    /// 2026-10-18: "add an option to not group for islamic resources ... make that default where it is
+    /// one section"). The ⋯ More menu switches it.
+    @AppStorage("islamGroupResources") var islamGroupResources: Bool = false
+
     var settingsGridMode: Bool {
         get { gridModeSettingsRaw != 0 }
         set { gridModeSettingsRaw = newValue ? 1 : 0 }
@@ -3831,8 +3838,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         case prayerCalculation
         /// Notification Settings, the notifications root (alert tone, silent-mode adhan, date reminder).
         case notifications
-        /// Prayer Notifications (each prayer's own switch and prenotification time).
-        case prayerNotifications
         /// Nagging Mode (repeat interval, last calls, per-prayer starts, its own tone and wording).
         case naggingMode
         /// Al-Quran → Recitation (what happens after a surah ends).

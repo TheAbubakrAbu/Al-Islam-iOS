@@ -1,15 +1,19 @@
 import XCTest
 @testable import iPhone
 
-/// The adhan catch-up, after 2026-10-06: the window is five minutes, and inside it the override
-/// decides whether the adhan PLAYS or is merely OFFERED.
+/// The in-app adhan's one decision, after 2026-10-19: look at Silent Mode. Audible, the adhan PLAYS;
+/// silenced, it is OFFERED as a Play button, unless "Play In-App Adhan in Silent Mode" treats the phone
+/// as audible. "Play Automatically" off always offers. A tap on the offer always sounds, through Silent
+/// Mode. And the moment is spent only by a recording that actually begins.
 ///
-/// The bug these hold the line on: "Play In-App Adhan in Silent Mode" makes the in-app recording
-/// ignore the ringer switch, and the catch-up auto-played on activation - so unlocking the phone a
-/// couple of minutes after Dhuhr filled a classroom at full volume (Abu, 2026-10-06). iOS exposes no
-/// API for the ringer switch, so the loud case cannot be detected; it can only be made deliberate.
-/// With the override ON nothing sounds without a tap. With it OFF the catch-up still auto-plays,
-/// because `.ambient` obeys the switch and cannot be loud on a silenced phone.
+/// The bug these hold the line on: with the override off the adhan used to start on `.ambient` without
+/// looking, so a silenced phone ran a three-minute recording inaudibly under an ADHAN PLAYING banner,
+/// and because that muted start spent the moment, the Play button (after flipping the override on)
+/// found nothing left to play (Abu, 2026-10-19).
+///
+/// The switch is faked (`SilentSwitch.debugOverride`) and the missed prayer is injected
+/// (`ForegroundAdhanPlayer.debugMissedAdhan`), so every test runs at any time of day against a phone
+/// in the state it names. The real probe is exercised once, for shape only: the simulator has no switch.
 @MainActor
 final class AdhanCatchUpOfferTests: XCTestCase {
 
@@ -24,10 +28,14 @@ final class AdhanCatchUpOfferTests: XCTestCase {
     /// device actually had (2026-10-08).
     private static var savedLocation: Location?
     private static var savedOverride = false
+    private static var savedAutoPlay = true
     private static var savedSound = ""
     private static var savedTravelAutomatic = false
     private static var savedTravelingMode = false
+    private static var savedMoment: String?
     private static var saved = false
+
+    private static let momentKey = "foregroundAdhanLastPlayedMoment"
 
     override func setUp() async throws {
         try await super.setUp()
@@ -35,9 +43,11 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         if !Self.saved {
             Self.savedLocation = settings.currentLocation
             Self.savedOverride = settings.adhanOverridesSilentMode
+            Self.savedAutoPlay = settings.adhanAutoPlayInApp
             Self.savedSound = settings.adhanNotificationSound
             Self.savedTravelAutomatic = settings.travelAutomatic
             Self.savedTravelingMode = settings.travelingMode
+            Self.savedMoment = UserDefaults.standard.string(forKey: Self.momentKey)
             Self.saved = true
         }
         settings.currentLocation = mecca
@@ -49,30 +59,68 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         // These tests are about the catch-up window, not about Qasr: pin the full five.
         settings.travelAutomatic = false
         settings.travelingMode = false
-        // The host app shares this player, and inside the five minutes after a prayer its own activation
-        // catch-up has started the adhan by the time the suite runs (16:41 on 2026-10-11: both
-        // `isPlaying` assertions failed with nothing of the tests' playing). Quiet it first; no test
-        // here is about an adhan the host began, and the fade clears `playingPrayerName` within half a second.
+        // A real recording, so the decision has something to play or offer ("Default" short-circuits
+        // every path before the decision is reached).
+        settings.adhanNotificationSound = "minshawi-2"
+        settings.adhanAutoPlayInApp = true
+        settings.adhanOverridesSilentMode = false
+        SilentSwitch.debugOverride = nil
+        ForegroundAdhanPlayer.debugMissedAdhan = nil
+        await quietThePlayer()
+    }
+
+    override func tearDown() async throws {
+        await quietThePlayer()
+        let settings = Settings.shared
+        settings.currentLocation = Self.savedLocation
+        settings.adhanOverridesSilentMode = Self.savedOverride
+        settings.adhanAutoPlayInApp = Self.savedAutoPlay
+        settings.adhanNotificationSound = Self.savedSound
+        settings.travelAutomatic = Self.savedTravelAutomatic
+        settings.travelingMode = Self.savedTravelingMode
+        UserDefaults.standard.set(Self.savedMoment, forKey: Self.momentKey)
+        SilentSwitch.debugOverride = nil
+        ForegroundAdhanPlayer.debugMissedAdhan = nil
+        try await super.tearDown()
+    }
+
+    /// The host app shares this player, and inside the five minutes after a prayer its own activation
+    /// catch-up may have started the adhan by the time the suite runs. Quiet it first; no test here is
+    /// about an adhan the host began, and the fade clears `playingPrayerName` within half a second.
+    private func quietThePlayer() async {
         let player = ForegroundAdhanPlayer.shared
-        player.clearPendingOffer()
+        player.stop()
         if player.isPlaying {
             player.stopAdhan()
             let deadline = Date().addingTimeInterval(3)
             while player.isPlaying, Date() < deadline {
-                try await Task.sleep(nanoseconds: 50_000_000)
+                try? await Task.sleep(nanoseconds: 50_000_000)
             }
         }
     }
 
-    override func tearDown() async throws {
-        let settings = Settings.shared
-        settings.currentLocation = Self.savedLocation
-        settings.adhanOverridesSilentMode = Self.savedOverride
-        settings.adhanNotificationSound = Self.savedSound
-        settings.travelAutomatic = Self.savedTravelAutomatic
-        settings.travelingMode = Self.savedTravelingMode
-        ForegroundAdhanPlayer.shared.clearPendingOffer()
-        try await super.tearDown()
+    /// A Dhuhr whose moment passed a minute ago: inside the window, and never the moment last played.
+    private func injectMissedDhuhr() -> ForegroundAdhanPlayer.Target {
+        let target: ForegroundAdhanPlayer.Target = (
+            date: Date().addingTimeInterval(-60),
+            name: "Dhuhr",
+            notificationID: "Dhuhr-test-\(UUID().uuidString)"
+        )
+        ForegroundAdhanPlayer.debugMissedAdhan = target
+        UserDefaults.standard.removeObject(forKey: Self.momentKey)
+        return target
+    }
+
+    private func momentKey(_ target: ForegroundAdhanPlayer.Target) -> String {
+        "\(target.name)@\(Int(target.date.timeIntervalSince1970 / 60))"
+    }
+
+    /// Waits for the decision, which runs off the main thread (the probe, the session activation).
+    private func settle(until condition: @MainActor () -> Bool, seconds: TimeInterval = 4) async {
+        let deadline = Date().addingTimeInterval(seconds)
+        while !condition(), Date() < deadline {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
     }
 
     // MARK: The window
@@ -126,20 +174,71 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         }
     }
 
-    // MARK: The offer state machine
+    // MARK: The decision
 
-    /// With the override ON a missed adhan is offered, never started: nothing is playing afterwards.
-    func testOverrideOnOffersInsteadOfPlaying() {
-        let settings = Settings.shared
-        settings.adhanOverridesSilentMode = true
+    /// A silenced phone gets a Play button, never a muted recording: nothing plays, the offer says why,
+    /// and the moment is NOT spent, so the button still has something to play.
+    func testSilencedPhoneOffersInsteadOfPlaying() async {
+        SilentSwitch.debugOverride = .muted
+        let target = injectMissedDhuhr()
         let player = ForegroundAdhanPlayer.shared
 
         player.playMissedAdhan()
+        await settle { player.pendingPrayerName != nil || player.isPlaying }
 
-        XCTAssertFalse(player.isPlaying, "the loud path must never start without a tap")
-        if player.pendingPrayerName != nil {
-            XCTAssertNil(player.playingPrayerName)
-        }
+        XCTAssertFalse(player.isPlaying, "a silenced phone must never start the recording")
+        XCTAssertEqual(player.pendingPrayerName, "Dhuhr")
+        XCTAssertEqual(player.pendingReason, .silenced)
+        XCTAssertNotEqual(UserDefaults.standard.string(forKey: Self.momentKey), momentKey(target),
+                          "an offer must not spend the moment")
+    }
+
+    /// "Play Automatically" off always offers, whatever the switch says, and the offer says so.
+    func testAutoPlayOffOffersInsteadOfPlaying() async {
+        Settings.shared.adhanAutoPlayInApp = false
+        SilentSwitch.debugOverride = .audible
+        _ = injectMissedDhuhr()
+        let player = ForegroundAdhanPlayer.shared
+
+        player.playMissedAdhan()
+        await settle { player.pendingPrayerName != nil || player.isPlaying }
+
+        XCTAssertFalse(player.isPlaying, "with Play Automatically off nothing starts by itself")
+        XCTAssertEqual(player.pendingPrayerName, "Dhuhr")
+        XCTAssertEqual(player.pendingReason, .manual)
+    }
+
+    /// "Play In-App Adhan in Silent Mode" treats a silenced phone as audible: the adhan plays, no offer.
+    func testOverrideTreatsASilencedPhoneAsAudible() async {
+        Settings.shared.adhanOverridesSilentMode = true
+        SilentSwitch.debugOverride = .muted
+        _ = injectMissedDhuhr()
+        let player = ForegroundAdhanPlayer.shared
+
+        player.playMissedAdhan()
+        await settle { player.isPlaying || player.pendingPrayerName != nil }
+
+        XCTAssertNil(player.pendingPrayerName, "the override plays through Silent Mode, it does not offer")
+        XCTAssertTrue(player.isPlaying, "the override starts the recording on a silenced phone")
+    }
+
+    /// A tap on the offer sounds the adhan through Silent Mode, and only then is the moment spent.
+    func testTappingTheOfferPlaysAndSpendsTheMoment() async {
+        SilentSwitch.debugOverride = .muted
+        let target = injectMissedDhuhr()
+        let player = ForegroundAdhanPlayer.shared
+
+        player.playMissedAdhan()
+        await settle { player.pendingPrayerName != nil }
+        XCTAssertEqual(player.pendingPrayerName, "Dhuhr")
+
+        player.playOfferedAdhan()
+        await settle { player.isPlaying && UserDefaults.standard.string(forKey: Self.momentKey) != nil }
+
+        XCTAssertNil(player.pendingPrayerName, "the offer is spent once tapped")
+        XCTAssertTrue(player.isPlaying, "a tap sounds the adhan on a silenced phone")
+        XCTAssertEqual(UserDefaults.standard.string(forKey: Self.momentKey), momentKey(target),
+                       "a recording that began spends the moment")
     }
 
     /// An offer is retired by backgrounding, and not by being looked at. `stop()` is the app leaving
@@ -152,16 +251,7 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         player.stop()
 
         XCTAssertNil(player.pendingPrayerName, "an offer must not survive backgrounding")
-    }
-
-    /// Tapping the offer takes it away, so the button cannot be tapped twice for the same adhan.
-    func testPlayingTheOfferClearsIt() {
-        let player = ForegroundAdhanPlayer.shared
-        player.debugSetPending("Asr")
-
-        player.playOfferedAdhan()
-
-        XCTAssertNil(player.pendingPrayerName, "the offer is spent once tapped")
+        XCTAssertNil(player.pendingReason)
     }
 
     /// An expired offer plays nothing. The window is checked at the moment of the tap, not only when
@@ -176,17 +266,32 @@ final class AdhanCatchUpOfferTests: XCTestCase {
         XCTAssertFalse(player.isPlaying, "an expired offer must not start the adhan")
     }
 
+    // MARK: The probe
+
+    /// The real probe answers, and answers promptly. The simulator has no switch, so only the SHAPE is
+    /// asserted: a verdict within the timeout, never a hang.
+    func testTheSilentSwitchProbeAnswers() async {
+        SilentSwitch.debugOverride = nil
+        let started = Date()
+        let state = await SilentSwitch.probe()
+        XCTAssertLessThan(Date().timeIntervalSince(started), 3, "the probe must not hang the adhan")
+        XCTAssertTrue([.muted, .audible, .unknown].contains(state))
+    }
+
     // MARK: The banner
 
-    /// The banner follows the adhan, and a dismissal applies only to the adhan it was made for: the
-    /// next one banners again. Dismissing never stops the audio, which is why the footer control stays.
-    func testBannerDismissalIsPerAdhan() {
+    /// The banner follows the player's key, and a dismissal applies only to the state it was made for:
+    /// hiding the Play offer never hides the PLAYING card that follows a tap, and the next adhan banners
+    /// again. Dismissing never stops the audio, which is why the footer control stays.
+    func testBannerDismissalIsPerState() {
         let presenter = AdhanBannerPresenter.shared
 
-        XCTAssertTrue(presenter.shouldShow(playing: "Fajr", dismissed: nil))
-        XCTAssertFalse(presenter.shouldShow(playing: "Fajr", dismissed: "Fajr"))
-        XCTAssertTrue(presenter.shouldShow(playing: "Dhuhr", dismissed: "Fajr"),
+        XCTAssertTrue(presenter.shouldShow(key: "playing:Fajr", dismissed: nil))
+        XCTAssertFalse(presenter.shouldShow(key: "playing:Fajr", dismissed: "playing:Fajr"))
+        XCTAssertTrue(presenter.shouldShow(key: "playing:Dhuhr", dismissed: "pending:Dhuhr"),
+                      "dismissing the offer must not hide the adhan that then plays")
+        XCTAssertTrue(presenter.shouldShow(key: "playing:Dhuhr", dismissed: "playing:Fajr"),
                       "a dismissal must not silence the next adhan's banner")
-        XCTAssertFalse(presenter.shouldShow(playing: nil, dismissed: nil))
+        XCTAssertFalse(presenter.shouldShow(key: nil, dismissed: nil))
     }
 }

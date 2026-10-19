@@ -26,7 +26,7 @@ struct LockScreen2EntryView: View {
                 }
 
                 Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
-                    .font(.caption2)
+                    .font(.caption)
 
                 // How far through the current prayer's window we are, filling live from its start to
                 // the next prayer's time.
@@ -37,15 +37,16 @@ struct LockScreen2EntryView: View {
                     tint: .primary
                 )
 
-                // The city is context, not the message - kept small and dimmed so the next prayer's
-                // line above stays the row the eye lands on.
+                // The city is context, not the message: a size under caption2 and dimmed, so the
+                // lines above get the height (Abu, 2026-10-18: "make the city a little smaller so
+                // that everything else can be bigger"; the Next line went back up to caption).
                 HStack {
                     Image(systemName: "location.fill")
                         .padding(.trailing, -4)
 
                     Text(entry.currentCity)
                 }
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundColor(.secondary)
             }
         }

@@ -106,7 +106,7 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
 
     var title: String {
         switch self {
-        case .prayerReminders: return "Prayer Reminders"
+        case .prayerReminders: return "Prayer Notifications"
         case .naggingMode: return "Nagging Mode"
         #if HAS_QURAN
         case .sunnahReminders: return "Sunnah Reminders"
@@ -126,7 +126,7 @@ enum SettingsNotificationsPage: String, CaseIterable, Hashable {
 
     var caption: String {
         switch self {
-        case .prayerReminders: return "Per-prayer alerts and early warnings"
+        case .prayerReminders: return "Each prayer's alert, lead time and adhan"
         case .naggingMode: return "Asks \u{201C}Did you pray?\u{201D} until you answer"
         #if HAS_QURAN
         case .sunnahReminders: return "Al-Kahf on Friday, al-Mulk before sleep"

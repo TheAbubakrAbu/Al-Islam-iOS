@@ -544,7 +544,7 @@ struct NamesView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
 
-    /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`.
+    /// "ASK AI" with the sparkles glyph in the header gray, as the Quran search's `askAIHeader` draws it.
     private var askAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
@@ -552,7 +552,6 @@ struct NamesView: View {
 
             Spacer()
         }
-        .foregroundStyle(settings.accentColor.color)
     }
 
     private var askPromptRow: some View {
@@ -609,7 +608,7 @@ struct NamesView: View {
         if aiQueryEligible {
             if semanticEngine.isReady(Self.semanticCorpusID) {
                 if !aiHits.isEmpty {
-                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles")) {
                         if settings.namesGridMode {
                             // Not lazy (`SummaryTileGrid`): a lazy grid in a List row can answer a different
                             // height on each self-sizing pass, which iOS 26 traps on. Ten matches at most.
@@ -839,7 +838,7 @@ struct NamesView: View {
     }
 
     private static var namesDisclaimerText: String {
-        var text = "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing."
+        var text = "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. The hadith does not limit His names to ninety-nine: the Prophet ﷺ asked Allah by every name He has, including those He kept in the knowledge of the unseen with Himself (Musnad Ahmad 3712, graded sahih by al-Albani)."
         #if HAS_QURAN
         text += " Names marked as coming from that list do not appear as names in the Quran."
         #endif
@@ -955,7 +954,7 @@ struct NamesView: View {
     }
 
     private static var allahIntroText: String {
-        var text = "Allah (اللَّه) is the proper name of the One True God, not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else."
+        var text = "Allah (اللَّه) is the proper name of the One True God, His greatest name, and the one every other name describes. Unlike other words, it has no plural and no feminine form, and it was never used for anything or anyone else."
         #if HAS_QURAN
         text += " It appears in the Quran more than 2,600 times, beginning with the very first ayah:"
         #endif

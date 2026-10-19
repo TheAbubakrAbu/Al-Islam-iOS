@@ -369,8 +369,8 @@ enum TipCatalog {
                detail: "Pause tracking, on the history page, exempts those days. They never break your streak, they stay out of every statistic, and the \u{201C}Did you pray?\u{201D} reminders stay silent while prayer-time notifications continue. Any single past day can be marked exempt too.",
                place: "Prayer Tracker, History & Insights", destination: .prayerTracker, card: ("Tracker Pause", "Menstruation and postpartum days that never break a streak.")),
         AppTip(id: "adhan.markgate", area: .adhan, group: "THE PRAYER TRACKER", systemImage: "lock.fill",
-               title: "Mark only after the time begins",
-               detail: "A switch on the history page keeps a prayer from being marked before its time has come in. Past days can always be filled in.",
+               title: "Marks wait for the adhan",
+               detail: "A prayer can be marked only once its time has come in, so today's row shows what is still left to pray. Past days can always be filled in from History & Insights.",
                place: "Prayer Tracker, History & Insights", destination: .prayerTracker),
         AppTip(id: "adhan.jumuah", area: .adhan, group: "THE PRAYER TRACKER", systemImage: "person.3.fill",
                title: "Jumuah counts as Dhuhr",
@@ -447,20 +447,20 @@ enum TipCatalog {
 
         AppTip(id: "notif.fulladhan", area: .notifications, group: "THE ADHAN", systemImage: "speaker.wave.3.fill",
                title: "Open the app, hear the whole adhan",
-               detail: "iOS lets a notification play 30 seconds at most. Open the app within ten minutes of a prayer time and the adhan plays in full, and it plays in full whenever the app is already open as the time comes in.",
+               detail: "iOS lets a notification play 30 seconds at most. With the app open at prayer time, or opened within five minutes of it, the adhan plays in full. On a silenced phone, or with Play Automatically off, a Play button appears instead, on the prayer card and in a banner on every tab.",
                place: "Adhan tab", tour: true),
         AppTip(id: "notif.silent", area: .notifications, group: "THE ADHAN", systemImage: "bell.slash.fill",
-               title: "Through silent mode",
-               detail: "Play In-App Adhan in Silent Mode lets the adhan that plays inside the app sound even with the ringer switched off. Notifications outside the app still follow the iPhone's own sound settings.",
-               place: "Notifications", destination: .notifications, advanced: true),
+               title: "Through Silent Mode",
+               detail: "The app reads Silent Mode before it starts an adhan: silenced, it offers a Play button rather than playing to no one. Play in Silent Mode lets the in-app adhan sound anyway. Notifications outside the app always follow the iPhone's own sound settings.",
+               place: "Notifications", destination: .notifications),
         AppTip(id: "notif.preview", area: .notifications, group: "THE ADHAN", systemImage: "play.circle.fill",
                title: "Preview plays the full recording",
                detail: "Preview Sound plays the chosen adhan from beginning to end, not the 30 seconds a notification carries.",
                place: "Notifications", destination: .notifications),
         AppTip(id: "notif.perprayer", area: .notifications, group: "THE ADHAN", systemImage: "slider.horizontal.below.rectangle",
                title: "A different sound for each prayer",
-               detail: "Every prayer chooses for itself between the adhan, a short excerpt of it, and an ordinary sound: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house.",
-               place: "Notifications, Prayer Notifications", destination: .notificationsPage(.prayerReminders), advanced: true),
+               detail: "Tap a prayer under Prayer Notifications to choose between the adhan, a short excerpt of it, and an ordinary tone: a full adhan at Maghrib and a quiet tone at Fajr, if that suits your house.",
+               place: "Notifications, Prayer Notifications", destination: .notificationsPage(.prayerReminders)),
         AppTip(id: "notif.alerttone", area: .notifications, group: "THE ADHAN", systemImage: "waveform",
                title: "A tone for being told, not called",
                detail: "The Alert Tone plays for everything that is not a call to prayer: prenotifications, Shurooq, the optional times, and prayers whose adhan is off. Echo and Takbir are soft; Chime, Ring, and Alarm are made to carry through noise.",
@@ -1286,8 +1286,11 @@ struct TipsTourView: View {
     @Environment(\.dismiss) private var dismiss
 
     let area: TipArea
-    /// Extra cards ahead of the area's own (the welcome flow's tour passes a hand-picked set).
+    /// A hand-picked set in place of the area's own cards (the welcome's tour passes the spotlight tips,
+    /// WelcomePages.swift).
     var tips: [AppTip]? = nil
+    /// A title of its own, when the cards are not one area's ("Only in Al-Islam").
+    var title: String? = nil
 
     @State private var page = 0
 
@@ -1308,7 +1311,7 @@ struct TipsTourView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
             }
-            .navigationTitle(area.tourTitle)
+            .navigationTitle(title ?? area.tourTitle)
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }

@@ -1482,12 +1482,12 @@ struct AskAISearchSection: View {
 
     var body: some View {
         if OnDeviceAsk.isAvailable {
+            // Header gray: a search section (`SectionIconHeader.accentTitle`'s rule).
             Section(header: HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                 Text("ASK AI")
                 Spacer()
-            }
-            .foregroundStyle(appearance.accent)) {
+            }) {
                 Button {
                     Settings.shared.hapticFeedback()
                     showAskAI = true

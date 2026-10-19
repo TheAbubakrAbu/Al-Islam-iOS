@@ -88,6 +88,36 @@ def locate(tokens: list[str], forms: list[list[str]]) -> tuple[int, int] | None:
     return None
 
 
+# Corrections to the explanations and "living" lines (2026-10-18 review, Ahl as-Sunnah's creed in the
+# names and attributes: Allah's highness of Essence above His creation, His real Sight, Hearing, Hands,
+# Mercy and Light affirmed as befit Him without likening or kalam negations such as "without an eye" or
+# "not assembled from parts"; and a few factual slips). (name number, old text, new text): the old text
+# must occur exactly once in that name's explanation or living line, or the build fails.
+CORRECTIONS: list[tuple[int, str, str]] = [
+    (36, 'High above His creation in station, not in location: above being contained, compared, or resembled.', 'High above His creation in every sense: in His Essence, above the heavens and over His Throne; in His status; and in His dominance over all things. Nothing He created contains Him, and nothing resembles Him.'),
+    (27, 'Seeing without an eye: in darkness, through walls, and inside intentions.', 'Seeing that is real and befits Him, unlike the sight of anything created: in darkness, through walls, and inside intentions.'),
+    (26, 'Hearing without an ear and without limit:', 'Hearing that is real and befits Him, without limit:'),
+    (20, 'because the hand that closes is the same hand that opens.', 'because the One who withholds is the same One who gives.'),
+    (20, 'It is one of two hands, and the other one exists.', 'The One who withholds is also Al-Basit, and all good is in His hand.'),
+    (73, 'The First, with nothing before Him. Not the earliest item in a sequence but outside the sequence altogether, since time is itself created. There is no before to put Him after.', 'The First, with nothing before Him: that is how the Prophet ﷺ himself explained the name (Muslim 2713). Everything else had a beginning; He did not.'),
+    (76, 'The Hidden: not distant but nearer than what is visible, beyond the reach of sight and imagination. He knows the inside of things, and the Quran places Him closer to you than the vein in your neck.', 'The Hidden: nothing is beyond Him, as the Prophet ﷺ explained the name (Muslim 2713). He is above His creation and beyond the reach of sight and imagination, yet nothing is hidden from Him: He knows the inside of things, even what your soul whispers to you (50:16).'),
+    (67, 'Related to Al-Wahid but sharper: one and indivisible, not assembled from parts, so He cannot be split, added to, or reduced. The Quran uses this exact form once, to open Surah Al-Ikhlas.', 'Related to Al-Wahid but sharper: one and unique, with no equal, no partner and no likeness in His Essence, His names and attributes, or His actions. He did not beget and was not begotten. The Quran uses this exact form as a name of Allah once, to open Surah Al-Ikhlas.'),
+    (67, 'Do not picture Him. Anything you can picture is made of parts.', 'Do not picture Him. No one knows how He is, and nothing is like Him.'),
+    (93, 'Light of the heavens and the earth: by Him things are seen, and by Him hearts see.', 'Light of the heavens and the earth. Light is His real attribute, as befits Him (His veil is light, Muslim 179), and He illuminates the heavens and the earth and guides the hearts of the believers.'),
+    (19, 'are equally present to Him, with no past or future about any of it.', 'are all known to Him: what was, what will be, and what did not happen, and how it would have been had it happened.'),
+    (83, 'Rafah is the tenderest form of mercy: the kind that cannot bear to watch suffering.', "Ra'fah is the tenderest and most intense form of mercy: mercy that lifts hardship from those it reaches."),
+    (33, 'Ayat al-Kursi lists what His throne contains and then lands on this name,', 'Ayat al-Kursi describes His Kursi extending over the heavens and the earth and then lands on this name,'),
+    (44, 'The Quran states it with no conditions attached: call on Me and I will respond. The response may be the thing asked for, or the thing withheld because it would have harmed you, or the whole of it stored up.', 'The Quran states it plainly: call on Me and I will respond (40:60). The Prophet ﷺ explained how: the thing asked for is given soon, or it is stored up for the Hereafter, or an equal harm is turned away (Musnad Ahmad 11133).'),
+    (85, 'after asking seventy-eight times which favour you would deny.', 'after asking thirty-one times which favour you would deny.'),
+    (23, 'Yusuf went from the bottom of a well to running a country without a single step of self-promotion.', 'Yusuf went from the bottom of a well, through slavery and prison, to the storehouses of Egypt, and the Quran credits every step of it to Allah.'),
+    (98, 'and the verse carrying this name contrasts guidance with error so clearly that it concludes there is no need to compel anyone in religion.', 'and the verse that uses its root (2:256) says right guidance has become so clearly distinct from error that there is no compulsion in religion.'),
+    (94, 'The Prophet was told plainly that he could not guide the person he loved most; only Allah does that part.', 'The Prophet ﷺ was told plainly that he could not guide whom he loved, even his own uncle (28:56); only Allah does that part.'),
+    (58, 'Origination is the harder of the two acts, and He does it first.', 'Nothing is difficult for Him, and the Quran argues from this first creation to the second.'),
+    (10, 'which makes this the one name whose human imitation is a sin.', 'which makes this a name whose human imitation is a sin: pride is His cloak (Abu Dawud 4090).'),
+    (28, 'and no evidence He was not shown.', 'and nothing hidden from Him.'),
+    (38, 'The hadith puts it in exactly those terms.', 'The hadith puts it in exactly those terms (Tirmidhi 2516).'),
+]
+
 def main() -> None:
     soften = load_softener()
     source = TILAWA / "src" / "data" / "allahNameDetails.ts"
@@ -103,6 +133,7 @@ def main() -> None:
     names = {}
     problems = []
     verses_total = matched = 0
+    applied = 0
     for record in app_names():
         number = int(record["number"])
         detail = details.get(str(number))
@@ -136,9 +167,21 @@ def main() -> None:
             "living": soften(detail.get("living", "")),
             "verses": verses,
         }
+        for fix_number, old_text, new_text in CORRECTIONS:
+            if fix_number != number:
+                continue
+            fields = [k for k in ("explanation", "living") if old_text in names[str(number)][k]]
+            if len(fields) != 1 or names[str(number)][fields[0]].count(old_text) != 1:
+                problems.append(f"name {number}: correction {old_text[:40]!r} does not match exactly once")
+                continue
+            names[str(number)][fields[0]] = names[str(number)][fields[0]].replace(old_text, new_text)
+            applied += 1
         for key in ("explanation", "living"):
             if "\u2014" in names[str(number)][key] or " - " in names[str(number)][key]:
                 problems.append(f"name {number}: dash left in {key}")
+
+    if applied != len(CORRECTIONS):
+        problems.append(f"{len(CORRECTIONS) - applied} of the CORRECTIONS were not applied")
 
     if problems:
         print(f"FAILED: {len(problems)} problem(s)", file=sys.stderr)

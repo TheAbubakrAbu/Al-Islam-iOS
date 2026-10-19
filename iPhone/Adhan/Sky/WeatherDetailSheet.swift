@@ -1,6 +1,12 @@
 // The weather up close: everything the reading holds (Abu, 2026-10-11: "temp and uv and humidity and
 // all that stuff"), opened from the sky card's weather chip and the glance wall's weather tiles.
 // Apple Weather's attribution lives here, as its terms ask: the mark, and a link to the legal page.
+//
+// Opens at the medium detent since 2026-10-19 (Abu: "make the sheet medium by the way"), with the sky
+// card still in view above it: the TRY ANOTHER SKY row under the reading dresses that very sky in any
+// condition Apple Weather can report ("allow me to preview somehow all the other conditions"). The
+// preview lives in `SkyWeatherStore.preview` so the card, the whole-tab sky and the glance tiles all
+// follow, and it is cleared when the sheet goes.
 #if os(iOS) && canImport(WeatherKit) && HAS_WEATHER
 import SwiftUI
 
@@ -19,6 +25,15 @@ struct WeatherDetailSheet: View {
                         Section {
                             header(weather)
                                 .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                        }
+
+                        Section {
+                            conditionPicker(weather)
+                                .listRowInsets(EdgeInsets())
+                        } header: {
+                            Text("TRY ANOTHER SKY")
+                        } footer: {
+                            Text("The sky behind this sheet takes the look while you choose. The reading above stays as it is.")
                         }
 
                         Section(header: Text("CONDITIONS")) {
@@ -110,26 +125,43 @@ struct WeatherDetailSheet: View {
             .sheetDismissToolbar()
         }
         .navigationViewStyle(.stack)
-        .smallMediumSheetPresentation(startLarge: true)
+        .smallMediumSheetPresentation()
         .onAppear { store.refreshIfNeeded() }
+        .onDisappear {
+            if store.preview != nil { store.preview = nil }
+        }
     }
 
     /// The big reading: the symbol, the temperature, the condition, and feels-like with the day's range.
+    /// While a condition is being tried on, the symbol and the sentence are its, tagged Preview; the
+    /// degrees are always today's.
     private func header(_ weather: SkyWeather) -> some View {
-        HStack(alignment: .center, spacing: 16) {
-            Image(systemName: weather.symbolName)
+        let preview = store.preview
+        return HStack(alignment: .center, spacing: 16) {
+            Image(systemName: preview?.symbolName ?? weather.symbolName)
                 .symbolRenderingMode(.multicolor)
                 .font(.system(size: 52, weight: .medium))
                 .frame(width: 64)
                 .accessibilityHidden(true)
+                .animation(.easeInOut(duration: 0.2), value: preview)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(weather.temperatureText)
                     .font(.system(size: 44, weight: .semibold, design: .rounded).monospacedDigit())
                     .foregroundColor(.primary)
-                Text(weather.conditionText)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                HStack(spacing: 8) {
+                    Text(preview?.text ?? weather.conditionText)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    if preview != nil {
+                        Text("Preview")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(settings.accentColor.color)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(settings.accentColor.color.opacity(0.14)))
+                    }
+                }
                 HStack(spacing: 10) {
                     Text("Feels like \(weather.apparentText)")
                     if let high = weather.highText, let low = weather.lowText {
@@ -145,6 +177,67 @@ struct WeatherDetailSheet: View {
             Spacer(minLength: 0)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// Today's sky first, then every condition the sky can wear, as chips in one scrolling row. Tapping
+    /// one dresses the sky behind the sheet in it (`SkyWeatherStore.preview`); Now puts it back.
+    private func conditionPicker(_ weather: SkyWeather) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    conditionChip(title: "Now", systemImage: weather.symbolName, selected: store.preview == nil, id: "now") {
+                        store.preview = nil
+                    }
+                    ForEach(SkyWeatherCondition.all) { condition in
+                        conditionChip(title: condition.text, systemImage: condition.symbolName,
+                                      selected: store.preview == condition, id: condition.id) {
+                            store.preview = condition
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
+            .onChange(of: store.preview) { preview in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(preview?.id ?? "now", anchor: .center)
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Try another sky")
+    }
+
+    private func conditionChip(title: String, systemImage: String, selected: Bool, id: String,
+                               action: @escaping () -> Void) -> some View {
+        let accent = settings.accentColor.color
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.25)) { action() }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .symbolRenderingMode(selected ? .monochrome : .hierarchical)
+                    .font(.caption.weight(.semibold))
+                Text(title)
+                    .font(.subheadline.weight(selected ? .semibold : .regular))
+                    .lineLimit(1)
+            }
+            .foregroundColor(selected ? .white : .primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule().fill(selected ? accent : Color.primary.opacity(0.07))
+            )
+            .overlay(
+                Capsule().strokeBorder(selected ? accent : Color.primary.opacity(0.08), lineWidth: 1)
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .id(id)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func row(_ title: String, systemImage: String, value: String, detail: String? = nil) -> some View {

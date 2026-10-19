@@ -163,7 +163,7 @@ struct ProvingIslamView: View {
         ResourceHero(
             eyebrow: "THE COMPLETE CASE",
             systemImage: "checkmark.shield.fill",
-            headline: "If the Quran and the Prophet \u{FDFA} were only human, where are the human fingerprints?",
+            headline: "If the Quran were only a human work, where are the human fingerprints?",
             message: "No single proof has to carry the weight. A human author leaves errors, a fraud leaves motives, a borrowed text leaves its sources, and a fragile scripture leaves scars. These chapters look for each, and ask what one explanation accounts for all of them at once.",
             stats: [
                 ResourceHeroStat("\(IslamArticleCatalog.provingGroups.reduce(0) { $0 + $1.entries.count })", "chapters"),
@@ -261,7 +261,7 @@ struct ProvingIslamProofsSection: View {
               summary: "A fire in the Hijaz that would light up the necks of camels in Busra",
               kind: "Prophecy", door: .prophecy("fire-hijaz")),
         Proof(id: "kingorpharaoh", title: "King or Pharaoh?",
-              summary: "The Quran calls Yusuf\u{2019}s ruler a king and Musa\u{2019}s a Pharaoh, as history does",
+              summary: "The Quran calls Yusuf\u{2019}s ruler a king and Musa\u{2019}s a Pharaoh, matching when the title came into use",
               kind: "History", door: .miracle("pharaoh", title: "King or Pharaoh?")),
         Proof(id: "101-fulfilled-prophecies-1", title: "101 Fulfilled Islamic Prophecies",
               summary: "The whole collection, gathered in this app\u{2019}s Prophecies of the Prophet",

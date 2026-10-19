@@ -598,7 +598,7 @@ struct TajweedOverviewView: View {
                 Section(header: ArticleHeader("APPLICABILITY TO QIRAAT")) {
                     ArticleCallout(paragraphs: [
                         "Other riwayat, such as Warsh an Nafi, Khalaf an Hamzah, and others, may differ slightly in their application of tajweed rules, including elongations (madd), treatment of hamzah, and certain pronunciation details. These differences stem from authentic variations rooted in classical Arabic dialects and were transmitted through reliable chains of recitation.",
-                        "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the diversity of classical Arabic dialects that were all correctly recited and approved by the Prophet ﷺ, and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition.",
+                        "As a result, some rules explained in this guide may not apply identically to other riwayat. These variations in tajweed application and pronunciation reflect the dialects of the Arabs in which Allah revealed the Quran: the Prophet ﷺ recited and taught them, saying of two different readings, \"It was revealed in this way\" (Sahih al-Bukhari 2419), and have been preserved exactly through continuous transmission. They highlight the richness, flexibility, and authenticity of the Quranic recitation tradition.",
                     ], title: "Other Riwayat", systemImage: "books.vertical.fill")
                 }
 

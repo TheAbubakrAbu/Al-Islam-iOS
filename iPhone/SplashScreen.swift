@@ -1,3 +1,8 @@
+// The welcome (Abu, 2026-10-19: "for splash screen force them to go through it"): a first launch walks
+// the pages in `SplashScreen.pages`, each ending in the same bar (WelcomePages.swift), Skip skipping its
+// own page; the Islam tab's "Learn More" shows the first page alone as a sheet. The pages after the first
+// are other files' views, embedded: AboutYouView.swift, WelcomePages.swift (permissions, discover), and
+// on Al-Islam the iCloud offer follows as the next root stage (CloudBackupViews.swift).
 #if os(iOS)
 import SwiftUI
 
@@ -8,17 +13,33 @@ struct SplashScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    /// True when the Islam tab's "Learn More" presents this as a sheet over a running app. The button then
-    /// reads "Done" and dismisses the sheet; on first launch (the default) it clears `firstLaunch` and the
-    /// root fades the splash away itself.
+    /// True when the Islam tab's "Learn More" presents this as a sheet over a running app. The sheet shows
+    /// the first page alone, its button reads "Done" and dismisses the sheet; on first launch (the
+    /// default) the pages run in order and the last clears `firstLaunch`, so the root fades the splash
+    /// away itself.
     var presentedAsSheet = false
 
-    @State private var openedAppStoreFromHero = false
-    /// The first launch's second step (Abu, 2026-10-10: "include simple mode in splash screen"): Simple
-    /// or Full, before the app opens. A sheet never leaves step one.
-    @State private var step = 1
-    /// The step's choice, Full preselected: the 10-07 "off by default for everyone" stands, so the
-    /// question offers Simple Mode rather than deciding it (Docs/Product/Simple Mode Guide.md).
+    /// The welcome's pages, in order (Abu, 2026-10-19: "for splash screen force them to go through it"):
+    /// what the app is, About You, Location and Notifications (the apps with prayer times), then what
+    /// there is to discover with the Simple or Full choice. On Al-Islam the iCloud offer is the stage
+    /// after the last page (CloudBackupViews.swift), so it reads as one more page. Nothing dismisses
+    /// the welcome; every page but the first can be skipped, and a skip skips that page alone.
+    enum Page: Equatable {
+        case welcome, aboutYou, permissions, discover
+    }
+
+    static let pages: [Page] = {
+        var pages: [Page] = [.welcome, .aboutYou]
+        #if HAS_ADHAN
+        pages.append(.permissions)
+        #endif
+        pages.append(.discover)
+        return pages
+    }()
+
+    @State private var pageIndex = 0
+    /// The discover page's choice, Full preselected: the 10-07 "off by default for everyone" stands, so
+    /// the question offers Simple Mode rather than deciding it (Docs/Product/Simple Mode Guide.md).
     @State private var choosesSimple = false
     @State private var popCenter = false
     @State private var popLeft = false
@@ -26,6 +47,10 @@ struct SplashScreen: View {
     /// One shimmer sweep across the Al-Islam card after the pop-in settles (the launch screen's
     /// gloss, reused) - the range LaunchLogoCard expects is -220 ... 220.
     @State private var splashShimmer: CGFloat = -220
+
+    private var page: Page {
+        Self.pages[min(max(pageIndex, 0), Self.pages.count - 1)]
+    }
 
     private var currentColorScheme: ColorScheme {
         settings.colorScheme ?? systemColorScheme
@@ -54,6 +79,12 @@ struct SplashScreen: View {
         .spring(response: 0.52, dampingFraction: 0.62, blendDuration: 0)
     }
 
+    /// A page slides in from the trailing edge as the one before leaves by the leading edge.
+    private var pageTransition: AnyTransition {
+        .asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity))
+    }
+
     var body: some View {
         NavigationView {
             GeometryReader { geo in
@@ -63,52 +94,39 @@ struct SplashScreen: View {
                 ZStack {
                     splashBackdrop(scale: s)
 
-                    VStack(spacing: 0) {
-                        if step == 2 {
-                            ScrollView(showsIndicators: false) {
-                                modeChoice(scale: s)
-                                    .frame(width: column)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 28 * s)
-                                    .padding(.bottom, 12)
-                            }
-                            .transition(.opacity)
-                        } else {
-                        // The greeting and the promises scroll only when they must (a small phone, a
-                        // large text size, the sheet); the family row and the button stay put.
-                        ScrollView(showsIndicators: false) {
-                            VStack(spacing: 18 * s) {
-                                greeting(scale: s)
-                                featureCard
-                                if heroScrolls {
-                                    appHeroStack(layoutScale: s)
-                                }
-                            }
-                            .frame(width: column)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 10 * s)
-                            .padding(.bottom, 12)
+                    Group {
+                        switch page {
+                        case .welcome:
+                            welcomePage(scale: s, column: column)
+                        case .aboutYou:
+                            AboutYouView(isNewInstall: true, embedded: true) { advance() }
+                        case .permissions:
+                            #if HAS_ADHAN
+                            WelcomePermissionsPage { advance() }
+                            #else
+                            EmptyView()
+                            #endif
+                        case .discover:
+                            discoverPage(scale: s, column: column)
                         }
-
-                        // Under the card, not over it: the aura spreads past its own frame, and on
-                        // top it washed the last row's text.
-                        if !heroScrolls {
-                            appHeroStack(layoutScale: s)
-                                .zIndex(-1)
-                        }
-                        }
-
-                        actionButtons
-                            .frame(width: column)
-                            .padding(.top, 4)
-                            .padding(.bottom, 16)
                     }
+                    .id(pageIndex)
+                    .transition(pageTransition)
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
                 .animation(.easeInOut, value: settings.firstLaunch)
                 .transition(.opacity)
             }
             .navigationBarTitleDisplayMode(.inline)
+            // Where in the welcome, in the bar's centre; a sheet shows one page and needs no dots. (The
+            // branch is inside the item, not the toolbar builder: the companions deploy to iOS 15.)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    if !presentedAsSheet {
+                        WelcomeProgressDots(count: Self.pages.count, index: pageIndex)
+                    }
+                }
+            }
             // As a sheet ("Learn More") this had NO dismiss control at all: the only way out was the
             // full-width hero button at the bottom of a scroll view (Abu, 2026-09-18). The hero button
             // stays - it is the screen's own call to action, and on first launch it reads "Get
@@ -116,17 +134,119 @@ struct SplashScreen: View {
             .sheetDismissToolbarIf(presentedAsSheet)
             .onAppear(perform: runHeroPopAnimation)
             #if DEBUG
-            // `-splashStep 2` lands on the Simple or Full step, for screenshots (taps aren't scriptable).
+            // `-splashStep N` lands on page N (1 = the welcome, 2 = About You, ...) for screenshots
+            // (taps aren't scriptable).
             .onAppear {
                 let args = ProcessInfo.processInfo.arguments
                 if !presentedAsSheet, let index = args.firstIndex(of: "-splashStep"), index + 1 < args.count,
-                   args[index + 1] == "2" {
-                    step = 2
+                   let step = Int(args[index + 1]) {
+                    pageIndex = min(max(step - 1, 0), Self.pages.count - 1)
                 }
             }
             #endif
         }
         .navigationViewStyle(.stack)
+    }
+
+    // MARK: Page one: what the app is
+
+    /// The greeting and the promises scroll only when they must (a small phone, a large text size, the
+    /// sheet); the family row and the button stay put.
+    private func welcomePage(scale s: CGFloat, column: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 18 * s) {
+                    greeting(scale: s)
+                    featureCard
+                    if heroScrolls {
+                        appHeroStack(layoutScale: s)
+                    }
+                }
+                .frame(width: column)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 10 * s)
+                .padding(.bottom, 12)
+            }
+
+            // Under the card, not over it: the aura spreads past its own frame, and on
+            // top it washed the last row's text.
+            if !heroScrolls {
+                appHeroStack(layoutScale: s)
+                    .zIndex(-1)
+            }
+
+            // Skip too, like every page of the welcome; the "Learn More" sheet is one page, and Done.
+            WelcomeActionBar(
+                primaryTitle: presentedAsSheet ? "Done" : "Get Started",
+                primaryAction: primaryAction,
+                secondaryTitle: presentedAsSheet ? nil : "Skip",
+                secondaryIdentifier: "welcomeSkip",
+                secondaryAction: advance
+            )
+            .frame(width: column)
+            .padding(.top, 4)
+            .padding(.bottom, 16)
+        }
+    }
+
+    // MARK: The discover page
+
+    /// "A lot to discover" (WelcomePages.swift), then the first launch ends: Continue writes the Simple
+    /// or Full choice, Skip leaves Full.
+    private func discoverPage(scale s: CGFloat, column: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                WelcomeDiscoverPage(choosesSimple: $choosesSimple)
+                    .frame(width: column)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 20 * s)
+                    .padding(.bottom, 12)
+            }
+
+            WelcomeActionBar(
+                primaryTitle: "Continue",
+                primaryAction: finishFirstLaunch,
+                secondaryTitle: "Skip",
+                secondaryIdentifier: "welcomeSkip",
+                secondaryAction: {
+                    choosesSimple = false
+                    finishFirstLaunch()
+                }
+            )
+            .frame(width: column)
+            .padding(.top, 4)
+            .padding(.bottom, 16)
+        }
+    }
+
+    // MARK: Moving on
+
+    /// The first page moves on; a sheet opened from "Learn More" over the running app has no first
+    /// launch to end, only the sheet, so a promotional sheet never changes a setting.
+    private func primaryAction() {
+        if presentedAsSheet {
+            dismiss()
+        } else {
+            advance()
+        }
+    }
+
+    private func advance() {
+        if pageIndex + 1 < Self.pages.count {
+            withAnimation(.easeInOut(duration: 0.32)) { pageIndex += 1 }
+        } else {
+            finishFirstLaunch()
+        }
+    }
+
+    /// The choice is written once, here, and then the first launch ends as it always has.
+    private func finishFirstLaunch() {
+        if settings.simpleMode != choosesSimple {
+            settings.simpleMode = choosesSimple
+        }
+        withAnimation {
+            settings.firstLaunch = false
+        }
     }
 
     private func runHeroPopAnimation() {
@@ -293,12 +413,25 @@ struct SplashScreen: View {
                 .font(.title.bold())
                 .foregroundColor(.primary)
 
-            Text("Peace be upon you, and welcome to \(AppIdentifiers.appName).")
+            Text("Peace be upon you, and welcome to \(AppIdentifiers.appName): \(Self.whatTheAppIs)")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
+    }
+
+    /// One line on what the app holds, by the domains this app ships (Abu, 2026-10-19: "explain what
+    /// al islam is").
+    private static var whatTheAppIs: String {
+        #if HAS_ADHAN && HAS_QURAN
+        return "prayer times, the Quran, hadith and more, in one place."
+        #elseif HAS_ADHAN
+        return "prayer times, the adhan, the Qibla and more, in one place."
+        #else
+        return "the Quran with its tajweed, translations and reciters, in one place."
+        #endif
     }
 
     private struct Feature: Identifiable {
@@ -473,200 +606,8 @@ struct SplashScreen: View {
         .accessibilityHidden(true)
     }
 
-    private var actionButtons: some View {
-        HStack {
-            /*Button {
-                settings.hapticFeedback()
-                withAnimation {
-                    settings.firstLaunch = false
-                }
-                openURLIfPossible(Self.alIslamAppURL)
-            } label: {
-                Text("Download Al-Islam")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-            }
-            .conditionalGlassEffect(rectangle: true, useColor: 0.38, customTint: AppIdentifiers.mainColor.color)*/
-            
-            VStack(spacing: 6) {
-                Button {
-                    settings.hapticFeedback()
-                    primaryAction()
-                } label: {
-                    Text(actionTitle)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                }
-                .conditionalGlassEffect(
-                    rectangle: true,
-                    useColor: 0.38,
-                    customTint: AppIdentifiers.mainColor.color
-                )
-                .accessibilityLabel(actionTitle)
-
-                if step == 2 {
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut) { step = 1 }
-                    } label: {
-                        Text("Back")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    /// Step one moves on to the Simple or Full step; that step ends the first launch. A sheet opened
-    /// from "Learn More" over the running app has no first launch to end, only the sheet: it never
-    /// reaches the step, so a promotional sheet never changes a setting.
-    private func primaryAction() {
-        if presentedAsSheet {
-            dismiss()
-        } else if step == 1 {
-            withAnimation(.easeInOut) { step = 2 }
-        } else {
-            finishFirstLaunch()
-        }
-    }
-
-    /// The choice is written once, here, and then the first launch ends as it always has.
-    private func finishFirstLaunch() {
-        if settings.simpleMode != choosesSimple {
-            settings.simpleMode = choosesSimple
-        }
-        withAnimation {
-            settings.firstLaunch = false
-        }
-    }
-
-    /// "Get Started" only makes sense on the first launch; a sheet opened from "Learn More" closes with "Done".
-    private var actionTitle: String {
-        if step == 2 { return "Continue" }
-        return (presentedAsSheet || openedAppStoreFromHero) ? "Done" : "Get Started"
-    }
-
-    // MARK: The Simple or Full step
-
-    /// "How much would you like to see?": two cards in About You's option grammar, then where to change
-    /// it later. The copy is the guide's (Docs/Product/Simple Mode Guide.md, Splash).
-    private func modeChoice(scale s: CGFloat) -> some View {
-        VStack(spacing: 18 * s) {
-            VStack(spacing: 8) {
-                Image(systemName: "rectangle.compress.vertical")
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundColor(accent)
-                    .accessibilityHidden(true)
-
-                Text("How much would you like to see?")
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
-            }
-
-            VStack(spacing: 10) {
-                modeCard(simple: true,
-                         title: "Simple",
-                         text: simpleModeSummary,
-                         systemImage: "rectangle.compress.vertical")
-                modeCard(simple: false,
-                         title: "Full",
-                         text: "Every tool, shortcut and detail, right on screen.",
-                         systemImage: "rectangle.expand.vertical")
-            }
-
-            Text("You can change this any time in Settings \u{203A} Simple Mode.")
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    /// What Simple keeps on screen, named by the domains this app ships (Al-Quran has no prayer
-    /// times, Al-Adhan no Quran reader).
-    private var simpleModeSummary: String {
-        #if HAS_ADHAN && HAS_QURAN
-        return "Prayer times, the Quran and the essentials, with the extras tucked away until you want them."
-        #elseif HAS_ADHAN
-        return "Prayer times and the essentials, with the extras tucked away until you want them."
-        #else
-        return "The Quran and the essentials, with the extras tucked away until you want them."
-        #endif
-    }
-
-    private func modeCard(simple: Bool, title: String, text: String, systemImage: String) -> some View {
-        let selected = choosesSimple == simple
-        return Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.2)) { choosesSimple = simple }
-        } label: {
-            HStack(spacing: 13) {
-                // The feature card's icon tile, so the step reads as the same screen.
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(LinearGradient(colors: [accent, accent.opacity(0.74)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 34, height: 34)
-                    .overlay(
-                        Image(systemName: systemImage)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                    )
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-
-                    Text(text)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundColor(selected ? accent : Color.secondary.opacity(0.5))
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(selected ? accent.opacity(0.16) : Color(UIColor.secondarySystemBackground))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(selected ? accent : Color.primary.opacity(0.08), lineWidth: selected ? 2 : 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(title). \(text)")
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityIdentifier(simple ? "splashChoiceSimple" : "splashChoiceFull")
-    }
-
     private func openAppStoreFromHero(_ url: URL?) {
         settings.hapticFeedback()
-        withAnimation(.easeInOut(duration: 0.25)) {
-            openedAppStoreFromHero = true
-        }
         openURLIfPossible(url)
     }
 

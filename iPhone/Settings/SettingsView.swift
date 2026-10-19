@@ -758,7 +758,7 @@ struct SettingsView: View {
         let aiOnly = settingsAIHits.filter { !keywordIDs.contains($0.id) }
 
         if !aiOnly.isEmpty {
-            Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles", accentTitle: true)) {
+            Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles")) {
                 ForEach(aiOnly) { entry in
                     settingsSearchResultRow(entry)
                 }
@@ -1601,7 +1601,7 @@ struct AppearancePageView: View {
                         .font(.subheadline)
                         .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
 
-                    Text("Turn this off for the Classic Look, the way the app looked before iOS 26: faster and easier on the battery. It changes the app's own cards, pills, and bars. The tab bar, navigation bars, sheets, and the search field are drawn by iOS and keep their Liquid Glass either way, so screens that are mostly those will look much the same.")
+                    Text("Off is the Classic Look from before iOS 26: faster and easier on the battery. It changes the app's own cards, pills and bars; the tab bar, navigation bars, sheets and search field are iOS's and keep Liquid Glass either way.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -2241,13 +2241,15 @@ struct AdvancedSettingsSection: View {
     }
 
     private var caption: String {
+        // One line where there were three (Abu, 2026-10-19): the switch is on eleven screens, and
+        // every one of them ended in the same paragraph.
         if settings.advanced(screen) {
-            return "Every option on this screen is shown. Turn this off to keep it to its essentials; what you set in the advanced options still applies. Each screen has its own switch."
+            return "Everything this screen has is shown. Off keeps it to the essentials; what is set here still applies."
         }
         if let hides {
-            return "Hidden on this screen: \(hides). Turn this on to see every option here. It changes this screen only, and anything set here before still applies."
+            return "Also here, with this on: \(hides)."
         }
-        return "This screen keeps to its essentials. Turn this on to see every option it has."
+        return "Shows every option this screen has."
     }
 }
 

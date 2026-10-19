@@ -272,7 +272,7 @@ struct QiraatTextAnalysisView: View {
 
     private var sharedSection: some View {
         Section(header: Text("WHAT ALL TWENTY SHARE")) {
-            bullet("The same rasm", "the Uthmanic consonantal skeleton is one skeleton. Every reading among the twenty is readable off it, which is exactly the point the Uthmanic copies were written to serve.")
+            bullet("The same rasm", "the consonantal skeleton of the copies Uthman sent to the cities. Every reading among the twenty agrees with it; where those copies differ by a letter or a word, as they do in a few dozen places, each reading agrees with one of them, which is exactly the point the copies were written to serve.")
             bullet("The same 114 surahs", "in the same order, with the same names and the same openings.")
             bullet("The same length", "77,424 to 77,468 words end to end.")
             bullet("The same subject matter, ayah for ayah", "the boundary disagreements move where a number is printed; no riwayah has an ayah another lacks.")

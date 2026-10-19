@@ -474,7 +474,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.keepAyahSheetOpen) { _ in settings.hapticFeedback() }
 
-            Text("When you open Tafsir, Play Custom Range, or anything else from an ayah's actions, keep the actions underneath it. Closing the second sheet returns to the first, so you can do something else with the same ayah. Off, the actions close as the new sheet opens.")
+            Text("Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -522,7 +522,7 @@ struct SettingsQuranView: View {
                         settings.dailyRolloverSwitchChanged()
                     }
 
-                Text("The Ayah, Hadith, Dua, Word, Name and Reminder of the Day change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, they change at midnight.")
+                Text("The daily cards change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, midnight.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -851,7 +851,7 @@ struct SettingsQuranView: View {
                 .onChange(of: settings.cleanArabicText) { _ in settings.hapticFeedback() }
 
             #if os(iOS)
-            Text("This option removes Tashkeel (like Fatha, Damma, Kasra, and others), while keeping vowel letters like Alif, Yaa, and Waw. It also adjusts \"Mad\" letters and the \"Hamzatul Wasl,\" and removes tiny vowel letters, stopping signs, chapter markers, and prayer indicators. This option is not recommended.")
+            Text("Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -865,7 +865,7 @@ struct SettingsQuranView: View {
                 .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
 
             #if os(iOS)
-            Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
+            Text("Removes the dots, turning ب into ٮ, the way the earliest manuscripts such as the Birmingham folios were written. Hard to read; not for beginners.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -948,7 +948,7 @@ struct SettingsQuranView: View {
                 .disabled(!settings.showArabicText)
 
                 #if os(iOS)
-                Text("The letters are the same in all three; only the vowel marks change. Light and Bold are the usual marks at two weights. Dot Vowels writes them the way the earliest vocalised mushafs did: a dot above the letter is fatha, below it is kasra, in front of it is damma, and doubled dots are tanween.")
+                Text("Same letters, different vowel marks. Light and Bold are the usual marks at two weights; Dot Vowels is the earliest vocalised mushafs' way: a dot above is fatha, below is kasra, in front is damma, doubled is tanween.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1029,7 +1029,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
 
-            Text("In reading mode, sets each mushaf page the way this riwayah's printed mushaf sets it: the same lines, broken at the same words, at the largest size that fits on one screen (larger or smaller than the size above, whatever the page allows), in your own font and colors. Turn this off to read at exactly the size above and scroll.")
+            Text("Sets each page the way this riwayah's printed mushaf does: the same lines and breaks, at the largest size that fits the screen, in your own font and colors. Off, the size above applies and the page scrolls.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1046,7 +1046,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
 
-            Text("In reading mode, shows two facing pages like an open mushaf whenever the page area is wider than it is tall, such as a phone or iPad in landscape or a wide Mac window. A portrait or narrow window shows one page.")
+            Text("Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1319,7 +1319,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.qiraatComparisonMode) { _ in settings.hapticFeedback() }
 
-            Text("When on, the ayah view shows a riwayah picker above the search bar even on Hafs, so you can switch and compare qiraat in that screen. In any other riwayah the picker is always there.")
+            Text("Shows the riwayah picker above the search bar on Hafs too, so you can switch and compare there. Every other riwayah always shows it.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

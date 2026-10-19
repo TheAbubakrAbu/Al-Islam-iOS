@@ -40,7 +40,7 @@ extension PropheciesView {
                       .text("Early in the seventh century Persia overran the Byzantine East: Damascus fell in 613 CE and Jerusalem in 614, and a Persian army reached the shore facing Constantinople itself. In those years, in Makkah, these verses came down:"),
                       .quran("30:2-5"),
                       .text("The span, bid' in Arabic, is a small number: three to nine. Ibn 'Abbas describes how Makkah took it:"),
-                      .hadith("tirmidhi:3193", cite: "Sunan al-Tirmidhi 3193", arabic: 45...86, english: 34...95),
+                      .hadith("tirmidhi:3193", cite: "Sunan al-Tirmidhi 3193; graded sahih by al-Albani", arabic: 45...86, english: 34...95),
                   ]),
                   SignSection("WHAT HAPPENED", [
                       .text("From 622 CE, the year of the Hijrah, the emperor Heraclius turned the war. By 624, the year of Badr, he was fighting inside Persia; in December 627 he destroyed a Persian army near Nineveh, and Persia sued for peace and gave back the lands it had taken."),
@@ -183,7 +183,7 @@ extension PropheciesView {
                       .text("The words 'and you will never be able to' are the prophecy. A challenge alone invites an answer; this clause said in advance that none would come."),
                   ]),
                   SignSection("WHAT HAPPENED", [
-                      .text("The people it addressed were the most exacting judges of Arabic there have been: poetry was their record, their honour and their weapon. They opposed him for more than twenty years with boycott, exile and war, at the cost of their wealth and their leaders. A single surah would have ended the argument, and they never produced one."),
+                      .text("The people it addressed were the most exacting judges of Arabic there have been: poetry was their record, their honour and their weapon. They opposed him for some twenty years with boycott, exile and war, at the cost of their wealth and their leaders. A single surah would have ended the argument, and they never produced one."),
                       .text("Jubayr ibn Mut'im, a nobleman of Quraysh, came to Madinah about the prisoners of Badr while still an unbeliever. He later said:"),
                       .hadith("bukhari:4854", cite: "Sahih al-Bukhari 4854", arabic: 22...63, english: 0...78),
                   ]),
@@ -316,7 +316,7 @@ extension PropheciesView {
                       .hadith("bukhari:3618", cite: "Sahih al-Bukhari 3618", arabic: 29...49, english: 4...46),
                   ]),
                   SignSection("WHAT HAPPENED", [
-                      .text("Yazdegerd III was the last Sasanian emperor; the dynasty ended with his death in 651 and no Chosroes followed. Caesar is the subtler half. Al-Shafi'i and other early scholars read it as Caesar's rule over Syria, and Heraclius was the last emperor to hold it: within a few years of Yarmuk in 636 he had lost Syria, Palestine and Egypt, and Damascus, Jerusalem and Egypt never returned to Roman rule. The Muslims did spend the treasures of both, as the same narration says they would."),
+                      .text("Yazdegerd III was the last Sasanian emperor; the dynasty ended with his death in 651 and no Chosroes followed. Caesar is the subtler half. Al-Shafi'i and other early scholars read it as Caesar's rule over Syria, and Heraclius was the last emperor to hold it: within a few years of Yarmuk in 636 he had lost Syria, Palestine and Egypt, and Damascus, Jerusalem and Egypt never returned to lasting Roman rule. The Muslims did spend the treasures of both, as the same narration says they would."),
                   ]),
               ]),
         .init(id: "white-palace", title: "The white palace of Chosroes",
@@ -691,7 +691,7 @@ extension PropheciesView {
                   ]),
                   SignSection("WHAT HAPPENED", [
                       .text("Abu Bakr, the Siddiq, died of illness in 13 AH. The other two were killed. 'Umar was stabbed while leading the dawn prayer in the mosque of Madinah and died of the wound in 23 AH (644 CE). 'Uthman was killed in his own house by rebels who had besieged it, in 35 AH (656 CE)."),
-                      .text("Neither died in battle, where a martyr's death would be looked for. Both were killed in Madinah itself, far from any front, and 'Umar had asked Allah for exactly that: martyrdom, and a death in the city of the Prophet."),
+                      .text("Neither died in battle, where a martyr's death would be looked for. Both were killed in Madinah itself, far from any front, and 'Umar had asked Allah for exactly that: martyrdom, and a death in the city of the Prophet (Sahih al-Bukhari 1890)."),
                   ]),
               ]),
         .init(id: "umar-door", title: "The door that would be broken",
@@ -808,7 +808,7 @@ extension PropheciesView {
                   ]),
               ]),
         .init(id: "hasan-reconciles", title: "The grandson who would reconcile two armies",
-              summary: "This son of mine is a chief, and Allah will reconcile two great parties of Muslims through him.",
+              summary: "This son of mine is a chief, and perhaps Allah will reconcile two great parties of Muslims through him.",
               group: .companions,
               aliases: ["hasan", "al-hasan", "muawiyah", "year of unity", "am al-jamaah", "caliphate", "grandson", "civil war", "reconcile"],
               sections: [
@@ -1031,7 +1031,7 @@ extension PropheciesView {
                       .hadith("muslim:2003b", cite: "Sahih Muslim 2003b", arabic: 35...40, english: 0...8),
                   ]),
                   SignSection("WHAT HAPPENED", [
-                      .text("The renaming began early. In his own lifetime he was asked about bit', made from honey, and mizr, made from barley, and he answered that every intoxicant is forbidden. Later, 'Abd al-Rahman ibn Ghanm, who also narrated this hadith from Abu Malik al-Ash'ari, recalled it when the people he was sitting with began discussing tila', a drink of cooked grape juice."),
+                      .text("The renaming began early. In his own lifetime he was asked about bit', made from honey, and mizr, made from barley, and he answered that every intoxicant is forbidden (Sahih al-Bukhari 4343). Later, 'Abd al-Rahman ibn Ghanm, who also narrated this hadith from Abu Malik al-Ash'ari, recalled it when the people he was sitting with began discussing tila', a drink of cooked grape juice."),
                       .text("Today intoxicants circulate under more names than ever, from trade names to the language of medicine and recreation, and the word wine is seldom the one used. What intoxicates has not changed; the names have, as he said they would."),
                   ]),
               ]),
@@ -1075,7 +1075,7 @@ extension PropheciesView {
                   SignSection("WHAT HAPPENED", [
                       .text("His own mosque in Madinah was as plain as a building can be. 'Abdullah ibn 'Umar described it:"),
                       .hadith("bukhari:446", cite: "Sahih al-Bukhari 446", arabic: 27...43, english: 0...27),
-                      .text("Building a mosque is itself a virtue: he promised whoever builds one for Allah the like of it in Paradise. What he foretold was the rivalry. Mosques are now among the grandest buildings of many cities, and it has become common to describe one by the record it holds: the tallest minaret, the widest dome, the largest carpet."),
+                      .text("Building a mosque is itself a virtue: he promised whoever builds one for Allah the like of it in Paradise (Sahih al-Bukhari 450, Sahih Muslim 533). What he foretold was the rivalry. Mosques are now among the grandest buildings of many cities, and it has become common to describe one by the record it holds: the tallest minaret, the widest dome, the largest carpet."),
                   ]),
               ]),
         .init(id: "whips-and-clothed", title: "Two kinds he had never seen",
@@ -1144,9 +1144,9 @@ extension PropheciesView {
               aliases: ["ruwaibidah", "ruwaybida", "rabidah", "deception", "treachery", "liars", "traitor", "trustworthy", "abu hurayrah", "public opinion", "khaddaat", "sign of the hour"],
               sections: [
                   SignSection("WHAT HE SAID", [
-                      .hadith("ibnmajah:4036", cite: "Sunan Ibn Majah 4036", arabic: 38...57, english: 0...49),
+                      .hadith("ibnmajah:4036", cite: "Sunan Ibn Majah 4036; graded sahih by al-Albani", arabic: 38...57, english: 0...49),
                       .text("He was asked who the ruwaybidah were, and said:"),
-                      .hadith("ibnmajah:4036", cite: "Sunan Ibn Majah 4036", arabic: 62...66, english: 59...69),
+                      .hadith("ibnmajah:4036", cite: "Sunan Ibn Majah 4036; graded sahih by al-Albani", arabic: 62...66, english: 59...69),
                   ]),
                   SignSection("WHAT HAPPENED", [
                       .text("Ruwaybidah is a diminutive of rabidah, one who lies down, and the lexicographers explained it as a person who sits back from lofty matters. The verb in the Arabic is 'speaks', where the translation has 'decide', and his definition is the insignificant man who holds forth on the affairs of the public."),
@@ -1190,7 +1190,7 @@ extension PropheciesView {
                       .text("In Rabi' al-Thani 1344 AH (late 1925 CE) an expedition sent under King 'Abd al-'Aziz reached the mountains of Daws. A first-hand account printed in a note to the modern edition of al-Azraqi's Akhbar Makkah records that at Thuruq the walls of the house of Dhul-Khalasa were standing, beside a tree the people venerated; the expedition burned the tree, pulled the building down and threw its stones into the valley. One who went with it said a single stone of it could not be moved by fewer than forty men."),
                   ]),
                   SignSection("A NOTE", [
-                      .text("Many scholars hold that the sign in its fullest sense comes near the Hour itself, when the religion has been forgotten; what happened at Thuruq shows how such a return begins, a single generation after tawhid had seemed complete. Proving Islam drew attention to this account."),
+                      .text("Many scholars hold that the sign in its fullest sense comes near the Hour itself, when the religion has been forgotten; what happened at Thuruq shows how such a return begins, in a land where tawhid had once seemed secure. Proving Islam drew attention to this account."),
                   ]),
               ]),
         .init(id: "shepherds-buildings", title: "Barefoot shepherds and tall buildings",
@@ -1219,14 +1219,14 @@ extension PropheciesView {
                   SignSection("WHAT HE SAID", [
                       .text("He joined two signs in one sentence: wealth so abundant that charity finds no taker, and a change in the land itself."),
                       .hadith("muslim:157c", cite: "Sahih Muslim 157c", arabic: 30...52, english: 0...43),
-                      .text("The verb he used is ta'uda, to return: the land would go back to something it had once been."),
+                      .text("The verb he used is ta'uda. It can mean to return, and Arabic also uses it simply for to become; many modern writers take it in the first sense, that the land would go back to something it had once been."),
                   ]),
                   SignSection("WHAT IS SEEN NOW", [
                       .text("Both sides of that word can now be seen. Geologists have found the dry beds of ancient lakes, some of them in the Empty Quarter holding the fossils of hippopotamus and water buffalo, and satellite imaging has traced the courses of rivers long buried under the sand. Arabia passed through several wet phases over hundreds of thousands of years; the last ended some thousands of years ago."),
                       .text("Since the 1980s, center-pivot irrigation has laid thousands of green circles, visible from orbit, across the northern deserts, fed by deep groundwater that fell as rain in those wetter ages. For a time Saudi Arabia grew enough wheat to export it."),
                   ]),
                   SignSection("A NOTE", [
-                      .text("Whether these fields are what he meant, or only the beginning of something still to come, the hadith does not say. What it does state, that Arabia had once been meadows and rivers, is now a finding of geology. Like every sign of the Hour, it tells what will come, not when."),
+                      .text("Whether these fields are what he meant, or only the beginning of something still to come, the hadith does not say. What the first sense of the verb implies, that Arabia had once been meadows and rivers, agrees with what geology has found. Like every sign of the Hour, it tells what will come, not when."),
                   ]),
               ]),
         .init(id: "killing-increase", title: "Killing that has lost its reason",

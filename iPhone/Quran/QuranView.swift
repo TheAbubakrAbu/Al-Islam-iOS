@@ -500,7 +500,8 @@ struct QuranView: View {
     // search happened to retrieve. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
     @State private var showAskAI = false
 
-    /// "ASK AI" with the sparkles glyph.
+    /// "ASK AI" with the sparkles glyph, in the header gray: a search section, not one of yours
+    /// (`SectionIconHeader.accentTitle`'s rule).
     private var askAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
@@ -509,7 +510,6 @@ struct QuranView: View {
 
             Spacer()
         }
-        .foregroundStyle(settings.accentColor.color)
     }
 
     /// The Ask AI entry as ONE section pinned ABOVE the surah results - ALWAYS present while searching
@@ -1162,7 +1162,9 @@ struct QuranView: View {
     }
 
     private var shouldShowSearchHelpOverlay: Bool {
-        isQuranSearchFocused
+        // Choose Surah is for picking a surah: the card's ayah syntax only covered the list there.
+        !isPicker
+            && isQuranSearchFocused
             && !isListMoving
             && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             // Makki, a juz or a surah pick lists results with nothing typed: the card would cover them.
@@ -1265,18 +1267,10 @@ struct QuranView: View {
                 // the search bar, so the expanded part scrolls within the card instead of clipping.
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Plain text matches anywhere: 'رب' also finds 'ربهم'")
-                        Text("Romanized Arabic finds its ayahs however you spell it: sabr, tawbah, alhamdulillah")
+                        Text("Arabic, English or transliteration, spelled any way: sabr, tawbah, رب")
                         Text("A named ayah opens by its name: Ayatul Kursi")
-                        Text("More, in the row of buttons, adds Match, Words and Without")
-                        Text("Match: Whole Word finds the word رب and not ربهم; Starts With, Ends With and Exact (tashkeel and capitals count) are there too")
-                        Text("Words: As a Phrase, All Words (anywhere in the ayah) or Any Word")
-                        Text("Without: words no result may carry")
-                        Text("\u{201C}Quotes\u{201D} keep a phrase together among other words")
-                        Text("A bare Arabic root (رحم) lists every word built on it")
-                        Text("Arabic, English or transliteration all work, and 'surah X', 'manzil X' too")
-                        Text("Count filters: 'X ayahs/pages', '<X', '>X', '<=X', '>=X', '==X'")
-                        Text("Juz names work too: Arabic or transliteration")
+                        Text("\u{201C}Quotes\u{201D} keep a phrase together; a bare root (رحم) lists every word built on it")
+                        Text("More, in the buttons above, adds Match (whole word and more), Words and Without")
                     }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -3872,7 +3866,7 @@ struct QuranView: View {
                 }
             }
         } header: {
-            SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered")
+            SectionIconHeader("KHATM PROGRESS", icon: "flag.checkered", accentTitle: true)
         }
         .onChange(of: settings.automaticKhatmCompletion) { _ in
             settings.hapticFeedback()
@@ -4312,7 +4306,6 @@ struct QuranView: View {
             title: "JUMP TO JUZ",
             count: QuranData.juzList.count,
             icon: "square.grid.3x3.fill",
-            accentTitle: true,
             isExpanded: $showJuzJumpGrid
         )) {
             if showJuzJumpGrid {

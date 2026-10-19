@@ -343,9 +343,9 @@ struct SettingsAdhanView: View {
             adhanPageLink(.sky, tint: SettingsTint.sky) { skyDestination }
         }
 
-        // No PRAYER TRACKER section here: "Mark Only After the Time Begins" moved onto the tracker
-        // itself, beneath the marks it governs (Abu, 2026-09-18). See
-        // `PrayerTrackerView.settingsSection`.
+        // No PRAYER TRACKER section here: the tracker's one switch ("Mark Only After the Time
+        // Begins") moved onto the tracker itself in September 2026 and became its only behaviour on
+        // 2026-10-19 (see `Settings.canMarkPrayer`); the tracker explains itself on its history page.
         #endif
 
         // Last on every settings page, above its ADVANCED switch (Abu, 2026-10-10): a page opens on its
@@ -443,7 +443,7 @@ struct SettingsAdhanView: View {
                                 .tint(settings.accentColor.color)
                                 .onChange(of: settings.skyShowsWeather) { _ in settings.hapticFeedback() }
 
-                            Text("Clouds, rain, snow and fog show on the sky, and the temperature, UV index, humidity and wind sit on the card, in At a Glance and on the sky widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, your location never leaves your device.")
+                            Text("Clouds, rain, snow and fog on the sky; temperature, UV, humidity and wind on the card and the widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, it never leaves your device.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -472,7 +472,7 @@ struct SettingsAdhanView: View {
                             .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
                             .onChange(of: settings.skySceneStyle) { _ in settings.hapticFeedback() }
 
-                            Text("Pyramids to the west and a mosque to the east along the horizon, with the sun crossing by day and the moon by night. Choose the pair, only pyramids, or only mosques. Also on the Solar Arc and Day & Night widgets.")
+                            Text("Pyramids to the west, a mosque to the east, the sun by day and the moon by night. Choose the pair, only pyramids, or only mosques. Also on the sky widgets.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -1006,39 +1006,29 @@ struct NotificationView: View {
                 }
                 #endif
 
-                Section(header: Text("HIJRI CALENDAR")) {
-                    Toggle("Islamic Calendar Notifications", isOn: $settings.dateNotifications.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
-
-                    if settings.dateNotifications, settings.advanced(.notifications) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
-
-                            Text("Also sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting never arrive unannounced.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .settingsDependent()
+                // The two doors first: they are what most people come here for. Each row says
+                // where it stands, so the common check needs no push.
+                Section(header: Text("PRAYERS")) {
+                    NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
+                        SettingsRowLabel(title: "Prayer Notifications", systemImage: "bell.fill",
+                                         subtitle: prayerNotificationsSummary, tint: SettingsTint.notifications)
                     }
-                }
+                    .tint(settings.accentColor.color)
 
-                #if os(iOS)
-                // The Sunnah Reminders schedule recitations in the Quran reader, so they ship with it.
-                #if HAS_QURAN
-                Section(header: Text("QURAN AND SUNNAH")) {
-                    NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
-                        SettingsRowLabel(title: "Sunnah Reminders", systemImage: "bell.and.waves.left.and.right.fill",
-                                         subtitle: "Al-Kahf on Friday, al-Mulk before sleep, and more", tint: SettingsTint.notifications)
+                    // The mode is the app's most unusual notification feature and was its hardest to
+                    // find; a row of its own here, beside the prayers it reminds about.
+                    NavigationLink(destination: LazyDestination { NaggingModeView() }) {
+                        SettingsRowLabel(title: "Nagging Mode",
+                                         systemImage: SettingsNotificationsPage.naggingMode.systemImage,
+                                         subtitle: SettingsNotificationsPage.naggingMode.caption,
+                                         tint: SettingsTint.notifications,
+                                         value: NaggingModeView.statusValue(settings))
                     }
                     .tint(settings.accentColor.color)
                 }
-                #endif
 
-                Section(header: Text("ADHAN SOUND")) {
+                #if os(iOS)
+                Section(header: Text("ADHAN")) {
                     Picker("Adhan Sound", selection: $settings.adhanNotificationSound) {
                         // Two groups, not one run of nineteen names: the tones (with Default, the same
                         // six the ALERT TONE picker offers) and then the calls to prayer.
@@ -1086,13 +1076,31 @@ struct NotificationView: View {
                                     playAdhanPreview()
                                 }
                             }
+
+                        // The in-app adhan's two switches, together and in plain sight (Abu,
+                        // 2026-10-19). With "Default" chosen there is no recording for either to
+                        // act on, so they stay out of the way.
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Play Automatically", isOn: $settings.adhanAutoPlayInApp.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: settings.adhanAutoPlayInApp) { _ in settings.hapticFeedback() }
+
+                            settingsCaption("Starts the full adhan when the app is open at prayer time, or opened within five minutes of it. Off, a Play button appears instead.")
+                        }
+
+                        if settings.adhanAutoPlayInApp {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Toggle("Play in Silent Mode", isOn: $settings.adhanOverridesSilentMode.animation(.easeInOut))
+                                    .font(.subheadline)
+                                    .onChange(of: settings.adhanOverridesSilentMode) { _ in settings.hapticFeedback() }
+
+                                settingsCaption("Plays even with the phone silenced. Off, a silenced phone gets a Play button instead.")
+                            }
+                            .settingsDependent()
+                        }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone\(settings.advanced(.notifications) ? " below" : ", an advanced setting").")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
+                    settingsCaption("A notification can play 30 seconds of the adhan; the app plays it in full.")
                 }
 
                 if settings.advanced(.notifications) {
@@ -1130,51 +1138,73 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("Used for prenotifications, the optional times (Shurooq, Duhaa, Islamic Midnight, Last Third), and any prayer whose adhan is switched off, so you can tell a prayer notification from every other alert on your phone. None of these is a call to prayer. Echo and Takbir are soft; Chime, Ring, and Alarm are pitched to carry through background noise, Alarm the most of all. Choose Default to go back to the iPhone's own alert sound.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
-
-                Section(footer: Text("With this on, the adhan that plays inside the app at prayer time sounds even when the ringer switch is set to silent. Because that ignores the ringer, opening the app within five minutes of a missed adhan then offers a Play button on the prayer card instead of starting the adhan on its own, so it never sounds somewhere quiet without you asking. With this off, a missed adhan inside those five minutes plays by itself and follows the ringer switch as usual. Notifications outside the app always follow your system sound settings.")) {
-                    Toggle("Play In-App Adhan in Silent Mode", isOn: $settings.adhanOverridesSilentMode.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.adhanOverridesSilentMode) { _ in settings.hapticFeedback() }
+                    settingsCaption("For prenotifications, the optional times and any prayer with the adhan off. Chime, Ring and Alarm carry through noise.")
                 }
                 }
                 #endif
 
-                Section(header: Text("PRAYER REMINDERS")) {
-                    NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
-                        SettingsRowLabel(title: "Prayer Notifications", systemImage: "bell.fill",
-                                         subtitle: SettingsNotificationsPage.prayerReminders.caption, tint: SettingsTint.notifications)
-                    }
-                    .tint(settings.accentColor.color)
+                Section(header: Text("MORE REMINDERS")) {
+                    Toggle("Islamic Calendar Notifications", isOn: $settings.dateNotifications.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
 
-                    // Its own row here, not only a section inside Prayer Notifications: the mode is
-                    // the app's most unusual notification feature and was its hardest to find.
-                    NavigationLink(destination: LazyDestination { NaggingModeView() }) {
-                        SettingsRowLabel(title: "Nagging Mode",
-                                         systemImage: SettingsNotificationsPage.naggingMode.systemImage,
-                                         subtitle: SettingsNotificationsPage.naggingMode.caption,
-                                         tint: SettingsTint.notifications,
-                                         value: NaggingModeView.statusValue(settings))
+                    if settings.dateNotifications, settings.advanced(.notifications) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
+
+                            settingsCaption("A heads-up the evening before each Islamic date.")
+                        }
+                        .settingsDependent()
+                    }
+
+                    #if os(iOS) && HAS_QURAN
+                    // The Sunnah Reminders schedule recitations in the Quran reader, so they ship with it.
+                    NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
+                        SettingsRowLabel(title: "Sunnah Reminders", systemImage: "bell.and.waves.left.and.right.fill",
+                                         subtitle: "Al-Kahf on Friday, al-Mulk before sleep, and more", tint: SettingsTint.notifications)
                     }
                     .tint(settings.accentColor.color)
+                    #endif
                 }
 
                 #if os(iOS)
                 // Last on the page, above its ADVANCED switch (Abu, 2026-10-10): see Prayer Settings.
                 TipsSection(area: .notifications, resolve: resolveSearchDestination)
 
-                AdvancedSettingsSection(screen: .notifications, hides: "the alert tone, the in-app adhan in silent mode and the day-before reminder for Islamic dates")
+                AdvancedSettingsSection(screen: .notifications, hides: "the alert tone and the day-before reminder for Islamic dates")
                 #else
                 // The watch's only advanced control here is Remind a Day Before, itself shown only
                 // while Islamic Calendar Notifications is on - so with that off, nothing is hidden.
                 AdvancedSettingsSection(screen: .notifications, hides: "the day-before reminder for Islamic dates",
                                         applies: settings.dateNotifications)
                 #endif
+    }
+
+    /// One line under a control, the only kind of caption this page carries (Abu, 2026-10-19).
+    private func settingsCaption(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 2)
+    }
+
+    /// What the Prayer Notifications door leads to, at a glance: "All 5 prayers \u{00B7} 10 min before",
+    /// "3 of 5 prayers", or "Off".
+    private var prayerNotificationsSummary: String {
+        let switches = [settings.notificationFajr, settings.notificationDhuhr, settings.notificationAsr,
+                        settings.notificationMaghrib, settings.notificationIsha]
+        let on = switches.filter { $0 }.count
+        guard on > 0 else { return "Off" }
+        let prayers = on == 5 ? "All 5 prayers" : "\(on) of 5 prayers"
+        let leads = Set([settings.preNotificationFajr, settings.preNotificationDhuhr, settings.preNotificationAsr,
+                         settings.preNotificationMaghrib, settings.preNotificationIsha])
+        if leads.count == 1, let lead = leads.first, lead > 0 {
+            return "\(prayers) \u{00B7} \(lead) min before"
+        }
+        return prayers
     }
 
     #if os(iOS)
@@ -1569,12 +1599,100 @@ struct MoreNotificationView: View {
 
     @State private var showAlert: Bool = false
 
+    /// A prayer with a row on this screen: its switch and its lead time, by key path, so one list
+    /// serves the five prayers, Shurooq and whichever optional times the Adhan tab shows.
+    private struct PrayerRow: Identifiable {
+        let name: String
+        let notification: ReferenceWritableKeyPath<Settings, Bool>
+        let lead: ReferenceWritableKeyPath<Settings, Int>
+        var id: String { name }
+    }
+
+    /// In the day's order. The optional times appear only while they are shown on the Adhan tab,
+    /// since a notification for a time the app does not display would be a surprise.
+    private var rows: [PrayerRow] {
+        var list: [PrayerRow] = [
+            .init(name: "Fajr", notification: \.notificationFajr, lead: \.preNotificationFajr),
+            .init(name: "Shurooq", notification: \.notificationSunrise, lead: \.preNotificationSunrise),
+        ]
+        if settings.showDuha {
+            list.append(.init(name: "Duhaa", notification: \.notificationDuha, lead: \.preNotificationDuha))
+        }
+        list += [
+            .init(name: "Dhuhr", notification: \.notificationDhuhr, lead: \.preNotificationDhuhr),
+            .init(name: "Asr", notification: \.notificationAsr, lead: \.preNotificationAsr),
+            .init(name: "Maghrib", notification: \.notificationMaghrib, lead: \.preNotificationMaghrib),
+            .init(name: "Isha", notification: \.notificationIsha, lead: \.preNotificationIsha),
+        ]
+        if settings.showIslamicMidnight {
+            list.append(.init(name: "Islamic Midnight", notification: \.notificationIslamicMidnight, lead: \.preNotificationIslamicMidnight))
+        }
+        if settings.showLastThird {
+            list.append(.init(name: "Last Third", notification: \.notificationLastThird, lead: \.preNotificationLastThird))
+        }
+        return list
+    }
+
+    /// The five obligatory prayers, which the All Prayers switch and lead govern. Shurooq and the
+    /// optional times keep their own rows: nobody wants a Shurooq alert because they wanted Fajr's.
+    private static let obligatory = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+
+    private var obligatoryRows: [PrayerRow] { rows.filter { Self.obligatory.contains($0.name) } }
+
+    private var allPrayersOn: Bool { obligatoryRows.allSatisfy { settings[keyPath: $0.notification] } }
+
+    private var allPrayersBinding: Binding<Bool> {
+        Binding(
+            get: { allPrayersOn },
+            set: { newValue in
+                withAnimation {
+                    for row in obligatoryRows { settings[keyPath: row.notification] = newValue }
+                }
+            }
+        )
+    }
+
+    /// The lead every obligatory prayer shares, or Fajr's when they differ (the stepper then moves
+    /// them all onto one value, which is what a stepper on an "all" row means).
+    private var allLeadsBinding: Binding<Int> {
+        Binding(
+            get: { settings.preNotificationFajr },
+            set: { newValue in
+                withAnimation {
+                    for row in obligatoryRows { settings[keyPath: row.lead] = newValue }
+                }
+            }
+        )
+    }
+
+    private func binding<T>(_ keyPath: ReferenceWritableKeyPath<Settings, T>) -> Binding<T> {
+        Binding(get: { settings[keyPath: keyPath] }, set: { settings[keyPath: keyPath] = $0 })
+    }
+
+    static func leadText(_ minutes: Int) -> String {
+        minutes == 0 ? "At the time" : "\(minutes) min before"
+    }
+
+    /// The row's trailing read-out: "10 min before \u{00B7} Adhan", "At the time \u{00B7} Tone", "Off".
+    private func summary(for row: PrayerRow) -> String {
+        guard settings[keyPath: row.notification] else { return "Off" }
+        var parts = [Self.leadText(settings[keyPath: row.lead])]
+        if Settings.adhanEligiblePrayerNames.contains(row.name), settings.adhanNotificationSound != "default" {
+            if settings.playsAdhanSound(forPrayer: row.name) {
+                parts.append(settings.adhanClipLength(forPrayer: row.name) == .short ? "Short adhan" : "Adhan")
+            } else {
+                parts.append("Tone")
+            }
+        }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
     var body: some View {
         #if DEBUG && os(iOS)
         ScrollViewReader { proxy in
             notificationBody
-                // "-scrollToEnglishMeanings": the WHAT THEY SAY section sits below the fold (further
-                // still in nagging mode), and a simulator screenshot cannot scroll.
+                // "-scrollToEnglishMeanings": the WORDING section sits below the fold, and a simulator
+                // screenshot cannot scroll.
                 .onAppear {
                     guard ProcessInfo.processInfo.arguments.contains("-scrollToEnglishMeanings") else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -1587,34 +1705,70 @@ struct MoreNotificationView: View {
         #endif
     }
 
+    // Revamped 2026-10-19 (Abu: "too complicated and ugly"). It was a Nagging Mode door (its third),
+    // a wording switch, an all-prayers switch that read OFF while five of six were on (Shurooq counted),
+    // and then nine identical four-control blocks behind Advanced Settings, five of which vanished
+    // whenever a nagging deadline was on, so Isha's adhan could not be turned off while Isha was being
+    // nagged about. Now: the all-prayers controls, one row per prayer with its state as the value and
+    // its own page behind it, and the wording switch. Nothing hides, so no Advanced switch.
     private var notificationBody: some View {
         List {
             Group {
-            // Nagging mode has a screen of its own now (Abu, 2026-09-20: "make nagging mode more
-            // customizable... front and center"): it outgrew a section, and as a section it sat
-            // three pushes deep where nobody found it. This is one of its three doors; the
-            // Notifications root and the Settings tab's featured cards are the other two.
-            Section(header: Text("NAGGING MODE")) {
-                NavigationLink(destination: LazyDestination { NaggingModeView() }) {
-                    SettingsRowLabel(title: "Nagging Mode",
-                                     systemImage: SettingsNotificationsPage.naggingMode.systemImage,
-                                     subtitle: SettingsNotificationsPage.naggingMode.caption,
-                                     tint: SettingsTint.notifications,
-                                     value: NaggingModeView.statusValue(settings))
+            Section {
+                Toggle("All Prayers", isOn: allPrayersBinding.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: allPrayersOn) { _ in settings.hapticFeedback() }
+
+                Stepper(value: allLeadsBinding, in: 0...120, step: 1) {
+                    HStack {
+                        Text("Remind Before")
+                            .font(.subheadline)
+                        Spacer()
+                        Text(Self.leadText(settings.preNotificationFajr))
+                            .font(.subheadline)
+                            .foregroundColor(settings.accentColor.color)
+                    }
                 }
-                .tint(settings.accentColor.color)
+
+                Text("Sets the five prayers at once. Each one can differ below.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
             }
 
-            // OUTSIDE the `!naggingMode` branch: the gloss is part of every prayer notification's
-            // wording, and a nag body names the prayer too, so hiding this control in nagging mode
-            // would hide a setting that is still in effect.
-            Section(header: Text("WHAT THEY SAY")) {
+            Section(header: Text("EACH PRAYER")) {
+                ForEach(rows) { row in
+                    NavigationLink(destination: LazyDestination {
+                        PrayerNotificationDetailView(prayerName: row.name,
+                                                     preNotificationTime: binding(row.lead),
+                                                     isNotificationOn: binding(row.notification))
+                    }) {
+                        HStack {
+                            Text(row.name)
+                                .foregroundColor(.primary)
+                            Spacer(minLength: 8)
+                            Text(summary(for: row))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                    .tint(settings.accentColor.color)
+                }
+            }
+
+            // The gloss is part of every prayer notification's wording, and a nag body names the
+            // prayer too, so this applies whatever else is on.
+            Section(header: Text("WORDING")) {
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle("Show English Meanings", isOn: $settings.prayerNotificationEnglishNames.animation(.easeInOut))
                         .font(.subheadline)
                         .onChange(of: settings.prayerNotificationEnglishNames) { _ in settings.hapticFeedback() }
 
-                    Text("Adds each prayer's meaning to its notification, like \u{201C}Time for Maghrib (sunset)\u{201D}. Shurooq and Jumuah always name theirs.")
+                    Text("\u{201C}Time for Maghrib (sunset)\u{201D}. Shurooq and Jumuah always name theirs.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1625,108 +1779,6 @@ struct MoreNotificationView: View {
                 .id("englishMeanings")
                 #endif
             }
-
-            // Always shown now, nagging mode or not (2026-09-22): with the per-prayer sections behind
-            // Advanced Settings, this is the one place the simple screen turns the adhans on and
-            // sets the prenotification lead. Nagging mode turns the six on when it starts; turning
-            // them off here afterwards keeps the "Did you pray?" reminders and drops the adhans.
-            Section(header: Text("ALL PRAYER NOTIFICATIONS")) {
-                    Toggle("Turn On All Prayer Notifications", isOn: Binding(
-                        get: {
-                            settings.notificationFajr &&
-                            settings.notificationSunrise &&
-                            settings.notificationDhuhr &&
-                            settings.notificationAsr &&
-                            settings.notificationMaghrib &&
-                            settings.notificationIsha
-                        },
-                        set: { newValue in
-                            withAnimation {
-                                settings.notificationFajr = newValue
-                                settings.notificationSunrise = newValue
-                                settings.notificationDhuhr = newValue
-                                settings.notificationAsr = newValue
-                                settings.notificationMaghrib = newValue
-                                settings.notificationIsha = newValue
-                            }
-                        }
-                    ).animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.notificationFajr) { _ in settings.hapticFeedback() }
-
-                    Stepper(value: Binding(
-                        get: { settings.preNotificationFajr },
-                        set: { newValue in
-                            withAnimation {
-                                settings.preNotificationFajr = newValue
-                                settings.preNotificationSunrise = newValue
-                                settings.preNotificationDhuhr = newValue
-                                settings.preNotificationAsr = newValue
-                                settings.preNotificationMaghrib = newValue
-                                settings.preNotificationIsha = newValue
-                            }
-                        }
-                    ), in: 0...120, step: 1) {
-                        Text("All Prayer Prenotifications:")
-                            .font(.subheadline)
-                        Text("\(settings.preNotificationFajr) minute\(settings.preNotificationFajr != 1 ? "s" : "")")
-                            .font(.subheadline)
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                }
-
-            // Nothing per prayer on the simple screen: the section above sets them all at once.
-            if settings.advanced(.prayerNotifications) {
-            if !settings.naggingMode {
-                NotificationSettingsSection(prayerName: "Fajr", preNotificationTime: $settings.preNotificationFajr, isNotificationOn: $settings.notificationFajr)
-                NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
-                NotificationSettingsSection(prayerName: "Dhuhr", preNotificationTime: $settings.preNotificationDhuhr, isNotificationOn: $settings.notificationDhuhr)
-                NotificationSettingsSection(prayerName: "Asr", preNotificationTime: $settings.preNotificationAsr, isNotificationOn: $settings.notificationAsr)
-                NotificationSettingsSection(prayerName: "Maghrib", preNotificationTime: $settings.preNotificationMaghrib, isNotificationOn: $settings.notificationMaghrib)
-                NotificationSettingsSection(prayerName: "Isha", preNotificationTime: $settings.preNotificationIsha, isNotificationOn: $settings.notificationIsha)
-
-                if settings.showDuha {
-                    NotificationSettingsSection(prayerName: "Duhaa", preNotificationTime: $settings.preNotificationDuha, isNotificationOn: $settings.notificationDuha)
-                }
-                if settings.showIslamicMidnight {
-                    NotificationSettingsSection(prayerName: "Islamic Midnight", preNotificationTime: $settings.preNotificationIslamicMidnight, isNotificationOn: $settings.notificationIslamicMidnight)
-                }
-                if settings.showLastThird {
-                    NotificationSettingsSection(prayerName: "Last Third", preNotificationTime: $settings.preNotificationLastThird, isNotificationOn: $settings.notificationLastThird)
-                }
-            } else {
-                if !settings.naggingFajr {
-                    NotificationSettingsSection(prayerName: "Fajr", preNotificationTime: $settings.preNotificationFajr, isNotificationOn: $settings.notificationFajr)
-                }
-                if !settings.naggingSunrise {
-                    NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
-                }
-                // Always shown: "before Dhuhr" is no longer a nagging deadline (it asked about Fajr,
-                // whose window had already closed at sunrise), so nothing else owns this slot.
-                NotificationSettingsSection(prayerName: "Dhuhr", preNotificationTime: $settings.preNotificationDhuhr, isNotificationOn: $settings.notificationDhuhr)
-                if !settings.naggingAsr {
-                    NotificationSettingsSection(prayerName: "Asr", preNotificationTime: $settings.preNotificationAsr, isNotificationOn: $settings.notificationAsr)
-                }
-                if !settings.naggingMaghrib {
-                    NotificationSettingsSection(prayerName: "Maghrib", preNotificationTime: $settings.preNotificationMaghrib, isNotificationOn: $settings.notificationMaghrib)
-                }
-                if !settings.naggingIsha {
-                    NotificationSettingsSection(prayerName: "Isha", preNotificationTime: $settings.preNotificationIsha, isNotificationOn: $settings.notificationIsha)
-                }
-                if settings.showDuha {
-                    NotificationSettingsSection(prayerName: "Duhaa", preNotificationTime: $settings.preNotificationDuha, isNotificationOn: $settings.notificationDuha)
-                }
-                if settings.showIslamicMidnight {
-                    NotificationSettingsSection(prayerName: "Islamic Midnight", preNotificationTime: $settings.preNotificationIslamicMidnight, isNotificationOn: $settings.notificationIslamicMidnight)
-                }
-                if settings.showLastThird {
-                    NotificationSettingsSection(prayerName: "Last Third", preNotificationTime: $settings.preNotificationLastThird, isNotificationOn: $settings.notificationLastThird)
-                }
-            }
-            }
-
-            AdvancedSettingsSection(screen: .prayerNotifications, hides: "each prayer's own notification switch, prenotification time, adhan and short adhan, including the optional times")
             }
             .themedListRowBackground()
         }
@@ -1776,7 +1828,10 @@ struct MoreNotificationView: View {
     }
 }
 
-struct NotificationSettingsSection: View {
+/// One prayer's page: its switch, its lead time, and (for the five prayers, with a recording chosen)
+/// whether its notification calls the adhan, in full or short. What used to be one of nine identical
+/// blocks stacked on Prayer Notifications.
+struct PrayerNotificationDetailView: View {
     @ObservedObject var settings = Settings.shared
 
     let prayerName: String
@@ -1787,96 +1842,111 @@ struct NotificationSettingsSection: View {
     private var travelNotificationCaption: String? {
         switch prayerName {
         case "Dhuhr":
-            return "Also affects the combined traveling Dhuhr/Asr prayer."
+            return "Also the combined traveling Dhuhr/Asr prayer."
         case "Maghrib":
-            return "Also affects the combined traveling Maghrib/Isha prayer."
+            return "Also the combined traveling Maghrib/Isha prayer."
         default:
             return nil
         }
     }
 
-    /// Only the five daily prayers carry an adhan. Shurooq and the optional times always use the default
-    /// notification sound (see `prayerNotificationSound`), so they get no adhan controls at all.
-    private var shortAdhan: Binding<Bool>? {
+    /// Only the five daily prayers carry an adhan. Shurooq and the optional times always use the alert
+    /// tone (see `prayerNotificationSound`), so they get no adhan controls at all.
+    private var adhanSound: ReferenceWritableKeyPath<Settings, Bool>? {
         switch prayerName {
-        case "Fajr":    return $settings.shortAdhanFajr
-        case "Dhuhr":   return $settings.shortAdhanDhuhr
-        case "Asr":     return $settings.shortAdhanAsr
-        case "Maghrib": return $settings.shortAdhanMaghrib
-        case "Isha":    return $settings.shortAdhanIsha
+        case "Fajr":    return \.adhanSoundFajr
+        case "Dhuhr":   return \.adhanSoundDhuhr
+        case "Asr":     return \.adhanSoundAsr
+        case "Maghrib": return \.adhanSoundMaghrib
+        case "Isha":    return \.adhanSoundIsha
         default:        return nil
         }
     }
 
-    private var adhanSound: Binding<Bool>? {
+    private var shortAdhan: ReferenceWritableKeyPath<Settings, Bool>? {
         switch prayerName {
-        case "Fajr":    return $settings.adhanSoundFajr
-        case "Dhuhr":   return $settings.adhanSoundDhuhr
-        case "Asr":     return $settings.adhanSoundAsr
-        case "Maghrib": return $settings.adhanSoundMaghrib
-        case "Isha":    return $settings.adhanSoundIsha
+        case "Fajr":    return \.shortAdhanFajr
+        case "Dhuhr":   return \.shortAdhanDhuhr
+        case "Asr":     return \.shortAdhanAsr
+        case "Maghrib": return \.shortAdhanMaghrib
+        case "Isha":    return \.shortAdhanIsha
         default:        return nil
         }
     }
 
-    /// With "Default" chosen there is no recording to play or shorten, so the per-prayer adhan controls have
+    /// With "Default" chosen there is no recording to play or shorten, so the adhan controls have
     /// nothing to act on and are hidden rather than shown doing nothing.
     private var hasAdhanRecording: Bool { settings.adhanNotificationSound != "default" }
 
+    private func binding(_ keyPath: ReferenceWritableKeyPath<Settings, Bool>) -> Binding<Bool> {
+        Binding(get: { settings[keyPath: keyPath] }, set: { settings[keyPath: keyPath] = $0 })
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 2)
+    }
+
     var body: some View {
-        Section(header: Text(prayerName.uppercased())) {
-            Toggle("Notification", isOn: $isNotificationOn.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: isNotificationOn) { _ in settings.hapticFeedback() }
-
-            if isNotificationOn {
-                Stepper(value: $preNotificationTime.animation(.easeInOut), in: 0...120, step: 1) {
-                    Text("Prenotification Time:")
+        List {
+            Group {
+                Section {
+                    Toggle("Notification", isOn: $isNotificationOn.animation(.easeInOut))
                         .font(.subheadline)
+                        .tint(settings.accentColor.color)
+                        .onChange(of: isNotificationOn) { _ in settings.hapticFeedback() }
 
-                    Text("\(preNotificationTime) minute\(preNotificationTime != 1 ? "s" : "")")
-                        .font(.subheadline)
-                        .foregroundColor(settings.accentColor.color)
-                }
-
-                if let adhanSound, hasAdhanRecording {
-                    VStack(alignment: .leading) {
-                        Toggle("Play Adhan", isOn: adhanSound.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: adhanSound.wrappedValue) { _ in settings.hapticFeedback() }
-
-                        Text("Turn off to get an ordinary notification sound for this prayer, while the others still call the adhan.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
+                    if isNotificationOn {
+                        Stepper(value: $preNotificationTime.animation(.easeInOut), in: 0...120, step: 1) {
+                            HStack {
+                                Text("Remind Before")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(MoreNotificationView.leadText(preNotificationTime))
+                                    .font(.subheadline)
+                                    .foregroundColor(settings.accentColor.color)
+                            }
+                        }
                     }
 
-                    // Nothing to shorten once the adhan itself is off.
-                    if let shortAdhan, adhanSound.wrappedValue {
-                        VStack(alignment: .leading) {
-                            Toggle("Short Adhan", isOn: shortAdhan.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: shortAdhan.wrappedValue) { _ in settings.hapticFeedback() }
+                    if let travelNotificationCaption {
+                        caption(travelNotificationCaption)
+                    }
+                }
 
-                            Text("Plays a brief excerpt instead of the adhan's first 30 seconds.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
+                if isNotificationOn, hasAdhanRecording, let adhanSound {
+                    Section(header: Text("SOUND")) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Play Adhan", isOn: binding(adhanSound).animation(.easeInOut))
+                                .font(.subheadline)
+                                .tint(settings.accentColor.color)
+                                .onChange(of: settings[keyPath: adhanSound]) { _ in settings.hapticFeedback() }
+
+                            caption("Off, this prayer gets the alert tone while the others still call the adhan.")
+                        }
+
+                        // Nothing to shorten once the adhan itself is off.
+                        if settings[keyPath: adhanSound], let shortAdhan {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Toggle("Short Adhan", isOn: binding(shortAdhan).animation(.easeInOut))
+                                    .font(.subheadline)
+                                    .tint(settings.accentColor.color)
+                                    .onChange(of: settings[keyPath: shortAdhan]) { _ in settings.hapticFeedback() }
+
+                                caption("A brief excerpt instead of the adhan's first 30 seconds.")
+                            }
+                            .settingsDependent()
                         }
                     }
                 }
             }
-
-            if let travelNotificationCaption {
-                Text(travelNotificationCaption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            .themedListRowBackground()
         }
+        .applyConditionalListStyle()
+        .navigationTitle(prayerName)
     }
 }
 
@@ -1893,12 +1963,13 @@ extension SettingsSearchEntry {
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
         .init(title: "Notification Permission", path: "Notifications", keywords: "allow access permission status sounds badges denied", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
-        .init(title: "Play In-App Adhan in Silent Mode", path: "Notifications", keywords: "silent mode ringer switch mute in-app adhan sound", destination: .notifications, advanced: true),
+        .init(title: "Play Adhan Automatically", path: "Notifications", keywords: "automatic auto play in-app adhan full recording open app five minutes play button offer", destination: .notifications),
+        .init(title: "Play in Silent Mode", path: "Notifications", keywords: "silent mode ringer switch mute action button in-app adhan sound", destination: .notifications),
         .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications, advanced: true),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
         .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications, advanced: true),
-        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert all prayers prenotification", destination: .notificationsPage(.prayerReminders)),
-        .init(title: "Per-Prayer Notifications & Adhan", path: "Notifications → Prayer Reminders", keywords: "per prayer each fajr dhuhr asr maghrib isha own sound short adhan play adhan prenotification duhaa midnight last third", destination: .notificationsPage(.prayerReminders), advanced: true),
+        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Notifications", keywords: "before minutes early alert all prayers prenotification remind", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Per-Prayer Notifications & Adhan", path: "Notifications → Prayer Notifications", keywords: "per prayer each fajr dhuhr asr maghrib isha own sound short adhan play adhan prenotification duhaa midnight last third", destination: .notificationsPage(.prayerReminders)),
         .init(title: "Nagging Mode", path: "Notifications → Nagging Mode", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq struggle lazy miss prayers accountability", destination: .notificationsPage(.naggingMode)),
         .init(title: "Nagging Start Time & Repeat Interval", path: "Notifications → Nagging Mode", keywords: "nag lead start minutes before hour repeat every interval spacing how often frequency last calls final reminders 10 5", destination: .notificationsPage(.naggingMode), advanced: true),
         .init(title: "Different Nagging Start for Each Prayer", path: "Notifications → Nagging Mode", keywords: "nag per prayer custom lead fajr shurooq asr maghrib isha midnight individual", destination: .notificationsPage(.naggingMode), advanced: true),
@@ -1906,7 +1977,7 @@ extension SettingsSearchEntry {
         .init(title: "Nag Tone & Louder Last Call", path: "Notifications → Nagging Mode", keywords: "nag sound tone alarm loud louder final last call escalate chime ring echo takbir", destination: .notificationsPage(.naggingMode), advanced: true),
         .init(title: "Add a Verse to the Last Call", path: "Notifications → Nagging Mode", keywords: "nag ayah verse quran wording reminder motivation last call", destination: .notificationsPage(.naggingMode), advanced: true),
         .init(title: "Pause Nagging", path: "Notifications → Nagging Mode", keywords: "pause snooze silence hold sick travel flight day week resume nag", destination: .notificationsPage(.naggingMode)),
-        .init(title: "Show English Meanings", path: "Notifications → Prayer Reminders", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
+        .init(title: "Show English Meanings", path: "Notifications → Prayer Notifications", keywords: "english translation meaning sunset dawn midday afternoon night maghrib notification wording name", destination: .notificationsPage(.prayerReminders)),
     ]
 
     /// The Sunnah Reminders' entry, where the Quran reader ships (`HAS_QURAN`): Al-Adhan has no such page.
@@ -1937,7 +2008,6 @@ extension SettingsSearchEntry {
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
         .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
         .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames), advanced: true),
-        .init(title: "Mark Only After the Time Begins", path: "Al-Adhan → Prayer Tracker", keywords: "prayer tracker mark time begins lock gate future prayers order only after adhan", destination: .prayerTracker),
         .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings → Sky", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerPage(.sky)),
         .init(title: "Sky Fills the Screen", path: "Prayer Settings → Sky", keywords: "sky whole tab background full screen fill page gradient behind everything glass rows adhan tab color", destination: .prayerPage(.sky)),
         .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings → Sky", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerPage(.sky)),

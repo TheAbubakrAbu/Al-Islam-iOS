@@ -161,7 +161,7 @@ struct SettingsIslamView: View {
                             .tint(settings.accentColor.color)
                             .onChange(of: settings.highlightAllahNamesIslam) { _ in settings.hapticFeedback() }
 
-                        Text("Shows the name of Allah in red in the duas, the dhikr and remembrances, the tasbih, the 99 Names, the daily cards, and the quotes in the articles and guides. \(IslamSettingsCopy.ownSwitches)")
+                        Text("The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -187,7 +187,7 @@ struct SettingsIslamView: View {
                     ArabicSizeSlider()
                         .padding(.vertical, 4)
 
-                    Text("How much larger the Arabic reads on the alphabet and letter screens than the rest of the app. The slider raises the size as a floor, so the letters never render smaller than your device's own text size.")
+                    Text("How much larger the Arabic reads on the alphabet screens. A floor: the letters never render smaller than your device's own text size.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

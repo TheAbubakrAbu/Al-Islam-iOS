@@ -526,7 +526,7 @@ struct ProvingContinuationView: View {
             .ayah("33:40"),
             .text("His place at the end of the line was decreed before the line began. Asked when prophethood was established for him, he answered:"),
             .hadith("tirmidhi:3609", cite: "Jami` at-Tirmidhi 3609; graded sahih by al-Albani", arabic: 27...41, english: [0...23]),
-            .text("Ibn Taymiyyah explained that Allah (Glorified and Exalted be He) wrote his prophethood and made it known while Adam (peace be upon him) was still between spirit and body. The hadith speaks of Allah’s decree and knowledge, not of the Prophet’s person existing before his birth, and he rejected the popular wording “between water and clay” as false. The Prophet was born of a father and a mother in Makkah and received the revelation at forty, and he never claimed to have existed before his birth."),
+            .text("Ibn Taymiyyah explained that Allah (Glorified and Exalted be He) wrote his prophethood and made it known while Adam (peace be upon him) was still between spirit and body. The hadith speaks of Allah’s decree and knowledge, not of the Prophet’s person existing before his birth, and he rejected the popular wording “between water and clay” as false (Majmu‘ al-Fatawa, vol. 18). The Prophet was born of a father and a mother in Makkah and received the revelation at forty, and he never claimed to have existed before his birth."),
         ]),
         ArticleSection("WHY THE LAST MESSAGE WAS KEPT", [
             .text("The logic of the line requires an end. Each earlier messenger was sent to his own people for his own time, to confirm what came before and to correct what later hands had changed; the last was sent to all people (Quran 34:28; Sahih al-Bukhari 335). A final message for everyone until the end of time needs what the earlier ones were not promised: preservation. The Quran draws this line itself. Of the Torah it says that the rabbis and scholars judged by what they had been entrusted to guard of Allah’s Book (Quran 5:44), and elsewhere that some distorted its words and forgot part of what they had been reminded of (Quran 5:13). Of the Quran, Allah (Glorified and Exalted be He) takes the guarding on Himself:"),
@@ -927,7 +927,6 @@ struct ProvingScienceView: View {
             .ayah("36:38-40", words: 26...29),
             .text("Ibn 'Abbas (may Allah be pleased with him) explained that they revolve like a spinning wheel, in a circle, and al-Hasan al-Basri compared the falak to the whorl of a spindle. Honesty needs a caution that apologists often skip: Ptolemy also gave the sun and the moon each its own sphere, so these verses were never at odds with the old astronomy either. What they avoid is any commitment to a fixed earth at the centre of everything, and their picture of each body swimming in its own course suits what is now known. The moon circles the earth, the earth circles the sun, and the sun itself travels around the centre of the galaxy, one circuit taking over two hundred million years."),
             .door(.miracle("expanding_universe", title: "Expanding Universe")),
-            .door(.miracle("planetary_orbits", title: "Planetary Orbits")),
         ]),
         ArticleSection("EVERY LIVING THING FROM WATER", [
             .ayah("21:30", words: 10...15),
@@ -941,13 +940,11 @@ struct ProvingScienceView: View {
             .versus(ArticleVersus.Side("Aristotle, History of Animals", caption: "Honey “is distilled from dew”; the bee “merely gathers what is deposited out of the atmosphere.”"), ArticleVersus.Side("Quran 16:69", arabic: "يَخۡرُجُ مِنۢ بُطُونِهَا شَرَابٞ", caption: "“There emerges from their bellies a drink.”"), quranic: true),
             .text("The verse puts the source inside the bees' own bodies, and that is what was found. A forager carries nectar in its honey stomach, a crop in its abdomen, where enzymes begin to turn it into honey, and brings it up into the comb to ripen."),
             .text("The second is who does the work. Aristotle wrote of the hive's leaders as kings, and European writers still spoke of a king bee in the seventeenth century, until naturalists showed that the “king” is a female who lays the colony's eggs. The bees that forage and make honey are all female; the males, the drones, do none of it. Honesty needs a caveat here too. The feminine verbs are ordinary Arabic: an-nahl, the bee, is a collective noun that may be treated as masculine or feminine, and ar-Razi noted that the people of the Hijaz make it feminine, which is why the Quran does. The grammar proves nothing by itself. What can be said is that the Quran's Arabic spoke of the bee in the gender that turned out to be right, while the Greek science of its age spoke of kings."),
-            .door(.miracle("honey_bees", title: "Honey Bees")),
         ]),
         ArticleSection("IRON SENT DOWN", [
             .ayah("57:25", words: 11...17),
             .text("Aristotle's Meteorology taught that metals, iron among them, are born inside the earth, from a vapour imprisoned in its stones, and a seventh-century writer would naturally have said that Allah (Glorified and Exalted be He) created iron in the earth. The verse says “sent down,” anzalna. Proving Islam keeps an honest hedge here, and so does this chapter: the same verb is used of livestock (Quran 39:6) and of clothing (Quran 7:26), where Saheeh International renders it “produced” and “bestowed.” It can mean that Allah provided iron as a gift from above rather than that iron fell from the sky, and the early commentators mostly explained the verse by what iron does: weapons for war, and tools for everything else."),
             .text("The modern reading adds this. Iron is not made in the earth. It is forged in the cores of massive stars and in their explosions, a star the size of our sun never makes it, and the earth's iron was made before the solar system existed. That is true of nearly every element heavier than helium, so the verse does not single out a property unique to iron. What it does is choose, for the metal of war, a word the Quran uses for gifts that come from above, and nothing in that word conflicts with what is known."),
-            .door(.miracle("iron", title: "Iron")),
         ]),
         ArticleSection("RAIN CLOUDS AND HAIL", [
             .ayah("24:43"),
@@ -974,22 +971,18 @@ struct ProvingScienceView: View {
             .text("The Prophet (peace and blessings be upon him) held to the same truth in his own grief. On the day his infant son Ibrahim died, the sun was eclipsed:"),
             .hadith("bukhari:1060", cite: "Sahih al-Bukhari 1060", arabic: 17...55, english: [0...68]),
             .text("A man building a legend around himself had every reason to let that omen stand. He corrected it the same day."),
-            .door(.miracle("mummy", title: "Pharaoh's Mummy")),
             .door(.miracle("mourning_pharaoh", title: "Mourning of Pharaoh")),
         ]),
         ArticleSection("MORE IN MIRACLES OF THE QURAN", [
-            .text("Miracles of the Quran, the library this chapter links to, gathers some two hundred readings like these from miracles-of-quran.com. These are the ones the app ranks strongest, where the wording is most specific and the finding hardest to argue with: a city found where the Quran placed it, the stages of the embryo, the structure of the earth and the sea. The arguments are that site’s own, not this chapter’s, so read them with this chapter’s two questions: what do the words say, and how did the classical commentators understand them?"),
-            .door(.miracle("ubar", title: "Ubar")),
-            .door(.miracle("petra", title: "Petra")),
+            .text("Miracles of the Quran, the library this chapter links to, gathers readings like these from miracles-of-quran.com, leaving out those that rest on counting letters or numbers or that pull an ayah away from how the classical commentators read it. These are the ones the app ranks strongest, where the wording is most specific: a ruler’s title, the stages of the embryo, the structure of the earth and the sea. The arguments are that site’s own, not this chapter’s, so read them with this chapter’s two questions: what do the words say, and how did the classical commentators understand them?"),
             .door(.miracle("haman", title: "Haman")),
             .door(.miracle("big_bang_crunch", title: "Big Bang")),
             .door(.miracle("primordial_smoke", title: "Primordial Smoke")),
-            .door(.miracle("fetal_development", title: "Fetal Development")),
             .door(.miracle("bones", title: "Bones")),
-            .door(.miracle("internal_mountains", title: "Internal Mountains")),
             .door(.miracle("mountains", title: "Mountains")),
             .door(.miracle("internal_waves", title: "Internal Waves")),
             .door(.miracle("photic_zone", title: "Photic Zone")),
+            .door(.miracle("halocline", title: "Halocline")),
             .door(.miracle("fingerprints", title: "Fingerprints")),
         ]),
         ArticleSection("COMMON QUESTIONS", [
@@ -1066,7 +1059,7 @@ struct ProvingProphecyView: View {
             .text("In the second decade of the seventh century Persia was tearing apart the Byzantine empire, which the Arabs called Rum, Rome. Antioch and Damascus fell in 613, Jerusalem in 614, and Alexandria around 619. Persian armies reached the shore facing Constantinople, and the emperor Heraclius thought of moving his government to Carthage. In those years, in Makkah, these verses were revealed to the Prophet (peace and blessings be upon him):"),
             .ayah("30:2-5"),
             .markdown("The span given is **bid' sinin**, a small number of years: the Arabs used bid' for three to nine. The pagans of Makkah, who sided with Persia, took it as a public claim and bet against it. Ibn 'Abbas (may Allah be pleased with him) describes the wager Abu Bakr (may Allah be pleased with him) made over it:"),
-            .hadith("tirmidhi:3193", cite: "Jami` at-Tirmidhi 3193; graded sahih by Ahmad Shakir and Darussalam", arabic: 69...144, english: [72...173, 188...193]),
+            .hadith("tirmidhi:3193", cite: "Jami` at-Tirmidhi 3193; graded sahih by al-Albani (Sahih at-Tirmidhi) and Ahmad Shakir", arabic: 69...144, english: [72...173, 188...193]),
             .text("Edward Gibbon, the historian of Rome's decline, did not accept the verse as prophecy; in a footnote he calls it a “conjecture, guess, wager.” Yet in his text he described the odds against it plainly:"),
             .quote(text: "“At the time when this prediction is said to have been delivered, no prophecy could be more distant from its accomplishment, since the first twelve years of Heraclius announced the approaching dissolution of the empire.” (Edward Gibbon, The History of the Decline and Fall of the Roman Empire, chapter 46)", dimmed: true),
             .text("Then the war turned. Heraclius took the field in 622, the year of the Hijrah. In 624, the year of Badr, he was inside Persia, destroying the great fire temple at Ganzak. The joint Persian and Avar siege of Constantinople failed in 626; late in 627 he broke the Persian army near Nineveh, and in February 628 Khosrow II was deposed and put to death by his own son, who made peace and gave back the Roman lands. The reports differ over which victory fulfilled the verses; Sufyan ath-Thawri, a narrator of the report above, heard that it came on the day of Badr. By the account of those who narrated the wager, the verses had been recited openly, a stake had been laid against them, and the Romans prevailed before the span ran out."),
@@ -1944,7 +1937,7 @@ struct ProvingGodView: View {
         ArticleSection("WHAT REASON CAN SAY OF HIM", [
             .text("If the chain rests on One who was never made, reason can say a little about Him before any scripture is opened. Proving Islam lists the qualities such a First Cause must have. Put carefully, in the way the Quran and the Sunnah describe Allah (Glorified and Exalted be He), they are these:"),
             .checklist([
-                "**Not part of the universe.** He made its space, time and matter, so He is not one more thing within them. He is distinct from His creation, and nothing in it contains Him.",
+                "**Not part of the universe.** He made its space, time and matter, so He is not one more thing within them. He is distinct from His creation and above it, over His Throne (Quran 20:5), and nothing in it contains Him.",
                 "**Without beginning.** Whatever began needs a cause; the First did not begin.",
                 "**Unlike anything made.** The universe’s matter is part of what began and depends, so its Maker is not built of it.",
                 "**Of immense power.** He brought all of it into being.",
@@ -1977,13 +1970,13 @@ struct ProvingGodView: View {
             .markdown("**“Perhaps the tuning is less fine than claimed.”** Some physicists, such as Victor Stenger and Fred Adams, argue that the ranges that permit life are wider than popular accounts suggest, and the debate among specialists continues. A Muslim does not rest his faith on any one number. The point is the pattern the Quran describes: a creation ordered, measured and intelligible, in which whoever looks finds no flaw (Quran 67:3)."),
         ]),
         ArticleSection("THE FITRAH", [
-            .text("The third line of evidence is within us. Allah (Glorified and Exalted be He) says that He created people upon a natural disposition, the fitrah, which turns to Him before anyone teaches it:"),
+            .text("The third line of evidence is within us, and in the order of knowing it comes first: Ibn Taymiyyah wrote that acknowledging the Creator is innate and necessary in human souls, and that proofs are needed where something has corrupted a person’s fitrah (Majmu‘ al-Fatawa 16/328). Allah (Glorified and Exalted be He) says that He created people upon a natural disposition, the fitrah, which turns to Him before anyone teaches it:"),
             .ayah("30:30", words: 4...9),
             .text("The Prophet (peace and blessings be upon him) explained it with an image from the flock: an animal is born whole, with nothing cut or missing."),
             .hadith("muslim:2658b", cite: "Sahih Muslim 2658", arabic: 30...50, english: [0...43]),
             .text("In a hadith qudsi, Allah says:"),
             .hadith("muslim:2865a", cite: "Sahih Muslim 2865", arabic: 70...80, english: [38...65]),
-            .text("Modern research has approached the same question from outside religion. A three-year project at the University of Oxford, the Cognition, Religion and Theology Project, directed by the psychologist Justin Barrett and the philosopher Roger Trigg, involved 57 researchers in more than forty studies across twenty countries, traditionally religious and atheist societies among them. It concluded that humans are “predisposed to believe in gods and an afterlife,” and that both theology and atheism are “reasoned responses to what is a basic impulse of the human mind.” Among its findings: three-year-olds assume that both their mother and God know what is inside a closed box; by four they understand that their mother can be wrong, but may go on believing that God knows. In Deborah Kelemen’s studies, children reach naturally for purpose, explaining that rocks are pointed “so the birds could sit on them.”"),
+            .text("Modern research has approached the same question from outside religion. A three-year project at the University of Oxford, the Cognition, Religion and Theology Project, directed by the psychologist Justin Barrett and the philosopher Roger Trigg, involved 57 researchers in more than forty studies across twenty countries, traditionally religious and atheist societies among them. It concluded that humans are “predisposed to believe in gods and an afterlife,” and that both theology and atheism are “reasoned responses to what is a basic impulse of the human mind.” Among its findings: three-year-olds assume that both their mother and God know what is inside a closed box; by four they understand that their mother can be wrong, but may go on believing that God knows. In Deborah Kelemen’s studies, children reach naturally for purpose: asked why prehistoric rocks were pointy, young children preferred answers such as “so that animals could scratch on them when they got itchy.”"),
             .text("Barrett was careful to add: “Just because we find it easier to think in a particular way does not mean that it is true in fact.” Researchers also disagree about why the mind works this way; some see a by-product of evolution. A Muslim need not claim that the research proves the fitrah. It is enough that it finds what the hadith would lead one to expect: belief in a Maker comes naturally to the human mind, and whoever denies Him has to argue against his own first instinct."),
         ]),
         ArticleSection("FROM A CREATOR TO A MESSAGE", [
@@ -2172,7 +2165,7 @@ struct ProvingClosingView: View {
             .bullet("**The unmatched Quran.** The most eloquent people of their age were challenged to produce a single surah like it, with every reason to succeed, and did not."),
             .bullet("**One message, many messengers.** The Prophet brought no new religion but the one every prophet taught, the worship of Allah (Glorified and Exalted be He) alone, and Muslim scholars read passages of the earlier scriptures as pointing ahead to him."),
             .bullet("**Jesus in the Gospels.** In the Gospels Jesus (peace be upon him) prays to God, speaks of himself as a prophet, and names the oneness of God as the first commandment; Islam honours him as the Messiah and a messenger of Allah."),
-            .bullet("**God, the prior question.** Whatever begins to exist needs a cause beyond itself. The universe began, and its cause is the First, with nothing before Him (57:3)."),
+            .bullet("**God, the prior question.** The Quran asks whether people were created by nothing or created themselves (52:35-36). Neither can be, so creation rests on its Maker, the First, with nothing before Him (57:3), whom the fitrah of every person already knows (30:30)."),
             .door(.article("ProvingCaseView")),
         ]),
         ArticleSection("THE CLOSING ARGUMENT", [
