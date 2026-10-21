@@ -776,20 +776,12 @@ private struct BeginnerModeAnswer: View {
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Toggle("Enable Arabic Beginner Mode", isOn: $settings.beginnerMode.animation(.easeInOut))
-                .font(.subheadline)
-                .disabled(!settings.showArabicText)
-                .onChange(of: settings.beginnerMode) { _ in settings.hapticFeedback() }
-
-            Text(settings.showArabicText
-                 ? "Puts a space between each Arabic letter to make it easier for beginners to read the Quran."
-                 : "The Arabic is hidden, so there is nothing to space out. Arabic Text, below, shows it again.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Enable Arabic Beginner Mode",
+                       caption: settings.showArabicText
+                           ? "Puts a space between each Arabic letter to make it easier for beginners to read the Quran."
+                           : "The Arabic is hidden, so there is nothing to space out. Arabic Text, below, shows it again.",
+                       isOn: $settings.beginnerMode)
+            .disabled(!settings.showArabicText)
     }
 }
 #endif
@@ -841,20 +833,8 @@ private struct DayBeginsAnswer: View {
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.dailyRolloverAtFajr) { _ in
-                    settings.hapticFeedback()
-                    settings.dailyRolloverSwitchChanged()
-                }
-
-            Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $settings.dailyRolloverAtFajr)
+            .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
 }
 #endif
@@ -907,16 +887,7 @@ struct HelpDoorsSettingsSection: View {
         let doors = HelpDoorCatalog.doors(for: area, settings: settings)
         Section(header: Text("NEED A HAND?")) {
             VStack(alignment: .leading, spacing: 10) {
-                VStack(alignment: .leading) {
-                    Toggle("Show on the \(area.tabName) Tab", isOn: shown.animation(.easeInOut))
-                        .font(.subheadline)
-
-                    Text("A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
+                SettingsToggle("Show on the \(area.tabName) Tab", caption: "A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away.", isOn: shown)
 
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(doors) { door in
@@ -943,15 +914,7 @@ struct HelpDoorsSettingsSection: View {
             }
 
             if let searchHelpShown {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Quick Search Help", isOn: searchHelpShown.animation(.easeInOut))
-                        .font(.subheadline)
-
-                    Text("The tips over the \(area.tabName) tab's search while you type nothing. Its trash puts them away; your recent searches stay either way.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                SettingsToggle("Quick Search Help", caption: "The tips over the \(area.tabName) tab's search while you type nothing. Its trash puts them away; your recent searches stay either way.", isOn: searchHelpShown)
             }
         }
         // Simple Mode keeps NEED A HAND? off every tab and draws Quick Search Help without its stored

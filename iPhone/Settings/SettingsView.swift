@@ -1422,7 +1422,6 @@ struct LaunchTabPicker: View {
     var body: some View {
         VStack(alignment: .leading) {
             Text("Open the App On")
-                .font(.subheadline)
 
             Picker("Open the App On", selection: selection) {
                 ForEach(LaunchTab.allCases) { tab in
@@ -1474,7 +1473,7 @@ struct AppearancePageView: View {
             get: { Color(hex: settings.customAccentColorHex) ?? .green },
             set: { newColor in
                 settings.customAccentColorHex = newColor.hexString
-                withAnimation { settings.accentColor = .custom }
+                settings.accentColor = .custom
             }
         )
     }
@@ -1484,9 +1483,7 @@ struct AppearancePageView: View {
         Binding(
             get: { settings.accentColor == .custom },
             set: { isOn in
-                withAnimation {
-                    settings.accentColor = isOn ? .custom : AppIdentifiers.mainColor
-                }
+                settings.accentColor = isOn ? .custom : AppIdentifiers.mainColor
             }
         )
     }
@@ -1497,7 +1494,7 @@ struct AppearancePageView: View {
             get: { Color(hex: settings.customBackgroundColorHex) ?? .gray },
             set: { newColor in
                 settings.customBackgroundColorHex = newColor.hexString
-                withAnimation { settings.colorSchemeString = "custom" }
+                settings.colorSchemeString = "custom"
             }
         )
     }
@@ -1507,9 +1504,7 @@ struct AppearancePageView: View {
         Binding(
             get: { settings.colorSchemeString == "custom" },
             set: { isOn in
-                withAnimation {
-                    settings.colorSchemeString = isOn ? "custom" : "system"
-                }
+                settings.colorSchemeString = isOn ? "custom" : "system"
             }
         )
     }
@@ -1521,11 +1516,10 @@ struct AppearancePageView: View {
                 .labelsHidden()
 
             Text(title)
-                .font(.subheadline)
 
             Spacer()
 
-            Toggle("", isOn: enabled.animation(.easeInOut))
+            Toggle("", isOn: enabled)
                 .labelsHidden()
                 .tint(tint)
         }
@@ -1563,27 +1557,10 @@ struct AppearancePageView: View {
 
         Section {
             VStack(alignment: .leading) {
-                Toggle("Top Accent Glow", isOn: $settings.showAccentGlow.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.showAccentGlow) { _ in settings.hapticFeedback() }
-
-                Text("A soft wash of your accent color at the top of each screen. Turn it off for a flat background.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
+                SettingsToggle("Top Accent Glow", caption: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background.", isOn: $settings.showAccentGlow)
 
                 if settings.showAccentGlow {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
-
-                        Text("Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    SettingsToggle("Al-Islam Glow", caption: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.", isOn: $settings.alIslamGlow)
                     .settingsDependent()
                 }
             }
@@ -1605,42 +1582,14 @@ struct AppearancePageView: View {
         }
 
         Section {
-            VStack(alignment: .leading) {
-                Toggle("Default List View", isOn: $settings.defaultView.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.defaultView) { _ in settings.hapticFeedback() }
-
-                Text("The default list view is the standard interface found in many of Apple's first party apps, including Notes. Screens already open switch the next time they open.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Default List View", caption: "Apple's standard list look, as in Notes. Screens already open switch the next time they open.", isOn: $settings.defaultView)
 
             if #available(iOS 26.0, *) {
                 VStack(alignment: .leading) {
-                    Toggle("Show Liquid Glass", isOn: $settings.showLiquidGlass.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
-
-                    Text("Off is the Classic Look from before iOS 26: faster and easier on the battery. It changes the app's own cards, pills and bars; the tab bar, navigation bars, sheets and search field are iOS's and keep Liquid Glass either way.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
+                    SettingsToggle("Show Liquid Glass", caption: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way.", isOn: $settings.showLiquidGlass)
 
                     if settings.showLiquidGlass {
-                        VStack(alignment: .leading) {
-                            Toggle("Automatically in Low Power Mode", isOn: $settings.classicLookInLowPower.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: settings.classicLookInLowPower) { _ in settings.hapticFeedback() }
-
-                            Text("Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
-                        }
+                        SettingsToggle("Automatically in Low Power Mode", caption: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.", isOn: $settings.classicLookInLowPower)
                         .settingsDependent()
                     }
                 }
@@ -1650,9 +1599,7 @@ struct AppearancePageView: View {
         }
 
         Section {
-            Toggle("Haptic Feedback", isOn: $settings.hapticOn.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.hapticOn) { _ in settings.hapticFeedback() }
+            SettingsToggle("Haptic Feedback", isOn: $settings.hapticOn)
         } header: {
             Text("HOW IT FEELS")
         }
@@ -1660,16 +1607,7 @@ struct AppearancePageView: View {
         // The Need a Hand? questions on every tab (HelpDoors.swift), all four at once. Each tab's own
         // switch is on its settings page, beside the list of that tab's questions.
         Section {
-            VStack(alignment: .leading) {
-                Toggle("Show on Every Tab", isOn: helpShortcutsBinding.animation(.easeInOut))
-                    .font(.subheadline)
-
-                Text(helpShortcutsCaption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Show on Every Tab", caption: helpShortcutsCaption, isOn: helpShortcutsBinding)
         } header: {
             Text("NEED A HAND?")
         }
@@ -1777,7 +1715,6 @@ struct SettingsAppearanceView: View {
                 Text("Gray").tag("gray")
                 Text("Sepia").tag("sepia")
             }
-            .font(.subheadline)
             .pickerStyle(SegmentedPickerStyle())
             .onChange(of: settings.colorSchemeString) { _ in settings.hapticFeedback() }
 
@@ -1841,11 +1778,7 @@ struct SettingsAppearanceView: View {
             }
         }
         #else
-        VStack(alignment: .leading) {
-            Toggle("Haptic Feedback", isOn: $settings.hapticOn.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.hapticOn) { _ in settings.hapticFeedback() }
-        }
+        SettingsToggle("Haptic Feedback", isOn: $settings.hapticOn)
         #endif
     }
 }
@@ -2188,20 +2121,7 @@ struct SimpleModeSection: View {
 
     var body: some View {
         Section(header: SectionIconHeader("SIMPLE MODE", icon: "rectangle.compress.vertical")) {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Simple Mode", isOn: $settings.simpleMode.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.simpleMode) { _ in settings.hapticFeedback() }
-
-                #if os(iOS)
-                Text(caption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-                #endif
-            }
+            SettingsToggle("Simple Mode", caption: caption, isOn: $settings.simpleMode)
 
             // Its own row, one link per row: inside the switch's row, a tap anywhere there would push.
             if showsCatalogRow {
@@ -2312,20 +2232,7 @@ struct AdvancedSettingsSection: View {
 
     private var section: some View {
         Section(header: SectionIconHeader("ADVANCED", icon: "slider.horizontal.3")) {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Advanced Settings", isOn: settings.advancedBinding(screen).animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.advanced(screen)) { _ in settings.hapticFeedback() }
-
-                #if os(iOS)
-                Text(caption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-                #endif
-            }
+            SettingsToggle("Show Advanced Settings", caption: caption, isOn: settings.advancedBinding(screen))
         }
     }
 

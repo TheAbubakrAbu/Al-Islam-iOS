@@ -2,11 +2,12 @@
 import SwiftUI
 import PDFKit
 
-/// The printed mushaf as bundled PDFs - one per riwayah. Nineteen are the Islamweb mushaf series; the
-/// Hafs volume is the app's own facsimile (`Scripts/mushaf-pdf/`): the app's KFGQPC text set in its
-/// Uthmani face on the Madinah 1421H 15-line page layout, inside a vector teal-and-gold frame, so the
-/// file stays font-based (1.3 MB packed) where every ornate edition found online stores its text as
-/// outlines and packs to 80 MB or more.
+/// The printed mushaf as bundled PDFs - one per riwayah, two for Hafs. Nineteen are the Islamweb
+/// mushaf series. Hafs has `MushafHafsPDFEdition`: the app's own facsimile (`Scripts/mushaf-pdf/`,
+/// the default: the app's KFGQPC text set in its Uthmani face on the Madinah 1421H 15-line page
+/// layout, inside a vector teal-and-gold frame, so the file stays font-based at 1.3 MB packed where
+/// every ornate edition found online stores its text as outlines and packs to 80 MB or more) and
+/// the Islamweb Hafs volume the app shipped before 4.6.6.
 ///
 /// Every one of the 20 files is exactly **604 pages**, laid out on the Madani page division: PDF page N is
 /// mushaf page N, page 1 is al-Fatihah and page 604 closes with an-Nas. That makes the mapping from the app's
@@ -22,9 +23,9 @@ enum MushafPDFLibrary {
     /// Two files from the original Islamweb set are deliberately NOT bundled: a second, image-based rendering
     /// of Ibn Jammaz (identical text, heavier border, 49 MB against 4.3 MB) and Warsh via tariq al-Asbahani,
     /// which is a genuinely different transmission with no riwayah slot in the app's twenty.
-    static func fileName(for tag: String) -> String? {
+    static func fileName(for tag: String, hafsEdition: MushafHafsPDFEdition = .alIslam) -> String? {
         switch Settings.Riwayah.canonicalTag(tag) {
-        case Settings.Riwayah.hafsTag:     return "01-asim-hafs"
+        case Settings.Riwayah.hafsTag:     return hafsEdition.fileName
         case Settings.Riwayah.shubah:      return "01-asim-shubah"
         case Settings.Riwayah.warsh:       return "02-nafi-warsh"
         case Settings.Riwayah.qaloon:      return "02-nafi-qalun"
@@ -55,8 +56,18 @@ enum MushafPDFLibrary {
     /// They ship as `.pdf.xz`, not `.pdf`: the files are pure vector with per-stream Flate, and re-doing the
     /// whole file as ONE solid xz stream is a third of the size, fully lossless (66 MB -> 22 MB across the
     /// set). A plain `.pdf` alongside still wins for that riwayah, so a quick drop-in needs no compression.
-    static func bundledURL(for tag: String) -> (url: URL, isCompressed: Bool)? {
-        guard let name = fileName(for: tag) else { return nil }
+    static func bundledURL(for tag: String, hafsEdition: MushafHafsPDFEdition = .alIslam) -> (url: URL, isCompressed: Bool)? {
+        guard let name = fileName(for: tag, hafsEdition: hafsEdition) else { return nil }
+        if let found = bundledURL(named: name) { return found }
+        // A Hafs edition this build does not carry (a choice synced from another device, or a file
+        // left out of the bundle) falls back to the app's own edition, never to nothing.
+        if hafsEdition != .alIslam, Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.hafsTag {
+            return bundledURL(named: MushafHafsPDFEdition.alIslam.fileName)
+        }
+        return nil
+    }
+
+    private static func bundledURL(named name: String) -> (url: URL, isCompressed: Bool)? {
         if let plain = Bundle.main.url(forResource: name, withExtension: "pdf", subdirectory: "Mushaf PDFs")
             ?? Bundle.main.url(forResource: name, withExtension: "pdf", subdirectory: "Mushaf") {
             return (plain, false)
@@ -70,6 +81,12 @@ enum MushafPDFLibrary {
     /// Whether this riwayah has a bundled facsimile. The PDF option hides itself when it doesn't, so a
     /// partial set of files degrades to "no PDF for this riwayah" instead of a blank reader.
     static func isAvailable(for tag: String) -> Bool { bundledURL(for: tag) != nil }
+
+    /// The Hafs editions this build carries, in `MushafHafsPDFEdition` order. The page menu's Edition
+    /// picker lists exactly these and hides itself when only the default is bundled. A bundle never
+    /// changes at run time, so this is looked up once.
+    static let bundledHafsEditions: [MushafHafsPDFEdition] =
+        MushafHafsPDFEdition.allCases.filter { bundledURL(named: $0.fileName) != nil }
 
     /// Per-edition content window (PDF points, origin bottom-left) holding just the Quran text: the
     /// islamweb header/logo, the legend strip, the URL footer and the decorative side borders all fall
@@ -86,6 +103,7 @@ enum MushafPDFLibrary {
         // The app's own Hafs facsimile has no furniture to cut: the frame IS the content, so the window
         // is the whole page and the ink-hug below only trims the paper margin around the frame.
         "01-asim-hafs":              CGRect(x: 0.0, y: 0.0, width: 450.0, height: 722.0),
+        "01-asim-hafs-islamweb":     CGRect(x: 68.0, y: 65.0, width: 456.0, height: 696.0),
         "01-asim-shubah":            CGRect(x: 63.0, y: 127.0, width: 468.0, height: 627.0),
         "02-nafi-qalun":             CGRect(x: 67.91, y: 65.0, width: 456.4, height: 697.0),
         "02-nafi-warsh":             CGRect(x: 67.91, y: 143.0, width: 455.4, height: 602.0),
@@ -118,8 +136,8 @@ enum MushafPDFLibrary {
     /// of the `.pdf.xz` into Caches. Extracting (not decompressing per open) keeps `PDFDocument` on its
     /// lazy file-mapped path - RAM stays at catalog-and-xref scale, not the whole 20+ MB file - and the
     /// system may evict the cache copy under disk pressure; it just re-extracts on next open.
-    private static func readableURL(for tag: String) -> URL? {
-        guard let (bundled, isCompressed) = bundledURL(for: tag) else { return nil }
+    private static func readableURL(for tag: String, hafsEdition: MushafHafsPDFEdition) -> URL? {
+        guard let (bundled, isCompressed) = bundledURL(for: tag, hafsEdition: hafsEdition) else { return nil }
         guard isCompressed else { return bundled }
 
         let name = bundled.deletingPathExtension().lastPathComponent   // "01-asim-hafs.pdf"
@@ -161,16 +179,23 @@ enum MushafPDFLibrary {
     @MainActor private static var cache: [(tag: String, document: PDFDocument)] = []
     private static let cacheLimit = 3
 
+    /// The cache key: the bundled file's name, so the three Hafs editions are three entries, and a
+    /// Hafs edition that fell back to the default shares the default's entry.
+    private static func cacheKey(for tag: String, hafsEdition: MushafHafsPDFEdition) -> String? {
+        bundledURL(for: tag, hafsEdition: hafsEdition)?.url.lastPathComponent
+    }
+
     @MainActor
-    static func document(for tag: String) -> PDFDocument? {
-        let key = Settings.Riwayah.canonicalTag(tag)
+    static func document(for tag: String, hafsEdition: MushafHafsPDFEdition = .alIslam) -> PDFDocument? {
+        guard let key = cacheKey(for: tag, hafsEdition: hafsEdition) else { return nil }
         if let hit = cache.firstIndex(where: { $0.tag == key }) {
             // Refresh on use so eviction sheds the least-recently-READ entry, not the first one loaded.
             let entry = cache.remove(at: hit)
             cache.append(entry)
             return entry.document
         }
-        guard let url = readableURL(for: tag), let document = PDFDocument(url: url) else { return nil }
+        guard let url = readableURL(for: tag, hafsEdition: hafsEdition),
+              let document = PDFDocument(url: url) else { return nil }
         insert(document, for: key)
         return document
     }
@@ -180,14 +205,14 @@ enum MushafPDFLibrary {
     /// now shows a spinner page for that beat instead of hanging on it. The parse itself
     /// (`PDFDocument(url:)`) stays on main: it is lazy and cheap, catalog and xref only.
     @MainActor
-    static func loadDocument(for tag: String) async -> PDFDocument? {
-        let key = Settings.Riwayah.canonicalTag(tag)
+    static func loadDocument(for tag: String, hafsEdition: MushafHafsPDFEdition = .alIslam) async -> PDFDocument? {
+        guard let key = cacheKey(for: tag, hafsEdition: hafsEdition) else { return nil }
         if let hit = cache.firstIndex(where: { $0.tag == key }) {
             let entry = cache.remove(at: hit)
             cache.append(entry)
             return entry.document
         }
-        let url = await Task.detached(priority: .userInitiated) { readableURL(for: tag) }.value
+        let url = await Task.detached(priority: .userInitiated) { readableURL(for: tag, hafsEdition: hafsEdition) }.value
         guard let url, let document = PDFDocument(url: url) else { return nil }
         // Someone else may have finished first while the extraction ran.
         if let hit = cache.first(where: { $0.tag == key }) { return hit.document }

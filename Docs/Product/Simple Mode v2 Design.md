@@ -94,7 +94,7 @@ A snapshot of `SimpleTrim.entries` as designed on 2026-10-20. The guide carries 
 | surahShuffle | quran | The SURAHS shuffle | ⋯ menu: Open a Random Surah |
 | sortRow | quran | The sort row, while the sort is surah ascending | ⋯ menu: Sort |
 | topSurahPair | listReader | The top Previous/Next surah pair | Elsewhere: the bottom pair |
-| ayahPlayMenu | listReader | The ▶ menu on each ayah | Elsewhere: the ayah ⋯ menu's Play This Ayah; More Actions… for the rest |
+| ayahPlayMenu | listReader | The ▶ button on each ayah | Elsewhere: the ayah ⋯ menu's Play This Ayah; More Actions… for the rest; a double tap on the ayah's text still plays it |
 | ayahLongMenu | listReader | The long ayah ⋯ menu | Elsewhere: five actions plus More Actions…, which opens the full actions sheet |
 | translationCaption | listReader | The default translation's name under the translation | Dropped |
 | pageJuzLine | listReader | The pinned page/juz line | Elsewhere: the inline page and juz dividers |

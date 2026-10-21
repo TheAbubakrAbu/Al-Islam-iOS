@@ -61,11 +61,11 @@ Since Simple Mode v2 (2026-10-20) the table of what Simple hides is generated fr
 | calendarFootStepper | adhan | The Hijri Calendar's second year stepper | The stepper at the top of IMPORTANT ISLAMIC DATES |
 | quranTodayPill | quran | The Today pill on the Quran tab's YOUR SUMMARY | ⋯ menu › Today |
 | lastListenedTiles | quran | The Last Listened Ayah and Surah tiles | The play menu's Play Last Listened Surah |
-| wordOfDayTile | quran | The Word of the Day tile | ⋯ menu › Word of the Day |
+| wordOfDayTile | quran | The Word of the Day tile | ⋯ menu › Explore › Word of the Day |
 | surahShuffle | quran | The SURAHS shuffle | ⋯ menu › Open a Random Surah |
 | sortRow | quran | The sort row, while the sort is surah ascending | ⋯ menu › Sort |
 | topSurahPair | listReader | The top Previous/Next surah pair | The bottom pair |
-| ayahPlayMenu | listReader | The ▶ menu on each ayah | The ayah ⋯ menu's Play This Ayah; More Actions… for the rest |
+| ayahPlayMenu | listReader | The ▶ button on each ayah | The ayah ⋯ menu's Play This Ayah; More Actions… for the rest; a double tap on the ayah's text still plays it |
 | ayahLongMenu | listReader | The long ayah ⋯ menu | Five actions plus More Actions…, which opens the full actions sheet |
 | translationCaption | listReader | The default translation's name under the translation | Dropped |
 | pageJuzLine | listReader | The pinned page/juz line | The inline page and juz dividers |

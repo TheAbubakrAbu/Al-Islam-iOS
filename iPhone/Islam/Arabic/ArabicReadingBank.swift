@@ -891,7 +891,7 @@ enum ArabicReadingBank {
     surah|المطففين|المُطَفِّفِين|Al-Mutaffifin|The Defrauding
     surah|الإنشقاق|الإنشِقَاق|Al-Inshiqaq|The Sundering
     surah|البروج|البُرُوج|Al-Buruj|The Mansions of the Stars
-    surah|الطارق|الطَّارِق|At-Tariq|The Nightcommer
+    surah|الطارق|الطَّارِق|At-Tariq|The Nightcomer
     surah|الأعلى|الأَعلَى|Al-A'la|The Most High
     surah|الغاشية|الغَاشِية|Al-Ghashiyah|The Overwhelming
     surah|الفجر|الفَجر|Al-Fajr|The Dawn

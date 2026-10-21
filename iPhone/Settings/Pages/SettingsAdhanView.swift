@@ -311,7 +311,6 @@ struct SettingsAdhanView: View {
                 }
             } label: {
                 Text("Prayer Times Layout")
-                    .font(.subheadline)
             }
             .tint(settings.accentColor.color)
             .onChange(of: prayerDisplayModeRawValue) { _ in settings.hapticFeedback() }
@@ -367,11 +366,11 @@ struct SettingsAdhanView: View {
             get: { settings.showSkyScene ? settings.skySceneStyle : "off" },
             set: { choice in
                 if choice == "off" {
-                    withAnimation(.easeInOut) { settings.showSkyScene = false }
+                    settings.showSkyScene = false
                 } else {
                     settings.skySceneStyle = choice
                     if !settings.showSkyScene {
-                        withAnimation(.easeInOut) { settings.showSkyScene = true }
+                        settings.showSkyScene = true
                     }
                 }
             }
@@ -404,32 +403,10 @@ struct SettingsAdhanView: View {
         List {
             Group {
                 Section(header: Text("SKY")) {
-                    VStack(alignment: .leading) {
-                        Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
-                            .font(.subheadline)
-                            .tint(settings.accentColor.color)
-                            .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
-
-                        Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Show Sky", caption: "The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.", isOn: $settings.showSkyView)
 
                     if settings.showSkyView {
-                        VStack(alignment: .leading) {
-                            Toggle("Sky Fills the Screen", isOn: $settings.skyFillsAdhanTab.animation(.easeInOut))
-                                .font(.subheadline)
-                                .tint(settings.accentColor.color)
-                                .onChange(of: settings.skyFillsAdhanTab) { _ in settings.hapticFeedback() }
-
-                            Text(Self.skyFillsCaption)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
-                        }
+                        SettingsToggle("Sky Fills the Screen", caption: Self.skyFillsCaption, isOn: $settings.skyFillsAdhanTab)
                     }
                 }
 
@@ -437,18 +414,7 @@ struct SettingsAdhanView: View {
                 if settings.showSkyView {
                     #if HAS_WEATHER
                     Section(header: Text("WEATHER")) {
-                        VStack(alignment: .leading) {
-                            Toggle("Weather", isOn: $settings.skyShowsWeather.animation(.easeInOut))
-                                .font(.subheadline)
-                                .tint(settings.accentColor.color)
-                                .onChange(of: settings.skyShowsWeather) { _ in settings.hapticFeedback() }
-
-                            Text("Clouds, rain, snow and fog on the sky; temperature, UV, humidity and wind on the card and the widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, it never leaves your device.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
-                        }
+                        SettingsToggle("Weather", caption: "Clouds, rain, snow and fog on the sky; temperature, UV, humidity and wind on the card and the widgets. Sends your location to Apple Weather about twice an hour while the tab is open; off, it never leaves your device.", isOn: $settings.skyShowsWeather)
 
                         if settings.skyShowsWeather {
                             weatherAttributionRow
@@ -467,7 +433,6 @@ struct SettingsAdhanView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .font(.subheadline)
                             .tint(settings.accentColor.color)
                             .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
                             .onChange(of: settings.skySceneStyle) { _ in settings.hapticFeedback() }
@@ -589,27 +554,7 @@ struct SettingsAdhanView: View {
     }
 
     private func optionalPrayerToggle(title: String, subtitle: String, icon: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn.animation(.easeInOut)) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(width: 22, alignment: .center)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .foregroundColor(.primary)
-
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
-            }
-        }
-        .font(.subheadline)
-        .tint(settings.accentColor.color)
-        .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
+        SettingsToggle(title, caption: subtitle, systemImage: icon, isOn: isOn)
     }
 
     // The madhab + high-latitude controls moved INTO PrayerCalculationListView (they are calculation
@@ -617,19 +562,22 @@ struct SettingsAdhanView: View {
     // settings-search index deep-links both to that screen.
 
     private var travelingModeSection: some View {
-        Section(header: Text("TRAVELING MODE")) {
+        // The fiqh of the choice is the section's footer, not the switch's caption: eight lines
+        // beside a switch read as a wall (2026-10-21 settings pass).
+        Section(header: Text("TRAVELING MODE"), footer: Text(Self.travelingFooter)) {
             homeCityButton
             automaticTravelToggle
             travelingModeGroup
         }
     }
 
+    private static let travelingFooter = "More than 48 mi (77.25 km) from home, it is obligatory to pray Qasr: Dhuhr and Asr combined at 2 rakahs each, Maghrib and Isha at 3 and 2. Allah said in the Quran, \u{201C}When you travel through the land, it is permissible for you to shorten the prayer\u{201D} [Quran 4:101]."
+
     @ViewBuilder
     private var homeCityButton: some View {
         #if os(iOS)
         HStack(spacing: 8) {
             Text("Set Home City")
-                .font(.subheadline)
                 .foregroundColor(settings.accentColor.color)
 
             Spacer(minLength: 8)
@@ -669,44 +617,24 @@ struct SettingsAdhanView: View {
     @ViewBuilder
     private var automaticTravelToggle: some View {
         #if os(iOS)
-        Toggle("Automatic Traveling Mode", isOn: $settings.travelAutomatic.animation(.easeInOut))
-            .font(.subheadline)
-            .tint(settings.accentColor.color)
-            .onChange(of: settings.travelAutomatic) { _ in settings.hapticFeedback() }
+        SettingsToggle("Automatic Traveling Mode", isOn: $settings.travelAutomatic)
         #endif
     }
 
     private var travelingModeGroup: some View {
         VStack(alignment: .leading) {
-            Toggle("Traveling Mode", isOn: travelingModeBinding.animation(.easeInOut))
-                .font(.subheadline)
-                .tint(settings.accentColor.color)
+            SettingsToggle("Traveling Mode",
+                           caption: settings.travelAutomatic
+                               ? "Shortens and combines the prayers while you are away from home. Turns on and off by itself; you can also set it here."
+                               : "Shortens and combines the prayers while you are away from home.",
+                           isOn: travelingModeBinding)
                 .disabled(settings.travelAutomatic && !isWatch)
-                .onChange(of: settings.travelingMode) { _ in settings.hapticFeedback() }
-
-            #if os(iOS)
-            Text("If you are traveling more than 48 mi (77.25 km), then it is obligatory to pray Qasr, where you combine Dhuhr and Asr (2 rakahs each) and Maghrib and Isha (3 and 2 rakahs). Allah said in the Quran, “When you travel through the land, it is permissible for you to shorten the prayer” [Quran 4:101]. \(settings.travelAutomatic ? "This feature turns on and off automatically, but you can also control it manually here." : "You can control traveling mode manually here.")")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-            #endif
 
             // The only door to full prayers for a Simple traveler: Simple hides the prayer list's travel
             // footer, which held the View Full / View Qasr button. Same key the footer writes.
             #if os(iOS)
             if settings.travelingMode {
-                VStack(alignment: .leading) {
-                    Toggle("Show Full Prayers", isOn: $settings.travelingShowFullPrayers.animation(.easeInOut))
-                        .font(.subheadline)
-                        .tint(settings.accentColor.color)
-
-                    Text("Every prayer at its full time while traveling, instead of the shortened and combined Qasr list. You may still shorten and combine.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
+                SettingsToggle("Show Full Prayers", caption: "Every prayer at its full time while traveling, instead of the shortened and combined Qasr list. You may still shorten and combine.", isOn: $settings.travelingShowFullPrayers)
             }
             #endif
         }
@@ -756,33 +684,26 @@ struct SettingsAdhanView: View {
             #else
             Stepper(value: $settings.hijriOffset, in: -3...3) {
                 HStack {
-                    Text("Hijri Offset:")
+                    Text("Hijri Offset")
                         .foregroundColor(.primary)
 
-                    Text("\(settings.hijriOffset) days")
+                    Spacer()
+
+                    Text("\(settings.hijriOffset > 0 ? "+" : "")\(settings.hijriOffset) \(abs(settings.hijriOffset) == 1 ? "day" : "days")")
                         .foregroundColor(settings.accentColor.color)
+                        .monospacedDigit()
                 }
             }
-            .font(.subheadline)
 
+            // Today's date as the offset leaves it, in both scripts, so the stepper's effect is
+            // visible right under it.
             if let hijriDate = settings.hijriDate {
-                HStack {
-                    Text("English:")
-                        .foregroundColor(.primary)
-
+                VStack(alignment: .leading, spacing: 2) {
                     Text(hijriDate.english)
-                        .foregroundColor(settings.accentColor.color)
-                }
-                .font(.subheadline)
-
-                HStack {
-                    Text("Arabic: ")
-                        .foregroundColor(.primary)
-
                     Text(hijriDate.arabic)
-                        .foregroundColor(settings.accentColor.color)
                 }
-                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
             }
             #endif
         }
@@ -811,7 +732,7 @@ struct PrayerOffsetsView: View {
         // Wide enough to follow a local mosque that runs well off the calculated time, not just to nudge it.
         #if os(watchOS)
         // Watch: prayer name over the minutes, small type - the phone's single wide row truncated badly.
-        Stepper(value: value.animation(.easeInOut), in: -190...190) {
+        Stepper(value: value, in: -190...190) {
             VStack(alignment: .leading, spacing: 1) {
                 Label(title, systemImage: icon)
                     .font(.caption2)
@@ -827,7 +748,7 @@ struct PrayerOffsetsView: View {
         }
         .font(.footnote)
         #else
-        Stepper(value: value.animation(.easeInOut), in: -190...190) {
+        Stepper(value: value, in: -190...190) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(settings.accentColor.color)
@@ -844,7 +765,6 @@ struct PrayerOffsetsView: View {
             .tint(settings.accentColor.color)
             .foregroundColor(settings.accentColor.color)
         }
-        .font(.subheadline)
         #endif
     }
 
@@ -862,16 +782,7 @@ struct PrayerOffsetsView: View {
     var body: some View {
         Section(header: Text("HIJRI DATE")) {
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("Switch Hijri Date at Maghrib", isOn: $settings.switchHijriDateAtMaghrib.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.switchHijriDateAtMaghrib) { _ in settings.hapticFeedback() }
-
-                Text("When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
+                SettingsToggle("Switch Hijri Date at Maghrib", caption: "When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default.", isOn: $settings.switchHijriDateAtMaghrib)
 
                 Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")
                     .font(.caption)
@@ -1083,7 +994,6 @@ struct NotificationView: View {
                     if settings.adhanNotificationSound != "default" {
                         Label(isPreviewingAdhan ? "Stop Preview" : "Preview Sound",
                               systemImage: isPreviewingAdhan ? "stop.circle.fill" : "play.circle.fill")
-                            .font(.subheadline)
                             .foregroundColor(settings.accentColor.color)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -1098,22 +1008,10 @@ struct NotificationView: View {
                         // The in-app adhan's two switches, together and in plain sight (Abu,
                         // 2026-10-19). With "Default" chosen there is no recording for either to
                         // act on, so they stay out of the way.
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle("Play Automatically", isOn: $settings.adhanAutoPlayInApp.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: settings.adhanAutoPlayInApp) { _ in settings.hapticFeedback() }
-
-                            settingsCaption("Starts the full adhan when the app is open at prayer time, or opened within five minutes of it. Off, a Play button appears instead.")
-                        }
+                        SettingsToggle("Play Automatically", caption: "Starts the full adhan when the app is open at prayer time, or opened within five minutes of it. Off, a Play button appears instead.", isOn: $settings.adhanAutoPlayInApp)
 
                         if settings.adhanAutoPlayInApp {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Toggle("Play in Silent Mode", isOn: $settings.adhanOverridesSilentMode.animation(.easeInOut))
-                                    .font(.subheadline)
-                                    .onChange(of: settings.adhanOverridesSilentMode) { _ in settings.hapticFeedback() }
-
-                                settingsCaption("Plays even with the phone silenced. Off, a silenced phone gets a Play button instead.")
-                            }
+                            SettingsToggle("Play in Silent Mode", caption: "Plays even with the phone silenced. Off, a silenced phone gets a Play button instead.", isOn: $settings.adhanOverridesSilentMode)
                             .settingsDependent()
                         }
                     }
@@ -1143,7 +1041,6 @@ struct NotificationView: View {
                     if settings.alertToneSound != "default" {
                         Label(isPreviewingAdhan ? "Stop Preview" : "Preview Tone",
                               systemImage: isPreviewingAdhan ? "stop.circle.fill" : "play.circle.fill")
-                            .font(.subheadline)
                             .foregroundColor(settings.accentColor.color)
                             .contentShape(Rectangle())
                             .onTapGesture {
@@ -1162,18 +1059,10 @@ struct NotificationView: View {
                 #endif
 
                 Section(header: Text("MORE REMINDERS")) {
-                    Toggle("Islamic Calendar Notifications", isOn: $settings.dateNotifications.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
+                    SettingsToggle("Islamic Calendar Notifications", isOn: $settings.dateNotifications)
 
                     if settings.dateNotifications, settings.advanced(.notifications) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
-
-                            settingsCaption("A heads-up the evening before each Islamic date.")
-                        }
+                        SettingsToggle("Remind a Day Before", caption: "A heads-up the evening before each Islamic date.", isOn: $settings.dateNotificationsDayBefore)
                         .settingsDependent()
                     }
 
@@ -1733,19 +1622,15 @@ struct MoreNotificationView: View {
         List {
             Group {
             Section {
-                Toggle("All Prayers", isOn: allPrayersBinding.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: allPrayersOn) { _ in settings.hapticFeedback() }
+                SettingsToggle("All Prayers", isOn: allPrayersBinding)
 
                 Stepper(value: allLeadsBinding, in: 0...120, step: 1) {
                     HStack {
                         Text("Remind Before")
-                            .font(.subheadline)
                         Spacer()
                         Text(Self.leadText(settings.preNotificationFajr))
-                            .font(.subheadline)
                             .foregroundColor(settings.accentColor.color)
+                            .monospacedDigit()
                     }
                 }
 
@@ -1781,16 +1666,7 @@ struct MoreNotificationView: View {
             // The gloss is part of every prayer notification's wording, and a nag body names the
             // prayer too, so this applies whatever else is on.
             Section(header: Text("WORDING")) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Show English Meanings", isOn: $settings.prayerNotificationEnglishNames.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.prayerNotificationEnglishNames) { _ in settings.hapticFeedback() }
-
-                    Text("\u{201C}Time for Maghrib (sunset)\u{201D}. Shurooq and Jumuah always name theirs.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                SettingsToggle("Show English Meanings", caption: "\u{201C}Time for Maghrib (sunset)\u{201D}. Shurooq and Jumuah always name theirs.", isOn: $settings.prayerNotificationEnglishNames)
                 #if DEBUG
                 // On the ROW, not on the Toggle nested inside the VStack: `scrollTo` targets a list
                 // row, and an id buried in a row's subview is not one.
@@ -1912,20 +1788,16 @@ struct PrayerNotificationDetailView: View {
         List {
             Group {
                 Section {
-                    Toggle("Notification", isOn: $isNotificationOn.animation(.easeInOut))
-                        .font(.subheadline)
-                        .tint(settings.accentColor.color)
-                        .onChange(of: isNotificationOn) { _ in settings.hapticFeedback() }
+                    SettingsToggle("Notification", isOn: $isNotificationOn)
 
                     if isNotificationOn {
-                        Stepper(value: $preNotificationTime.animation(.easeInOut), in: 0...120, step: 1) {
+                        Stepper(value: $preNotificationTime, in: 0...120, step: 1) {
                             HStack {
                                 Text("Remind Before")
-                                    .font(.subheadline)
                                 Spacer()
                                 Text(MoreNotificationView.leadText(preNotificationTime))
-                                    .font(.subheadline)
                                     .foregroundColor(settings.accentColor.color)
+                                    .monospacedDigit()
                             }
                         }
                     }
@@ -1937,25 +1809,11 @@ struct PrayerNotificationDetailView: View {
 
                 if isNotificationOn, hasAdhanRecording, let adhanSound {
                     Section(header: Text("SOUND")) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Toggle("Play Adhan", isOn: binding(adhanSound).animation(.easeInOut))
-                                .font(.subheadline)
-                                .tint(settings.accentColor.color)
-                                .onChange(of: settings[keyPath: adhanSound]) { _ in settings.hapticFeedback() }
-
-                            caption("Off, this prayer gets the alert tone while the others still call the adhan.")
-                        }
+                        SettingsToggle("Play Adhan", caption: "Off, this prayer gets the alert tone while the others still call the adhan.", isOn: binding(adhanSound))
 
                         // Nothing to shorten once the adhan itself is off.
                         if settings[keyPath: adhanSound], let shortAdhan {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Toggle("Short Adhan", isOn: binding(shortAdhan).animation(.easeInOut))
-                                    .font(.subheadline)
-                                    .tint(settings.accentColor.color)
-                                    .onChange(of: settings[keyPath: shortAdhan]) { _ in settings.hapticFeedback() }
-
-                                caption("A brief excerpt instead of the adhan's first 30 seconds.")
-                            }
+                            SettingsToggle("Short Adhan", caption: "A brief excerpt instead of the adhan's first 30 seconds.", isOn: binding(shortAdhan))
                             .settingsDependent()
                         }
                     }
@@ -2146,16 +2004,7 @@ struct PrayerCalculationListView: View {
 
     private var automaticSection: some View {
         Section(header: Text("AUTOMATIC")) {
-            Toggle("Choose Automatically", isOn: $settings.calculationAutomatic.animation(.easeInOut))
-                .font(.subheadline)
-                .tint(settings.accentColor.color)
-                .onChange(of: settings.calculationAutomatic) { _ in settings.hapticFeedback() }
-
-            Text("Picks the method customary in the country you are in. Choosing a method by hand below turns this off.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
+            SettingsToggle("Choose Automatically", caption: "Picks the method customary in the country you are in. Choosing a method by hand below turns this off.", isOn: $settings.calculationAutomatic)
         }
     }
 
@@ -2272,18 +2121,7 @@ struct PrayerCalculationListView: View {
     /// settings-search index deep-links "hanafi"/"high latitude" to this screen.
     private var madhabAndHighLatitudeSection: some View {
         Section(header: Text(settings.advanced(.prayerCalculation) ? "MADHAB & HIGH LATITUDE" : "MADHAB")) {
-            VStack(alignment: .leading) {
-                Toggle("Hanafi Calculation for Asr", isOn: $settings.hanafiMadhab.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.hanafiMadhab) { _ in settings.hapticFeedback() }
-
-                Text("The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Hanafi Calculation for Asr", caption: "The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method.", isOn: $settings.hanafiMadhab)
 
             if settings.advanced(.prayerCalculation) {
             VStack(alignment: .leading) {

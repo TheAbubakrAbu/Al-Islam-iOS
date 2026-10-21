@@ -376,22 +376,9 @@ struct QuranTestModeSettingsView: View {
         List {
             Group {
                 Section {
-                    VStack(alignment: .leading) {
-                        Toggle("Test Mode", isOn: Binding(
-                            get: { testMode.isOn },
-                            set: { on in
-                                settings.hapticFeedback()
-                                testMode.setOn(on)
-                            }
-                        ))
-                        .font(.subheadline)
-
-                        Text("Hides the Quran's text in the list and page readers until you tap an ayah, so you can recite from memory and check yourself. In the reader, the play button's menu turns it on and off, and the button wears a small eye while it is on. While a recitation plays, hold the playing bar for the same switch. The printed mushaf (PDF) can't hide single ayahs, so it works on text pages.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Test Mode",
+                                   caption: "Hides the Quran's text in the list and page readers until you tap an ayah, so you can recite from memory and check yourself. In the reader, the play button's menu turns it on and off, and the button wears a small eye while it is on. While a recitation plays, hold the playing bar for the same switch. The printed mushaf (PDF) can't hide single ayahs, so it works on text pages.",
+                                   isOn: Binding(get: { testMode.isOn }, set: { testMode.setOn($0) }))
                 }
 
                 Section(header: Text("WHAT IT HIDES")) {
@@ -431,32 +418,10 @@ struct QuranTestModeSettingsView: View {
                 }
 
                 Section {
-                    VStack(alignment: .leading) {
-                        Toggle("Reveal as It's Recited", isOn: $settings.quranTestModeRevealsRecited.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: settings.quranTestModeRevealsRecited) { _ in settings.hapticFeedback() }
+                    SettingsToggle("Reveal as It's Recited", caption: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words.", isOn: $settings.quranTestModeRevealsRecited)
 
-                        Text("While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
-
-                    VStack(alignment: .leading) {
-                        Toggle("Turn Off When Leaving the Reader", isOn: $settings.quranTestModeEndsOnLeave.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: settings.quranTestModeEndsOnLeave) { _ in
-                                settings.hapticFeedback()
-                                testMode.syncStoredOn()
-                            }
-
-                        Text("On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Turn Off When Leaving the Reader", caption: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off.", isOn: $settings.quranTestModeEndsOnLeave)
+                        .onChange(of: settings.quranTestModeEndsOnLeave) { _ in testMode.syncStoredOn() }
                 }
             }
             .themedListRowBackground()

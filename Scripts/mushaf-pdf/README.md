@@ -24,3 +24,21 @@ inside a vector teal-and-gold frame. Packed: 1.3 MB.
 The reader (`MushafPDFReader.swift`) keys this edition's content window to the whole page and
 extracts the `.pdf.xz` into a cache folder stamped with the bundled file's size, so replacing the
 file never serves a previous build's extraction.
+
+## The two Hafs editions
+
+Hafs alone has more than one printed edition bundled; the page menu's Edition picker (shown under
+Appearance when the printed mushaf is on screen for Hafs) lists the ones the build carries, and
+`Settings.mushafHafsPDFEdition` remembers the choice (`MushafHafsPDFEdition` in Globals.swift).
+
+| Edition | File | What it is | Size |
+| --- | --- | --- | --- |
+| Al-Islam (default) | `01-asim-hafs.pdf.xz` | generated here (above) | 1.3 MB |
+| Islamweb | `01-asim-hafs-islamweb.pdf.xz` | the Islamweb Hafs volume the app shipped up to 4.6.5 (11 lines a page, KFGQPC HQPB glyphs) | 0.8 MB |
+
+The reader falls back to the default when a chosen edition's file is missing. A third edition, the
+King Fahd Complex's blue Madinah print as republished by islamic1articles.home.blog, was built and
+dropped on 2026-10-20: those PDFs are 96 dpi JPEG scans (one image a page, 98 MB in all), and even
+re-cut to the frame and re-encoded as JPEG 2000 they came to 32 MB against a 3 MB ceiling. A
+scanned mushaf cannot get near that; only a font-based file can, and none exists for the ornate
+Madinah print.

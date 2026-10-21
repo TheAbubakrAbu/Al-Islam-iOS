@@ -55,7 +55,7 @@ struct ThemeHighlightsView: View {
                 get: { themeHighlights.allSectionsLit },
                 set: { on in
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { themeHighlights.setAllSectionsLit(on) }
+                    themeHighlights.setAllSectionsLit(on)
                 }
             )) {
                 HStack(spacing: 12) {

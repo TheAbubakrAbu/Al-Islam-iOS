@@ -406,15 +406,30 @@ struct HadithSearchFilterBar: View {
             if !filters.books.isEmpty {
                 Button("Every Collection") { filters.books = [] }
             }
-            ForEach(HadithCatalogBook.all, id: \.slug) { book in
-                Toggle(book.englishTitle, isOn: Binding(
-                    get: { filters.books.contains(book.slug) },
-                    set: { isOn in
-                        if isOn { filters.books.insert(book.slug) } else { filters.books.remove(book.slug) }
+            // One submenu per group of the Hadith tab (the Six Books, the early collections, the
+            // forties, the rest), not seventeen rows in one (Abu, 2026-10-21: menus "not too long"). A
+            // submenu's label counts what it holds, so a filter set inside it still shows from outside.
+            ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
+                let books = HadithCatalogBook.all.filter { $0.group == group }
+                if !books.isEmpty {
+                    let picked = books.filter { filters.books.contains($0.slug) }.count
+                    Menu {
+                        ForEach(books, id: \.slug) { book in
+                            Toggle(book.englishTitle, isOn: Binding(
+                                get: { filters.books.contains(book.slug) },
+                                set: { isOn in
+                                    if isOn { filters.books.insert(book.slug) } else { filters.books.remove(book.slug) }
+                                }
+                            ))
+                            // The root PaddedSwitchToggleStyle draws double-height menu rows on iOS 26.
+                            .toggleStyle(.automatic)
+                        }
+                    } label: {
+                        let title = group.rawValue.capitalized
+                        Label(picked > 0 ? "\(title) (\(picked))" : title,
+                              systemImage: picked > 0 ? "checkmark" : group.systemImage)
                     }
-                ))
-                // The root PaddedSwitchToggleStyle draws double-height menu rows on iOS 26.
-                .toggleStyle(.automatic)
+                }
             }
         } label: {
             chipLabel(booksTitle, systemImage: "books.vertical", isOn: !filters.books.isEmpty, isMenu: true)

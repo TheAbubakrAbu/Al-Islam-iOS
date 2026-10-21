@@ -599,87 +599,38 @@ struct HighlightedSnippet: View {
            normalizedTerm.containsArabicLetters == source.containsArabicLetters {
             ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
         }
-        // A short term paints only the letters it matched: "na" lights the "Na" of An-Najm, not the
-        // whole name (Abu, 2026-10-20: painting all of "Najm" for "na" read as the highlight being
-        // wrong, in the surah grid and in Arabic alike). A longer partial still fills its word
-        // ("believ" -> believers, the alef-skeleton prefix of a word the loose rung half-matched), so
-        // words in a results line never show half accent / half base color (Abu, 2026-08-29).
-        return snappedToWholeWords(ranges, in: source, minimumSnapLetters: 4)
+        // Exactly the letters that matched, never the word around them: "na" lights the "Na" of
+        // An-Najm and nothing more, "believ" lights those letters of "believers". The rungs above
+        // already make sure SOMETHING is lit for every matched row; what that something covers is
+        // what matched (Abu, 2026-10-20: "I want SOMETHING highlighted, doesn't mean I want the
+        // whole thing"). Touching ranges merge so a phrase still reads as one span.
+        return mergedMatchRanges(ranges, in: source)
     }
 
-    /// Every match painted as WHOLE WORDS. The rungs above find substrings - "صلاة" inside
-    /// "وَٱلصَّلَوٰةِ", "believ" inside "believers", the alef-skeleton prefix "لصل" of a word the loose
-    /// rung could only half-match - and painting exactly the matched letters left words chopped in
-    /// two colors: the head of the word in the accent, its tail in the base color, which read as a
-    /// highlight that had been cut off mid-word. A word either matched or it didn't, so each range
-    /// grows outward to the whitespace on both sides, then sheds the punctuation it picked up at the
-    /// edges (a closing quote, the comma after "ease,") - the accent covers the word and nothing
-    /// else. Overlapping or touching ranges merge, so a phrase reads as one span. Shared by every
-    /// caller of the ladder (list rows, the mushaf page reader, the cross-language token lookup), so
-    /// the same query paints the same words everywhere.
-    nonisolated private static func snappedToWholeWords(
+    /// The ladder's ranges trimmed and merged, with NO growth to word edges: each range keeps exactly
+    /// the letters it matched. A range that ends on whitespace ("patience " as the longest prefix of
+    /// "patience hardship") sheds it, and overlapping or touching ranges merge so a phrase is one span.
+    /// Whole-word snapping lived here from 2026-08-29 to 2026-10-20 and was withdrawn: "na" filling all
+    /// of "Najm" read as a wrong highlight. The matched letters are what the reader wants to see.
+    nonisolated private static func mergedMatchRanges(
         _ ranges: [Range<String.Index>],
-        in source: String,
-        minimumSnapLetters: Int = 2
+        in source: String
     ) -> [Range<String.Index>] {
         guard !ranges.isEmpty else { return ranges }
-        var snapped: [Range<String.Index>] = []
+        var merged: [Range<String.Index>] = []
         for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
             var start = range.lowerBound
             var end = range.upperBound
-            // A range that ENDS on a space ("patience " as the longest prefix of "patience hardship")
-            // would grow across that space into the next word and paint "patience and". The edge
-            // whitespace is shed first, so only words the range really touches can grow.
-            while start < end, isWordBoundary(source[start]) { start = source.index(after: start) }
-            while end > start, isWordBoundary(source[source.index(before: end)]) { end = source.index(before: end) }
+            while start < end, source[start].isWhitespace { start = source.index(after: start) }
+            while end > start, source[source.index(before: end)].isWhitespace { end = source.index(before: end) }
             guard start < end else { continue }
-            // Too few matched letters to claim the word: keep exactly what matched (merged with a
-            // touching range, so a phrase still reads as one span).
-            let matchedLetters = source[start..<end].filter { $0.isLetter || $0.isNumber }.count
-            if matchedLetters < minimumSnapLetters {
-                if let last = snapped.last, last.upperBound >= start {
-                    snapped[snapped.count - 1] = last.lowerBound..<max(last.upperBound, end)
-                } else {
-                    snapped.append(start..<end)
-                }
-                continue
-            }
-            while start > source.startIndex {
-                let previous = source.index(before: start)
-                if isWordBoundary(source[previous]) { break }
-                start = previous
-            }
-            while end < source.endIndex, !isWordBoundary(source[end]) {
-                end = source.index(after: end)
-            }
-            while start < end, !isWordCharacter(source[start]) { start = source.index(after: start) }
-            while end > start, !isWordCharacter(source[source.index(before: end)]) { end = source.index(before: end) }
-            guard start < end else { continue }
-            if let last = snapped.last, last.upperBound >= start {
-                snapped[snapped.count - 1] = last.lowerBound..<max(last.upperBound, end)
+            if let last = merged.last, last.upperBound >= start {
+                merged[merged.count - 1] = last.lowerBound..<max(last.upperBound, end)
             } else {
-                snapped.append(start..<end)
+                merged.append(start..<end)
             }
         }
-        return snapped
-    }
-
-    /// Where a snapped range stops growing: whitespace, and the dashes that glue two words together
-    /// without a space (an em or en dash), so "mercy\u{2014}indeed" never paints its neighbour. A
-    /// hyphen is NOT a boundary: "All-Knowing" is one word.
-    nonisolated private static func isWordBoundary(_ character: Character) -> Bool {
-        character.isWhitespace || character == "\u{2014}" || character == "\u{2013}" || character == "/"
-    }
-
-    /// A character that belongs to a word for painting purposes: it carries a letter or a digit, or an
-    /// Arabic mark (a standalone tashkeel cluster after its letter). Quotes, brackets, commas, and the
-    /// like are not, so they are trimmed off the ends of a snapped range.
-    nonisolated private static func isWordCharacter(_ character: Character) -> Bool {
-        character.unicodeScalars.contains { scalar in
-            CharacterSet.letters.contains(scalar)
-                || CharacterSet.decimalDigits.contains(scalar)
-                || scalar.isArabicMarkScalar
-        }
+        return merged
     }
 
     /// Convenience for callers without a cached fold (the mushaf page reader): folds `source` fresh, then

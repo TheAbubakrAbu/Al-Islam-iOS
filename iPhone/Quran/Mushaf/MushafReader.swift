@@ -1768,6 +1768,10 @@ struct SurahPageReader<Controls: View>: View {
                 .animation(nil, value: selectRoom)
             }
         }
+        // A settings page's own animated write (SettingsControls.swift, `withSettingsPageAnimation`)
+        // reaches the pages WITHOUT its animation: every mounted page used to recompose and re-lay
+        // itself out inside that ease-in-out on every flip of a switch in the sheet above it.
+        .ignoresSettingsPageAnimation()
         // A phone in LANDSCAPE reads the page across the sensor housing's safe area. Measured
         // 2026-10-05: the pager's band came out 750x169 on an 874 pt screen, so 62 pt of each side
         // went to the housing - 124 pt, 14% of the width, on the axis a landscape mushaf has least of
@@ -1858,7 +1862,8 @@ struct SurahPageReader<Controls: View>: View {
                 if facsimileDocument != nil { facsimileDocument = nil }
                 return
             }
-            let document = await MushafPDFLibrary.loadDocument(for: Self.facsimileTag(of: key))
+            let edition = Self.facsimileEdition(of: key)
+            let document = await MushafPDFLibrary.loadDocument(for: edition.tag, hafsEdition: edition.hafsEdition)
             guard !Task.isCancelled, facsimileKey == key else { return }
             facsimileDocument = document
         }
@@ -2878,14 +2883,20 @@ struct SurahPageReader<Controls: View>: View {
     /// everyone starts on) produced "" here, which the loader below read as "not the facsimile", and
     /// "Read Pages as Printed Mushaf" silently kept composing text for Hafs while every other
     /// riwayah opened its print (2026-09-12).
+    /// The Hafs edition rides along after a "|", so picking another edition reloads the document.
     private var facsimileKey: String {
         guard settings.resolvedMushafPageLanguage.isPDF else { return "" }
         return "pdf:" + (settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag)
+            + "|" + settings.resolvedMushafHafsPDFEdition.rawValue
     }
 
-    /// The riwayah tag inside a non-empty `facsimileKey`.
-    private static func facsimileTag(of key: String) -> String {
-        key.hasPrefix("pdf:") ? String(key.dropFirst(4)) : key
+    /// The riwayah tag and Hafs edition inside a non-empty `facsimileKey`.
+    private static func facsimileEdition(of key: String) -> (tag: String, hafsEdition: MushafHafsPDFEdition) {
+        let body = key.hasPrefix("pdf:") ? String(key.dropFirst(4)) : key
+        let parts = body.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+        let tag = parts.first.map(String.init) ?? ""
+        let edition = parts.count > 1 ? MushafHafsPDFEdition(rawValue: String(parts[1])) ?? .alIslam : .alIslam
+        return (tag, edition)
     }
 
     /// A wide reader has the room to put the legend / search / riwayah row BESIDE the footer instead of
@@ -2920,10 +2931,13 @@ struct SurahPageReader<Controls: View>: View {
     private var wideFooterWidth: CGFloat {
         let base: CGFloat = controlsRowIsCrowded ? 404 : 460
         // The controls row's floor beside it. Crowded (legend + "Search" + riwayah picker without
-        // its "(default)" suffix), the row needs ~400 pt with its own 48 pt of side padding; a 240 pt
-        // floor left "Search" as "Sea..." on a 700 pt Mac window and an iPad mini while the footer
-        // kept its full 404 (Abu, 2026-10-20: "so much space but search is getting eaten off").
-        let controlsFloor: CGFloat = controlsRowIsCrowded ? 400 : 240
+        // its "(default)" suffix), the row wants ~400 pt with its own 48 pt of side padding, which a
+        // 744 pt iPad mini or a 700 pt Mac window cannot give it without truncating the footer
+        // ("Surah 1...", "Page 312 / 604..." at 344 pt, measured 2026-10-20). 340 keeps the footer
+        // whole there and the search pill drops to its magnifier (`ViewThatFits` in the host's bar)
+        // instead of a clipped "Sea..."; the word comes back once the reader is ~800 pt wide
+        // (Abu, 2026-10-20: "so much space but search is getting eaten off").
+        let controlsFloor: CGFloat = controlsRowIsCrowded ? 340 : 240
         return min(max(readerWidth / 2, base * footerScale), max(readerWidth - controlsFloor, 0))
     }
 
@@ -3050,7 +3064,7 @@ struct SurahPageReader<Controls: View>: View {
                 // never fold, so the play button rides in space the row already occupies and the fold
                 // stays ONE band change.
                 if let footerSurah {
-                    pageFooterPlayButton(surah: footerSurah)
+                    pageFooterPlayButton(surah: footerSurah, onScreen: surahsOnScreen(pages: pages))
                 }
 
             }
@@ -3450,14 +3464,34 @@ struct SurahPageReader<Controls: View>: View {
         withAnimation(.easeInOut) { activePicker = nil }
     }
 
+    /// Every surah with ayahs on the page(s) now on screen, in reading order: the one page, or both
+    /// pages of the open spread. More than one, and the play menu asks which one (Abu, 2026-10-21:
+    /// "when I click play surah in page mode and there are multiple surahs on the screen have me
+    /// choose via a menu").
+    private func surahsOnScreen(pages: [MushafPage]) -> [Surah] {
+        var seen = Set<Int>()
+        return visiblePageIndices(around: pageIndex, in: pages)
+            .flatMap { pages[$0].segments.map(\.surah) }
+            .filter { seen.insert($0.id).inserted }
+    }
+
+    /// A surah row in the "which surah" lists: the number and name, as the surah grid writes them.
+    private static func surahChoiceTitle(_ surah: Surah) -> String {
+        "\(surah.id): \(surah.nameTransliteration)"
+    }
+
     /// The list reader's play menu, verbatim (user rule: "take the SurahView play menu exactly and put it in
     /// the mushaf one") - reciter picker on top, then Other Options (custom range, random ayah, random
     /// reciter, repeat), ayah-by-ayah, last listened, and Play Surah nearest the thumb. It acts on the surah
-    /// the FOOTER is showing, which in page mode is wherever the reader has paged to.
-    private func pageFooterPlayButton(surah: Surah) -> some View {
+    /// the FOOTER is showing, which in page mode is wherever the reader has paged to. With more than one
+    /// surah on screen (`onScreen`: page 604 carries 112, 113 and 114; an open spread can hold more),
+    /// Play Surah and Play Ayah by Ayah open a list of those surahs instead of guessing the meter's one.
+    /// The double-tap shortcut cannot ask, so it keeps the meter's surah.
+    private func pageFooterPlayButton(surah: Surah, onScreen: [Surah]) -> some View {
         let idle = !nowPlaying.isLoading && !nowPlaying.isPlaying && !nowPlaying.isPaused
         let canResumeLast = settings.lastListenedSurah?.surahNumber == surah.id
         let repeatCounts = [20, 15, 10, 5, 3, 2]
+        let asksWhichSurah = onScreen.count > 1
 
         return Group {
             if idle {
@@ -3588,11 +3622,26 @@ struct SurahPageReader<Controls: View>: View {
                     }
 
                     if settings.isHafsDisplay {
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: 1, continueRecitation: true)
-                        } label: {
-                            Label("Play Ayah by Ayah", systemImage: "list.number")
+                        if asksWhichSurah {
+                            Menu {
+                                ForEach(onScreen, id: \.id) { candidate in
+                                    Button {
+                                        settings.hapticFeedback()
+                                        quranPlayer.playAyah(surahNumber: candidate.id, ayahNumber: 1, continueRecitation: true)
+                                    } label: {
+                                        Text(Self.surahChoiceTitle(candidate))
+                                    }
+                                }
+                            } label: {
+                                Label("Play Ayah by Ayah", systemImage: "list.number")
+                            }
+                        } else {
+                            Button {
+                                settings.hapticFeedback()
+                                quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: 1, continueRecitation: true)
+                            } label: {
+                                Label("Play Ayah by Ayah", systemImage: "list.number")
+                            }
                         }
                     }
 
@@ -3609,13 +3658,28 @@ struct SurahPageReader<Controls: View>: View {
                         }
                     }
 
-                    Button {
-                        settings.hapticFeedback()
-                        quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
-                    } label: {
-                        // No reciter caption here: this menu's Choose Reciter row already carries
-                        // it (Abu, 2026-09-21: "no point in saying the name twice").
-                        Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
+                    if asksWhichSurah {
+                        Menu {
+                            ForEach(onScreen, id: \.id) { candidate in
+                                Button {
+                                    settings.hapticFeedback()
+                                    quranPlayer.playSurah(surahNumber: candidate.id, surahName: candidate.nameTransliteration)
+                                } label: {
+                                    Text(Self.surahChoiceTitle(candidate))
+                                }
+                            }
+                        } label: {
+                            Label("Play Surah", systemImage: "memories")
+                        }
+                    } else {
+                        Button {
+                            settings.hapticFeedback()
+                            quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
+                        } label: {
+                            // No reciter caption here: this menu's Choose Reciter row already carries
+                            // it (Abu, 2026-09-21: "no point in saying the name twice").
+                            Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
+                        }
                     }
                 } label: {
                     playControlLabel

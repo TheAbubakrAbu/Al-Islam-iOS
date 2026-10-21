@@ -155,18 +155,7 @@ struct SettingsIslamView: View {
                 // The Islam tab's own switch (Abu, 2026-09-20), beside the Quran's and the hadith
                 // books': each area of the app decides for itself.
                 Section(header: Text("HIGHLIGHTS")) {
-                    VStack(alignment: .leading) {
-                        Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesIslam.animation(.easeInOut))
-                            .font(.subheadline)
-                            .tint(settings.accentColor.color)
-                            .onChange(of: settings.highlightAllahNamesIslam) { _ in settings.hapticFeedback() }
-
-                        Text("The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Highlight Allah", caption: "The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)", isOn: $settings.highlightAllahNamesIslam)
                 }
             }
             .themedListRowBackground()
@@ -196,27 +185,9 @@ struct SettingsIslamView: View {
 
                 if settings.advanced(.islamAlphabet) {
                 Section(header: Text("PRACTICE")) {
-                    VStack(alignment: .leading) {
-                        Toggle("Hide English Readings", isOn: $settings.hideEnglishInArabicLetters.animation(.easeInOut))
-                            .onChange(of: settings.hideEnglishInArabicLetters) { _ in settings.hapticFeedback() }
+                    SettingsToggle("Hide English Readings", caption: "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone.", isOn: $settings.hideEnglishInArabicLetters)
 
-                        Text("Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
-
-                    VStack(alignment: .leading) {
-                        Toggle("Use Quranic Sukoon", isOn: $settings.quranicSukoonInLetterPractice.animation(.easeInOut))
-                            .onChange(of: settings.quranicSukoonInLetterPractice) { _ in settings.hapticFeedback() }
-
-                        Text("Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Use Quranic Sukoon", caption: "Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints.", isOn: $settings.quranicSukoonInLetterPractice)
                 }
                 }
 
@@ -237,21 +208,9 @@ struct SettingsIslamView: View {
         List {
             Group {
                 Section(header: Text("LAYOUT")) {
-                    VStack(alignment: .leading) {
-                        Toggle("Grid Mode", isOn: Binding(
-                            get: { settings.islamGridMode },
-                            set: { newValue in
-                                settings.hapticFeedback()
-                                withAnimation(.easeInOut) { settings.islamGridMode = newValue }
-                            }
-                        ))
-
-                        Text("Shows the Islamic resources as tiles instead of rows. The 99 Names and the Arabic alphabet keep their own grid switches, in each screen's toolbar.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Grid Mode",
+                                   caption: "Shows the Islamic resources as tiles instead of rows. The 99 Names and the Arabic alphabet keep their own grid switches, in each screen's toolbar.",
+                                   isOn: Binding(get: { settings.islamGridMode }, set: { settings.islamGridMode = $0 }))
                 }
 
                 // DAILY: Word of the Day where the Quran ships, the Fajr turnover where the prayer times
@@ -285,34 +244,14 @@ struct SettingsIslamView: View {
 
     #if HAS_QURAN
     private var wordOfTheDayToggle: some View {
-        VStack(alignment: .leading) {
-            Toggle("Word of the Day", isOn: $settings.showWordOfTheDay.animation(.easeInOut))
-                .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
-
-            Text("One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Word of the Day", caption: "One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.", isOn: $settings.showWordOfTheDay)
     }
     #endif
 
     #if HAS_ADHAN
     private var fajrTurnoverToggle: some View {
-        VStack(alignment: .leading) {
-            Toggle("Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
-                .onChange(of: settings.dailyRolloverAtFajr) { _ in
-                    settings.hapticFeedback()
-                    settings.dailyRolloverSwitchChanged()
-                }
-
-            Text("Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $settings.dailyRolloverAtFajr)
+            .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
     #endif
 }
@@ -387,54 +326,39 @@ struct IslamTextSizeSettingsView: View {
     private var followsDevice: Bool { IslamTextSize.size(for: settings.islamTextSize) == nil }
     private var chosen: DynamicTypeSize { IslamTextSize.size(for: settings.islamTextSize) ?? deviceSize }
 
+    /// The slider's step while the thumb is down (the stored index is written on release, like every
+    /// size slider in Settings), so the PREVIEW below follows the thumb.
+    @State private var liveIndex: Double? = nil
+    private var previewSize: DynamicTypeSize {
+        liveIndex.flatMap { IslamTextSize.size(for: Int($0.rounded())) } ?? chosen
+    }
+
+    private var indexBinding: Binding<Double> {
+        Binding(
+            get: { Double(max(settings.islamTextSize, 0)) },
+            set: { settings.islamTextSize = Int($0.rounded()) }
+        )
+    }
+
     var body: some View {
         List {
             Group {
                 Section(header: Text("TEXT SIZE"),
                         footer: Text("Applies to everything on the Al-Islam tab: the articles and guides, the duas and dhikr, the 99 Names and the libraries. \(IslamSettingsCopy.ownTextSizes)")) {
-                    Toggle("Use Device Text Size", isOn: Binding(
+                    SettingsToggle("Use Device Text Size", isOn: Binding(
                         get: { followsDevice },
                         set: { follow in
-                            settings.hapticFeedback()
                             // Turning it off starts the slider at the size the device already uses,
                             // so nothing jumps until the slider moves.
                             settings.islamTextSize = follow ? -1 : (IslamTextSize.steps.firstIndex(of: deviceSize) ?? 3)
                         }
                     ))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
 
                     if !followsDevice {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack {
-                                Text("Size")
-                                Spacer()
-                                Text(IslamTextSize.name(chosen))
-                                    .foregroundColor(.secondary)
-                            }
-                            .font(.subheadline)
-
-                            HStack(spacing: 12) {
-                                Image(systemName: "textformat.size.smaller")
-                                Slider(
-                                    value: Binding(
-                                        get: { Double(settings.islamTextSize) },
-                                        set: { value in
-                                            let index = Int(value.rounded())
-                                            guard index != settings.islamTextSize else { return }
-                                            settings.hapticFeedback()
-                                            settings.islamTextSize = index
-                                        }
-                                    ),
-                                    in: 0...Double(IslamTextSize.steps.count - 1),
-                                    step: 1
-                                )
-                                .tint(settings.accentColor.color)
-                                Image(systemName: "textformat.size.larger")
-                            }
-                            .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 4)
+                        FontSizeSlider("Text Size", value: indexBinding, in: 0...Double(IslamTextSize.steps.count - 1),
+                                       sample: nil,
+                                       label: { IslamTextSize.name(IslamTextSize.size(for: Int($0.rounded())) ?? .large) },
+                                       onLiveChange: { liveIndex = $0 })
                     }
                 }
 
@@ -452,7 +376,7 @@ struct IslamTextSizeSettingsView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding(.vertical, 4)
-                    .dynamicTypeSize(chosen)
+                    .dynamicTypeSize(previewSize)
                 }
             }
             .themedListRowBackground()

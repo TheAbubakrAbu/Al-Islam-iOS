@@ -3249,34 +3249,39 @@ func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> som
 
     Divider()
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = letterData.letter
-    } label: {
-        Label("Copy Letter", systemImage: "doc.on.doc")
-    }
+    // The four copies as one Copy submenu, not four rows (Abu, 2026-10-21: menus "not too long").
+    Menu {
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = letterData.letter
+        } label: {
+            Label("Copy Letter", systemImage: "doc.on.doc")
+        }
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = letterData.name
-    } label: {
-        Label("Copy Arabic Name", systemImage: "doc.on.doc")
-    }
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = letterData.name
+        } label: {
+            Label("Copy Arabic Name", systemImage: "doc.on.doc")
+        }
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = letterData.transliteration
-    } label: {
-        Label("Copy Transliteration", systemImage: "doc.on.doc")
-    }
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = letterData.transliteration
+        } label: {
+            Label("Copy Transliteration", systemImage: "doc.on.doc")
+        }
 
-    Button {
-        settings.hapticFeedback()
-        // `forms` is [final, medial, initial]; reversed so the copied text reads initial-first, the way the
-        // row and the detail screen show them.
-        UIPasteboard.general.string = letterData.forms.prefix(3).reversed().joined(separator: " ")
+        Button {
+            settings.hapticFeedback()
+            // `forms` is [final, medial, initial]; reversed so the copied text reads initial-first, the way the
+            // row and the detail screen show them.
+            UIPasteboard.general.string = letterData.forms.prefix(3).reversed().joined(separator: " ")
+        } label: {
+            Label("Copy Forms", systemImage: "doc.on.doc")
+        }
     } label: {
-        Label("Copy Forms", systemImage: "doc.on.doc")
+        Label("Copy", systemImage: "doc.on.doc")
     }
 }
 
@@ -3307,25 +3312,30 @@ func arabicNumberContextItems(
 
     Divider()
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = numberData.number
-    } label: {
-        Label("Copy Numeral", systemImage: "doc.on.doc")
-    }
+    // The three copies as one Copy submenu, as the letters' menu has it.
+    Menu {
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = numberData.number
+        } label: {
+            Label("Copy Numeral", systemImage: "doc.on.doc")
+        }
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = numberData.name
-    } label: {
-        Label("Copy Arabic Name", systemImage: "doc.on.doc")
-    }
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = numberData.name
+        } label: {
+            Label("Copy Arabic Name", systemImage: "doc.on.doc")
+        }
 
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = numberData.transliteration
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = numberData.transliteration
+        } label: {
+            Label("Copy Transliteration", systemImage: "doc.on.doc")
+        }
     } label: {
-        Label("Copy Transliteration", systemImage: "doc.on.doc")
+        Label("Copy", systemImage: "doc.on.doc")
     }
 }
 

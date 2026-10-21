@@ -34,17 +34,15 @@ struct SettingsQuranView: View {
             set: { newValue in
                 // If not on Hafs, English settings don't apply (toggle is disabled in UI).
                 guard settings.isHafsDisplay else { return }
-                withAnimation {
-                    if newValue {
-                        // Ensure at least one English option is enabled so this toggle can stay on.
-                        if !(settings.showTransliteration || settings.showEnglishSaheeh || settings.showEnglishMustafa) {
-                            settings.showEnglishSaheeh = true
-                        }
-                    } else {
-                        settings.showTransliteration = false
-                        settings.showEnglishSaheeh = false
-                        settings.showEnglishMustafa = false
+                if newValue {
+                    // Ensure at least one English option is enabled so this toggle can stay on.
+                    if !(settings.showTransliteration || settings.showEnglishSaheeh || settings.showEnglishMustafa) {
+                        settings.showEnglishSaheeh = true
                     }
+                } else {
+                    settings.showTransliteration = false
+                    settings.showEnglishSaheeh = false
+                    settings.showEnglishMustafa = false
                 }
             }
         )
@@ -53,11 +51,7 @@ struct SettingsQuranView: View {
     private var pageJuzDividers: Binding<Bool> {
         Binding(
             get: { settings.showPageJuzDividers },
-            set: { newValue in
-                withAnimation {
-                    settings.showPageJuzDividers = newValue
-                }
-            }
+            set: { settings.showPageJuzDividers = $0 }
         )
     }
 
@@ -68,6 +62,9 @@ struct SettingsQuranView: View {
     /// pattern. DEBUG builds only.
     @State private var autoOpenArabicText =
         ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsArabic")
+    /// `-launchQuranSettingsEnglish` lands on the English Text subpage. DEBUG builds only.
+    @State private var autoOpenEnglishText =
+        ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsEnglish")
     /// `-launchQuranSettingsReciters` lands on the reciter list, for verifying the legend dots and
     /// a partial reciter's coverage. DEBUG builds only.
     @State private var autoOpenReciters =
@@ -102,6 +99,7 @@ struct SettingsQuranView: View {
         // readers' sheets host this page in `SettingsSheetStack`, a `NavigationStack`, so these push
         // there as in the Settings tab.
         .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
+        .debugPushDestination(isPresented: $autoOpenEnglishText) { englishTextDestination }
         .debugPushDestination(isPresented: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
         .debugPushDestination(isPresented: $autoOpenSunnah) { SunnahRemindersView() }
         .debugPushDestination(isPresented: $autoOpenThemes) { ThemeHighlightsView() }
@@ -417,7 +415,6 @@ struct SettingsQuranView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .font(.subheadline)
         .onChange(of: settings.reciteType) { _ in settings.hapticFeedback() }
     }
 
@@ -438,17 +435,7 @@ struct SettingsQuranView: View {
             // NOT behind Advanced (Abu, 2026-10-05: "show full surah details should not be in
             // advanced settings"): it changes what every row of the main surah list shows, which is
             // the first screen of the tab, so it belongs with the ordinary options.
-            VStack(alignment: .leading) {
-                Toggle("Show Full Surah Details", isOn: $settings.showFullSurahRow.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
-
-                Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Show Full Surah Details", caption: "Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.", isOn: $settings.showFullSurahRow)
 
             lastReadAndListenedGroup
         }
@@ -469,121 +456,39 @@ struct SettingsQuranView: View {
 
     /// Whether a sheet opened FROM the ayah's actions sheet stacks on top of it or replaces it.
     private var keepAyahSheetOpenGroup: some View {
-        VStack(alignment: .leading) {
-            Toggle("Keep Sheet Open", isOn: $settings.keepAyahSheetOpen.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.keepAyahSheetOpen) { _ in settings.hapticFeedback() }
-
-            Text("Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Keep Sheet Open", caption: "Opening Tafsir or another action from an ayah keeps its actions underneath; closing the new sheet returns to them. Off, the actions close as the new sheet opens.", isOn: $settings.keepAyahSheetOpen)
     }
 
     private var lastReadAndListenedGroup: some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Ayah of the Day", isOn: $settings.showAyahOfTheDay.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.showAyahOfTheDay) { _ in settings.hapticFeedback() }
-
-                Text("Shows a different ayah each day at the top of the Quran tab.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Show Ayah of the Day", caption: "Shows a different ayah each day at the top of the Quran tab.", isOn: $settings.showAyahOfTheDay)
 
             #if os(iOS)
             if WordOfDayStore.isBundled {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Show Word of the Day", isOn: $settings.showWordOfTheDay.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
-
-                    Text("Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
+                SettingsToggle("Show Word of the Day", caption: "Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in.", isOn: $settings.showWordOfTheDay)
             }
 
             // Fajr comes from the prayer calculation, which only an app with prayer times has.
             #if HAS_ADHAN
             if settings.advanced(.quranReadingView) {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Daily Cards Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.dailyRolloverAtFajr) { _ in
-                        settings.hapticFeedback()
-                        settings.dailyRolloverSwitchChanged()
-                    }
-
-                Text("The daily cards change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, midnight.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Daily Cards Turn Over at Fajr", caption: "The daily cards change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, midnight.", isOn: $settings.dailyRolloverAtFajr)
+                .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
             }
             #endif
             #endif
 
             if settings.advanced(.quranReadingView) {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Last Listened Surah", isOn: $settings.saveLastListenedSurah.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.saveLastListenedSurah) { _ in settings.hapticFeedback() }
+            SettingsToggle("Show Last Listened Surah", caption: "Remembers and shows the last surah you were listening to at the top of the Quran tab.", isOn: $settings.saveLastListenedSurah)
 
-                Text("Remembers and shows the last surah you were listening to at the top of the Quran tab.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Show Last Listened Ayah", caption: "Remembers and shows the last single ayah or custom range you were listening to at the top of the Quran tab.", isOn: $settings.saveLastListenedAyah)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Last Listened Ayah", isOn: $settings.saveLastListenedAyah.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.saveLastListenedAyah) { _ in settings.hapticFeedback() }
-
-                Text("Remembers and shows the last single ayah or custom range you were listening to at the top of the Quran tab.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Show Last Read Ayah", isOn: $settings.saveLastReadAyah.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.saveLastReadAyah) { _ in settings.hapticFeedback() }
-
-                Text("Remembers and shows the last ayah you were reading at the top of the Quran tab.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle("Show Last Read Ayah", caption: "Remembers and shows the last ayah you were reading at the top of the Quran tab.", isOn: $settings.saveLastReadAyah)
             }
         }
     }
 
     private var pageAndJuzDividersGroup: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Toggle("Show Page and Juz Dividers", isOn: pageJuzDividers.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.showPageJuzDividers) { _ in settings.hapticFeedback() }
-
-            Text("Shows a divider inside a surah wherever a new mushaf page or juz begins, plus a small floating label with the current page and juz while you read.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Show Page and Juz Dividers", caption: "Shows a divider inside a surah wherever a new mushaf page or juz begins, plus a small floating label with the current page and juz while you read.", isOn: pageJuzDividers)
     }
 
     /// "Use System Font Size" for the Arabic text only - pins the Arabic size to the device's Dynamic Type
@@ -597,13 +502,7 @@ struct SettingsQuranView: View {
             },
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                withAnimation {
-                    // Explicit publish: this is a direct assignment through a hand-rolled Binding, not the
-                    // `$settings` projection, and an @AppStorage write from here was observed NOT reaching
-                    // observers reliably - leaving every equatable row on the old size until scrolled off.
-                    settings.objectWillChange.send()
-                    settings.fontArabicSize = newValue ? systemBodySize + 10 : systemBodySize + 11
-                }
+                settings.fontArabicSize = newValue ? systemBodySize + 10 : systemBodySize + 11
             }
         )
     }
@@ -618,11 +517,7 @@ struct SettingsQuranView: View {
             },
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                withAnimation {
-                    // Explicit publish - see `useSystemArabicFontSize`.
-                    settings.objectWillChange.send()
-                    settings.englishFontSize = newValue ? systemBodySize : systemBodySize + 1
-                }
+                settings.englishFontSize = newValue ? systemBodySize : systemBodySize + 1
             }
         )
     }
@@ -660,25 +555,19 @@ struct SettingsQuranView: View {
                 set: { settings.wordByWordMeanings = $0 }
             )
 
-            Toggle("Tap a Word for Its Meaning", isOn: binding.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Tap a Word for Its Meaning",
+                           caption: canRenderNow || !settings.showArabicText
+                               ? "Tap a word twice while reading to study it: its meaning and pronunciation, its grammar and root, and the ayah's themes. With tajweed colors on, the card explains each color too. Works offline."
+                               : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.",
+                           isOn: binding)
                 .disabled(!canRenderNow)
                 .onChange(of: settings.wordByWordMeanings) { enabled in
-                    settings.hapticFeedback()
                     // A megabyte of glosses has no business staying resident once the mode is off -
                     // unless the study layout below is still reading from it.
                     if !enabled && !settings.wordByWordInline { WordByWordStore.shared.unload() }
                     // Turning it on parses the pack off-main now, not in the first row's body.
                     if enabled { WordByWordStore.shared.prewarm() }
                 }
-
-            Text(canRenderNow || !settings.showArabicText
-                 ? "Tap a word twice while reading, in list mode or page mode, to study it: what it means and how it is pronounced, its grammar part by part, its root and every word built on it, and the ayah's themes. Move to any other word of the ayah without closing the card. With tajweed colors on, the card also explains every tajweed color painted on the word. A single tap still marks the ayah. Works offline."
-                 : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
         }
     }
 
@@ -691,22 +580,16 @@ struct SettingsQuranView: View {
                 set: { settings.wordByWordInline = $0 }
             )
 
-            Toggle("Word by Word", isOn: inlineBinding.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Word by Word",
+                           caption: canRenderNow || !settings.showArabicText
+                               ? "Lays the ayah out word by word, each word's meaning and pronunciation beneath it. List mode only: page mode keeps the mushaf layout."
+                               : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.",
+                           isOn: inlineBinding)
                 .disabled(!canRenderNow)
                 .onChange(of: settings.wordByWordInline) { enabled in
-                    settings.hapticFeedback()
                     if !enabled && !settings.wordByWordMeanings { WordByWordStore.shared.unload() }
                     if enabled { WordByWordStore.shared.prewarm() }
                 }
-
-            Text(canRenderNow || !settings.showArabicText
-                 ? "Lays the ayah out word by word, with each word's meaning and pronunciation written directly beneath it. Works on its own, with or without the tap above. List mode only: page mode keeps the mushaf layout, so this has no effect there."
-                 : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
 
             if settings.wordByWordInline && canRenderNow {
                 wordByWordLineToggles
@@ -719,50 +602,24 @@ struct SettingsQuranView: View {
     /// the switch that would empty it does not move.
     private var wordByWordLineToggles: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Toggle("Translation", isOn: $settings.wordByWordInlineTranslation.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Translation", caption: "What each word means on its own, from the Quranic Arabic Corpus via Quran.com. Literal and in place, so it reads differently from the flowing translation of the whole ayah.", isOn: $settings.wordByWordInlineTranslation)
                 .disabled(!settings.wordByWordInlineTransliteration)
-                .onChange(of: settings.wordByWordInlineTranslation) { _ in settings.hapticFeedback() }
 
-            Text("What each word means on its own, from the Quranic Arabic Corpus via Quran.com. Literal and in place, so it reads differently from the flowing translation of the whole ayah.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Toggle("Transliteration", isOn: $settings.wordByWordInlineTransliteration.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Transliteration", caption: "How each word is pronounced, written above its meaning. Independent of the ayah's own transliteration line.", isOn: $settings.wordByWordInlineTransliteration)
                 .disabled(!settings.wordByWordInlineTranslation)
-                .onChange(of: settings.wordByWordInlineTransliteration) { _ in settings.hapticFeedback() }
-
-            Text("How each word is pronounced, written above its meaning. Independent of the ayah's own transliteration line.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .settingsDependent()
     }
     #endif
 
     private var arabicVisibilityToggle: some View {
-        Toggle("Show Arabic Quran Text", isOn: $settings.showArabicText.animation(.easeInOut))
-            .font(.subheadline)
+        SettingsToggle("Show Arabic Quran Text", isOn: $settings.showArabicText)
             .disabled(!settings.showTransliteration && !settings.showEnglishSaheeh && !settings.showEnglishMustafa)
-            .onChange(of: settings.showArabicText) { _ in settings.hapticFeedback() }
     }
 
     private var highlightAllahGroup: some View {
-        VStack(alignment: .leading) {
-            Toggle("Highlight Allah", isOn: $settings.highlightAllahNames.animation(.easeInOut))
-                .font(.subheadline)
-                .disabled(!settings.showArabicText)
-                .onChange(of: settings.highlightAllahNames) { _ in settings.hapticFeedback() }
-
-            Text("Colors the majestic and glorius name الله (Allah) in red throughout the Quran.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Highlight Allah", caption: "Colors the majestic and glorius name الله (Allah) in red throughout the Quran.", isOn: $settings.highlightAllahNames)
+            .disabled(!settings.showArabicText)
     }
 
     private var tajweedSettingsGroup: some View {
@@ -776,15 +633,12 @@ struct SettingsQuranView: View {
                 set: { settings.showTajweedColors = $0 }
             )
 
-            Toggle("Show Tajweed Colors", isOn: tajweedToggleBinding.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Show Tajweed Colors", isOn: tajweedToggleBinding)
                 .disabled(!tajweedCanRenderNow)
-                .onChange(of: settings.showTajweedColors) { _ in settings.hapticFeedback() }
 
             #if os(iOS)
             NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false) }) {
                 Text("Customize Tajweed Colors")
-                    .font(.subheadline)
                     .foregroundColor(settings.accentColor.color)
             }
             .disabled(!settings.showTajweedColors)
@@ -846,30 +700,11 @@ struct SettingsQuranView: View {
     // suggested that a disabled-but-ticked state existed somewhere.
     private var cleanArabicTextToggles: some View {
         VStack(alignment: .leading) {
-            Toggle("Hide Arabic Tashkeel (Vowel Diacritics) and Signs", isOn: $settings.cleanArabicText.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.cleanArabicText) { _ in settings.hapticFeedback() }
-
-            #if os(iOS)
-            Text("Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-            #endif
+            SettingsToggle("Hide Arabic Tashkeel (Vowel Diacritics) and Signs", caption: "Removes the tashkeel (fatha, damma, kasra and the rest) and the small signs: madd marks, hamzat al-wasl, tiny vowel letters, stop signs and markers. The vowel letters stay. Not recommended.", isOn: $settings.cleanArabicText)
             
             // No `.settingsDependent()` rail any more: that indent marks a row as belonging to the
             // one above it, which is exactly the relationship this row no longer has.
-            Toggle("Hide Arabic Dots", isOn: $settings.removeArabicDots.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
-
-            #if os(iOS)
-            Text("Removes the dots, turning ب into ٮ, the way the earliest manuscripts such as the Birmingham folios were written. Hard to read; not for beginners.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            #endif
+            SettingsToggle("Hide Arabic Dots", caption: "Removes the dots, turning ب into ٮ, the way the earliest manuscripts such as the Birmingham folios were written. Hard to read; not for beginners.", isOn: $settings.removeArabicDots)
         }
     }
 
@@ -1003,18 +838,17 @@ struct SettingsQuranView: View {
         }
     }
 
+    /// The size control (`FontSizeSlider`: sample line, small ب to big ب, one write on release), then
+    /// the system-size switch. The sample is set in the face the reader will actually draw, cleaned
+    /// the way Hide Tashkeel / Hide Dots would clean it.
     private var arabicFontSizeControls: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Toggle("Use System Font Size", isOn: useSystemArabicFontSize.animation(.easeInOut))
-                .font(.subheadline)
-                .padding(.vertical, 2)
+        VStack(alignment: .leading, spacing: 12) {
+            FontSizeSlider("Arabic Font Size", value: $settings.fontArabicSize, in: 15...75,
+                           sample: settings.cleanedQuranArabic(Settings.arabicSizeSample),
+                           fontName: settings.quranArabicFontName(for: settings.displayQiraahForArabic),
+                           glyph: settings.cleanedQuranArabic("ب"))
 
-            Stepper(value: $settings.fontArabicSize.animation(.easeInOut), in: 15...75, step: 1) {
-                Text("Arabic Font Size: \(Int(settings.fontArabicSize))")
-                    .font(.subheadline)
-            }
-
-            Slider(value: $settings.fontArabicSize.animation(.easeInOut), in: 15...75, step: 1)
+            SettingsToggle("Use System Font Size", isOn: useSystemArabicFontSize)
 
             #if os(iOS)
             fitPageControls
@@ -1025,49 +859,22 @@ struct SettingsQuranView: View {
     #if os(iOS)
     private var fitPageControls: some View {
         VStack(alignment: .leading) {
-            Toggle("Fit Page to Screen", isOn: $settings.mushafFitPage.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
+            SettingsToggle("Fit Page to Screen", caption: "Each page laid out as this riwayah's printed mushaf is, at the largest size that fits the screen. Off, the size above applies and the page scrolls.", isOn: $settings.mushafFitPage)
 
-            Text("Sets each page the way this riwayah's printed mushaf does: the same lines and breaks, at the largest size that fits the screen, in your own font and colors. Off, the size above applies and the page scrolls.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-
-            // NOT `.animation(.easeInOut)` on the binding, unlike its neighbours here. This one is an
-            // @AppStorage flip that changes the READER's page layout behind this sheet: animating the
-            // binding puts the defaults write inside the transaction, so Settings republishes and every
-            // mounted mushaf page re-evaluates INSIDE the animation (the trap recorded in
-            // `page-mode-chrome-bands`: animated reader state must be @State, never an @AppStorage
-            // flipped inside a transaction). The other toggles in this file animate harmlessly because
-            // they only move rows inside this sheet. The reader animates its own spread change.
-            Toggle("Two-Page Spread", isOn: $settings.mushafTwoPageSpread)
-                .font(.subheadline)
-                .onChange(of: settings.mushafTwoPageSpread) { _ in settings.hapticFeedback() }
-
-            Text("Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
+            // An @AppStorage flip that changes the READER's page layout behind this sheet. It used to
+            // be the one switch here with NO `.animation` on its binding, because an animated write
+            // made every mounted mushaf page re-evaluate INSIDE the animation (the trap recorded in
+            // `page-mode-chrome-bands`). Every switch is a `SettingsToggle` now: its write is flagged
+            // and the pager strips the animation from it (`ignoresSettingsPageAnimation`), so this
+            // row animates the sheet like its neighbours while the reader animates its own spread change.
+            SettingsToggle("Two-Page Spread", caption: "Two facing pages, like an open mushaf, whenever the page area is wider than it is tall: landscape, an iPad, a wide Mac window. Portrait shows one.", isOn: $settings.mushafTwoPageSpread)
         }
     }
     #endif
 
     private var beginnerModeGroup: some View {
-        VStack(alignment: .leading) {
-            Toggle("Enable Arabic Beginner Mode", isOn: $settings.beginnerMode.animation(.easeInOut))
-                .font(.subheadline)
-                .disabled(!settings.showArabicText)
-                .onChange(of: settings.beginnerMode) { _ in settings.hapticFeedback() }
-
-            Text("Puts a space between each Arabic letter to make it easier for beginners to read the Quran.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-        }
+        SettingsToggle("Enable Arabic Beginner Mode", caption: "Puts a space between each Arabic letter to make it easier for beginners to read the Quran.", isOn: $settings.beginnerMode)
+            .disabled(!settings.showArabicText)
     }
 
     private var englishTextSection: some View {
@@ -1079,30 +886,23 @@ struct SettingsQuranView: View {
     }
 
     private var includeEnglishToggle: some View {
-        Toggle("Include English", isOn: includeEnglish.animation(.easeInOut))
-            .font(.subheadline)
+        SettingsToggle("Include English", isOn: includeEnglish)
             .disabled(!settings.isHafsDisplay)
     }
 
     @ViewBuilder
     private var englishDisplayToggles: some View {
         if settings.isHafsDisplay && includeEnglish.wrappedValue {
-            Toggle("Show Transliteration", isOn: $settings.showTransliteration.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Show Transliteration", isOn: $settings.showTransliteration)
                 .disabled(!settings.showArabicText && !settings.showEnglishSaheeh && !settings.showEnglishMustafa)
-                .onChange(of: settings.showTransliteration) { _ in settings.hapticFeedback() }
                 .settingsDependent()
 
-            Toggle("Show English Translation\nSaheeh International", isOn: $settings.showEnglishSaheeh.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Show English Translation", caption: "Saheeh International", isOn: $settings.showEnglishSaheeh)
                 .disabled(!settings.showArabicText && !settings.showTransliteration && !settings.showEnglishMustafa)
-                .onChange(of: settings.showEnglishSaheeh) { _ in settings.hapticFeedback() }
                 .settingsDependent()
 
-            Toggle("Show English Translation\nClear Quran (Mustafa Khattab)", isOn: $settings.showEnglishMustafa.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle("Show English Translation", caption: "Clear Quran (Mustafa Khattab)", isOn: $settings.showEnglishMustafa)
                 .disabled(!settings.showArabicText && !settings.showTransliteration && !settings.showEnglishSaheeh)
-                .onChange(of: settings.showEnglishMustafa) { _ in settings.hapticFeedback() }
                 .settingsDependent()
         }
     }
@@ -1110,16 +910,11 @@ struct SettingsQuranView: View {
     @ViewBuilder
     private var englishFontSizeControls: some View {
         if settings.isHafsDisplay && includeEnglish.wrappedValue && (settings.showTransliteration || settings.showEnglishSaheeh || settings.showEnglishMustafa) {
-            VStack(alignment: .leading, spacing: 16) {
-                Toggle("Use System Font Size", isOn: useSystemEnglishFontSize.animation(.easeInOut))
-                    .font(.subheadline)
-                    .padding(.vertical, 2)
+            VStack(alignment: .leading, spacing: 12) {
+                FontSizeSlider("English Font Size", value: $settings.englishFontSize, in: 13...20,
+                               sample: Settings.englishSizeSample)
 
-                Stepper(value: $settings.englishFontSize.animation(.easeInOut), in: 13...20, step: 1) {
-                    Text("English Font Size: \(Int(settings.englishFontSize))")
-                        .font(.subheadline)
-                }
-                Slider(value: $settings.englishFontSize.animation(.easeInOut), in: 13...20, step: 1)
+                SettingsToggle("Use System Font Size", isOn: useSystemEnglishFontSize)
             }
             .settingsDependent()
         }
@@ -1203,10 +998,9 @@ struct SettingsQuranView: View {
         // Menu-row form: `choose(_:)` inside the picker already fires the haptic, so no `.onChange`
         // echo here (the old flat Picker needed one).
         ArabicTextRiwayahPicker(
-            selection: $settings.displayQiraah.animation(.easeInOut),
+            selection: $settings.displayQiraah,
             useMenuRow: true
         )
-        .font(.subheadline)
     }
 
     /// The beta-TEXT switch. All twenty riwayat are always selectable and their printed
@@ -1216,32 +1010,19 @@ struct SettingsQuranView: View {
     /// settings-side twin and the way to turn beta text back off.
     @ViewBuilder
     private var betaQiraatGroup: some View {
-        Toggle(isOn: Binding(
-            get: { settings.betaQiraatEnabled },
-            set: { newValue in
-                settings.hapticFeedback()
-                if newValue {
-                    confirmEnableBetaQiraat = true      // confirm before unlocking
-                } else {
-                    withAnimation(.easeInOut) { settings.betaQiraatEnabled = false }
-                }
-            }
-        )) {
-            VStack(alignment: .leading, spacing: 2) {
-                // An explicit HStack, not a `Label`: inside a Toggle's stacked label, iOS 26 drew the
-                // Label's symbol on a line of its own above the title (Abu, 2026-09-26: "put the sf
-                // symbol on the same line").
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: "flask")
-                        .foregroundColor(settings.accentColor.color)
-                    Text("Beta Text (12 Riwayat, 6 Qiraat)")
-                }
-                Text("Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .tint(settings.accentColor.color)
+        SettingsToggle("Beta Text (12 Riwayat, 6 Qiraat)",
+                       caption: "Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta.",
+                       systemImage: "flask",
+                       isOn: Binding(
+                           get: { settings.betaQiraatEnabled },
+                           set: { newValue in
+                               if newValue {
+                                   confirmEnableBetaQiraat = true      // confirm before unlocking
+                               } else {
+                                   settings.betaQiraatEnabled = false
+                               }
+                           }
+                       ))
         .confirmationDialog(
             "Turn on beta text?",
             isPresented: $confirmEnableBetaQiraat,
@@ -1249,10 +1030,8 @@ struct SettingsQuranView: View {
         ) {
             Button("Turn On") {
                 settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.betaQiraatEnabled = true
-                    settings.acceptedBetaQiraatNotice = true
-                }
+                settings.betaQiraatEnabled = true
+                settings.acceptedBetaQiraatNotice = true
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -1314,18 +1093,7 @@ struct SettingsQuranView: View {
     }
 
     private var comparisonModeGroup: some View {
-        VStack(alignment: .leading) {
-            Toggle("Comparison mode", isOn: $settings.qiraatComparisonMode.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.qiraatComparisonMode) { _ in settings.hapticFeedback() }
-
-            Text("Shows the riwayah picker above the search bar on Hafs too, so you can switch and compare there. Every other riwayah always shows it.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-
-        }
+        SettingsToggle("Comparison mode", caption: "Shows the riwayah picker above the search bar on Hafs too, so you can switch and compare there. Every other riwayah always shows it.", isOn: $settings.qiraatComparisonMode)
     }
 
 }

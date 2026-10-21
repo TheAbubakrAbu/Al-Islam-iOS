@@ -175,42 +175,35 @@ struct NaggingModeView: View {
 
     private var masterSection: some View {
         Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Nagging Mode", isOn: Binding(
-                    get: { settings.naggingMode },
-                    set: { newValue in
-                        withAnimation {
-                            settings.naggingMode = newValue
+            SettingsToggle("Nagging Mode",
+                           caption: "Asks \u{201C}Did you pray?\u{201D} as a prayer's time runs out, and keeps asking until you answer.",
+                           isOn: Binding(
+                get: { settings.naggingMode },
+                set: { newValue in
+                    settings.naggingMode = newValue
 
-                            if newValue {
-                                settings.notificationFajr = true
-                                settings.notificationSunrise = true
-                                settings.notificationDhuhr = true
-                                settings.notificationAsr = true
-                                settings.notificationMaghrib = true
-                                settings.notificationIsha = true
+                    if newValue {
+                        settings.notificationFajr = true
+                        settings.notificationSunrise = true
+                        settings.notificationDhuhr = true
+                        settings.notificationAsr = true
+                        settings.notificationMaghrib = true
+                        settings.notificationIsha = true
 
-                                for deadline in NaggingDeadline.all {
-                                    settings[keyPath: deadline.key] = true
-                                }
-                            } else {
-                                for deadline in NaggingDeadline.all {
-                                    settings[keyPath: deadline.key] = false
-                                }
-                                // The retired "before Dhuhr" cascade, in case an old install still
-                                // has it set; otherwise it would keep firing with the mode "off".
-                                settings.naggingDhuhr = false
-                                settings.resumeNagging()
-                            }
+                        for deadline in NaggingDeadline.all {
+                            settings[keyPath: deadline.key] = true
                         }
+                    } else {
+                        for deadline in NaggingDeadline.all {
+                            settings[keyPath: deadline.key] = false
+                        }
+                        // The retired "before Dhuhr" cascade, in case an old install still
+                        // has it set; otherwise it would keep firing with the mode "off".
+                        settings.naggingDhuhr = false
+                        settings.resumeNagging()
                     }
-                ).animation(.easeInOut))
-                .font(.subheadline)
-                .tint(settings.accentColor.color)
-                .onChange(of: settings.naggingMode) { _ in settings.hapticFeedback() }
-
-                caption("Asks \u{201C}Did you pray?\u{201D} as a prayer's time runs out, and keeps asking until you answer.")
-            }
+                }
+            ))
 
             if settings.naggingMode, settings.naggingPauseEnd == nil {
                 pauseControl
@@ -241,7 +234,6 @@ struct NaggingModeView: View {
             } label: {
                 HStack {
                     Text("Pause the Reminders")
-                        .font(.subheadline)
                         .foregroundColor(.primary)
 
                     Spacer()
@@ -272,7 +264,6 @@ struct NaggingModeView: View {
             if let end = settings.naggingPauseEnd {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Until \(end.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.subheadline)
 
                     caption("Only the \u{201C}Did you pray?\u{201D} reminders are held. For menstruation or postpartum, pause tracking in the Prayer Tracker instead.")
                 }
@@ -283,7 +274,6 @@ struct NaggingModeView: View {
                 withAnimation { settings.resumeNagging() }
             } label: {
                 Label("Resume Now", systemImage: "play.fill")
-                    .font(.subheadline)
             }
             .tint(settings.accentColor.color)
         }
@@ -330,17 +320,8 @@ struct NaggingModeView: View {
                 }
                 .onChange(of: settings.naggingLastCallsRaw) { _ in settings.hapticFeedback() }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Different Start for Each Prayer", isOn: $settings.naggingPerDeadlineStart.animation(.easeInOut))
-                        .font(.subheadline)
-                        .tint(settings.accentColor.color)
-                        .onChange(of: settings.naggingPerDeadlineStart) { _ in
-                            settings.hapticFeedback()
-                            fitIntervalToLeads()
-                        }
-
-                    caption("A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers.")
-                }
+                SettingsToggle("Different Start for Each Prayer", caption: "A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers.", isOn: $settings.naggingPerDeadlineStart)
+                    .onChange(of: settings.naggingPerDeadlineStart) { _ in fitIntervalToLeads() }
 
                 caption(budgetLine)
             }
@@ -366,25 +347,14 @@ struct NaggingModeView: View {
             // CLOSES. The scheduler (`Settings.prayerQuestion(for:)`) has always worked this way;
             // the old labels ("Nagging before Dhuhr") just never said so.
             ForEach(NaggingDeadline.all) { deadline in
-                Toggle(isOn: Binding(
+                SettingsToggle("Did you pray \(deadline.asks)?", caption: deadline.caption, isOn: Binding(
                     get: { settings[keyPath: deadline.key] },
                     set: { newValue in
                         settings[keyPath: deadline.key] = newValue
                         turnOffNaggingModeIfAllOff()
                         fitIntervalToLeads()
                     }
-                ).animation(.easeInOut)) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Did you pray \(deadline.asks)?")
-                            .font(.subheadline)
-
-                        Text(deadline.caption)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .tint(settings.accentColor.color)
-                .onChange(of: settings[keyPath: deadline.key]) { _ in settings.hapticFeedback() }
+                ))
 
                 if settings.naggingPerDeadlineStart, settings[keyPath: deadline.key] {
                     if settings.advanced(.naggingMode) {
@@ -440,23 +410,9 @@ struct NaggingModeView: View {
             }
             .onChange(of: settings.naggingSound) { _ in settings.hapticFeedback() }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Louder Last Call", isOn: $settings.naggingLoudLastCall.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.naggingLoudLastCall) { _ in settings.hapticFeedback() }
+            SettingsToggle("Louder Last Call", caption: "The final reminder before each deadline plays Alarm, the tone that carries furthest.", isOn: $settings.naggingLoudLastCall)
 
-                caption("The final reminder before each deadline plays Alarm, the tone that carries furthest.")
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Add a Verse to the Last Call", isOn: $settings.naggingAyahInLastCall.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.naggingAyahInLastCall) { _ in settings.hapticFeedback() }
-
-                caption("A verse about prayer, such as \(Settings.nagAyat[0].reference), in Saheeh International.")
-            }
+            SettingsToggle("Add a Verse to the Last Call", caption: "A verse about prayer, such as \(Settings.nagAyat[0].reference), in Saheeh International.", isOn: $settings.naggingAyahInLastCall)
         }
     }
 

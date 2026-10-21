@@ -3075,30 +3075,42 @@ struct QuranView: View {
     var moreMenuItems: some View {
         TabMoreMenuItem("Today", systemImage: "sun.horizon.fill") { openMenuDoor(.daily) }
         TabMoreMenuItem("History", systemImage: "clock.arrow.circlepath") { openMenuDoor(.history) }
-        if ThematicTopicsStore.isBundled {
-            TabMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
-        }
-        if settings.showWordOfTheDay, wordOfTheDay != nil {
-            TabMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
-                settings.hapticFeedback()
-                guard !anyDoorOpen, path.isEmpty else { return }
-                openWordOfDay = true
-            }
-        }
-        if settings.showQiraahDetails {
-            TabMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
-        }
-        if settings.isHafsDisplay {
-            TabMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
-                settings.hapticFeedback()
-                plannerRequest = true
-            }
-        }
         TabMoreMenuItem("Open a Random Surah", systemImage: "shuffle") {
             settings.hapticFeedback()
             guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
             push(surahID: surah.id)
         }
+
+        // The four feature doors behind one Explore submenu (Abu, 2026-10-21: "make sure not too long if
+        // need be put menus in menus"): ten rows were this tab's longest menu.
+        let offersWordOfDay = settings.showWordOfTheDay && wordOfTheDay != nil
+        if ThematicTopicsStore.isBundled || offersWordOfDay || settings.showQiraahDetails || settings.isHafsDisplay {
+            Menu {
+                if ThematicTopicsStore.isBundled {
+                    TabMoreMenuItem("Browse by Theme", systemImage: "rectangle.stack.fill") { openMenuDoor(.themes) }
+                }
+                if offersWordOfDay {
+                    TabMoreMenuItem(SummaryWordTile.title, systemImage: "character.book.closed.fill") {
+                        settings.hapticFeedback()
+                        guard !anyDoorOpen, path.isEmpty else { return }
+                        openWordOfDay = true
+                    }
+                }
+                if settings.showQiraahDetails {
+                    TabMoreMenuItem("Qiraat Explorer", systemImage: "arrow.left.and.right.text.vertical") { openMenuDoor(.qiraat) }
+                }
+                if settings.isHafsDisplay {
+                    TabMoreMenuItem("Quran Planner", systemImage: "calendar.badge.clock") {
+                        settings.hapticFeedback()
+                        plannerRequest = true
+                    }
+                }
+            } label: {
+                Label("Explore", systemImage: "safari")
+            }
+        }
+
+        Divider()
 
         // The sort row's only home in Simple while the sort is the default, so the sort lives here too,
         // in both modes: the same buttons the row's menu draws, plus the direction.
@@ -3130,8 +3142,6 @@ struct QuranView: View {
         } label: {
             Label("Sort", systemImage: "arrow.up.arrow.down")
         }
-
-        Divider()
 
         TabMoreMenuItem(settings.quranPageMode ? "Read as List" : "Read as Pages",
                            systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book") {

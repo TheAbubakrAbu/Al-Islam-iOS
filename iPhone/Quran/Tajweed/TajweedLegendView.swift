@@ -275,30 +275,22 @@ struct TajweedLegendView: View {
                     }
 
                     // The same nested grammar as the riwayah picker everywhere else: one submenu
-                    // per qiraah, each opening its two riwayat - not a flat list of all twenty.
-                    ForEach(Settings.Riwayah.groups) { group in
+                    // per qiraah, each opening its two riwayat - not a flat list of all twenty. The
+                    // six beta qiraat sit behind one Beta Riwayat door (2026-10-21): twelve rows were
+                    // the legend's longest menu.
+                    let groups = Settings.Riwayah.groups
+                    ForEach(groups.filter { !$0.isBeta }) { group in
+                        teacherMenu(group)
+                    }
+
+                    let beta = groups.filter(\.isBeta)
+                    if !beta.isEmpty {
                         Menu {
-                            ForEach(group.options, id: \.tag) { option in
-                                Button {
-                                    settings.hapticFeedback()
-                                    withAnimation { previewTag = option.tag }
-                                } label: {
-                                    selectionLabel(option.label, tag: option.tag)
-                                }
+                            ForEach(beta) { group in
+                                teacherMenu(group)
                             }
                         } label: {
-                            Label(
-                                "\(group.teacher) - \(group.teacherArabic)",
-                                systemImage: group.options.contains(where: { option in
-                                    previewTag.map { tag in
-                                        Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.canonicalTag(option.tag)
-                                    } ?? false
-                                }) ? "checkmark" : "book.closed"
-                            )
-
-                            if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
-                                Text(detail)
-                            }
+                            Label("Beta Riwayat", systemImage: "testtube.2")
                         }
                     }
                 } label: {
@@ -347,6 +339,34 @@ struct TajweedLegendView: View {
     }
 
     /// A menu row for one riwayah, checkmarked when it is the previewed one.
+    /// One qiraah's submenu: its two riwayat, the teacher's name on the door.
+    @ViewBuilder
+    private func teacherMenu(_ group: Settings.Riwayah.Group) -> some View {
+        Menu {
+            ForEach(group.options, id: \.tag) { option in
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { previewTag = option.tag }
+                } label: {
+                    selectionLabel(option.label, tag: option.tag)
+                }
+            }
+        } label: {
+            Label(
+                "\(group.teacher) - \(group.teacherArabic)",
+                systemImage: group.options.contains(where: { option in
+                    previewTag.map { tag in
+                        Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.canonicalTag(option.tag)
+                    } ?? false
+                }) ? "checkmark" : "book.closed"
+            )
+
+            if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
+                Text(detail)
+            }
+        }
+    }
+
     private func selectionLabel(_ title: String, tag: String) -> some View {
         let selected = previewTag.map {
             Settings.Riwayah.canonicalTag($0) == Settings.Riwayah.canonicalTag(tag)

@@ -1017,14 +1017,8 @@ struct AyahActionsSheet: View {
                         } label: {
                             Label("Repeat Forever", systemImage: "infinity")
                         }
-
-                        // The ellipsis menu's Repeat Ayah submenu ends with the custom range too.
-                        Button {
-                            settings.hapticFeedback()
-                            onRequestSheet?(.customRange)
-                        } label: {
-                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
-                        }
+                        // Play Custom Range is its own tile beside this one; it no longer ends this
+                        // menu as well (the menus' one-home rule, 2026-10-21).
                     } label: {
                         actionTileLabel(item.title, systemImage: item.systemImage)
                     }

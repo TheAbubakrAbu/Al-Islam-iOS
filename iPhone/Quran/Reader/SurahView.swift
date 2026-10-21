@@ -2023,7 +2023,9 @@ struct SurahView: View {
         #if os(iOS)
         // The centered title is now a Menu (Surah List / Surah Info / Revelation Info), so the toolbar
         // only carries the principal title and the trailing settings gear.
-        applySurahToolbar(to: surahReadingBody)
+        // Inside the sheets below, on purpose: the settings sheet keeps its row animations, the
+        // reader behind it takes a settings write plainly (see `ignoresSettingsPageAnimation`).
+        applySurahToolbar(to: surahReadingBody.ignoresSettingsPageAnimation())
             // A FOLDED page keeps nothing but the page, its surah/juz pill and the chevron: the top bar
             // goes with the bottom chrome (Abu, 2026-10-05). Page mode only - the list reader's bar never
             // folds, and `pageChromeCollapsed` can only be true while the page reader is mounted.
@@ -4272,6 +4274,17 @@ struct SurahView: View {
                                     .tag(appearance.rawValue)
                             }
                         }
+                        // Hafs alone has more than one edition bundled; the picker lists the ones this
+                        // build carries and stays away when that is just the default.
+                        if Settings.Riwayah.canonicalTag(pdfRiwayahTag) == Settings.Riwayah.hafsTag,
+                           MushafPDFLibrary.bundledHafsEditions.count > 1 {
+                            Picker("Edition", selection: $settings.mushafHafsPDFEdition) {
+                                ForEach(MushafPDFLibrary.bundledHafsEditions) { edition in
+                                    Label(edition.displayName, systemImage: edition.systemImage)
+                                        .tag(edition.rawValue)
+                                }
+                            }
+                        }
                         Text("The printed mushaf shows in page mode only.")
                     }
                 } label: {
@@ -5046,21 +5059,41 @@ struct ArabicTextRiwayahPicker: View {
             )
         }
 
-        ForEach(Settings.Riwayah.textGroups) { group in
+        // The four verified qiraat on the menu itself; the six beta ones behind one Beta Riwayat door
+        // once beta text is unlocked (2026-10-21): eleven rows were the picker's longest menu.
+        let groups = Settings.Riwayah.textGroups
+        ForEach(groups.filter { !$0.isBeta }) { group in
+            teacherMenu(group, current: current)
+        }
+
+        let beta = groups.filter(\.isBeta)
+        if !beta.isEmpty {
             Menu {
-                ForEach(group.options.filter { includeHafs || !$0.tag.isEmpty }, id: \.tag) { option in
-                    qiraahButton(option, current: current)
+                ForEach(beta) { group in
+                    teacherMenu(group, current: current)
                 }
             } label: {
-                Label(
-                    "\(group.teacher) - \(group.teacherArabic)",
-                    systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
-                )
+                Label("Beta Riwayat", systemImage: "testtube.2")
+            }
+        }
+    }
 
-                // The menu subtitle line: where the imam taught, and when he died.
-                if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
-                    Text(detail)
-                }
+    /// One qiraah's submenu: its riwayat, the teacher's name and dates on the door.
+    @ViewBuilder
+    private func teacherMenu(_ group: Settings.Riwayah.Group, current: String) -> some View {
+        Menu {
+            ForEach(group.options.filter { includeHafs || !$0.tag.isEmpty }, id: \.tag) { option in
+                qiraahButton(option, current: current)
+            }
+        } label: {
+            Label(
+                "\(group.teacher) - \(group.teacherArabic)",
+                systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
+            )
+
+            // The menu subtitle line: where the imam taught, and when he died.
+            if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
+                Text(detail)
             }
         }
     }

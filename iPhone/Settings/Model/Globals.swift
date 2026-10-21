@@ -1795,6 +1795,42 @@ enum MushafPDFAppearance: String, CaseIterable, Identifiable {
     }
 }
 
+/// Which Hafs facsimile the printed mushaf shows. Hafs alone has more than one edition bundled (every
+/// other riwayah has its one Islamweb volume): the app's own typesetting on the Madinah page layout
+/// (the default) and the Islamweb volume the app shipped before 4.6.6. A scanned Madinah print was
+/// tried too (2026-10-20) and dropped: scanned pages are 96 dpi JPEGs, 32 MB even as JPEG 2000,
+/// against a 3 MB ceiling. Raw values are persisted in `Settings.mushafHafsPDFEdition`; an edition
+/// whose file is not in the bundle hides itself from the picker and the reader falls back to the
+/// default (`MushafPDFLibrary.bundledURL`).
+enum MushafHafsPDFEdition: String, CaseIterable, Identifiable {
+    case alIslam = "alislam"
+    case islamweb
+
+    var id: String { rawValue }
+
+    /// File base name in `Resources/Mushaf PDFs` (see `MushafPDFLibrary.fileName`).
+    var fileName: String {
+        switch self {
+        case .alIslam:  return "01-asim-hafs"
+        case .islamweb: return "01-asim-hafs-islamweb"
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .alIslam:  return "Al-Islam"
+        case .islamweb: return "Islamweb"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .alIslam:  return "book.closed"
+        case .islamweb: return "globe"
+        }
+    }
+}
+
 /// True once the launch/splash cover has been lifted and the tabs are actually on screen. Views that fire
 /// user-facing side effects on appear (e.g. AdhanView's prayer-calculation confirmation dialogs) read this so
 /// they don't present while they're only being built behind the launch screen. Defaults to `true`, so anywhere

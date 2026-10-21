@@ -489,6 +489,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
             UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "mushafPDFAppearance")
         }
+        // `-mushafHafsPDFEdition alislam|islamweb` picks the Hafs facsimile edition.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-mushafHafsPDFEdition"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "mushafHafsPDFEdition")
+        }
         // "-hijriOffset 2" - seed the Hijri date adjustment headlessly. `simctl spawn defaults write
         // group.com.IslamicPillars.AppGroup ...` lands in the simulator-global prefs file, NOT the
         // app's shared container, so the app never sees it - the seed has to happen in-process.
@@ -646,8 +651,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                     // (the split above drops empty pieces).
                     case "displayQiraah": shared.displayQiraah = kv[1]
                     // The Arabic Text settings page's switches, flipped the way their Toggles flip them
-                    // (the bindings there carry `.animation(.easeInOut)`, so the write runs inside the
-                    // same transaction a tap would). For watching what the settings SHEET does when a
+                    // (an animated transaction, as a tap on a `SettingsToggle` makes one; the probe's is
+                    // not FLAGGED the way SettingsControls.swift flags the real one, since this file
+                    // compiles into the widgets, so the reader behind the sheet animates too, as it does
+                    // on iOS 16). For watching what the settings SHEET does when a
                     // switch inside it moves: 2026-09-15, "Show Arabic Quran Text" off collapsed the sheet
                     // on iPad/Mac.
                     case "showArabicText", "beginnerMode", "showTajweedColors", "highlightAllahNames",
@@ -2551,6 +2558,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// dark app shows the print inverted without being asked; "light"/"night" pin it either way. The
     /// invert is hue-preserving (the green border stays green). Raw `MushafPDFAppearance` value.
     @AppStorage("mushafPDFAppearance") var mushafPDFAppearance: String = MushafPDFAppearance.auto.rawValue
+    /// Which Hafs facsimile the printed mushaf shows (`MushafHafsPDFEdition` raw value): the app's own
+    /// Madinah-layout edition by default, the Islamweb volume, or the scanned Madinah print. Only Hafs
+    /// has more than one bundled; the page menu lists the editions this build actually carries.
+    @AppStorage("mushafHafsPDFEdition") var mushafHafsPDFEdition: String = MushafHafsPDFEdition.alIslam.rawValue
+
+    var resolvedMushafHafsPDFEdition: MushafHafsPDFEdition {
+        MushafHafsPDFEdition(rawValue: mushafHafsPDFEdition) ?? .alIslam
+    }
     /// Shows the spelled-out pronunciation aid above muqatta'at ayahs (e.g. أَلِفۡ لَآم مِيٓمۡ). Off by default.
     @AppStorage("showMuqattaatHelper") var showMuqattaatHelper = false
 

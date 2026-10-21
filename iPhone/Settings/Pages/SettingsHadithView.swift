@@ -25,6 +25,11 @@ struct SettingsHadithView: View {
     /// lands directly on the Reading View subpage. DEBUG builds only.
     @State private var autoOpenReadingView =
         ProcessInfo.processInfo.arguments.contains("-launchHadithSettingsReading")
+    /// `-launchHadithSettingsArabic` / `-launchHadithSettingsEnglish`: the two font pages.
+    @State private var autoOpenArabicText =
+        ProcessInfo.processInfo.arguments.contains("-launchHadithSettingsArabic")
+    @State private var autoOpenEnglishText =
+        ProcessInfo.processInfo.arguments.contains("-launchHadithSettingsEnglish")
     #endif
 
     var body: some View {
@@ -38,6 +43,8 @@ struct SettingsHadithView: View {
                     .sheetDismissToolbar()
                     #if DEBUG
                     .debugPushDestination(isPresented: $autoOpenReadingView) { readingViewDestination }
+                    .debugPushDestination(isPresented: $autoOpenArabicText) { arabicTextDestination }
+                    .debugPushDestination(isPresented: $autoOpenEnglishText) { englishTextDestination }
                     #endif
             }
         } else {
@@ -64,9 +71,7 @@ struct SettingsHadithView: View {
             },
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                withAnimation {
-                    settings.hadithArabicFontSize = newValue ? systemBodySize + 4 : systemBodySize + 5
-                }
+                settings.hadithArabicFontSize = newValue ? systemBodySize + 4 : systemBodySize + 5
             }
         )
     }
@@ -80,9 +85,7 @@ struct SettingsHadithView: View {
             },
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-                withAnimation {
-                    settings.hadithEnglishFontSize = newValue ? systemBodySize : systemBodySize + 1
-                }
+                settings.hadithEnglishFontSize = newValue ? systemBodySize : systemBodySize + 1
             }
         )
     }
@@ -137,23 +140,13 @@ struct SettingsHadithView: View {
                 // The Quran tab's "Show Ayah of the Day", for the Hadith tab's tile (2026-09-21). This
                 // is also where the tile's "Delete Forever" sends you to bring it back.
                 Section(header: Text("HADITH TAB")) {
-                    Toggle("Show Hadith of the Day", isOn: $settings.showHadithOfTheDay.animation(.easeInOut))
-                        .onChange(of: settings.showHadithOfTheDay) { _ in settings.hapticFeedback() }
+                    SettingsToggle("Show Hadith of the Day", isOn: $settings.showHadithOfTheDay)
                 }
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
                 Section {
-                    VStack(alignment: .leading) {
-                        Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesHadith.animation(.easeInOut))
-                            .onChange(of: settings.highlightAllahNamesHadith) { _ in settings.hapticFeedback() }
-
-                        Text("Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
-                    }
+                    SettingsToggle("Highlight Allah", caption: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English.", isOn: $settings.highlightAllahNamesHadith)
                 }
             }
             .themedListRowBackground()
@@ -166,18 +159,16 @@ struct SettingsHadithView: View {
         List {
             Group {
                 Section {
-                    Toggle("Show Arabic", isOn: Binding(
+                    SettingsToggle("Show Arabic", isOn: Binding(
                         get: { settings.showHadithArabic },
                         set: { newValue in
-                            settings.hapticFeedback()
                             settings.showHadithArabic = newValue
                             // Never allow both off - there would be nothing left to read.
                             if !newValue && !settings.showHadithEnglish {
                                 settings.showHadithEnglish = true
                             }
                         }
-                    ).animation(.easeInOut))
-
+                    ))
                 }
 
                 if settings.showHadithArabic {
@@ -185,21 +176,16 @@ struct SettingsHadithView: View {
                     Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption)) {
                         IslamArabicFontPicker()
 
-                        // The Quran settings' font controls, one for one: system-size toggle,
-                        // stepper, and slider.
-                        VStack(alignment: .leading, spacing: 16) {
-                            Toggle("Use System Font Size", isOn: useSystemArabicFontSize.animation(.easeInOut))
-                                .font(.subheadline)
-                                .padding(.vertical, 2)
+                        // The Quran settings' font controls, one for one: the size slider with its
+                        // sample, then the system-size switch.
+                        VStack(alignment: .leading, spacing: 12) {
+                            FontSizeSlider("Arabic Font Size", value: $settings.hadithArabicFontSize, in: 15...40,
+                                           sample: Settings.hadithArabicSizeSample,
+                                           fontName: settings.hadithArabicWantsCustomFace ? settings.nonQuranArabicFontName : nil,
+                                           glyph: "ب")
 
-                            Stepper(value: $settings.hadithArabicFontSize.animation(.easeInOut), in: 15...40, step: 1) {
-                                Text("Arabic Font Size: \(Int(settings.hadithArabicFontSize))")
-                                    .font(.subheadline)
-                            }
-
-                            Slider(value: $settings.hadithArabicFontSize.animation(.easeInOut), in: 15...40, step: 1)
+                            SettingsToggle("Use System Font Size", isOn: useSystemArabicFontSize)
                         }
-                        .onChange(of: settings.hadithArabicFontSize) { _ in settings.hapticFeedback() }
                     }
                 }
             }
@@ -215,33 +201,25 @@ struct SettingsHadithView: View {
                 // No separate narrator toggle: the narrator is part of the English text and
                 // simply shows whenever English does - one less switch to reason about.
                 Section {
-                    Toggle("Show English", isOn: Binding(
+                    SettingsToggle("Show English", isOn: Binding(
                         get: { settings.showHadithEnglish },
                         set: { newValue in
-                            settings.hapticFeedback()
                             settings.showHadithEnglish = newValue
                             if !newValue && !settings.showHadithArabic {
                                 settings.showHadithArabic = true
                             }
                         }
-                    ).animation(.easeInOut))
+                    ))
                 }
 
                 if settings.showHadithEnglish {
                     Section(header: Text("ENGLISH FONT")) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Toggle("Use System Font Size", isOn: useSystemEnglishFontSize.animation(.easeInOut))
-                                .font(.subheadline)
-                                .padding(.vertical, 2)
+                        VStack(alignment: .leading, spacing: 12) {
+                            FontSizeSlider("English Font Size", value: $settings.hadithEnglishFontSize, in: 10...32,
+                                           sample: Settings.hadithEnglishSizeSample)
 
-                            Stepper(value: $settings.hadithEnglishFontSize.animation(.easeInOut), in: 10...32, step: 1) {
-                                Text("English Font Size: \(Int(settings.hadithEnglishFontSize))")
-                                    .font(.subheadline)
-                            }
-
-                            Slider(value: $settings.hadithEnglishFontSize.animation(.easeInOut), in: 10...32, step: 1)
+                            SettingsToggle("Use System Font Size", isOn: useSystemEnglishFontSize)
                         }
-                        .onChange(of: settings.hadithEnglishFontSize) { _ in settings.hapticFeedback() }
                     }
                 }
             }

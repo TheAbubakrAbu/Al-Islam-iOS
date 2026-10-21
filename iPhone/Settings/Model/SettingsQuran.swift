@@ -107,6 +107,10 @@ extension Settings {
             let options: [Option]
 
             var id: String { teacher }
+
+            /// Every riwayah of this teacher is a beta text (the twelve machine-extracted ones): the
+            /// riwayah menus keep these six teachers behind one Beta Riwayat door.
+            var isBeta: Bool { options.allSatisfy(\.beta) }
         }
 
         static let hafsTag = ""

@@ -68,7 +68,7 @@ struct CreditItem: Identifiable, Hashable {
                    detail: "Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)",
                    url: "https://github.com/thetruetruth/quran-data-kfgqpc", group: .quran, keywords: "king fahd complex uthmani hafs warsh qaloon riwayah readings"),
         CreditItem(id: "islamweb", title: "Printed mushaf PDFs and beta qiraat text: Islamweb",
-                   detail: "Credit for the printed mushaf PDFs of the nineteen riwayat other than Hafs and for the beta qiraat text goes to Islamweb",
+                   detail: "Credit for the printed mushaf PDFs of the nineteen riwayat other than Hafs, the Islamweb edition of the Hafs printed mushaf, and the beta qiraat text goes to Islamweb",
                    url: "https://www.islamweb.net", group: .quran, keywords: "mushaf pdf riwayah beta"),
         CreditItem(id: "hafs-facsimile-layout", title: "Hafs printed-mushaf page layout: Quran.com",
                    detail: "The Hafs printed mushaf is set by this app from its own KFGQPC text; its line breaks follow the Madinah Mushaf (1421 AH print) as published in the Quran.com word-by-word data",

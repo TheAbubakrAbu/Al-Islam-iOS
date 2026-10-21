@@ -231,15 +231,28 @@ struct QuranSearchFilterBar: View {
             if !filters.juzs.isEmpty {
                 Button("Any Juz") { filters.juzs = [] }
             }
-            ForEach(QuranData.juzList) { juz in
-                Toggle("Juz \(juz.id) · \(juz.nameTransliteration)", isOn: Binding(
-                    get: { filters.juzs.contains(juz.id) },
-                    set: { isOn in
-                        if isOn { filters.juzs.insert(juz.id) } else { filters.juzs.remove(juz.id) }
+            // Three submenus of ten, not thirty rows in one (Abu, 2026-10-21: menus "not too long"). A
+            // submenu's label counts what it holds, so a filter set inside it still shows from outside.
+            ForEach(Array(stride(from: 0, to: QuranData.juzList.count, by: 10)), id: \.self) { start in
+                let juzs = Array(QuranData.juzList[start..<min(start + 10, QuranData.juzList.count)])
+                if let first = juzs.first, let last = juzs.last {
+                    let picked = juzs.filter { filters.juzs.contains($0.id) }.count
+                    Menu {
+                        ForEach(juzs) { juz in
+                            Toggle("Juz \(juz.id) · \(juz.nameTransliteration)", isOn: Binding(
+                                get: { filters.juzs.contains(juz.id) },
+                                set: { isOn in
+                                    if isOn { filters.juzs.insert(juz.id) } else { filters.juzs.remove(juz.id) }
+                                }
+                            ))
+                            // The root PaddedSwitchToggleStyle draws double-height menu rows on iOS 26.
+                            .toggleStyle(.automatic)
+                        }
+                    } label: {
+                        Label(picked > 0 ? "Juz \(first.id)–\(last.id) (\(picked))" : "Juz \(first.id)–\(last.id)",
+                              systemImage: picked > 0 ? "checkmark" : "square.stack.3d.up")
                     }
-                ))
-                // The root PaddedSwitchToggleStyle draws double-height menu rows on iOS 26.
-                .toggleStyle(.automatic)
+                }
             }
         } label: {
             chipLabel(title: Self.summary(of: filters.juzs, noun: "Juz"), systemImage: "square.stack.3d.up",

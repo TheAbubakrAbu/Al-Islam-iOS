@@ -60,7 +60,7 @@ enum CloudManifest {
         "hideEnglishInArabicLetters", "highlightAllahNames",
         "highlightAllahNamesHadith", "highlightAllahNamesIslam", "hijriCalendarDisplayMode",
         "islamArabicFontFace", "islamGroupResources", "islamTextSize", "keepAyahSheetOpen", "khatmGroupByJuz", "launchTab", "launchTabChosen",
-        "mushafBottomBarsCollapsed", "mushafFitPage", "mushafPDFAppearance", "mushafPageLanguage",
+        "mushafBottomBarsCollapsed", "mushafFitPage", "mushafHafsPDFEdition", "mushafPDFAppearance", "mushafPageLanguage",
         "mushafTwoPageSpread", "naggingAsr", "naggingAyahInLastCall", "naggingDeadlineStarts",
         "naggingDhuhr", "naggingDuha", "naggingFajr", "naggingFollowUpMinutes", "naggingInterval",
         "naggingIsha", "naggingIslamicMidnight", "naggingLastCalls", "naggingLastThird",

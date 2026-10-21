@@ -85,13 +85,16 @@ final class SimpleModeUITests: XCTestCase {
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Simple Mode")
         XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open")
-        for item in ["Today", "History", "Browse by Theme", "Open a Random Surah"] {
+        for item in ["Today", "History", "Open a Random Surah", "Explore"] {
             XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the More menu has no \(item)")
         }
         XCTAssertTrue(app.buttons["Read as Pages"].exists || app.buttons["Read as List"].exists,
                       "the More menu has no reading-mode switch")
         XCTAssertTrue(app.buttons["Show as Grid"].exists || app.buttons["Show as List"].exists,
                       "the More menu has no grid switch")
+        // The feature doors sit behind Explore (2026-10-21); opening it replaces the top level.
+        app.buttons["Explore"].tap()
+        XCTAssertTrue(app.buttons["Browse by Theme"].waitForExistence(timeout: 5), "Explore has no Browse by Theme")
     }
 
     /// Full Mode has the same menu: the reading mode, the planner and the grid, which were three toolbar
@@ -102,13 +105,15 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Full Mode")
         XCTAssertFalse(app.buttons["Read surahs as pages"].exists, "Full Mode still shows the reading-mode button")
         XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open in Full Mode")
-        for item in ["Today", "History", "Quran Planner", "Open a Random Surah"] {
+        for item in ["Today", "History", "Open a Random Surah", "Explore"] {
             XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the Full Mode More menu has no \(item)")
         }
         XCTAssertTrue(app.buttons["Read as Pages"].exists || app.buttons["Read as List"].exists,
                       "the Full Mode More menu has no reading-mode switch")
         XCTAssertTrue(app.buttons["Show as Grid"].exists || app.buttons["Show as List"].exists,
                       "the Full Mode More menu has no grid switch")
+        app.buttons["Explore"].tap()
+        XCTAssertTrue(app.buttons["Quran Planner"].waitForExistence(timeout: 5), "Explore has no Quran Planner")
     }
 
     /// The sort row hides in Simple while the sort is the default, so the ⋯ menu carries a Sort submenu in
@@ -356,8 +361,10 @@ final class SimpleModeUITests: XCTestCase {
         let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=1,quranPageMode=0"])
         let more = app.buttons["tabMoreMenu"]
         XCTAssertTrue(more.waitForExistence(timeout: 15), "no More menu on the Quran tab in Simple Mode")
-        XCTAssertTrue(openMoreMenu(app, expecting: ["Quran Planner"]), "the More menu has no Quran Planner")
+        XCTAssertTrue(openMoreMenu(app, expecting: ["Explore"]), "the More menu has no Explore")
+        app.buttons["Explore"].tap()
         let planner = app.buttons["Quran Planner"]
+        XCTAssertTrue(planner.waitForExistence(timeout: 5), "Explore has no Quran Planner")
         planner.tap()
         XCTAssertTrue(app.navigationBars["Quran Planner"].waitForExistence(timeout: 10),
                       "Quran Planner from the More menu did not open the planner")
@@ -677,29 +684,78 @@ final class SimpleModeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
     }
 
-    func testAyahPlaybackDoubleTapStartsPlayback() {
+    /// The ayah's play button PLAYS on a tap (from the ayah to the end of the surah), with no menu in
+    /// the way; a hold opens its playback menu (2026-10-21).
+    func testAyahPlayButtonTapStartsPlayback() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0,nowPlayingExpanded=1"])
-        let play = app.buttons["ayahPlaybackMenu"].firstMatch
+        let play = app.buttons["ayahPlayButton"].firstMatch
         XCTAssertTrue(play.waitForExistence(timeout: 15))
-        play.doubleTap()
-        XCTAssertTrue(app.buttons["Stop playing"].waitForExistence(timeout: 10), "double tap did not start playback")
-        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap also opened the playback menu")
+        play.tap()
+        XCTAssertTrue(app.buttons["Stop playing"].waitForExistence(timeout: 10), "tap did not start playback")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "tap also opened the playback menu")
         app.buttons["Stop playing"].tap()
     }
 
-    func testAyahPlaybackTapAndHold() {
+    func testAyahPlayButtonHoldOpensPlaybackMenu() {
         let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
                           "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
-        let play = app.buttons["ayahPlaybackMenu"].firstMatch
+        let play = app.buttons["ayahPlayButton"].firstMatch
         XCTAssertTrue(play.waitForExistence(timeout: 15))
-        play.tap()
-        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5))
-        // Dismiss the menu without selecting a playback action.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.15)).tap()
         play.press(forDuration: 0.7)
-        XCTAssertTrue(app.navigationBars["Custom Range"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Play This Ayah"].waitForExistence(timeout: 5), "hold did not open the playback menu")
+        XCTAssertTrue(app.buttons["Play Custom Range"].exists)
+        XCTAssertFalse(app.buttons["Stop playing"].exists, "hold also started playback")
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
+    }
+
+    /// Two taps on the ayah's text, off any word, play just that ayah; the row's single tap (the mark)
+    /// is not made to wait, and neither the playback menu nor the row's actions sheet opens.
+    func testAyahTextDoubleTapPlaysAyah() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,nowPlayingExpanded=1"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15))
+        // The translation line of the first ayah on screen: off any Arabic word, inside the text block.
+        let translation = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] %@", "praise")).firstMatch
+        XCTAssertTrue(translation.waitForExistence(timeout: 5), "no translation line to double tap")
+        attachScreenshot("Ayah text before double tap")
+        translation.doubleTap()
+        let started = app.buttons["Stop playing"].waitForExistence(timeout: 10)
+        if !started {
+            attachScreenshot("Ayah text after double tap")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(started, "double tap did not start playback")
+        XCTAssertFalse(app.buttons["Play This Ayah"].exists, "double tap opened the playback menu")
+        XCTAssertFalse(app.buttons["Select Text"].exists, "double tap opened the row actions")
+        if started { app.buttons["Stop playing"].tap() }
+    }
+
+    /// A word's own two taps (the word card) win over the ayah's: the card opens and nothing plays.
+    func testAyahWordDoubleTapOpensCardNotPlayback() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:2",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0,wordByWordMeanings=1,nowPlayingExpanded=1"])
+        XCTAssertTrue(app.buttons["ayahActionsMenu"].firstMatch.waitForExistence(timeout: 15))
+        // The first ⋯ ON SCREEN: opened at 1:2, the first match is 1:1's, scrolled off the top (a tap
+        // 40 pt under it landed in the title bar, 2026-10-21).
+        guard let menu = app.buttons.matching(identifier: "ayahActionsMenu")
+            .allElementsBoundByIndex.first(where: { $0.isHittable }) else {
+            return XCTFail("no visible ayah actions control")
+        }
+        // The first word of the Arabic line sits at its trailing edge, under the ⋯ control.
+        let point = app.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: menu.frame.midX, dy: menu.frame.maxY + 40))
+        attachScreenshot("Word before double tap")
+        point.doubleTap()
+        let opened = app.staticTexts["Word Study"].waitForExistence(timeout: 5)
+            || app.navigationBars["Word Study"].waitForExistence(timeout: 2)
+        if !opened {
+            attachScreenshot("Word after double tap")
+            print(app.debugDescription)
+        }
+        XCTAssertTrue(opened, "the word's two taps did not open its card")
+        XCTAssertFalse(app.buttons["Stop playing"].waitForExistence(timeout: 3), "the word's two taps also played the ayah")
     }
 
     func testHadithMenuCopyAndShareShortcuts() {
@@ -754,6 +810,27 @@ final class SimpleModeUITests: XCTestCase {
             print(app.debugDescription)
         }
         XCTAssertTrue(changedToGrid, "double tap did not switch to grid")
+    }
+
+    /// Full Mode's ⋯ menu is four groups with the deeper study and the playback behind submenus
+    /// (2026-10-21): the long list it was is gone from the top level.
+    func testAyahMenuIsGroupedInFullMode() {
+        let app = launch(["-launchTabQuran", "-quranListMode", "-lastRead", "1:1",
+                          "-seedBool", "simpleMode=0,THEfirstLaunch=0"])
+        let menu = app.buttons["ayahActionsMenu"].firstMatch
+        XCTAssertTrue(menu.waitForExistence(timeout: 15), "no ayah menu in the list reader")
+        menu.tap()
+        for item in ["Bookmark Ayah", "Highlight", "Add Note", "See Tafsir", "Study Ayah", "Apply Settings",
+                     "Play Ayah", "Select Text", "Copy Ayah", "Share Ayah"] {
+            XCTAssertTrue(app.buttons[item].waitForExistence(timeout: 5), "the ayah menu has no \(item)")
+        }
+        attachScreenshot("Ayah menu grouped")
+        for nested in ["Similar Ayahs", "Mutashabihat", "Play This Ayah", "Repeat Ayah", "Play Custom Range"] {
+            XCTAssertFalse(app.buttons[nested].exists, "\(nested) is still on the menu's top level")
+        }
+        app.buttons["Study Ayah"].tap()
+        XCTAssertTrue(app.buttons["Similar Ayahs"].waitForExistence(timeout: 5), "Study Ayah has no Similar Ayahs")
+        attachScreenshot("Ayah menu study submenu")
     }
 
     /// The ayah's ⋯ keeps to five actions and a way to the rest; the long list waits behind More Actions.

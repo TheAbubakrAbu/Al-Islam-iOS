@@ -600,39 +600,116 @@ struct AyahContextMenuModifier: ViewModifier {
     }
 
     #if os(iOS)
+    /// The deeper study of the ayah as one submenu, the reader rows' `studyMenu` item for item: the
+    /// repeated phrases, the two comparisons and the AI summary. See Tafsir stays outside it, the study
+    /// action a reader reaches for most. Nothing when none of them applies.
     @ViewBuilder
-    private var comparisonMenuBlock: some View {
-        if settings.showQiraahDetails && canCompareEnglishText {
+    private var studyMenu: some View {
+        // Similar Ayahs and Mutashabihat read against the Hafs text (the pack's targets and phrases
+        // are Hafs wording), mirroring the tafsir gate. They show whenever the pack is bundled: probing
+        // "does THIS ayah have matches" would parse 4.5 MB of JSON on menu open, so the sheet handles
+        // the no-matches case instead.
+        let similar = settings.isHafsDisplay && SimilarAyahsStore.isBundled
+        let mutashabihat = settings.isHafsDisplay && MutashabihatStore.isBundled
+        let qiraah = settings.showQiraahDetails
+        let translation = canCompareEnglishText
+        let summarize = settings.isHafsDisplay && AyahSummarizeSheet.isOffered
+
+        if similar || mutashabihat || qiraah || translation || summarize {
+            Menu {
+                if similar {
+                    Button {
+                        settings.hapticFeedback()
+                        showSimilarAyahsSheet = true
+                    } label: {
+                        Label("Similar Ayahs", systemImage: "doc.text.magnifyingglass")
+                    }
+                }
+
+                // The repeated phrases (mutashabihat): the same sheet, opened on its phrases tab.
+                if mutashabihat {
+                    Button {
+                        settings.hapticFeedback()
+                        showMutashabihatSheet = true
+                    } label: {
+                        Label("Mutashabihat", systemImage: "text.quote")
+                    }
+                }
+
+                if (similar || mutashabihat) && (qiraah || translation) {
+                    Divider()
+                }
+
+                if qiraah {
+                    Button {
+                        settings.hapticFeedback()
+                        showQiraahComparisonSheet = true
+                    } label: {
+                        Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
+                    }
+                }
+
+                if translation {
+                    Button {
+                        settings.hapticFeedback()
+                        showEnglishComparisonSheet = true
+                    } label: {
+                        Label("Translation Comparison", systemImage: "character.book.closed")
+                    }
+                }
+
+                // The on-device summary of the ayah's tafsirs and translations.
+                if summarize {
+                    Divider()
+
+                    Button {
+                        settings.hapticFeedback()
+                        showSummarizeSheet = true
+                    } label: {
+                        Label("Summarize with AI", systemImage: "text.append")
+                    }
+                }
+            } label: {
+                Label("Study Ayah", systemImage: "books.vertical")
+            }
+        }
+    }
+
+    /// Add Note on its own; once a note is saved, one Note submenu holds Edit and Remove instead of
+    /// two rows (the reader rows' `noteMenuItems`).
+    @ViewBuilder
+    private var noteMenuItems: some View {
+        if currentNote.isEmpty {
+            Button {
+                settings.hapticFeedback()
+                if !isBookmarked {
+                    settings.ensureBookmarkExists(surah: surah, ayah: ayah)
+                }
+                draftNote = currentNote
+                showingNoteSheet = true
+            } label: {
+                Label("Add Note", systemImage: "note.text")
+            }
+        } else {
             Menu {
                 Button {
                     settings.hapticFeedback()
-                    showQiraahComparisonSheet = true
+                    draftNote = currentNote
+                    showingNoteSheet = true
                 } label: {
-                    Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
+                    Label("Edit Note", systemImage: "note.text")
                 }
 
-                Button {
+                Button(role: .destructive) {
                     settings.hapticFeedback()
-                    showEnglishComparisonSheet = true
+                    withAnimation(.easeInOut) {
+                        removeNote()
+                    }
                 } label: {
-                    Label("Translation Comparison", systemImage: "character.book.closed")
+                    Label("Remove Note", systemImage: "minus.circle")
                 }
             } label: {
-                Label("Compare Ayah", systemImage: "rectangle.split.2x1")
-            }
-        } else if settings.showQiraahDetails {
-            Button {
-                settings.hapticFeedback()
-                showQiraahComparisonSheet = true
-            } label: {
-                Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
-            }
-        } else if canCompareEnglishText {
-            Button {
-                settings.hapticFeedback()
-                showEnglishComparisonSheet = true
-            } label: {
-                Label("Translation Comparison", systemImage: "character.book.closed")
+                Label("Note", systemImage: "note.text")
             }
         }
     }
@@ -670,230 +747,176 @@ struct AyahContextMenuModifier: ViewModifier {
 
     @ViewBuilder
     private func menuItems(surahObj: Surah?) -> some View {
-                if ayahOfTheDay {
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        withAnimation {
-                            // The DAILY day (Fajr rollover by default), the key the card compares
-                            // against: the calendar day hid nothing between midnight and Fajr (A10).
-                            settings.ayahOfTheDayHiddenDate = settings.dailyDayKey()
-                        }
-                    } label: { Label("Hide for Today", systemImage: "eye.slash") }
-
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        confirmDeleteForever = true
-                    } label: { Label("Delete Forever", systemImage: "trash") }
-
-                    Divider()
-                } else if lastRead {
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        withAnimation {
-                            settings.lastReadSurah = 0
-                            settings.lastReadAyah = 0
-                        }
-                    } label: { Label("Remove", systemImage: "minus.circle") }
-
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        confirmDeleteForever = true
-                    } label: { Label("Delete Forever", systemImage: "trash") }
-
-                    Divider()
+        // The reader rows' ⋯ menu block for block (user rule 2026-09-05: every ayah menu offers the same
+        // actions in the same order), minus Apply Settings, whose per-ayah pins only the readers draw,
+        // plus the surah's own actions as a last submenu. Four groups, ten rows at most (Abu,
+        // 2026-10-21: "make sure not too long if need be put menus in menus"; it was twenty-three).
+        if ayahOfTheDay {
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation {
+                    // The DAILY day (Fajr rollover by default), the key the card compares
+                    // against: the calendar day hid nothing between midnight and Fajr (A10).
+                    settings.ayahOfTheDayHiddenDate = settings.dailyDayKey()
                 }
+            } label: { Label("Hide for Today", systemImage: "eye.slash") }
 
-                Button(role: isBookmarked ? .destructive : .cancel) {
-                    settings.hapticFeedback()
-                    toggleBookmarkOrConfirm()
-                } label: {
-                    Label(
-                        isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
-                        systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
-                    )
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                confirmDeleteForever = true
+            } label: { Label("Delete Forever", systemImage: "trash") }
+
+            Divider()
+        } else if lastRead {
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation {
+                    settings.lastReadSurah = 0
+                    settings.lastReadAyah = 0
                 }
+            } label: { Label("Remove", systemImage: "minus.circle") }
 
-                // Directly under the bookmark row, because it IS a bookmark action: picking a color saves
-                // the ayah and paints its bookmark in that color.
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                confirmDeleteForever = true
+            } label: { Label("Delete Forever", systemImage: "trash") }
+
+            Divider()
+        }
+
+        Button(role: isBookmarked ? .destructive : .cancel) {
+            settings.hapticFeedback()
+            toggleBookmarkOrConfirm()
+        } label: {
+            Label(
+                isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
+                systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
+            )
+        }
+
+        // Directly under the bookmark row, because it IS a bookmark action: picking a color saves
+        // the ayah and paints its bookmark in that color.
+        Menu {
+            ayahHighlightMenuItems(surah: surah, ayah: ayah, settings: settings)
+        } label: {
+            Label(
+                currentHighlight == nil ? "Highlight" : "Highlight: \(currentHighlight!.title)",
+                systemImage: "highlighter"
+            )
+        }
+
+        noteMenuItems
+
+        Divider()
+
+        if settings.isHafsDisplay {
+            Button {
+                settings.hapticFeedback()
+                showTafsirSheet = true
+            } label: {
+                Label("See Tafsir", systemImage: "text.book.closed")
+            }
+        }
+
+        studyMenu
+
+        if settings.isHafsDisplay {
+            Divider()
+
+            // Who is reciting first, then the reader rows' playback list: Play This Ayah last, the
+            // primary action nearest the thumb.
+            Menu {
+                chooseReciterButton
+
+                Divider()
+
                 Menu {
-                    ayahHighlightMenuItems(surah: surah, ayah: ayah, settings: settings)
+                    Text("Repeat Count")
+                        .foregroundStyle(.secondary)
+
+                    ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
+                        Button {
+                            settings.hapticFeedback()
+                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: count)
+                        } label: {
+                            Label("Repeat \(count)×", systemImage: "\(count).circle")
+                        }
+                    }
+
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: QuranPlayer.infiniteRepeat)
+                    } label: {
+                        Label("Repeat Forever", systemImage: "infinity")
+                    }
                 } label: {
-                    Label(
-                        currentHighlight == nil ? "Highlight" : "Highlight: \(currentHighlight!.title)",
-                        systemImage: "highlighter"
-                    )
+                    Label("Repeat Ayah", systemImage: "repeat")
                 }
 
                 Button {
                     settings.hapticFeedback()
-                    if !isBookmarked {
-                        settings.ensureBookmarkExists(surah: surah, ayah: ayah)
-                    }
-                    draftNote = currentNote
-                    showingNoteSheet = true
+                    showCustomRangeSheet = true
                 } label: {
-                    Label(currentNote.isEmpty ? "Add Note" : "Edit Note", systemImage: "note.text")
+                    Label("Play Custom Range", systemImage: "slider.horizontal.3")
                 }
 
-                if !currentNote.isEmpty {
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut) {
-                            removeNote()
-                        }
-                    } label: {
-                        Label("Remove Note", systemImage: "minus.circle")
-                    }
-                }
-
-                if settings.isHafsDisplay {
-                    Button {
-                        settings.hapticFeedback()
-                        showTafsirSheet = true
-                    } label: {
-                        Label("See Tafsir", systemImage: "text.book.closed")
-                    }
-                }
-
-                // Similar Ayahs reads against the Hafs text (the pack's targets and phrases are
-                // Hafs wording), mirroring the tafsir gate above. The row shows whenever the pack
-                // is bundled - probing "does THIS ayah have matches" here would parse 4.5 MB of
-                // JSON on menu open, so the sheet handles the no-matches case instead.
-                if settings.isHafsDisplay && SimilarAyahsStore.isBundled {
-                    Button {
-                        settings.hapticFeedback()
-                        showSimilarAyahsSheet = true
-                    } label: {
-                        Label("Similar Ayahs", systemImage: "doc.text.magnifyingglass")
-                    }
-                }
-
-                // The repeated phrases (mutashabihat): the same sheet, opened on its phrases tab.
-                if settings.isHafsDisplay && MutashabihatStore.isBundled {
-                    Button {
-                        settings.hapticFeedback()
-                        showMutashabihatSheet = true
-                    } label: {
-                        Label("Mutashabihat", systemImage: "text.quote")
-                    }
-                }
-
-                comparisonMenuBlock
-
-                // From here down, the reader rows' ellipsis menu block for block (user rule
-                // 2026-09-05: every ayah menu offers the same actions in the same order) - minus
-                // "Apply Settings", whose per-ayah pins only the readers draw.
-                if settings.isHafsDisplay {
-                    Divider()
-
-                    Menu {
-                        chooseReciterButton
-
-                        Divider()
-
-                        ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
-                            Button {
-                                settings.hapticFeedback()
-                                quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: count)
-                            } label: {
-                                Label("Repeat \(count)×", systemImage: "\(count).circle")
-                            }
-                        }
-
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: QuranPlayer.infiniteRepeat)
-                        } label: {
-                            Label("Repeat Forever", systemImage: "infinity")
-                        }
-
-                        Button {
-                            settings.hapticFeedback()
-                            showCustomRangeSheet = true
-                        } label: {
-                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
-                        }
-                    } label: {
-                        Label("Repeat Ayah", systemImage: "repeat")
-                    }
-
-                    Menu {
-                        chooseReciterButton
-
-                        Divider()
-
-                        Button {
-                            settings.hapticFeedback()
-                            showCustomRangeSheet = true
-                        } label: {
-                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
-                        }
-
-                        Menu {
-                            ayahPlayFromMenuItems(surah: surah, ayah: ayah, settings: settings,
-                                                  quranPlayer: quranPlayer)
-                        } label: {
-                            Label("Play From Ayah", systemImage: "play.circle.fill")
-                        }
-
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
-                        } label: {
-                            Label("Play This Ayah", systemImage: "play.circle")
-                        }
-                    } label: {
-                        Label("Play Ayah", systemImage: "play.circle")
-                    }
-                }
-
-                Divider()
-
-                Button {
-                    settings.hapticFeedback()
-                    showSelectTextSheet = true
+                Menu {
+                    ayahPlayFromMenuItems(surah: surah, ayah: ayah, settings: settings,
+                                          quranPlayer: quranPlayer)
                 } label: {
-                    Label("Select Text", systemImage: "highlighter")
+                    Label("Play From Ayah", systemImage: "play.circle.fill")
                 }
 
                 Button {
                     settings.hapticFeedback()
-                    ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah, ayahNumber: ayah, settings: settings, quranData: quranData)
+                    quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
                 } label: {
-                    Label("Copy Ayah", systemImage: "doc.on.doc")
+                    Label("Play This Ayah", systemImage: "play.circle")
                 }
+            } label: {
+                Label("Play Ayah", systemImage: "play.circle")
+            }
+        }
 
-                Button {
-                    settings.hapticFeedback()
-                    showAyahSheet = true
-                } label: {
-                    Label("Share Ayah", systemImage: "square.and.arrow.up")
-                }
+        Divider()
 
-                // The reader rows' last item, here too (one action list for every ayah menu): the
-                // on-device summary of the ayah's tafsirs and translations.
-                if settings.isHafsDisplay, AyahSummarizeSheet.isOffered {
-                    Divider()
+        Button {
+            settings.hapticFeedback()
+            showSelectTextSheet = true
+        } label: {
+            Label("Select Text", systemImage: "highlighter")
+        }
 
-                    Button {
-                        settings.hapticFeedback()
-                        showSummarizeSheet = true
-                    } label: {
-                        Label("Summarize with AI", systemImage: "text.append")
-                    }
-                }
+        Button {
+            settings.hapticFeedback()
+            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah, ayahNumber: ayah, settings: settings, quranData: quranData)
+        } label: {
+            Label("Copy Ayah", systemImage: "doc.on.doc")
+        }
 
-                Divider()
+        Button {
+            settings.hapticFeedback()
+            showAyahSheet = true
+        } label: {
+            Label("Share Ayah", systemImage: "square.and.arrow.up")
+        }
 
-                if let surah = surahObj {
-                    SurahContextMenu(
-                        surahID: surah.id,
-                        surahName: surah.nameTransliteration,
-                        favoriteSurahs: favoriteSurahs,
-                        searchText: $searchText,
-                        scrollToSurahID: $scrollToSurahID
-                    )
-                }
+        // The surah's seven actions behind its name, where they used to run on inline under the ayah's.
+        if let surah = surahObj {
+            Divider()
+
+            Menu {
+                SurahContextMenu(
+                    surahID: surah.id,
+                    surahName: surah.nameTransliteration,
+                    favoriteSurahs: favoriteSurahs,
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID
+                )
+            } label: {
+                Label("Surah \(surah.nameTransliteration)", systemImage: "book.closed")
+            }
+        }
     }
     #endif
 
