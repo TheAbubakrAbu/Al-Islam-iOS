@@ -19,6 +19,10 @@ struct SettingsSearchEntry: Identifiable {
     /// opening it turns the switch on (`revealsAdvancedSettings`), so a search never lands on a
     /// screen that hides the very thing that was searched for.
     var advanced: Bool = false
+    /// Whether the entry can be offered right now, as `AppTip.isAvailable` does for tips. The four
+    /// "Need a Hand?" entries land on a section Simple Mode hides, so in Simple they would be dead ends.
+    /// `rank` drops an unavailable entry from every result list.
+    var isAvailable: () -> Bool = { true }
 
     var id: String { path + title }
 
@@ -48,8 +52,8 @@ struct SettingsSearchEntry: Identifiable {
         case appearance
         /// About You: who the reader says they are, and the Start Here guide it switches on.
         case aboutYou
-        /// Simple Mode's switch on a page of its own (`SimpleModeSettingsView`): where its search
-        /// entry, its tip and the Islam tab's "Too Much on Screen?" door land.
+        /// Simple Mode's page (`SimpleModeSettingsView`), its switch over the catalog of what it hides:
+        /// where its search entry, its tip and the Islam tab's "Too Much on Screen?" door land.
         case simpleMode
         #if HAS_ICLOUD_BACKUP
         /// iCloud Backup: this device's profile, the others in the account, restore. Al-Islam's
@@ -308,6 +312,7 @@ struct SettingsView: View {
                     guard SettingsSearchEntry.all.indices.contains(result.index) else { return nil }
                     return SettingsSearchEntry.all[result.index]
                 }
+                .filter { $0.isAvailable() }
             }
         }
     }
@@ -332,6 +337,10 @@ struct SettingsView: View {
         case hadithSettings
         #endif
         case islamSettings
+        /// The Simple Mode page, from the What Moves Where row under the SIMPLE MODE switch: a
+        /// selection like the hub rows, so the page fills the detail column rather than pushing inside
+        /// the sidebar.
+        case simpleMode
         /// A spotlight card's screen in the iPad/Mac detail column, by tip id. A SELECTION like the
         /// rows, deliberately: no row is tagged with it, so the hub rows show no highlight while a
         /// card fills the detail (the card wears the ring instead), and every card-to-card switch is
@@ -533,6 +542,7 @@ struct SettingsView: View {
         #if HAS_ADHAN
         case "prayer": return .prayerSettings
         case "prayerSky": return .prayerPage(.sky)
+        case "travelingMode": return .prayerPage(.travelingMode)
         case "notifications": return .notifications
         case "prayerReminders": return .notificationsPage(.prayerReminders)
         case "nagging": return .notificationsPage(.naggingMode)
@@ -652,7 +662,17 @@ struct SettingsView: View {
         // the way back out (Docs/Product/Simple Mode Guide.md). iPhone, iPad and Mac only: the watch's screens
         // do not read it.
         #if os(iOS)
-        SimpleModeSection()
+        if split, #available(iOS 16.0, *) {
+            // The split root reaches the Simple Mode page the way it reaches the hub's pages: a
+            // selection that fills the detail column (`splitResourceLink`).
+            SimpleModeSection(splitCatalogRow: AnyView(splitResourceLink(
+                title: SimpleModeSection.catalogRowTitle,
+                systemImage: SimpleModeSection.catalogRowImage,
+                value: .simpleMode
+            )))
+        } else {
+            SimpleModeSection()
+        }
         #endif
 
         // No ADVANCED section here (Abu, 2026-09-22: "dont do one general advanced settings there,
@@ -718,6 +738,8 @@ struct SettingsView: View {
             #endif
             case .islamSettings:
                 SettingsIslamView()
+            case .simpleMode:
+                SimpleModeSettingsView()
             case .spotlight(let id):
                 // Exactly what the card pushes on iPhone (`spotlightTarget`), as the detail's root.
                 if let tip = TipCatalog.spotlight.first(where: { $0.id == id }), let destination = tip.destination {
@@ -2135,26 +2157,34 @@ struct ProfileTilesSection: View {
 }
 #endif
 
-// MARK: - Advanced Settings
+// MARK: - Simple Mode
 
-/// The switch a simplified settings screen ends with. ONE PER SCREEN (Abu, 2026-09-22: "dont do one
-/// general advanced settings there, do that for each one - if it needs advanced mode then show it
-/// there"): the toggle writes `screen`'s own key, so turning the second half on under Nagging Mode
-/// leaves Arabic Text simple. Off, a screen keeps to its essentials and this section names what it is
-/// keeping out of sight (`hides`), so nobody wonders where an option went; the hidden options keep
-/// the values they hold. A screen that hides nothing carries no ADVANCED section at all - which is
-/// why the Settings tab's own hub no longer has one. Compiles for the watch too (its Notifications
-/// and Nagging Mode pages use it).
-/// Simple Mode's one switch, in APPEARANCE. The per-screen Advanced switches trim the SETTINGS
-/// screens; this trims the app's own chrome (Abu, 2026-10-07: "just make the app look less
-/// overwhelming and have a toggle to show more complicated stuff").
+/// Simple Mode's one switch, directly under the Settings root's hub. The per-screen Advanced switches
+/// trim the SETTINGS screens; this trims the app's own chrome (Abu, 2026-10-07: "just make the app
+/// look less overwhelming and have a toggle to show more complicated stuff").
 ///
 /// One switch, app-wide, where Advanced is one per screen: Advanced answers "show me the rest of
 /// THIS screen", which is a question about the screen in front of you. Simple Mode answers "I find
-/// the app busy", which is not - hunting a dozen switches to settle it would be the clutter it is
+/// the app busy", which is not: hunting a dozen switches to settle it would be the clutter it is
 /// meant to remove.
+///
+/// On the root the section ends with the What Moves Where row, the door to the Simple Mode page that
+/// lists every trim and where it went (Docs/Product/Simple Mode v2 Design.md, section 4.4). The page
+/// opens with this same section, without the row.
 struct SimpleModeSection: View {
     @ObservedObject private var settings = Settings.shared
+
+    /// The What Moves Where row under the switch: on the Settings root, off on the page it opens.
+    var showsCatalogRow = true
+
+    /// The iPad/Mac split root's own copy of the row, a selection that fills the detail column as the
+    /// hub's rows do (`SettingsView.splitResourceLink`). Nil on the iPhone's list and grid roots, where
+    /// the row pushes the page.
+    var splitCatalogRow: AnyView? = nil
+
+    /// The row's title and symbol (the design's section 7), shared with the split root's copy.
+    static let catalogRowTitle = "What Moves Where"
+    static let catalogRowImage = "list.bullet.rectangle"
 
     var body: some View {
         Section(header: SectionIconHeader("SIMPLE MODE", icon: "rectangle.compress.vertical")) {
@@ -2172,31 +2202,90 @@ struct SimpleModeSection: View {
                     .padding(.vertical, 2)
                 #endif
             }
+
+            // Its own row, one link per row: inside the switch's row, a tap anywhere there would push.
+            if showsCatalogRow {
+                if let splitCatalogRow {
+                    splitCatalogRow
+                } else {
+                    NavigationLink(destination: LazyDestination { SimpleModeSettingsView() }) {
+                        SettingsRowLabel(title: Self.catalogRowTitle, systemImage: Self.catalogRowImage)
+                    }
+                    .tint(settings.accentColor.color)
+                }
+            }
         }
     }
 
-    /// Says what moves and, either way, that nothing stops working - the one worry a switch that
-    /// hides parts of the app has to answer before it is turned on.
+    /// Says what moves and, either way, that nothing stops working: the one worry a switch that
+    /// hides parts of the app has to answer before it is turned on. Short since the catalog page
+    /// exists: the row under it names every trim, so the caption no longer lists examples.
     private var caption: String {
         if settings.simpleMode {
-            return "Each tab keeps to its essentials. Shortcuts wait in the ⋯ menu at the top of a tab or in Settings, and extras like Need a Hand? and At a Glance step aside. Nothing is turned off: everything you set keeps working."
+            // The page itself has no row under the switch, so its caption points at the list below.
+            if !showsCatalogRow {
+                return "Each tab keeps to its essentials. Nothing is turned off; the list below says where everything went."
+            }
+            return "Each tab keeps to its essentials. Nothing is turned off; What Moves Where says where everything went."
         }
-        return "Keeps each tab to its essentials: shortcuts move into a ⋯ menu at the top or into Settings, and the extras step aside. Nothing is turned off, and turning this back off brings it all back."
+        return "Keeps each tab to its essentials: shortcuts move into the ⋯ menu at the top or into Settings, and the extras step aside. Nothing is turned off."
     }
 }
 
-/// Simple Mode's switch on a page of its own: where its search entry, its tip and the Islam tab's
-/// "Too Much on Screen?" door land.
+/// The Simple Mode page: the switch, then the live catalog of what Simple hides and where each thing
+/// went, one section per surface in the catalog's order (`SimpleTrim.grouped`, so a new trim lists
+/// itself here), then the two rules the catalog cannot show. The root's What Moves Where row, the
+/// search entry, the tip and the Islam tab's "Too Much on Screen?" door land here. The same in both
+/// modes: it is how someone in Full decides, and how someone in Simple finds a thing again.
 struct SimpleModeSettingsView: View {
     var body: some View {
         List {
-            SimpleModeSection()
+            Group {
+                SimpleModeSection(showsCatalogRow: false)
+
+                ForEach(SimpleTrim.grouped, id: \.surface) { group in
+                    Section(header: SectionIconHeader(group.surface.title.uppercased(), icon: group.surface.systemImage)) {
+                        ForEach(group.entries) { entry in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.title)
+                                    .font(.subheadline)
+
+                                Text(entry.door.text)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+
+                // Rules 9 and 4 of the design (what Simple does once, and what it never hides): no
+                // trim row can carry either.
+                Section {
+                    Text("Turning Simple Mode on also turns off Show Advanced Settings on every settings screen; each screen's ADVANCED switch brings its options back. Sheets, press-and-hold menus, search, play, the gear, the prayer bells and everything you made never change.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
+            }
+            .themedListRowBackground()
         }
         .applyConditionalListStyle()
         .navigationTitle("Simple Mode")
     }
 }
 
+// MARK: - Advanced Settings
+
+/// The switch a simplified settings screen ends with. ONE PER SCREEN (Abu, 2026-09-22: "dont do one
+/// general advanced settings there, do that for each one - if it needs advanced mode then show it
+/// there"): the toggle writes `screen`'s own key, so turning the second half on under Nagging Mode
+/// leaves Arabic Text simple. Off, a screen keeps to its essentials and this section names what it is
+/// keeping out of sight (`hides`), so nobody wonders where an option went; the hidden options keep
+/// the values they hold. A screen that hides nothing carries no ADVANCED section at all, which is
+/// why the Settings tab's own hub no longer has one. Compiles for the watch too (its Notifications
+/// and Nagging Mode pages use it).
 struct AdvancedSettingsSection: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -2241,15 +2330,18 @@ struct AdvancedSettingsSection: View {
     }
 
     private var caption: String {
-        // One line where there were three (Abu, 2026-10-19): the switch is on eleven screens, and
+        // One line where there were three (Abu, 2026-10-19): the switch is on nine screens, and
         // every one of them ended in the same paragraph.
         if settings.advanced(screen) {
             return "Everything this screen has is shown. Off keeps it to the essentials; what is set here still applies."
         }
-        if let hides {
-            return "Also here, with this on: \(hides)."
+        let hidden = hides.map { "Also here, with this on: \($0)." } ?? "Shows every option this screen has."
+        // Rule 9: Simple Mode folded this switch off when it was turned on, so the caption adds one
+        // sentence saying so, after the list of what the switch keeps out of sight (design 6.6).
+        if settings.simpleModeFoldsAdvanced {
+            return hidden + " Simple Mode turned this off; turn it on to see every option here."
         }
-        return "Shows every option this screen has."
+        return hidden
     }
 }
 
@@ -2258,7 +2350,7 @@ struct AdvancedSettingsSection: View {
 /// expected outcome, not a surprise; the screen's own ADVANCED section is there to turn it back off.
 ///
 /// Every screen's switch, not one: a search entry records only THAT the control is advanced, never
-/// which of the eleven screens owns it, and landing on a screen still hiding the very thing that was
+/// which of the nine screens owns it, and landing on a screen still hiding the very thing that was
 /// searched for is the failure this exists to prevent.
 struct AdvancedSettingsReveal: ViewModifier {
     let active: Bool

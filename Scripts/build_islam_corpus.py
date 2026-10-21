@@ -67,8 +67,10 @@ SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEX
 # The design kit (iPhone/Islam/Content/ArticleDesign.swift, 2026-09-29) draws a lead, a step, a bullet and a
 # closing paragraph as cards; each takes the paragraph as the `Text` it replaced did, so the corpus
 # reads them as prose: `ArticleLead("...")`, `ArticleStep("1. ...")`, `ArticleBullet(verbatim: "...")`,
-# `ArticleClosing(articleMarkdown: "...")`, and the data blocks `.lead(`, `.step(`, `.bullet(`.
-TEXT_RE = re.compile(r"(?:(?<![\w.])(?:Text|ArticleLead|ArticleStep|ArticleBullet|ArticleClosing)\(" + TEXT_ARG
+# `ArticleClosing(articleMarkdown: "...")`, and the data blocks `.lead(`, `.step(`, `.bullet(`. A plain
+# paragraph is `ArticleParagraph(verbatim: "...")` / `ArticleParagraph(articleMarkdown: "...")` since
+# 2026-10-19 (the drag-selectable form of the `Text` rows the pages were written with).
+TEXT_RE = re.compile(r"(?:(?<![\w.])(?:Text|ArticleParagraph|ArticleLead|ArticleStep|ArticleBullet|ArticleClosing)\(" + TEXT_ARG
                      + r"|(?<!\w)\.(?:text|markdown|lead|step|bullet)\()(" + STR + r")\)", re.S)
 # The kit's other cards, read into sentences: a callout ("Title. Body"), a term card ("Term (Arabic):
 # meaning"), stat tiles ("value label"), a chain ("name, detail"), a checklist ("Title: item item"),

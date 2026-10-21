@@ -27,6 +27,13 @@ struct ConditionalGlassEffect: ViewModifier {
     // publish - a page turn re-rendered every pill in the app. The environment value changes only when
     // an appearance field (or the performance tier) does.
     @Environment(\.appearance) private var appearance
+    /// The Adhan tab under its whole-tab sky (`Settings.skyFillsAdhanTab`, SkyPageBackground.swift):
+    /// every glass surface inside that List draws the CLEAR Liquid Glass style, so the sky shows
+    /// through the prayer tiles, the pills and the tracker instead of a frosted regular glass over a
+    /// dark row (Abu, 2026-10-19: "if show sky is on then make liquid glass clear for adhan so it
+    /// looks prettier"). Liquid Glass only: the pre-26 fallback's `clear` is the ultra-thin material,
+    /// which the rows' dark wash would show straight through ("wayyy too transparent").
+    @Environment(\.skyPageFill) private var skyPageFill
 
     var clear: Bool = false
     var rectangle: Bool = false
@@ -78,12 +85,15 @@ struct ConditionalGlassEffect: ViewModifier {
                 }
                 return interactive ? .clear.interactive() : .clear
             }()
-            
+
+            // Clear by the caller's choice, or for every site under the whole-tab sky (see `skyPageFill`).
+            let drawsClear = clear || skyPageFill
+
             if circle {
-                content.glassEffect(clear ? clearStyle : regularStyle, in: Circle())
+                content.glassEffect(drawsClear ? clearStyle : regularStyle, in: Circle())
             } else if rectangle {
-                content.glassEffect(clear ? clearStyle : regularStyle, in: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
-            } else if clear {
+                content.glassEffect(drawsClear ? clearStyle : regularStyle, in: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
+            } else if drawsClear {
                 content.glassEffect(clearStyle)
             } else {
                 content.glassEffect(regularStyle)

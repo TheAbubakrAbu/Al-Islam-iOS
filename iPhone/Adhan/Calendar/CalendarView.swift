@@ -205,6 +205,7 @@ struct CalendarView: View {
 
                         yearStepperRow
                             .listRowSeparator(.hidden)
+                            .hiddenInSimple(.calendarFootStepper)
                     }
                 }
                 .themedListRowBackground()

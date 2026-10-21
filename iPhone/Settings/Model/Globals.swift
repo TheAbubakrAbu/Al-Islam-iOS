@@ -1755,7 +1755,7 @@ enum MushafPageLanguage: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .arabic:          return "Arabic"
-        case .pdf:             return "Printed Mushaf (PDF)"
+        case .pdf:             return "Printed Mushaf"
         case .transliteration: return "Transliteration (English)"
         case .clearQuran:      return "The Clear Quran (English)"
         case .saheeh:          return "Saheeh International (English)"
@@ -1777,7 +1777,7 @@ enum MushafPDFAppearance: String, CaseIterable, Identifiable {
         switch self {
         case .auto:  return "Automatic"
         case .light: return "Light"
-        case .night: return "Night"
+        case .night: return "Dark"
         }
     }
 

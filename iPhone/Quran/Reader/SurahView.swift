@@ -688,8 +688,10 @@ struct SurahView: View {
     /// of the surah. Cleared on a surah swap, which has its own target.
     @State private var modeSwitchAyah: Int?
 
-    /// The first surah + ayah of the mushaf page currently on screen, reported by `SurahPageReader`. This is
-    /// what "top of the page" means when leaving page mode.
+    /// The page reader's reading position: the surah + ayah a navigation landed on, else the first row of
+    /// the mushaf page on screen (`MushafPagination.readingPosition`). This is where leaving page mode lands
+    /// when nothing is marked - and after Choose Surah picked a surah that opens partway down its page, that
+    /// is the picked surah, not the one the page begins with.
     @State private var pageAnchor: (surahID: Int, ayahID: Int)?
 
     var surah: Surah { swappedSurah ?? initialSurah }
@@ -1435,7 +1437,7 @@ struct SurahView: View {
         if shouldShowKhatmProgress { return Self.khatmTopAnchorID }
         if !settings.isHafsDisplay { return Self.qiraahTopAnchorID }
         #if !os(watchOS)
-        if !settings.simpleMode,
+        if !settings.hides(.topSurahPair),
            neighboringSurah(before: surah.id) != nil || neighboringSurah(after: surah.id) != nil {
             return Self.navTopAnchorID
         }
@@ -2603,7 +2605,7 @@ struct SurahView: View {
         // divider rows keep counting toward the top-visible anchor (the last-read position must not
         // move with the switch, rule 1 of Docs/Product/Simple Mode Guide.md).
         let pageJuzOverlayApplies = showBoundaryDividers && searchText.isEmpty
-        let shouldShowFloatingPageJuzOverlay = pageJuzOverlayApplies && !settings.simpleMode
+        let shouldShowFloatingPageJuzOverlay = pageJuzOverlayApplies && !settings.hides(.pageJuzLine)
         let shouldUpdateFloatingPageJuzOverlay = pageJuzOverlayApplies && surah.pageOrJuzChangesWithinSurah
         // (The floating page/juz model and the ayah progress fraction are derived INSIDE the pinned
         // header's `ReaderPinnedHeader` closure now - they read the scroll anchor, and deriving them
@@ -2693,7 +2695,7 @@ struct SurahView: View {
                 // Simple Mode keeps one pair, the one below the last ayah (Docs/Product/Simple Mode Guide.md).
                 // `surahListTopTargetID` mirrors this condition, so a swap never scrolls to a row that
                 // is not there.
-                if !settings.simpleMode, previousSurah != nil || nextSurah != nil {
+                if !settings.hides(.topSurahPair), previousSurah != nil || nextSurah != nil {
                     Section {
                         surahNavigationButtonPair(previous: previousSurah, next: nextSurah)
                     }
@@ -3752,31 +3754,44 @@ struct SurahView: View {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) { pageSearchActive = true }
             } label: {
-                Label("Search", systemImage: "magnifyingglass")
-                    .font(.caption)
-                    .foregroundColor(settings.accentColor.accent1)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 4)
-                    // A floor, not just a share: search is the only flexible cell here, so with a
-                    // legend AND a riwayah picker beside it (both `layoutPriority(1)`) it absorbed the
-                    // whole squeeze and collapsed to a bare magnifying glass with a clipped label
-                    // (2026-10-06). 96 keeps "Search" readable; the picker's own label truncates
-                    // instead, which it already does gracefully.
-                    .frame(minWidth: 96, maxWidth: .infinity)
-                    .conditionalGlassEffect()
+                // The labeled pill when it fits, a magnifier-only pill when the row is too tight for
+                // the word (a 700 pt Mac window beside the footer): never a scaled, clipped "Sea...".
+                if #available(iOS 16.0, watchOS 9.0, *) {
+                    ViewThatFits(in: .horizontal) {
+                        pageSearchPill(showsTitle: true)
+                        pageSearchPill(showsTitle: false)
+                    }
+                } else {
+                    pageSearchPill(showsTitle: true)
+                }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Search this page")
 
             if flanks.comparison {
-                ArabicTextRiwayahPicker(selection: $settings.displayQiraah)
+                ArabicTextRiwayahPicker(selection: $settings.displayQiraah, omitsDefaultSuffix: true)
                     .layoutPriority(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 24)
+    }
+
+    /// The page bar's search pill. With the title: a floor, not just a share - search is the only
+    /// flexible cell in its row, so with a legend AND a riwayah picker beside it (both
+    /// `layoutPriority(1)`) it absorbed the whole squeeze and collapsed to a bare magnifying glass
+    /// with a clipped label (2026-10-06); 96 keeps "Search" readable. Without the title (the row
+    /// really is too tight, see `ViewThatFits` above): the magnifier alone in a 44 pt pill.
+    private func pageSearchPill(showsTitle: Bool) -> some View {
+        Label("Search", systemImage: "magnifyingglass")
+            .labelStyle(PageSearchPillLabelStyle(showsTitle: showsTitle))
+            .font(.caption)
+            .foregroundColor(settings.accentColor.accent1)
+            .lineLimit(1)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
+            .frame(minWidth: showsTitle ? 96 : 44, maxWidth: .infinity)
+            .conditionalGlassEffect()
     }
 
     private var qiraatAndTajweedControls: some View {
@@ -3814,7 +3829,7 @@ struct SurahView: View {
                 }
 
                 // Simple Mode leaves the whole-Quran search to the Quran tab's own search bar.
-                if !settings.simpleMode {
+                if !settings.hides(.globalSearch) {
                     Button {
                         settings.hapticFeedback()
                         QuranSearchHandoff.shared.request(searchText)
@@ -3939,9 +3954,12 @@ struct SurahView: View {
                 Divider()
 
                 // Test Mode (Abu, 2026-10-11: "a button for list and page mode in the play button").
-                QuranTestModeMenuSection(settings: settings, available: true)
+                // Simple Mode trims it, and the divider under it, while it is off.
+                QuranTestModeMenuGate(settings: settings) {
+                    QuranTestModeMenuSection(settings: settings, available: true)
 
-                Divider()
+                    Divider()
+                }
 
                 Text("Surah Playback")
                     .foregroundStyle(.secondary)
@@ -3949,74 +3967,78 @@ struct SurahView: View {
                 // Play Surah sits at the visual BOTTOM of every play menu (user-picked order) - the
                 // primary action lands nearest the thumb, with Play Last Listened just above it.
                 // Declared order is visual order (`fixedMenuOrder`).
-                Menu {
-                    Text("More Playback")
-                        .foregroundStyle(.secondary)
-
-                    // Ayah-level playback only in a Hafs display, as the ayah menus gate it: the ayah
-                    // audio is Hafs-numbered, so in Warsh (where 2:1 is Hafs 2:1 and 2:2) the
-                    // highlight ran one ayah ahead for the whole surah (Quality Guide A5).
-                    if settings.isHafsDisplay {
-                        Button {
-                            settings.hapticFeedback()
-                            showCustomRangeSheet = true
-                        } label: {
-                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
-                        }
-
-                        Button {
-                            settings.hapticFeedback()
-                            if let randomAyah = surah.ayahs.filter({ $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }).randomElement() {
-                                quranPlayer.playAyah(
-                                    surahNumber: surah.id,
-                                    ayahNumber: randomAyah.id,
-                                    continueRecitation: true
-                                )
-                            }
-                        } label: {
-                            Label("Play Random Ayah", systemImage: "shuffle.circle")
-                        }
-                    }
-
-                    Button {
-                        settings.hapticFeedback()
-                        playRandomReciterForCurrentSurah()
-                    } label: {
-                        Label("Play Random Reciter", systemImage: "person.wave.2")
-                    }
-
+                // Simple Mode drops Other Options: Play Custom Range is the play button's hold, the repeats
+                // live in that range's sheet, and the random picks go.
+                if !settings.hides(.playOtherOptions) {
                     Menu {
-                        Text("Repeat Count")
+                        Text("More Playback")
                             .foregroundStyle(.secondary)
 
-                        Button {
-                            settings.hapticFeedback()
-                            quranPlayer.playSurah(
-                                surahNumber: surah.id,
-                                surahName: surah.nameTransliteration,
-                                repeatCount: QuranPlayer.infiniteRepeat
-                            )
-                        } label: {
-                            Label("Repeat Forever", systemImage: "infinity")
+                        // Ayah-level playback only in a Hafs display, as the ayah menus gate it: the ayah
+                        // audio is Hafs-numbered, so in Warsh (where 2:1 is Hafs 2:1 and 2:2) the
+                        // highlight ran one ayah ahead for the whole surah (Quality Guide A5).
+                        if settings.isHafsDisplay {
+                            Button {
+                                settings.hapticFeedback()
+                                showCustomRangeSheet = true
+                            } label: {
+                                Label("Play Custom Range", systemImage: "slider.horizontal.3")
+                            }
+
+                            Button {
+                                settings.hapticFeedback()
+                                if let randomAyah = surah.ayahs.filter({ $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }).randomElement() {
+                                    quranPlayer.playAyah(
+                                        surahNumber: surah.id,
+                                        ayahNumber: randomAyah.id,
+                                        continueRecitation: true
+                                    )
+                                }
+                            } label: {
+                                Label("Play Random Ayah", systemImage: "shuffle.circle")
+                            }
                         }
 
-                        ForEach(repeatCounts, id: \.self) { n in
+                        Button {
+                            settings.hapticFeedback()
+                            playRandomReciterForCurrentSurah()
+                        } label: {
+                            Label("Play Random Reciter", systemImage: "person.wave.2")
+                        }
+
+                        Menu {
+                            Text("Repeat Count")
+                                .foregroundStyle(.secondary)
+
                             Button {
                                 settings.hapticFeedback()
                                 quranPlayer.playSurah(
                                     surahNumber: surah.id,
                                     surahName: surah.nameTransliteration,
-                                    repeatCount: n
+                                    repeatCount: QuranPlayer.infiniteRepeat
                                 )
                             } label: {
-                                Label("Repeat \(n)×", systemImage: "\(n).circle")
+                                Label("Repeat Forever", systemImage: "infinity")
                             }
+
+                            ForEach(repeatCounts, id: \.self) { n in
+                                Button {
+                                    settings.hapticFeedback()
+                                    quranPlayer.playSurah(
+                                        surahNumber: surah.id,
+                                        surahName: surah.nameTransliteration,
+                                        repeatCount: n
+                                    )
+                                } label: {
+                                    Label("Repeat \(n)×", systemImage: "\(n).circle")
+                                }
+                            }
+                        } label: {
+                            Label("Repeat Surah", systemImage: "repeat")
                         }
                     } label: {
-                        Label("Repeat Surah", systemImage: "repeat")
+                        Label("Other Options", systemImage: "ellipsis.circle")
                     }
-                } label: {
-                    Label("Other Options", systemImage: "ellipsis.circle")
                 }
 
                 if settings.isHafsDisplay {
@@ -4169,6 +4191,8 @@ struct SurahView: View {
             } label: {
                 Label("Select Ayahs", systemImage: "checkmark.circle")
             }
+            // The printed mushaf is an image of the print: nothing on it can be selected (Abu, 2026-10-20).
+            .disabled(settings.quranPageMode && settings.resolvedMushafPageLanguage.isPDF)
 
             // Playback lives on the play control in the footer, not up here.
             Button {
@@ -4201,8 +4225,8 @@ struct SurahView: View {
                     // page shows, not the reading mode); the bare "Read as Text" read as if it left
                     // page mode, sitting right under "Read as List".
                     Label(settings.resolvedMushafPageLanguage.isPDF
-                              ? (settings.displayBetaTextConsentNeeded ? "Read Pages as Text (Beta)" : "Read Pages as Text")
-                              : "Read Pages as Printed Mushaf (PDF)",
+                              ? (settings.displayBetaTextConsentNeeded ? "Text Pages (Beta)" : "Text Pages")
+                              : "Printed Mushaf",
                           systemImage: settings.resolvedMushafPageLanguage.isPDF
                               ? "textformat" : "doc.richtext")
                 }
@@ -4238,7 +4262,7 @@ struct SurahView: View {
                     }
 
                     // Only meaningful while the facsimile is on screen, so it only appears then.
-                    // Automatic follows the app's light/dark appearance; Light/Night pin the print
+                    // Automatic follows the app's light/dark appearance; Light/Dark pin the print
                     // either way, so night reading is always one choice away regardless of theme.
                     if settings.resolvedMushafPageLanguage.isPDF {
                         Divider()
@@ -4261,6 +4285,8 @@ struct SurahView: View {
                 .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
+        // A stable handle for the UI tests (ChooseSurahModeSwitchTests), as the tab's More menu has.
+        .accessibilityIdentifier("readerTitleMenu")
         // HOLD the title to go straight to Choose Surah, in both readers (Abu, 2026-09-19). A tap still
         // opens the full menu, where Choose Surah is only the first of a dozen items; holding is the
         // shortcut for the one thing people come to this title for. `simultaneousGesture`, not
@@ -4358,7 +4384,7 @@ struct SurahView: View {
     private var titlePageJuzLabel: some View {
         // Simple Mode drops this line in landscape as it drops the pinned strip in portrait.
         if isCompactHeight, !settings.quranPageMode, settings.showPageJuzDividers, searchText.isEmpty,
-           !settings.simpleMode {
+           !settings.hides(.pageJuzLine) {
             let rows = listAyahs
             let follows = surah.pageOrJuzChangesWithinSurah
             ReaderPinnedHeader(visibility: visibility) { anchorID, _, _, _ in
@@ -4678,6 +4704,10 @@ struct SurahView: View {
             if !swapsSurah && !settings.quranPageMode {
                 scrollDown = ayahID
             }
+        } else if let mark = highlightedAyah, mark.surahID != target.surah.id {
+            // A whole-surah target names no ayah; a mark left in another surah must not steer the next
+            // mode switch there (see `navigateToSurah`).
+            highlightedAyah = nil
         }
     }
 
@@ -4711,6 +4741,11 @@ struct SurahView: View {
         visibility.setAnchor(nil)
         // A surah swap opens at its own target (the top), so a stale mode-switch anchor must not win.
         modeSwitchAyah = nil
+        // Nor a stale MARK. The tap-mark survives a programmatic page turn (a search hit keeps its own),
+        // and a mode switch lands on the marked ayah before anything else - so a mark left in the surah
+        // being left sent Read as List back to THAT surah after a pick (2026-10-20). A picked surah opens
+        // from its top with nothing marked.
+        if highlightedAyah != nil { highlightedAyah = nil }
 
         if let onSelectSurah {
             // Column navigation: the parent owns the detail, so let it swap the surah.
@@ -4719,14 +4754,16 @@ struct SurahView: View {
             // Stack navigation: swap the surah in place rather than pushing a whole new SurahView.
             pageSurah = nil
             settings.recordSurahOpened(targetSurah.id)
-            withAnimation(.easeInOut) {
-                swappedSurah = targetSurah
-            }
             // The page reader re-seeds on `surah.id` changes - but after paging away, the picked surah
             // can EQUAL the prop (picking the surah the reader was opened from), so the id never
             // changes and no re-seed fires. The token forces one on every navigation, and the reader
-            // turns to it like a swipe (user rule: every jump slides, back or forward).
-            pageJumpToken += 1
+            // turns to it like a swipe (user rule: every jump slides, back or forward). In the SAME
+            // transaction as the swap, as `goTo` writes its three: written bare after the animated
+            // swap, SwiftUI delivered the two as two passes and the reader re-seeded twice.
+            withAnimation(.easeInOut) {
+                swappedSurah = targetSurah
+                pageJumpToken += 1
+            }
         }
     }
 
@@ -4845,8 +4882,17 @@ struct ArabicTextRiwayahPicker: View {
     /// where the full "Hafs an Asim (default)" truncated and the side letter said nothing.
     var compactLabel: Bool = false
 
+    /// Drops the " (default)" suffix of the Hafs label: the page reader's bar sets it, where the
+    /// suffix cost the search pill its word beside the legend on a 700 pt Mac window and an iPad
+    /// mini (the toolbar title already says which riwayah is open).
+    var omitsDefaultSuffix: Bool = false
+
     private var currentLabel: String {
-        Settings.Riwayah.option(for: selection).label
+        let label = Settings.Riwayah.option(for: selection).label
+        if omitsDefaultSuffix, label.hasSuffix(" (default)") {
+            return String(label.dropLast(" (default)".count))
+        }
+        return label
     }
 
     private func choose(_ option: Settings.Riwayah.Option) {
@@ -5075,7 +5121,7 @@ private struct ReaderLegendMenu: View {
     /// Whether the reader shows the button: always, but under Simple Mode only while it has a color
     /// code to explain.
     static func isVisible(tajweedApplies: Bool, themesApply: Bool) -> Bool {
-        tajweedApplies || themesApply || !Settings.shared.simpleMode
+        !Settings.shared.hides(.legendPill, unless: tajweedApplies || themesApply)
     }
 
     /// Neither color code is on the page.
@@ -5333,4 +5379,19 @@ private struct ReaderLegendSheet: View {
 final class TouchFlag {
     var value = false
     var binding: Binding<Bool> { Binding(get: { self.value }, set: { self.value = $0 }) }
+}
+
+/// `.titleAndIcon` or `.iconOnly`, chosen per layout pass by the page bar's `ViewThatFits`.
+private struct PageSearchPillLabelStyle: LabelStyle {
+    let showsTitle: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        if showsTitle {
+            HStack(spacing: 4) {
+                configuration.icon
+                configuration.title
+            }
+        } else {
+            configuration.icon
+        }
+    }
 }

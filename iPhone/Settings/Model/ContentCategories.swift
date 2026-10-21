@@ -69,11 +69,12 @@ struct ContentCategory: Identifiable {
             id: "positions", title: "Reading and Listening", systemImage: "book.fill",
             keys: ["lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
                    "quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData",
-                   "quranSearchHistoryData", "surahOpenCountsData", "surahPlayCountsData",
+                   "customRangeHistoryData", "quranSearchHistoryData", "surahOpenCountsData", "surahPlayCountsData",
                    "hadithLastReadByBook", "hadithViewedLog", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts"],
             files: [], summaryRank: nil,
             measure: { snapshot in
-                let history = snapshot.counted("quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData", "hadithViewedLog")
+                let history = snapshot.counted("quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData",
+                                               "customRangeHistoryData", "hadithViewedLog")
                 if history > 0 { return history.measure("history entry", "history entries") }
                 // A position alone, on a device that has not built a history yet.
                 let positions = [snapshot.defaults["lastReadSurah"], snapshot.defaults["lastListenedSurahData"], snapshot.defaults["hadithLastReadByBook"]]

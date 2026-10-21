@@ -911,7 +911,7 @@ enum AskAIRetriever {
         let terms = question.searchTerms.filter { $0.count >= 3 && !["app", "setting", "settings", "change", "turn", "use", "find", "open"].contains($0) }
         guard !terms.isEmpty else { return [] }
         var scored: [(SettingsSearchEntry, Int)] = []
-        for entry in SettingsSearchEntry.all {
+        for entry in SettingsSearchEntry.available() {
             let title = AskAILexicon.fold(entry.title)
             let path = AskAILexicon.fold(entry.path)
             let keywords = AskAILexicon.fold(entry.keywords)

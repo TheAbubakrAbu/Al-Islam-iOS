@@ -1,3 +1,4 @@
+import SwiftUI
 import XCTest
 @testable import iPhone
 
@@ -13,12 +14,33 @@ final class SimpleModeTests: XCTestCase {
     }
 
     override func tearDown() {
+        restoreSimpleMode()
+        super.tearDown()
+    }
+
+    /// Puts the host app's flag back as setUp found it. A raw write on purpose: going through
+    /// `Settings.simpleMode` would run rule 9's fold again on an off→on restore.
+    private func restoreSimpleMode() {
         if let savedSimpleMode {
             UserDefaults.standard.set(savedSimpleMode, forKey: "simpleMode")
         } else {
             UserDefaults.standard.removeObject(forKey: "simpleMode")
         }
-        super.tearDown()
+    }
+
+    /// Every screen's Advanced key as stored (nil where it was never written), for a `defer` to put back.
+    private static func storedAdvancedKeys() -> [(key: String, value: Any?)] {
+        Settings.AdvancedScreen.allCases.map { ($0.storageKey, UserDefaults.standard.object(forKey: $0.storageKey)) }
+    }
+
+    private static func restoreAdvancedKeys(_ stored: [(key: String, value: Any?)]) {
+        for (key, value) in stored {
+            if let value {
+                UserDefaults.standard.set(value, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
     }
 
     private static let calendar: Calendar = {
@@ -70,8 +92,13 @@ final class SimpleModeTests: XCTestCase {
     /// launch reopens records the visit; UIKit keeps keys of its own). So the launch settles first, an
     /// idle window of the same length records what changes with nobody touching anything, and only a
     /// write beyond that, in a key the app owns, is laid at the switch's door.
+    ///
+    /// Rule 9's fold is the one write the flip owns: turning Simple Mode on turns every screen's
+    /// Advanced switch off, so the `advancedSettings_` keys are expected to change and are put back.
     func testFlippingSimpleModeWritesNothingElse() {
         let defaults = UserDefaults.standard
+        let storedAdvanced = Self.storedAdvancedKeys()
+        defer { Self.restoreAdvancedKeys(storedAdvanced) }
         RunLoop.main.run(until: Date().addingTimeInterval(4))
 
         let idleStart = defaults.dictionaryRepresentation()
@@ -87,8 +114,56 @@ final class SimpleModeTests: XCTestCase {
         let changed = Self.changedKeys(before, defaults.dictionaryRepresentation())
             .subtracting(ambient)
             .subtracting(["simpleMode"])
+            .filter { !$0.hasPrefix("advancedSettings_") }
             .filter { !$0.hasPrefix("NS") && !$0.hasPrefix("Apple") && !$0.hasPrefix("com.apple") }
-        XCTAssertTrue(changed.isEmpty, "flipping Simple Mode wrote: \(changed.sorted())")
+        XCTAssertTrue(changed.isEmpty, "flipping Simple Mode wrote, beyond rule 9's advancedSettings_ fold: \(changed.sorted())")
+    }
+
+    /// Rule 9: turning Simple Mode ON folds every screen's Advanced switch off, once, on the off→on edge.
+    /// Turning it off restores nothing, and a switch turned on while Simple Mode is on stays on.
+    func testTurningSimpleOnFoldsAdvancedSwitches() {
+        let settings = Settings.shared
+        let storedAdvanced = Self.storedAdvancedKeys()
+        defer {
+            restoreSimpleMode()
+            Self.restoreAdvancedKeys(storedAdvanced)
+        }
+
+        settings.simpleMode = false
+        settings.setAdvanced(.prayerCalculation, true)
+        settings.setAdvanced(.quranReadingView, true)
+
+        settings.simpleMode = true
+        for screen in Settings.AdvancedScreen.allCases {
+            XCTAssertFalse(settings.advanced(screen), "turning Simple Mode on left \(screen.rawValue)'s Advanced switch on")
+        }
+
+        settings.setAdvanced(.quranReadingView, true)
+        settings.simpleMode = false
+        XCTAssertTrue(settings.advanced(.quranReadingView), "a switch turned on while Simple Mode was on did not stay on")
+        XCTAssertFalse(settings.advanced(.prayerCalculation), "turning Simple Mode off restored a folded switch")
+    }
+
+    /// The fold runs on the edge only: search's reveal still turns every switch on while Simple Mode is
+    /// on, and nothing (a render, a publish) folds them back afterwards.
+    func testRevealAfterFoldStays() {
+        let settings = Settings.shared
+        let storedAdvanced = Self.storedAdvancedKeys()
+        defer {
+            restoreSimpleMode()
+            Self.restoreAdvancedKeys(storedAdvanced)
+        }
+
+        settings.simpleMode = true
+        settings.revealAllAdvancedSettings()
+        for screen in Settings.AdvancedScreen.allCases {
+            XCTAssertTrue(settings.advanced(screen), "revealAllAdvancedSettings() left \(screen.rawValue) off in Simple Mode")
+        }
+
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        for screen in Settings.AdvancedScreen.allCases {
+            XCTAssertTrue(settings.advanced(screen), "\(screen.rawValue)'s Advanced switch folded again after the reveal")
+        }
     }
 
     /// Ignore on a permission dialog quiets it for exactly one day.
@@ -116,6 +191,78 @@ final class SimpleModeTests: XCTestCase {
         XCTAssertNotNil(entry, "no Simple Mode entry in Settings search")
         XCTAssertTrue(entry?.keywords.contains("overwhelming") == true)
         XCTAssertTrue(entry?.keywords.contains("clutter") == true)
+    }
+
+    /// The Simple traveler's door to full prayers is a row on the Traveling Mode page, so search must find it.
+    func testShowFullPrayersIsSearchable() {
+        let entry = SettingsSearchEntry.adhanEntries.first { $0.title == "Show Full Prayers" }
+        XCTAssertNotNil(entry, "no Show Full Prayers entry in Settings search")
+        XCTAssertTrue(entry?.keywords.contains("qasr") == true)
+        XCTAssertTrue(entry?.keywords.contains("traveling") == true)
+    }
+
+    /// The Simple Mode switch and the Show Full Prayers switch bind `$settings.simpleMode` and
+    /// `$settings.travelingShowFullPrayers` through an `@ObservedObject`, with `.animation`. Built here
+    /// the same way, each binding must run its property's `didSet`: rule 9's fold for the first, the
+    /// app-group mirror the widgets read for the second. `testSimpleModeSwitchFoldsAdvanced` (UI) taps
+    /// the real Simple Mode switch.
+    func testObservedBindingsRunTheDidSets() {
+        let settings = Settings.shared
+        let storedAdvanced = Self.storedAdvancedKeys()
+        let storedFull = settings.travelingShowFullPrayers
+        let storedGroupFull = settings.appGroupUserDefaults?.object(forKey: "travelingShowFullPrayers")
+        defer {
+            restoreSimpleMode()
+            Self.restoreAdvancedKeys(storedAdvanced)
+            settings.travelingShowFullPrayers = storedFull
+            if let storedGroupFull {
+                settings.appGroupUserDefaults?.set(storedGroupFull, forKey: "travelingShowFullPrayers")
+            } else {
+                settings.appGroupUserDefaults?.removeObject(forKey: "travelingShowFullPrayers")
+            }
+        }
+        let bindings = ObservedObject(wrappedValue: settings).projectedValue
+
+        settings.simpleMode = false
+        settings.setAdvanced(.prayerCalculation, true)
+        settings.setAdvanced(.islamLibraries, true)
+        bindings.simpleMode.animation(.easeInOut).wrappedValue = true
+        XCTAssertTrue(settings.simpleMode)
+        for screen in Settings.AdvancedScreen.allCases {
+            XCTAssertFalse(settings.advanced(screen), "the switch's binding skipped rule 9's fold: \(screen.rawValue) stayed on")
+        }
+
+        let flipped = !storedFull
+        bindings.travelingShowFullPrayers.animation(.easeInOut).wrappedValue = flipped
+        XCTAssertEqual(settings.travelingShowFullPrayers, flipped)
+        XCTAssertEqual(settings.appGroupUserDefaults?.object(forKey: "travelingShowFullPrayers") as? Bool, flipped,
+                       "the Show Full Prayers binding skipped the didSet that mirrors the key for the widgets")
+    }
+
+    /// The four "Need a Hand? on the ... Tab" entries land on a section Simple Mode hides, so search must
+    /// not offer them while it is on. Flipping Simple folds the Advanced switches (rule 9); put them back.
+    func testNeedAHandEntriesLeaveSearchInSimple() {
+        let settings = Settings.shared
+        let storedAdvanced = Self.storedAdvancedKeys()
+        defer { Self.restoreAdvancedKeys(storedAdvanced) }
+        let wasSimple = settings.simpleMode
+        defer { settings.simpleMode = wasSimple }
+
+        func titles() -> [String] {
+            SettingsSearchEntry.rank(SettingsSearchEntry.all, query: "need a hand")
+                .map(\.title)
+                .filter { $0.hasPrefix("Need a Hand? on the") }
+        }
+
+        settings.simpleMode = false
+        XCTAssertFalse(titles().isEmpty, "Full Mode: the Need a Hand? entries are searchable")
+        settings.simpleMode = true
+        XCTAssertTrue(titles().isEmpty, "Simple Mode: they would land on a hidden section: \(titles())")
+        // The semantic matches and Ask AI's settings lane read `available()` instead of `rank`.
+        XCTAssertFalse(SettingsSearchEntry.available().contains { $0.title.hasPrefix("Need a Hand? on the") },
+                       "Simple Mode: the AI paths' collection still holds them")
+        settings.simpleMode = false
+        XCTAssertTrue(SettingsSearchEntry.available().contains { $0.title.hasPrefix("Need a Hand? on the") })
     }
 
     private static func changedKeys(_ before: [String: Any], _ after: [String: Any]) -> Set<String> {

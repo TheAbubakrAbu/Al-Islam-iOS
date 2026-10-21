@@ -286,7 +286,7 @@ struct PrayerList: View {
         // the footer says, and other days live in the Prayer Calendar. The stepper stays while another
         // day is on screen, so the list is never left unexplained.
         #if os(iOS)
-        if !settings.simpleMode {
+        if !settings.hides(.travelFooter) {
             travelModeFooter
         }
         #else
@@ -294,7 +294,7 @@ struct PrayerList: View {
         #endif
         optionalPrayersFooter
         #if os(iOS)
-        if !settings.simpleMode || isShowingDifferentDay {
+        if !settings.hides(.dateStepper, unless: isShowingDifferentDay) {
             dateSelectionFooter
         }
         #else
@@ -426,7 +426,7 @@ struct PrayerList: View {
             footerButtonPair {
                 // Simple Mode keeps the Rakaah Guide (a beginner's question) and leaves Optional Times
                 // to Settings > Prayer Settings > Optional Prayers.
-                if !settings.simpleMode {
+                if !settings.hides(.optionalTimes) {
                     footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
                         showOptionalPrayerToggles.toggle()
                     }
@@ -437,7 +437,7 @@ struct PrayerList: View {
                 }
             }
 
-            if showOptionalPrayerToggles, !settings.simpleMode {
+            if showOptionalPrayerToggles, !settings.hides(.optionalTimes) {
                 VStack(spacing: 10) {
                     optionalPrayerToggle("Duhaa", isOn: $settings.showDuha)
                     optionalPrayerToggle("Islamic Midnight", isOn: $settings.showIslamicMidnight)

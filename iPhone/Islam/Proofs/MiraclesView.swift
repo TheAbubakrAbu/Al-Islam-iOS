@@ -417,6 +417,7 @@ struct MiraclesView: View {
                                         Text("\(library.count(in: category))")
                                             .font(.caption.weight(.semibold).monospacedDigit())
                                             .foregroundStyle(.secondary)
+                                            .hiddenInSimple(.sectionCounts)
                                     }
                                 }
                             }
@@ -1031,7 +1032,36 @@ struct MiracleProse: View {
         }
     }
 
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
+        #if os(iOS)
+        // Drag-selectable (Abu, 2026-10-19), the same text view the article kit's paragraphs use. The
+        // in-prose links keep working: a tap goes to the page's `openURL` handler, the route the `Text`
+        // form took, and the string's own accent + underline draw them.
+        SelectableAttributedProse(
+            attributed: attributed,
+            textStyle: style == .claim ? .title2 : .body,
+            weight: uiWeight,
+            italic: style == .closer,
+            lineSpacing: 4,   // the `Text` line pitch, see `ArticleParagraph`
+            onLink: { openURL($0) }
+        )
+        #else
+        plainText
+        #endif
+    }
+
+    #if os(iOS)
+    private var uiWeight: UIFont.Weight {
+        switch style {
+        case .claim: return .bold
+        case .lead, .closer: return .semibold
+        case .body: return .regular
+        }
+    }
+    #else
+    private var plainText: some View {
         let base = Text(attributed)
         return (style == .closer ? base.italic() : base)
             .font(font)
@@ -1048,6 +1078,7 @@ struct MiracleProse: View {
         case .closer: return .body.weight(.semibold)
         }
     }
+    #endif
 
     private static func build(text: String, links: [MiracleLink], accent: Color) -> AttributedString {
         var result = AttributedString(text)

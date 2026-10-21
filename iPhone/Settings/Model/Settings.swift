@@ -1212,6 +1212,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "quranSearchHistoryData",
         // The reading and listening histories under the Quran tab's rows.
         "quranListeningHistoryData", "quranReadingHistoryData", "quranAyahListeningHistoryData",
+        // The ranges played from the Custom Range sheet (its Recent Ranges rows).
+        "customRangeHistoryData",
         // Lit themes and passages: chosen one by one, like bookmarks.
         "themeHighlightsLit", "themeHighlightsAllSections", "themeHighlightsSections",
         // The prayer tracker and menses-pause record: months of marks and exempt days - the most
@@ -3806,10 +3808,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     ///
     /// 2026-10-10 (Abu: "right now its worthless"): the only-door rule became a MOVE, not a veto.
     /// Anything hidden from a tab stays one tap away, in that tab's ⋯ More menu or in Settings, and a
-    /// short list of details is dropped outright. The rules and the catalog of every trim are in
-    /// Docs/Product/Simple Mode Guide.md and atop iPhone/Helpers/UI/SimpleMode.swift. New installs choose it
-    /// on the splash's second step (Full preselected); existing installs are never asked.
-    @AppStorage("simpleMode") var simpleMode: Bool = false
+    /// short list of details is dropped outright. The rules are in Docs/Product/Simple Mode Guide.md;
+    /// the catalog of every trim is `SimpleTrim` in iPhone/Settings/Model/SimpleTrims.swift, which views
+    /// read through `hides(_:)` and `hiddenInSimple(_:)`. New installs choose it on the splash's second
+    /// step (Full preselected); existing installs are never asked.
+    ///
+    /// The one action the switch takes (rule 9, Docs/Product/Simple Mode v2 Design.md): turning it ON
+    /// folds every settings screen's Advanced switch off (`foldAllAdvancedSettings()`), once, on the
+    /// off-to-on edge. Turning it off restores nothing, and a switch turned back on while Simple Mode
+    /// is on (by hand, or by search's `revealAllAdvancedSettings()`) stays on. The flip comes from a
+    /// Toggle or the splash, never from a view body; a `-seedBool` launch writes the key directly and
+    /// folds nothing.
+    @AppStorage("simpleMode") var simpleMode: Bool = false {
+        didSet {
+            guard simpleMode, !oldValue else { return }
+            foldAllAdvancedSettings()
+        }
+    }
 
     /// Test Mode (Abu, 2026-10-11): the readers hide the Quran's text until an ayah is tapped, for
     /// reciting from memory. The switch lives in both readers' play menus and on its own settings page
@@ -3886,6 +3901,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
+    /// Turns every screen's switch off: Simple Mode's one action, run by `simpleMode`'s `didSet` when it
+    /// turns on (rule 9, Docs/Product/Simple Mode v2 Design.md). It changes only what the settings
+    /// screens show, so rule 1 holds: every hidden option keeps its value and keeps applying.
+    func foldAllAdvancedSettings() {
+        for screen in AdvancedScreen.allCases {
+            setAdvanced(screen, false)
+        }
+    }
+
     /// True while at least one screen is showing its second half - what a breadcrumb reads to decide
     /// whether to warn that a result is behind an Advanced switch.
     var anyAdvancedSettings: Bool {
@@ -3893,7 +3917,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     /// One-time carry-over of the legacy single switch: someone who had Advanced Settings on before
-    /// this update keeps seeing every option, on every screen, without hunting for eleven switches.
+    /// this update keeps seeing every option, on every screen, without hunting for nine switches.
     static func migrateAdvancedSettings() {
         let defaults = UserDefaults.standard
         let doneKey = "advancedSettingsPerScreenMigrated"

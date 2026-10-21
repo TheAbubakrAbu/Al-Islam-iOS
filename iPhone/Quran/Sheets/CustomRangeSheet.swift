@@ -1,13 +1,18 @@
 #if os(iOS)
 import SwiftUI
 
+/// "Play Custom Range": a span of one surah's ayahs (or of its mushaf pages), how often each ayah
+/// and the whole range repeat, the reciter, and Play.
+///
+/// One list, top to bottom (Abu, 2026-10-19: the old layered layout, with seven range buttons, a
+/// chip row per repeat and a split preview pane, was "too spread out, too hard to read, too
+/// confusing"): the range card, the two repeat rows and the forever switch, the reciter, then every
+/// ayah the range will play. The count and the play total sit over the Play button, so they stay on
+/// screen while the list scrolls.
 struct PlayCustomRangeSheet: View {
     @ObservedObject var settings = Settings.shared
+    @ObservedObject private var rangeHistory = CustomRangeHistoryStore.shared
     @Environment(\.appearance) private var appearance
-    /// Which detent the sheet sits at (iOS 16+). It OPENS at the full height, where the layered layout
-    /// has room for the range controls above the preview pane, and the pane shrinks at the half height.
-    @State private var isExpanded = true
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     enum SelectionMode: String, CaseIterable {
         case ayahs, pages
@@ -31,20 +36,20 @@ struct PlayCustomRangeSheet: View {
     @State private var repeatSectionText: String
     @AppStorage("customRangeRepeatPerAyah") private var storedRepeatPerAyah = 1
     @AppStorage("customRangeRepeatSection") private var storedRepeatSection = 1
-    /// Loop the whole section until stopped (Abu, 2026-09-26: "have an infinite option"). The player
+    /// Loop the whole range until stopped (Abu, 2026-09-26: "have an infinite option"). The player
     /// fetches each ayah once and replays the file on every pass (`PlaybackAudioCache`).
     @AppStorage("customRangeRepeatForever") private var repeatForever = false
-    
+
     @FocusState private var startAyahFocused: Bool
     @FocusState private var endAyahFocused: Bool
     @FocusState private var repeatPerAyahFocused: Bool
     @FocusState private var repeatSectionFocused: Bool
 
     /// Per-render memoization for `pageGroups`. The page list only depends on the surah and active
-    /// qiraah, but `pageGroups` is read ~12× per body evaluation; without this the all-ayahs scan ran
-    /// every time and caused lag while stepping the range on long surahs. A reference box lets the
-    /// computed property cache within a render (and recompute when the qiraah key changes) while
-    /// staying always-correct - unlike an @State cache, it can never be transiently empty.
+    /// qiraah, but `pageGroups` is read many times per body evaluation; without this the all-ayahs
+    /// scan ran every time and caused lag while stepping the range on long surahs. A reference box
+    /// lets the computed property cache within a render (and recompute when the qiraah key changes)
+    /// while staying always-correct: unlike an @State cache, it can never be transiently empty.
     private final class PageGroupsBox {
         var key: String = "\u{0}unset"
         var value: [(page: Int, firstAyah: Int, lastAyah: Int)] = []
@@ -53,7 +58,6 @@ struct PlayCustomRangeSheet: View {
 
     private static let repeatMin = 1
     private static let repeatMax = 20
-    private static let repeatOptions = [1, 2, 3, 5, 10, 15, 20]
     private static let repeatPerAyahStorageKey = "customRangeRepeatPerAyah"
     private static let repeatSectionStorageKey = "customRangeRepeatSection"
 
@@ -94,6 +98,8 @@ struct PlayCustomRangeSheet: View {
         _repeatSectionText = State(initialValue: "\(savedRepeatSection)")
     }
 
+    // MARK: - Range model
+
     private var canPlay: Bool {
         startAyah >= 1 && endAyah <= maxAyah && startAyah <= endAyah
     }
@@ -112,10 +118,10 @@ struct PlayCustomRangeSheet: View {
     }
 
     /// "Ayah N" plus the mushaf page it falls on (when page data is available),
-    /// the page annotated with its position within this surah, e.g. "Page 102 (3)".
+    /// the page annotated with its position within this surah, e.g. "Page 102 (3/12)".
     private func ayahPageLabel(_ ayahID: Int) -> String {
         if hasPageData, let page = pageNumber(forAyah: ayahID) {
-            return "Ayah \(ayahID) · \(mushafPageLabel(forAbsolutePage: page, in: surah))"
+            return "Ayah \(ayahID) \u{00B7} \(mushafPageLabel(forAbsolutePage: page, in: surah))"
         }
         return "Ayah \(ayahID)"
     }
@@ -147,10 +153,10 @@ struct PlayCustomRangeSheet: View {
         return groups
     }
 
-    /// True when we have any page data for this surah (drives whether the Ayahs/Pages toggle is shown).
+    /// True when we have any page data for this surah (drives whether the Ayahs/Pages picker is shown).
     private var hasPageData: Bool { !pageGroups.isEmpty }
 
-    /// True when this surah spans more than one mushaf page (drives the page-snap helpers in Ayahs mode).
+    /// True when this surah spans more than one mushaf page (drives the Whole Page chip in Ayahs mode).
     private var hasMultiplePages: Bool { pageGroups.count > 1 }
 
     /// Index into `pageGroups` of the page containing the given ayah (falls back to the nearest preceding page).
@@ -164,6 +170,7 @@ struct PlayCustomRangeSheet: View {
 
     private var fromPageIndex: Int { pageIndex(containing: startAyah) ?? 0 }
     private var toPageIndex: Int { pageIndex(containing: endAyah) ?? fromPageIndex }
+    private var pagesInRange: Int { Swift.max(1, toPageIndex - fromPageIndex + 1) }
 
     /// Mushaf page number that the given ayah falls on, if known.
     private func pageNumber(forAyah ayah: Int) -> Int? {
@@ -171,13 +178,13 @@ struct PlayCustomRangeSheet: View {
         return pageGroups[idx].page
     }
 
-    /// True when the start ayah is already the first ayah of its page (so "Start of page" would be a no-op).
+    /// True when the start ayah is already the first ayah of its page.
     private var startAtPageStart: Bool {
         guard let idx = pageIndex(containing: startAyah) else { return true }
         return startAyah <= pageGroups[idx].firstAyah
     }
 
-    /// True when the end ayah is already the last ayah of its page (so "End of page" would be a no-op).
+    /// True when the end ayah is already the last ayah of its page.
     private var endAtPageEnd: Bool {
         guard let idx = pageIndex(containing: endAyah) else { return true }
         return endAyah >= pageGroups[idx].lastAyah
@@ -207,7 +214,8 @@ struct PlayCustomRangeSheet: View {
         }
     }
 
-    /// Expands the current ayah range out to whole-page boundaries - used when switching into Pages mode.
+    /// Expands the current ayah range out to whole-page boundaries: the Whole Page chip, and the
+    /// switch into Pages mode.
     private func snapRangeToPages() {
         let groups = pageGroups
         guard !groups.isEmpty else { return }
@@ -219,26 +227,12 @@ struct PlayCustomRangeSheet: View {
         endAyah = b; endAyahText = "\(b)"
     }
 
-    /// In Ayahs mode: move the start back to the first ayah of its page.
-    private func snapStartToPageStart() {
-        guard let idx = pageIndex(containing: startAyah) else { return }
-        commitBothAyahFields()
-        let a = pageGroups[idx].firstAyah
+    private func selectWholeSurah() {
         withAnimation(.easeInOut(duration: 0.2)) {
-            startAyah = a
-            startAyahText = "\(a)"
-            if endAyah < a { endAyah = a; endAyahText = "\(a)" }
-        }
-    }
-
-    /// In Ayahs mode: extend the end out to the last ayah of its page.
-    private func snapEndToPageEnd() {
-        guard let idx = pageIndex(containing: endAyah) else { return }
-        commitBothAyahFields()
-        let a = pageGroups[idx].lastAyah
-        withAnimation(.easeInOut(duration: 0.2)) {
-            endAyah = a
-            endAyahText = "\(a)"
+            startAyah = 1
+            endAyah = maxAyah
+            startAyahText = "1"
+            endAyahText = "\(maxAyah)"
         }
     }
 
@@ -256,14 +250,14 @@ struct PlayCustomRangeSheet: View {
 
     /// "X ayahs · Y pages" describing the current selection (pages dropped when no page data).
     private var rangeCountSummary: String {
-        let pagesInRange = Swift.max(1, toPageIndex - fromPageIndex + 1)
+        let pagesInRange = self.pagesInRange
         if hasPageData {
-            return "\(ayahCount) ayah\(ayahCount == 1 ? "" : "s") · \(pagesInRange) page\(pagesInRange == 1 ? "" : "s")"
+            return "\(ayahCount) ayah\(ayahCount == 1 ? "" : "s") \u{00B7} \(pagesInRange) page\(pagesInRange == 1 ? "" : "s")"
         }
         return "\(ayahCount) ayah\(ayahCount == 1 ? "" : "s")"
     }
 
-    /// Total recitations the range will play: each ayah × its per-ayah repeats × the whole-section repeats.
+    /// Total recitations the range will play: each ayah × its per-ayah repeats × the whole-range repeats.
     private var totalPlayCount: Int {
         // Reported, never trapping: the fields are clamped while typing now, but a product of three
         // typed numbers must not be able to crash a render.
@@ -272,18 +266,31 @@ struct PlayCustomRangeSheet: View {
         return perAyah.overflow || total.overflow ? Int.max : total.partialValue
     }
 
-    @ViewBuilder
-    private func animatedCaption(_ text: String) -> some View {
-        let label = Text(text)
-            .font(.caption.monospacedDigit())
-            .foregroundColor(.secondary)
+    /// "2 ayahs · 1 page · 4 plays", or "... · Repeats forever": the line over the Play button.
+    private var playSummary: String {
+        if repeatForever {
+            return "\(rangeCountSummary) \u{00B7} Repeats forever"
+        }
+        let total = totalPlayCount
+        let plays = total == Int.max ? "Too many plays" : "\(total) play\(total == 1 ? "" : "s")"
+        return "\(rangeCountSummary) \u{00B7} \(plays)"
+    }
 
-        if #available(iOS 16.0, watchOS 9.0, *) {
-            label.contentTransition(.numericText())
-        } else {
-            label
+    /// "Ayahs 1–6", or "Ayah 3" for a range of one: the preview section's title.
+    private var previewTitle: String {
+        startAyah == endAyah ? "Ayah \(startAyah)" : "Ayahs \(startAyah)\u{2013}\(endAyah)"
+    }
+
+    /// Every ayah the chosen range will actually play, in playback order, clamped to the active
+    /// qiraah (an ayah absent from the riwayah's text is skipped by playback too).
+    private var rangeAyahs: [Ayah] {
+        surah.ayahs.filter {
+            $0.id >= startAyah && $0.id <= endAyah
+                && $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id)
         }
     }
+
+    // MARK: - Text fields
 
     private func sanitizedNumberText(from value: String) -> String {
         value.filter(\.isNumber)
@@ -291,11 +298,11 @@ struct PlayCustomRangeSheet: View {
 
     private func syncAyahTextInput(value: Binding<Int>, text: Binding<String>, isFocused: Bool) {
         let sanitized = sanitizedNumberText(from: text.wrappedValue)
-        
+
         if sanitized != text.wrappedValue {
             text.wrappedValue = sanitized
         }
-        
+
         // While the keyboard is up the TEXT may say anything, but the value is clamped: a long number
         // typed here fed the range's play count unclamped, and its product overflowed on the next
         // render (Quality Guide C2).
@@ -305,14 +312,14 @@ struct PlayCustomRangeSheet: View {
             }
             return
         }
-        
+
         // When keyboard is dismissed, validate and clamp
         guard !sanitized.isEmpty else {
             text.wrappedValue = "\(value.wrappedValue)"
             value.wrappedValue = 1
             return
         }
-        
+
         let parsed = Int(sanitized) ?? 1
         let clamped = min(Swift.max(1, parsed), maxAyah)
         value.wrappedValue = clamped
@@ -333,7 +340,7 @@ struct PlayCustomRangeSheet: View {
             }
             return
         }
-        
+
         // When keyboard is dismissed, validate and clamp
         guard !sanitized.isEmpty else {
             text.wrappedValue = "\(value.wrappedValue)"
@@ -347,10 +354,10 @@ struct PlayCustomRangeSheet: View {
         text.wrappedValue = "\(clamped)"
     }
 
-    /// Step the START ayah by `delta`. Reads/writes the `startAyah` @State *directly* (not through a passed
-    /// Binding). The old generic helper computed `value.wrappedValue + delta` through a Binding parameter,
-    /// which in this nested helper context did not reflect the current value - so every tap jumped the range
-    /// to the surah's last ayah. Direct @State access steps reliably by one.
+    /// Step the START ayah by `delta`. Reads/writes the `startAyah` @State directly (not through a passed
+    /// Binding): the old generic helper computed `value.wrappedValue + delta` through a Binding parameter,
+    /// which in this nested helper context did not reflect the current value, so every tap jumped the
+    /// range to the surah's last ayah. Direct @State access steps reliably by one.
     private func stepStart(_ delta: Int) {
         let newValue = min(Swift.max(1, startAyah + delta), maxAyah)
         withAnimation(.easeInOut(duration: 0.15)) {
@@ -387,29 +394,6 @@ struct PlayCustomRangeSheet: View {
         persistRepeatValues()
     }
 
-    private func syncRepeatTextInput(value: Binding<Int>, text: Binding<String>) {
-        let sanitized = sanitizedNumberText(from: text.wrappedValue)
-
-        if sanitized != text.wrappedValue {
-            text.wrappedValue = sanitized
-        }
-
-        guard !sanitized.isEmpty else { return }
-
-        let parsed = Int(sanitized) ?? value.wrappedValue
-        let clamped = min(Swift.max(Self.repeatMin, parsed), Self.repeatMax)
-
-        if parsed != clamped {
-            text.wrappedValue = "\(clamped)"
-        }
-
-        if value.wrappedValue != clamped {
-            withAnimation(.easeInOut(duration: 0.18)) {
-                value.wrappedValue = clamped
-            }
-        }
-    }
-
     private func clampStoredRepeatValues() {
         let perAyah = min(Swift.max(Self.repeatMin, storedRepeatPerAyah), Self.repeatMax)
         let section = min(Swift.max(Self.repeatMin, storedRepeatSection), Self.repeatMax)
@@ -426,112 +410,144 @@ struct PlayCustomRangeSheet: View {
         storedRepeatSection = min(Swift.max(Self.repeatMin, repeatSection), Self.repeatMax)
     }
 
+    private func commitBothAyahFields() {
+        let s = Int(startAyahText.trimmingCharacters(in: .whitespaces)) ?? startAyah
+        let e = Int(endAyahText.trimmingCharacters(in: .whitespaces)) ?? endAyah
+
+        // Clamp to 1...maxAyah (handles negatives and out-of-range)
+        let clampedStart = min(Swift.max(1, s), maxAyah)
+        let clampedEnd = min(Swift.max(1, e), maxAyah)
+
+        // Ensure start <= end (if not, swap to make valid range)
+        let from = min(clampedStart, clampedEnd)
+        let to = Swift.max(clampedStart, clampedEnd)
+
+        startAyah = from
+        endAyah = to
+        startAyahText = "\(from)"
+        endAyahText = "\(to)"
+
+        #if canImport(UIKit)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+
+    private func commitRepeatInput(value: Binding<Int>, text: Binding<String>) {
+        let parsed = Int(text.wrappedValue.trimmingCharacters(in: .whitespaces)) ?? value.wrappedValue
+        let clamped = min(Swift.max(Self.repeatMin, parsed), Self.repeatMax)
+        value.wrappedValue = clamped
+        text.wrappedValue = "\(clamped)"
+        persistRepeatValues()
+    }
+
+    private func commitAllRepeatFields() {
+        commitRepeatInput(value: $repeatPerAyah, text: $repeatPerAyahText)
+        commitRepeatInput(value: $repeatSection, text: $repeatSectionText)
+    }
+
+    private var anyFieldFocused: Bool {
+        startAyahFocused || endAyahFocused || repeatPerAyahFocused || repeatSectionFocused
+    }
+
+    /// The keyboard's Done: dropping focus runs each field's commit through its focus `onChange`.
+    private func endEditing() {
+        startAyahFocused = false
+        endAyahFocused = false
+        repeatPerAyahFocused = false
+        repeatSectionFocused = false
+    }
+
+    // MARK: - Body
+
     var body: some View {
-        NavigationView {
-            // LAYERED layout (user-picked, brought back): a settings List on top and the live preview
-            // pinned as its own List at the bottom, so the first/last ayah (and the plays badge) stay
-            // on screen while the range is adjusted. The old implementation sized the bottom pane with
-            // a GeometryReader (a third of the reported height), and at the half-height (.medium) sheet
-            // detent the GeometryReader is proposed the FULL-detent size - the pane overflowed the
-            // visible sheet and drew over the From/To section. A fixed height avoids the lying geometry
-            // entirely: the pane is the same size at every detent, and the top List scrolls above it.
-            VStack(spacing: 0) {
+        SheetNavigationContainer {
+            ScrollViewReader { proxy in
                 List {
+                    // The ayahs lead (Abu, 2026-10-20: "put the preview at the top"): what the range
+                    // will play is the first thing on screen, and it follows the fields as they move.
                     Section {
-                        rangeSectionContent
-                    } header: {
-                        if selectionMode == .pages && hasPageData {
-                            Label("Page Range", systemImage: "doc.text")
-                        } else {
-                            Label("Ayah Range", systemImage: "number")
+                        ForEach(rangeAyahs, id: \.id) { ayah in
+                            previewRow(ayah)
                         }
+                    } header: {
+                        SectionIconHeader("\(surah.nameTransliteration) \u{00B7} \(previewTitle)", icon: "book.closed")
                     }
 
                     Section {
-                        SurahRow(surah: surah, hideInfo: false)
+                        rangeCard
+                    } header: {
+                        SectionIconHeader("Range", icon: "arrow.left.and.right")
+                    }
+
+                    Section {
+                        repeatRow(title: "Each Ayah", value: $repeatPerAyah, text: $repeatPerAyahText, isFocused: $repeatPerAyahFocused)
+                        repeatRow(title: "Whole Range", value: $repeatSection, text: $repeatSectionText, isFocused: $repeatSectionFocused)
+                            .disabled(repeatForever)
+                            .opacity(repeatForever ? 0.45 : 1)
+                        foreverRow
+                    } header: {
+                        SectionIconHeader("Repeat", icon: "repeat")
                     }
 
                     Section {
                         reciterRow
                     } header: {
-                        Label("Reciter", systemImage: "person.wave.2.fill")
+                        SectionIconHeader("Reciter", icon: "person.wave.2")
                     }
 
-                    Section {
-                        repeatRow(title: "Each ayah", value: $repeatPerAyah, text: $repeatPerAyahText, isFocused: $repeatPerAyahFocused)
-                        repeatRow(title: "Whole section", value: $repeatSection, text: $repeatSectionText, isFocused: $repeatSectionFocused)
-                            .disabled(repeatForever)
-                            .opacity(repeatForever ? 0.45 : 1)
-                        Toggle(isOn: Binding(
-                            get: { repeatForever },
-                            set: { newValue in
-                                settings.hapticFeedback()
-                                withAnimation(.easeInOut) { repeatForever = newValue }
-                            }
-                        )) {
-                            Label("Repeat Forever", systemImage: "infinity")
-                                .font(.subheadline)
-                        }
-                        .tint(settings.accentColor.color)
-                    } header: {
-                        Label("Repeats", systemImage: "repeat")
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .applyConditionalListStyle(disableNowPlayingInset: true)
-
-                Divider()
-
-                // Bottom layer: first/last ayah + summary always visible, and scrolling this pane
-                // reveals EVERY ayah the range will play, each on its own row (user request). Only
-                // from three ayahs: one or two are already in the preview above in full, so listing
-                // them again just repeated it (Abu, 2026-10-19).
-                List {
-                    Section {
-                        arabicVersesPreview
-                    } header: {
-                        Label("Preview", systemImage: "text.quote")
-                    }
-
-                    if ayahCount > 2 {
+                    // The ranges played from here before, newest first: one tap plays one again.
+                    if !rangeHistory.items.isEmpty {
                         Section {
-                            ForEach(rangeAyahs, id: \.id) { ayah in
-                                fullVerseRow(ayah: ayah)
+                            ForEach(rangeHistory.items) { item in
+                                historyRow(item)
+                                    .id(item.id)
+                            }
+                            .onDelete { offsets in
+                                rangeHistory.remove(atOffsets: offsets)
                             }
                         } header: {
-                            Label(
-                                startAyah == endAyah ? "Ayah \(startAyah)" : "Ayahs \(startAyah)–\(endAyah)",
-                                systemImage: "play.circle"
-                            )
+                            SectionIconHeader("Recent Ranges", icon: "clock.arrow.circlepath", accentTitle: true)
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
                 .applyConditionalListStyle(disableNowPlayingInset: true)
-                .frame(height: previewPaneHeightForLayout)
-            }
-            .navigationTitle("Custom Ayah Range")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        settings.hapticFeedback()
-                        onCancel()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
+                .onAppear {
+                    #if DEBUG
+                    // Headless verification: "-customRangeScrollToEnd" scrolls the list to its last
+                    // Recent Ranges row a beat after the sheet opens (nothing can swipe the simulator).
+                    if ProcessInfo.processInfo.arguments.contains("-customRangeScrollToEnd"),
+                       let last = rangeHistory.items.last {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
+                    #endif
+                }
+                .dismissKeyboardOnScroll()
+                .navigationTitle("Custom Range")
+                .navigationBarTitleDisplayMode(.inline)
+                .sheetDismissToolbar()
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        if anyFieldFocused {
+                            Spacer(minLength: 0)
+                            Button("Done") { endEditing() }
+                        }
                     }
                 }
-            }
-            .adaptiveSafeArea(edge: .bottom) {
-                playButtonBar
+                .adaptiveSafeArea(edge: .bottom) {
+                    playBar
+                }
             }
         }
-        .navigationViewStyle(.stack)
-        .modifier(CustomRangeSheetPresentation(isExpanded: $isExpanded))
+        // Full height first: the list is long, and the half height showed the range card alone.
+        .smallMediumSheetPresentation(startLarge: true)
         .onAppear {
             clampRangeToMaxAyah()
             clampStoredRepeatValues()
+            // Pages mode remembered from last time: the fields show whole pages, so the range the
+            // host handed over (one or two ayahs) widens to them at once, as a mode switch does.
+            if selectionMode == .pages && hasPageData { snapRangeToPages() }
         }
         .onChange(of: settings.displayQiraahForArabic) { _ in
             clampRangeToMaxAyah()
@@ -545,51 +561,14 @@ struct PlayCustomRangeSheet: View {
         .id("\(initialStartAyah)-\(initialEndAyah)")
     }
 
-    private var reciterRow: some View {
-        NavigationLink {
-            LazyDestination {
-                ReciterListView()
-                    .environmentObject(settings)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "person.wave.2.fill")
-                    .font(.title3)
-                    .foregroundStyle(settings.accentColor.color)
+    // MARK: - Range card
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(selectedRangeReciterName)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-
-                    if selectedRangeReciter?.defaultToMinshawi == true {
-                        Text("Ayahs default to \(Reciter.minshawiAyahFallbackName).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else if let note = selectedRangeReciter?.ayahMurattalStyleNote {
-                        Text("Ayahs play in \(note).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-        }
-    }
-
-    private var rangeSectionContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if selectionMode == .pages && hasPageData {
-                pageSelectionSection
-            } else {
-                ayahSelectionSection
-            }
-
+    /// Ayahs | Pages, the From → To fields with their page (or ayah span) under each, and the chips
+    /// that widen the range to whole pages or the whole surah. One row of the list.
+    private var rangeCard: some View {
+        VStack(spacing: 14) {
             if hasPageData {
-                Picker("Selection mode", selection: $selectionMode) {
+                Picker("Range by", selection: $selectionMode) {
                     ForEach(SelectionMode.allCases, id: \.self) { mode in
                         Text(mode.title).tag(mode)
                     }
@@ -600,113 +579,92 @@ struct PlayCustomRangeSheet: View {
                     if mode == .pages { snapRangeToPages() }
                 }
             }
+
+            if selectionMode == .pages && hasPageData {
+                pageFields
+            } else {
+                ayahFields
+            }
+
+            quickActions
         }
+        .padding(.vertical, 4)
         // One animation for the range as a whole, not a separate one per endpoint.
         .animation(.easeInOut, value: [startAyah, endAyah])
     }
 
-    private var ayahSelectionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private var arrow: some View {
+        Image(systemName: "arrow.right")
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.secondary)
+    }
+
+    /// The small line under a From / To field: the page the ayah is on, or the ayahs a page spans.
+    private func fieldCaption(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.monospacedDigit())
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var ayahFields: some View {
+        VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 12) {
                 rangeField(title: "From", value: $startAyah, text: $startAyahText, isFocused: $startAyahFocused, onStep: stepStart)
-
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(Color(.tertiaryLabel))
-
+                arrow
                 rangeField(title: "To", value: $endAyah, text: $endAyahText, isFocused: $endAyahFocused, onStep: stepEnd)
             }
             .onChange(of: startAyah) { ayah in
                 startAyahText = "\(ayah)"
             }
             .onChange(of: endAyah) { ayah in
-                endAyahText = "\(endAyah)"
+                endAyahText = "\(ayah)"
             }
 
             if hasPageData {
-                HStack(spacing: 10) {
-                    quickActionButton(title: "Start of page", systemImage: "arrow.up.to.line", enabled: hasMultiplePages && !startAtPageStart) {
-                        snapStartToPageStart()
-                    }
-
-                    quickActionButton(title: "End of page", systemImage: "arrow.down.to.line", enabled: hasMultiplePages && !endAtPageEnd) {
-                        snapEndToPageEnd()
-                    }
-                }
-
-                perFieldPageLabels
-            }
-
-            HStack(spacing: 10) {
-                quickActionButton(title: "Go to start", systemImage: "arrow.left.to.line", enabled: startAyah > 1) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        startAyah = 1
-                        startAyahText = "1"
-                    }
-                }
-
-                quickActionButton(title: "Go to end", systemImage: "arrow.right.to.line", enabled: endAyah < maxAyah) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        endAyah = maxAyah
-                        endAyahText = "\(maxAyah)"
-                    }
-                }
-            }
-
-            quickActionButton(title: "Whole surah (1–\(maxAyah))", systemImage: "doc.text.fill", prominent: true, enabled: !(startAyah == 1 && endAyah == maxAyah)) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    startAyah = 1
-                    endAyah = maxAyah
-                    startAyahText = "1"
-                    endAyahText = "\(maxAyah)"
+                HStack(spacing: 12) {
+                    fieldCaption(pageCaption(forAyah: startAyah))
+                    arrow.hidden()
+                    fieldCaption(pageCaption(forAyah: endAyah))
                 }
             }
         }
     }
 
-    /// The mushaf page of the From / To ayah, centered directly under each big ayah field.
-    private var perFieldPageLabels: some View {
-        HStack(spacing: 12) {
-            pageLabelColumn(forAyah: startAyah)
-
-            Image(systemName: "arrow.right")
-                .font(.subheadline.weight(.medium))
-                .hidden()
-
-            pageLabelColumn(forAyah: endAyah)
-        }
+    private func pageCaption(forAyah ayah: Int) -> String {
+        pageNumber(forAyah: ayah).map { mushafPageLabel(forAbsolutePage: $0, in: surah) } ?? " "
     }
 
-    private func pageLabelColumn(forAyah ayah: Int) -> some View {
-        Text(pageNumber(forAyah: ayah).map { mushafPageLabel(forAbsolutePage: $0, in: surah) } ?? " ")
-            .font(.caption)
-            .foregroundColor(Color(.tertiaryLabel))
-            .frame(maxWidth: .infinity, alignment: .center)
+    /// "Ayahs 1–12" (or "Ayah 5") for the page at `index` of `pageGroups`.
+    private func ayahSpanCaption(forPageIndex index: Int) -> String {
+        let groups = pageGroups
+        guard groups.indices.contains(index) else { return " " }
+        let group = groups[index]
+        if group.firstAyah == group.lastAyah { return "Ayah \(group.firstAyah)" }
+        return "Ayahs \(group.firstAyah)\u{2013}\(group.lastAyah)"
     }
 
     @ViewBuilder
-    private var pageSelectionSection: some View {
+    private var pageFields: some View {
         let groups = pageGroups
         let fromIdx = fromPageIndex
         let toIdx = toPageIndex
 
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
+        VStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 12) {
                 pageField(
-                    title: "From page",
+                    title: "From Page",
                     pageNumber: groups.indices.contains(fromIdx) ? groups[fromIdx].page : nil,
                     canDecrement: fromIdx > 0,
                     canIncrement: fromIdx < toIdx,
                     onDecrement: { setFromPage(to: fromIdx - 1) },
                     onIncrement: { setFromPage(to: fromIdx + 1) }
                 )
-
-                Image(systemName: "arrow.right")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(Color(.tertiaryLabel))
-
+                arrow
                 pageField(
-                    title: "To page",
+                    title: "To Page",
                     pageNumber: groups.indices.contains(toIdx) ? groups[toIdx].page : nil,
                     canDecrement: toIdx > fromIdx,
                     canIncrement: toIdx < groups.count - 1,
@@ -715,50 +673,70 @@ struct PlayCustomRangeSheet: View {
                 )
             }
 
-            HStack(spacing: 10) {
-                quickActionButton(title: "First page", systemImage: "arrow.left.to.line", enabled: fromIdx > 0) {
-                    setFromPage(to: 0)
-                }
-
-                quickActionButton(title: "Last page", systemImage: "arrow.right.to.line", enabled: toIdx < groups.count - 1) {
-                    setToPage(to: groups.count - 1)
-                }
+            HStack(spacing: 12) {
+                fieldCaption(ayahSpanCaption(forPageIndex: fromIdx))
+                arrow.hidden()
+                fieldCaption(ayahSpanCaption(forPageIndex: toIdx))
             }
+        }
+    }
 
-            quickActionButton(title: "All pages (\(groups.count))", systemImage: "doc.text.fill", prominent: true, enabled: !(fromIdx == 0 && toIdx == groups.count - 1)) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    startAyah = 1
-                    endAyah = maxAyah
-                    startAyahText = "1"
-                    endAyahText = "\(maxAyah)"
+    /// Whole Page(s) + Whole Surah in Ayahs mode, All Pages in Pages mode: the one row of shortcuts
+    /// (the old Start of page / End of page / Go to start / Go to end pairs folded into these).
+    @ViewBuilder
+    private var quickActions: some View {
+        if selectionMode == .pages && hasPageData {
+            let groups = pageGroups
+            chip("All Pages (\(groups.count))", systemImage: "book.closed",
+                 enabled: !(fromPageIndex == 0 && toPageIndex == groups.count - 1)) {
+                selectWholeSurah()
+            }
+        } else {
+            HStack(spacing: 10) {
+                if hasMultiplePages {
+                    chip(pagesInRange > 1 ? "Whole Pages" : "Whole Page", systemImage: "doc.text",
+                         enabled: !(startAtPageStart && endAtPageEnd)) {
+                        commitBothAyahFields()
+                        withAnimation(.easeInOut(duration: 0.2)) { snapRangeToPages() }
+                    }
+                }
+
+                chip("Whole Surah", systemImage: "book.closed",
+                     enabled: !(startAyah == 1 && endAyah == maxAyah)) {
+                    commitBothAyahFields()
+                    selectWholeSurah()
                 }
             }
         }
     }
 
-    private func quickActionButton(title: String, systemImage: String, prominent: Bool = false, enabled: Bool = true, action: @escaping () -> Void) -> some View {
-        // onTapGesture (not Button): these are used in pairs within one List row (e.g. Go to start / Go to
-        // end), and two Buttons in a single row share one tap target. Scoped contentShape keeps them separate.
+    private func chip(_ title: String, systemImage: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        // onTapGesture (not Button): two of these share one List row, and two Buttons in a single row
+        // share one tap target. A scoped contentShape keeps them separate.
         let tint = enabled ? settings.accentColor.color : Color(UIColor.tertiaryLabel)
         return Label(title, systemImage: systemImage)
             .font(.subheadline.weight(.medium))
             .foregroundColor(tint)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, prominent ? 12 : 10)
+            .padding(.vertical, 9)
+            .padding(.horizontal, 10)
             .background(tint.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: prominent ? 16 : 14, style: .continuous))
-            .contentShape(Rectangle())
+            .clipShape(Capsule())
+            .contentShape(Capsule())
             .onTapGesture {
                 guard enabled else { return }
                 settings.hapticFeedback()
                 action()
             }
+            .accessibilityAddTraits(.isButton)
     }
 
     private func pageField(title: String, pageNumber: Int?, canDecrement: Bool, canIncrement: Bool, onDecrement: @escaping () -> Void, onIncrement: @escaping () -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.caption)
+                .font(.caption.weight(.medium))
                 .foregroundColor(.secondary)
             // onTapGesture (not Button) so the two steppers in this single row don't share one tap target.
             HStack(spacing: 0) {
@@ -771,6 +749,7 @@ struct PlayCustomRangeSheet: View {
                         settings.hapticFeedback()
                         onDecrement()
                     }
+                    .accessibilityLabel("Previous page")
 
                 Spacer()
 
@@ -790,9 +769,10 @@ struct PlayCustomRangeSheet: View {
                         settings.hapticFeedback()
                         onIncrement()
                     }
+                    .accessibilityLabel("Next page")
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(Color(UIColor.tertiarySystemFill))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .contentShape(Rectangle())
@@ -801,13 +781,13 @@ struct PlayCustomRangeSheet: View {
     }
 
     private func rangeField(title: String, value: Binding<Int>, text: Binding<String>, isFocused: FocusState<Bool>.Binding, onStep: @escaping (Int) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(.caption)
+                .font(.caption.weight(.medium))
                 .foregroundColor(.secondary)
-            // onTapGesture (not Button): multiple Buttons inside one List/Form row collapse into a single
-            // tap target, so tapping minus could fire plus (and vice-versa) - the "it's touching everything"
-            // bug. A scoped contentShape + onTapGesture per icon keeps each hit area separate.
+            // onTapGesture (not Button): multiple Buttons inside one List row collapse into a single
+            // tap target, so tapping minus could fire plus (and vice-versa). A scoped contentShape +
+            // onTapGesture per icon keeps each hit area separate.
             HStack(spacing: 0) {
                 Image(systemName: "minus.circle.fill")
                     .font(.title2)
@@ -818,6 +798,7 @@ struct PlayCustomRangeSheet: View {
                         settings.hapticFeedback()
                         onStep(-1)
                     }
+                    .accessibilityLabel("Previous ayah")
 
                 Spacer()
 
@@ -840,6 +821,7 @@ struct PlayCustomRangeSheet: View {
                     .onSubmit {
                         commitBothAyahFields()
                     }
+                    .accessibilityLabel("\(title) ayah")
 
                 Spacer()
 
@@ -852,9 +834,10 @@ struct PlayCustomRangeSheet: View {
                         settings.hapticFeedback()
                         onStep(1)
                     }
+                    .accessibilityLabel("Next ayah")
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(Color(UIColor.tertiarySystemFill))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .contentShape(Rectangle())
@@ -862,191 +845,18 @@ struct PlayCustomRangeSheet: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func commitAyahInput(value: Binding<Int>, text: Binding<String>, max: Int, onChange: @escaping (Int) -> Void) {
-        let parsed = Int(text.wrappedValue.trimmingCharacters(in: .whitespaces)) ?? value.wrappedValue
-        let clamped = min(Swift.max(1, parsed), max)
-        value.wrappedValue = clamped
-        text.wrappedValue = "\(clamped)"
-        onChange(clamped)
-    }
+    // MARK: - Repeat rows
 
-    private func commitBothAyahFields() {
-        let s = Int(startAyahText.trimmingCharacters(in: .whitespaces)) ?? startAyah
-        let e = Int(endAyahText.trimmingCharacters(in: .whitespaces)) ?? endAyah
-        
-        // Clamp to 1...maxAyah (handles negatives and out-of-range)
-        let clampedStart = min(Swift.max(1, s), maxAyah)
-        let clampedEnd = min(Swift.max(1, e), maxAyah)
-        
-        // Ensure start <= end (if not, swap to make valid range)
-        let from = min(clampedStart, clampedEnd)
-        let to = Swift.max(clampedStart, clampedEnd)
-        
-        startAyah = from
-        endAyah = to
-        startAyahText = "\(from)"
-        endAyahText = "\(to)"
-        
-        #if canImport(UIKit)
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        #endif
-    }
-
-    /// The bottom preview pane's fixed height. Deliberately NOT geometry-derived: at the sheet's
-    /// half (.medium) detent a GeometryReader is proposed the full-detent size, which is exactly the
-    /// bug that killed the previous layered layout. ~a third of the full-detent sheet.
-    private static let previewPaneHeight: CGFloat = 250
-    /// The pane at the sheet's half (.medium) detent: the first/last ayah and the summary, with the
-    /// From/To rows still on screen above it. At 250 the half-height sheet showed the pane alone.
-    private static let previewPaneHeightAtMedium: CGFloat = 130
-
-    /// An iPad form sheet is a fixed ~620 pt tall whatever detent is asked for, and an iPhone in
-    /// landscape is shorter still: with the 250 pt pane only the From/To rows stayed on screen there
-    /// (iPad pass, 2026-09-06). Those layouts always take the half-detent pane.
-    private var previewPaneHeightForLayout: CGFloat {
-        if UIDevice.current.userInterfaceIdiom != .phone || verticalSizeClass == .compact {
-            return Self.previewPaneHeightAtMedium
-        }
-        return isExpanded ? Self.previewPaneHeight : Self.previewPaneHeightAtMedium
-    }
-
-    /// Every ayah the chosen range will actually play, in playback order - clamped to the active
-    /// qiraah (an ayah absent from the riwayah's text is skipped by playback too).
-    private var rangeAyahs: [Ayah] {
-        surah.ayahs.filter {
-            $0.id >= startAyah && $0.id <= endAyah
-                && $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id)
-        }
-    }
-
-    /// One row of the all-ayahs preview section: the ayah's label (number + mushaf page) over its FULL
-    /// Arabic text - unlike the compact first/last preview, nothing is line-limited here, because this
-    /// section exists to show exactly what will play.
-    private func fullVerseRow(ayah: Ayah) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(ayahPageLabel(ayah.id))
-                .font(.caption2.weight(.medium))
-                .foregroundColor(Color(.tertiaryLabel))
-
-            Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
+    /// "Each Ayah   [− 2× +]": the title on the left, a stepper you can also type into on the right.
+    private func repeatRow(title: String, value: Binding<Int>, text: Binding<String>, isFocused: FocusState<Bool>.Binding) -> some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.body)
                 .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-    }
-
-    /// Compact, read-only preview (the main List's last section): the first & last ayah followed by
-    /// a summary line (count, repeats, total plays). Line-limited (no minimum scale factor) so it
-    /// stays small regardless of ayah length, except for a range of one or two ayahs: those have no
-    /// all-ayahs section under it, so the preview shows them in full.
-    private var arabicVersesPreview: some View {
-        Group {
-            if let first = surah.ayahs.first(where: { $0.id == startAyah }),
-               let last = surah.ayahs.first(where: { $0.id == endAyah }) {
-                VStack(alignment: .leading, spacing: 12) {
-                    versePreviewRow(label: ayahPageLabel(startAyah), ayah: first)
-
-                    if startAyah != endAyah {
-                        versePreviewRow(label: ayahPageLabel(endAyah), ayah: last)
-                    }
-                }
-                
-                previewSummaryHeader
-            }
-        }
-        // One animation keyed on the whole selection, not four stacked modifiers.
-        .animation(.easeInOut, value: [startAyah, endAyah, repeatPerAyah, repeatSection])
-    }
-
-    /// Range count + repeats on the left, a bold "total plays" badge on the right.
-    private var previewSummaryHeader: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                animatedCaption(rangeCountSummary)
-                animatedCaption("Each ayah ×\(repeatPerAyah) · Section ×\(repeatForever ? "\u{221E}" : "\(repeatSection)")")
-            }
 
             Spacer(minLength: 8)
 
-            VStack(spacing: 0) {
-                totalPlaysText
-                    .font(.subheadline.monospacedDigit().weight(.bold))
-                    .foregroundColor(.white)
-                
-                Text("plays")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.9))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(settings.accentColor.color)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-    }
-
-    @ViewBuilder
-    private var totalPlaysText: some View {
-        let label = Text(repeatForever ? "\u{221E}" : "\(totalPlayCount)×")
-        if #available(iOS 16.0, watchOS 9.0, *) {
-            label.contentTransition(.numericText())
-        } else {
-            label
-        }
-    }
-
-    private func versePreviewRow(label: String, ayah: Ayah) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundColor(Color(.tertiaryLabel))
-
-            Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
-                .lineLimit(ayahCount > 2 ? 2 : nil)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
-    }
-
-    private func repeatRow(title: String, value: Binding<Int>, text: Binding<String>, isFocused: FocusState<Bool>.Binding) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-            HStack(spacing: 12) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Self.repeatOptions, id: \.self) { n in
-                            Text("\(n)×")
-                                .font(.subheadline.weight(value.wrappedValue == n ? .semibold : .regular))
-                                .foregroundColor(value.wrappedValue == n ? .white : .primary)
-                                .padding(8)
-                                .background(
-                                    value.wrappedValue == n
-                                        ? settings.accentColor.color
-                                        : Color(UIColor.tertiarySystemFill)
-                                )
-                                .clipShape(Capsule())
-                                .contentShape(Capsule())
-                                .onTapGesture {
-                                    settings.hapticFeedback()
-                                    withAnimation {
-                                        value.wrappedValue = n
-                                        text.wrappedValue = "\(n)"
-                                    }
-                                }
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
-                .frame(maxWidth: .infinity)
-
-                repeatStepper(value: value, text: text, isFocused: isFocused)
-            }
+            repeatStepper(value: value, text: text, isFocused: isFocused)
         }
         .onChange(of: value.wrappedValue) { newValue in
             text.wrappedValue = "\(newValue)"
@@ -1055,9 +865,9 @@ struct PlayCustomRangeSheet: View {
     }
 
     private func repeatStepper(value: Binding<Int>, text: Binding<String>, isFocused: FocusState<Bool>.Binding) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Image(systemName: "minus.circle.fill")
-                .font(.body)
+                .font(.title3)
                 .foregroundStyle(value.wrappedValue > Self.repeatMin ? settings.accentColor.color : Color(UIColor.tertiaryLabel))
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -1065,27 +875,36 @@ struct PlayCustomRangeSheet: View {
                     settings.hapticFeedback()
                     adjustRepeatValue(value, text: text, delta: -1)
                 }
+                .accessibilityLabel("Fewer")
 
-            TextField("", text: text)
-                .font(.subheadline.monospacedDigit().weight(.medium))
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
-                .keyboardType(.numberPad)
-                .frame(width: 32, alignment: .center)
-                .focused(isFocused)
-                .onChange(of: text.wrappedValue) { _ in
-                    syncRepeatTextInput(value: value, text: text, isFocused: isFocused.wrappedValue)
-                }
-                .onChange(of: isFocused.wrappedValue) { newValue in
-                    // When keyboard dismisses (newValue = false), validate
-                    if !newValue {
-                        commitAllRepeatFields()
+            HStack(spacing: 1) {
+                TextField("", text: text)
+                    .font(.body.monospacedDigit().weight(.semibold))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.trailing)
+                    .keyboardType(.numberPad)
+                    .frame(width: 30, alignment: .trailing)
+                    .focused(isFocused)
+                    .onChange(of: text.wrappedValue) { _ in
+                        syncRepeatTextInput(value: value, text: text, isFocused: isFocused.wrappedValue)
                     }
-                }
-                .onSubmit { commitAllRepeatFields() }
+                    .onChange(of: isFocused.wrappedValue) { newValue in
+                        // When keyboard dismisses (newValue = false), validate
+                        if !newValue {
+                            commitAllRepeatFields()
+                        }
+                    }
+                    .onSubmit { commitAllRepeatFields() }
+
+                Text("\u{00D7}")
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(value.wrappedValue) times")
 
             Image(systemName: "plus.circle.fill")
-                .font(.body)
+                .font(.title3)
                 .foregroundStyle(value.wrappedValue < Self.repeatMax ? settings.accentColor.color : Color(UIColor.tertiaryLabel))
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -1093,39 +912,195 @@ struct PlayCustomRangeSheet: View {
                     settings.hapticFeedback()
                     adjustRepeatValue(value, text: text, delta: 1)
                 }
+                .accessibilityLabel("More")
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.vertical, 5)
         .background(Color(UIColor.tertiarySystemFill))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .contentShape(Rectangle())
+        .clipShape(Capsule())
+        .contentShape(Capsule())
     }
 
-    private func commitRepeatInput(value: Binding<Int>, text: Binding<String>) {
-        let parsed = Int(text.wrappedValue.trimmingCharacters(in: .whitespaces)) ?? value.wrappedValue
-        let clamped = min(Swift.max(Self.repeatMin, parsed), Self.repeatMax)
-        value.wrappedValue = clamped
-        text.wrappedValue = "\(clamped)"
-        persistRepeatValues()
+    private var foreverRow: some View {
+        Toggle(isOn: Binding(
+            get: { repeatForever },
+            set: { newValue in
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { repeatForever = newValue }
+            }
+        )) {
+            Label("Repeat Forever", systemImage: "infinity")
+                .font(.body)
+        }
+        .tint(settings.accentColor.color)
     }
 
-    private func commitAllRepeatFields() {
-        commitRepeatInput(value: $repeatPerAyah, text: $repeatPerAyahText)
-        commitRepeatInput(value: $repeatSection, text: $repeatSectionText)
+    // MARK: - Reciter
+
+    private var reciterRow: some View {
+        NavigationLink {
+            LazyDestination {
+                ReciterListView()
+                    .environmentObject(settings)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.wave.2.fill")
+                    .font(.body)
+                    .foregroundStyle(settings.accentColor.color)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedRangeReciterName)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    if selectedRangeReciter?.defaultToMinshawi == true {
+                        Text("Ayahs default to \(Reciter.minshawiAyahFallbackName).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else if let note = selectedRangeReciter?.ayahMurattalStyleNote {
+                        Text("Ayahs play in \(note).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
     }
 
-    private var playButtonBar: some View {
+    // MARK: - Preview
+
+    /// One ayah the range will play: its label (number + mushaf page) over the full Arabic text.
+    private func previewRow(_ ayah: Ayah) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(ayahPageLabel(ayah.id))
+                .font(.caption.weight(.medium))
+                .foregroundColor(.secondary)
+
+            Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
+                .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                .multilineTextAlignment(.trailing)
+                .foregroundColor(.primary)
+                // Its ideal height, never a line: a List row sometimes offered the Quran face one
+                // line and cut a long ayah off with an ellipsis.
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Recent ranges
+
+    /// One range played from this sheet before: its surah and span over how it repeated, and when.
+    /// A tap plays it again exactly as it was and closes the sheet, the one-tap play of the Quran
+    /// tab's Last Listened rows; a swipe (or the context menu) forgets it.
+    private func historyRow(_ item: CustomRangeHistoryItem) -> some View {
+        Button {
+            settings.hapticFeedback()
+            playHistoryItem(item)
+        } label: {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .lineLimit(1)
+
+                    Text(item.caption)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+
+                Spacer(minLength: 8)
+
+                Text(formatCompactHistoryTimestamp(item.timestamp))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Image(systemName: "play.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(settings.accentColor.color)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Play \(item.title), \(item.caption)")
+        .contextMenu {
+            Button(role: .destructive) {
+                rangeHistory.remove(item)
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        }
+    }
+
+    /// Plays a remembered range as it was played: its own surah (not necessarily this sheet's),
+    /// its span clamped to the riwayah's ayah count, its repeats. Through the player directly, as
+    /// the reciter switch above does, since `onPlay` is bound to the sheet's surah.
+    private func playHistoryItem(_ item: CustomRangeHistoryItem) {
+        guard let target = QuranData.shared.quran.first(where: { $0.id == item.surahNumber }) else { return }
+        let maxA = target.numberOfAyahs(for: settings.displayQiraahForArabic)
+        let start = min(Swift.max(1, item.startAyah), maxA)
+        let end = min(Swift.max(start, item.endAyah), maxA)
+        rangeHistory.record(surahNumber: target.id, surahName: target.nameTransliteration,
+                            startAyah: start, endAyah: end,
+                            repeatPerAyah: item.repeatPerAyah, repeatSection: item.repeatSection)
+        QuranPlayer.shared.playCustomRange(
+            surahNumber: target.id,
+            surahName: target.nameTransliteration,
+            startAyah: start,
+            endAyah: end,
+            repeatPerAyah: item.repeatPerAyah,
+            repeatSection: item.repeatSection
+        )
+        onCancel()
+    }
+
+    // MARK: - Play bar
+
+    @ViewBuilder
+    private func animatedSummary(_ text: String) -> some View {
+        let label = Text(text)
+            .font(.subheadline.monospacedDigit())
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+
+        if #available(iOS 16.0, *) {
+            label.contentTransition(.numericText())
+        } else {
+            label
+        }
+    }
+
+    private var playBar: some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+            animatedSummary(playSummary)
+                .animation(.easeInOut, value: [startAyah, endAyah, repeatPerAyah, repeatSection, repeatForever ? 1 : 0])
+
             Button {
                 settings.hapticFeedback()
                 commitBothAyahFields()
                 commitAllRepeatFields()
-                onPlay(startAyah, endAyah, repeatPerAyah, repeatForever ? QuranPlayer.infiniteRepeat : repeatSection)
+                let section = repeatForever ? QuranPlayer.infiniteRepeat : repeatSection
+                rangeHistory.record(surahNumber: surah.id, surahName: surah.nameTransliteration,
+                                    startAyah: startAyah, endAyah: endAyah,
+                                    repeatPerAyah: repeatPerAyah, repeatSection: section)
+                onPlay(startAyah, endAyah, repeatPerAyah, section)
                 onCancel()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "play.fill")
-                    Text("Play range")
+                    Text("Play Range")
                         .fontWeight(.semibold)
                 }
                 .frame(maxWidth: .infinity)
@@ -1140,42 +1115,12 @@ struct PlayCustomRangeSheet: View {
                 .contentShape(Rectangle())
             }
             .disabled(!canPlay)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            // The reading theme's ground, not the system one: on Sepia the bar was a white band.
-            .background(appearance.themeBackground ?? Color(UIColor.systemGroupedBackground))
         }
-    }
-}
-
-/// The range sheet's own detents: full height FIRST (the layered layout needs it - at the half height the
-/// 250 pt preview pane left the range controls no room at all), the half height a drag away, with the
-/// pane shrinking there. The standard `smallMediumSheetPresentation()` opens at the half height, so the
-/// hosts that present this sheet leave it off and let this one speak. iPad keeps the full-size sheet.
-private struct CustomRangeSheetPresentation: ViewModifier {
-    @Binding var isExpanded: Bool
-
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) {
-            if UIDevice.current.userInterfaceIdiom == .phone {
-                content
-                    .presentationDetents(
-                        [.medium, .large],
-                        selection: Binding(
-                            get: { isExpanded ? .large : .medium },
-                            set: { isExpanded = $0 == .large }
-                        )
-                    )
-                    .presentationDragIndicator(.visible)
-            } else {
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.hidden)
-            }
-        } else {
-            content
-        }
+        .padding(.horizontal, 24)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        // The reading theme's ground, not the system one: on Sepia the bar was a white band.
+        .background(appearance.themeBackground ?? Color(UIColor.systemGroupedBackground))
     }
 }
 
@@ -1192,6 +1137,105 @@ private struct CustomRangeSheetPresentation: ViewModifier {
             onPlay: { _, _, _, _ in },
             onCancel: {}
         )
+    }
+}
+
+// MARK: - Range history
+
+/// One range played from the sheet (Abu, 2026-10-20: "add custom range history"): what to play
+/// again with one tap, and how it repeated.
+struct CustomRangeHistoryItem: Identifiable, Codable, Equatable {
+    var id = UUID()
+    let surahNumber: Int
+    let surahName: String
+    let startAyah: Int
+    let endAyah: Int
+    let repeatPerAyah: Int
+    /// `QuranPlayer.infiniteRepeat` when the whole range repeated forever.
+    let repeatSection: Int
+    var timestamp: Date = Date()
+
+    /// "Al-Kahf 1-6" (an en dash), or "Al-Kahf 3" for a range of one.
+    var title: String {
+        startAyah == endAyah ? "\(surahName) \(startAyah)" : "\(surahName) \(startAyah)\u{2013}\(endAyah)"
+    }
+
+    /// "6 ayahs · Each ×2 · Range ×3", "6 ayahs · Forever", or "6 ayahs · Once".
+    var caption: String {
+        let count = Swift.max(1, endAyah - startAyah + 1)
+        var parts = ["\(count) ayah\(count == 1 ? "" : "s")"]
+        if repeatPerAyah > 1 { parts.append("Each \u{00D7}\(repeatPerAyah)") }
+        if repeatSection == QuranPlayer.infiniteRepeat {
+            parts.append("Forever")
+        } else if repeatSection > 1 {
+            parts.append("Range \u{00D7}\(repeatSection)")
+        }
+        if parts.count == 1 { parts.append("Once") }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    /// The same range played the same way, whenever it was played.
+    func matches(_ other: CustomRangeHistoryItem) -> Bool {
+        surahNumber == other.surahNumber && startAyah == other.startAyah && endAyah == other.endAyah
+            && repeatPerAyah == other.repeatPerAyah && repeatSection == other.repeatSection
+    }
+}
+
+/// The ranges played from the sheet, newest first, capped at ten: playing a range again moves it to
+/// the top with a fresh time. Persisted like the Quran tab's histories (`Settings.encoder` under a
+/// content key, so a keep-content reset spares it and the iCloud backup carries it), and reread
+/// after a restore through `StoredContentObserver`.
+@MainActor
+final class CustomRangeHistoryStore: ObservableObject {
+    static let shared = CustomRangeHistoryStore()
+    static let storageKey = "customRangeHistoryData"
+    private static let cap = 10
+
+    @Published private(set) var items: [CustomRangeHistoryItem] = []
+    private var storageObserver: StoredContentObserver?
+
+    private init() {
+        ObjectPublishCounter.attach(self, label: "CustomRangeHistoryStore")
+        items = Self.load()
+        storageObserver = StoredContentObserver(reload: { [weak self] in
+            self?.items = Self.load()
+        })
+    }
+
+    func record(surahNumber: Int, surahName: String, startAyah: Int, endAyah: Int, repeatPerAyah: Int, repeatSection: Int) {
+        let item = CustomRangeHistoryItem(surahNumber: surahNumber, surahName: surahName,
+                                          startAyah: startAyah, endAyah: endAyah,
+                                          repeatPerAyah: Swift.max(1, repeatPerAyah),
+                                          repeatSection: Swift.max(1, repeatSection))
+        var updated = items.filter { !$0.matches(item) }
+        updated.insert(item, at: 0)
+        items = Array(updated.prefix(Self.cap))
+        persist()
+    }
+
+    func remove(_ item: CustomRangeHistoryItem) {
+        items.removeAll { $0.id == item.id }
+        persist()
+    }
+
+    func remove(atOffsets offsets: IndexSet) {
+        items.remove(atOffsets: offsets)
+        persist()
+    }
+
+    private static func load() -> [CustomRangeHistoryItem] {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let decoded = UserDataRescue.decodeList(CustomRangeHistoryItem.self, from: data, key: storageKey,
+                                                      decoder: Settings.decoder) else { return [] }
+        return Array(decoded.prefix(cap))
+    }
+
+    private func persist() {
+        if items.isEmpty {
+            UserDefaults.standard.removeObject(forKey: Self.storageKey)
+        } else if let data = try? Settings.encoder.encode(items) {
+            UserDefaults.standard.set(data, forKey: Self.storageKey)
+        }
     }
 }
 #endif

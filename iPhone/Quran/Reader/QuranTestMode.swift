@@ -290,6 +290,24 @@ struct QuranTestModeMenuSection: View {
     }
 }
 
+/// A play menu's Test Mode rows with the divider that sets them off, behind Simple Mode's `playTestMode`
+/// trim: hidden while Test Mode is off, kept while it is on (rule 2 of Docs/Product/Simple Mode Guide.md),
+/// so the switch that turns it off and Hide All Again stay in reach. The divider goes with the rows, so
+/// the menu never shows two in a row. It observes the store itself, as `QuranTestModeMenuSection` does:
+/// the page reader and the playing bar do not, and a host reading `isOn` would keep the rows hidden after
+/// Test Mode was turned on in Settings. `settings` is the host's, which observes it.
+struct QuranTestModeMenuGate<Content: View>: View {
+    let settings: Settings
+    @ViewBuilder let content: () -> Content
+    @ObservedObject private var testMode = QuranTestMode.shared
+
+    var body: some View {
+        if !settings.hides(.playTestMode, unless: testMode.isOn) {
+            content()
+        }
+    }
+}
+
 /// `QuranTestModeBadge` while Test Mode is on, observing the store itself for the same reason as
 /// `QuranTestModeMenuSection`. Nudged out to the button's corner.
 struct QuranTestModeBadgeSlot: View {

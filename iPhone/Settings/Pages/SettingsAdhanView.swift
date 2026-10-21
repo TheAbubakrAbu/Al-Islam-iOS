@@ -691,6 +691,24 @@ struct SettingsAdhanView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
             #endif
+
+            // The only door to full prayers for a Simple traveler: Simple hides the prayer list's travel
+            // footer, which held the View Full / View Qasr button. Same key the footer writes.
+            #if os(iOS)
+            if settings.travelingMode {
+                VStack(alignment: .leading) {
+                    Toggle("Show Full Prayers", isOn: $settings.travelingShowFullPrayers.animation(.easeInOut))
+                        .font(.subheadline)
+                        .tint(settings.accentColor.color)
+
+                    Text("Every prayer at its full time while traveling, instead of the shortened and combined Qasr list. You may still shorten and combine.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
+            }
+            #endif
         }
     }
 
@@ -2000,9 +2018,10 @@ extension SettingsSearchEntry {
 
     static let adhanEntries: [SettingsSearchEntry] = weatherEntries + [
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
-        .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings),
+        .init(title: "Need a Hand? on the Adhan Tab", path: "Prayer Settings", keywords: "need a hand help shortcuts questions show hide adhan tab need help praying traveling sky nagging", destination: .prayerSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Prayer Times Layout", path: "Prayer Settings", keywords: "tiles grid list split layout columns prayer times view display", destination: .prayerSettings),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .prayerPage(.travelingMode)),
+        .init(title: "Show Full Prayers", path: "Prayer Settings → Traveling Mode", keywords: "full prayers qasr shorten combine traveling travel", destination: .prayerPage(.travelingMode)),
         .init(title: "Optional Prayer Times", path: "Prayer Settings → Optional Prayers", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerPage(.optionalPrayers)),
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),

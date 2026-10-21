@@ -261,7 +261,7 @@ struct SettingsHadithView: View {
 extension SettingsSearchEntry {
     static let hadithEntries: [SettingsSearchEntry] = [
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
-        .init(title: "Need a Hand? on the Hadith Tab", path: "Hadith Settings", keywords: "need a hand help shortcuts questions show hide hadith tab one language arabic english allah red", destination: .hadithSettings),
+        .init(title: "Need a Hand? on the Hadith Tab", path: "Hadith Settings", keywords: "need a hand help shortcuts questions show hide hadith tab one language arabic english allah red", destination: .hadithSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Show Hadith Arabic", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic text toggle display", destination: .hadithPage(.arabicText)),
         .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system", destination: .hadithPage(.arabicText)),
         .init(title: "Show Hadith English", path: "Hadith Settings → English Text", keywords: "hadith english translation narrator toggle display", destination: .hadithPage(.englishText)),

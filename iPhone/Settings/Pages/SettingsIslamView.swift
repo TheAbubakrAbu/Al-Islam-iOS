@@ -547,7 +547,7 @@ extension View {
 extension SettingsSearchEntry {
     static let islamEntries: [SettingsSearchEntry] = [
         .init(title: "Islam Settings", path: "Al-Islam", keywords: "islam arabic font dua dhikr names alphabet libraries sunnah reminders", destination: .islamSettings),
-        .init(title: "Need a Hand? on the Islam Tab", path: "Islam Settings", keywords: "need a hand help shortcuts questions show hide islam tab getting started text size fajr day begin", destination: .islamSettings),
+        .init(title: "Need a Hand? on the Islam Tab", path: "Islam Settings", keywords: "need a hand help shortcuts questions show hide islam tab getting started text size fajr day begin", destination: .islamSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Highlight Allah (Islam)", path: "Islam Settings → Arabic Text", keywords: "highlight allah name red color dua dhikr adhkar tasbih articles islam", destination: .islamPage(.arabicText)),
         .init(title: "Text Size (Islam)", path: "Islam Settings → Text Size", keywords: "text size font bigger smaller larger dynamic type articles guides duas islam reading", destination: .islamPage(.textSize)),
         .init(title: "Arabic Font (Islam)", path: "Islam Settings → Arabic Text", keywords: "arabic font face uthmani indopak hijazi kufi basic dua dhikr adhkar names alphabet islam", destination: .islamPage(.arabicText)),

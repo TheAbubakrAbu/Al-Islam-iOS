@@ -36,113 +36,74 @@ One rule kept it that small: "a control that is the only way to reach something 
 
 **Since 2026-10-11 the ⋯ menu is every tab's leading button in BOTH modes** (Abu: "there are some things that I like that should always be there. for example always have the top left button just be a more button that contains grid and everything else"). `TabMoreMenu` (was `SimpleMoreMenu`) leads the Adhan, Quran, Hadith, Islam and Settings roots; the gear keeps its trailing slot on every tab and reader. What a tab's toolbar used to show as separate buttons is an item of its menu now, in both modes: the grid or list switch on every tab, the Quran tab's reading mode and Planner, the Adhan tab's Prayer and Hijri calendars and the prayer list's layout (a Prayer Times Layout submenu naming the layout in use, with TILES / GRID / LIST / SPLIT inside it; the PRAYER TIMES header no longer carries it). The doors Simple Mode takes off the screen (Today, History, Topics, ...) are items of the menu in both modes too. The Quran and Hadith summaries' door chips (Word of the Day, Browse by Theme, History; Topics, Encyclopedia, History) are gone in both modes since later that day (Abu: "put these top left no matter simple or normal and remove it from summary"): the menu is their only door now, and the Today pill is the one door left on the summary header in Full. Items keep the exact behaviour of the controls they replace (the reading-mode switch still asks to confirm). Order: places to open, a divider, then view choices. A pushed screen (a hadith book) keeps its own trailing buttons: its leading slot is Back.
 
-Before 2026-10-11: the menu showed in Simple only, and Full Mode kept the individual toolbar buttons. The tables below say "More menu" for both.
+Before 2026-10-11: the menu showed in Simple only, and Full Mode kept the individual toolbar buttons. The generated catalog and the "What stays" list below say "More menu" for both.
 
 ## Per screen
 
-Each table lists what Simple hides and where its function lives while hidden. Anything not listed stays as it is.
+Since Simple Mode v2 (2026-10-20) the table of what Simple hides is generated from the catalog, `iPhone/Settings/Model/SimpleTrims.swift`: one row per trim, with its surface, its title and where its function lives while hidden. Never edit between the markers; run `python3 Scripts/check_simple_trims.py --write-guide`, and the plain run fails when the block is stale. The seven hand-written tables of the first build (2026-10-10/11) were stale copies of it and are gone; what they said about what STAYS is kept below.
 
-### Quran tab (QuranView.swift)
+<!-- simple-trims:begin -->
+| Case | Surface | Hidden in Simple | Door |
+| --- | --- | --- | --- |
+| needAHand | everywhere | NEED A HAND? on every tab | Settings › each card's setting is a row on its own settings page |
+| sectionCounts | everywhere | Count pills and capsules on section headers and rows | Dropped |
+| sectionSearch | everywhere | The search glyph on BOOKMARKS and FAVORITES headers | Search's Bookmarks and Favorites filters |
+| sectionShuffles | everywhere | Shuffle buttons on section headers | Dropped |
+| outlineStar | everywhere | The outline star on a tile that is not a favorite | Press and hold › Favorite |
+| historyExpanders | everywhere | The +/− history buttons on YOUR SUMMARY | Dropped |
+| heroStats | everywhere | The figures on a resource's hero card | Dropped |
+| quickSearchHelp | everywhere | Quick Search Help's examples on the Quran and Hadith tabs | Tips & Tricks; the recent-search chips stay |
+| optionalTimes | adhan | The Optional Times pill | Settings › Prayer Settings › Optional Prayers |
+| dateStepper | adhan | The Showing prayers for date stepper, with Compare Today | ⋯ menu › Prayer Calendar |
+| atAGlance | adhan | AT A GLANCE | The date row, the location pill, the sky's moon and the city pill; the figures are dropped |
+| prayerTracker | adhan | PRAYER TRACKER until a prayer is marked within 14 days | Settings › Prayer Settings › Prayer Tracker; marking a prayer from its detail brings it back |
+| travelFooter | adhan | The travel footer under the prayer list | The traveling banner, which opens Travel Settings |
+| calendarFootStepper | adhan | The Hijri Calendar's second year stepper | The stepper at the top of IMPORTANT ISLAMIC DATES |
+| quranTodayPill | quran | The Today pill on the Quran tab's YOUR SUMMARY | ⋯ menu › Today |
+| lastListenedTiles | quran | The Last Listened Ayah and Surah tiles | The play menu's Play Last Listened Surah |
+| wordOfDayTile | quran | The Word of the Day tile | ⋯ menu › Word of the Day |
+| surahShuffle | quran | The SURAHS shuffle | ⋯ menu › Open a Random Surah |
+| sortRow | quran | The sort row, while the sort is surah ascending | ⋯ menu › Sort |
+| topSurahPair | listReader | The top Previous/Next surah pair | The bottom pair |
+| ayahPlayMenu | listReader | The ▶ menu on each ayah | The ayah ⋯ menu's Play This Ayah; More Actions… for the rest |
+| ayahLongMenu | listReader | The long ayah ⋯ menu | Five actions plus More Actions…, which opens the full actions sheet |
+| translationCaption | listReader | The default translation's name under the translation | Dropped |
+| pageJuzLine | listReader | The pinned page/juz line | The inline page and juz dividers |
+| globalSearch | listReader | The Global button in the controls row | The Quran tab's search |
+| legendPill | listReader | The Legend pill while nothing on the page is coloured (both readers) | Settings › Quran Settings › Arabic Text for tajweed, Highlight Themes for themes |
+| mushafMeters | pageReader | The footer's meters, percentages and progress bar | Dropped |
+| findWholeQuran | pageReader | Search the whole Quran in the find bar | The Quran tab's search |
+| playRandomAyah | playback | Play Random Ayah in the Quran tab's play menu | Dropped |
+| playOtherOptions | playback | Other Options in the readers' play menus | Play Custom Range is the play button's hold; repeats live in that sheet; the random picks are dropped |
+| playTestMode | playback | Test Mode in the readers' play menus, while Test Mode is off | Settings › Quran Settings › Test Mode |
+| hadithTodayPill | hadith | The Today pill on the Hadith tab's YOUR SUMMARY | ⋯ menu › Today |
+| bookStats | hadith | A book's stats and era lines on the tab | The book's own screen |
+| chapterStats | hadithBook | The CHAPTERS header's pills, each chapter's count and range | The reading screen's chapter header |
+| topChapterPair | hadithReader | The top Previous/Next chapter pair | The bottom pair |
+| foldedGroups | islam | TOOLS, SIGNS & PROOFS and ASK AI | The More Resources row |
+| prophetQuote | islam | The Prophet Muhammad ﷺ quote card | Dropped |
+| appsSection | islam | AL-ISLAMIC APPS | Settings › the Settings tab's copy |
+| cardTodayPills | islam | The Today pills on the Reminder of the Day and Dua of the Day cards | ⋯ menu › Today |
+| dailyHubShuffles | destinations | The shuffle circles on the Ayah and Hadith of the Day | Dropped |
+| spotlightCards | settings | The ONLY IN AL-ISLAM spotlight cards | The All Tips & Tricks row |
+| pageTipsRows | settings | The Tips & Tricks row on each settings page | Settings › All Tips & Tricks |
+| pageHelpDoors | settings | NEED A HAND? on the settings pages | Dropped: the tab sections it controls are hidden too |
+<!-- simple-trims:end -->
 
-| Hidden in Simple | Where it lives |
-|---|---|
-| Reading-mode button (`book`), Quran Planner button, Grid/List toggle | More menu (in both modes since 2026-10-11) |
-| Door chips: Word of the Day, Browse by Theme, History, Qiraat Explorer | More menu, in both modes since 2026-10-11 (the chips are gone from Full too; Qiraat Explorer only while `showOtherQiraatReciters`, as now) |
-| The Today pill on YOUR SUMMARY | More menu |
-| Last Listened Ayah, Last Listened Surah and Word of the Day tiles | the play menu's Play Last Listened Surah; Word of the Day in More |
-| +/− history buttons on the summary tiles | dropped (rule 3) |
-| NEED A HAND? | Settings (each card's target already lives there) |
-| SURAHS count pill and shuffle | the shuffle becomes More › Open a Random Surah |
-| Outline star on every surah grid tile (a favorite keeps its filled star) | long-press › Favorite Surah |
-| Count, search and shuffle on the BOOKMARKS and FAVORITES headers | dropped; the sections and their collapse arrows stay; bookmarks are searchable through search's Bookmarks filter |
-| Sort row | unchanged: hidden only while the sort is surah, ascending |
+### What stays
 
-Stays: the Last Read Ayah and Ayah of the Day tiles, bookmarks, favorites, the surah grid, search, play.
+- **Quran tab:** the Last Read Ayah and Ayah of the Day tiles, bookmarks, favorites, the surah grid, search, play. The ⋯ menu holds Today, History, Browse by Theme, Word of the Day, Qiraat Explorer, Quran Planner (Hafs only, as now), Open a Random Surah; a divider; Read as Pages or Read as List; Show as Grid or Show as List (and, since v2, a Sort submenu).
+- **List reader:** the Legend and the riwayah picker under their existing rules, the Bismillah row, the surah card, search, play. The 2026-09-05 parity rule ("every ayah menu offers the same actions in the same order") is suspended for the ⋯ button in Simple only; long-press still opens the full sheet everywhere, the Quran tab's ayah context menu is untouched, and Full Mode keeps strict parity. "Clear Quran (Mustafa Khattab)" always keeps its name, being the off-default choice (rule 2).
+- **Page reader:** the top strip, the controls row, search, play, the fold chevron, and the footer pill's "Page 42" and "Juz 3" jump buttons. Since 2026-10-11 the Simple pill is 44 pt tall instead of 62 (`footerHeight`), and the Play button beside it shrinks with it; flipping the mode is one band change the page refits for once.
+- **Adhan tab:** the toolbar (calendar, gear), the date, location and Qibla card, the sky with its countdown and moon, the prayer tiles with their bells and tracker dots, every prayer's detail, the Rakaah Guide pill, the traveling banner. The tracker gate must be cheap, because the tab re-renders on every countdown tick: read it from the tracker's day-keyed marks (at most 14 lookups) or the cached stats, never a history walk in a body.
+- **Hadith tab:** Hadith of the Day, Last Read, bookmarks, favorites, every book, About Hadith & the Sunnah, search with its filters, every hadith's grade line. The ⋯ menu holds Today, Topics, Encyclopedia, History; a divider; Show as Grid or Show as List.
+- **Islam tab:** in Simple it is one ISLAMIC RESOURCES section (grouping by subject is the user's `islamGroupResources` choice, which Simple does not touch) with Start Here (when it applies), Favorites, the More Resources row and Reminder of the Day. The first build's guide described LEARN, REMEMBRANCE and FAITH & PRACTICE as three Simple sections; the app shows one. The toolbar is the same in both modes: the leading ⋯ menu (Today, then the grid toggle) and the gear. The iPad and Mac sidebar keeps every section (as built 2026-10-10): its detail column cannot host the More Resources screen, whose tiles push onto the iPhone stack's path, and a sidebar is a list of places anyway. The quote card and AL-ISLAMIC APPS step aside there too.
+- **Settings tab:** the settings pages themselves. For everyone, the SIMPLE MODE section sits directly under the SETTINGS hub, so the way back out is easy to find, and since 2026-10-11 the tab's grid toggle is the one item of a leading ⋯ menu in both modes. Per-screen Advanced switches still do their own job (see rule 9).
+- **Section headers** (`SectionPillHeader`, `SurahsHeader`): the collapse arrow stays, and so does the trash on a folded help section.
 
-More menu: Today, History, Browse by Theme, Word of the Day, Qiraat Explorer, Quran Planner (Hafs only, as now), Open a Random Surah; divider; Read as Pages or Read as List; Show as Grid or Show as List.
+### Rule 9 (v2): Simple acts once
 
-### List reader (SurahView.swift, AyahRow.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| Top Previous/Next surah pair | the bottom pair (both slots always render) |
-| The ▶ `play.circle` menu on each ayah | the ⋯ menu's Play This Ayah; More Actions… for the rest |
-| The long ⋯ menu (13 items, 35 actions, 5 submenus) | ⋯ shows Play This Ayah (Hafs only), Bookmark or Remove Bookmark, See Tafsir, Copy Ayah, Share Ayah, a divider, More Actions… (opens the long-press actions sheet, `requestSheet(.actions)`) |
-| "Saheeh International" caption under the translation | dropped while it is the only translation on screen; "Clear Quran (Mustafa Khattab)" always keeps its name, being the off-default choice (rule 2) |
-| Pinned page/juz line ("Page 42 (41/48) • Juz 3") | the inline page and juz dividers, which stay |
-| Global search button in the controls row | the Quran tab's own search |
-
-The 2026-09-05 parity rule ("every ayah menu offers the same actions in the same order") is suspended for the ⋯ button in Simple only. Long-press still opens the full sheet everywhere, the Quran tab's ayah context menu is untouched, and Full Mode keeps strict parity.
-
-Stays: the Legend and the riwayah picker under their existing rules, the Bismillah row, the surah card, search, play.
-
-### Page reader (MushafReader.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| The footer pill's Surah n/N and Juz n/N meters, its percentages and the whole-mushaf progress bar | dropped; the pill keeps "Page 42" and "Juz 3" as its two jump buttons |
-
-Since 2026-10-11 the Simple pill is 44 pt tall instead of 62 (`footerHeight`), and the Play button beside it, a square of the same height, shrinks with it (Abu: "make the height of the button and the page/juz thing smaller"). Flipping the mode is one band change the page refits for once.
-
-Everything else stays: the top strip, the controls row, search, play, the fold chevron.
-
-### Adhan tab (AdhanView.swift, PrayerList.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| Layout picker (TILES / GRID / LIST / SPLIT) on PRAYER TIMES | since 2026-10-11 the header carries no picker in either mode: the tab's More menu holds it (an inline picker under the two calendars), and Settings › Prayer Settings' Prayer Times Layout row (built 2026-10-10) stays; same `prayerDisplayModeV2` key |
-| Optional Times pill | Settings › Prayer Settings › Optional Prayers (exists) |
-| "Showing prayers for" date stepper, with Compare Today | the Prayer Calendar (toolbar); Compare Today dropped (rule 3) |
-| AT A GLANCE (12 tiles) | each destination keeps another door: the calendar button, the Qibla compass, the city pill, the sky's moon; the figures are dropped (rule 3) |
-| PRAYER TRACKER section | shown once any prayer has been marked in the last 14 days; marking one from a prayer's detail (tap its tile) brings it back; its History & Insights page is a Prayer Tracker row in Settings › Prayer Settings (both modes) |
-| NEED A HAND? | Settings |
-| Travel footer under the prayer list | the traveling banner at the top, which stays |
-
-Stays: the toolbar (calendar, gear), the date, location and Qibla card, the sky with its countdown and moon, the prayer tiles with their bells and tracker dots, every prayer's detail as it is today, the Rakaah Guide pill, the traveling banner.
-
-The tracker gate must be cheap: the tab re-renders on every countdown tick. Read it from the tracker's day-keyed marks (at most 14 lookups) or the cached stats, never a history walk in a body.
-
-### Hadith tab (HadithView.swift, HadithBookView.swift, HadithComponents.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| Grid/List toggle | More menu (in both modes since 2026-10-11) |
-| Door chips Topics, Encyclopedia and History; the Today pill | More menu (the chips are gone from Full too since 2026-10-11; the Today pill stays on the header in Full) |
-| The +/− history toggle on YOUR SUMMARY | dropped (rule 3) |
-| NEED A HAND? | Settings |
-| Count and shuffle on every catalog header, BOOKMARKS and FAVORITES | dropped (rule 3) |
-| A book tile's stats line ("N • 97 Ch • 7,277 Ha") and era line; a list row's stat chips and era | the book's own screen (its hero card) |
-| Book screen: the CHAPTERS header's stat pills; each chapter row's count pill and "Hadiths a–b" range | the reading screen's chapter header |
-| Reading screen: the top Previous/Next chapter pair | the bottom pair |
-
-Stays: Hadith of the Day, Last Read, bookmarks, favorites, every book, About Hadith & the Sunnah, search with its filters, every hadith's grade line.
-
-More menu: Today, Topics, Encyclopedia, History; divider; Show as Grid or Show as List.
-
-### Islam tab (IslamView.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| The TOOLS, SIGNS & PROOFS and ASK AI sections | one More Resources row after the last shown section, pushing a screen that lists those sections in the tab's grid or list form; search still finds every resource |
-| The star on every tile (a favorite keeps its filled star) | the tile's long-press menu (`GridTileMenu`) |
-| Section count pills | dropped (rule 3) |
-| The Prophet Muhammad ﷺ quote card | dropped (rule 3); Reminder of the Day stays as the tab's daily card |
-| NEED A HAND? | Settings |
-| AL-ISLAMIC APPS | the Settings tab's copy, which stays |
-
-Shown in Simple: Start Here (when it applies), Favorites, LEARN, REMEMBRANCE, FAITH & PRACTICE, More Resources, Reminder of the Day. The toolbar is the same in both modes: since 2026-10-11 the leading ⋯ More menu (holding the grid toggle) and the gear. The iPad and Mac sidebar keeps every section (as built 2026-10-10): its detail column cannot host the More Resources screen, whose tiles push onto the iPhone stack's path, and a sidebar is a list of places anyway. The quote card and AL-ISLAMIC APPS step aside there too.
-
-### Settings tab (SettingsView.swift)
-
-| Hidden in Simple | Where it lives |
-|---|---|
-| The ONLY IN AL-ISLAM spotlight cards (12) | the section keeps its All Tips & Tricks row |
-
-For everyone: the SIMPLE MODE section moves up to sit directly under the SETTINGS hub, so the way back out is easy to find. Since 2026-10-11 the tab's grid toggle is the one item of a leading ⋯ More menu, in both modes (it was a trailing button). The settings pages are not touched by Simple Mode; their per-screen Advanced switches already do that job.
-
-### Section headers (`SectionPillHeader`, ViewExtensions.swift)
-
-In Simple the header drops its count pill, its search button and its shuffle; one change covers the Quran, Hadith and Islam tabs. The collapse arrow stays, and so does the new trash. `SurahsHeader` lays its cluster out by hand and needs the same treatment.
+Turning Simple Mode on turns every settings screen's Show Advanced Settings switch off, once, on the off-to-on edge (`Settings.foldAllAdvancedSettings()`, called from `simpleMode`'s `didSet`). It is the single place Simple does something other than hide, and the Simple Mode page says so. Turning Simple off restores nothing (rule 5: no memory, no key), and each screen's ADVANCED switch is one flip away in both modes; search's reveal still turns the switches on while Simple is on.
 
 ## Help surfaces: trash when collapsed (everyone)
 
@@ -204,8 +165,12 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 - **One switch**, read directly at each site (`settings.simpleMode`). Two alternatives were rejected:
   - per-element switches, which rebuild the clutter as settings
   - separate simple copies of each tab, which means two copies of 6,000-line views that drift apart
-- **A new file**, `iPhone/Helpers/UI/SimpleMode.swift`, iOS-only.
-  - It holds the More menu's shared label and helpers, plus a catalog comment listing every trim and its door (this guide's tables, kept beside the code).
+- **The catalog (v2)**, `iPhone/Settings/Model/SimpleTrims.swift`, compiled into every target that builds `Settings` (iPhone, Watch, Widget, Complication) so no site needs `#if os(iOS)` just to name a trim. It holds `SimpleTrim` (43 cases), `SimpleTrim.Surface`, `Door` and `Entry` (one `Entry(` line per case, which the script parses), `Settings.hides` and `hiddenInSimple`, and `enum SimpleMode` (the tracker window, the nag snooze).
+  - **Two idioms read a trim.** `settings.hides(.atAGlance)` (with `unless:` for a rule-2 site) on a view that already observes `Settings`; and the `.hiddenInSimple(.needAHand)` modifier for pure-hide sites and the watch-shared helpers (`SectionPillHeader`, `GridFavoriteStar`, `CountPill`), which owns its `@AppStorage("simpleMode")` so it redraws on the flip without observing every setting. Menu trims are cases read with `hides(...)` inside the menu builder. Nothing outside the script's allow-list reads the raw flag.
+  - **`Scripts/check_simple_trims.py`** fails on a case no site reads, a raw read of the flag outside the allow-list, and a missing or stale guide block; `--list` prints every trim with its readers, and `--write-guide` regenerates the table above.
+  - **The Simple Mode page** (`SimpleModeSettingsView`) is the live catalog: the switch, one section per surface, then the rule-9 and never-hidden sentences. The root's SIMPLE MODE section has a What Moves Where row that pushes it.
+- **A file for the kit**, `iPhone/Helpers/UI/SimpleMode.swift`, iOS-only.
+  - It holds the More menu's shared label and helpers, and the rules comment; the catalog of trims lives in `SimpleTrims.swift`.
   - QuranView also compiles into the Watch target, so every reference from it to this file sits inside `#if os(iOS)`. `simpleMode` itself is declared outside the iOS-only blocks, so `SectionPillHeader` can read it on the watch.
   - Register the file by hand in project.pbxproj, iPhone target only. Object IDs are 22 or 24 hex characters.
   - The siblings will need the file at the next sync; the sync report lists new files.
@@ -240,6 +205,7 @@ New: while the authorization status is `.notDetermined`, the request waits for t
   - each trash path sets its key
 - **Full UnitTests run** at the end. The CarPlay tests fail only in the full run from order pollution; rerun those isolated before blaming a change.
 - `Scripts/check_cloud_manifest.py` passes.
+- **v2:** `Scripts/check_simple_trims.py` exits 0 (every trim read, no raw read, the guide block current), and `SimpleTrimCatalogTests` and `SimpleModeTests` are green.
 - **iPad and Mac:** one Simple screenshot of each split tab.
 
 ## Noticed, not in scope
@@ -264,6 +230,26 @@ New: while the authorization status is `.notDetermined`, the request waits for t
 | 9 | The verification sweep and the memory update | done 2026-10-10/11 |
 
 Each phase ends with a Debug build and its screens' Simple and Full screenshots. Phase 7 does not depend on Simple Mode and can ship on its own.
+
+### v2 (2026-10-20)
+
+Design: `Docs/Product/Simple Mode v2 Design.md`.
+
+| Task | What | Status |
+|---|---|---|
+| 1 | The catalog file and its tests | done 2026-10-20 |
+| 2 | The usage and raw-read script | done 2026-10-20 |
+| 3 | The shared helpers (counts, headers, stars, help doors, tips) | done 2026-10-20 |
+| 4 | The hand-built counts and the hero figures | done 2026-10-20 |
+| 5 | Adhan, and the Show Full Prayers gap fix | done 2026-10-20 |
+| 6 | Quran tab root, Quick Search Help, the Sort submenu | done 2026-10-20 |
+| 7 | The readers and the play menus | done 2026-10-20 |
+| 8 | Hadith | done 2026-10-20 |
+| 9 | The Islam tab, the card pills, the Daily Hub, Today in the Islam menu | done 2026-10-20 |
+| 10 | The settings pages and rule 9 (the Advanced fold) | done 2026-10-20 |
+| 11 | The Simple Mode page | done 2026-10-20 |
+| 12 | Docs, comments and the generated table | done 2026-10-20 |
+| 13 | The verification sweep | open |
 
 ## Progress log
 
@@ -378,3 +364,27 @@ Each phase ends with a Debug build and its screens' Simple and Full screenshots.
     - Landscape drops its page/juz line too.
     - The divider rows keep feeding the last-read anchor in Simple (rule 1).
   - **Declined:** moving `SimpleMoreMenu`'s tint to `@Environment(\.appearance)`, because it sits in a toolbar, where environment objects have not always arrived in this app.
+- **2026-10-20, v2 Task 1, the catalog file and its tests.** `SimpleTrims.swift` holds `SimpleTrim` (43 cases), `Settings.hides`, `hiddenInSimple` and `enum SimpleMode` (moved from SettingsAdhan.swift); `SimpleTrimCatalogTests` pins its shape.
+- **2026-10-20, v2 Task 2, the usage and raw-read script.** `Scripts/check_simple_trims.py` has `--list`, `--write-guide` and the no-flag check (unread cases, raw reads outside the allow-list, missing or stale guide block); until the migration lands it exits 1 on purpose.
+- **2026-10-20, v2 Task 3, the shared helpers.** `CountPill` hides itself (`sectionCounts`), `SectionPillHeader` and `GridFavoriteStar` lost their own `@AppStorage` for `hiddenInSimple` (`sectionSearch`, `sectionShuffles`, `outlineStar`), both Quran headers use the modifier (`surahShuffle`), and HelpDoors and Tips read `needAHand`, `pageHelpDoors` and `spotlightCards`.
+- **2026-10-20, v2 Task 4, the hand-built counts and the hero figures.** Every hand-drawn count (Dua collections and shelves, Quran themes and topics, Miracles rows, Hadith lane headers, Journal chips, Tajweed letter sets, the Daily reflections count) wraps in `hiddenInSimple(.sectionCounts)` and keeps its Full look; `ResourceHeroStats` hides under `heroStats`.
+
+- **2026-10-20, Simple Mode v2 Task 5, Adhan.** The six raw reads in AdhanView and PrayerList now name `.prayerTracker`, `.atAGlance`, `.travelFooter`, `.dateStepper`, `.optionalTimes` (truth tables unchanged). The Hijri Calendar's foot year stepper is `.hiddenInSimple(.calendarFootStepper)`. Gap fix: Traveling Mode settings page gains a "Show Full Prayers" toggle (the existing `travelingShowFullPrayers` key) in both modes while traveling mode is on, with a Settings search entry and `-settingsOpen travelingMode`.
+
+- **2026-10-20, Simple Mode v2 Task 6, Quran tab root and Quick Search Help.** The raw reads in QuranView now name `.sortRow` (kept while the sort is off default), `.lastListenedTiles`, `.wordOfDayTile`, `.historyExpanders`, `.quranTodayPill` and `.playRandomAyah` (truth tables unchanged). Quick Search Help in Simple (Quran and Hadith) draws only the recent-search chips, with no card when there are none, and neither reads nor writes the stored fold and removal flags. New: a "Sort" submenu in the Quran ⋯ menu in both modes (the row's mode buttons plus Surah/Asc/Desc, current ticked), covered by `testQuranMoreMenuHasSort`.
+
+- **2026-10-20, Simple Mode v2 Task 7, the readers and the play menus.** The raw reads in SurahView, AyahRow, TajweedLegendView and MushafReader now name `.topSurahPair`, `.pageJuzLine`, `.globalSearch`, `.legendPill` (kept while tajweed or a theme colours the page), `.ayahPlayMenu`, `.ayahLongMenu`, `.translationCaption` (kept beside a second translation) and `.mushafMeters` (truth tables unchanged). New in Simple: the page reader's find bar drops "Search the whole Quran" (`.findWholeQuran`); the list and page play menus drop Other Options (`.playOtherOptions`); and the Test Mode rows in the list, page and playing-bar menus hide with their divider while Test Mode is off (`.playTestMode`, through `QuranTestModeMenuGate` in QuranTestMode.swift, which observes the store because the page reader and the playing bar do not).
+
+- **2026-10-20, Simple Mode v2 Task 8, Hadith.** The twelve raw reads in HadithView and HadithBookView now name `.hadithTodayPill`, `.historyExpanders`, `.bookStats`, `.chapterStats` and `.topChapterPair` (truth tables unchanged; no row type there is Equatable, so no signature change).
+
+- **2026-10-20, Simple Mode v2 Task 9, the Islam tab, the card pills and the Daily Hub.** The five raw reads in IslamView now name `.foldedGroups` (three, truth tables unchanged), `.prophetQuote` and `.appsSection`; the Today pills on the Reminder of the Day header and the Dua of the Day card hide in Simple (`.cardTodayPills`), as do the Ayah and Hadith shuffle circles in the Daily Hub (`.dailyHubShuffles`). New in both modes: a "Today" item first in the Islam ⋯ menu (guarded by `islamPath.isEmpty`), which pushes the Daily Hub through `reminderDoor`, covered by `testIslamMoreMenuHasToday`.
+
+- **2026-10-20, Simple Mode v2 Task 10, the settings pages and the Advanced fold.** Rule 9: `simpleMode`'s `didSet` calls the new `Settings.foldAllAdvancedSettings()` on the off-to-on edge only, so turning Simple Mode on turns every screen's Show Advanced Settings switch off once; turning it off restores nothing, and search's `revealAllAdvancedSettings()` still works while Simple is on. `AdvancedSettingsSection`'s caption reads the new `simpleModeFoldsAdvanced` (SimpleTrims.swift) and, while the switch is off in Simple, says "Simple Mode turned this off; turn it on to see every option here." On the settings pages the Tips & Tricks row hides (`.pageTipsRows`) and so does NEED A HAND? (`.pageHelpDoors`; its caption's Simple sentence could no longer show and is gone). New tests `testTurningSimpleOnFoldsAdvancedSwitches` and `testRevealAfterFoldStays`; the flip test allows the `advancedSettings_` keys, and `SimpleTrimCatalogTests` puts back the switches its flip folds.
+
+- **2026-10-20, Simple Mode v2 Task 11, the Simple Mode page.** `SimpleModeSettingsView` is now the live catalog: the SIMPLE MODE switch (`SimpleModeSection(showsCatalogRow: false)`), then one section per surface from `SimpleTrim.grouped` (43 rows under 12 headers, each trim's title over its door), then one caption with the rule-9 and never-hidden sentences. The root's SIMPLE MODE section has the two short captions and a "What Moves Where" row (`list.bullet.rectangle`) that pushes the page from the list and grid roots; the iPad/Mac split root selects the new `SettingsDestination.simpleMode`, which fills the detail column. Covered by `testSimpleModePageListsTheCatalog` (both modes, every header and the footer, the row on both phone roots).
+
+- **2026-10-20, Simple Mode v2 Task 12, docs, comments and the generated table.** The guide's seven per-screen tables are the generated catalog block (`--write-guide`, 43 rows) plus a "What stays" list and the rule-9 paragraph; the Islam wording says one ISLAMIC RESOURCES section; Architecture, Verification and Build order carry v2. `SimpleMode.swift`'s catalog comment points at `SimpleTrims.swift`; "eleven screens" is "nine" at its three sites; `simpleModeDetail` names What Moves Where. The Simple Mode page's own caption says "the list below says where everything went" (`SimpleModeSection` reads `showsCatalogRow`). `SettingsSearchEntry` gained an `isAvailable` closure (`rank` honours it), so the four "Need a Hand? on the ... Tab" entries leave search while Simple hides their section (`testNeedAHandEntriesLeaveSearchInSimple`). Two MushafReader find-bar comments now say the whole-Quran button is Full Mode only.
+
+- **2026-10-20, Simple Mode v2 Task 13, the verification sweep.** Shot Simple and Full on iPhone 17 Pro for 30 surfaces (Adhan while traveling, Quran root, list reader, page reader, Now Playing, Hadith root, book, reader, Topics, Islam root top and lower, commonDuas, commonAdhkar, namesOfAllah, arabicAlphabet, miraclesOfQuran, journal, Settings root, the seven `-settingsOpen` pages) and viewed every side-by-side pair: every trim in the catalog that was in frame hid in Simple and stayed in Full, with no gap, clipped label or doubled divider. The live flip was verified for the Hadith book and Common Duas (no counts, stars, chips or Today pill after turning Simple on from Settings); the "Too Much on Screen?" door was not reached by the UI test. Out of frame (verified by code in the per-task reports): the Tips and NEED A HAND? feet of the Settings pages, the Hijri Calendar foot stepper, the Islam tab's NEED A HAND? section. UnitTests: 372 run, 1 failure (`TipsCatalogTests.testPerAppWordingReadsAsBeforeInAlIslam`, the `app.simple` tip detail gained a sentence). SimpleModeUITests: 24 of 26 on the first run; `testHadithBookAndChapterInSimple` passed on rerun (flaky), `testAyahPlaybackTapAndHold` fails twice (it waits for a "Custom Ayah Range" bar and the sheet's title is now "Custom Range"). Left for Abu: those two test expectations, the door flip by hand, and the device checks.
+
+- **2026-10-20, Simple Mode v2 final fix wave.** The review's doubt about the Settings switch reaching rule 9 was settled by test, not argument: `testSimpleModeSwitchFoldsAdvanced` (UI) taps the root's Simple Mode switch after seeding Libraries' Show Advanced Settings on and finds it off on relaunch (the seed alone leaves it on), and `testObservedBindingsRunTheDidSets` (unit) drives `$settings.simpleMode` and `$settings.travelingShowFullPrayers` through an `ObservedObject` binding and sees both `didSet`s run, so both toggles keep their bindings. The ADVANCED caption now keeps its "Also here, with this on" list (or "Shows every option this screen has.") and adds the rule-9 sentence after it. `.elsewhere` doors start with a capital on the Simple Mode page and in the generated table; the check script's section allowance also closes on access-modified or `class` declarations. The two stale test strings (the `app.simple` tip, the "Custom Range" sheet title) are current. `testAyahPlaybackDoubleTapStartsPlayback` failed three times in this wave (the double tap starts the stream, the reader shows the loading spinner past 10 s, no Now Playing bar); no code this wave touched is on that path.

@@ -527,6 +527,12 @@ extension SettingsSearchEntry {
         #endif
     }
 
+    /// The index minus entries that are unavailable right now (the Need a Hand? entries in Simple). The
+    /// semantic matches and Ask AI's settings lane read this, since they bypass `rank`.
+    static func available() -> [SettingsSearchEntry] {
+        all.filter { $0.isAvailable() }
+    }
+
     static func entries(in scope: SettingsSearchScope) -> [SettingsSearchEntry] {
         all.filter { $0.destination.scope == scope }
     }
@@ -561,6 +567,7 @@ extension SettingsSearchEntry {
         let terms = query.split(separator: " ").map(String.init)
 
         let scored: [(entry: SettingsSearchEntry, score: Int, order: Int)] = entries.enumerated().compactMap { order, entry in
+            guard entry.isAvailable() else { return nil }
             let (title, path, keywords) = folded(entry)
             var score = 0
             for term in terms {

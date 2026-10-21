@@ -508,7 +508,7 @@ struct HelpDoorsSection: View {
         // Settings (Docs/Product/Simple Mode Guide.md), so the section steps aside on all four tabs at once.
         // Not while one of its sheets is up: "Too Much on Screen?" turns Simple Mode on from inside its
         // own sheet, and removing the section would take the sheet's presenter with it mid-tap.
-        if settings.showsHelpDoors(area), !settings.simpleMode || openDoor != nil {
+        if settings.showsHelpDoors(area), !settings.hides(.needAHand, unless: openDoor != nil) {
             let listed = HelpDoorCatalog.doors(for: area, settings: settings)
             let doors = keepingOpenDoor(listed)
             if !doors.isEmpty {
@@ -911,8 +911,7 @@ struct HelpDoorsSettingsSection: View {
                     Toggle("Show on the \(area.tabName) Tab", isOn: shown.animation(.easeInOut))
                         .font(.subheadline)
 
-                    Text("A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away."
-                         + (settings.simpleMode ? " Simple Mode keeps them off every tab while it is on." : ""))
+                    Text("A few questions \(area.placement), each opening the setting that answers it. The arrow beside NEED A HAND? on the tab folds them away.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -955,6 +954,9 @@ struct HelpDoorsSettingsSection: View {
                 }
             }
         }
+        // Simple Mode keeps NEED A HAND? off every tab and draws Quick Search Help without its stored
+        // flags, so neither switch here would change anything on screen: the whole section steps aside.
+        .hiddenInSimple(.pageHelpDoors)
     }
 }
 #endif

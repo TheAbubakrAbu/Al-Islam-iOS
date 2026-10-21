@@ -386,13 +386,16 @@ struct HadithView: View {
     /// empty. Deliberately terse.
     @ViewBuilder
     private var searchHelpOverlay: some View {
-        // With the help removed the card is only the recent searches, so with none there is no card.
+        // Simple Mode draws only the recent-search chips (the stored fold and removal flags are not
+        // read on that path); with the help removed the card is only the recents too. With none, no card.
+        let examplesHidden = settings.hides(.quickSearchHelp)
         if isHadithSearchFocused, searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-           !hadithSearchHelpRemoved || !settings.hadithSearchHistory.isEmpty {
+           examplesHidden ? !settings.hadithSearchHistory.isEmpty
+                          : (!hadithSearchHelpRemoved || !settings.hadithSearchHistory.isEmpty) {
             VStack(alignment: .leading, spacing: 10) {
                 // The Quran card's grammar: the help folds behind a -/+, the recent chips stay at
                 // the bottom, nearest the field. Folded, a trash removes the help for good.
-                if !hadithSearchHelpRemoved {
+                if !examplesHidden, !hadithSearchHelpRemoved {
                 HStack(spacing: 8) {
                     Text("Quick Search Help")
                         .font(.subheadline.bold())
@@ -1067,14 +1070,14 @@ struct HadithView: View {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
                 // Simple Mode keeps the tiles alone: Today moves into the More menu, and the history
                 // expander steps aside (Docs/Product/Simple Mode Guide.md).
-                if !settings.simpleMode {
+                if !settings.hides(.hadithTodayPill) {
                     NavigationLink(destination: LazyDestination { DailyHubView() }) {
                         DailyHubDoorLabel()
                     }
                     .buttonStyle(.plain)
                 }
 
-                if !dailyHistory.isEmpty, !settings.simpleMode {
+                if !dailyHistory.isEmpty, !settings.hides(.historyExpanders) {
                     Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
                         .padding(4)
                         .conditionalGlassEffect()
@@ -1142,7 +1145,7 @@ struct HadithView: View {
                 .padding(.vertical, 4)
             }
 
-            if showDailyHistory, !settings.simpleMode {
+            if showDailyHistory, !settings.hides(.historyExpanders) {
                 ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
                     dailyHistoryRow(entry, isToday: index == 0)
                         .opacity(index == 0 ? 1 : 0.75)
@@ -2603,7 +2606,7 @@ struct HadithView: View {
                 // (size) chip any more: every book ships in the app, so its download weight is not a
                 // fact the reader has to decide anything with.
                 // Simple Mode leaves the counts and the era to the book's own screen.
-                if !settings.simpleMode {
+                if !settings.hides(.bookStats) {
                     HStack(spacing: 4) {
                         if let counts = store.counts(for: book) {
                             statChip("\(counts.chapters) Ch")
@@ -2671,7 +2674,7 @@ struct HadithView: View {
 
                 // Simple Mode leaves the number, the counts and the era to the book's own screen, and
                 // the tile shrinks to what it still holds.
-                if !settings.simpleMode {
+                if !settings.hides(.bookStats) {
                     HStack(spacing: 4) {
                         Text("\(book.number)")
                             .font(.caption2.monospacedDigit().weight(.bold))
@@ -2691,7 +2694,7 @@ struct HadithView: View {
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             // A fixed height so every tile in the grid lines up regardless of how its titles wrap.
-            .frame(height: settings.simpleMode ? 72 : 100)
+            .frame(height: settings.hides(.bookStats) ? 72 : 100)
             .padding(.vertical, 4)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())

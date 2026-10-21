@@ -556,6 +556,7 @@ struct DuaView: View {
                                     .padding(.horizontal, 9)
                                     .padding(.vertical, 4)
                                     .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
+                                    .hiddenInSimple(.sectionCounts)
                             }
                             .padding(.vertical, 3)
                         }
@@ -608,6 +609,7 @@ struct DuaView: View {
                             .padding(.vertical, 6)
                             .conditionalGlassEffect()
                             .padding(.vertical, -16)
+                            .hiddenInSimple(.sectionCounts)
                     }
                 }
 
@@ -1555,6 +1557,7 @@ struct HisnDuaLibraryView: View {
                                             .padding(.horizontal, 9)
                                             .padding(.vertical, 4)
                                             .background(Capsule().fill(accent.opacity(0.12)))
+                                            .hiddenInSimple(.sectionCounts)
                                     }
                                 }
                             }
@@ -1605,6 +1608,7 @@ struct HisnDuaLibraryView: View {
                                     Text("\(category.count)")
                                         .font(.caption2.weight(.semibold).monospacedDigit())
                                         .foregroundStyle(.secondary)
+                                        .hiddenInSimple(.sectionCounts)
                                 }
                             }
                         }
@@ -1710,6 +1714,7 @@ struct HisnDuaOfTheDayCard: View {
                     DailyHubDoorLabel()
                 }
                 .buttonStyle(.borderless)
+                .hiddenInSimple(.cardTodayPills)
             }
             .font(.caption2.weight(.bold))
             .foregroundColor(settings.accentColor.color)

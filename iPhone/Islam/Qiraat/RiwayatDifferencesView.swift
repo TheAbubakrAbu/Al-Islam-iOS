@@ -21,8 +21,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("ONE SKELETON, DIFFERENT MARKS")) {
-                    Text(verbatim: "The Companions wrote the mushaf without dots or vowel signs, and that one consonantal skeleton, the rasm (رَسم), carries every canonical reading. The marks came after them: the vowel dots attributed to Abu al-Aswad ad-Du’ali (d. 69 AH), the dots that tell one letter from another, and later the signs of al-Khalil ibn Ahmad (d. 170 AH) that became today’s harakat. A mushaf printed for a riwayah adds the marks its pronunciation needs, in the conventions of the lands that recite it, which is why two correct mushafs can look different on the same line.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "The Companions wrote the mushaf without dots or vowel signs, and that one consonantal skeleton, the rasm (رَسم), carries every canonical reading. The marks came after them: the vowel dots attributed to Abu al-Aswad ad-Du’ali (d. 69 AH), the dots that tell one letter from another, and later the signs of al-Khalil ibn Ahmad (d. 170 AH) that became today’s harakat. A mushaf printed for a riwayah adds the marks its pronunciation needs, in the conventions of the lands that recite it, which is why two correct mushafs can look different on the same line.")
 
                     ArticleStatGrid([
                         ArticleStat("20", "riwayat, each with its own printed mushaf"),
@@ -30,15 +29,13 @@ struct RiwayatDifferencesView: View {
                         ArticleStat("1", "Uthmanic skeleton under all of them"),
                     ])
 
-                    Text(verbatim: "Below are the differences you will actually see when you switch the Quran tab to another riwayah: the hamzah, the dot that stands in for it, hamzat al-wasl, the dots under letters, the small waw after a meem, and the madd sign. Where the readings differ in a word or a vowel, the Qiraat Explorer in The 10 Qiraat walks through every place, ayah by ayah.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Below are the differences you will actually see when you switch the Quran tab to another riwayah: the hamzah, the dot that stands in for it, hamzat al-wasl, the dots under letters, the small waw after a meem, and the madd sign. Where the readings differ in a word or a vowel, the Qiraat Explorer in The 10 Qiraat walks through every place, ayah by ayah.")
 
                     ArticleDoorRow(door: .article("QiraatView"))
                 }
 
                 Section(header: ArticleHeader("THE HAMZAH: PRONOUNCED, EASED, OR DROPPED")) {
-                    Text(verbatim: "The hamzah, the catch in the throat written ء, is where the readings differ most often. Arabic itself was divided on it: the people of the Hijaz tended to soften it and the tribes of Najd to pronounce it fully. The canonical readings preserve both, each applying its own rule every time it meets one.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "The hamzah, the catch in the throat written ء, is where the readings differ most often. Arabic itself was divided on it: the people of the Hijaz tended to soften it and the tribes of Najd to pronounce it fully. The canonical readings preserve both, each applying its own rule every time it meets one.")
 
                     RiwayahSpellingCard(title: "Quran 2:3 (2:2 outside the Kufan count): “they believe”", [
                         RiwayahSpelling("Hafs, Shu’bah, Qalun, ad-Duri, al-Bazzi, Qunbul", arabic: "يُؤۡمِنُونَ", note: "The hamzah pronounced: yu’minūn"),
@@ -66,8 +63,7 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("Warsh", arabic: "قَدَ اَفۡلَحَ", note: "The hamzah’s vowel moves onto the dal and the hamzah drops (naql): qadaflaḥa"),
                     ])
 
-                    Text(verbatim: "How many hamzah signs each text carries (every ء, أ, إ, ؤ, ئ and seated hamzah):")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "How many hamzah signs each text carries (every ء, أ, إ, ؤ, ئ and seated hamzah):")
 
                     ArticleStatGrid([
                         ArticleStat("19,170", "Hafs"),
@@ -76,16 +72,13 @@ struct RiwayatDifferencesView: View {
                         ArticleStat("14,546", "Warsh"),
                     ])
 
-                    Text(verbatim: "Qalun sits within 127 of Hafs. As-Susi writes about 1,300 fewer, Ibn Wardan and Ibn Jammaz, who share Abu Ja’far’s rule, about 1,500 fewer, and Warsh about 4,600 fewer, the most of any riwayah.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Qalun sits within 127 of Hafs. As-Susi writes about 1,300 fewer, Ibn Wardan and Ibn Jammaz, who share Abu Ja’far’s rule, about 1,500 fewer, and Warsh about 4,600 fewer, the most of any riwayah.")
                 }
 
                 Section(header: ArticleHeader("WHERE A DOT STANDS FOR THE HAMZAH")) {
-                    Text(verbatim: "An eased hamzah is pronounced between a hamzah and the long vowel it leans towards, and the mushafs of the readings that ease it do not draw a hamzah there at all: a small dot takes its place. That is the dot on the second alef in Qalun’s and ad-Duri’s spelling of 2:6 above, and in al-Bazzi’s.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "An eased hamzah is pronounced between a hamzah and the long vowel it leans towards, and the mushafs of the readings that ease it do not draw a hamzah there at all: a small dot takes its place. That is the dot on the second alef in Qalun’s and ad-Duri’s spelling of 2:6 above, and in al-Bazzi’s.")
 
-                    Text(verbatim: "Hafs eases a hamzah only once in the whole Quran, and his mushaf marks it the same way:")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Hafs eases a hamzah only once in the whole Quran, and his mushaf marks it the same way:")
 
                     RiwayahSpellingCard(title: "Quran 41:44: “a foreign one?”", [
                         RiwayahSpelling("Hafs", arabic: "ءَا۬عۡجَمِيّٞ", note: "The second hamzah eased, drawn as a dot"),
@@ -93,16 +86,14 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("HAMZAT AL-WASL: ٱ OR A DOT")) {
-                    Text(verbatim: "Hamzat al-wasl is the alef that is sounded only when you begin with it and passes silently when you join, like the “al-” of ٱلۡحَمۡدُ. The mushafs write it in two ways.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Hamzat al-wasl is the alef that is sounded only when you begin with it and passes silently when you join, like the “al-” of ٱلۡحَمۡدُ. The mushafs write it in two ways.")
 
                     RiwayahSpellingCard(title: "Quran 1:2 (1:1 in the Madinan and Basran counts): “all praise”", [
                         RiwayahSpelling("Hafs, Shu’bah, al-Bazzi, Qunbul, Hisham, Ibn Dhakwan, and the narrators of Hamzah, al-Kisa’i and Khalaf", arabic: "ٱلۡحَمۡدُ", note: "ٱ: a small head of the letter ṣad over the alef, the sign of joining"),
                         RiwayahSpelling("Qalun, Warsh, Ibn Wardan, Ibn Jammaz, ad-Duri, as-Susi, Ruways, Rawh", arabic: "اِ۬لۡحَمۡدُ", note: "A dot on the alef, set where the vowel of the join falls: the Madani hamzat al-wasl"),
                     ])
 
-                    Text(verbatim: "In the second way the dot’s position carries the vowel that the joining takes from the word before: over the alef after a fatha, under it after a kasra, and beside it after a damma. Each Madani and Basri text in this app carries about ten thousand of these dots; Hafs’s carries 13,483 of the ٱ.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "In the second way the dot’s position carries the vowel that the joining takes from the word before: over the alef after a fatha, under it after a kasra, and beside it after a damma. Each Madani and Basri text in this app carries about ten thousand of these dots; Hafs’s carries 13,483 of the ٱ.")
 
                     RiwayahSpellingCard(title: "The dot follows the vowel before it (Qalun)", [
                         RiwayahSpelling("After a fatha, 1:7", arabic: "صِرَٰطَ اَ۬لذِينَ", note: "The dot over the alef"),
@@ -110,13 +101,11 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("After a damma, 2:5", arabic: "هُمُ اُ۬لۡمُفۡلِحُونَ", note: "The dot beside the alef"),
                     ])
 
-                    Text(verbatim: "The ٱ is the sign of the eastern system of marks that most printed mushafs follow today. The dot belongs to the dot-based way of marking kept for centuries in the mushafs of North and West Africa and of the Sudan, the lands where Warsh, Qalun and ad-Duri are recited.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "The ٱ is the sign of the eastern system of marks that most printed mushafs follow today. The dot belongs to the dot-based way of marking kept for centuries in the mushafs of North and West Africa and of the Sudan, the lands where Warsh, Qalun and ad-Duri are recited.")
                 }
 
                 Section(header: ArticleHeader("DOTS UNDER THE LETTERS: IMALAH AND TAQLIL")) {
-                    Text(verbatim: "Imalah tilts a fatha towards a kasra, so that the long a of مُوسَىٰ leans towards an e. The mushafs show it with a mark under the letter where the fatha would be: a filled dot for the full tilt (imalah kubra, the great tilt) and a hollow ring for the half tilt between the two (taqlil, also called bayna bayn).")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Imalah tilts a fatha towards a kasra, so that the long a of مُوسَىٰ leans towards an e. The mushafs show it with a mark under the letter where the fatha would be: a filled dot for the full tilt (imalah kubra, the great tilt) and a hollow ring for the half tilt between the two (taqlil, also called bayna bayn).")
 
                     RiwayahSpellingCard(title: "Quran 2:7 (2:6 outside the Kufan count): “their sight”", [
                         RiwayahSpelling("Hafs and most readings", arabic: "أَبۡصَٰرِهِمۡ", note: "No tilt: abṣārihim"),
@@ -135,8 +124,7 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("Warsh", arabic: "رَم۪ىٰ", note: "A hollow ring: taqlil"),
                     ])
 
-                    Text(verbatim: "Hafs tilts a vowel once in the whole Quran, in مَجۡر۪ىٰهَا (11:41). The other readings run from a handful of tilts to nearly two thousand:")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Hafs tilts a vowel once in the whole Quran, in مَجۡر۪ىٰهَا (11:41). The other readings run from a handful of tilts to nearly two thousand:")
 
                     RiwayahBarChart(title: "Imalah and taqlil marks in each text", [
                         RiwayahBar("ad-Duri (al-Kisa’i)", filled: 1956, hollow: 0),
@@ -163,8 +151,7 @@ struct RiwayatDifferencesView: View {
                 }
 
                 Section(header: ArticleHeader("THE SMALL WAW AFTER A MEEM: SILAH")) {
-                    Text(verbatim: "Ibn Kathir’s and Abu Ja’far’s readings join the meem of the plural (-hum, -kum) to a long ū whenever a letter follows it, and their mushafs write that with a small waw:")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Ibn Kathir’s and Abu Ja’far’s readings join the meem of the plural (-hum, -kum) to a long ū whenever a letter follows it, and their mushafs write that with a small waw:")
 
                     RiwayahSpellingCard(title: "Quran 1:7: “on them”", [
                         RiwayahSpelling("Hafs and most readings", arabic: "عَلَيۡهِمۡ", note: "ʿalayhim"),
@@ -172,13 +159,11 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("Hamzah’s narrators, and Ya’qub’s", arabic: "عَلَيۡهُمۡ", note: "ʿalayhum: the ha read with a damma"),
                     ])
 
-                    Text(verbatim: "Warsh joins the meem only when a hamzah follows, as in his spelling of 2:6 above. Qalun may join it or not, both being transmitted from him, and his printed mushaf writes it without the waw. In the app’s texts the small waw appears 8,037 times in al-Bazzi’s, 7,493 in Ibn Wardan’s, 2,142 in Warsh’s, and about 1,250 times in every other, where it marks mostly the joined pronoun of بِهِۦ that all the readings share.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Warsh joins the meem only when a hamzah follows, as in his spelling of 2:6 above. Qalun may join it or not, both being transmitted from him, and his printed mushaf writes it without the waw. In the app’s texts the small waw appears 8,037 times in al-Bazzi’s, 7,493 in Ibn Wardan’s, 2,142 in Warsh’s, and about 1,250 times in every other, where it marks mostly the joined pronoun of بِهِۦ that all the readings share.")
                 }
 
                 Section(header: ArticleHeader("THE MADD SIGN")) {
-                    Text(verbatim: "A long vowel before a hamzah is stretched. When the long vowel ends one word and the hamzah begins the next (al-madd al-munfasil), the readings divide: some stretch it and some keep it short (qasr), and the printed mushafs show which by drawing the madd sign ٓ or leaving it out.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "A long vowel before a hamzah is stretched. When the long vowel ends one word and the hamzah begins the next (al-madd al-munfasil), the readings divide: some stretch it and some keep it short (qasr), and the printed mushafs show which by drawing the madd sign ٓ or leaving it out.")
 
                     RiwayahSpellingCard(title: "Quran 2:4 (2:3 outside the Kufan count): “in what was revealed”", [
                         RiwayahSpelling("Hafs, Warsh", arabic: "بِمَآ أُنزِلَ", note: "Stretched, with the madd sign"),
@@ -212,37 +197,27 @@ struct RiwayatDifferencesView: View {
                         RiwayahSpelling("Qalun, Warsh and the others", arabic: "مَلِكِ", note: "Maliki: the King"),
                     ])
 
-                    Text(verbatim: "Ayah numbers shift too, because each riwayah’s mushaf follows one of the schools of counting ayahs. The words are the same; only where an ayah ends differs. Hafs’s mushaf follows the Kufan count of 6,236 ayahs, Warsh’s and Qalun’s the later Madinan count of 6,214, al-Bazzi’s and Qunbul’s the Makkan count of 6,220, and Hisham’s and Ibn Dhakwan’s the Syrian count of 6,226.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Ayah numbers shift too, because each riwayah’s mushaf follows one of the schools of counting ayahs. The words are the same; only where an ayah ends differs. Hafs’s mushaf follows the Kufan count of 6,236 ayahs, Warsh’s and Qalun’s the later Madinan count of 6,214, al-Bazzi’s and Qunbul’s the Makkan count of 6,220, and Hisham’s and Ibn Dhakwan’s the Syrian count of 6,226.")
                 }
 
                 Section(header: ArticleHeader("EVERY RIWAYAH AT A GLANCE")) {
-                    Text(verbatim: "The twenty, in the classical order of their imams, with what each one’s mushaf shows. Tap one to read about its narrator.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "The twenty, in the classical order of their imams, with what each one’s mushaf shows. Tap one to read about its narrator.")
 
                     RiwayahTraitsTable()
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    Text(articleMarkdown: "**Is a mushaf without the hamzah missing something?**")
-                        .font(.body)
-                    Text(verbatim: "No. The rasm of the word is the same. A riwayah that eases or drops a hamzah is pronouncing the word as it was taught from the Prophet (peace and blessings be upon him), and its mushaf writes down what is pronounced. Each of the twenty is the complete Quran.")
-                        .font(.body)
+                    ArticleParagraph(articleMarkdown: "**Is a mushaf without the hamzah missing something?**")
+                    ArticleParagraph(verbatim: "No. The rasm of the word is the same. A riwayah that eases or drops a hamzah is pronouncing the word as it was taught from the Prophet (peace and blessings be upon him), and its mushaf writes down what is pronounced. Each of the twenty is the complete Quran.")
 
-                    Text(articleMarkdown: "**Why does Hafs’s mushaf look like the “normal” one?**")
-                        .font(.body)
-                    Text(verbatim: "Because most printed mushafs today are Hafs, set in the eastern system of marks. The Madani dot for hamzat al-wasl is not a modern invention: it belongs to the dot-based way of marking that the mushafs of North and West Africa have kept for centuries.")
-                        .font(.body)
+                    ArticleParagraph(articleMarkdown: "**Why does Hafs’s mushaf look like the “normal” one?**")
+                    ArticleParagraph(verbatim: "Because most printed mushafs today are Hafs, set in the eastern system of marks. The Madani dot for hamzat al-wasl is not a modern invention: it belongs to the dot-based way of marking that the mushafs of North and West Africa have kept for centuries.")
 
-                    Text(articleMarkdown: "**Can I recite Hafs from a Warsh mushaf?**")
-                        .font(.body)
-                    Text(verbatim: "Not reliably. The marks tell the reader what to pronounce, and a Warsh mushaf marks Warsh’s pronunciation: its hamzahs, its tilts, its madd. Recite each riwayah from its own mushaf, or with a teacher who has an ijazah in it.")
-                        .font(.body)
+                    ArticleParagraph(articleMarkdown: "**Can I recite Hafs from a Warsh mushaf?**")
+                    ArticleParagraph(verbatim: "Not reliably. The marks tell the reader what to pronounce, and a Warsh mushaf marks Warsh’s pronunciation: its hamzahs, its tilts, its madd. Recite each riwayah from its own mushaf, or with a teacher who has an ijazah in it.")
 
-                    Text(articleMarkdown: "**Are the counts on this page exact?**")
-                        .font(.body)
-                    Text(verbatim: "They are exact counts of the app’s own texts. Eight of the twenty (Hafs, Shu’bah, Warsh, Qalun, al-Bazzi, Qunbul, ad-Duri and as-Susi) are verified digital texts; the other twelve are beta texts read by machine from their printed mushafs, so their counts are close but not guaranteed to the last mark.")
-                        .font(.body)
+                    ArticleParagraph(articleMarkdown: "**Are the counts on this page exact?**")
+                    ArticleParagraph(verbatim: "They are exact counts of the app’s own texts. Eight of the twenty (Hafs, Shu’bah, Warsh, Qalun, al-Bazzi, Qunbul, ad-Duri and as-Susi) are verified digital texts; the other twelve are beta texts read by machine from their printed mushafs, so their counts are close but not guaranteed to the last mark.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {

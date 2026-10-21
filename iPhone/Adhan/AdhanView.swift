@@ -172,7 +172,7 @@ struct AdhanView: View {
     /// `SimpleMode.trackerWindowDays` (Docs/Product/Simple Mode Guide.md). Marking one from a prayer's detail
     /// brings it back. At most fourteen lookups into the cached tracker, so the countdown tick can ask.
     private var showsTracker: Bool {
-        !settings.simpleMode || settings.trackerMarkedRecently()
+        !settings.hides(.prayerTracker, unless: settings.trackerMarkedRecently())
     }
 
     #if os(iOS)
@@ -273,7 +273,7 @@ struct AdhanView: View {
 
                 // Simple Mode leaves the glance wall out: each tile is a shortcut to a door the tab
                 // already has (the calendar button, the compass, the city pill, the sky's moon).
-                if !settings.simpleMode {
+                if !settings.hides(.atAGlance) {
                     Section(header: SectionIconHeader("AT A GLANCE", icon: "rectangle.grid.2x2.fill")) {
                         GlanceCard(onSelect: handleGlance)
                     }

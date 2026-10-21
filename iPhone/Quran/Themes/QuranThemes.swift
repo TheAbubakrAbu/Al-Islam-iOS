@@ -520,6 +520,7 @@ struct ThemesBrowseView: View {
                             Text("\(theme.count)")
                                 .font(.caption.weight(.semibold).monospacedDigit())
                                 .foregroundStyle(.secondary)
+                                .hiddenInSimple(.sectionCounts)
                             Button {
                                 settings.hapticFeedback()
                                 withAnimation(.easeInOut) { themeHighlights.remove(theme.id) }
@@ -699,6 +700,7 @@ struct ThemesBrowseView: View {
                     .background(
                         Capsule().fill(settings.accentColor.color.opacity(0.12))
                     )
+                    .hiddenInSimple(.sectionCounts)
             }
 
             if !topic.description.isEmpty {
@@ -827,6 +829,7 @@ struct ThemeTopicDetailView: View {
                                     Text("\(child.ayahs.count)")
                                         .font(.caption.weight(.semibold).monospacedDigit())
                                         .foregroundStyle(settings.accentColor.color)
+                                        .hiddenInSimple(.sectionCounts)
                                 }
                             }
                         }

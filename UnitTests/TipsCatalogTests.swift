@@ -41,7 +41,7 @@ final class TipsCatalogTests: XCTestCase {
         XCTAssertEqual(tip("islam.journal")?.title, "A journal that gathers your notes")
         XCTAssertEqual(tip("islam.journal")?.detail, "The Islamic Journal collects the notes you leave on ayahs and hadiths beside your own entries. Swipe an entry to pin or delete it, and export everything as text from its menu.")
         XCTAssertEqual(tip("app.advanced")?.detail, "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so turning Nagging Mode's on leaves Arabic Text simple. A search result or a tip marked Advanced turns them on for you.")
-        XCTAssertEqual(tip("app.simple")?.detail, "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and extras like Need a Hand? and At a Glance step aside. Nothing is turned off, and turning it back off brings everything back.")
+        XCTAssertEqual(tip("app.simple")?.detail, "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and extras like Need a Hand? and At a Glance step aside. Nothing is turned off, and turning it back off brings everything back. What Moves Where, on the Simple Mode page, lists every shortcut and where it went.")
         XCTAssertEqual(tip("app.helpdoors")?.detail, "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it. Need Help Praying? on the prayer times opens Nagging Mode, Need Help Reading? on the Quran answers with Arabic Beginner Mode, and Reading in One Language? on the hadith picks the Arabic, the English or both. Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them.")
         XCTAssertEqual(tip("app.helpdoors")?.place, "Adhan, Quran, Hadith and Islam tabs")
         XCTAssertEqual(TipCatalog.searchHint, "\"adhan\", \"tajweed\" or \"widget\"")
@@ -55,5 +55,36 @@ final class TipsCatalogTests: XCTestCase {
         XCTAssertNil(TipArea.adhan.secondaryTint)
         XCTAssertNil(TipArea.quran.secondaryTint)
         XCTAssertNil(TipArea.hadith.secondaryTint)
+    }
+
+    /// The 2026-10-19 audit: the features that had shipped without a tip have one, Test Mode's opens the
+    /// screen that owns it and joins the Settings-tab cards, and the reworded tips say what changed.
+    /// The count is pinned on purpose: a new tip is a conscious addition (the App Store copy quotes it).
+    func testOctoberFeaturesHaveTips() {
+        for id in ["quran.testmode", "quran.history", "quran.awake", "quran.controls", "adhan.controls",
+                   "app.menushortcuts", "islam.locators"] {
+            XCTAssertNotNil(tip(id), id)
+        }
+        XCTAssertEqual(TipCatalog.all.count, 158)
+
+        if case .quranPage(let page)? = tip("quran.testmode")?.destination {
+            XCTAssertEqual(page, .testMode)
+        } else {
+            XCTFail("Test Mode's tip opens Quran Settings, Test Mode")
+        }
+        XCTAssertEqual(tip("quran.testmode")?.tour, true)
+        let spotlight = TipCatalog.spotlight.map(\.id)
+        XCTAssertEqual(spotlight.count, 13)
+        XCTAssertEqual(spotlight.prefix(3), ["notif.nagging", "adhan.travel", "quran.wordtap"],
+                       "the welcome's discover page names the first three cards")
+        XCTAssertTrue(spotlight.contains("quran.testmode"))
+
+        XCTAssertEqual(tip("quran.planner")?.title, "Plan a khatm, or a revision")
+        XCTAssertEqual(tip("quran.sort")?.title, "Eleven ways to sort")
+        XCTAssertTrue(tip("quran.range")?.detail.contains("Play Range") == true)
+        XCTAssertTrue(tip("quran.nowplaying")?.detail.contains("Range Ayahs") == true)
+        XCTAssertTrue(tip("adhan.stopadhan")?.detail.contains("Play Automatically") == true)
+        XCTAssertTrue(tip("adhan.weather")?.detail.contains("Try Another Sky") == true)
+        XCTAssertEqual(tip("app.menushortcuts")?.detail, "Double tap the ⋯ menu at the top of the Quran, Hadith, Islam, and Settings tabs to switch between the grid and the list without opening it. On the Quran tab, holding it opens the Quran Planner. A single tap still opens the whole menu.")
     }
 }

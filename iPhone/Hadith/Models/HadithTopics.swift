@@ -220,6 +220,7 @@ struct HadithTopicsView: View {
                 Text(lane.label.uppercased())
                 Spacer()
                 Text("\(store.count(inLane: lane.id))")
+                    .hiddenInSimple(.sectionCounts)
             }
             Text(lane.subtitle)
                 .font(.caption2)

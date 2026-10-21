@@ -1330,6 +1330,7 @@ private struct ReminderOfTheDayHeader: View {
                         Image(systemName: "bookmark.fill")
                         Text("\(reflections.items.count)")
                             .monospacedDigit()
+                            .hiddenInSimple(.sectionCounts)
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundColor(appearance.accent)
@@ -1347,6 +1348,7 @@ private struct ReminderOfTheDayHeader: View {
                     DailyHubDoorLabel()
                 }
                 .buttonStyle(.plain)
+                .hiddenInSimple(.cardTodayPills)
             }
         }
     }

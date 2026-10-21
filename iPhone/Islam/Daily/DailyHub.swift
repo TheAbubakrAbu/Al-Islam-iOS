@@ -117,6 +117,7 @@ struct DailyHubView: View {
                         shuffleButton(label: "Shuffle the Ayah of the Day") {
                             withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
                         }
+                        .hiddenInSimple(.dailyHubShuffles)
                     }
 
                     Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
@@ -191,6 +192,7 @@ struct DailyHubView: View {
                         shuffleButton(label: "Pick a random hadith of the day") {
                             Task { await hadithStore.shuffleDailyHadith() }
                         }
+                        .hiddenInSimple(.dailyHubShuffles)
                     }
 
                     Text("\(pick.book.englishTitle) \(pick.hadith.displayNumber)")

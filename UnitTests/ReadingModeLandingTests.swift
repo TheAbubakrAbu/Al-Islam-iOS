@@ -83,6 +83,68 @@ final class ReadingModeLandingTests: XCTestCase {
         XCTAssertEqual(listLanding(marked: (112, 3), surahID: 112, topVisible: 3), 3)
     }
 
+    // MARK: the page reader's reading position
+
+    /// A navigation that lands on a surah is positioned IN that surah, on every surah, including the 64
+    /// that open partway down a page; a swipe (no landing) is positioned at the page's first row. The
+    /// Choose Surah coin flip (2026-10-20): al-Falaq picked, the page's first row said al-Ikhlas.
+    @MainActor
+    func testLandingOnEverySurahPositionsTheReaderInThatSurah() async {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let pages = MushafPagination.pages(quran: data.quran, qiraah: nil)
+        XCTAssertFalse(pages.isEmpty, "no pagination")
+
+        var midPage: [Int] = []
+        for surah in data.quran {
+            guard let index = MushafPagination.pageIndex(surahID: surah.id, ayahID: nil, in: pages) else {
+                XCTFail("surah \(surah.id) is on no page"); continue
+            }
+            let page = pages[index]
+            let landed = MushafPagination.readingPosition(on: page, landing: (surah.id, nil))
+            XCTAssertEqual(landed?.surah.id, surah.id, "landing on \(surah.id) must position the reader in it")
+            XCTAssertEqual(landed?.ayah.id, surah.ayahs.first?.id, "landing on \(surah.id) must stand on its first ayah")
+            let swiped = MushafPagination.readingPosition(on: page, landing: nil)
+            XCTAssertEqual(swiped?.surah.id, page.firstSurah?.id, "a swipe onto page \(page.page) reads its first row")
+            XCTAssertEqual(swiped?.ayah.id, page.firstAyah?.id)
+            if page.firstSurah?.id != surah.id { midPage.append(surah.id) }
+        }
+        XCTAssertEqual(midPage.count, 64, "the Madinah mushaf opens 64 surahs partway down a page: \(midPage)")
+        XCTAssertTrue(midPage.contains(113), "al-Falaq opens under al-Ikhlas on page 604")
+        XCTAssertFalse(midPage.contains(2), "al-Baqarah opens page 2")
+    }
+
+    /// On the last page (al-Ikhlas, al-Falaq, an-Nas): a named ayah the page holds is the position; an
+    /// ayah it does not hold falls back to that surah's first ayah on the page; a surah it does not hold
+    /// falls back to the page's first row.
+    @MainActor
+    func testLandingResolvesToWhatTheLastPageHolds() async {
+        let data = QuranData.shared
+        await data.waitUntilLoaded()
+        let pages = MushafPagination.pages(quran: data.quran, qiraah: nil)
+        guard let index = MushafPagination.pageIndex(surahID: 113, ayahID: 3, in: pages) else {
+            return XCTFail("113:3 is on no page")
+        }
+        let page = pages[index]
+        XCTAssertEqual(page.firstSurah?.id, 112, "al-Falaq's page opens with al-Ikhlas")
+
+        let named = MushafPagination.readingPosition(on: page, landing: (113, 3))
+        XCTAssertEqual(named?.surah.id, 113)
+        XCTAssertEqual(named?.ayah.id, 3)
+
+        let missingAyah = MushafPagination.readingPosition(on: page, landing: (113, 99))
+        XCTAssertEqual(missingAyah?.surah.id, 113)
+        XCTAssertEqual(missingAyah?.ayah.id, 1)
+
+        let missingSurah = MushafPagination.readingPosition(on: page, landing: (2, 1))
+        XCTAssertEqual(missingSurah?.surah.id, 112)
+        XCTAssertEqual(missingSurah?.ayah.id, 1)
+
+        let anNas = MushafPagination.readingPosition(on: page, landing: (114, nil))
+        XCTAssertEqual(anNas?.surah.id, 114)
+        XCTAssertEqual(anNas?.ayah.id, 1)
+    }
+
     /// Every surah in the Quran satisfies the same rule, in both directions, for a real swap pair.
     @MainActor
     func testRuleHoldsForEveryAdjacentSurahPair() async {

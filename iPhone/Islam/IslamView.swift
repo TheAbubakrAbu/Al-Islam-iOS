@@ -396,7 +396,7 @@ struct IslamView: View {
     /// subject while `islamGroupResources` is on. `foldsSimple`: Simple Mode leaves the folded groups
     /// to More Resources (the iPad sidebar lists every group regardless).
     private func resourceSections(foldsSimple: Bool) -> [ResourceSection] {
-        let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.simpleMode && $0.foldsInSimpleMode) }
+        let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.hides(.foldedGroups) && $0.foldsInSimpleMode) }
         guard !settings.islamGroupResources else {
             return groups.map { ResourceSection(id: $0.title, systemImage: $0.systemImage, items: $0.resources) }
                 .filter { !$0.items.isEmpty }
@@ -584,11 +584,11 @@ struct IslamView: View {
             HelpDoorsSection(area: .islam)
             #endif
 
-            if !settings.simpleMode {
+            if !settings.hides(.prophetQuote) {
                 ProphetQuote()
             }
 
-            if !settings.simpleMode {
+            if !settings.hides(.appsSection) {
                 AlIslamAppsSection()
                     .id("apps")
             }
@@ -746,7 +746,7 @@ struct IslamView: View {
         withAnimation { searchText = "" }
         // In Simple Mode a folded resource has no row of its own on the tab (unless it is a favorite):
         // the row that holds it is More Resources.
-        let folded = settings.simpleMode && item.group.foldsInSimpleMode
+        let folded = settings.hides(.foldedGroups) && item.group.foldsInSimpleMode
             && !settings.isIslamResourceFavorite(item.rawValue)
         scrollTarget = Self.rowID(folded ? .moreResources : item)
     }
@@ -841,7 +841,7 @@ struct IslamView: View {
             }
         }
 
-        if settings.simpleMode {
+        if settings.hides(.foldedGroups) {
             Section {
                 moreResourcesEntry
             }
@@ -1220,6 +1220,14 @@ struct IslamView: View {
     /// the resources in one section or one per subject (`islamGroupResources`).
     @ViewBuilder
     private var islamMoreMenuItems: some View {
+        // The Today pills on the cards hide in Simple (`.cardTodayPills`), so the Daily Hub keeps a door
+        // here in both modes. It pushes through the same state the Reminder of the Day card uses.
+        TabMoreMenuItem("Today", systemImage: "sun.horizon.fill") {
+            settings.hapticFeedback()
+            guard islamPath.isEmpty else { return }
+            reminderDoor = .hub
+        }
+        Divider()
         TabMoreMenuItem(settings.islamGridMode ? "Show as List" : "Show as Grid",
                         systemImage: settings.islamGridMode ? "list.bullet" : "square.grid.2x2") {
             settings.hapticFeedback()

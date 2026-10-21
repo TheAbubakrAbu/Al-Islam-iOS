@@ -2,7 +2,11 @@
 import SwiftUI
 import PDFKit
 
-/// The printed mushaf as bundled PDFs - one per riwayah, from the Islamweb mushaf series.
+/// The printed mushaf as bundled PDFs - one per riwayah. Nineteen are the Islamweb mushaf series; the
+/// Hafs volume is the app's own facsimile (`Scripts/mushaf-pdf/`): the app's KFGQPC text set in its
+/// Uthmani face on the Madinah 1421H 15-line page layout, inside a vector teal-and-gold frame, so the
+/// file stays font-based (1.3 MB packed) where every ornate edition found online stores its text as
+/// outlines and packs to 80 MB or more.
 ///
 /// Every one of the 20 files is exactly **604 pages**, laid out on the Madani page division: PDF page N is
 /// mushaf page N, page 1 is al-Fatihah and page 604 closes with an-Nas. That makes the mapping from the app's
@@ -79,7 +83,9 @@ enum MushafPDFLibrary {
     /// as "no spacing" on screen - user feedback, then dialed down a touch from 24pt); top and
     /// bottom cut to just past the furniture ink.
     private static let contentWindows: [String: CGRect] = [
-        "01-asim-hafs":              CGRect(x: 68.0, y: 65.0, width: 456.0, height: 696.0),
+        // The app's own Hafs facsimile has no furniture to cut: the frame IS the content, so the window
+        // is the whole page and the ink-hug below only trims the paper margin around the frame.
+        "01-asim-hafs":              CGRect(x: 0.0, y: 0.0, width: 450.0, height: 722.0),
         "01-asim-shubah":            CGRect(x: 63.0, y: 127.0, width: 468.0, height: 627.0),
         "02-nafi-qalun":             CGRect(x: 67.91, y: 65.0, width: 456.4, height: 697.0),
         "02-nafi-warsh":             CGRect(x: 67.91, y: 143.0, width: 455.4, height: 602.0),
@@ -117,20 +123,35 @@ enum MushafPDFLibrary {
         guard isCompressed else { return bundled }
 
         let name = bundled.deletingPathExtension().lastPathComponent   // "01-asim-hafs.pdf"
-        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let fm = FileManager.default
+        let root = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("MushafPDF", isDirectory: true)
+        // The extraction lives under a folder STAMPED with the bundled file's byte count, so an app
+        // update that ships a different edition (the Hafs volume was replaced in 4.6.6) never serves
+        // the previous build's extraction - the plain `MushafPDF/<name>.pdf` of older builds did, for as
+        // long as the system left it alone. The file keeps its bare name inside, which is what
+        // `contentWindow(for:)` keys on. Other stamps of the same edition are swept on extraction.
+        let stamp = (try? fm.attributesOfItem(atPath: bundled.path)[.size] as? NSNumber)?.intValue ?? 0
+        let cacheDir = root.appendingPathComponent("v\(stamp)", isDirectory: true)
         let extracted = cacheDir.appendingPathComponent(name)
-        if FileManager.default.fileExists(atPath: extracted.path) { return extracted }
+        if fm.fileExists(atPath: extracted.path) { return extracted }
 
         guard let compressed = try? Data(contentsOf: bundled),
               let raw = SolidPack.xzDecompress(compressed) else { return nil }
         do {
-            try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+            try fm.createDirectory(at: cacheDir, withIntermediateDirectories: true)
             try raw.write(to: extracted, options: .atomic)
-            return extracted
         } catch {
             return nil
         }
+        // Sweep this edition's stale copies (the unstamped file of older builds, other stamps).
+        try? fm.removeItem(at: root.appendingPathComponent(name))
+        if let dirs = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) {
+            for dir in dirs where dir.lastPathComponent.hasPrefix("v") && dir.lastPathComponent != cacheDir.lastPathComponent {
+                try? fm.removeItem(at: dir.appendingPathComponent(name))
+            }
+        }
+        return extracted
     }
 
     /// Parsed documents, most-recently-used last. Opening a 604-page PDF costs enough to be felt as a pause
@@ -279,7 +300,7 @@ private struct MushafPDFPageView: UIViewRepresentable {
         let document = PDFDocument()
         if let copy = page.copy() as? PDFPage {
             // Trim the page furniture (islamweb header, legend strip, side borders) off the display:
-            // the edition window cuts it away. Applied to the COPY - the source document's pages stay
+            // the edition window cuts it away (the app's own Hafs volume has none; its window is the page). Applied to the COPY - the source document's pages stay
             // untouched. The size guard keeps a malformed intersection (odd drop-in file) from
             // collapsing the page to a sliver.
             if let window = cropWindow {

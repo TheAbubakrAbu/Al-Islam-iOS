@@ -1020,7 +1020,7 @@ struct AyahRow: View, Equatable {
 
                     // Simple Mode folds the play menu into the one ayah menu, whose first action is
                     // Play This Ayah (Docs/Product/Simple Mode Guide.md).
-                    if settings.isHafsDisplay, !settings.simpleMode {
+                    if settings.isHafsDisplay, !settings.hides(.ayahPlayMenu) {
                         ShortcutMenu(
                             doubleTap: MenuShortcut("Play This Ayah Only") {
                                 settings.hapticFeedback()
@@ -1067,7 +1067,7 @@ struct AyahRow: View, Equatable {
                         // tab's long press, this menu and the page's sheet offer the same actions).
                         // Simple Mode is the one exception: five actions and More Actions, which
                         // opens the long-press sheet with all of them (Abu, 2026-10-10).
-                        if settings.simpleMode {
+                        if settings.hides(.ayahLongMenu) {
                             simpleMenuBlock(isBookmarked: isBookmarked)
                         } else {
                             menuBlock(isBookmarked: isBookmarked, includePlaybackOptions: true)
@@ -1613,7 +1613,7 @@ struct AyahRow: View, Equatable {
                     )
                     // The translation's name tells two apart; with the default alone on screen, Simple
                     // Mode drops it.
-                    if !settings.simpleMode || showEnglishMustafa {
+                    if !settings.hides(.translationCaption, unless: showEnglishMustafa) {
                         Text("Saheeh International")
                             .font(.caption2)
                             .foregroundStyle(.secondary)

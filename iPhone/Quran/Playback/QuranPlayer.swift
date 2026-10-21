@@ -1312,7 +1312,10 @@ final class QuranPlayer: ObservableObject {
         customRangeLoops = false
         customRangeFetchesFirst = false
         customRangeItemPositions = [:]
+        customRangeItemFailureObservers = [:]
         customRangeAwaitedPosition = nil
+        customRangeLastPosition = nil
+        customRangeRecoveries = [:]
     }
 
     func stop() {
@@ -2234,6 +2237,11 @@ final class QuranPlayer: ObservableObject {
         removeAllObservers()
         discardPrewarm()
         customRangeToken = UUID()
+        // Another range starts its recovery count afresh; a rebuild of this one (a skip, a jump, a
+        // recovery, the fetch-first re-entry) keeps it.
+        if customRangeSurahNumber != surahNumber || customRangeStartAyah != startAyah || customRangeEndAyah != endAyah {
+            customRangeRecoveries = [:]
+        }
         customRangeSequence = sequence
         customRangeSurahNumber = surahNumber
         customRangeSurahName = surahName
@@ -2244,7 +2252,9 @@ final class QuranPlayer: ObservableObject {
         customRangeLoops = loops
         customRangeFetchesFirst = repeats && !streamIfUncached
         customRangeItemPositions = [:]
+        customRangeItemFailureObservers = [:]
         customRangeAwaitedPosition = nil
+        customRangeLastPosition = (initialIndex, 0)
         customRangeCurrentIndex = initialIndex + 1
         customRangeTotalItems = sequence.count
         customRangeCurrentRepeatWithinAyah = ((initialIndex % perAyah) + 1)
@@ -2341,6 +2351,16 @@ final class QuranPlayer: ObservableObject {
                         self.isLoading = true
                         return
                     }
+                    // Dry with the range unfinished (2026-10-20): the ayah due next was DROPPED.
+                    // AVQueuePlayer skips an item whose file will not open (an unplayable cached
+                    // copy, a dead stream) without a word, so the range ended here in silence, and
+                    // at the same ayah every time, since the copy stayed on disk and was served
+                    // first. Only a range that has reached its end stops.
+                    if let last = self.customRangeLastPosition,
+                       let next = self.nextCustomRangePosition(after: last) {
+                        self.recoverCustomRangeItem(at: next, in: qPlayer, surah: surah, reciter: reciter)
+                        return
+                    }
                     self.stop()
                     return
                 }
@@ -2356,6 +2376,7 @@ final class QuranPlayer: ObservableObject {
                 let numAyahsInRange = (self.customRangeEndAyah ?? 1) - (self.customRangeStartAyah ?? 1) + 1
                 let itemsPerSection = numAyahsInRange * perAyah
 
+                self.customRangeLastPosition = position
                 self.currentAyahNumber = ayahNum
                 self.customRangeCurrentIndex = zeroBasedIndex + 1
                 self.customRangeCurrentRepeatWithinAyah = (zeroBasedIndex % perAyah) + 1
@@ -2371,6 +2392,7 @@ final class QuranPlayer: ObservableObject {
                 // Forget the items that have left the queue (an endless loop would otherwise grow this).
                 let queued = Set(qPlayer.items().map(ObjectIdentifier.init))
                 self.customRangeItemPositions = self.customRangeItemPositions.filter { queued.contains($0.key) }
+                self.customRangeItemFailureObservers = self.customRangeItemFailureObservers.filter { queued.contains($0.key) }
 
                 // Keep only a lightweight queue (current + next) to prevent large-memory lag spikes.
                 if qPlayer.items().count < 2, self.customRangeAwaitedPosition == nil,
@@ -2389,8 +2411,17 @@ final class QuranPlayer: ObservableObject {
     private var customRangeFetchesFirst = false
     /// Each queued item's place: its index in the one-pass-or-full sequence, and which loop it is in.
     private var customRangeItemPositions: [ObjectIdentifier: (index: Int, pass: Int)] = [:]
+    /// Each queued item's `status` watch (`enqueueCustomRangeItem`): a queued item that FAILS is
+    /// recovered, where the first item's failure raises the alert. Pruned with the positions.
+    private var customRangeItemFailureObservers: [ObjectIdentifier: NSKeyValueObservation] = [:]
     /// The place waiting on its download, while the queue may run dry under it.
     private var customRangeAwaitedPosition: (index: Int, pass: Int)?
+    /// The place last heard playing: a queue that runs dry before the place after it has played
+    /// lost that ayah to a failed item, and is not a finished range.
+    private var customRangeLastPosition: (index: Int, pass: Int)?
+    /// Recovery attempts per place ("index-pass"), so an ayah whose file is bad at the source is
+    /// tried once more from the network and then reported, not fetched for ever.
+    private var customRangeRecoveries: [String: Int] = [:]
     /// Which range a download belongs to: renewed by every range (and by `stop`). A fetch from the
     /// previous range landing late cleared the new range's awaited position, and the queue-ran-dry
     /// branch then ended the new range early on a slow network (Quality Guide R4).
@@ -2421,6 +2452,21 @@ final class QuranPlayer: ObservableObject {
                                            isBismillah: entry.isBismillah) else { return }
             item.preferredForwardBufferDuration = self.ayahStartupBuffer
             self.customRangeItemPositions[ObjectIdentifier(item)] = position
+            // A queued item that fails to open is replaced (2026-10-20), where the queue used to
+            // drop it in silence: the bad copy goes, the ayah comes down afresh, and the fresh item
+            // takes the failed one's place behind whatever is playing (`recoverCustomRangeItem`).
+            self.customRangeItemFailureObservers[ObjectIdentifier(item)] = item.observe(\.status, options: [.new]) { [weak self, weak q] itm, _ in
+                guard itm.status == .failed else { return }
+                DispatchQueue.main.async { [weak self] in
+                    guard let self, let q, self.queuePlayer === q, self.isPlayingCustomRange,
+                          self.customRangeToken == token else { return }
+                    // The dry-queue branch may have reached it first.
+                    if let awaited = self.customRangeAwaitedPosition, awaited == position { return }
+                    self.customRangeItemFailureObservers[ObjectIdentifier(itm)] = nil
+                    self.recoverCustomRangeItem(at: position, in: q, surah: surah, reciter: reciter,
+                                                failedItem: itm, error: itm.error)
+                }
+            }
             let ranDry = q.items().isEmpty
             q.insert(item, after: nil)
             if ranDry {
@@ -2453,6 +2499,47 @@ final class QuranPlayer: ObservableObject {
         }
     }
 
+    /// Queues `position` again after its item failed. The cached copy of its ayah is discarded first
+    /// (the one unplayable file otherwise failed every later range through the ayah, since a copy
+    /// is served before the network), the failed item leaves the queue, and `enqueueCustomRangeItem`
+    /// fetches the ayah afresh and slots the new item in behind whatever is playing, so the ayah
+    /// before it finishes (a rebuild from the failed place cut that ayah short: the queue loads the
+    /// next item while the current one plays, so the failure lands mid-ayah). A second failure at
+    /// the same place means the file is bad at its source or the network is gone: that one raises
+    /// the alert, as the first item of a range always did.
+    private func recoverCustomRangeItem(at position: (index: Int, pass: Int), in q: AVQueuePlayer, surah: Surah,
+                                        reciter: Reciter, failedItem: AVPlayerItem? = nil, error: Error? = nil) {
+        guard isPlayingCustomRange, queuePlayer === q, position.index < customRangeSequence.count else {
+            stop()
+            return
+        }
+        let entry = customRangeSequence[position.index]
+        let key = "\(position.index)-\(position.pass)"
+        let attempts = (customRangeRecoveries[key] ?? 0) + 1
+        customRangeRecoveries[key] = attempts
+        if let remote = ayahRemoteURL(forSurah: surah, reciter: reciter, ayahNumber: entry.ayahNumber),
+           let copy = PlaybackAudioCache.shared.localURL(for: remote) {
+            PlaybackAudioCache.shared.discardCopy(at: copy)
+        }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-playbackProbe") {
+            NSLog("RANGEPROBE recover %ld:%ld index=%ld pass=%ld attempt=%ld error=%@",
+                  surah.id, entry.ayahNumber, position.index, position.pass, attempts, String(describing: error))
+        }
+        #endif
+        guard attempts <= 1 else {
+            let details = playbackFailureDetails(for: error, reciter: reciter, what: "custom range")
+            presentPlaybackFailure(details.message, title: details.title)
+            return
+        }
+        // Out of the queue BEFORE the fresh fetch is asked for: a failed current item leaving the
+        // queue runs it dry, and the dry-queue branch then finds the awaited place and waits.
+        if let failedItem, q.items().contains(where: { $0 === failedItem }) {
+            q.remove(failedItem)
+        }
+        enqueueCustomRangeItem(at: position, in: q, surah: surah, reciter: reciter)
+    }
+
     private func customRangeSkipAyah(by delta: Int) {
         guard isPlayingCustomRange,
               delta != 0,
@@ -2474,6 +2561,39 @@ final class QuranPlayer: ObservableObject {
         guard targetAyahOffset != ayahOffsetInSection else { return }
 
         let targetSequenceIndex = sectionStartIndex + (targetAyahOffset * perAyah)
+        playCustomRange(
+            surahNumber: customRangeSurahNumber,
+            surahName: customRangeSurahName,
+            startAyah: startAyah,
+            endAyah: endAyah,
+            repeatPerAyah: perAyah,
+            repeatSection: customRangeRepeatSection,
+            initialSequenceIndex: targetSequenceIndex
+        )
+    }
+
+    /// Moves the playing range to `ayah`'s first play in the current section: a row tapped in the
+    /// range sheet (`CustomRangeAyahsSheet`). The same rebuild as a skip (`customRangeSkipAyah`), so
+    /// the reciter, the repeats and the section are all kept; an ayah outside the range, or the one
+    /// already playing, is left alone.
+    func customRangeJump(toAyah ayah: Int) {
+        guard isPlayingCustomRange,
+              let currentIndex = customRangeCurrentIndex,
+              let startAyah = customRangeStartAyah,
+              let endAyah = customRangeEndAyah,
+              ayah >= startAyah, ayah <= endAyah,
+              customRangeSurahNumber > 0,
+              !customRangeSurahName.isEmpty else {
+            return
+        }
+
+        let perAyah = max(1, customRangeRepeatPerAyah)
+        let itemsPerSection = max(1, (endAyah - startAyah + 1) * perAyah)
+        let currentZeroBased = max(0, currentIndex - 1)
+        let sectionStartIndex = (currentZeroBased / itemsPerSection) * itemsPerSection
+        let targetSequenceIndex = sectionStartIndex + (ayah - startAyah) * perAyah
+        guard targetSequenceIndex != currentZeroBased else { return }
+
         playCustomRange(
             surahNumber: customRangeSurahNumber,
             surahName: customRangeSurahName,

@@ -4,9 +4,6 @@ struct SurahsHeader: View {
     @ObservedObject var quranData = QuranData.shared
 
     @State private var randomSurah: Surah?
-    /// Simple Mode drops the count and the shuffle (Docs/Product/Simple Mode Guide.md); Random Surah moves to
-    /// the tab's More menu.
-    @AppStorage("simpleMode") private var simpleMode = false
 
     var headerText: String
     /// The glyph leading the title; REVELATION ORDER passes its own.
@@ -25,11 +22,12 @@ struct SurahsHeader: View {
             Spacer()
 
             goToSurah
-            // The count pill sits left of the shuffle, the section-header family's order.
-            if !simpleMode {
-                CountPill(count: quranData.quran.count)
-                randomSurahLink
-            }
+            // The count pill sits left of the shuffle, the section-header family's order. Simple Mode
+            // drops the count (CountPill hides itself) and the shuffle; Random Surah moves to the
+            // tab's More menu.
+            CountPill(count: quranData.quran.count)
+            randomSurahLink
+                .hiddenInSimple(.surahShuffle)
             #endif
         }
         .onAppear {
@@ -74,8 +72,6 @@ struct JuzHeader: View {
     #if os(iOS)
     @ObservedObject var settings = Settings.shared
     #endif
-    /// Simple Mode drops the count and the shuffle, as `SurahsHeader` does; the info button stays.
-    @AppStorage("simpleMode") private var simpleMode = false
 
     let juz: Juz
 
@@ -101,14 +97,14 @@ struct JuzHeader: View {
             #if os(iOS)
             Spacer()
 
-            if !simpleMode {
-                surahCountBadge
-            }
+            // Simple Mode drops the count and the shuffle, as `SurahsHeader` does; the info button stays.
+            surahCountBadge
             infoButton
             // Khatm's Juz grouping is about tracking a full read-through, so the random "shuffle to a surah"
             // jump doesn't belong there - hide it in khatm mode.
-            if settings.quranSortMode != .khatm, !simpleMode {
+            if settings.quranSortMode != .khatm {
                 randomSurahLink
+                    .hiddenInSimple(.sectionShuffles)
             }
             #endif
         }
@@ -152,6 +148,7 @@ struct JuzHeader: View {
             .padding(.vertical, 4)
             .conditionalGlassEffect()
             .accessibilityLabel("\(surahCount) surahs")
+            .hiddenInSimple(.sectionCounts)
     }
 
     private var infoButton: some View {

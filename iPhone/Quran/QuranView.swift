@@ -516,7 +516,8 @@ struct QuranView: View {
     /// (even for "5:6" references and zero-result queries): the ask is an invitation, not a result.
     @ViewBuilder
     private func askAISection(context: SearchDisplayContext) -> some View {
-        if context.isSearching, OnDeviceAsk.isAvailable, searchFilters.shows(.ai), searchFilters.goTo == nil,
+        // Not in Choose Surah: the sheet searches surahs only (Abu, 2026-10-20).
+        if !isPicker, context.isSearching, OnDeviceAsk.isAvailable, searchFilters.shows(.ai), searchFilters.goTo == nil,
            !QuranSearchFilters.plainWords(searchText).isEmpty {
             Section(header: askAIHeader) {
                 askPromptRow
@@ -528,6 +529,8 @@ struct QuranView: View {
     /// sit at the top while the exhaustive keyword sections stay below them.
     private func runAISearch(query: String) {
         aiSearchTask?.cancel()
+        // Choose Surah searches surahs only: no semantic lane, no corpus build.
+        guard !isPicker else { return }
         let compiled = searchFilters.compile(query)
         let trimmed = compiled.semantic
         guard aiQueryEligible(compiled) else {
@@ -1170,7 +1173,10 @@ struct QuranView: View {
             // Makki, a juz or a surah pick lists results with nothing typed: the card would cover them.
             && !searchFilters.narrowsSurahList
             // With the help removed the card is only the recent searches, so with none there is no card.
-            && (!quranSearchHelpRemoved || !settings.quranSearchHistory.isEmpty)
+            // In Simple the card is only the chips (the stored fold and removal flags are not read).
+            && (settings.hides(.quickSearchHelp)
+                ? !settings.quranSearchHistory.isEmpty
+                : (!quranSearchHelpRemoved || !settings.quranSearchHistory.isEmpty))
     }
 
     private func markListMoving() {
@@ -1201,11 +1207,13 @@ struct QuranView: View {
     }
 
     private var searchHelpOverlayCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // Simple Mode draws only the recent-search chips: no title row, no fold or trash, no examples.
+        let examplesHidden = settings.hides(.quickSearchHelp)
+        return VStack(alignment: .leading, spacing: 10) {
             // The help folds away behind a -/+ (a reader who knows the syntax keeps only the recent
             // chips); the chips stay, at the BOTTOM, nearest the field and the thumb. Folded, a trash
             // removes the help for good, examples included.
-            if !quranSearchHelpRemoved {
+            if !examplesHidden, !quranSearchHelpRemoved {
             HStack(spacing: 8) {
                 Text("Quick Search Help")
                     .font(.subheadline.bold())
@@ -1282,7 +1290,7 @@ struct QuranView: View {
             }
 
             quranRecentSearches
-            if !quranSearchHelpRemoved {
+            if !examplesHidden, !quranSearchHelpRemoved {
                 quranSearchExamples
             }
         }
@@ -1864,7 +1872,7 @@ struct QuranView: View {
                     // Only hoist page/juz above the surah list for EXPLICIT "page X" / "juz Y" queries
                     // (where surahContentSections is empty anyway). For a bare number, the surah match
                     // comes first and the compact page/juz results follow below (in searchResultSections).
-                    if context.explicitPageOrJuzMode && context.isSearching && searchFilters.shows(.jumps) {
+                    if !isPicker, context.explicitPageOrJuzMode && context.isSearching && searchFilters.shows(.jumps) {
                         boxed(pageSearchSection(context: context))
                         boxed(juzSearchSection(context: context))
                         boxed(divisionSearchSection(context: context))
@@ -1936,7 +1944,8 @@ struct QuranView: View {
             // Focusing the search field starts the one-time AI vector build (or its disk load) EARLY, so
             // by the time a query is typed the semantic results usually appear with the keyword ones.
             .onChange(of: isQuranSearchFocused) { focused in
-                guard focused else { return }
+                // Choose Surah searches surahs only: nothing to warm.
+                guard focused, !isPicker else { return }
                 // The ayah index is built on demand (or ahead of time on the full tier, see Al-IslamApp);
                 // focusing the field is the earliest signal a search is coming.
                 quranData.ensureVerseSearchIndex()
@@ -2200,7 +2209,8 @@ struct QuranView: View {
     /// query typed, or a filter still set (so a narrowed list never hides the control that narrowed it).
     @ViewBuilder
     private var searchFilterBar: some View {
-        if isQuranSearchFocused || !searchText.isEmpty || searchFilters.hasSessionFilters {
+        // Not in Choose Surah: every chip shapes an ayah-text search, and the sheet runs none.
+        if !isPicker, isQuranSearchFocused || !searchText.isEmpty || searchFilters.hasSessionFilters {
             QuranSearchFilterBar(filters: $searchFilters, surahs: quranData.quran) {
                 showSearchFilterSheet = true
             }
@@ -2269,9 +2279,8 @@ struct QuranView: View {
         // would leave a list in an order with nothing on screen to explain or undo it - a hidden
         // control that changes what the app DOES, which is the one thing Simple Mode must never do.
         // Sorted, the row stays and Simple Mode is the lighter for having let it.
-        let simpleModeHidesSort = settings.simpleMode
-            && settings.quranSortMode == .surah
-            && settings.quranSortDirection == .ascending
+        let sortIsOffDefault = settings.quranSortMode != .surah || settings.quranSortDirection != .ascending
+        let simpleModeHidesSort = settings.hides(.sortRow, unless: sortIsOffDefault)
 
         let secondaryVisible = !isQuranSearchFocused
             && (searchText.isEmpty || showsEveryFilterButton)
@@ -2445,6 +2454,14 @@ struct QuranView: View {
         #else
         EmptyView()
         #endif
+    }
+
+    private static func sortDirectionIcon(_ direction: Settings.QuranSortDirection) -> String {
+        switch direction {
+        case .surahOrder: return "list.number"
+        case .ascending: return "arrow.up"
+        case .descending: return "arrow.down"
+        }
     }
 
     private var sortDirectionOptions: [Settings.QuranSortDirection] {
@@ -2674,6 +2691,7 @@ struct QuranView: View {
         // Bottom-up by importance (user-picked order): Play Last Listened sits at the visual BOTTOM -
         // nearest the thumb - with Random Surah above it and Random Ayah above that. The menus use
         // `fixedMenuOrder`, so declared order IS the visual top-to-bottom order.
+        if !settings.hides(.playRandomAyah) {
         Button {
             settings.hapticFeedback()
             // A Hafs ayah: the audio is Hafs-numbered, and a surah can carry textless ids minted for
@@ -2688,6 +2706,7 @@ struct QuranView: View {
             }
         } label: {
             Label("Play Random Ayah", systemImage: "shuffle.circle")
+        }
         }
 
         Button {
@@ -2924,26 +2943,31 @@ struct QuranView: View {
         // Simple Mode keeps the two tiles a reader comes back for, Last Read and the Ayah of the Day;
         // the listening tiles, the Word of the Day and the history expanders step aside (the play menu
         // resumes listening). Docs/Product/Simple Mode Guide.md.
-        let simple = settings.simpleMode
+        // Three trims, one per thing the old single flag hid: the listening tiles, the Word of the Day
+        // tile and the +/- history expanders (all three step aside together in Simple today).
+        let listenedHidden = settings.hides(.lastListenedTiles)
+        let wordHidden = settings.hides(.wordOfDayTile)
+        let expandersHidden = settings.hides(.historyExpanders)
         let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
         let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
-        let lastListenedAyah = settings.saveLastListenedAyah && !simple ? lastListenedAyahPair : nil
-        let lastListened = settings.saveLastListenedSurah && !simple ? settings.lastListenedSurah : nil
+        let lastListenedAyah = settings.saveLastListenedAyah && !listenedHidden ? lastListenedAyahPair : nil
+        let lastListened = settings.saveLastListenedSurah && !listenedHidden ? settings.lastListenedSurah : nil
         let lastListenedSurah = lastListened.flatMap { quranData.surah($0.surahNumber) }
         let historyTileCount = [hasLastRead, ayahOfTheDay != nil, lastListenedAyah != nil, lastListenedSurah != nil]
             .filter { $0 }
             .count
-        let word = settings.showWordOfTheDay && !simple ? wordOfTheDay : nil
+        let word = settings.showWordOfTheDay && !wordHidden ? wordOfTheDay : nil
         let wordSurah = word.flatMap { quranData.surah($0.surah) }
         let wordFillsGrid = historyTileCount % 2 == 1
-        if !(simple && historyTileCount == 0) {
+        // The whole section's hide follows the listening tiles' trim alone, since the three trims above flip together.
+        if !(listenedHidden && historyTileCount == 0) {
             Section(header: summaryHeader) {
                 SummaryTileGrid(columns: quranGridColumns.count) {
                     if hasLastRead, let lastReadSurah, let lastReadAyah {
                         SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: .secondaryOnGlass,
                                         rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .reading,
-                                        onExpand: simple || playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
+                                        onExpand: expandersHidden || playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
                             push(surahID: lastReadSurah.id, ayahID: lastReadAyah.id)
                         }
                         .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
@@ -2952,7 +2976,7 @@ struct QuranView: View {
                         SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: .secondaryOnGlass,
                                         rowHeight: rowHeight,
                                         isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
-                                        onExpand: simple ? nil : { toggleSummaryExpansion(.ayahOfTheDay) }) {
+                                        onExpand: expandersHidden ? nil : { toggleSummaryExpansion(.ayahOfTheDay) }) {
                             push(surahID: pair.surah.id, ayahID: pair.ayah.id)
                         }
                         .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
@@ -2996,7 +3020,7 @@ struct QuranView: View {
                 }
 
                 // The one open expansion, unfolded as plain rows right under the tiles.
-                if !simple, let kind = summaryHistoryExpansion {
+                if !expandersHidden, let kind = summaryHistoryExpansion {
                     summaryHistoryRows(kind: kind)
                         .transition(.opacity)
                 }
@@ -3029,7 +3053,7 @@ struct QuranView: View {
         } controls: {
             // Everything of the day on one screen (2026-09-16): the door every daily card carries.
             // Simple Mode moves it into the More menu (Today).
-            if !settings.simpleMode {
+            if !settings.hides(.quranTodayPill) {
                 NavigationLink(destination: dailyHubDestination) {
                     DailyHubDoorLabel()
                 }
@@ -3074,6 +3098,37 @@ struct QuranView: View {
             settings.hapticFeedback()
             guard !anyDoorOpen, path.isEmpty, let surah = quranData.quran.randomElement() else { return }
             push(surahID: surah.id)
+        }
+
+        // The sort row's only home in Simple while the sort is the default, so the sort lives here too,
+        // in both modes: the same buttons the row's menu draws, plus the direction.
+        Menu {
+            ForEach([Settings.QuranSortMode.surah, .juz, .khatm]) { mode in
+                sortModeButton(mode)
+            }
+            Divider()
+            ForEach([Settings.QuranSortMode.revelation, .page, .ayahs, .words, .letters]) { mode in
+                sortModeButton(mode)
+            }
+            Divider()
+            ForEach([Settings.QuranSortMode.muqattaat, .pages, .sajdah]) { mode in
+                sortModeButton(mode)
+            }
+            // Khatm swaps the direction for a Surah/Juz grouping in the row, so it has none here.
+            if settings.quranSortMode != .khatm {
+                Divider()
+                ForEach(sortDirectionOptions) { direction in
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut(duration: 0.22)) { settings.quranSortDirection = direction }
+                    } label: {
+                        Label(direction.accessibilityTitle,
+                              systemImage: direction == settings.quranSortDirection ? "checkmark" : Self.sortDirectionIcon(direction))
+                    }
+                }
+            }
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
         }
 
         Divider()
@@ -3560,16 +3615,21 @@ struct QuranView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 8)
             }
-        } else if context.explicitPageOrJuzMode && context.isSearching {
+        } else if context.explicitPageOrJuzMode && context.isSearching && !isPicker {
             EmptyView()
         } else if context.isSearching {
             // An empty surah card over a list of ayahs that DID answer is noise ("رب" under Whole Word names
             // no surah and fills the page with ayahs). It stays when nothing else answered, where it is
             // the only thing saying the search came up empty.
             // The same for the Bookmarks chip: bookmarks that answered make an empty surah card noise.
+            //
+            // Choose Surah searches SURAHS ONLY (Abu, 2026-10-20: "make it where you can only search for
+            // surah not ayahs"): the surah card is the whole answer there, whatever the tab's lanes are
+            // set to, and nothing else is on the page to make an empty card noise.
             let bookmarksAnswered = searchFilters.libraries.contains(.bookmarks) && !bookmarkSearchMatches.isEmpty
-            if settings.searchForSurahs, searchFilters.shows(.surahs),
-               !(context.filteredSurahs.isEmpty && (ayahsAnswered || bookmarksAnswered || context.isExactAyahReference)) {
+            if isPicker
+                || (settings.searchForSurahs && searchFilters.shows(.surahs)
+                    && !(context.filteredSurahs.isEmpty && (ayahsAnswered || bookmarksAnswered || context.isExactAyahReference))) {
                 boxed(surahSearchSection(context: context))
             }
         } else {
@@ -4647,7 +4707,8 @@ struct QuranView: View {
 
     @ViewBuilder
     private func searchResultSections(context: SearchDisplayContext) -> some View {
-        if context.isSearching {
+        // None of these in Choose Surah, which lists surahs and nothing else.
+        if context.isSearching, !isPicker {
             // The Bookmarks chip: the bookmarks themselves, matched by name or note (the ayah text
             // matches come below, from the ayah lanes held to the same bookmarks).
             if searchFilters.libraries.contains(.bookmarks) {
@@ -5602,6 +5663,8 @@ struct QuranView: View {
     private func handleAyahSearchChange(_ txt: String, debounce: Bool) {
         ayahSearchTask?.cancel()
         ayahLoadMoreTask?.cancel()
+        // Choose Surah searches surahs only: the ayah index is never built or scanned for it.
+        guard !isPicker else { return }
 
         // The shaping filters are folded into `query` (the exact scan's grammar); the ranked lane
         // gets the plain words, when it can answer them at all; the scope rides beside both.

@@ -457,6 +457,9 @@ struct ArabicView: View {
                 #if os(iOS)
                 if searchText.isEmpty { ResourceHeroSection(Self.hero) }
                 #endif
+                // The study tools lead the page, above the favorite letters (Abu, 2026-10-20: "make
+                // explore above favorites").
+                if searchText.isEmpty { exploreSection }
                 favoriteLettersSection
                 #if os(iOS)
                 if !searchText.isEmpty {
@@ -851,8 +854,6 @@ struct ArabicView: View {
     @ViewBuilder
     private var mainLetterSections: some View {
         if searchText.isEmpty {
-            exploreSection
-
             standardLetterSections
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
@@ -1024,11 +1025,10 @@ struct ArabicView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(settings.accentColor.color.opacity(0.09))
-            )
             .contentShape(Rectangle())
+            // The same clear glass as the letter tiles under it: a flat accent wash made the shelf
+            // read as foreign to the page (Abu, 2026-10-20: "why they look so different").
+            .conditionalGlassEffect(clear: true, rectangle: true)
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -1070,10 +1070,7 @@ struct ArabicView: View {
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(settings.accentColor.color.opacity(0.09))
-            )
+            .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

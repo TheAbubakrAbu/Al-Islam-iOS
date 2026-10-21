@@ -303,8 +303,7 @@ struct SignArticleSections: View {
                         if case .timeline = style {
                             SignTimelineParagraph(text: text, first: first, last: last)
                         } else {
-                            Text(verbatim: text)
-                                .font(.body)
+                            ArticleParagraph(verbatim: text)
                         }
                     case let .note(paragraphs, systemImage):
                         SignNoteCard(paragraphs: paragraphs, systemImage: systemImage)
@@ -313,8 +312,7 @@ struct SignArticleSections: View {
                     case let .block(.hadith(link, cite, arabic, english)):
                         ScriptureQuote(hadith: link, cite: cite, arabic: arabic, english: english)
                     case .block(.text(let text)):
-                        Text(verbatim: text)
-                            .font(.body)
+                        ArticleParagraph(verbatim: text)
                     }
                 }
             }
@@ -347,11 +345,7 @@ private struct SignTimelineParagraph: View {
             .frame(width: 12)
             .accessibilityHidden(true)
 
-            Text.islamText(text, highlightAllah: appearance.highlightAllahIslam)
-                .font(.body)
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            ArticleParagraph(verbatim: text, highlightsAllah: true)
         }
     }
 }
@@ -371,11 +365,7 @@ private struct SignNoteCard: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                    Text.islamText(paragraph, highlightAllah: appearance.highlightAllahIslam)
-                        .font(.body)
-                        .lineLimit(nil)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ArticleParagraph(verbatim: paragraph, highlightsAllah: true)
                 }
             }
         }

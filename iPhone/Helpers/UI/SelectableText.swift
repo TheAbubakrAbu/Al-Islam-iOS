@@ -29,9 +29,17 @@ struct SelectableTextView: UIViewRepresentable {
     /// scrolls the ENCLOSING scroll view instead. See `scroll(_:to:)`.
     var scrollTarget: NSRange? = nil
 
-    init(attributed: NSAttributedString, scrollTarget: NSRange? = nil) {
+    /// Where a tap on a `.link` run goes. Nil leaves UIKit's default (open the URL with the system),
+    /// which is right for a web link and useless for the app's own schemes: the Miracles prose links
+    /// to other articles through `alislam-miracle://`, which only the page's `openURL` handler knows.
+    /// With a handler the string's own colour and underline draw the link (`linkTextAttributes` is
+    /// cleared), the way the `Text` it replaced drew them.
+    var onLink: ((URL) -> Void)? = nil
+
+    init(attributed: NSAttributedString, scrollTarget: NSRange? = nil, onLink: ((URL) -> Void)? = nil) {
         self.attributed = attributed
         self.scrollTarget = scrollTarget
+        self.onLink = onLink
     }
 
     init(
@@ -88,6 +96,10 @@ struct SelectableTextView: UIViewRepresentable {
         // Without this the text view reports a huge intrinsic width and the row stops wrapping.
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         textView.setContentHuggingPriority(.required, for: .vertical)
+        if onLink != nil {
+            textView.delegate = context.coordinator
+            textView.linkTextAttributes = [:]
+        }
         return textView
     }
 
@@ -109,10 +121,30 @@ struct SelectableTextView: UIViewRepresentable {
         DispatchQueue.main.async { Self.scroll(textView, to: scrollTarget) }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator { Coordinator(onLink: onLink) }
 
-    final class Coordinator {
+    final class Coordinator: NSObject, UITextViewDelegate {
         var lastScrollTarget: NSRange?
+        let onLink: ((URL) -> Void)?
+
+        init(onLink: ((URL) -> Void)?) {
+            self.onLink = onLink
+        }
+
+        // iOS 17+ asks for the link's primary action; the deprecated form below is what iOS 16 calls.
+        @available(iOS 17.0, *)
+        func textView(_ textView: UITextView, primaryActionFor textItem: UITextItem,
+                      defaultAction: UIAction) -> UIAction? {
+            guard let onLink, case .link(let url) = textItem.content else { return defaultAction }
+            return UIAction { _ in onLink(url) }
+        }
+
+        func textView(_ textView: UITextView, shouldInteractWith URL: URL, in characterRange: NSRange,
+                      interaction: UITextItemInteraction) -> Bool {
+            guard let onLink, interaction == .invokeDefaultAction else { return true }
+            onLink(URL)
+            return false
+        }
     }
 
     /// Brings a character range on screen by scrolling whatever scroll view the text view happens to
@@ -220,8 +252,15 @@ struct SelectableAttributedProse: View {
     let attributed: AttributedString
     var textStyle: UIFont.TextStyle = .body
     var weight: UIFont.Weight = .regular
+    /// The whole passage slanted (`Text.italic()`), the Miracles closer.
+    var italic: Bool = false
+    var secondary: Bool = false
+    /// Overrides the label/secondary-label default.
+    var color: Color? = nil
     var lineSpacing: CGFloat = 5
     var alignment: NSTextAlignment = .natural
+    /// Where a tap on a link run goes; see `SelectableTextView.onLink`.
+    var onLink: ((URL) -> Void)? = nil
 
     @Environment(\.sizeCategory) private var sizeCategory
 
@@ -229,20 +268,44 @@ struct SelectableAttributedProse: View {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = alignment
         paragraph.lineSpacing = lineSpacing
+        let font = resolvedFont
 
-        return SelectableTextView(attributed: .selectableProse(
-            attributed,
-            baseFont: .roundedSystemFont(
-                ofSize: UIFont.preferredFont(forTextStyle: textStyle).pointSize,
-                weight: weight
+        return SelectableTextView(
+            attributed: .selectableProse(
+                attributed,
+                baseFont: font,
+                baseColor: color.map(UIColor.init) ?? (secondary ? .secondaryLabel : .label),
+                paragraph: paragraph
             ),
-            baseColor: .label,
-            paragraph: paragraph
-        ))
+            onLink: onLink
+        )
         // See `SelectableProse` - the text view opts out of automatic content-size tracking, so the
         // font is rebuilt from this instead.
         .id(sizeCategory)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .textViewFirstBaseline(font)
+    }
+
+    private var resolvedFont: UIFont {
+        let base = UIFont.roundedSystemFont(
+            ofSize: UIFont.preferredFont(forTextStyle: textStyle).pointSize,
+            weight: weight
+        )
+        guard italic, let descriptor = base.fontDescriptor.withSymbolicTraits(
+            base.fontDescriptor.symbolicTraits.union(.traitItalic)
+        ) else { return base }
+        return UIFont(descriptor: descriptor, size: base.pointSize)
+    }
+}
+
+extension View {
+    /// A `UIViewRepresentable` has no text baseline of its own, so an `HStack(alignment:
+    /// .firstTextBaseline)` would hang a bullet mark or a checklist icon off the block's BOTTOM edge.
+    /// The text view draws its first line from the top of its bounds with no inset, which puts the
+    /// first baseline one ascender down: handed to SwiftUI as the guide, the mark sits on the first
+    /// line the way it did beside a `Text`.
+    func textViewFirstBaseline(_ font: UIFont) -> some View {
+        alignmentGuide(.firstTextBaseline) { _ in font.ascender }
     }
 }
 
@@ -277,6 +340,7 @@ struct SelectableProse: View {
         // SwiftUI re-run this body when the user changes text size in Settings.
         .id(sizeCategory)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .textViewFirstBaseline(resolvedFont)
     }
 
     private var resolvedFont: UIFont {

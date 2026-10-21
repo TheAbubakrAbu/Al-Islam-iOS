@@ -2618,42 +2618,39 @@ private struct SidebarCellProbe: UIViewRepresentable {
 #endif
 
 /// The corner star of `gridFavoriteStar`. A view of its own so it can watch Simple Mode itself: in
-/// Simple Mode a tile that is not a favorite draws no star (Docs/Product/Simple Mode Guide.md; every tile's
+/// Simple Mode a tile that is not a favorite draws no star (`SimpleTrim.outlineStar`; every tile's
 /// press-and-hold menu still offers Favorite), and an Equatable tile around it may not redraw when the
-/// switch flips, where this view does.
+/// switch flips, where this view does (`hiddenInSimple` owns the observation).
 private struct GridFavoriteStar: View {
     let isFavorite: Bool
     let accent: Color
     let accessibilityName: String
     let onToggle: () -> Void
 
-    @AppStorage("simpleMode") private var simpleMode = false
-
     var body: some View {
-        if isFavorite || !simpleMode {
-            Image(systemName: isFavorite ? "star.fill" : "star")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(isFavorite ? accent : .secondary)
-                // The tap target is a 30pt square CENTERED ON THE GLYPH, sized before the corner
-                // positioning, not after. The old shape came after the 10/11pt paddings and then
-                // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
-                // corner: on a small grid tile, tapping anywhere on the right side toggled the star
-                // instead of opening the tile.
-                .frame(width: 30, height: 30)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    Settings.shared.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        onToggle()
-                    }
+        Image(systemName: isFavorite ? "star.fill" : "star")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(isFavorite ? accent : .secondary)
+            // The tap target is a 30pt square CENTERED ON THE GLYPH, sized before the corner
+            // positioning, not after. The old shape came after the 10/11pt paddings and then
+            // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
+            // corner: on a small grid tile, tapping anywhere on the right side toggled the star
+            // instead of opening the tile.
+            .frame(width: 30, height: 30)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                Settings.shared.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    onToggle()
                 }
-                .padding(.top, 1)
-                .padding(.trailing, 2)
-                .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
-                // A tap-gesture image: VoiceOver announced it as an image, not something to press.
-                .accessibilityRemoveTraits(.isImage)
-                .accessibilityAddTraits(.isButton)
-        }
+            }
+            .padding(.top, 1)
+            .padding(.trailing, 2)
+            .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
+            // A tap-gesture image: VoiceOver announced it as an image, not something to press.
+            .accessibilityRemoveTraits(.isImage)
+            .accessibilityAddTraits(.isButton)
+            .hiddenInSimple(.outlineStar, unless: isFavorite)
     }
 }
 
@@ -2715,7 +2712,9 @@ extension Color {
 // MARK: - Section header accessories (count pill / collapse / shuffle)
 
 /// The small numeric badge the Quran tab's section headers wear - caption-semibold, monospaced digits,
-/// on glass. One view so every counted section in the app shows the identical pill.
+/// on glass. One view so every counted section in the app shows the identical pill. Counts are details
+/// (Simple Mode spec rule 8), so the pill hides itself in Simple Mode and every caller is covered; the
+/// rule's exceptions do not use this view.
 struct CountPill: View {
     @Environment(\.appearance) private var appearance
 
@@ -2731,6 +2730,7 @@ struct CountPill: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .conditionalGlassEffect()
+            .hiddenInSimple(.sectionCounts)
     }
 }
 
@@ -2874,11 +2874,6 @@ struct SectionPillHeader: View {
     /// collapsed have a button to trash remove it"). The owner confirms before removing anything.
     var onRemove: (() -> Void)? = nil
 
-    /// Simple Mode keeps a header to its title and its arrow: the count, search and shuffle step aside
-    /// (Docs/Product/Simple Mode Guide.md, rule 3). The one key is observed here rather than read off
-    /// `Settings.shared`, so a header redraws when the switch flips without observing every setting.
-    @AppStorage("simpleMode") private var simpleMode = false
-
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
     static var pillHeight: CGFloat {
@@ -2910,12 +2905,11 @@ struct SectionPillHeader: View {
         // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
         // of the cluster (it is information, not a control), then the buttons: search, shuffle, trash,
         // then the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its
-        // cluster must follow this order too. Simple Mode drops the count, search and shuffle.
-        if !simpleMode {
-            CountPill(count: count, overflow: overflow)
-        }
+        // cluster must follow this order too. Simple Mode drops the count, search and shuffle (each
+        // hides itself; the trash and the chevron stay).
+        CountPill(count: count, overflow: overflow)
 
-        if let onSearch, !simpleMode {
+        if let onSearch {
             Image(systemName: "magnifyingglass")
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(appearance.accent)
@@ -2928,9 +2922,10 @@ struct SectionPillHeader: View {
                 .accessibilityLabel("Search \(title.lowercased())")
                 .accessibilityRemoveTraits(.isImage)
                 .accessibilityAddTraits(.isButton)
+                .hiddenInSimple(.sectionSearch)
         }
 
-        if let onShuffle, !simpleMode {
+        if let onShuffle {
             // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
             // and as wide as it is tall.
             Image(systemName: "shuffle")
@@ -2946,6 +2941,7 @@ struct SectionPillHeader: View {
                 // Tap-gesture images: without these VoiceOver said "image" and offered no action.
                 .accessibilityRemoveTraits(.isImage)
                 .accessibilityAddTraits(.isButton)
+                .hiddenInSimple(.sectionShuffles)
         }
 
         // Only while folded: an open section's cards are still in use, and the arrow is the way to put

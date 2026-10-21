@@ -16,11 +16,13 @@ import SwiftUI
 //     gestures (`spotlight`), as cards that open the setting they describe.
 //
 // EVERY TIP HERE WAS CHECKED AGAINST THE CODE THAT IMPLEMENTS IT (three catalogues with file and line,
-// 2026-09-20). A tip that describes something the app does not do is worse than no tip, so: when a
-// feature's labels or gestures change, change its tip in the same commit, and never add one from
-// memory. Things the app does NOT have, which a tip must therefore never promise: a sleep timer, a
-// playback speed control, a hadith page mode, a narrator search, favorites or counters on individual
-// duas, Hadith or Islam widgets and Siri shortcuts, and an .ics export of prayer times.
+// 2026-09-20; re-audited line by line on 2026-10-19, when Test Mode, the Revision plan, the Control
+// Center controls, the menu shortcuts, History and the locators got their tips). A tip that describes
+// something the app does not do is worse than no tip, so: when a feature's labels or gestures change,
+// change its tip in the same commit, and never add one from memory. Things the app does NOT have, which
+// a tip must therefore never promise: a sleep timer, a playback speed control, a hadith page mode, a
+// narrator search, favorites or counters on individual duas, Hadith or Islam widgets and Siri
+// shortcuts, and an .ics export of prayer times.
 //
 // No em dashes and no spaced hyphens in any of this text (house rule); quoted labels are the app's own.
 //
@@ -201,7 +203,7 @@ enum TipCatalog {
 
     /// The Settings tab's cards, in the order they are worth meeting: the mode nobody else has first.
     private static let spotlightOrder = [
-        "notif.nagging", "adhan.travel", "quran.wordtap", "adhan.menses", "quran.tajweedcolors",
+        "notif.nagging", "adhan.travel", "quran.wordtap", "quran.testmode", "adhan.menses", "quran.tajweedcolors",
         "quran.themes", "notif.sunnah", "quran.compare", "adhan.names", "adhan.skycolors",
         "islam.fajr", "app.themes",
     ]
@@ -230,6 +232,16 @@ enum TipCatalog {
         if #available(iOS 16.2, *) { return true }
         return false
     }
+    /// Control Center controls (Widget/ControlWidgets.swift) arrived with iOS 18.
+    private static var hasControls: Bool {
+        if #available(iOS 18.0, *) { return true }
+        return false
+    }
+    /// The double tap and hold on a menu button (`ShortcutMenu`) need iOS 17.4.
+    private static var hasMenuShortcuts: Bool {
+        if #available(iOS 17.4, *) { return true }
+        return false
+    }
 
     /// The Quran domain (the readers, the reciters, the tajweed lessons): Al-Adhan has none of it.
     private static var shipsQuran: Bool {
@@ -256,7 +268,7 @@ enum TipCatalog {
         return [
             AppTip(id: "adhan.weather", area: .adhan, group: "THE SKY", systemImage: "cloud.sun.fill",
                    title: "Put the weather on the sky",
-                   detail: "Turn on Weather and the sky clouds over, rains and fogs with the real weather outside. The temperature sits at the top of the card (tap it for the UV index, humidity, wind and more), At a Glance gains a Weather group, and the sky widgets show the temperature beside the city. It uses Apple Weather, so your location is sent to Apple while it is on.",
+                   detail: "Turn on Weather and the sky clouds over, rains and fogs with the real weather outside. The temperature sits at the top of the card (tap it for the UV index, humidity, wind and more, and for Try Another Sky, which dresses the sky in any condition while you look), At a Glance gains a Weather group, and the sky widgets show the temperature beside the city. It uses Apple Weather, so your location is sent to Apple while it is on.",
                    place: "Prayer Settings, Sky", destination: .prayerPage(.sky)),
         ]
         #else
@@ -302,8 +314,8 @@ enum TipCatalog {
                detail: skyFillDetail,
                place: "Prayer Settings, Sky", destination: .prayerPage(.sky)),
         AppTip(id: "adhan.stopadhan", area: .adhan, group: "THE SKY", systemImage: "stop.circle.fill",
-               title: "Stop an adhan that is playing",
-               detail: "While the adhan sounds inside the app, a capsule that reads \u{201C}Tap to stop\u{201D} appears at the foot of the sky card.",
+               title: "Stop an adhan, or play the one waiting",
+               detail: "While the adhan sounds inside the app, a capsule that reads \u{201C}Tap to stop\u{201D} sits at the foot of the sky card, and a banner with a Stop button shows on every tab. When an adhan is waiting instead (a silenced phone, or Play Automatically off), the same capsule and banner offer Play.",
                place: "Adhan tab"),
 
         AppTip(id: "adhan.rowdetail", area: .adhan, group: "THE PRAYER LIST", systemImage: "list.bullet.rectangle",
@@ -419,6 +431,10 @@ enum TipCatalog {
                title: "Widgets with a sky",
                detail: "Most prayer widgets come in a Sky version painted with your sky colors. The Lock Screen has prayer-time and Hijri date widgets, including one that sits above the clock.",
                place: "Home Screen and Lock Screen"),
+        AppTip(id: "adhan.controls", area: .adhan, group: "BEYOND THE APP", systemImage: "switch.2",
+               title: "The next prayer in Control Center",
+               detail: "Two controls for Control Center, the Lock Screen, and the Action button: Prayer Times shows the next prayer and its time on the control itself and opens today's times, and Qibla opens the compass.",
+               place: "Control Center, Add a Control", isAvailable: { hasControls }),
         AppTip(id: "adhan.liveactivity", area: .adhan, group: "BEYOND THE APP", systemImage: "fork.knife",
                title: "Ramadan on the Lock Screen",
                detail: "In Ramadan a Live Activity counts down to the end of suhoor and to iftar, appearing an hour before each.",
@@ -504,13 +520,14 @@ enum TipCatalog {
     // Al-Adhan has no Quran reader.
     #if HAS_QURAN
     private static let quran: [AppTip] = [
+        AppTip(id: "quran.testmode", area: .quran, group: "READING", systemImage: "eye.slash",
+               title: "Test Mode: recite from memory",
+               detail: "Test Mode, in the reader's play menu, hides the Quran's text in both readers until you tap an ayah, so you can recite from memory and check yourself. Its settings choose whether the Arabic alone or everything hides, whether a tap shows one ayah or everything before it too, and whether Reveal as It's Recited uncovers each ayah as the reciter reaches it. Hide All Again, in the same menu, starts over.",
+               place: "Quran reader, play menu", destination: .quranPage(.testMode), tour: true, card: ("Test Mode", "Hide the text, recite from memory, tap an ayah to check.")),
         AppTip(id: "quran.menushortcuts", area: .quran, group: "READING", systemImage: "hand.tap.fill",
                title: "Double tap for a shortcut",
-               detail: "Tap an ayah's play button for its menu, double tap to play just that ayah, or hold to choose a custom range. Double tap its ellipsis to copy; hold to share. Hadith ellipsis buttons use the same copy and share shortcuts. A Copied badge confirms when the copy is ready. With VoiceOver, use the named actions or the menu.",
-               place: "Ayah and hadith controls", isAvailable: {
-                   if #available(iOS 17.4, *) { return true }
-                   return false
-               }),
+               detail: "Tap an ayah's play button for its menu, double tap to play just that ayah, or hold to choose a custom range. Double tap its ellipsis to copy; hold to share. The reader's own play button answers the same way: double tap plays the surah, and a hold opens a custom range (Choose Reciter, in a riwayah other than Hafs). Hadith ellipsis buttons use the same copy and share shortcuts. A Copied badge confirms when the copy is ready. With VoiceOver, use the named actions or the menu.",
+               place: "Ayah and hadith controls", isAvailable: { hasMenuShortcuts }),
         AppTip(id: "quran.holdtitle", area: .quran, group: "MOVING AROUND", systemImage: "hand.tap.fill",
                title: "Hold the title to choose a surah",
                detail: "In the reader, touch and hold the title at the top to go straight to Choose Surah. In page mode, holding the pill at the foot of the page does the same. A plain tap on the title opens its whole menu.",
@@ -625,11 +642,11 @@ enum TipCatalog {
                place: "Quran reader", tour: true),
         AppTip(id: "quran.range", area: .quran, group: "LISTENING", systemImage: "repeat",
                title: "A range built for memorizing",
-               detail: "Play Custom Range takes a range of ayahs or of pages, and repeats each ayah and the whole section as many times as you set.",
+               detail: "Play Custom Range takes a range of ayahs or of pages, with Whole Page and Whole Surah a tap away, repeats Each Ayah and the Whole Range as many times as you set (or forever), and lists every ayah of the range before you press Play Range. While it plays, the range line under the reciter on the Now Playing bar opens the same list, with the ayah being recited marked and kept in view. Tap any ayah there to jump to it.",
                place: "Quran reader, play menu"),
         AppTip(id: "quran.nowplaying", area: .quran, group: "LISTENING", systemImage: "waveform.circle.fill",
                title: "Hold the Now Playing bar",
-               detail: "Touch and hold the player for Stop Playing, Play from Beginning, and the queue. Inside the reader, tapping the player jumps to the ayah being recited.",
+               detail: "Touch and hold the player for Stop Playing, Play from Beginning, the queue, and favoriting the surah or bookmarking the ayah. While a custom range plays it adds Range Ayahs. Inside the reader, tapping the player jumps to the ayah being recited.",
                place: "Now Playing bar"),
         AppTip(id: "quran.dots", area: .quran, group: "LISTENING", systemImage: "circle.fill",
                title: "What the reciter dots mean",
@@ -643,6 +660,10 @@ enum TipCatalog {
                title: "When a surah ends",
                detail: "After Surah Recitation Ends chooses between going on to the next surah, going back to the previous one, and stopping.",
                place: "Quran Settings, Recitation", destination: .quranPage(.recitation), advanced: true),
+        AppTip(id: "quran.awake", area: .quran, group: "LISTENING", systemImage: "light.max",
+               title: "The screen stays on while you follow along",
+               detail: "While the recitation is highlighting the ayah being read in either reader, the screen does not go to sleep. Pause, stop, or leave the reader and it sleeps as usual, so listening with the phone put away costs the screen nothing.",
+               place: "Quran reader, during playback"),
 
         AppTip(id: "quran.swipe", area: .quran, group: "THE QURAN TAB", systemImage: "hand.draw.fill",
                title: "Swipe a surah",
@@ -653,13 +674,17 @@ enum TipCatalog {
                detail: "In any grid, a tap opens the tile and a touch and hold opens its menu. The small star in a tile's corner favorites it without opening it.",
                place: "Quran tab, grid view"),
         AppTip(id: "quran.sort", area: .quran, group: "THE QURAN TAB", systemImage: "arrow.up.arrow.down",
-               title: "Nine ways to sort",
-               detail: "The sort menu orders the surahs by revelation, page, length in ayahs, words, or letters, by juz, and more. Its Khatm mode tracks a full reading and marks ayahs as you read them.",
+               title: "Eleven ways to sort",
+               detail: "The sort menu orders the surahs by revelation, by juz, by page, by their length in ayahs, pages, words, or letters, and by the sajdahs and the broken letters they carry. Its Khatm mode tracks a full reading and marks ayahs as you read them.",
                place: "Quran tab"),
         AppTip(id: "quran.planner", area: .quran, group: "THE QURAN TAB", systemImage: "calendar.badge.clock",
-               title: "Plan a khatm",
-               detail: "The Quran Planner, in the ⋯ menu at the top of the Quran tab, sets a goal of one, two, or three months and can remind you daily.",
-               place: "Quran tab"),
+               title: "Plan a khatm, or a revision",
+               detail: "The Quran Planner, in the ⋯ menu at the top of the Quran tab, holds two plans. Khatm sets a finish of one, two, or three months and recomputes each day's amount from what is left, so a missed day is absorbed. Revision keeps a juz range or chosen surahs in rotation, revised in full every week, two weeks, or month, with Continue Revising and Mark as Revised. One Daily Reminder covers both.",
+               place: "Quran tab, ⋯ menu"),
+        AppTip(id: "quran.history", area: .quran, group: "THE QURAN TAB", systemImage: "clock.arrow.circlepath",
+               title: "What you read, heard, and searched",
+               detail: "History, in the ⋯ menu at the top of the Quran tab, keeps what you read, the ayahs and surahs you listened to, earlier Ayahs of the Day, and your recent searches. Tap a past search to run it again.",
+               place: "Quran tab, ⋯ menu"),
         AppTip(id: "quran.themes", area: .quran, group: "THE QURAN TAB", systemImage: "paintbrush.pointed.fill",
                title: "Highlight Themes",
                detail: "Wash passages in the color of what they speak about, in both readers, or light one subject across the whole Quran with Browse by Theme.",
@@ -684,6 +709,10 @@ enum TipCatalog {
                title: "Choose the ayah on your widget",
                detail: "Add the Chosen Ayah widget to your Home Screen or Lock Screen, then hold it and choose Edit Widget. Pick one of your bookmarks, or type a reference such as 2:255 or Yaseen 9. Until you choose, it shows your newest bookmark.",
                place: "Home Screen and Lock Screen, Edit Widget", isAvailable: { hasChosenAyahWidget }),
+        AppTip(id: "quran.controls", area: .quran, group: "THE QURAN TAB", systemImage: "switch.2",
+               title: "Resume from Control Center",
+               detail: "Add the Resume Recitation control to Control Center, the Lock Screen, or the Action button, and it plays the last surah you were listening to, from where you left off, without opening the app.",
+               place: "Control Center, Add a Control", isAvailable: { hasControls }),
     ]
     #else
     private static let quran: [AppTip] = []
@@ -885,7 +914,7 @@ enum TipCatalog {
                place: "Islam tab, articles"),
         AppTip(id: "islam.articles", area: .islam, group: "LEARNING", systemImage: "doc.text.magnifyingglass",
                title: "Find within an article",
-               detail: "An article's search bar searches that article and scrolls to the match. Its text can be selected and copied, and a touch and hold on a quotation copies it with its citation.",
+               detail: "An article's search bar searches that article and scrolls to the match. Drag across any paragraph to select and copy part of it, and a touch and hold on a quotation copies it with its citation.",
                place: "Islam tab, articles", tour: true),
         AppTip(id: "islam.askai", area: .islam, group: "LEARNING", systemImage: "sparkles",
                title: "Ask AI, with its sources",
@@ -927,6 +956,10 @@ enum TipCatalog {
                title: "Copy a converted date",
                detail: "In the Hijri Date Converter, touch and hold either date to copy it.",
                place: "Islam tab, Hijri Date Converter"),
+        AppTip(id: "islam.locators", area: .islam, group: "CALCULATORS AND TOOLS", systemImage: "mappin.and.ellipse",
+               title: "Mosques and halal food around you",
+               detail: "The Masjid Locator and the Halal Food Locator search near you, or wherever you move the map with Search This Area. Tap a result for directions in Maps, and touch and hold it to copy its name or address.",
+               place: "Islam tab, Masjid Locator and Halal Food Locator"),
         AppTip(id: "islam.wallpapers", area: .islam, group: "CALCULATORS AND TOOLS", systemImage: "photo.on.rectangle",
                title: "Save a wallpaper",
                detail: "Touch and hold a wallpaper for Save to Photos and Copy Image.",
@@ -956,7 +989,7 @@ enum TipCatalog {
         #else
         let extras = "extras like Need a Hand? step aside"
         #endif
-        return "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and \(extras). Nothing is turned off, and turning it back off brings everything back."
+        return "Simple Mode keeps each tab to its essentials. Shortcuts move into a ⋯ menu at the top of the tab or into Settings, and \(extras). Nothing is turned off, and turning it back off brings everything back. What Moves Where, on the Simple Mode page, lists every shortcut and where it went."
     }
 
     /// The tabs with a NEED A HAND? section (`HelpDoorsSection`), in tab-bar order.
@@ -987,6 +1020,24 @@ enum TipCatalog {
         return "Each tab keeps a Need a Hand? section: a few questions, each with the setting that answers it." + examples + " Hold a question for a quick switch, tap the arrow beside the header to fold them away, and use each tab's settings page (or Show on Every Tab, in Look and Feel) to hide them."
     }
 
+    /// The tabs whose ⋯ menu answers a double tap (`TabMoreMenu(doubleTap:)`); the Adhan tab's does not,
+    /// and only the Quran tab's answers a hold (the Quran Planner).
+    private static var menuShortcutDetail: String {
+        #if HAS_QURAN && HAS_HADITH
+        let tabs = "the Quran, Hadith, Islam, and Settings tabs"
+        #elseif HAS_QURAN
+        let tabs = "the Quran, Islam, and Settings tabs"
+        #else
+        let tabs = "the Islam and Settings tabs"
+        #endif
+        let lead = "Double tap the ⋯ menu at the top of \(tabs) to switch between the grid and the list without opening it."
+        #if HAS_QURAN
+        return lead + " On the Quran tab, holding it opens the Quran Planner. A single tap still opens the whole menu."
+        #else
+        return lead + " A single tap still opens the whole menu."
+        #endif
+    }
+
     private static let generalLead: [AppTip] = [
         AppTip(id: "app.advanced", area: .app, group: "FINDING THINGS", systemImage: "slider.horizontal.3",
                title: "Simple until you ask for more",
@@ -1010,6 +1061,10 @@ enum TipCatalog {
                title: "Touch and hold is worth trying",
                detail: "Most rows, cards, tiles, and images answer a touch and hold with a menu: Copy, Share, Favorite, View Fullscreen, or Scroll To.",
                place: "Everywhere", tour: true),
+        AppTip(id: "app.menushortcuts", area: .app, group: "FINDING THINGS", systemImage: "ellipsis.circle.fill",
+               title: "Double tap the ⋯ menu",
+               detail: menuShortcutDetail,
+               place: "The ⋯ menu at the top of a tab", isAvailable: { hasMenuShortcuts }),
         AppTip(id: "app.bars", area: .app, group: "FINDING THINGS", systemImage: "rectangle.compress.vertical",
                title: "Bars that get out of the way",
                detail: "Search bars and players shrink as you scroll down and come back when you scroll up.",
@@ -1021,7 +1076,7 @@ enum TipCatalog {
                place: "Settings tab, Your Progress", tour: true),
         AppTip(id: "app.aboutyou", area: .app, group: "YOU", systemImage: "person.crop.circle.fill",
                title: "Tell the app who you are",
-               detail: "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone.",
+               detail: "About You remembers whether you grew up Muslim, embraced Islam, are just getting started, or are learning about Islam, and tailors the Start Here guide on the Islam tab. It never leaves your iPhone. Replay the Welcome Tutorial, on the same page, walks the welcome again.",
                place: "Settings tab, About You", destination: .aboutYou),
     ]
 
@@ -1103,6 +1158,8 @@ struct TipsSection: View {
             }
             .tint(settings.accentColor.color)
         }
+        // Simple Mode keeps one door to the tips, the All Tips & Tricks row on the Settings tab.
+        .hiddenInSimple(.pageTipsRows)
     }
 }
 
@@ -1487,10 +1544,10 @@ struct SettingsSpotlightSection: View {
 
     var body: some View {
         let tips = TipCatalog.spotlight
-        // Simple Mode keeps the one row to every tip and leaves the twelve cards out
+        // Simple Mode keeps the one row to every tip and leaves the thirteen cards out
         // (Docs/Product/Simple Mode Guide.md).
-        Section(header: SectionIconHeader(settings.simpleMode ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())", icon: "lightbulb.fill")) {
-            if settings.simpleMode {
+        Section(header: SectionIconHeader(settings.hides(.spotlightCards) ? "TIPS & TRICKS" : "ONLY IN \(AppIdentifiers.appName.uppercased())", icon: "lightbulb.fill")) {
+            if settings.hides(.spotlightCards) {
                 EmptyView()
             } else if rows {
                 ForEach(tips) { tip in
@@ -1550,11 +1607,11 @@ extension SettingsSearchEntry {
 
     static let tipsEntries: [SettingsSearchEntry] = [
         .init(title: "Tips & Tricks", path: "Settings", keywords: tipKeywords, destination: .tips(nil)),
-        .init(title: "Prayer Times Tips & Tricks", path: "Prayer Settings", keywords: tipKeywords + " adhan sky qibla tracker", destination: .tips(.adhan)),
+        .init(title: "Prayer Times Tips & Tricks", path: "Prayer Settings", keywords: tipKeywords + " adhan sky qibla tracker control center", destination: .tips(.adhan)),
         .init(title: "Notification Tips & Tricks", path: "Notifications", keywords: tipKeywords + " adhan nagging lock screen", destination: .tips(.notifications)),
-        .init(title: "Quran Tips & Tricks", path: "Quran Settings", keywords: tipKeywords + " reader mushaf tajweed word search", destination: .tips(.quran)),
+        .init(title: "Quran Tips & Tricks", path: "Quran Settings", keywords: tipKeywords + " reader mushaf tajweed word search test mode planner revision history", destination: .tips(.quran)),
         .init(title: "Hadith Tips & Tricks", path: "Hadith Settings", keywords: tipKeywords + " bookmark search reference", destination: .tips(.hadith)),
-        .init(title: "Islam Tips & Tricks", path: "Islam Settings", keywords: tipKeywords + " tasbih dua dhikr names alphabet", destination: .tips(.islam)),
+        .init(title: "Islam Tips & Tricks", path: "Islam Settings", keywords: tipKeywords + " tasbih dua dhikr names alphabet masjid halal", destination: .tips(.islam)),
     ].filter { entry in
         // An area this app compiles out has no list to open (`TipArea.offered`).
         guard case .tips(let area?) = entry.destination else { return true }

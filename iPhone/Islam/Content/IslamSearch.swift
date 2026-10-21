@@ -674,9 +674,9 @@ private struct ArticleHeaderProbe: UIViewRepresentable {
 /// `.text(`, `.markdown(`, `.quote(text:`, `.ayah(`, `.hadith(` and `ArticleSection("HEADING"` straight
 /// out of the source.
 enum ArticleBlock {
-    /// Plain prose, drawn with `Text(verbatim:)`.
+    /// Plain prose, drawn with `ArticleParagraph(verbatim:)`.
     case text(String)
-    /// Prose with inline **bold** terms, drawn through `Text(articleMarkdown:)`.
+    /// Prose with inline **bold** terms, drawn through `ArticleParagraph(articleMarkdown:)`.
     case markdown(String)
     /// A `ScriptureQuote`, same arguments: the words of scholars and anything the packs do not
     /// carry, as written.
@@ -800,12 +800,10 @@ struct ArticleBlockView: View {
             case .lead: ArticleLead(prose)
             case .closing: ArticleClosing(prose)
             case .body:
-                Text(verbatim: prose)
-                    .font(.body)
+                ArticleParagraph(verbatim: prose)
             }
         case .markdown(let prose):
-            Text(articleMarkdown: prose)
-                .font(.body)
+            ArticleParagraph(articleMarkdown: prose)
         case .quote(let text, let arabic, let dimmed):
             ScriptureQuote(text: text, arabic: arabic, dimmed: dimmed)
         case .ayah(let reference, let words):

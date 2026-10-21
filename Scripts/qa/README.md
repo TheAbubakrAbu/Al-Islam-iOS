@@ -26,6 +26,13 @@ One at a time:
 | `stress-screens.sh <sim\|mac> <udid\|-> <tag> <steps>` | one walk per `screens.txt` line, started with that screen's arguments ("start deep"); on the Mac the lines that write defaults are skipped |
 | `ipsreport.py [report.ips ...]` | one crash report in a few lines: where it ran, the message, the crashing thread, StressWalker on a stack or not |
 
+Checks (plain Python, no simulator; run from the repo root, EXIT 0 is the bar; `audits.sh` runs none of them):
+
+| Script | What it checks |
+| --- | --- |
+| `Scripts/check_cloud_manifest.py` | every `@AppStorage` / defaults key is classified in `CloudManifest.swift` |
+| `Scripts/check_simple_trims.py` | every `SimpleTrim` case is read by a site, no raw `simpleMode` read outside the allow-list, and the Simple Mode Guide's generated table is current (`--write-guide` rewrites it, `--list` prints each trim with its readers) |
+
 `screens.txt` lines are `name|seconds|launch arguments`; a line starting with `!` runs a shell command with
 the app terminated. Set state with launch arguments (`-seedBool`, `-seedString`, `-displayQiraah ""`): on the
 iOS 27 runtime `simctl spawn defaults write <bundle id>` writes a domain the app never reads.

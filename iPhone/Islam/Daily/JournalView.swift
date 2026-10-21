@@ -776,6 +776,7 @@ struct JournalView: View {
                 Text(title)
                 Text("\(count)")
                     .foregroundColor(selected ? .white.opacity(0.85) : .secondary)
+                    .hiddenInSimple(.sectionCounts)
             }
             .font(.caption.weight(.semibold))
             .foregroundColor(selected ? .white : .primary)

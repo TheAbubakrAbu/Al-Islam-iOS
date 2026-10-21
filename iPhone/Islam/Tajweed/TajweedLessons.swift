@@ -354,6 +354,7 @@ struct TajweedLessonDetailView: View {
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
+                                .hiddenInSimple(.sectionCounts)
                         }
                         if !set.note.isEmpty {
                             TajweedNoteText(text: set.note)

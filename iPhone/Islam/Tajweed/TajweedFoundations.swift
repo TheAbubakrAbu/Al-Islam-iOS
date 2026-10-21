@@ -548,11 +548,9 @@ struct TajweedOverviewView: View {
                 }
 
                 Section(header: ArticleHeader("RECITATION AND PRONUNCIATION")) {
-                    Text(verbatim: "Recitation (قِرَاءَة qiraah or تِلَاوَة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Recitation (قِرَاءَة qiraah or تِلَاوَة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations.")
 
-                    Text(verbatim: "Pronunciation in Quranic recitation is governed by two key components:")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Pronunciation in Quranic recitation is governed by two key components:")
 
                     ArticleVersus(
                         .init("Makharij", arabic: "مَخَارِجُ الحُرُوفِ",
@@ -562,11 +560,9 @@ struct TajweedOverviewView: View {
                         quranic: false
                     )
 
-                    Text(verbatim: "Together, they ensure that each letter is pronounced distinctly and correctly.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Together, they ensure that each letter is pronounced distinctly and correctly.")
 
-                    Text(verbatim: "These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:")
 
                     ScriptureQuote(quran: "73:4", words: 3...5)
                 }
@@ -585,14 +581,11 @@ struct TajweedOverviewView: View {
                 }
 
                 Section(header: ArticleHeader("HOW TO START LEARNING")) {
-                    Text(verbatim: "Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter.")
 
-                    Text(verbatim: "Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key; recording your recitation can help you catch mistakes and improve pronunciation.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key; recording your recitation can help you catch mistakes and improve pronunciation.")
 
-                    Text(verbatim: "Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey.")
-                        .font(.body)
+                    ArticleParagraph(verbatim: "Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey.")
                 }
 
                 Section(header: ArticleHeader("APPLICABILITY TO QIRAAT")) {

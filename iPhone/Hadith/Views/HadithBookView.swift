@@ -1040,7 +1040,7 @@ struct HadithBookView: View {
 
             // Chapters, then hadiths - the SAME order as the catalog rows' chips, abbreviated in the
             // split view's narrow content column so neither ellipsizes. Simple Mode drops them.
-            if settings.simpleMode {
+            if settings.hides(.chapterStats) {
                 EmptyView()
             } else if usesColumnNavigation {
                 statPill("\(data.chapters.count) Ch")
@@ -1417,7 +1417,7 @@ struct HadithBookView: View {
 
                     Spacer(minLength: 8)
 
-                    if !settings.simpleMode, let count = chapterStats(data).counts[chapter.id] {
+                    if !settings.hides(.chapterStats), let count = chapterStats(data).counts[chapter.id] {
                         CountPill(count: count)
                     }
                 }
@@ -1452,7 +1452,7 @@ struct HadithBookView: View {
 
                     Spacer(minLength: 8)
 
-                    if !settings.simpleMode, let rangeText = chapterRangeText(chapter, data: data) {
+                    if !settings.hides(.chapterStats), let rangeText = chapterRangeText(chapter, data: data) {
                         Text(rangeText)
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -1540,7 +1540,7 @@ struct HadithBookView: View {
                 .minimumScaleFactor(0.6)
 
                 // Simple Mode leaves the span and the count to the reader's chapter header.
-                if !settings.simpleMode {
+                if !settings.hides(.chapterStats) {
                     HStack(spacing: 4) {
                         if let rangeText = chapterRangeText(chapter, data: data) {
                             Text(rangeText)
@@ -1566,7 +1566,7 @@ struct HadithBookView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .frame(height: settings.simpleMode ? 60 : 76)
+            .frame(height: settings.hides(.chapterStats) ? 60 : 76)
             .contentShape(Rectangle())
             // The chapter filling the detail column wears the sidebar's ring. It used to get a lighter
             // accent TINT, the favorite's own grammar, so the open chapter "just highlights the back as
@@ -1997,7 +1997,7 @@ struct HadithChapterView: View {
     /// The pair ABOVE the first hadith. Simple Mode keeps only the one below the last
     /// (Docs/Product/Simple Mode Guide.md), and the two scrolls that land "at the literal top" target the
     /// first hadith instead of a pair that is not there.
-    private var showsTopChapterNav: Bool { showsChapterNav && !settings.simpleMode }
+    private var showsTopChapterNav: Bool { showsChapterNav && !settings.hides(.topChapterPair) }
 
     /// Swap the chapter in place - recompute its derived reading data, reset the search and visibility,
     /// and record it as Last Read - exactly as the surah reader swaps surahs without a new push.

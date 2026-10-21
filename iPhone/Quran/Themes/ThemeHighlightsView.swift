@@ -267,6 +267,7 @@ struct ThemeHighlightsView: View {
                     Text("\(theme.count)")
                         .font(.caption.weight(.semibold).monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .hiddenInSimple(.sectionCounts)
                     Button {
                         settings.hapticFeedback()
                         withAnimation(.easeInOut) { themeHighlights.remove(theme.id) }

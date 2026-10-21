@@ -599,8 +599,12 @@ struct HighlightedSnippet: View {
            normalizedTerm.containsArabicLetters == source.containsArabicLetters {
             ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
         }
-        // A one-letter term would snap every word it touches; below two letters the exact ranges stand.
-        return normalizedTerm.count >= 2 ? snappedToWholeWords(ranges, in: source) : ranges
+        // A short term paints only the letters it matched: "na" lights the "Na" of An-Najm, not the
+        // whole name (Abu, 2026-10-20: painting all of "Najm" for "na" read as the highlight being
+        // wrong, in the surah grid and in Arabic alike). A longer partial still fills its word
+        // ("believ" -> believers, the alef-skeleton prefix of a word the loose rung half-matched), so
+        // words in a results line never show half accent / half base color (Abu, 2026-08-29).
+        return snappedToWholeWords(ranges, in: source, minimumSnapLetters: 4)
     }
 
     /// Every match painted as WHOLE WORDS. The rungs above find substrings - "صلاة" inside
@@ -615,7 +619,8 @@ struct HighlightedSnippet: View {
     /// the same query paints the same words everywhere.
     nonisolated private static func snappedToWholeWords(
         _ ranges: [Range<String.Index>],
-        in source: String
+        in source: String,
+        minimumSnapLetters: Int = 2
     ) -> [Range<String.Index>] {
         guard !ranges.isEmpty else { return ranges }
         var snapped: [Range<String.Index>] = []
@@ -628,6 +633,17 @@ struct HighlightedSnippet: View {
             while start < end, isWordBoundary(source[start]) { start = source.index(after: start) }
             while end > start, isWordBoundary(source[source.index(before: end)]) { end = source.index(before: end) }
             guard start < end else { continue }
+            // Too few matched letters to claim the word: keep exactly what matched (merged with a
+            // touching range, so a phrase still reads as one span).
+            let matchedLetters = source[start..<end].filter { $0.isLetter || $0.isNumber }.count
+            if matchedLetters < minimumSnapLetters {
+                if let last = snapped.last, last.upperBound >= start {
+                    snapped[snapped.count - 1] = last.lowerBound..<max(last.upperBound, end)
+                } else {
+                    snapped.append(start..<end)
+                }
+                continue
+            }
             while start > source.startIndex {
                 let previous = source.index(before: start)
                 if isWordBoundary(source[previous]) { break }
@@ -1314,18 +1330,23 @@ extension Text {
     /// Quran and hadith readers, and the English word "Allah" the way those readers paint it. Every
     /// other run keeps whatever color the call site gives the `Text`.
     static func islamText(_ source: String, highlightAllah: Bool) -> Text {
-        guard highlightAllah else { return Text(source) }
+        if let attributed = islamHighlighted(source, highlightAllah: highlightAllah) { return Text(attributed) }
+        return Text(source)
+    }
+
+    /// The string `islamText` draws, as the attributed form: the name of Allah painted, or nil when the
+    /// setting is off or the text names Allah nowhere (draw the plain string). The selectable article
+    /// paragraphs (`ArticleParagraph`, ArticleDesign.swift) hand this to a text view, so a passage reads
+    /// the same whether it is a `Text` or a drag-selectable block.
+    static func islamHighlighted(_ source: String, highlightAllah: Bool) -> AttributedString? {
+        guard highlightAllah else { return nil }
         // Cached per source (Phase 10.8): every verbatim article paragraph, dua line and name tile runs
         // this on each body pass, with a diacritic-insensitive `range(of:)` scan over the whole string.
         let key = source as NSString
-        if let hit = IslamTextCache.cache.object(forKey: key) {
-            if let attributed = hit.value { return Text(attributed) }
-            return Text(source)
-        }
+        if let hit = IslamTextCache.cache.object(forKey: key) { return hit.value }
         let attributed = islamAttributed(source)
         IslamTextCache.cache.setObject(IslamTextCache.Box(attributed), forKey: key)
-        if let attributed { return Text(attributed) }
-        return Text(source)
+        return attributed
     }
 
     /// The highlighted form, or nil when the text names Allah nowhere.

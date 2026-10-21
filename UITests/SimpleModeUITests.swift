@@ -111,6 +111,172 @@ final class SimpleModeUITests: XCTestCase {
                       "the Full Mode More menu has no grid switch")
     }
 
+    /// The sort row hides in Simple while the sort is the default, so the ⋯ menu carries a Sort submenu in
+    /// both modes (Simple Mode v2, Task 6).
+    func testQuranMoreMenuHasSort() {
+        for simple in [1, 0] {
+            let app = launch(["-launchTabQuran", "-seedBool", "simpleMode=\(simple),quranPageMode=0"])
+            XCTAssertTrue(app.buttons["tabMoreMenu"].waitForExistence(timeout: 15),
+                          "no More menu on the Quran tab (simpleMode=\(simple))")
+            XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Quran More menu did not open (simpleMode=\(simple))")
+            XCTAssertTrue(app.buttons["Sort"].waitForExistence(timeout: 5),
+                          "the Quran More menu has no Sort (simpleMode=\(simple))")
+            app.terminate()
+        }
+    }
+
+    /// The Islam tab has no Today pill in Simple (the card pills hide), so its ⋯ menu leads with a Today
+    /// item in both modes, and it pushes the Daily Hub (Simple Mode v2, Task 9).
+    func testIslamMoreMenuHasToday() {
+        for simple in [1, 0] {
+            let app = launch(["-launchTabIslam", "-seedBool", "simpleMode=\(simple)"])
+            XCTAssertTrue(app.buttons["tabMoreMenu"].waitForExistence(timeout: 15),
+                          "no More menu on the Islam tab (simpleMode=\(simple))")
+            XCTAssertTrue(openMoreMenu(app, expecting: ["Today"]), "the Islam More menu did not open (simpleMode=\(simple))")
+            let today = app.buttons["Today"]
+            XCTAssertTrue(today.waitForExistence(timeout: 5), "the Islam More menu has no Today (simpleMode=\(simple))")
+            today.tap()
+            let landed = app.navigationBars.matching(NSPredicate(format: "identifier CONTAINS[c] 'Today'")).firstMatch
+            let heading = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'AYAH OF THE DAY' OR label CONTAINS[c] 'Today'")).firstMatch
+            XCTAssertTrue(landed.waitForExistence(timeout: 8) || heading.waitForExistence(timeout: 8),
+                          "Today did not open the Daily Hub (simpleMode=\(simple))")
+            app.terminate()
+        }
+    }
+
+    /// The Simple Mode page is the live catalog of what Simple hides and where each thing went (Simple
+    /// Mode v2, Task 11): the switch, then one section per surface in the catalog's order, each trim's
+    /// title over its door, in both modes, and no row back to itself. The root's SIMPLE MODE section
+    /// carries the What Moves Where row that pushes it, on the list root and on the grid root.
+    func testSimpleModePageListsTheCatalog() {
+        let door = NSPredicate(format: "label BEGINSWITH 'What Moves Where'")
+        for simple in [1, 0] {
+            let app = launch(["-launchTabSettings", "-settingsOpen", "simpleMode", "-seedBool", "simpleMode=\(simple)"])
+            XCTAssertTrue(app.staticTexts["EVERY TAB"].waitForExistence(timeout: 15),
+                          "the Simple Mode page has no EVERY TAB section (simpleMode=\(simple))")
+            XCTAssertTrue(app.switches["Simple Mode"].exists, "the Simple Mode page lost its switch (simpleMode=\(simple))")
+            XCTAssertFalse(app.buttons.matching(door).firstMatch.exists,
+                           "the Simple Mode page links to itself (simpleMode=\(simple))")
+            // The Adhan section's first row, under the eight of EVERY TAB: at most three swipes down.
+            let row = app.staticTexts["The Optional Times pill"]
+            var swipes = 0
+            while !row.exists, swipes < 3 {
+                app.swipeUp()
+                swipes += 1
+            }
+            XCTAssertTrue(row.waitForExistence(timeout: 3), "no Optional Times row after \(swipes) swipes (simpleMode=\(simple))")
+            XCTAssertTrue(app.staticTexts["ADHAN"].exists, "the Optional Times row has no ADHAN header (simpleMode=\(simple))")
+            XCTAssertTrue(app.staticTexts["Settings › Prayer Settings › Optional Prayers"].exists,
+                          "the Optional Times row does not say where it went (simpleMode=\(simple))")
+            attachScreenshot("simple-mode-page-\(simple)")
+
+            // Down the rest of the page: every surface's header, the last trim with its door, then the
+            // footer. A header is checked as the swipes pass it, since a List drops what scrolls away.
+            let headers = ["QURAN TAB", "LIST READER", "PAGE READER", "PLAY MENUS", "HADITH TAB", "HADITH BOOK",
+                           "HADITH READER", "ISLAM TAB", "ISLAM DESTINATIONS", "SETTINGS"]
+            let footer = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Turning Simple Mode on also turns off'")).firstMatch
+            var seen: Set<String> = []
+            var more = 0
+            repeat {
+                for header in headers where !seen.contains(header) && app.staticTexts[header].exists {
+                    seen.insert(header)
+                }
+                if footer.exists { break }
+                app.swipeUp()
+                more += 1
+            } while more < 15
+            for header in headers where !seen.contains(header) && app.staticTexts[header].exists {
+                seen.insert(header)
+            }
+            XCTAssertEqual(seen, Set(headers), "headers missing from the page: \(Set(headers).subtracting(seen)) (simpleMode=\(simple))")
+            XCTAssertTrue(footer.exists, "no footer after \(more) more swipes (simpleMode=\(simple))")
+            XCTAssertTrue(app.staticTexts["NEED A HAND? on the settings pages"].exists,
+                          "the last trim is missing (simpleMode=\(simple))")
+            XCTAssertTrue(app.staticTexts["Dropped: the tab sections it controls are hidden too"].exists,
+                          "the last trim does not say where it went (simpleMode=\(simple))")
+            attachScreenshot("simple-mode-page-foot-\(simple)")
+            app.terminate()
+        }
+
+        for grid in [0, 1] {
+            let app = launch(["-launchTabSettings", "-seedBool", "simpleMode=1,gridModeSettingsRaw=\(grid)"])
+            XCTAssertTrue(app.staticTexts["SIMPLE MODE"].waitForExistence(timeout: 15) || app.navigationBars["Settings"].exists,
+                          "the Settings tab did not show its root (grid=\(grid))")
+            let row = app.buttons.matching(door).firstMatch
+            row.scrollIntoViewIfNeeded(in: app)
+            XCTAssertTrue(row.exists, "the root's SIMPLE MODE section has no What Moves Where row (grid=\(grid))")
+            // The floating search bar's inset spans the foot of the screen and takes a tap there: on
+            // the grid root the row lands at 748 of 874 points, under it, and the first run's tap
+            // opened nothing. A slow drag, held at its end so nothing coasts, lifts the row clear.
+            if row.frame.maxY > app.frame.height * 0.75 {
+                let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+                let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+                from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+                row.waitUntilStill()
+            }
+            attachScreenshot("simple-mode-root-row-grid\(grid)")
+            row.tap()
+            XCTAssertTrue(app.staticTexts["EVERY TAB"].waitForExistence(timeout: 8),
+                          "What Moves Where did not open the Simple Mode page (grid=\(grid))")
+            app.terminate()
+        }
+    }
+
+    /// Rule 9 through the real switch: the Settings root's Simple Mode toggle writes through
+    /// `$settings.simpleMode`, and that binding must run the property's `didSet`, which folds every
+    /// screen's Show Advanced Settings off. A `-seedBool` writes the key directly and folds nothing, so
+    /// the control launch (the seed, no tap) still shows the switch on; after one tap on Simple Mode a
+    /// fresh launch shows it off, with the caption naming Simple Mode as the reason.
+    func testSimpleModeSwitchFoldsAdvanced() {
+        let seed = "advancedSettings_prayerCalculation=1,advancedSettings_islamLibraries=1,simpleMode=0,gridModeSettingsRaw=1"
+        let advancedSwitch: (XCUIApplication) -> XCUIElement = { $0.switches["Show Advanced Settings"].firstMatch }
+
+        // The control: seeded on, nothing tapped, the Libraries page's switch reads on.
+        var app = launch(["-launchTabSettings", "-settingsOpen", "islamLibraries", "-seedBool", seed])
+        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Libraries page has no ADVANCED switch (control)")
+        XCTAssertEqual(advancedSwitch(app).value as? String, "1", "the seed alone did not leave Show Advanced Settings on")
+        attachScreenshot("advanced-fold-control")
+        app.terminate()
+
+        // The same seed, then one tap on the Settings root's Simple Mode switch.
+        app = launch(["-launchTabSettings", "-seedBool", seed])
+        let simple = app.switches["Simple Mode"].firstMatch
+        XCTAssertTrue(simple.waitForExistence(timeout: 15), "the Settings root has no Simple Mode switch")
+        simple.scrollIntoViewIfNeeded(in: app)
+        // The floating search bar's inset takes a tap at the foot of the screen (see the What Moves
+        // Where row above): lift the switch clear first.
+        if simple.frame.maxY > app.frame.height * 0.7 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            let to = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+            from.press(forDuration: 0.1, thenDragTo: to, withVelocity: .slow, thenHoldForDuration: 0.3)
+            simple.waitUntilStill()
+        }
+        XCTAssertEqual(simple.value as? String, "0", "the seed did not leave Simple Mode off")
+        // A SwiftUI Toggle's row is one element, label and all; the tap has to land on the switch.
+        let knob = simple.switches.firstMatch
+        if knob.exists {
+            knob.tap()
+        } else {
+            simple.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5)).withOffset(CGVector(dx: -32, dy: 0)).tap()
+        }
+        let turnedOn = NSPredicate(format: "value == '1'")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: turnedOn, object: simple)], timeout: 5), .completed,
+                       "the tap did not turn Simple Mode on")
+        attachScreenshot("advanced-fold-tapped")
+        // The writes reach the defaults daemon before the next launch kills this one.
+        Thread.sleep(forTimeInterval: 2)
+        app.terminate()
+
+        // No seed this time: whatever the tap wrote is what the page reads.
+        app = launch(["-launchTabSettings", "-settingsOpen", "islamLibraries"])
+        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Libraries page has no ADVANCED switch (after the tap)")
+        XCTAssertEqual(advancedSwitch(app).value as? String, "0",
+                       "turning Simple Mode on with its switch did not fold Show Advanced Settings (rule 9)")
+        let caption = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Also here, with this on:' AND label ENDSWITH 'Simple Mode turned this off; turn it on to see every option here.'")).firstMatch
+        XCTAssertTrue(caption.exists, "the ADVANCED caption does not keep its list and add the Simple Mode sentence")
+        attachScreenshot("advanced-fold-after")
+    }
+
     /// The Adhan tab's More menu, in Full Mode: the two calendars, and the prayer list's layout, which
     /// left the PRAYER TIMES header for it (Abu, 2026-10-11: "for prayer have it contain a menu to switch
     /// between tiles and grid and whatnot and remove it from where it was originally").
@@ -532,7 +698,7 @@ final class SimpleModeUITests: XCTestCase {
         // Dismiss the menu without selecting a playback action.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.15)).tap()
         play.press(forDuration: 0.7)
-        XCTAssertTrue(app.navigationBars["Custom Ayah Range"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Custom Range"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Select Text"].exists, "row hold stole the button's hold")
     }
 

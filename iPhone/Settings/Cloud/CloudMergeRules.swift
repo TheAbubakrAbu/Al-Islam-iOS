@@ -67,6 +67,7 @@ enum CloudMergeRules {
         "quranListeningHistoryData": .unionObjects(identity: ["surahNumber", "reciter.name"], stamp: "timestamp", newestFirst: true, cap: 10),
         "quranReadingHistoryData": .unionObjects(identity: ["surahNumber", "ayahNumber"], stamp: "timestamp", newestFirst: true, cap: 10),
         "quranAyahListeningHistoryData": .unionObjects(identity: ["surahNumber", "ayahNumber", "reciter.name"], stamp: "timestamp", newestFirst: true, cap: 10),
+        "customRangeHistoryData": .unionObjects(identity: ["surahNumber", "startAyah", "endAyah", "repeatPerAyah", "repeatSection"], stamp: "timestamp", newestFirst: true, cap: 10),
         "themeHighlightsLit": .unionObjects(identity: ["id"], stamp: nil, newestFirst: false, cap: 7),
         "themeHighlightsAllSections": .eitherTrue,
         "themeHighlightsSections": .unionScalars(cap: nil),
