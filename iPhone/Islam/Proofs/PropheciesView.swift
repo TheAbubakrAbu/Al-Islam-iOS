@@ -16,8 +16,7 @@ import SwiftUI
 /// verifier had checked; Abu, 2026-09-25: "there's barely any in there! the real source had way
 /// more". The wording is this app's own; the hadith text is the shelf's.
 struct PropheciesView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
     @State private var searchText = ""
     @State private var openDoor: SignsAboutDoor?
     @State private var barsCollapsed = false

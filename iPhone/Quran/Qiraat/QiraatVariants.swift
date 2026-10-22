@@ -293,8 +293,9 @@ final class QiraatVariantsStore: @unchecked Sendable {
 /// them and what they mean, the reader's own riwayah marked. Compact by design; the full page
 /// (explanations, notes, transliterations) is one push away.
 struct AyahQiraatVariantsSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let surah: Surah
     /// The reader's row: its id is the DISPLAYED riwayah's own ayah number.
     let ayah: Ayah
@@ -431,8 +432,9 @@ struct AyahQiraatVariantsSection: View {
 /// Every juncture of the ayah with its readings in full: the form, who reads it, how it is said, what
 /// it means, and the source's explanation and note. Pushed from the actions sheet.
 struct AyahQiraatVariantsView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let surah: Surah
     /// The ayah as the READER numbers it (the preview card draws it in the displayed riwayah).
     let ayah: Ayah

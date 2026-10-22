@@ -130,8 +130,9 @@ enum SignsAboutDoor: String, Identifiable, Hashable, CaseIterable {
 /// The doors are Buttons writing one `@State`, not NavigationLinks: every chip here sits in the SAME
 /// List row (this whole card is one row), and two links in one row both fire on any tap.
 struct AboutSignsSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The card's own heading, e.g. "About Miracles & Prophethood".
     let heading: String
     let systemImage: String
@@ -535,8 +536,9 @@ enum ProphetSignsIndex {
 /// door to the article about his signs. `ProphetViews` has 25 pages and this is added by id, so a
 /// prophet with no entry in `ProphetSignsIndex` renders nothing at all.
 struct ProphetMiraclesLink: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The prophet page's own view-type name, e.g. "ProphetMusaView".
     let article: String
 

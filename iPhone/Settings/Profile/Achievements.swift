@@ -845,7 +845,8 @@ struct AchievementBannerHost: View {
 }
 
 private struct AchievementBannerCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let announcement: AchievementAnnouncement
@@ -1032,7 +1033,11 @@ extension View {
 /// publish re-evaluates a single empty view rather than five tab view trees. The stamp it hashes is
 /// the same one `ProfileSettingsRow` already recomputes on every pass of the Settings list.
 private struct AchievementWatcher: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var quranContent = QuranContent.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var tasbih = TasbihCounters.shared
     @ObservedObject private var hadithUserData = HadithUserData.shared

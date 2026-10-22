@@ -369,7 +369,12 @@ final class HadithSearchHandoff: ObservableObject {
 /// derived once per change of the viewed log or the last-read table (a formatter per entry per
 /// body before), and the rows push lazily.
 struct HadithHistoryView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var viewedLog = HadithStore.shared.viewedLog
     @Environment(\.dismiss) private var dismiss
 

@@ -404,7 +404,10 @@ struct JournalMarginNote: Identifiable {
 // MARK: - Screens
 
 struct JournalView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var store = JournalStore.shared
     @ObservedObject private var quranData = QuranData.shared
 

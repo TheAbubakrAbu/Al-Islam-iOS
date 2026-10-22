@@ -24,7 +24,8 @@ struct SearchBar: View {
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @State private var isEditing = false
     /// Bumped by Cancel: the field clears and resigns on the next update (the representable can't be
     /// reached imperatively from here).

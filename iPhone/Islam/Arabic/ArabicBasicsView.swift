@@ -10,8 +10,7 @@ import SwiftUI
 struct ArabicBasicsView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
     var body: some View {
         List {
             Group {
@@ -171,8 +170,10 @@ struct ArabicBasicsView: View {
 /// These used to be a plain `Label` whose icon was a one-glyph `Text` in the system font, which left the
 /// rows looking like settings rows beside a screen full of large letters (Abu, 2026-09-20).
 struct ArabicTopicLinkLabel: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let specimen: String
     let title: String
     let caption: String
@@ -268,8 +269,10 @@ struct ArabicTopicLinkLabel: View {
 struct DefaultTashkeelView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     var body: some View {
         List {
             Group {
@@ -519,8 +522,9 @@ struct DefaultTashkeelView: View {
 struct BaaHaaShapesView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
     /// The dotless pair: U+066E (dotless baa), haa, and a tatweel so the haa stays in its joining form.
     static let skeleton = "\u{066E}\u{062D}\u{0640}"
 
@@ -730,8 +734,10 @@ struct BaaHaaShapesView: View {
 struct LaamAlifShapesView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     /// Laam and alif, which every face draws as the one shape.
     static let skeleton = "\u{0644}\u{0627}"
 

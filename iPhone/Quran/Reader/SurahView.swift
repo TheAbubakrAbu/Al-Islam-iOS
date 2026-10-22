@@ -483,7 +483,11 @@ struct SurahView: View {
         return false
         #endif
     }
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject var quranData = QuranData.shared
     /// Playback STATE from the coalesced `NowPlayingState`; actions on the un-observed player
     /// (Phase 10.4: the raw player published 5-6 times per ayah advance, each a full reader pass).
@@ -783,9 +787,9 @@ struct SurahView: View {
     /// rotation changes - so after a rotation SwiftUI considered every surviving row equal to its old
     /// value and never re-ran its body. Traced: `WordByWordTextView.updateUIView` fired 16 times and
     /// its LAST call was `width=794` in landscape; nothing arrived when the interface came back to
-    /// 402pt. The row therefore kept 794pt of TextKit layout inside a ~338pt card, and because that
-    /// view sets `clipsToBounds = false` (so tashkeel ink is not sheared at the edge) the overflow
-    /// PAINTED outside the row: Arabic and English ran off both sides and the List scrolled sideways.
+    /// 402pt. The row therefore kept 794pt of TextKit layout inside a ~338pt card, and because nothing
+    /// above that view clips (a view's own drawing fills its bounds whatever `clipsToBounds` says) the
+    /// overflow PAINTED outside the row: Arabic and English ran off both sides and the List scrolled sideways.
     ///
     /// Folding the width in means a rotation changes the signature, `==` returns false, and the rows
     /// re-render against the new geometry. It is the width and not the size class because an iPad
@@ -3771,7 +3775,7 @@ struct SurahView: View {
             .accessibilityLabel("Search this page")
 
             if flanks.comparison {
-                ArabicTextRiwayahPicker(selection: $settings.displayQiraah, omitsDefaultSuffix: true)
+                ArabicTextRiwayahPicker(selection: $quranDisplay.displayQiraah, omitsDefaultSuffix: true)
                     .layoutPriority(1)
             }
         }
@@ -3851,7 +3855,7 @@ struct SurahView: View {
                 }
 
                 if comparisonVisible {
-                    ArabicTextRiwayahPicker(selection: $settings.displayQiraah)
+                    ArabicTextRiwayahPicker(selection: $quranDisplay.displayQiraah)
                         .layoutPriority(1)
                 }
             }
@@ -4239,7 +4243,7 @@ struct SurahView: View {
             // along in Latin script. Headings follow the page's language automatically.
             if settings.quranPageMode {
                 Menu {
-                    Picker("Page Text", selection: $settings.mushafPageLanguage) {
+                    Picker("Page Text", selection: $quranDisplay.mushafPageLanguage) {
                         // The PDF facsimile only lists itself when this riwayah actually has one bundled,
                         // so a missing file reads as "not offered here" rather than an empty reader.
                         // While the beta text is unaccepted, "Arabic" leaves the picker (the facsimile
@@ -4268,7 +4272,7 @@ struct SurahView: View {
                     // either way, so night reading is always one choice away regardless of theme.
                     if settings.resolvedMushafPageLanguage.isPDF {
                         Divider()
-                        Picker("Appearance", selection: $settings.mushafPDFAppearance) {
+                        Picker("Appearance", selection: $quranDisplay.mushafPDFAppearance) {
                             ForEach(MushafPDFAppearance.allCases) { appearance in
                                 Label(appearance.displayName, systemImage: appearance.systemImage)
                                     .tag(appearance.rawValue)
@@ -4278,7 +4282,7 @@ struct SurahView: View {
                         // build carries and stays away when that is just the default.
                         if Settings.Riwayah.canonicalTag(pdfRiwayahTag) == Settings.Riwayah.hafsTag,
                            MushafPDFLibrary.bundledHafsEditions.count > 1 {
-                            Picker("Edition", selection: $settings.mushafHafsPDFEdition) {
+                            Picker("Edition", selection: $quranDisplay.mushafHafsPDFEdition) {
                                 ForEach(MushafPDFLibrary.bundledHafsEditions) { edition in
                                     Label(edition.displayName, systemImage: edition.systemImage)
                                         .tag(edition.rawValue)
@@ -4876,8 +4880,9 @@ struct RotatingGearView: View {
 /// available); the beta-text consent happens where text would actually render
 /// (`BetaTextConsentCard`), not here at selection time.
 struct ArabicTextRiwayahPicker: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Binding var selection: String
     /// Renders as a labeled row (title leading, current riwayah trailing) for Forms and sheets,
     /// opening the SAME nested qiraah menu the comparison bar chip uses - one picker grammar
@@ -5142,8 +5147,10 @@ enum ReaderLegendPage: String {
 /// exception: it folds the button away while nothing is colored (Quran Settings still holds both
 /// switches, so it is not the only way back).
 private struct ReaderLegendMenu: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Tajweed colors are on the page (or it is the facsimile, whose print colors cannot be turned off).
     let tajweedApplies: Bool
     /// At least one theme or passage is lit.
@@ -5305,7 +5312,8 @@ private struct ReaderLegendMenu: View {
 
 /// The legend sheet: the tajweed legend and the theme legend behind one segmented picker in the bar.
 private struct ReaderLegendSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     @State private var page: ReaderLegendPage

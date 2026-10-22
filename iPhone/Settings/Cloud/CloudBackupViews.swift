@@ -14,7 +14,9 @@ import UniformTypeIdentifiers
 /// profiles yet (name this device, start), an account with profiles already in it (pick one to
 /// restore onto this device, or start a new one).
 struct CloudOfferView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var manager = CloudBackupManager.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
@@ -707,7 +709,9 @@ struct CloudBackupSettingsRow: View {
 }
 
 struct CloudBackupSettingsView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var manager = CloudBackupManager.shared
 
     @State private var showOffer = false

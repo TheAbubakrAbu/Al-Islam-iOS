@@ -70,7 +70,10 @@ struct SurahsHeader: View {
 struct JuzHeader: View {
     @ObservedObject var quranData = QuranData.shared
     #if os(iOS)
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     #endif
 
     let juz: Juz
@@ -217,7 +220,11 @@ struct PageHeader: View {
 }
 
 struct SurahSectionHeader: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     // Player state is only READ on watchOS (the wrist playback button). Observing it on iOS re-rendered
     // this header on every play/pause/ayah-advance publish for a body that never looks at it.
     #if os(watchOS)
@@ -350,7 +357,10 @@ struct SurahSectionHeader: View {
 }
 
 struct HeaderRow: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Actions only (`playBismillah`): observing the player re-ran this row's three highlighted
     /// snippets on every ayah advance while a surah played from its start (Phase 10.4).
     private var quranPlayer: QuranPlayer { .shared }

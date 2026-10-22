@@ -10,7 +10,7 @@ import SwiftUI
 /// Loads the book, resolves the reference, and shows the hadith - the landing screen for "bukhari 5"-style
 /// lookups and for bookmarked hadiths.
 struct HadithReferenceView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
     @ObservedObject private var store = HadithStore.shared
 
     let book: HadithCatalogBook
@@ -852,7 +852,8 @@ struct HadithRow: View, Equatable {
 /// book view both show these inside the search-help card that floats over the list while the field
 /// is focused and empty. Picking one re-runs it (and bumps it to the front), the ✕ forgets it.
 struct HadithRecentSearches: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
     @Binding var searchText: String
 
     var body: some View {
@@ -1246,7 +1247,8 @@ struct HadithLoadMoreControls: View {
 /// a `GridTileMenu`, whose tap runs the action and whose long press opens the menu - a `contextMenu`
 /// in a grid lifts the whole List row (every tile at once) as its preview.
 struct HadithBookmarkMenu: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var userData = HadithUserData.shared
 
     let bookmark: HadithBookmark
@@ -1380,7 +1382,12 @@ extension View {
 }
 
 struct HadithBookmarkRow: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Bookmark rows render only user marks - observe the user-data object, not the whole store.
     @ObservedObject private var userData = HadithUserData.shared
 
@@ -1532,8 +1539,12 @@ struct HadithBookmarkRow: View, Equatable {
 /// two-line Arabic, two-line English, on clear glass, with the filled bookmark in the top-right corner
 /// where tapping it removes the bookmark (after the confirmation) - the ayah tile's corner exactly.
 struct HadithBookmarkGridTile: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let bookmark: HadithBookmark
     /// iPad/Mac catalog: ring the tile while the detail column reads this bookmark (`HadithReadingRing`,
     /// which observes the selection itself, so only the layout flip has to pass `==`).
@@ -1659,7 +1670,9 @@ struct HadithBookmarkGridTile: View, Equatable {
 /// Edge-to-edge distraction-free reading: just the hadith text on the system background, with a quiet
 /// dismiss control - the hadith counterpart of the Quran's full-screen reading.
 struct HadithImmersiveView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let title: String
@@ -1742,7 +1755,12 @@ extension FocusItem {
 /// logo + app-name watermark - with the hadith's parts (reference, Arabic, narrator, English, grade,
 /// note) in place of the ayah's.
 struct HadithShareSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     let book: HadithCatalogBook
@@ -2472,8 +2490,12 @@ struct HadithShareSheet: View {
 /// selection somewhere to live, and each block also gets a one-tap copy for when the whole block
 /// is what you wanted.
 struct SelectHadithTextSheet: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
 

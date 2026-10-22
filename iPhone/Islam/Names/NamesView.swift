@@ -408,7 +408,11 @@ final class NamesViewModel: ObservableObject {
 }
 
 struct NamesView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Two names across at the accessibility text sizes, where three squeezed each name's line.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private var nameGridColumns: [GridItem] {
@@ -1448,7 +1452,9 @@ private struct NameRow: View, Equatable {
 }
 
 private struct NameRowDetails: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
     #if HAS_QURAN
     @ObservedObject var quranData = QuranData.shared
     #endif
@@ -1522,8 +1528,9 @@ private struct NameRowDetails: View {
 }
 
 private struct VerseReflectionCard: View {
-    @ObservedObject var settings = Settings.shared
-    
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
     let title: String
     let contentText: String
 

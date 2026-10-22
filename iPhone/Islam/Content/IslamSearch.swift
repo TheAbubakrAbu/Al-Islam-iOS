@@ -304,7 +304,8 @@ enum IslamArticleCatalog {
             ("DuhaView", "How to Pray Duha", "duha", ["forenoon", "ishraq", "morning prayer", "chasht"]),
             ("TaraweehView", "How to Pray Taraweeh", "taraweeh", ["tarawih", "ramadan night", "qiyam"]),
             ("JanazahView", "How to Pray the Funeral Prayer", "janazah", ["janaza", "funeral", "death", "burial", "shroud", "kafan", "deceased"]),
-            ("IstikharahView", "How to Pray Istikharah", "istikharah", ["istikhara", "decision", "guidance prayer", "choice"]),
+            ("IstikharahView", "How to Pray Istikharah", "istikharah", ["istikhara", "salat al-istikhara", "decision", "guidance prayer", "choice"]),
+            ("IstikharahDuaView", "The Dua of Istikharah", "istikharah-dua", ["dua istikhara", "istikhara dua", "dua al-istikhara", "istikhara", "supplication", "decision", "allahumma inni astakhiruka"]),
         ]),
         group("PRAYER IN SPECIAL CASES", .guides, [
             ("TravelPrayerView", "How to Pray While Traveling", "travel", ["traveler", "qasr", "shorten", "combine", "jam", "journey", "plane"]),
@@ -2753,6 +2754,13 @@ enum ArticleSources {
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
             ArticleSource(title: "Al-Wabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
             ArticleSource(title: "Ad-Da' wad-Dawa'", subtitle: "Ibn al-Qayyim"),
+            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
+            ArticleSource(title: "How to Pray Istikharah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
+            ArticleSource(title: "Istikharah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),
+        ],
+        "IstikharahDuaView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-‘Asqalani, commentary on Sahih al-Bukhari, on the Istikharah hadith"),
             ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
             ArticleSource(title: "How to Pray Istikharah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
             ArticleSource(title: "Istikharah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),

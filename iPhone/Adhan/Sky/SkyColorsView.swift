@@ -6,8 +6,9 @@ import SwiftUI
 /// Only the six real prayers appear. Jumuah, the traveling-mode pairs and the optional night times inherit
 /// through `SkyPalette.editableKey`, so there is nothing extra to set or keep in sync.
 struct SkyColorsView: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Which prayer the preview is showing. Follows whichever picker was touched last.
     @State private var previewPrayer = "Fajr"
 

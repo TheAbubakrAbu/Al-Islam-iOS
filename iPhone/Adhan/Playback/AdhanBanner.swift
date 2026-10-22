@@ -93,7 +93,9 @@ struct AdhanBannerHost: View {
 }
 
 private struct AdhanBannerCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let prayerName: String

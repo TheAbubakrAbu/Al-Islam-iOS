@@ -149,7 +149,11 @@ enum StartHere {
 // MARK: - The welcome
 
 struct AboutYouView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.dismiss) private var dismiss
 
@@ -630,7 +634,9 @@ struct AboutYouView: View {
 
 /// The answer, changeable: a row of the Settings tab, under Your Progress.
 struct AboutYouSettingsView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @State private var showWelcome = false
 
     var body: some View {
@@ -741,8 +747,8 @@ struct AboutYouSettingsView: View {
 /// own two colors (Abu, 2026-09-20: "allow me to change my tutorial somewhere in settings"; the
 /// guide it switches on lives on the Islam tab, so that is where he looked). One screen, two doors.
 struct AboutYouSettingsRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     var tint: Color? = nil
     var secondaryTint: Color? = nil
 

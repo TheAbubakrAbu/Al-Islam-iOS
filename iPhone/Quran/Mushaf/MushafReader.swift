@@ -723,7 +723,11 @@ private var mushafStillTransaction: Transaction {
 }
 
 struct SurahPageReader<Controls: View>: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     /// Playback STATE comes from the coalesced `NowPlayingState` (one publish per main-queue turn, only
     /// when a read field changed); the raw player published five or six times per ayah advance and each
@@ -3747,7 +3751,11 @@ enum PageReaderControlsPart {
 
 /// One page of the mushaf. Its body is only built when the page scrolls into view.
 private struct MushafPageContent: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The lit themes' washes on this page (see `ThemeHighlights`).
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
     // Deliberately NOT @ObservedObject: this page only hands quranData to its secondary sheets as an
@@ -7549,10 +7557,10 @@ final class PageZoomScrollView: UIScrollView {
             bounces = false
             clipsToBounds = false
         }
-        // The text view normally has this size already (`MushafPageTextView.updateUIView` gives it its box
-        // before its text). A text view's frame change resizes its text container, which throws the page's
-        // whole typesetting away and lays it out again, so a frame that differs only by SwiftUI's pixel
-        // rounding of the same box is left alone.
+        // The page box (`ArabicInkBleedHost`, with the text view inside it) normally has this size already
+        // (`MushafPageTextView.updateUIView` gives it its box before its text). A text view's frame change
+        // resizes its text container, which throws the page's whole typesetting away and lays it out again,
+        // so a frame that differs only by SwiftUI's pixel rounding of the same box is left alone.
         let size = pageView.frame.size
         if abs(size.width - bounds.width) > 0.5 || abs(size.height - bounds.height) > 0.5 {
             pageView.frame = CGRect(origin: .zero, size: bounds.size)
@@ -7933,13 +7941,16 @@ struct MushafPageTextView: UIViewRepresentable {
         tv.isEditable = false
         tv.isSelectable = false
         tv.isScrollEnabled = false
-        // Never scrolls (above), so it doesn't need to clip - and it must not: a justified line ends flush
-        // at the margin, and the tashkeel ink of a line's last letter routinely overhangs its glyph advance.
-        // Clipping sheared those marks at the container edge; letting them draw a few points into the page's
-        // horizontal padding is exactly what the padding is for.
+        // Never scrolls (above), so it doesn't clip its subviews - but `clipsToBounds` was never what
+        // sheared the tashkeel: the text is the view's OWN drawing, rasterised within its bounds whatever
+        // this says. A justified line ends flush at both margins, and the ink of a line-initial alif
+        // wasla (its ṣād) or a line-final mark routinely overhangs the glyph advance, so the view has to
+        // be wider than the column: `ArabicInkBleedHost` (below) makes it so, with the container insets
+        // that keep every line exactly where the fitter put it, and the ink draws into the page's
+        // horizontal padding, which is what the padding is for (Abu, 2026-10-21: "look at hamzatul wasl
+        // its broken").
         tv.clipsToBounds = false
         tv.backgroundColor = .clear
-        tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
         tv.adjustsFontForContentSizeCategory = false
         tv.textContainer.widthTracksTextView = false
@@ -8014,8 +8025,11 @@ struct MushafPageTextView: UIViewRepresentable {
         // The page always ships inside a scroll view; on the fitted page it IS the zoomer (PDF-style
         // persistent pinch zoom), on an overflowing page it is inert (no scroll, no zoom) and just holds
         // the text view for the SwiftUI scroll container around it.
+        // The page box that the scroll view, the zoom and the SwiftUI frame all see; the text view
+        // inside it overhangs by the bleed on each side.
+        let host = ArabicInkBleedHost(textView: tv)
         let scroll = PageZoomScrollView()
-        scroll.pageView = tv
+        scroll.pageView = host
         scroll.pageNumber = pageNumber
         scroll.backgroundColor = .clear
         scroll.showsVerticalScrollIndicator = false
@@ -8036,15 +8050,16 @@ struct MushafPageTextView: UIViewRepresentable {
             scroll.maximumZoomScale = 1
             scroll.isScrollEnabled = false
         }
-        scroll.addSubview(tv)
+        scroll.addSubview(host)
 
         context.coordinator.textView = tv
+        context.coordinator.pageHost = host
         context.coordinator.scrollView = scroll
         return scroll
     }
 
     func updateUIView(_ scroll: UIScrollView, context: Context) {
-        guard let tv = context.coordinator.textView else { return }
+        guard let tv = context.coordinator.textView, let host = context.coordinator.pageHost else { return }
         context.coordinator.ranges = ranges
         context.coordinator.onTapAyah = onTapAyah
         context.coordinator.onLongPressAyah = onLongPressAyah
@@ -8129,13 +8144,16 @@ struct MushafPageTextView: UIViewRepresentable {
             // resizing, so nothing but the new text is ever typeset. A zoomed page keeps the old order:
             // its frame is the zoom's, and the scroll view resets the zoom when its size changes.
             let box = CGSize(width: width, height: height)
-            if scroll.zoomScale == 1, height > 0, tv.frame.size != box {
+            if scroll.zoomScale == 1, height > 0, host.frame.size != box {
                 if tv.textStorage.length > 0 { tv.textStorage.setAttributedString(NSAttributedString()) }
-                tv.frame = CGRect(origin: .zero, size: box)
+                host.frame = CGRect(origin: .zero, size: box)
+                // The text view's own box NOW, not at the host's next layout pass: the text assigned
+                // below must find its final frame already set, which is the whole point of this order.
+                tv.frame = ArabicInkBleedHost.textFrame(in: host.bounds)
             }
             // Re-pin on every real update: the width changes on rotation / size-class changes.
             tv.textContainer.widthTracksTextView = false
-            tv.textContainer.size = tv.frame.size == box
+            tv.textContainer.size = host.frame.size == box
                 ? box
                 : CGSize(width: width, height: .greatestFiniteMagnitude)
             tv.attributedText = tinted
@@ -8159,6 +8177,8 @@ struct MushafPageTextView: UIViewRepresentable {
         static let doubleTapGrace: TimeInterval = 0.25
 
         weak var textView: UITextView?
+        /// The page box around the text view (`ArabicInkBleedHost`): what the scroll view zooms.
+        weak var pageHost: ArabicInkBleedHost?
         weak var scrollView: UIScrollView?
         /// The page's long press, so the right-click interaction can tell a finger's press from a click.
         weak var pressRecognizer: UILongPressGestureRecognizer?
@@ -8173,7 +8193,7 @@ struct MushafPageTextView: UIViewRepresentable {
 
         // MARK: PDF-style zoom (fitted page only - the host enables zooming there)
 
-        func viewForZooming(in scrollView: UIScrollView) -> UIView? { textView }
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? { pageHost ?? textView }
 
         /// Bounce and clipping only exist while actually zoomed in: panning a magnified page should feel
         /// like the facsimile's PDFView (and must not slide over the reader's chrome, hence the clip),

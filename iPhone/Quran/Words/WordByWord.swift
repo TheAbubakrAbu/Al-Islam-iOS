@@ -1091,6 +1091,64 @@ enum CrossLanguageWordHighlight {
     }
 }
 
+// MARK: - Ink bleed
+
+/// A box around an Arabic `UITextView` that lets its ink overhang the text column.
+///
+/// The Quranic faces draw ink past a glyph's advance box: in KFGQPC HAFS the small ṣād of a hamzat
+/// wasl (ٱ) reaches about 1pt per 40pt of size to the RIGHT of the alif, and a line-final kasra or
+/// tanween up to 2.7pt to the LEFT (measured with CoreText, 2026-10-21). A line's first glyph sits
+/// flush at the container's right edge and a justified page line's last glyph at its left, so that
+/// ink falls outside the container - and a `UITextView` rasterises its text in a surface exactly its
+/// own size. `clipsToBounds = false` frees SUBVIEWS, never the view's own drawing, which is why the
+/// list rows, the ayah sheets and the mushaf page all sliced the wasla's mark off (Abu, 2026-10-21:
+/// "some letters get cut off in list and page and menu ... look at hamzatul wasl its broken").
+///
+/// So the text view is made `bleed` wider than its column on each side, with container insets of the
+/// same size: every line fragment keeps exactly the geometry it had (the fitter's line breaks, the
+/// justification, the tap hit-testing, which already subtracts `textContainerInset`), and the overhang
+/// lands inside the view's own surface. This host is the column: the frame SwiftUI or the page's
+/// scroll view lays out, and the box a touch has to be inside, since a point outside a view's bounds
+/// never hit-tests into its subviews. The text view hangs out of it by `bleed` on both sides, as
+/// drawing only.
+final class ArabicInkBleedHost: UIView {
+    /// The faces' largest measured overhang is about 7% of the point size (the left side), and the
+    /// reader's largest Arabic is 75pt (the sheet card tops out near 80): 12pt covers every size with
+    /// room to spare, and matches the page's horizontal `textPadding` and the list rows' wash outset,
+    /// so the ink never reaches past the paint those already reserve.
+    static let bleed: CGFloat = 12
+
+    let textView: UITextView
+
+    init(textView: UITextView) {
+        self.textView = textView
+        super.init(frame: .zero)
+        clipsToBounds = false
+        backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 0, left: Self.bleed, bottom: 0, right: Self.bleed)
+        addSubview(textView)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+    /// The text view's frame for a host box: the box, plus the bleed on each side.
+    static func textFrame(in bounds: CGRect) -> CGRect { bounds.insetBy(dx: -bleed, dy: 0) }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let target = Self.textFrame(in: bounds)
+        // Same box, left alone. A non-scrolling text view resyncs its container to any frame change,
+        // and a container resize throws the whole typesetting away (see `MushafPageTextView`), so
+        // SwiftUI's pixel rounding of the same box must not count as a change.
+        let current = textView.frame
+        if abs(current.minX - target.minX) > 0.5 || abs(current.minY - target.minY) > 0.5
+            || abs(current.width - target.width) > 0.5 || abs(current.height - target.height) > 0.5 {
+            textView.frame = target
+        }
+    }
+}
+
 // MARK: - The reader's word-tappable Arabic
 
 /// The ayah's Arabic, rendered through TextKit so one word can be hit-tested and lit.
@@ -1110,16 +1168,17 @@ struct WordByWordTextView: UIViewRepresentable {
     var tapsRequired: Int = 2
     let onTapWord: (Int) -> Void
 
-    func makeUIView(context: Context) -> UITextView {
+    func makeUIView(context: Context) -> ArabicInkBleedHost {
         let view = UITextView()
         view.isEditable = false
         view.isSelectable = false
         view.isScrollEnabled = false
-        // A line's last letter routinely overhangs its glyph advance with tashkeel ink; clipping would
-        // shear those marks off at the container edge (same reasoning as the mushaf page view).
+        // `clipsToBounds` frees SUBVIEWS only; the text is the view's own drawing, rasterised within its
+        // bounds whatever this says. The ink that overhangs a glyph's advance (a line-initial alif
+        // wasla's ṣād, a line-final mark) therefore needs the view to be WIDER than its column, which is
+        // what `ArabicInkBleedHost` does - with the container insets that keep every line in place.
         view.clipsToBounds = false
         view.backgroundColor = .clear
-        view.textContainerInset = .zero
         view.textContainer.lineFragmentPadding = 0
         view.adjustsFontForContentSizeCategory = false
         view.textContainer.widthTracksTextView = false
@@ -1141,10 +1200,11 @@ struct WordByWordTextView: UIViewRepresentable {
         context.coordinator.textView = view
         tap.delegate = context.coordinator
         view.addGestureRecognizer(tap)
-        return view
+        return ArabicInkBleedHost(textView: view)
     }
 
-    func updateUIView(_ view: UITextView, context: Context) {
+    func updateUIView(_ host: ArabicInkBleedHost, context: Context) {
+        let view = host.textView
         context.coordinator.wordRanges = wordRanges
         context.coordinator.onTapWord = onTapWord
 
@@ -1186,11 +1246,15 @@ struct WordByWordTextView: UIViewRepresentable {
     /// TextKit relays out on the next pass. Growth never needed this (the flexible frame around the
     /// view takes a wider offer by itself); see `WordByWordWidthTests`.
     @available(iOS 16.0, *)
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView host: ArabicInkBleedHost, context: Context) -> CGSize? {
         guard width > 0 else { return nil }
         let offered = proposal.width.flatMap { $0.isFinite && $0 > 0 ? $0 : nil }
         let fitWidth = min(width, offered ?? width)
-        let fitting = uiView.sizeThatFits(CGSize(width: fitWidth, height: .greatestFiniteMagnitude))
+        // The text view is the column plus its bleed on each side, and its answer subtracts the insets
+        // that make up that bleed - so it is asked the width it will actually have.
+        let fitting = host.textView.sizeThatFits(
+            CGSize(width: fitWidth + 2 * ArabicInkBleedHost.bleed, height: .greatestFiniteMagnitude)
+        )
         return CGSize(width: fitWidth, height: ceil(fitting.height))
     }
 
@@ -1319,8 +1383,9 @@ struct WordByWordRef: Hashable {
 /// Builds the attributed ayah run (tajweed colors, the name الله, the trailing ayah ornaments) and hands it
 /// to the text view above. Kept separate so the representable stays a dumb renderer.
 struct WordByWordText: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let segments: [WordByWordSegment]
     let fontName: String?
     let fontSize: CGFloat
@@ -1366,8 +1431,8 @@ struct WordByWordText: View {
     /// horizontal to vertical or vice versa ruins list"). `@State` is initialised once per row, so a
     /// plain static seed handed every row rebuilt after a rotation the width from the PREVIOUS
     /// orientation - 695pt of landscape text laid out inside a ~362pt portrait card. TextKit duly
-    /// typeset to 695, and because this view sets `clipsToBounds = false` (so tashkeel ink is not
-    /// sheared at the edge) the overflow PAINTED outside the card: both the Arabic and the English
+    /// typeset to 695, and because nothing above this view clips (its own drawing fills its bounds
+    /// whatever `clipsToBounds` says) the overflow PAINTED outside the card: both the Arabic and the English
     /// ran off each side of the row, and the List could be scrolled sideways. The preference below
     /// does correct the width a pass later, but a row that was reused rather than re-measured never
     /// got that pass and stayed wrong until it was scrolled off screen and rebuilt.
@@ -1493,8 +1558,8 @@ struct WordByWordText: View {
         // the way BACK from landscape the preference simply stopped firing (traced 2026-10-07: the last
         // callback a row ever saw was `measured=794` in landscape; nothing arrived when the interface
         // returned to 402pt). The row kept 794pt of TextKit layout inside a ~338pt card, and since
-        // `WordByWordTextView` sets `clipsToBounds = false` so tashkeel ink is not sheared at the edge,
-        // the overflow PAINTED outside the row: Arabic and English both ran off each side and the List
+        // nothing above `WordByWordTextView` clips (a view's own drawing fills its bounds whatever its
+        // `clipsToBounds` says), the overflow PAINTED outside the row: Arabic and English both ran off each side and the List
         // could be dragged sideways (Abu, 2026-10-07: "going from horizontal to vertical or vice versa
         // ruins list"). `onGeometryChange` reports a SHRINK as reliably as a growth, which is exactly
         // the direction the old path dropped.
@@ -1661,8 +1726,9 @@ struct WordByWordSearchPaint: Equatable {
 }
 
 struct WordByWordInlineText: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// What the reader is showing - already clean-mode / dots-mode processed.
     let displayText: String
     /// Tajweed-colored version of `displayText`, when tajweed colors are on.
@@ -2347,8 +2413,9 @@ private enum WordAcrossRiwayat {
 /// riwayah, each spelling shown once with the riwayat that print it. Computed on appear, not in
 /// `body` - it touches every riwayah's text and alignment.
 private struct WordAcrossRiwayatSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let surah: Surah
     let ayah: Ayah
     /// Riwayah the word was tapped in ("" = Hafs).
@@ -2488,8 +2555,9 @@ private struct WordAcrossRiwayatSection: View {
 /// Ten actually starts. Classical order of the Ten here rather than the menus' alphabetical order:
 /// this is a comparison table, not a picker, and the order is part of what it teaches.
 private struct WordByQiraahGrid: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let cells: [WordQiraahCell]
 
     /// Every cell the height of the tallest (Abu, 2026-09-07: "make sure each grid is the same
@@ -2679,7 +2747,10 @@ enum WordCardTrace {
 /// (every word of the root, a page at a time, and its other dictionary forms), Themes (the passage
 /// and the ayah's topics), Tajweed, and Qiraat when the reader has qiraat on.
 struct WordMeaningSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
     @Environment(\.presentationMode) private var presentationMode
 
@@ -3293,7 +3364,10 @@ struct RiwayahTappedWord: Identifiable, Equatable {
 }
 
 struct RiwayahWordSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
 
     let surah: Surah

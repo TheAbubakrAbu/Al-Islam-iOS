@@ -1144,8 +1144,8 @@ enum TipCatalog {
 /// "Tips & Tricks", the first row of a settings page. `resolve` is the page's own search resolver, so
 /// a tip that opens one of that page's screens pushes it directly instead of a second page root.
 struct TipsSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let area: TipArea
     var resolve: (SettingsSearchEntry.Destination) -> AnyView? = { _ in nil }
 
@@ -1166,8 +1166,9 @@ struct TipsSection: View {
 // MARK: - The list
 
 struct TipsView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let area: TipArea
     var resolve: (SettingsSearchEntry.Destination) -> AnyView? = { _ in nil }
 
@@ -1339,7 +1340,9 @@ struct TipRow: View {
 
 /// The tutorial: an area's `tour` tips as cards to swipe through, one idea to a card.
 struct TipsTourView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let area: TipArea
@@ -1454,8 +1457,8 @@ private struct TipTourCard: View {
 
 /// "All Tips & Tricks": the six lists behind one door, for the Settings tab's own root.
 struct TipsHubView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @State private var query = ""
     @State private var barsCollapsed = false
 
@@ -1532,8 +1535,9 @@ struct TipsHubView: View {
 /// split's detail column (`SettingsDestination.spotlight`). Only iOS 15, which has neither, takes
 /// `rows: true`: the same tips as ordinary rows.
 struct SettingsSpotlightSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// True for the fallback shape: one settings row per tip.
     let rows: Bool
     /// The card whose screen fills the iPad/Mac detail column. It wears the ring every sidebar grid

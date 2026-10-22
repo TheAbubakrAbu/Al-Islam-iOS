@@ -170,7 +170,9 @@ struct PermissionsIntro: View {
 /// The two cards, each with its status and its own Allow button.
 struct PermissionCards: View {
     @ObservedObject var asker: PermissionAsker
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var accent: Color { settings.accentColor.color }
@@ -279,7 +281,8 @@ struct PermissionCards: View {
 // MARK: - The sheet
 
 struct PermissionsSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
     @StateObject private var asker = PermissionAsker()
     @Environment(\.dismiss) private var dismiss
 

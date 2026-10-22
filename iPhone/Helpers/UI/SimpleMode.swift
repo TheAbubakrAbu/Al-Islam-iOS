@@ -35,7 +35,8 @@ import SwiftUI
 struct TabMoreMenu<Items: View>: View {
     /// Observed for the tint. Not `@Environment(\.appearance)`: this view lives in a toolbar, the
     /// hoisted context where environment objects have failed to arrive in this app before.
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     /// Something the menu started is still working (the Quran tab building its pages for Read as
     /// Pages): the label spins, as the reading-mode button it stands in for did.
     private let isBusy: Bool

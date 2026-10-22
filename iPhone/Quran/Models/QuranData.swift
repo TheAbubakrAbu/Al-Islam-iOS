@@ -4354,6 +4354,14 @@ final class QuranData: ObservableObject {
             self.isVerseSearchReady = false
         }
 
+        #if DEBUG
+        // "-slowQuranLoad": hold the core load for 3 s, so a launch can be made to LOSE the race the
+        // page-mode auto-open ran against it (`QuranView.openMushafWhereLeftOff`, 2026-10-22). On
+        // the simulator the text lands in ~300 ms and that race was never visible without this.
+        if ProcessInfo.processInfo.arguments.contains("-slowQuranLoad") {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+        }
+        #endif
         // Off the load path: reclaim the disk the retired plist cache layer left behind.
         Task.detached(priority: .background) {
             Self.purgeLegacyDerivedCaches()

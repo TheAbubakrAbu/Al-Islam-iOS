@@ -9,7 +9,11 @@ import SwiftUI
 private let qiraahSmartComparisonKey = "qiraahSmartComparison"
 
 struct ShareAyahSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
 
     @Environment(\.presentationMode) private var presentationMode
@@ -581,13 +585,13 @@ struct ShareAyahSheet: View {
                             }
                         }
 
-                        Toggle("Show Ayah Information", isOn: $settings.showAyahInformation.animation(.easeInOut))
+                        Toggle("Show Ayah Information", isOn: $quranDisplay.showAyahInformation.animation(.easeInOut))
                             .tint(settings.accentColor.color)
                             .scaleEffect(0.8)
                             .padding(.horizontal, -24)
                             .padding(.vertical, 2)
 
-                        Toggle("Show Surah Information", isOn: $settings.showSurahInformation.animation(.easeInOut))
+                        Toggle("Show Surah Information", isOn: $quranDisplay.showSurahInformation.animation(.easeInOut))
                             .tint(settings.accentColor.color)
                             .scaleEffect(0.8)
                             .padding(.horizontal, -24)

@@ -232,7 +232,14 @@ final class RootAppearance: ObservableObject {
         firstLaunch = settings.firstLaunch
         needsAboutYou = Self.needsAboutYou(settings)
         needsCloudOffer = Self.needsCloudOffer(settings)
-        cancellable = settings.objectWillChange.sink { [weak self] _ in self?.scheduleRefresh() }
+        // Re-snapshot when a slice that feeds the snapshot publishes (the chrome, the system flags,
+        // the reading faces and sizes): never for a prayer change, a tracker mark or a bookmark, which
+        // used to re-run this through the whole-object publish (Performance Guide, section 18).
+        let feeds: [any SettingsSlice] = [
+            AppearanceSettings.shared, SystemSettings.shared, QuranDisplay.shared,
+            HadithSettings.shared, IslamSettings.shared,
+        ]
+        cancellable = Publishers.MergeMany(feeds.map(\.willChange)).sink { [weak self] _ in self?.scheduleRefresh() }
         ObjectPublishCounter.attach(self, label: "RootAppearance")
     }
 
@@ -1659,8 +1666,9 @@ struct DismissKeyboardOnScrollModifier: ViewModifier {
 /// 2026-09-19: "so cluttered and ugly and confusing"). Nothing is deleted: each section keeps a
 /// one-line caption and puts the full text behind this button, which opens it as a sheet.
 struct ExplainerButton: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let title: String
     let body_: String
     /// A short line that stays visible under the section, when one is worth having.
@@ -1714,8 +1722,8 @@ struct ExplainerButton: View {
 
 /// The big answer a calculator exists to produce, at the TOP of its screen.
 struct CalculatorResultCard<Detail: View>: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let title: String
     let value: String
     /// Shown under the number: the working, or why there is nothing to pay.
@@ -1772,8 +1780,8 @@ struct ReciterCaptionedMenuLabel: View {
     // because nothing in the reader had re-rendered in between (Abu, 2026-09-21, reproduced with idb:
     // the store said Saud Al-Shuraim, the reopened menu said Saad Al-Ghamdi). Subscribing here lets
     // the reciter write re-run this label, and SwiftUI carries that into the menu's items.
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     init(title: String, systemImage: String) {
         self.title = title
         self.systemImage = systemImage
@@ -1794,7 +1802,7 @@ struct ReciterCaptionedMenuLabel: View {
 /// and the page reader; now also used by the per-ayah menu, whose Play/Repeat submenus grew their own
 /// "Choose Reciter" entry (Abu, 2026-09-19).
 struct ReciterPickerSheet: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
     @Binding var isPresented: Bool
 
     func body(content: Content) -> some View {
@@ -2679,8 +2687,10 @@ private struct GridSelectionRing: ViewModifier {
 /// 99 Names, Arabic Alphabet). One control, one setting - every screen that shows standard Arabic
 /// text offers the same choice: Uthmani, IndoPak, Hijazi, Kufi, or the system font.
 struct IslamArabicFontPicker: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     var body: some View {
         Picker("Arabic Font", selection: Binding(
             get: { settings.islamArabicFace },

@@ -164,4 +164,119 @@ final class SkyWeatherTests: XCTestCase {
         XCTAssertFalse(due(location: true, locationNever: true))
         XCTAssertTrue(due(location: true, notifications: true, locationNever: true), "the other permission still asks")
     }
+
+    // MARK: Motion (2026-10-21, Abu: "make rain and conditions move")
+
+    private let box = CGSize(width: 300, height: 200)
+
+    func testWrappedKeepsAValueInsideItsSpan() {
+        XCTAssertEqual(SkyWeatherField.wrapped(-10, span: 100), 90)
+        XCTAssertEqual(SkyWeatherField.wrapped(250, span: 100), 50)
+        XCTAssertEqual(SkyWeatherField.wrapped(100, span: 100), 0)
+        XCTAssertEqual(SkyWeatherField.wrapped(42, span: 100), 42)
+    }
+
+    func testRainStreaksFallAlongTheirLean() {
+        let before = SkyWeatherField.rain(amount: 0.6, size: box, time: 100)
+        let after = SkyWeatherField.rain(amount: 0.6, size: box, time: 100.05)
+        XCTAssertEqual(before.count, after.count)
+        for (p, q) in zip(before, after) {
+            let fell = SkyWeatherField.wrapped(q.y - p.y, span: box.height)
+            XCTAssertGreaterThan(fell, 0, "every streak moved down")
+            XCTAssertLessThan(fell, box.height * 0.1, "a twentieth of a second moves a streak a little, never a wrap")
+            let leaned = SkyWeatherField.wrapped(p.x - q.x, span: box.width)
+            XCTAssertEqual(leaned, fell * 0.25, accuracy: 0.001, "it slides along its own lean")
+            XCTAssertEqual(p.length, q.length)
+        }
+    }
+
+    func testRainStaysInTheBoxAndThickensAsItPours() {
+        let drizzle = SkyWeatherField.rain(amount: 0.3, size: box, time: 1234.5)
+        let pour = SkyWeatherField.rain(amount: 1.0, size: box, time: 1234.5)
+        XCTAssertLessThan(drizzle.count, pour.count)
+        for streak in pour {
+            XCTAssertTrue((0..<box.width).contains(streak.x) && (0..<box.height).contains(streak.y))
+            XCTAssertGreaterThanOrEqual(streak.length, 9)
+        }
+        XCTAssertEqual(pour, SkyWeatherField.rain(amount: 1.0, size: box, time: 1234.5), "the same moment is the same frame")
+    }
+
+    func testSnowFallsSlowerThanRainAndSways() {
+        let before = SkyWeatherField.snow(amount: 0.6, size: box, time: 100)
+        let after = SkyWeatherField.snow(amount: 0.6, size: box, time: 100.05)
+        let slowestRain = zip(SkyWeatherField.rain(amount: 0.6, size: box, time: 100),
+                              SkyWeatherField.rain(amount: 0.6, size: box, time: 100.05))
+            .map { SkyWeatherField.wrapped($1.y - $0.y, span: box.height) }.min()!
+        var swayed = false
+        for (p, q) in zip(before, after) {
+            let fell = SkyWeatherField.wrapped(q.y - p.y, span: box.height)
+            XCTAssertGreaterThan(fell, 0, "every flake moved down")
+            XCTAssertLessThan(fell, slowestRain, "snow falls slower than the slowest raindrop")
+            let dx = abs(q.x - p.x)
+            let sway = min(dx, box.width - dx)
+            if sway > 0.01 { swayed = true }
+            XCTAssertLessThan(sway, 20, "a sway, not a jump")
+            XCTAssertEqual(p.radius, q.radius)
+            XCTAssertTrue((0..<box.width).contains(q.x) && (0..<box.height).contains(q.y))
+        }
+        XCTAssertTrue(swayed, "flakes drift sideways as they fall")
+        XCTAssertLessThan(SkyWeatherField.snow(amount: 0.3, size: box, time: 1).count,
+                          SkyWeatherField.snow(amount: 1.0, size: box, time: 1).count)
+    }
+
+    func testCloudsDriftWithTheWindAcrossTheUpperSky() {
+        let before = SkyWeatherField.clouds(cover: 0.7, size: box, time: 50)
+        let after = SkyWeatherField.clouds(cover: 0.7, size: box, time: 51)
+        XCTAssertEqual(before.count, 6, "nine puffs at full cover, in proportion below it")
+        XCTAssertTrue(SkyWeatherField.clouds(cover: 0.1, size: box, time: 50).isEmpty, "a few percent of cloud draws nothing")
+        for (p, q) in zip(before, after) {
+            let drifted = SkyWeatherField.wrapped(p.x - q.x, span: box.width + 2 * p.width)
+            XCTAssertGreaterThan(drifted, 0, "a puff drifts left, the way the rain leans")
+            XCTAssertLessThan(drifted, box.width * 0.05, "slowly: a second moves it a sliver")
+            XCTAssertEqual(p.y, q.y, "it keeps its height")
+            XCTAssertEqual(p.width, q.width)
+            XCTAssertTrue((box.height * 0.05 ... box.height * 0.55).contains(p.y), "clouds live in the upper sky")
+            XCTAssertGreaterThan(p.width, p.height, "a puff is wider than it is tall")
+        }
+    }
+
+    func testFogBanksSitLowAndDrift() {
+        let before = SkyWeatherField.fogBanks(size: box, time: 10)
+        let after = SkyWeatherField.fogBanks(size: box, time: 11)
+        XCTAssertFalse(before.isEmpty)
+        for (p, q) in zip(before, after) {
+            XCTAssertGreaterThanOrEqual(p.y, box.height * 0.5, "fog sits near the ground")
+            XCTAssertEqual(p.y, q.y)
+            let drifted = SkyWeatherField.wrapped(p.x - q.x, span: box.width + 2 * p.width)
+            XCTAssertGreaterThan(drifted, 0, "a bank drifts left")
+            XCTAssertLessThan(drifted, box.width * 0.05)
+        }
+    }
+
+    func testLightningIsRareAndBrief() {
+        var lit = 0, samples = 0, peak = 0.0, time = 0.0
+        while time < 120 {
+            let flash = SkyWeatherField.lightning(at: time)
+            XCTAssertTrue((0...1).contains(flash))
+            if flash > 0 { lit += 1 }
+            peak = max(peak, flash)
+            samples += 1
+            time += 0.01
+        }
+        XCTAssertGreaterThan(lit, 0, "two minutes of storm strike at least once")
+        XCTAssertLessThan(Double(lit) / Double(samples), 0.06, "the sky is dark almost all of the time")
+        XCTAssertGreaterThan(peak, 0.9, "a strike reaches full brightness")
+    }
+
+    func testFrameIntervalsByPrecipitation() {
+        XCTAssertNil(SkyWeatherField.fastFrameInterval(for: SkyWeatherLook(condition: "cloudy", cloudCover: 0.9)),
+                     "clouds alone need no fast layer")
+        XCTAssertNil(SkyWeatherField.fastFrameInterval(for: SkyWeatherLook(condition: "foggy", cloudCover: 0.5)))
+        let rain = SkyWeatherField.fastFrameInterval(for: SkyWeatherLook(condition: "rain", cloudCover: 0.9))!
+        let snow = SkyWeatherField.fastFrameInterval(for: SkyWeatherLook(condition: "snow", cloudCover: 0.9))!
+        let storm = SkyWeatherField.fastFrameInterval(for: SkyWeatherLook(condition: "thunderstorms", cloudCover: 1))!
+        XCTAssertLessThan(rain, snow, "rain redraws more often than snow")
+        XCTAssertEqual(storm, rain, "a storm is rain with lightning")
+        XCTAssertLessThan(snow, SkyWeatherField.slowFrameInterval, "both faster than the drifting clouds")
+    }
 }

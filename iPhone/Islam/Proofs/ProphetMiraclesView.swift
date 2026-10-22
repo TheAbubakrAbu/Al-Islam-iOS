@@ -17,8 +17,7 @@ import SwiftUI
 /// & Beliefs, and every one of those 25 pages carries the door back (`ProphetSignsIndex`, the one
 /// table both directions read).
 struct ProphetMiraclesView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
     @State private var searchText = ""
     @State private var openDoor: SignsAboutDoor?
     @State private var barsCollapsed = false
@@ -211,8 +210,9 @@ struct ProphetMiraclesView: View {
 }
 
 struct ProphetMiracleArticleView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let entry: ProphetMiraclesView.Entry
 
     /// The door to a prophet's full story. One `@State` + one destination on the List: the stories

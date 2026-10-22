@@ -134,7 +134,9 @@ func mutashabihPhraseText(_ phrase: MutashabihatStore.Phrase, quranData: QuranDa
 /// The rows of the Similar Ayahs sheet's "Repeated Phrases" tab: each phrase this ayah shares, with
 /// how widely it repeats, opening the full list of its occurrences.
 struct MutashabihatRows: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var quranData = QuranData.shared
 
     let surahNumber: Int
@@ -183,7 +185,9 @@ struct MutashabihatRows: View {
 /// All the places one phrase occurs, in mushaf order, the phrase tinted in each ayah so the words
 /// around it - what changes from one occurrence to the next - can be read against each other.
 struct PhraseOccurrencesView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var quranData = QuranData.shared
 
     let phrase: MutashabihatStore.Phrase

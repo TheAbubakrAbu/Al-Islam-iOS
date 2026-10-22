@@ -2,7 +2,11 @@ import SwiftUI
 import AVFoundation
 
 struct NowPlayingView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Actions and the `AVPlayer` only: not observed. Playback state comes from `nowPlaying`, which
     /// republishes once per turn instead of once per player write (see `NowPlayingState`).
     private let quranPlayer = QuranPlayer.shared

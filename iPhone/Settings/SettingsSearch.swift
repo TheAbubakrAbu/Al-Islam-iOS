@@ -658,8 +658,9 @@ enum SettingsSearchDestinationView {
 
 /// One search result row: the destination's chip, the title with the match lit, and the breadcrumb.
 struct SettingsSearchResultRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let entry: SettingsSearchEntry
     let query: String
     /// The breadcrumb's leading segment to drop ("Quran Settings" on the Quran page), or nil for the
@@ -713,7 +714,8 @@ struct SettingsScopedSearch<Content: View>: View {
     let resolve: (SettingsSearchEntry.Destination) -> AnyView?
     @ViewBuilder let content: () -> Content
 
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @State private var query = ""
     /// Apple Music-style: true while scrolling down, minimizing the floating search bar.
     @State private var barsCollapsed = false

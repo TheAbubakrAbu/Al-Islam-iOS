@@ -105,8 +105,11 @@ LINEAGE_RE = re.compile(r"lineageRow\(\s*(" + STR + r")\s*,\s*companions:\s*\[(.
 # does this corpus (Saheeh International, the app's default translation), so a reference here is
 # the same words the screen shows. `words` narrows the screen's emphasis, not the corpus text.
 QURAN_RE = re.compile(r"(?:ScriptureQuote\(\s*quran:|(?<!\w)\.ayah\()\s*(" + STR + r")(?:\s*,\s*words:\s*(\d+)\s*\.\.\.\s*(\d+))?", re.S)
-HADITH_RE = re.compile(r"(?:ScriptureQuote\(\s*hadith:|(?<!\w)\.hadith\()\s*(" + STR + r")\s*,\s*cite:\s*(" + STR
-                       + r")((?:\s*,\s*(?:arabic|english|text|arabicText):\s*(?:" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\]))*)\s*\)", re.S)
+# A guide's dua row (`GuideDuaRow(DuaItem(hadith: ..., cite: ..., arabic: ..., english: ...,
+# transliteration: ..., note: ...))`) quotes the shelf the same way; its transliteration and note
+# are the row's own and stay out of the corpus, like a quote's citation styling.
+HADITH_RE = re.compile(r"(?:ScriptureQuote\(\s*hadith:|(?<!\w)\.hadith\(|DuaItem\(\s*hadith:)\s*(" + STR + r")\s*,\s*cite:\s*(" + STR
+                       + r")((?:\s*,\s*(?:arabic|english|text|arabicText|transliteration|note):\s*(?:" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\]))*)\s*\)", re.S)
 HADITH_ARG_RE = re.compile(r"(arabic|english|text|arabicText):\s*(" + STR + r"|\d+\s*\.\.\.\s*\d+|\[[^\]]*\])", re.S)
 RANGE_RE = re.compile(r"(\d+)\s*\.\.\.\s*(\d+)")
 TITLE_RE = re.compile(r"\.navigationTitle\((" + STR + r")\)", re.S)

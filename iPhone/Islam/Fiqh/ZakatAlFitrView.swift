@@ -11,8 +11,8 @@ import SwiftUI
 /// The position followed is the one Ibn Baz, Ibn 'Uthaymin and the Permanent Committee held: it is
 /// given as FOOD, not as its price.
 struct ZakatAlFitrView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @AppStorage("zakahFitrPeople") private var fitrPeople = 1
     @AppStorage("zakahFitrCost") private var fitrCost = ""
 

@@ -58,8 +58,14 @@ struct SurahRow: View, Equatable {
         textStylePointSize(style, at: dynamicTypeSize)
     }
 
-    @ObservedObject var settings = Settings.shared
-    
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    @ObservedObject private var quranContent = QuranContent.shared
+
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let surah: Surah
     var ayah: Int?
     var end: Bool?
@@ -587,8 +593,11 @@ struct SurahAyahRow: View, Equatable {
 
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     var surah: Surah
     var ayah: Ayah
     var note: String? = nil
@@ -882,8 +891,10 @@ struct SurahAyahRow: View, Equatable {
 struct AyahArabicSnippet: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let surah: Surah
     let ayah: Ayah
     var scale: CGFloat = 0.8
@@ -971,8 +982,10 @@ struct AyahArabicSnippet: View, Equatable {
 }
 
 struct AyahSearchResultRow: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let surah: Surah
     let ayah: Ayah
 
@@ -1095,7 +1108,11 @@ struct AyahSearchRow: View, Equatable {
 
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The search's Match rule: the cross-language spans follow it like the snippets do.
     @Environment(\.searchWordRule) private var wordRule
 

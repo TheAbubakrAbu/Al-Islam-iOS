@@ -23,7 +23,9 @@ import Foundation
 
 @available(iOS 16.0, *)
 struct AskAIChatView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var chat = AskAIConversation.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -489,7 +491,9 @@ struct AskAIChatSheet: View {
 
 @available(iOS 16.0, *)
 private struct AskAIAnswerCard: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.appearance) private var appearance
 
     let message: AskAIConversation.Message
@@ -718,7 +722,9 @@ private struct AskAIAnswerProse: View {
 /// Arabic where there is one, and a footer saying where it comes from. A tap opens the real screen.
 @available(iOS 16.0, *)
 private struct AskAISourceCard: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.appearance) private var appearance
 
     let number: Int

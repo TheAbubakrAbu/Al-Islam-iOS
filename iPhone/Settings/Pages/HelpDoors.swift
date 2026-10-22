@@ -478,7 +478,8 @@ enum HadithReadingLanguage: String, CaseIterable, Identifiable {
 /// folded to its header by the header's arrow. Observes Settings HERE, once, and hands each card plain
 /// values, so the cards do not each re-render on every Settings publish.
 struct HelpDoorsSection: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     #if HAS_QURAN
     /// The Quran run's Sunnah Reminders count belongs to the store, not to Settings.
     @ObservedObject private var sunnah = SunnahReminderStore.shared
@@ -737,8 +738,8 @@ private struct HelpDoorAnswerPage: View {
 
 /// A settings page as the row the settings roots draw for it: its icon, its title, its caption.
 private struct HelpDoorPageLabel: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let destination: SettingsSearchEntry.Destination
     let tint: Color
     var secondaryTint: Color? = nil
@@ -773,14 +774,14 @@ private struct HelpDoorPageLabel: View {
 #if HAS_QURAN
 /// "Need Help Reading?": Arabic Beginner Mode, the switch Arabic Text keeps below its fonts and sizes.
 private struct BeginnerModeAnswer: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     var body: some View {
         SettingsToggle("Enable Arabic Beginner Mode",
                        caption: settings.showArabicText
                            ? "Puts a space between each Arabic letter to make it easier for beginners to read the Quran."
                            : "The Arabic is hidden, so there is nothing to space out. Arabic Text, below, shows it again.",
-                       isOn: $settings.beginnerMode)
+                       isOn: $quranDisplay.beginnerMode)
             .disabled(!settings.showArabicText)
     }
 }
@@ -789,8 +790,8 @@ private struct BeginnerModeAnswer: View {
 #if HAS_HADITH
 /// "Reading in One Language?": the hadith's Arabic and English as one three-way choice.
 private struct HadithLanguageAnswer: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Plain, never animated: an animated selection binding makes the segmented indicator slide, snap
     /// back and slide again. The change itself animates inside `apply`.
     private var selection: Binding<HadithReadingLanguage> {
@@ -830,10 +831,10 @@ private struct HadithLanguageAnswer: View {
 /// "When Does Your Day Begin?": the daily cards' turnover, which Libraries shows only with Advanced
 /// Settings on. Answered here, so opening the question does not have to turn that switch on.
 private struct DayBeginsAnswer: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     var body: some View {
-        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $settings.dailyRolloverAtFajr)
+        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $systemSettings.dailyRolloverAtFajr)
             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
 }
@@ -845,7 +846,8 @@ private struct DayBeginsAnswer: View {
 /// there (Abu, 2026-09-28: "mention parts of it in each respective settings"). Look and Feel keeps one
 /// switch for all four.
 struct HelpDoorsSettingsSection: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The Quran and Hadith tabs' Quick Search Help, which its own trash can put away: this page is
     /// where it comes back (`QuranView.quranSearchHelpRemoved`, `HadithView.hadithSearchHelpRemoved`).
     @AppStorage("quranSearchHelpRemoved") private var quranSearchHelpRemoved = false

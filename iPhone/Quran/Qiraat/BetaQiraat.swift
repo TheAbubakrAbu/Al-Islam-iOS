@@ -149,8 +149,10 @@ final class BetaQiraatStore: @unchecked Sendable {
 /// so the consent lives exactly where the beta thing (the TEXT) would appear,
 /// with both ways out on the same screen. No dialog, no settings scavenger hunt.
 struct BetaTextConsentCard: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Riwayah shown in the title, e.g. "Ruways an Yaqub".
     let riwayahLabel: String
     /// Switch this reader to the printed mushaf (page mode + facsimile).

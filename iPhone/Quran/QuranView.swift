@@ -11,7 +11,10 @@ import SwiftUI
 /// iOS 26 with `ToolbarSpacer`s so each button gets its OWN Liquid Glass capsule instead of all merging
 /// into one pill, and plain on earlier OSes (which never merged them).
 private struct QuranTrailingToolbar: ViewModifier {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The Choose Surah sheet (`QuranView.picker`): no grid/list toggle and no gear (Abu, 2026-09-21:
     /// "keep it simple"). It is always rows since 2026-09-25 (`QuranView.usesGrid`), so a toggle there
     /// would have nothing to switch.
@@ -79,7 +82,9 @@ private struct QuranTrailingToolbar: ViewModifier {
 /// Mode showed the reading-mode toggle and the Quran Planner here as two buttons, and the grid switch
 /// at the trailing edge; all three are items of the menu now, with the summary doors.
 private struct QuranLeadingToolbar: ViewModifier {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The Choose Surah sheet (`QuranView.picker`): the standard sheet X, inline title, nothing else.
     var isPicker: Bool = false
     @Binding var showReadingModeConfirm: Bool
@@ -185,7 +190,11 @@ final class QuranSearchHandoff: ObservableObject {
 }
 
 struct QuranView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The last-read position publishes from `ReadingState`, not `Settings` (see its comment).
     @ObservedObject private var reading = ReadingState.shared
     @ObservedObject var quranData = QuranData.shared
@@ -827,6 +836,9 @@ struct QuranView: View {
     @State private var path: [QuranRoute] = []
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
+    /// A page-mode re-open asked for before the Quran text had loaded is waiting on it
+    /// (`openMushafWhereLeftOff`); one waiter at a time.
+    @State private var mushafOpenAwaitsLoad = false
     @State private var selectedRoute: QuranRoute?
     /// Bumped when a tap re-selects the route ALREADY shown in the detail column: the detail is keyed
     /// on it, so every tap lands (re-scrolls to the ayah / reopens the surah at its top) - re-tapping
@@ -1039,9 +1051,37 @@ struct QuranView: View {
         #if os(iOS)
         guard usesColumnNavigation || path.isEmpty else { return }
 
+        // Never on an empty store. The tab-exit and background re-opens can fire during the launch's
+        // under-cover tab walk, before the Quran text has decoded (Al-Quran mounts this tab on the
+        // cover's first frame). `mushafResumePosition` looks the stored surah up, an empty store
+        // holds none, and none means al-Fatiha, whose reader then records 1:1 over the position
+        // that was stored (the "it just stays at Fatiha" of 2026-10-22). Wait for the text and the
+        // pages, then decide, with the callers' guards re-checked: the user may have opened
+        // something, or another re-open may have landed first. A text that failed to load opens
+        // nothing; the tab shows its loading state instead.
+        if quranData.quran.isEmpty {
+            guard !mushafOpenAwaitsLoad else { return }
+            mushafOpenAwaitsLoad = true
+            Task { @MainActor in
+                await quranData.waitUntilCoreLoaded()
+                await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+                mushafOpenAwaitsLoad = false
+                guard !quranData.quran.isEmpty, settings.quranPageMode, !anyDoorOpen,
+                      usesColumnNavigation ? selectedRoute == nil : path.isEmpty else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { openMushafWhereLeftOff() }
+            }
+            return
+        }
+
         // A page turned in the last 0.8 s still has its last-read write on the debounce timer: the
         // tab-exit re-open (0.35 s after leaving) read the position BEFORE it.
         settings.flushPendingLastRead()
+        #if DEBUG
+        NSLog("MUSHAF REOPEN lastRead=%d:%d resume=%@", reading.lastReadSurah, reading.lastReadAyah,
+              String(describing: MushafResumePosition.load()))
+        #endif
         if let resume = mushafResumePosition {
             push(surahID: resume.surah, ayahID: resume.ayah)
         } else {
@@ -1404,6 +1444,15 @@ struct QuranView: View {
             if AppNavigation.shared.pendingQuran != nil { shouldAutoOpen = false }
             if shouldAutoOpen, !didAutoOpenMushaf {
                 didAutoOpenMushaf = true
+                // The text first. This task starts the moment the tab mounts, which in Al-Quran is
+                // the launch cover's first frame, while the Quran is still decoding off-main. Run
+                // against the empty store it paginated nothing (a 0-surah entry in the page cache)
+                // and `openMushafWhereLeftOff` found no surah to resume on, so it opened al-Fatiha,
+                // whose reader then recorded 1:1 over the real position: a cold launch of Al-Quran
+                // that lost the race came back on al-Fatiha and STAYED there (Abu, 2026-10-22). The
+                // simulator's text lands in ~300 ms and never lost it; Al-Islam never lost it because
+                // its under-cover walk mounts this tab after the core load.
+                await quranData.waitUntilCoreLoaded()
                 await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
                 // Unanimated, like every other page-mode open below. Animated, this push IS the
                 // "it goes to the Quran view and THEN opens the page" two-step: the surah list is
@@ -2414,7 +2463,7 @@ struct QuranView: View {
             // Bind to the stored @AppStorage raw via its projected binding (like SettingsView's color-theme
             // picker). A hand-rolled Binding(get:set:) closure over `settings` does NOT drive a segmented
             // Picker's selection here - the segment never commits - which is why this used to refuse to switch.
-            Picker("Sort Direction", selection: $settings.quranSortDirectionRaw) {
+            Picker("Sort Direction", selection: $quranDisplay.quranSortDirectionRaw) {
                 ForEach(sortDirectionOptions) { direction in
                     Text(direction.title)
                         .accessibilityLabel(direction.accessibilityTitle)
@@ -2437,7 +2486,7 @@ struct QuranView: View {
         #if os(iOS)
         // Projected @AppStorage binding (like ArabicView's font picker). A custom Binding(get:set:) closure
         // wouldn't commit the segment here - that was the "can't switch to Juz" bug.
-        Picker("Khatm Grouping", selection: $settings.khatmGroupByJuz) {
+        Picker("Khatm Grouping", selection: $quranDisplay.khatmGroupByJuz) {
             Text("Surah")
                 .accessibilityLabel("Group by Surah")
                 .tag(false)
@@ -3230,7 +3279,7 @@ struct QuranView: View {
             count: count,
             icon: "bookmark.fill",
             accentTitle: true,
-            isExpanded: $settings.showBookmarks,
+            isExpanded: $quranDisplay.showBookmarks,
             onShuffle: {
                 if let random = settings.bookmarkedAyahs.randomElement() {
                     push(surahID: random.surah, ayahID: random.ayah)
@@ -3419,7 +3468,7 @@ struct QuranView: View {
             count: count,
             icon: "star.fill",
             accentTitle: true,
-            isExpanded: $settings.showFavorites,
+            isExpanded: $quranDisplay.showFavorites,
             onShuffle: {
                 if let random = settings.favoriteSurahs.randomElement() {
                     push(surahID: random, ayahID: nil)
@@ -3860,7 +3909,7 @@ struct QuranView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Toggle("Automatically Mark Ayahs", isOn: $settings.automaticKhatmCompletion.animation(.easeInOut))
+                Toggle("Automatically Mark Ayahs", isOn: $quranDisplay.automaticKhatmCompletion.animation(.easeInOut))
                     .font(.subheadline)
 
                 Text("When on, ayahs are marked as completed as soon as they appear while you read. Turn this off to mark ayahs only when you tap them.")

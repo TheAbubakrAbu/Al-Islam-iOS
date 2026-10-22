@@ -265,7 +265,7 @@ extension Settings {
     private static let didAdoptMinshawiDefaultKey = "didAdoptMinshawiAdhanDefault"
 
     /// One-time startup migrations for the adhan sound selection. These write straight to `UserDefaults`
-    /// (where `@AppStorage` reads from) instead of going through the property, so they can run inside
+    /// (where `@Setting` reads from) instead of going through the property, so they can run inside
     /// `Settings.init` without the `didSet` kicking off a prayer-time refresh mid-initialization.
     func runAdhanSoundStartupMigrations() {
         let defaults = UserDefaults.standard
@@ -295,7 +295,7 @@ extension Settings {
             // over whatever was stored - so a user who had deliberately chosen "Default" tapped a
             // notification, the relaunch ran this migration, and their selection silently became
             // Minshawi 1. A device that never set the key already resolves to `defaultAdhanSoundID`
-            // through the `@AppStorage` default, which is all the adoption this migration ever needed.
+            // through the `@Setting` default, which is all the adoption this migration ever needed.
             //
             // Nor is there a migration for the title swap above: anyone already listening to a Minshawi
             // adhan keeps the exact recording they picked (the ids never moved). It is now labelled with
@@ -545,8 +545,9 @@ extension Settings {
 
         switch status {
         case .authorizedAlways, .authorizedWhenInUse:
-            // Guarded: an unconditional `@AppStorage` write is a publish even when nothing changed, and
-            // this path runs on every authorization callback.
+            // Guarded: this path runs on every authorization callback, and the guard keeps even the
+            // defaults write off it (a `@Setting` write of an unchanged value publishes nothing, but
+            // still touches the store).
             if showLocationAlert { showLocationAlert = false }
             // One self-terminating fix. The watch used to also `startUpdatingLocation()` here, which kept
             // 100 m continuous updates streaming for its entire foreground life; a wrist app that shows
@@ -2340,8 +2341,8 @@ extension Settings {
 
         switch status {
         case .authorized:
-            // Guarded: an @AppStorage write publishes even when the value is unchanged, and this runs
-            // on every Adhan tab appear.
+            // Guarded: this runs on every Adhan tab appear, and the guard keeps even the defaults
+            // write off it (a `@Setting` write of an unchanged value publishes nothing).
             if showNotificationAlert { showNotificationAlert = false }
             return true
 

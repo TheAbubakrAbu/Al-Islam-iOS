@@ -27,12 +27,12 @@ final class WordByWordWidthTests: XCTestCase {
     func testTextNarrowsWhenTheContainerNarrows() async throws {
         let host = makeHost(width: 800)
 
-        let wide = try XCTUnwrap(Self.textView(in: host.view), "the ayah must render through the text view")
+        let wide = try XCTUnwrap(Self.column(in: host.view), "the ayah must render through the text view")
         XCTAssertGreaterThan(wide.frame.width, 700, "Precondition: the text took the wide container's width")
 
         await resize(to: 402)
 
-        let narrow = try XCTUnwrap(Self.textView(in: host.view))
+        let narrow = try XCTUnwrap(Self.column(in: host.view))
         XCTAssertLessThanOrEqual(narrow.frame.width, 402 - 2 * Self.margin + 0.5,
                                  "The text kept its stale width (\(narrow.frame.width)pt) inside a 402pt container")
     }
@@ -42,12 +42,12 @@ final class WordByWordWidthTests: XCTestCase {
     func testTextWidensWhenTheContainerWidens() async throws {
         let host = makeHost(width: 402)
 
-        let narrow = try XCTUnwrap(Self.textView(in: host.view), "the ayah must render through the text view")
+        let narrow = try XCTUnwrap(Self.column(in: host.view), "the ayah must render through the text view")
         XCTAssertLessThanOrEqual(narrow.frame.width, 402 - 2 * Self.margin + 0.5)
 
         await resize(to: 800)
 
-        let wide = try XCTUnwrap(Self.textView(in: host.view))
+        let wide = try XCTUnwrap(Self.column(in: host.view))
         XCTAssertGreaterThan(wide.frame.width, 700, "The text did not grow into the wider container")
     }
 
@@ -115,10 +115,12 @@ final class WordByWordWidthTests: XCTestCase {
         window?.layoutIfNeeded()
     }
 
-    private static func textView(in view: UIView) -> UITextView? {
-        if let textView = view as? UITextView { return textView }
+    /// The ayah's text COLUMN: the frame SwiftUI lays out, which the text view hangs out of by its
+    /// ink bleed on each side (`ArabicInkBleedHost`).
+    private static func column(in view: UIView) -> ArabicInkBleedHost? {
+        if let column = view as? ArabicInkBleedHost { return column }
         for subview in view.subviews {
-            if let found = textView(in: subview) { return found }
+            if let found = column(in: subview) { return found }
         }
         return nil
     }

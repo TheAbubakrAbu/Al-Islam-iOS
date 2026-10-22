@@ -279,8 +279,10 @@ private struct TrackerMarkChip: View {
 /// answers for that one prayer, on the day the list is showing. Re-tapping the chosen answer clears
 /// it. Before the prayer begins it says so instead, and on an exempt day it says tracking is paused.
 struct PrayerMarkChooser: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let prayer: Prayer
     /// The day of the list the prayer is on. Not `prayer.time`'s day: an Isha after midnight is
     /// still the Isha of the day before, and marked under its own time it was filed a day late.
@@ -343,8 +345,10 @@ struct PrayerMarkDot: View {
 /// "Not Marked" to clear. A Picker rather than plain buttons, so the current answer shows its
 /// checkmark in the menu.
 private struct TrackerMarkPicker: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let prayerName: String
     let date: Date
 
@@ -368,8 +372,8 @@ private struct TrackerMarkPicker: View {
 
 /// The ring that anchors the tracker section: progress around a fraction label.
 private struct TrackerProgressRing: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let prayed: Int
     let total: Int
     var size: CGFloat = 46
@@ -416,7 +420,10 @@ private struct TrackerProgressRing: View {
 /// Tap marks it prayed on time (tap again to clear); press and hold opens the full chooser - on time,
 /// late, missed, or not marked.
 private struct TrackerPrayerToggle: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Observed for the time gate only: `LiveState` republishes when a prayer window rolls over, which
     /// is exactly the moment a slot becomes markable (`canMarkPrayer`). Without it the circle would
     /// stay inert until something else happened to redraw it.
@@ -496,7 +503,10 @@ private struct TrackerPrayerToggle: View {
 /// doorway into the full history. Standalone struct on purpose - a new Adhan-tab section must never be
 /// an inline closure of an already-deep view tree.
 struct PrayerTrackerSection: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 
@@ -637,8 +647,11 @@ struct PrayerTrackerSection: View {
 // MARK: - Full history page
 
 struct PrayerTrackerView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     private enum Scope: String, CaseIterable, Identifiable {
         case day = "Day", week = "Week", month = "Month", year = "Year"
         var id: String { rawValue }

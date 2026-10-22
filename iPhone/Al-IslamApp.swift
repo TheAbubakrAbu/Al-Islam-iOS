@@ -241,6 +241,9 @@ private struct MainTabView: View {
     // Quran load pipeline's 10-property core-load batch landed exactly while the under-cover warm
     // needed the main thread. `warmUnderCover` reaches the singletons directly.
     private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
 

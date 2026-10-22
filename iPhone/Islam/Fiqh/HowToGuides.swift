@@ -135,6 +135,41 @@ struct GuideSourcesSection: View {
     }
 }
 
+/// A dua inside a guide, drawn as the Dua screen draws its rows (`AdhkarRow`: the Arabic, its
+/// transliteration, the translation, the citation, Listen, and the copy menu). The words are the
+/// shelf's, read by the same reference and token ranges a `DuaItem` on the Dua screen uses, never
+/// a copy typed into the article; until the shelf answers (one off-main read the first time) the row
+/// shows the transliteration alone, as the Dua screen's own rows do on a cold launch.
+struct GuideDuaRow: View {
+    let dua: DuaItem
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @State private var resolved: DuaItem?
+
+    init(_ dua: DuaItem) {
+        self.dua = dua
+    }
+
+    var body: some View {
+        let shown = resolved ?? dua
+        AdhkarRow(
+            arabicText: shown.arabicText,
+            transliteration: shown.transliteration,
+            translation: shown.translation,
+            useQuranicFont: quranDisplay.useFontArabic,
+            alwaysTrailing: true,
+            speechEnabled: true,
+            source: shown.reference
+        )
+        .equatable()
+        .spokenRowWash(shown.arabicText)
+        .task(id: dua.id) {
+            guard resolved == nil, dua.source != nil else { return }
+            let unresolved = dua
+            resolved = await Task.detached(priority: .userInitiated) { unresolved.resolved() }.value
+        }
+    }
+}
+
 struct HowToPrayView: View {
     var body: some View {
         List {
@@ -837,8 +872,6 @@ struct JanazahView: View {
 }
 
 struct IstikharahView: View {
-    @Environment(\.appearance) private var appearance
-
     var body: some View {
         List {
             Group {
@@ -848,7 +881,19 @@ struct IstikharahView: View {
 
                 Section(header: ArticleHeader("THE HADITH")) {
                     ArticleParagraph(verbatim: "Jabir ibn Abdullah (may Allah be pleased with him) said the Prophet (peace and blessings be upon him) taught them Istikharah for every matter as he taught them a surah of the Quran:")
-                    ScriptureQuote(hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 43...140, english: 46...312)
+                    ScriptureQuote(hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 43...53, english: [46...71, 300...312])
+                }
+
+                Section(header: ArticleHeader("THE DUA OF ISTIKHARAH")) {
+                    ArticleParagraph(verbatim: "Said after the taslim of the two rak‘ah. Where it says هَذَا الأَمْرَ, “this matter”, name what you are deciding. The narrator's “or he said” gives the Prophet's other wording of one phrase; say either.")
+                    // The dua as the Dua screen would carry it: the narration's own words from "Allahumma"
+                    // to "ardini bih", the narrator's variants set off by dashes as the shelf prints them.
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 54...135, english: 154...299,
+                        transliteration: "Allahumma inni astakhiruka bi-‘ilmika, wa astaqdiruka bi-qudratika, wa as'aluka min fadlika al-‘adhim, fa-innaka taqdiru wa la aqdiru, wa ta‘lamu wa la a‘lamu, wa anta ‘allamu al-ghuyub. Allahumma in kunta ta‘lamu anna hadha al-amra khayrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: ‘ajili amri wa ajilihi), faqdurhu li wa yassirhu li thumma barik li fih. Wa in kunta ta‘lamu anna hadha al-amra sharrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: fi ‘ajili amri wa ajilihi), fasrifhu ‘anni wasrifni ‘anhu, waqdur li al-khayra haythu kana thumma ardini bih.",
+                        note: "After the two rak‘ah, naming the matter at hand"
+                    ))
+                    ArticleDoorRow(door: .article("IstikharahDuaView"))
                 }
 
                 Section(header: ArticleHeader("WHEN TO PRAY IT")) {
@@ -861,20 +906,6 @@ struct IstikharahView: View {
                     ArticleStep("2. **After the taslim**, raise your hands and say the supplication above, in Arabic if you can, otherwise in your own language. Praise Allah and send prayers upon the Prophet before it.")
                     ArticleStep("3. **Name the matter** where the hadith says “this matter”: “if You know that marrying so-and-so...” or “this position at...”")
                     ArticleStep("4. **Then act.** Pursue the matter. If Allah eases it, that is His choice; if He turns it away, that is His choice too. Do not sit waiting for a sign.")
-                }
-
-                Section(header: ArticleHeader("THE ARABIC")) {
-                    Text.islamArabic("اللَّهُمَّ إِنِّي أَستَخِيرُكَ بِعِلمِكَ وَأَستَقدِرُكَ بِقُدرَتِكَ، وَأَسأَلُكَ مِن فَضلِكَ العَظِيمِ، فَإِنَّكَ تَقدِرُ وَلاَ أَقدِرُ، وَتَعلَمُ وَلاَ أَعلَمُ، وَأَنتَ عَلاَّمُ الغُيُوبِ. اللَّهُمَّ إِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ خَيرٌ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاقدُرهُ لِي وَيَسِّرهُ لِي ثُمَّ بَارِك لِي فِيهِ، وَإِن كُنتَ تَعلَمُ أَنَّ هَذَا الأَمرَ شَرٌّ لِي فِي دِينِي وَمَعَاشِي وَعَاقِبَةِ أَمرِي فَاصرِفهُ عَنِّي وَاصرِفنِي عَنهُ، وَاقدُر لِي الخَيرَ حَيثُ كَانَ ثُمَّ أَرضِنِي بِهِ", highlightAllah: appearance.highlightAllahIslam)
-                        .font(appearance.islamArabicFont(base: 22, relativeTo: .title2))
-                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
-                        .lineSpacing(6)
-                        .multilineTextAlignment(.trailing)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .foregroundColor(appearance.accent)
-                    Text(verbatim: "Allahumma inni astakhiruka bi-‘ilmika, wa astaqdiruka bi-qudratika, wa as'aluka min fadlika al-‘adhim, fa-innaka taqdiru wa la aqdiru, wa ta‘lamu wa la a‘lamu, wa anta ‘allamu al-ghuyub. Allahumma in kunta ta‘lamu anna hadha al-amra khayrun li fi dini wa ma‘ashi wa ‘aqibati amri, faqdurhu li wa yassirhu li thumma barik li fih. Wa in kunta ta‘lamu anna hadha al-amra sharrun li fi dini wa ma‘ashi wa ‘aqibati amri, fasrifhu ‘anni wasrifni ‘anhu, waqdur li al-khayra haythu kana thumma ardini bih.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
@@ -894,6 +925,65 @@ struct IstikharahView: View {
         }
         .selectableArticleList(article: "IstikharahView")
         .navigationTitle("How to Pray Istikharah")
+    }
+}
+
+/// The Dua of Istikharah on its own page (Abu, 2026-10-21: "make it its own link"): the words as a
+/// Dua-screen row, what each phrase asks, how it is said, and the questions the words raise. The
+/// prayer that frames it is IstikharahView's; the two pages open each other through a door row.
+struct IstikharahDuaView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    ArticleLead(articleMarkdown: "In short: the **Dua of Istikharah (دُعَاءُ الاِستِخَارَة)** is the supplication the Prophet (peace and blessings be upon him) taught for every matter a Muslim is unsure about. Said after two voluntary rak'ah, it asks Allah, by His knowledge and His power, to bring the matter about if it is good for you and to turn it away if it is not, and to make you content with whatever He chooses.")
+                }
+
+                Section(header: ArticleHeader("THE DUA")) {
+                    ArticleParagraph(verbatim: "Jabir ibn Abdullah (may Allah be pleased with him) said the Prophet taught it to them as he taught them a surah of the Quran. Where it says هَذَا الأَمْرَ, “this matter”, name what you are deciding. The narrator's “or he said” gives the Prophet's other wording of one phrase; say either.")
+                    GuideDuaRow(DuaItem(
+                        hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 54...135, english: 154...299,
+                        transliteration: "Allahumma inni astakhiruka bi-‘ilmika, wa astaqdiruka bi-qudratika, wa as'aluka min fadlika al-‘adhim, fa-innaka taqdiru wa la aqdiru, wa ta‘lamu wa la a‘lamu, wa anta ‘allamu al-ghuyub. Allahumma in kunta ta‘lamu anna hadha al-amra khayrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: ‘ajili amri wa ajilihi), faqdurhu li wa yassirhu li thumma barik li fih. Wa in kunta ta‘lamu anna hadha al-amra sharrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: fi ‘ajili amri wa ajilihi), fasrifhu ‘anni wasrifni ‘anhu, waqdur li al-khayra haythu kana thumma ardini bih.",
+                        note: "After the two rak‘ah, naming the matter at hand"
+                    ))
+                }
+
+                Section(header: ArticleHeader("WHAT EACH PHRASE ASKS")) {
+                    ArticleTermCard("I seek Your choice by Your knowledge", arabic: "أَسْتَخِيرُكَ بِعِلْمِكَ", meaning: "Istikharah is from **khayr**, good: you ask Allah to choose the good for you, because He knows how the matter ends and you do not.")
+                    ArticleTermCard("I seek Your power by Your power", arabic: "وَأَسْتَقْدِرُكَ بِقُدْرَتِكَ", meaning: "You ask Him to make you able and to bring the matter about, because the power to do either is His alone.")
+                    ArticleTermCard("I ask You of Your great bounty", arabic: "وَأَسْأَلُكَ مِنْ فَضْلِكَ الْعَظِيمِ", meaning: "Whatever He then gives is a gift from His favour, not something you earned or were owed.")
+                    ArticleTermCard("You are able and I am not, You know and I do not", arabic: "فَإِنَّكَ تَقْدِرُ وَلاَ أَقْدِرُ وَتَعْلَمُ وَلاَ أَعْلَمُ", meaning: "The reason for the asking, said plainly: all ability and all knowledge are His, and He is the Knower of the unseen (**‘allam al-ghuyub**).")
+                    ArticleTermCard("If You know this matter is good for me", arabic: "إِنْ كُنْتَ تَعْلَمُ أَنَّ هَذَا الأَمْرَ خَيْرٌ لِي", meaning: "Here you name the matter. Good is measured in three things, in this order: **my religion**, **my livelihood** (ma‘ashi) and **the end of my affair** (‘aqibati amri), the outcome in this world and the next.")
+                    ArticleTermCard("Decree it for me, ease it for me, then bless me in it", arabic: "فَاقْدُرْهُ لِي وَيَسِّرْهُ لِي ثُمَّ بَارِكْ لِي فِيهِ", meaning: "Three requests in order: that it comes to be, that it comes easily, and that once it has come it carries blessing. A thing can be given and still be without barakah, so the third is asked for on its own.")
+                    ArticleTermCard("Turn it away from me and turn me away from it", arabic: "فَاصْرِفْهُ عَنِّي وَاصْرِفْنِي عَنْهُ", meaning: "If the matter is bad for you, both directions are asked for: that it leaves you, and that your heart leaves it, so you are not left longing for what was kept away.")
+                    ArticleTermCard("Decree the good for me wherever it is, then make me content with it", arabic: "وَاقْدُرْ لِي الْخَيْرَ حَيْثُ كَانَ ثُمَّ أَرْضِنِي بِهِ", meaning: "The closing: good from whatever direction Allah knows it to be, and a heart at peace with His choice. Contentment (**rida**) is the fruit of Istikharah.")
+                }
+
+                Section(header: ArticleHeader("HOW TO SAY IT")) {
+                    ArticleStep("1. **Pray two rak'ah** other than the obligatory prayer, at any time prayer is permitted, with the intention of Istikharah.")
+                    ArticleStep("2. **After the taslim**, praise Allah and send prayers upon the Prophet (peace and blessings be upon him), then say the dua: in Arabic if you can, otherwise with its meaning in your own words.")
+                    ArticleStep("3. **Name the matter** where the dua says “this matter”, in whatever words describe it: the person, the position, the journey, the purchase.")
+                    ArticleStep("4. **Then go ahead.** Pursue the matter and take what Allah opens or closes as the answer; the dua asks for His decree, not for a dream or a feeling.")
+                    ArticleDoorRow(door: .article("IstikharahView"))
+                }
+
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
+                    ArticleParagraph(articleMarkdown: "**Must I say it in Arabic?** Say the Prophet's words if you can; they are the Sunnah. Someone who cannot may say their meaning in their own language, and Allah hears every tongue.")
+                    ArticleParagraph(articleMarkdown: "**Inside the prayer or after it?** The hadith says to pray two rak'ah and then say it, so after the taslim is its apparent meaning and the clearest way. The scholars also allowed saying it before the taslim, after the final tashahhud.")
+                    ArticleParagraph(articleMarkdown: "**Can I say the dua without the two rak'ah?** The Sunnah ties the dua to the prayer. Someone who cannot pray at the time, such as a woman during her period, may say the dua on its own in the view of some scholars.")
+                    ArticleParagraph(articleMarkdown: "**Should I memorise it?** It helps, and the Companions learned it as they learned the Quran. Until then read it from the page: the row above can be heard aloud and copied.")
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    ArticleClosing("Ask by His knowledge, ask by His power, name your matter, and ask for the good wherever it is and a heart content with it. Then act, and let what Allah opens or closes be the answer.")
+                }
+
+                ArticleSourcesSection(article: "IstikharahDuaView")
+            }
+            .themedListRowBackground()
+        }
+        .selectableArticleList(article: "IstikharahDuaView")
+        .navigationTitle("The Dua of Istikharah")
     }
 }
 

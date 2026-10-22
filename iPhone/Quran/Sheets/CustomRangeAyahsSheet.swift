@@ -11,7 +11,10 @@ import SwiftUI
 /// (the Quran face at the title size, then the translations the reader shows), not as a reader row:
 /// this is a list to scan, and the reader's rows carry word cards, tajweed and pins it has no use for.
 struct CustomRangeAyahsSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
     private let quranPlayer = QuranPlayer.shared
     @Environment(\.appearance) private var appearance

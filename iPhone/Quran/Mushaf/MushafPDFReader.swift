@@ -463,7 +463,9 @@ struct MushafPDFPageBody: View {
     /// traps outright when the object is missing. That killed the app from
     /// `ToolbarPlacementEnvironment.updateValue` while paging the printed mushaf
     /// (2026-10-06, iPhone-2026-10-06-214850.ips and -215046.ips, EXC_BREAKPOINT on thread 0).
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @Environment(\.colorScheme) private var colorScheme
 
     private var appearance: MushafPDFAppearance {

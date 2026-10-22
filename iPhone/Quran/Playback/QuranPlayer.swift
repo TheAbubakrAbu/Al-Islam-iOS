@@ -189,7 +189,7 @@ final class QuranPlayer: ObservableObject {
     private static let readingHistoryKey = "quranReadingHistoryData"
     private static let ayahListeningHistoryKey = "quranAyahListeningHistoryData"
     
-    @ObservedObject var settings = Settings.shared
+    let settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     
     @Published var isLoading = false

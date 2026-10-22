@@ -17,7 +17,9 @@ import SwiftUI
 #if os(iOS) && canImport(FoundationModels)
 
 struct SummarizeSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     /// What the source text IS, shown to the user and to the model (e.g. "Ibn Kathir on Al-Baqarah 2:153").
@@ -468,8 +470,9 @@ struct SummarizeSheet: View {
 /// it on `OnDeviceAsk.isAvailable` at render time (the OnDeviceAsk pattern - when Apple Intelligence
 /// is off or unsupported the feature simply does not exist in the UI).
 struct SummarizeToolbarButton: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let action: () -> Void
 
     var body: some View {

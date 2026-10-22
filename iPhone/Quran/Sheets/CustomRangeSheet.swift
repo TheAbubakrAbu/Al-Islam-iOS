@@ -10,7 +10,10 @@ import SwiftUI
 /// ayah the range will play. The count and the play total sit over the Play button, so they stay on
 /// screen while the list scrolls.
 struct PlayCustomRangeSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var rangeHistory = CustomRangeHistoryStore.shared
     @Environment(\.appearance) private var appearance
 

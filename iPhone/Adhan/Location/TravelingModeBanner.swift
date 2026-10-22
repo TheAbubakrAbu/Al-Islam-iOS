@@ -13,7 +13,10 @@ import CoreLocation
 /// reads at 4.5:1 on it in both appearances (`AccentContrast.legible` against white), so every
 /// accent, the custom one included, gets a solid card instead of a tint that disappears into the list.
 struct TravelingModeBanner: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var live = LiveState.shared
     @Environment(\.colorScheme) private var colorScheme
 
@@ -124,7 +127,9 @@ struct TravelingModeBanner: View {
 
 /// The badge the PRAYER TIMES header wears while traveling, so the combined list labels itself.
 struct QasrHeaderBadge: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {

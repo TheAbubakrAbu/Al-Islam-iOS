@@ -74,7 +74,8 @@ final class DuaSessionProgress: ObservableObject {
 
 /// The button that starts (or resumes) a session, shown at the top of a collection screen.
 struct DuaSessionStartButton: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var progress = DuaSessionProgress.shared
     @State private var showingSession = false
 
@@ -123,7 +124,11 @@ struct DuaSessionStartButton: View {
 // MARK: - Session
 
 struct DuaSessionView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var progress = DuaSessionProgress.shared
     @ObservedObject private var speech = ArabicSpeech.shared
     @Environment(\.dismiss) private var dismiss

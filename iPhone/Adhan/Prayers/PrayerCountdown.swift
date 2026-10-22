@@ -16,7 +16,12 @@ struct PrayerCountdown: View {
     /// (the extra prayer rows), and the tap that flips it must not be swallowed by the equality gate.
     var showPrayerInfoKey: Bool = Settings.shared.showPrayerInfo
 
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -805,8 +810,8 @@ private struct CountdownDigits: View {
 /// A linear progress bar filled with the accent gradient. `ProgressView` only accepts a flat `tint`, so a
 /// two-color accent needs its own bar. Matches the stock bar's 4pt height and capsule ends.
 struct AccentGradientBar: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     /// 0…1. Clamped, because a stale progress value crossing a prayer boundary can briefly fall outside it.
     var progress: Double
 

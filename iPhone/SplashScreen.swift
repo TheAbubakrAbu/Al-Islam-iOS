@@ -7,7 +7,11 @@
 import SwiftUI
 
 struct SplashScreen: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss

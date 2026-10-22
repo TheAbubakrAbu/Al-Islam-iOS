@@ -3,7 +3,11 @@ import CoreLocation
 import UserNotifications
 
 struct AdhanView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 
@@ -970,8 +974,9 @@ struct AdhanView: View {
 }
 
 private struct DateAndLocationSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Binding var showBigQibla: Bool
 
     var body: some View {
@@ -995,7 +1000,9 @@ private struct DateAndLocationSection: View {
 }
 
 private struct HijriDateRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let hijriDate: HijriDate
@@ -1075,7 +1082,9 @@ private struct HijriDateRow: View {
 }
 
 private struct CurrentLocationRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 
@@ -1465,8 +1474,8 @@ private enum GlanceSheet: Identifiable {
 /// The Qibla and Distance to Makkah tiles' sheet: the big compass over the two lines the tiles showed.
 /// At this size `QiblaView` starts the heading updates and the GPS refinement burst by itself.
 private struct QiblaSheet: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let bearing: String?
     let distance: String?
 

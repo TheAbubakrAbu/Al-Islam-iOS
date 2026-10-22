@@ -59,8 +59,10 @@ struct NaggingDeadline: Identifiable {
 }
 
 struct NaggingModeView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The row's trailing read-out wherever this screen is linked from: "Off", "On", or "Paused".
     static func statusValue(_ settings: Settings) -> String {
         guard settings.naggingMode else { return "Off" }
@@ -287,7 +289,7 @@ struct NaggingModeView: View {
     private var whenSection: some View {
         Section(header: Text("WHEN")) {
             if !settings.naggingPerDeadlineStart {
-                Picker("Start", selection: $settings.naggingStartOffset) {
+                Picker("Start", selection: $adhanSettings.naggingStartOffset) {
                     ForEach(Settings.naggingStartOptions, id: \.self) { minutes in
                         Text("\(Self.leadTitle(minutes)) before").tag(minutes)
                     }
@@ -306,21 +308,21 @@ struct NaggingModeView: View {
             }
 
             if settings.advanced(.naggingMode) {
-                Picker("Repeat Every", selection: $settings.naggingInterval) {
+                Picker("Repeat Every", selection: $adhanSettings.naggingInterval) {
                     ForEach(intervalChoices, id: \.self) { minutes in
                         Text("\(minutes) min").tag(minutes)
                     }
                 }
                 .onChange(of: settings.naggingInterval) { _ in settings.hapticFeedback() }
 
-                Picker("Last Calls", selection: $settings.naggingLastCallsRaw) {
+                Picker("Last Calls", selection: $adhanSettings.naggingLastCallsRaw) {
                     ForEach(NaggingLastCalls.allCases) { option in
                         Text(option.title).tag(option.rawValue)
                     }
                 }
                 .onChange(of: settings.naggingLastCallsRaw) { _ in settings.hapticFeedback() }
 
-                SettingsToggle("Different Start for Each Prayer", caption: "A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers.", isOn: $settings.naggingPerDeadlineStart)
+                SettingsToggle("Different Start for Each Prayer", caption: "A short lead before Shurooq, a long one before Maghrib: set each under Which Prayers.", isOn: $adhanSettings.naggingPerDeadlineStart)
                     .onChange(of: settings.naggingPerDeadlineStart) { _ in fitIntervalToLeads() }
 
                 caption(budgetLine)
@@ -392,7 +394,7 @@ struct NaggingModeView: View {
     private var fineTuneSection: some View {
         Section(header: Text("FINE-TUNE")) {
             VStack(alignment: .leading, spacing: 4) {
-                Picker("Check In After the Adhan", selection: $settings.naggingFollowUpMinutes) {
+                Picker("Check In After the Adhan", selection: $adhanSettings.naggingFollowUpMinutes) {
                     ForEach(Settings.naggingFollowUpOptions, id: \.self) { minutes in
                         Text(minutes == 0 ? "Off" : "\(minutes) min after").tag(minutes)
                     }
@@ -402,7 +404,7 @@ struct NaggingModeView: View {
                 caption("One early nudge, \u{201C}Have you prayed Dhuhr yet?\u{201D}, this long after the adhan while the prayer is unmarked.")
             }
 
-            Picker("Nag Tone", selection: $settings.naggingSound) {
+            Picker("Nag Tone", selection: $adhanSettings.naggingSound) {
                 Text("Same as Alert Tone").tag("")
                 ForEach(Settings.supportedAlertTones) { option in
                     Text(option.title).tag(option.id)
@@ -410,9 +412,9 @@ struct NaggingModeView: View {
             }
             .onChange(of: settings.naggingSound) { _ in settings.hapticFeedback() }
 
-            SettingsToggle("Louder Last Call", caption: "The final reminder before each deadline plays Alarm, the tone that carries furthest.", isOn: $settings.naggingLoudLastCall)
+            SettingsToggle("Louder Last Call", caption: "The final reminder before each deadline plays Alarm, the tone that carries furthest.", isOn: $adhanSettings.naggingLoudLastCall)
 
-            SettingsToggle("Add a Verse to the Last Call", caption: "A verse about prayer, such as \(Settings.nagAyat[0].reference), in Saheeh International.", isOn: $settings.naggingAyahInLastCall)
+            SettingsToggle("Add a Verse to the Last Call", caption: "A verse about prayer, such as \(Settings.nagAyat[0].reference), in Saheeh International.", isOn: $adhanSettings.naggingAyahInLastCall)
         }
     }
 

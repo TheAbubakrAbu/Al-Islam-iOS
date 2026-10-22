@@ -595,8 +595,10 @@ struct InheritanceCalculatorView: View {
     @State private var aboutDoor: SignsAboutDoor?
     #endif
 
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
 
+    @ObservedObject private var systemSettings = SystemSettings.shared
     // Persisted so a half-entered family survives leaving the screen, matching the zakah calculator.
     @AppStorage("faraidEstate") private var estate = ""
     @AppStorage("faraidFuneral") private var funeral = ""

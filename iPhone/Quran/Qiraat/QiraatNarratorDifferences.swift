@@ -160,7 +160,9 @@ enum RiwayahDifferenceFinder {
 
 /// "WHERE WARSH DIFFERS FROM HAFS": the count of places, the pairs, and the way into the explorer.
 struct RiwayahDifferencesSection: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.appearance) private var appearance
 
     /// The narrator's riwayah tag (`Settings.Riwayah`); never Hafs.

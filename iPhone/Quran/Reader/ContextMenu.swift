@@ -228,7 +228,10 @@ func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
 #endif
 
 struct SurahContextMenu: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject var quranData = QuranData.shared
     /// Playback state from the coalesced snapshot, actions on the player (Phase 10.4).
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
@@ -517,7 +520,11 @@ final class TafsirStore {
 #endif
 
 struct AyahContextMenuModifier: ViewModifier {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// NOT @ObservedObject (Phase 10.8): the body only calls `surah(_:)`, an index lookup; observing
     /// re-ran this modifier on every realized search/bookmark/grid row for each QuranData publish.
     private var quranData: QuranData { .shared }
@@ -1114,8 +1121,10 @@ extension View {
 }
 
 struct LeftSwipeActions: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let surah: Int
     let favoriteSurahs: Set<Int>
     let bookmarkedAyahs: Set<String>?
@@ -1201,7 +1210,9 @@ public extension View {
 }
 
 struct RightSwipeActions: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// NOT @ObservedObject - action-closure use only; see AyahContextMenuModifier's note. This
     /// modifier also sits on every row, so player publishes fanned out across the whole list.
     private var quranPlayer: QuranPlayer { .shared }
@@ -1285,8 +1296,9 @@ public extension View {
 import SwiftUI
 
 struct NoteEditorSheet: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let title: String
     @Binding var text: String
     var onAttemptSave: (String) -> Bool
@@ -1481,7 +1493,10 @@ extension FocusItem {
 /// the text into a sheet of its own gives the selection somewhere to live, and each block also gets a one-tap copy
 /// for when the whole block is what you wanted.
 struct SelectAyahTextSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let surah: Surah

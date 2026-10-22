@@ -4,7 +4,11 @@ import SwiftUI
 /// color (`accent2`) - the date/location/sky section above it stays on the first. For a one-color accent the
 /// two are the same color and this looks exactly as it always did.
 struct PrayerList: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var prayerTracker = PrayerTracker.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -439,9 +443,9 @@ struct PrayerList: View {
 
             if showOptionalPrayerToggles, !settings.hides(.optionalTimes) {
                 VStack(spacing: 10) {
-                    optionalPrayerToggle("Duhaa", isOn: $settings.showDuha)
-                    optionalPrayerToggle("Islamic Midnight", isOn: $settings.showIslamicMidnight)
-                    optionalPrayerToggle("Last Third of the Night", isOn: $settings.showLastThird)
+                    optionalPrayerToggle("Duhaa", isOn: $adhanSettings.showDuha)
+                    optionalPrayerToggle("Islamic Midnight", isOn: $adhanSettings.showIslamicMidnight)
+                    optionalPrayerToggle("Last Third of the Night", isOn: $adhanSettings.showLastThird)
                 }
 
                 Text("These extra prayer times appear in the app only, never in widgets.")
@@ -1357,8 +1361,9 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
 }
 
 private struct PrayerDetailBlock: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let prayer: Prayer
     let timeWindowText: String?
     let referenceText: String?

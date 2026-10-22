@@ -48,7 +48,10 @@ extension TafsirAuthor {
 #endif
 
 struct AyahTafsirSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// NOT @ObservedObject: the sheet only reads the long-loaded quran array. Observing it meant every
     /// background publish (search-index rebuilds, prewarm state) re-rendered the whole sheet mid-read.
     let quranData = QuranData.shared
@@ -518,8 +521,8 @@ struct AyahTafsirSheet: View {
 /// one. The selected chip scrolls into view when the sheet opens, since the remembered source may be
 /// the last one.
 private struct SurahInfoSourceChips: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let sources: [SurahInfoSource]
     @Binding var selection: String
 
@@ -571,7 +574,10 @@ private extension SurahInfoSource {
 /// "About this Surah" sheet - bundled surah background, mirroring the Tafsir sheet: a source picker
 /// (Maududi / Ibn Ashur), searchable content, and the same accent-foreground search match (no highlight box).
 struct SurahInfoSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -946,7 +952,10 @@ struct SurahInfoSheet: View {
 /// The surah info sheet's playback card: play the surah once, or a chosen number of times. A separate
 /// struct so the player's per-ayah ticks only re-render this card, not the whole markdown sheet.
 private struct SurahInfoPlaybackCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Playback state from the coalesced snapshot, actions on the player (Phase 10.4).
     @ObservedObject private var nowPlaying = QuranPlayer.shared.nowPlaying
     private var quranPlayer: QuranPlayer { .shared }
@@ -1398,8 +1407,9 @@ private struct TafsirMarkdownBlock {
 /// Find-in-page control bar: "current/total" plus up/down arrows, styled to match the app. Shown over the
 /// Tafsir / Surah Info sheets while a search query is active.
 private struct TafsirFindBar: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let current: Int   // 0-based index of the active match
     let total: Int
     let onPrevious: () -> Void
@@ -1460,8 +1470,9 @@ private struct SingleSourceSummary: Identifiable {
 /// 2026-09-05: "maybe I just want that tafsir summarized"); the toolbar's sparkles button summarizes
 /// everything the app has. Callers gate it on `OnDeviceAsk.isAvailable`, like the toolbar button.
 private struct SummarizeChip: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let title: String
     let action: () -> Void
 

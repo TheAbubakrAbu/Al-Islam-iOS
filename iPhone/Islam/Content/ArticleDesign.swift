@@ -602,24 +602,46 @@ struct ArticleTermCard: View {
         self.meaning = meaning
     }
 
+    /// A word sits beside its term on one line; a phrase (three words or more, a dua's clause) takes
+    /// its own line under the term, where it can wrap, instead of shrinking and then truncating.
+    private var isPhrase: Bool {
+        arabic.split(whereSeparator: \.isWhitespace).count > 2
+    }
+
     var body: some View {
         let accent = appearance.accent
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .center, spacing: 12) {
+            if isPhrase {
                 Text(term)
                     .font(.headline)
                     .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Spacer(minLength: 8)
-
                 Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
-                    .font(appearance.islamArabicFont(base: 30, relativeTo: .title))
+                    .font(appearance.islamArabicFont(base: 26, relativeTo: .title2))
                     .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
                     .foregroundColor(accent)
                     .multilineTextAlignment(.trailing)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.vertical, 2)
+            } else {
+                HStack(alignment: .center, spacing: 12) {
+                    Text(term)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 8)
+
+                    Text.islamArabic(arabic, highlightAllah: appearance.highlightAllahIslam)
+                        .font(appearance.islamArabicFont(base: 30, relativeTo: .title))
+                        .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                        .foregroundColor(accent)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
             }
 
             ArticleParagraph(articleMarkdown: meaning, textStyle: .subheadline, secondary: true)

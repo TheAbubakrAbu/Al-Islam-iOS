@@ -2328,3 +2328,123 @@ enum SearchRank {
             .map { items[$0] }
     }
 }
+
+// MARK: - Stored settings (2026-10-21, Performance Guide section 18)
+
+/// What a `@Setting` asks of the object it lives on: a word BEFORE the value moves, with the defaults
+/// key, so the object can publish once and route the change to whoever owns that key.
+protocol SettingsHost: AnyObject {
+    func settingWillChange(_ key: String)
+}
+
+/// The value shapes a `@Setting` holds: exactly what `@AppStorage` held in this model (Bool, Int,
+/// Double, String, Data, an optional String), read and written through the same `UserDefaults`
+/// calls, so every key keeps its stored form and a `defaults read` shows the same thing.
+protocol SettingStorable: Equatable {
+    /// The stored value, or nil when the key is absent (the wrapper then answers its default).
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Self?
+    func writeSetting(_ defaults: UserDefaults, key: String)
+}
+
+extension Bool: SettingStorable {
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Bool? { defaults.object(forKey: key) as? Bool }
+    func writeSetting(_ defaults: UserDefaults, key: String) { defaults.set(self, forKey: key) }
+}
+
+extension Int: SettingStorable {
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Int? { defaults.object(forKey: key) as? Int }
+    func writeSetting(_ defaults: UserDefaults, key: String) { defaults.set(self, forKey: key) }
+}
+
+extension Double: SettingStorable {
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Double? { defaults.object(forKey: key) as? Double }
+    func writeSetting(_ defaults: UserDefaults, key: String) { defaults.set(self, forKey: key) }
+}
+
+extension String: SettingStorable {
+    static func readSetting(_ defaults: UserDefaults, key: String) -> String? { defaults.object(forKey: key) as? String }
+    func writeSetting(_ defaults: UserDefaults, key: String) { defaults.set(self, forKey: key) }
+}
+
+extension Data: SettingStorable {
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Data? { defaults.object(forKey: key) as? Data }
+    func writeSetting(_ defaults: UserDefaults, key: String) { defaults.set(self, forKey: key) }
+}
+
+extension Optional: SettingStorable where Wrapped: SettingStorable {
+    /// Always `.some`: an absent key IS the value (nil), never a fall-through to a default.
+    static func readSetting(_ defaults: UserDefaults, key: String) -> Wrapped?? {
+        .some(Wrapped.readSetting(defaults, key: key))
+    }
+
+    func writeSetting(_ defaults: UserDefaults, key: String) {
+        if let value = self {
+            value.writeSetting(defaults, key: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}
+
+/// A user setting stored in standard defaults under `key`, on a `SettingsHost` class.
+///
+/// The replacement for `@AppStorage` inside `Settings`. The SwiftUI wrapper, hosted by an
+/// `ObservableObject`, published that object on its own set, again when its defaults observer
+/// echoed the write, and once more for ANY defaults write in the process (a store saving its own
+/// key republished every view observing `Settings`), and it published for a write of the value
+/// already stored. Measured 2026-10-21 (`UnitTests/SettingPublishTests`): three to four publishes per
+/// changed write, two per unchanged one, one per foreign key.
+///
+/// This wrapper reads the store through (a raw write by a restore or a `-seedBool` shows at the next
+/// read), writes the same key the same way, and tells the host ONCE, before the write, only when the
+/// value changes. The host publishes and routes; the wrapper never echoes.
+/// The key behind a `@Setting`, readable through a `Mirror` of the host: the slice test walks every
+/// stored setting this way and fails on one that no slice owns.
+protocol SettingKeyed {
+    var settingKey: String { get }
+}
+
+@propertyWrapper
+struct Setting<Value: SettingStorable>: SettingKeyed {
+    let key: String
+    let defaultValue: Value
+
+    var settingKey: String { key }
+
+    init(wrappedValue: Value, _ key: String) {
+        self.key = key
+        self.defaultValue = wrappedValue
+    }
+
+    /// `@Setting("key") var x: String?`: the default is nil, as `@AppStorage` had it.
+    init(_ key: String) where Value: ExpressibleByNilLiteral {
+        self.init(wrappedValue: nil, key)
+    }
+
+    @available(*, unavailable, message: "@Setting lives on a stored property of a SettingsHost class")
+    var wrappedValue: Value {
+        get { fatalError("@Setting is read through its host") }
+        set { fatalError("@Setting is written through its host") }
+    }
+
+    static subscript<Host: SettingsHost>(
+        _enclosingInstance host: Host,
+        wrapped _: ReferenceWritableKeyPath<Host, Value>,
+        storage storageKeyPath: ReferenceWritableKeyPath<Host, Self>
+    ) -> Value {
+        get {
+            let wrapper = host[keyPath: storageKeyPath]
+            return Value.readSetting(.standard, key: wrapper.key) ?? wrapper.defaultValue
+        }
+        set {
+            let wrapper = host[keyPath: storageKeyPath]
+            let current = Value.readSetting(.standard, key: wrapper.key) ?? wrapper.defaultValue
+            if current != newValue {
+                host.settingWillChange(wrapper.key)
+            }
+            // Written even when equal: the first write of a default value lands the key in the
+            // store, exactly as the SwiftUI wrapper did.
+            newValue.writeSetting(.standard, key: wrapper.key)
+        }
+    }
+}

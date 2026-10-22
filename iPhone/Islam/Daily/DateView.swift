@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct DateView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @State private var sourceDate = Date()
     @State private var selectedTab: ConversionTab = .hijriToGregorian
 

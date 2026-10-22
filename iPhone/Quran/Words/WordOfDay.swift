@@ -313,8 +313,10 @@ struct SummaryWordTile: View, Equatable {
 /// root and dictionary form (from the morphology pack, when bundled), and every ayah it appears in
 /// with the form tinted, each a tap away from the reader.
 struct WordOfDayDetailView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let word: WordOfDayEntry
     var onOpenAyah: ((Int, Int) -> Void)? = nil
 

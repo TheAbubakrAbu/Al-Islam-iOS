@@ -7,8 +7,11 @@ import SwiftUI
 /// What a hadith row shows: Arabic, English, the narrator line, and which Arabic face. Small enough to live
 /// in a sheet off the Hadith tab rather than the app settings tree.
 struct SettingsHadithView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = true
@@ -140,13 +143,13 @@ struct SettingsHadithView: View {
                 // The Quran tab's "Show Ayah of the Day", for the Hadith tab's tile (2026-09-21). This
                 // is also where the tile's "Delete Forever" sends you to bring it back.
                 Section(header: Text("HADITH TAB")) {
-                    SettingsToggle("Show Hadith of the Day", isOn: $settings.showHadithOfTheDay)
+                    SettingsToggle("Show Hadith of the Day", isOn: $hadithSettings.showHadithOfTheDay)
                 }
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
                 Section {
-                    SettingsToggle("Highlight Allah", caption: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English.", isOn: $settings.highlightAllahNamesHadith)
+                    SettingsToggle("Highlight Allah", caption: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English.", isOn: $hadithSettings.highlightAllahNamesHadith)
                 }
             }
             .themedListRowBackground()
@@ -179,7 +182,7 @@ struct SettingsHadithView: View {
                         // The Quran settings' font controls, one for one: the size slider with its
                         // sample, then the system-size switch.
                         VStack(alignment: .leading, spacing: 12) {
-                            FontSizeSlider("Arabic Font Size", value: $settings.hadithArabicFontSize, in: 15...40,
+                            FontSizeSlider("Arabic Font Size", value: $hadithSettings.hadithArabicFontSize, in: 15...40,
                                            sample: Settings.hadithArabicSizeSample,
                                            fontName: settings.hadithArabicWantsCustomFace ? settings.nonQuranArabicFontName : nil,
                                            glyph: "ب")
@@ -215,7 +218,7 @@ struct SettingsHadithView: View {
                 if settings.showHadithEnglish {
                     Section(header: Text("ENGLISH FONT")) {
                         VStack(alignment: .leading, spacing: 12) {
-                            FontSizeSlider("English Font Size", value: $settings.hadithEnglishFontSize, in: 10...32,
+                            FontSizeSlider("English Font Size", value: $hadithSettings.hadithEnglishFontSize, in: 10...32,
                                            sample: Settings.hadithEnglishSizeSample)
 
                             SettingsToggle("Use System Font Size", isOn: useSystemEnglishFontSize)

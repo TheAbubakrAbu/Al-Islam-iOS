@@ -6,8 +6,9 @@ import SwiftUI
 /// preferences, the optional-prayer set, Siri's search keys and the scrubber's highlight all key off it.
 /// Names live in the app group, so widgets and the Watch render them too.
 struct CustomPrayerNamesSection: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Edited locally and committed on blur. Writing straight through on every keystroke would recompute
     /// prayer times and reschedule notifications once per typed character.
     @State private var drafts: [String: String] = [:]

@@ -2,7 +2,10 @@
 import SwiftUI
 
 struct TajweedLegendView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     var showsDismissButton = true
@@ -1057,7 +1060,9 @@ struct TajweedLegendView: View {
 /// cards with the rule's names, a one-liner, the longer note, and a
 /// show/hide toggle (mirrors the Hafs legend's detail cards).
 struct QiraahTajweedLegendView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let tag: String
 
     private var entries: [QiraahTajweedStore.LegendEntry] {
@@ -1148,8 +1153,10 @@ struct QiraahTajweedLegendView: View {
 /// Settings and sends both readers to repaint, so the pick is committed once the hand has rested
 /// (`commitDelay`); the well itself follows the finger meanwhile.
 struct TajweedRuleColorRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// `TajweedColorOverrides` key of the rule.
     let colorKey: String
     /// Names the rule for VoiceOver ("Color for Qalqalah").

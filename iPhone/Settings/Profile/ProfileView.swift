@@ -248,7 +248,8 @@ struct ProfileStats: Equatable {
 /// The Settings row that opens the profile. Carries live numbers in its caption so the row itself is
 /// worth looking at - a streak and a khatm percentage answer "how am I doing" without a tap.
 struct ProfileSettingsRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     /// Observed so the deferred `loadLastRead()` (see `ProfileStats.current`) re-renders this row when
     /// the count lands - without a subscription the caption's badge tally would stay stale until some
@@ -305,7 +306,9 @@ struct ProfileSettingsRow: View {
 // MARK: - Profile screen
 
 struct ProfileView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     /// Observed so a count tapped on the tasbih screen is reflected the next time this one appears.
     @ObservedObject private var tasbih = TasbihCounters.shared
@@ -624,7 +627,8 @@ struct ProfileView: View {
 /// inward steps down in opacity. That keeps the hero on-palette under any accent the user picks,
 /// including a custom one, instead of inventing colors the rest of the app never uses.
 private struct RingHero: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let stats: ProfileStats
 
     /// Rings sweep in from zero each time the screen appears - the fill IS the story here, and the
@@ -724,8 +728,7 @@ private struct RingHero: View {
 // MARK: - Card chrome
 
 private struct ProfileCard<Content: View>: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
     let title: String
     let systemImage: String
     var trailing: String? = nil
@@ -762,7 +765,8 @@ private struct ProfileCard<Content: View>: View {
 // MARK: - Badge tiles
 
 private struct BadgeTile: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var achievements = AchievementsStore.shared
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     /// Three lines of the title at the reader's text size, so every tile's bar sits on one line. Two
@@ -845,7 +849,8 @@ private struct BadgeTile: View {
 }
 
 private struct BadgeDetailSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var achievements = AchievementsStore.shared
     @Environment(\.dismiss) private var dismiss
 

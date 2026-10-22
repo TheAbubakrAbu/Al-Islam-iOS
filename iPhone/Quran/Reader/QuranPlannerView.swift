@@ -413,7 +413,10 @@ enum QuranPlannerReminder {
 /// The planner's only entry point: the calendar button in the Quran tab's leading toolbar. Owns the
 /// sheet and - since it is always mounted while the tab is up - the plan's day-rollover lifecycle.
 struct QuranPlannerToolbarButton: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
 
     let openReader: (Int, Int) -> Void
@@ -534,7 +537,12 @@ struct PlannerRing: View {
 // MARK: - Full planner sheet
 
 struct QuranPlannerView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     @Environment(\.presentationMode) private var presentationMode
 

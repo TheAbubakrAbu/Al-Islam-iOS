@@ -128,8 +128,8 @@ enum QiraatTextAnalysis {
 }
 
 struct QiraatTextAnalysisView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     var body: some View {
         List {
             disclaimerSection

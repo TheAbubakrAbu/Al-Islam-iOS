@@ -91,8 +91,10 @@ final class FocusOverlayPresenter: ObservableObject {
 /// - "View First Found" hands the ayah to `AppNavigation.pendingQuran` and closes the overlay, the
 ///   cross-tab route a Sunnah reminder's notification already uses. The Quran tab opens it.
 struct FocusNameDetails: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let name: NameOfAllah
 
     @State private var showsDetail = false
@@ -274,7 +276,10 @@ struct CenteredChipFlow: Layout {
 /// Sits at the top of the app's root `ZStack` - not a sheet, so it can cover the tab bar and animate as a
 /// plain cross-fade instead of the system's slide-up.
 struct FocusOverlayHost: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var presenter = FocusOverlayPresenter.shared
 
     @State private var showingActivityView = false

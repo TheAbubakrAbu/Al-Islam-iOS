@@ -1022,7 +1022,7 @@ extension Settings {
 
         if persistImmediately {
             persistKhatmProgressNow()
-            objectWillChange.send()
+            settingWillChange("khatmCompletedAyahsData")
         }
     }
 
@@ -1076,7 +1076,7 @@ extension Settings {
             self.persistKhatmProgressNow()
             if self.khatmProgressRefreshPending {
                 self.khatmProgressRefreshPending = false
-                self.objectWillChange.send()
+                self.settingWillChange("khatmCompletedAyahsData")
             }
         }
     }
@@ -1091,7 +1091,7 @@ extension Settings {
         persistKhatmProgressNow()
         if khatmProgressRefreshPending {
             khatmProgressRefreshPending = false
-            objectWillChange.send()
+            settingWillChange("khatmCompletedAyahsData")
         }
     }
 
@@ -1144,7 +1144,7 @@ extension Settings {
         revisionSaveTask = nil
         revisionRefreshPending = false
         persistRevisionProgressNow()
-        objectWillChange.send()
+        settingWillChange("quranRevisionRevisedData")
     }
 
     /// Lands a debounced revision mark before the app is backgrounded (`flushAllPendingWrites`).
@@ -1155,7 +1155,7 @@ extension Settings {
         persistRevisionProgressNow()
         if revisionRefreshPending {
             revisionRefreshPending = false
-            objectWillChange.send()
+            settingWillChange("quranRevisionRevisedData")
         }
     }
 
@@ -1176,7 +1176,7 @@ extension Settings {
         ActivityLog.shared.record(.read)
         khatmCompletedAyahIntCache.insert(Self.khatmIntKey(surah: surah, ayah: ayah))
         khatmCompletedSurahCountsCache[surah, default: 0] += 1
-        if immediate { objectWillChange.send() }
+        if immediate { settingWillChange("khatmCompletedAyahsData") }
         scheduleKhatmProgressSaveAndRefresh(refresh: !immediate)
     }
 
@@ -1193,7 +1193,7 @@ extension Settings {
         khatmCompletedAyahIntCache.subtract(surah.ayahs.map { Self.khatmIntKey(surah: surah.id, ayah: $0.id) })
         khatmCompletedSurahCountsCache[surah.id] = nil
         persistKhatmProgressNow()
-        objectWillChange.send()
+        settingWillChange("khatmCompletedAyahsData")
     }
 
     func resetAllKhatmProgress() {
@@ -1202,7 +1202,7 @@ extension Settings {
         khatmCompletedAyahIntCache.removeAll(keepingCapacity: true)
         khatmCompletedSurahCountsCache.removeAll(keepingCapacity: true)
         persistKhatmProgressNow()
-        objectWillChange.send()
+        settingWillChange("khatmCompletedAyahsData")
     }
 
     func khatmTotalCompleted(in surahs: [Surah]) -> Int {
@@ -1408,7 +1408,7 @@ extension Settings {
 // MARK: - Quran logic moved out of Settings.swift
 //
 // Behavior that operates on Quran data lives here so Settings.swift holds (mostly) just the stored
-// settings. Only the @AppStorage/@Published *storage* must stay in the main class - Swift forbids stored
+// settings. Only the @Setting/@Published *storage* must stay in the main class - Swift forbids stored
 // property wrappers in extensions - but methods and `static` caches are free to live here.
 extension Settings {
 

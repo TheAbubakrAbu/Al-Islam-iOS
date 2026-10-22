@@ -548,8 +548,8 @@ enum QuranMetadata {
 /// The insight rows under an ayah in its actions sheet: the passage it belongs to, where it sits in
 /// the mushaf's divisions, and the topics that annotate it (each a push to the topic's ayahs).
 struct AyahInsightsCard: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let surah: Surah
     let ayah: Ayah
 
@@ -625,8 +625,8 @@ struct AyahInsightsCard: View {
 
 /// Topic chips that wrap onto as many lines as they need, each pushing the topic's ayahs.
 struct TopicChipFlow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     let topics: [ThemeTopic]
 
     var body: some View {

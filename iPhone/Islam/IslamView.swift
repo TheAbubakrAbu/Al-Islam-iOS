@@ -1,7 +1,10 @@
 import SwiftUI
 
 struct IslamView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     // No NamesViewModel observation: this body renders nothing from it, and observing it re-ran the
     // whole tab root when the 99 Names JSON finished its background load. NamesView observes it itself.
     #if os(iOS)
@@ -1603,7 +1606,8 @@ struct IslamView: View {
 /// nothing moves up or down, nothing pulses - the earlier scale/offset/opacity entrance replayed on every
 /// scroll past the card and read as the whole card breathing.
 struct ProphetQuote: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Environment(\.appearance) private var appearance
     /// The sweep's horizontal position across the card, in points from its centre. Parked off the leading
     /// edge until the card appears, then animated once past the trailing edge.
@@ -1812,7 +1816,8 @@ struct ProphetQuote: View {
 }
 
 struct AlIslamAppsSection: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     #if os(iOS)
     @State private var showLearnMoreSheet = false
     #endif
@@ -1983,7 +1988,8 @@ struct AlIslamAppsSection: View {
 }
 
 private struct Card: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.openURL) private var openURL
     @State private var showActions = false
 

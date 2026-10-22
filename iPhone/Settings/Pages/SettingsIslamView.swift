@@ -17,8 +17,11 @@ import SwiftUI
 /// It wears BOTH of Al-Islam's colours (yellow into green, `SettingsTint.islam`) because unlike the other
 /// three it is not one tab: it is the whole of the rest of the app.
 struct SettingsIslamView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = false
@@ -155,7 +158,7 @@ struct SettingsIslamView: View {
                 // The Islam tab's own switch (Abu, 2026-09-20), beside the Quran's and the hadith
                 // books': each area of the app decides for itself.
                 Section(header: Text("HIGHLIGHTS")) {
-                    SettingsToggle("Highlight Allah", caption: "The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)", isOn: $settings.highlightAllahNamesIslam)
+                    SettingsToggle("Highlight Allah", caption: "The name of Allah in red across the duas, dhikr, tasbih, 99 Names, daily cards and article quotes. \(IslamSettingsCopy.ownSwitches)", isOn: $islamSettings.highlightAllahNamesIslam)
                 }
             }
             .themedListRowBackground()
@@ -185,9 +188,9 @@ struct SettingsIslamView: View {
 
                 if settings.advanced(.islamAlphabet) {
                 Section(header: Text("PRACTICE")) {
-                    SettingsToggle("Hide English Readings", caption: "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone.", isOn: $settings.hideEnglishInArabicLetters)
+                    SettingsToggle("Hide English Readings", caption: "Hides the transliterations (\"ba\", \"bi\", \"bu\") under the tashkeel glyphs, so the marks can be practised from the Arabic alone.", isOn: $islamSettings.hideEnglishInArabicLetters)
 
-                    SettingsToggle("Use Quranic Sukoon", caption: "Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints.", isOn: $settings.quranicSukoonInLetterPractice)
+                    SettingsToggle("Use Quranic Sukoon", caption: "Writes the practice syllables with the Uthmani sukoon (\u{06E1}) instead of the plain one (\u{0652}), the exact mark shape the mushaf prints.", isOn: $islamSettings.quranicSukoonInLetterPractice)
                 }
                 }
 
@@ -244,13 +247,13 @@ struct SettingsIslamView: View {
 
     #if HAS_QURAN
     private var wordOfTheDayToggle: some View {
-        SettingsToggle("Word of the Day", caption: "One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.", isOn: $settings.showWordOfTheDay)
+        SettingsToggle("Word of the Day", caption: "One Arabic word a day on the Al-Islam tab, with its root and where it appears in the Quran.", isOn: $quranDisplay.showWordOfTheDay)
     }
     #endif
 
     #if HAS_ADHAN
     private var fajrTurnoverToggle: some View {
-        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $settings.dailyRolloverAtFajr)
+        SettingsToggle("Turn Over at Fajr", caption: "Every daily feature changes at Fajr rather than at midnight, so the day begins with the prayer. Without a location set, the boundary is midnight.", isOn: $systemSettings.dailyRolloverAtFajr)
             .onChange(of: settings.dailyRolloverAtFajr) { _ in settings.dailyRolloverSwitchChanged() }
     }
     #endif
@@ -320,7 +323,8 @@ private struct IslamTextSizeModifier: ViewModifier {
 /// Islam Settings -> Text Size: follow the device, or pick a size on a slider, with a preview at
 /// that size.
 struct IslamTextSizeSettingsView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
     @Environment(\.dynamicTypeSize) private var deviceSize
 
     private var followsDevice: Bool { IslamTextSize.size(for: settings.islamTextSize) == nil }

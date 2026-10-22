@@ -340,62 +340,215 @@ extension Settings {
     }
 }
 
+// MARK: - The field
+
+/// Where every cloud puff, fog bank, raindrop and snowflake sits at a moment, and when the lightning
+/// strikes: pure maths over a fixed seed and `time`, like `SkyStars`, so the card, the page and a
+/// widget agree on the frame, nothing reshuffles between frames (each particle keeps its own lane and
+/// pace), and a test can watch it move. The overlay only paints what this places. Sizes are in points;
+/// the speeds scale with the box, as the streaks and the puffs do.
+enum SkyWeatherField {
+    struct Streak: Equatable { var x: Double; var y: Double; var length: Double }
+    struct Flake: Equatable { var x: Double; var y: Double; var radius: Double }
+    /// A cloud puff or a fog bank; `x`, `y` is its centre.
+    struct Puff: Equatable { var x: Double; var y: Double; var width: Double; var height: Double }
+
+    /// The clouds' and the fog's cadence: a puff drifts a few points a second, so 8 fps is smooth, and
+    /// the blur under each puff is the dearest stroke on the sky.
+    static let slowFrameInterval: TimeInterval = 1.0 / 8.0
+
+    /// The precipitation layer's cadence, nil when nothing falls (no layer at all then). Rain crosses
+    /// the box in under a second and needs the full 30; snow drifts, 24 is plenty.
+    static func fastFrameInterval(for look: SkyWeatherLook) -> TimeInterval? {
+        switch look.precipitation {
+        case .none: return nil
+        case .rain: return 1.0 / 30.0
+        case .snow: return 1.0 / 24.0
+        }
+    }
+
+    /// `value` folded into `0..<span`.
+    static func wrapped(_ value: Double, span: Double) -> Double {
+        let remainder = value.truncatingRemainder(dividingBy: span)
+        return remainder < 0 ? min(remainder + span, span.nextDown) : remainder
+    }
+
+    /// The stars' generator: the same seed gives the same field everywhere.
+    private struct Generator {
+        var seed: UInt64
+        mutating func next() -> Double {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double((seed >> 33) & 0xFFFF) / Double(0xFFFF)
+        }
+    }
+
+    /// Streaks leaning with the wind, denser as it pours. Each falls at its own pace along its own
+    /// lean, so the sheet never moves as one.
+    static func rain(amount: Double, size: CGSize, time: TimeInterval) -> [Streak] {
+        var rng = Generator(seed: 0x51CE_C10D)
+        let count = Int(30 + 70 * amount)
+        let length = max(9, size.height * 0.06)
+        return (0..<count).map { _ in
+            let x0 = rng.next() * size.width
+            let y0 = rng.next() * size.height
+            let speed = (1.0 + 0.5 * rng.next()) * size.height
+            let travelled = speed * time
+            return Streak(x: wrapped(x0 - 0.25 * travelled, span: size.width),
+                          y: wrapped(y0 + travelled, span: size.height),
+                          length: length)
+        }
+    }
+
+    /// Flakes drifting down and swaying as they go; the big ones are the near ones, falling faster and
+    /// swinging wider.
+    static func snow(amount: Double, size: CGSize, time: TimeInterval) -> [Flake] {
+        var rng = Generator(seed: 0x5A0F_1A4E)
+        let count = Int(24 + 56 * amount)
+        return (0..<count).map { _ in
+            let x0 = rng.next() * size.width
+            let y0 = rng.next() * size.height
+            let radius = 0.9 + rng.next() * 1.4
+            let near = (radius - 0.9) / 1.4
+            let speed = (0.08 + 0.10 * near) * size.height
+            let period = 2.4 + 1.6 * rng.next()
+            let phase = rng.next()
+            let sway = (5 + 7 * near) * sin(2 * .pi * (time / period + phase))
+            return Flake(x: wrapped(x0 + sway, span: size.width),
+                         y: wrapped(y0 + speed * time, span: size.height),
+                         radius: radius)
+        }
+    }
+
+    /// Puffs across the upper sky, more with the cover, drifting left with the wind (the way the rain
+    /// leans), the wider, nearer ones a little faster. A puff leaves at the left edge and comes back in
+    /// at the right, so the wrap is the box plus a puff's width each side.
+    static func clouds(cover: Double, size: CGSize, time: TimeInterval) -> [Puff] {
+        guard cover > 0.12 else { return [] }
+        var rng = Generator(seed: 0xC10D_D81F)
+        let count = Int((cover * 9).rounded())
+        return (0..<count).map { _ in
+            let x0 = rng.next() * size.width
+            let y = (0.06 + rng.next() * 0.48) * size.height
+            let w = (0.16 + rng.next() * 0.20) * size.width
+            let h = w * (0.28 + rng.next() * 0.14)
+            // A puff crosses the box in half a minute to a minute: slow enough to be cloud, quick
+            // enough that a glance at the card sees it move.
+            let speed = (0.015 + 0.02 * (w / size.width - 0.16) / 0.20) * size.width
+            return Puff(x: drifting(from: x0, width: w, speed: speed, time: time, across: size.width), y: y, width: w, height: h)
+        }
+    }
+
+    /// Three low, wide banks drifting through the fog veil, so fog is weather and not only a tint.
+    static func fogBanks(size: CGSize, time: TimeInterval) -> [Puff] {
+        var rng = Generator(seed: 0xF06B_A4C5)
+        return (0..<3).map { index in
+            let w = (0.55 + rng.next() * 0.35) * size.width
+            let h = (0.08 + rng.next() * 0.06) * size.height
+            let y = (0.58 + 0.14 * Double(index) + rng.next() * 0.08) * size.height
+            let x0 = rng.next() * size.width
+            let speed = (0.015 + 0.01 * rng.next()) * size.width
+            return Puff(x: drifting(from: x0, width: w, speed: speed, time: time, across: size.width), y: y, width: w, height: h)
+        }
+    }
+
+    /// The centre of a shape `width` wide that started at `x0` and drifts left at `speed` points a
+    /// second, wrapping once it has fully left the box (so it comes back in at the right edge whole).
+    private static func drifting(from x0: Double, width: Double, speed: Double, time: TimeInterval, across boxWidth: Double) -> Double {
+        wrapped(x0 + width - speed * time, span: boxWidth + 2 * width) - width
+    }
+
+    /// A storm's whole-sky flash, 0...1: a strike every ten seconds or so (nine-second cycles, six in
+    /// ten striking, each at its own moment), two flickers 120 ms apart, a sharp attack and a 160 ms
+    /// fade. Deterministic in `time`, so the card and the page flash together.
+    static func lightning(at time: TimeInterval) -> Double {
+        let cycle = 9.0
+        let index = (time / cycle).rounded(.down)
+        let t = time - index * cycle
+        let hash = wrapped(sin(index * 12.9898 + 78.233) * 43758.5453, span: 1)
+        guard hash < 0.6 else { return 0 }
+        let strike = 1 + (hash / 0.6) * (cycle - 2)
+        func flicker(_ dt: Double, peak: Double) -> Double {
+            guard dt >= 0, dt < 0.16 else { return 0 }
+            return peak * (1 - dt / 0.16)
+        }
+        return max(flicker(t - strike, peak: 1), flicker(t - strike - 0.12, peak: 0.7))
+    }
+}
+
 // MARK: - The overlay
 
-/// One still frame of the weather over a sky: cloud puffs across the upper sky, rain streaks or snow
-/// across all of it, a fog veil low down. Deterministic like `SkyStars` (the same seed on the card,
-/// the page and a widget), with `time` picking the frame so two moments differ a little. Drawn in a
-/// Canvas: cheap enough for the minute tick, and a widget can draw it too.
+/// The weather over a sky: cloud puffs drifting across the upper sky, rain streaking or snow drifting
+/// down across all of it, fog banks low down, a storm's flash. Two Canvases, each on its own clock
+/// (Abu, 2026-10-21: "make rain and conditions move"): the clouds and the fog at 8 fps, since a puff
+/// moves a few points a second and its blur is the dearest stroke here; the rain or the snow at 30 or
+/// 24, in a layer that exists only while something falls. Both hold a still frame while `paused` (the
+/// card off screen, another tab in front of the page, animation reduced), as the stars do. What each
+/// frame places comes from `SkyWeatherField`, so a widget draws the same field through `draw`.
 struct SkyWeatherOverlay: View {
     let look: SkyWeatherLook
     /// True over a night gradient: the clouds go grey instead of white.
     let night: Bool
-    /// Seconds; shifts the rain and snow between frames.
-    var time: TimeInterval = 0
+    /// True while the sky is off screen or animation is reduced: the layers hold one still frame.
+    var paused: Bool = false
 
     var body: some View {
-        Canvas { context, size in
-            Self.draw(in: &context, size: size, look: look, night: night, time: time)
+        ZStack {
+            if look.cloudCover > 0.12 || look.fog > 0 {
+                TimelineView(.animation(minimumInterval: SkyWeatherField.slowFrameInterval, paused: paused)) { timeline in
+                    Canvas { context, size in
+                        Self.drawSky(in: &context, size: size, look: look, night: night,
+                                     time: timeline.date.timeIntervalSinceReferenceDate)
+                    }
+                }
+            }
+            if let interval = SkyWeatherField.fastFrameInterval(for: look) {
+                TimelineView(.animation(minimumInterval: interval, paused: paused)) { timeline in
+                    Canvas { context, size in
+                        Self.drawPrecipitation(in: &context, size: size, look: look, night: night,
+                                               time: timeline.date.timeIntervalSinceReferenceDate, lightning: true)
+                    }
+                }
+            }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
-    /// The same frame, for a widget's `Canvas`.
+    /// One still frame of the whole field, for a widget's `Canvas`: the same clouds, fog and
+    /// precipitation at `time`, without the lightning (a frame that stands for half an hour should not
+    /// be a lit one).
     static func draw(in context: inout GraphicsContext, size: CGSize, look: SkyWeatherLook, night: Bool, time: TimeInterval) {
-        guard !look.isClear, size.width > 1, size.height > 1 else { return }
-        var seed: UInt64 = 0x51CE_C10D
-        func next() -> Double {
-            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-            return Double((seed >> 33) & 0xFFFF) / Double(0xFFFF)
-        }
+        drawSky(in: &context, size: size, look: look, night: night, time: time)
+        drawPrecipitation(in: &context, size: size, look: look, night: night, time: time, lightning: false)
+    }
 
-        // Clouds: soft puffs across the upper sky, more with the cover. Each puff is three overlapping
-        // ellipses blurred together, so it reads as cloud rather than as three discs. Kept faint (Abu,
-        // 2026-10-11: "clouds are too strong"; they were bright white blobs on every cloudy sky), and
-        // fading as the sky greys over: an overcast sky is one grey, its tint already says so, and
-        // separate puffs on it read as decoration rather than weather.
-        if look.cloudCover > 0.12 {
-            let count = Int((look.cloudCover * 9).rounded())
+    /// The slow layer: the clouds and the fog.
+    static func drawSky(in context: inout GraphicsContext, size: CGSize, look: SkyWeatherLook, night: Bool, time: TimeInterval) {
+        guard !look.isClear, size.width > 1, size.height > 1 else { return }
+
+        // Clouds: soft puffs, each three overlapping ellipses blurred together so it reads as cloud
+        // rather than as three discs. Kept faint (Abu, 2026-10-11: "clouds are too strong"; they were
+        // bright white blobs on every cloudy sky), and fading as the sky greys over: an overcast sky is
+        // one grey, its tint already says so, and separate puffs on it read as decoration rather than
+        // weather.
+        let puffs = SkyWeatherField.clouds(cover: look.cloudCover, size: size, time: time)
+        if !puffs.isEmpty {
             let distinct = 1 - 0.55 * look.overcast
             let alpha = (night ? 0.03 + 0.06 * look.cloudCover : 0.06 + 0.10 * look.cloudCover) * distinct
             let fill = night ? Color(white: 0.78) : Color.white
             var clouds = context
             clouds.addFilter(.blur(radius: max(8, size.width * 0.03)))
-            for _ in 0..<count {
-                let cx = next() * size.width
-                let cy = (0.06 + next() * 0.48) * size.height
-                let w = (0.16 + next() * 0.20) * size.width
-                let h = w * (0.28 + next() * 0.14)
+            for puff in puffs {
                 for (dx, scale) in [(-0.28, 0.72), (0.0, 1.0), (0.3, 0.8)] {
-                    let rect = CGRect(x: cx + dx * w - w * scale / 2, y: cy - h * scale / 2,
-                                      width: w * scale, height: h * scale)
+                    let rect = CGRect(x: puff.x + dx * puff.width - puff.width * scale / 2,
+                                      y: puff.y - puff.height * scale / 2,
+                                      width: puff.width * scale, height: puff.height * scale)
                     clouds.fill(Path(ellipseIn: rect), with: .color(fill.opacity(alpha)))
                 }
             }
         }
 
-        // Fog: a veil that thickens toward the ground, where fog sits.
+        // Fog: a veil that thickens toward the ground, where fog sits, with banks drifting through it.
         if look.fog > 0 {
             let veil = night ? Color(white: 0.6) : Color.white
             context.fill(Path(CGRect(origin: .zero, size: size)),
@@ -405,34 +558,50 @@ struct SkyWeatherOverlay: View {
                 startPoint: CGPoint(x: size.width / 2, y: size.height * 0.35),
                 endPoint: CGPoint(x: size.width / 2, y: size.height)
             ))
+            var banks = context
+            banks.addFilter(.blur(radius: max(10, size.width * 0.05)))
+            for bank in SkyWeatherField.fogBanks(size: size, time: time) {
+                let rect = CGRect(x: bank.x - bank.width / 2, y: bank.y - bank.height / 2,
+                                  width: bank.width, height: bank.height)
+                banks.fill(Path(ellipseIn: rect), with: .color(veil.opacity((night ? 0.07 : 0.11) * look.fog)))
+            }
+        }
+    }
+
+    /// The fast layer: the rain or the snow, over a storm's flash.
+    static func drawPrecipitation(in context: inout GraphicsContext, size: CGSize, look: SkyWeatherLook, night: Bool,
+                                  time: TimeInterval, lightning: Bool) {
+        guard !look.isClear, size.width > 1, size.height > 1 else { return }
+
+        // Lightning: a flash out of the clouds, brightest at the top, faint enough to read as weather
+        // and never as a strobe.
+        if lightning, look.storm {
+            let flash = SkyWeatherField.lightning(at: time)
+            if flash > 0 {
+                let peak = (night ? 0.22 : 0.16) * flash
+                context.fill(Path(CGRect(origin: .zero, size: size)), with: .linearGradient(
+                    Gradient(colors: [.white.opacity(peak), .white.opacity(peak * 0.35)]),
+                    startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+            }
         }
 
         switch look.precipitation {
         case .none:
             break
         case .rain(let amount):
-            // Streaks leaning with the wind, denser as it pours; the frame slides them down a little.
-            let count = Int(30 + 70 * amount)
-            let drop = time.truncatingRemainder(dividingBy: 60) / 60
-            let length = max(9, size.height * 0.06)
             let ink = Color.white.opacity(night ? 0.16 : 0.24)
-            for _ in 0..<count {
-                let x = next() * size.width
-                let y = ((next() + drop).truncatingRemainder(dividingBy: 1)) * size.height
+            for streak in SkyWeatherField.rain(amount: amount, size: size, time: time) {
                 var path = Path()
-                path.move(to: CGPoint(x: x, y: y))
-                path.addLine(to: CGPoint(x: x - length * 0.25, y: y + length))
+                path.move(to: CGPoint(x: streak.x, y: streak.y))
+                path.addLine(to: CGPoint(x: streak.x - streak.length * 0.25, y: streak.y + streak.length))
                 context.stroke(path, with: .color(ink), lineWidth: 1)
             }
         case .snow(let amount):
-            let count = Int(24 + 56 * amount)
-            let drift = time.truncatingRemainder(dividingBy: 120) / 120
-            for _ in 0..<count {
-                let x = next() * size.width
-                let y = ((next() + drift).truncatingRemainder(dividingBy: 1)) * size.height
-                let r = 0.9 + next() * 1.4
-                context.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)),
-                             with: .color(.white.opacity(night ? 0.45 : 0.6)))
+            let ink = Color.white.opacity(night ? 0.45 : 0.6)
+            for flake in SkyWeatherField.snow(amount: amount, size: size, time: time) {
+                let r = flake.radius
+                context.fill(Path(ellipseIn: CGRect(x: flake.x - r, y: flake.y - r, width: 2 * r, height: 2 * r)),
+                             with: .color(ink))
             }
         }
     }

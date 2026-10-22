@@ -259,8 +259,9 @@ private extension Character {
 /// Root, dictionary form and counts for one tapped word, with the way into every other word of the
 /// same root. Sits in the word card under the meaning; silent when the pack has nothing for the word.
 struct WordMorphologySection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let surah: Surah
     let ayah: Ayah
     /// The token index inside the ayah's RAW Hafs text (the index the pack is aligned to).
@@ -376,7 +377,8 @@ struct WordMorphologySection: View {
 /// sheet (the word card) or from the Quran tab's search; with `onOpenAyah` set, tapping a row opens
 /// the ayah in the reader.
 struct RootOccurrencesView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
 
     let title: String
@@ -486,8 +488,10 @@ struct RootOccurrencesView: View {
 /// its own words, or a setting it reads, changed (Tilawa Guide, Phase 6 step 8). Wrap call sites in
 /// `.equatable()`.
 struct WordOccurrenceRow: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let surah: Surah
     let ayah: Ayah
     /// 0-based token indices of the RAW Hafs text to tint.

@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct SkyPageBackground: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
     @ObservedObject private var scrubber = DayScrubber.shared
     @Environment(\.appearance) private var appearance
     #if HAS_WEATHER
@@ -54,7 +55,7 @@ struct SkyPageBackground: View {
 
             if let weather, !weather.look.isClear {
                 SkyWeatherOverlay(look: weather.look, night: starOpacity > 0.4 || !weather.isDaylight,
-                                  time: now.timeIntervalSinceReferenceDate)
+                                  paused: paused || appearance.reduceAnimations)
                     .transition(.opacity)
             }
 

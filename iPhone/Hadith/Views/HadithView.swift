@@ -7,7 +7,9 @@ import SwiftUI
 #if os(iOS)
 
 struct HadithTrailingToolbar: ViewModifier {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Binding var hadithGridMode: Bool
     @Binding var showHadithSettings: Bool
     /// A jump's one-visit list (`HadithView.listForJump`, `HadithBookView.listForJump`).
@@ -80,7 +82,12 @@ struct HadithView: View {
     /// `-launchHadithSettings` presents once per launch (see the hook in the body's onAppear).
     private static var debugSettingsHookScheduled = false
     #endif
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject private var store = HadithStore.shared

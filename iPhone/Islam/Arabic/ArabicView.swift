@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct ArabicView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Two tiles across at the accessibility text sizes: four kept every line FITTING (the tile rule)
     /// by shrinking the names to about 6 pt, e.g. "yaa madd" (2026-09-27).
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -703,7 +707,7 @@ struct ArabicView: View {
     private var arabicFontPicker: some View {
         #if os(watchOS)
         // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
-        Picker("Arabic Font", selection: $settings.useFontArabic) {
+        Picker("Arabic Font", selection: $quranDisplay.useFontArabic) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }
@@ -1467,8 +1471,10 @@ struct ArabicView: View {
 /// the size they already read at (`arabicLetterTypeFloor(steps:)`). Position 0 is no floor at all - the
 /// alphabet then renders at whatever size the device is set to.
 struct ArabicSizeSlider: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     private var maxIndex: Int { Settings.arabicLetterSizeSteps }
 
     private var indexBinding: Binding<Double> {

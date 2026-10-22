@@ -319,7 +319,8 @@ final class TasbihCounters: ObservableObject {
 /// tasbih screen. Its own view so it alone observes `TasbihCounters` - the rest of the screen still
 /// skips every count tap.
 struct TasbihStatsStrip: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @ObservedObject private var counts = TasbihCounters.shared
 
     var body: some View {
@@ -365,8 +366,10 @@ struct TasbihView: View {
     @State private var aboutDoor: SignsAboutDoor?
     #endif
 
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
 
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var selectedDhikrIndex: Int = TasbihCounters.freeIndex
@@ -601,7 +604,11 @@ struct TasbihView: View {
 /// the row controls) the only view observing `TasbihCounters`, so each count tap re-renders just this
 /// card - TasbihView itself no longer owns the count and its List is skipped entirely.
 struct ActiveTasbihCard: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var counts = TasbihCounters.shared
 
     /// nil means the free counter is active.
@@ -742,8 +749,8 @@ struct ProgressCircleView: View {
     /// Counts per full turn of the ring. The count itself is never capped by this.
     var cycle: Int = 33
     var lineWidth: CGFloat = 15
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     var body: some View {
         let turn = max(cycle, 1)
         let progressFraction = CGFloat(progress % turn) / CGFloat(turn)
@@ -764,8 +771,8 @@ struct ProgressCircleView: View {
 }
 
 struct CounterView: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Binding var counter: Int
 
     var body: some View {
@@ -785,8 +792,11 @@ struct CounterView: View {
 }
 
 struct TasbihRow: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let tasbih: CommonDhikr
     /// An index into `TasbihCounters`, not a Binding: a Binding made fresh each parent pass holds new
     /// closures, which SwiftUI can never prove unchanged - an Int compares, so the row can be skipped.
@@ -866,7 +876,9 @@ struct TasbihRow: View {
 /// can't drift apart on what a tap does. Observes `TasbihCounters` itself (rather than taking a Binding) so
 /// a count tap re-renders only this small stack and the active card - never the enclosing List.
 struct TasbihCounterControls: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var counts = TasbihCounters.shared
 
     let counterIndex: Int

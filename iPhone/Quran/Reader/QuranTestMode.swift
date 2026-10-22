@@ -369,7 +369,9 @@ private struct QuranTestVeilModifier: ViewModifier {
 
 /// Settings → Al-Quran → Test Mode (Abu: "make it a whole navigation link for test mode").
 struct QuranTestModeSettingsView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var testMode = QuranTestMode.shared
 
     var body: some View {
@@ -382,7 +384,7 @@ struct QuranTestModeSettingsView: View {
                 }
 
                 Section(header: Text("WHAT IT HIDES")) {
-                    Picker("What It Hides", selection: $settings.quranTestModeHides) {
+                    Picker("What It Hides", selection: $quranDisplay.quranTestModeHides) {
                         ForEach(QuranTestHiding.allCases) { hiding in
                             Text(hiding.title).tag(hiding.rawValue)
                         }
@@ -398,7 +400,7 @@ struct QuranTestModeSettingsView: View {
                 }
 
                 Section(header: Text("WHAT A TAP SHOWS")) {
-                    Picker("What a Tap Shows", selection: $settings.quranTestModeReveals) {
+                    Picker("What a Tap Shows", selection: $quranDisplay.quranTestModeReveals) {
                         ForEach(QuranTestReveal.allCases) { reveal in
                             Text(reveal.title).tag(reveal.rawValue)
                         }
@@ -418,9 +420,9 @@ struct QuranTestModeSettingsView: View {
                 }
 
                 Section {
-                    SettingsToggle("Reveal as It's Recited", caption: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words.", isOn: $settings.quranTestModeRevealsRecited)
+                    SettingsToggle("Reveal as It's Recited", caption: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words.", isOn: $quranDisplay.quranTestModeRevealsRecited)
 
-                    SettingsToggle("Turn Off When Leaving the Reader", caption: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off.", isOn: $settings.quranTestModeEndsOnLeave)
+                    SettingsToggle("Turn Off When Leaving the Reader", caption: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off.", isOn: $quranDisplay.quranTestModeEndsOnLeave)
                         .onChange(of: settings.quranTestModeEndsOnLeave) { _ in testMode.syncStoredOn() }
                 }
             }

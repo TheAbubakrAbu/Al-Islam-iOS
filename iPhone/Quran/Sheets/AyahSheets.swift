@@ -67,7 +67,8 @@ struct AyahRowSheetRequest: Identifiable {
 
 /// The body of a row-sheet host: every sheet a list row can ask for, built from the request.
 struct AyahRowSheetContent: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var quranData = QuranData.shared
     private var quranPlayer: QuranPlayer { .shared }
 
@@ -142,7 +143,8 @@ struct AyahRowSheetContent: View {
 /// actions sheet can present the SAME sheet on top of itself when "Keep Sheet Open" is on
 /// (Abu, 2026-09-19) - one builder, so the stacked copy can never drift from the swapped one.
 struct AyahSecondarySheetContent: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @ObservedObject private var quranData = QuranData.shared
     private var quranPlayer: QuranPlayer { .shared }
 
@@ -264,8 +266,8 @@ struct AyahSummarizeSheet: View {
 /// The note editor plus the draft it edits. A small view of its own so the *parent* can present the editor
 /// without owning the draft text and the profanity check.
 struct AyahNoteSheet: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
     let surah: Surah
     let ayah: Ayah
 
@@ -308,7 +310,11 @@ struct AyahNoteSheet: View {
 /// card on a SINGLE tap, a plain-text toggle, the reference caption, the translation, and any notes. A
 /// tafsir group hands in several ayahs; the actions sheet hands in one.
 struct AyahPreviewCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
 
     let surah: Surah
@@ -672,7 +678,11 @@ struct AyahPreviewCard: View {
 /// parent closes this sheet first and then presents the new one, so you never end up with a sheet stacked on a
 /// sheet.
 struct AyahActionsSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     /// Actions only (`playAyah`): the sheet reads no player state, and observing it rebuilt the whole
     /// action grid on every ayah advance of a recitation running behind the sheet (Phase 10.4).
@@ -962,7 +972,7 @@ struct AyahActionsSheet: View {
     /// Quran Settings > Reading, which is a long way from where the question comes up). The same
     /// stored setting, so either switch moves the other.
     private var keepSheetOpenRow: some View {
-        Toggle(isOn: $settings.keepAyahSheetOpen.animation(.easeInOut)) {
+        Toggle(isOn: $quranDisplay.keepAyahSheetOpen.animation(.easeInOut)) {
             HStack(spacing: 8) {
                 Image(systemName: "rectangle.stack")
                     .font(.system(size: 15, weight: .semibold))

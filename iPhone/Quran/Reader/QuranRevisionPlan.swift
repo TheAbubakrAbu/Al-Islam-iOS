@@ -318,7 +318,10 @@ enum QuranRevisionMath {
 /// The multi-select list behind the Revision plan's "Surahs" scope: every surah with a checkmark,
 /// a search field, and a menu to take the favorites, everything, or nothing.
 struct RevisionSurahPicker: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     @Binding var selection: Set<Int>
     @State private var searchText = ""

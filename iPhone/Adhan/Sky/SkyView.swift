@@ -301,7 +301,9 @@ struct SkyView: View {
 /// The sky card's drawing, for one moment `now`. See `SkyView`.
 struct SkyCard: View {
     @Environment(\.appearance) private var appearance
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
     @ObservedObject private var scrubber = DayScrubber.shared
@@ -507,7 +509,7 @@ struct SkyCard: View {
 
                 if let weather, !weather.look.isClear {
                     SkyWeatherOverlay(look: weather.look, night: starOpacity > 0.4 || !weather.isDaylight,
-                                      time: now.timeIntervalSinceReferenceDate)
+                                      paused: !isOnScreen || appearance.reduceAnimations)
                         .transition(.opacity)
                 }
             }

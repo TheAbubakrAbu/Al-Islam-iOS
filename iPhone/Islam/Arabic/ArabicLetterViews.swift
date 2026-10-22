@@ -3,7 +3,11 @@ import SwiftUI
 struct TashkeelLettersView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Two mark chips across at the accessibility text sizes (three is the family-aligned default).
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -660,8 +664,10 @@ struct TashkeelLettersView: View {
 /// A standalone struct rather than a computed property on either screen: it is the only thing on those
 /// screens that redraws when the flag flips, so the toggle owns the observation.
 struct HideEnglishToolbarButton: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     var body: some View {
         Button {
             settings.hapticFeedback()
@@ -678,7 +684,10 @@ struct HideEnglishToolbarButton: View {
 #endif
 
 struct LetterSectionHeader: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let letterData: LetterData
 
     var body: some View {
@@ -745,8 +754,11 @@ struct ArabicLetterView: View {
 struct ArabicLetterPage: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let letterData: LetterData
     /// The letters either side of this one in its run, and how the bottom bar steps to them.
     var previous: LetterData? = nil
@@ -1570,7 +1582,7 @@ struct ArabicLetterPage: View {
     private var arabicFontPicker: some View {
         #if os(watchOS)
         // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
-        Picker("Arabic Font", selection: $settings.useFontArabic) {
+        Picker("Arabic Font", selection: $quranDisplay.useFontArabic) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }
@@ -1850,7 +1862,9 @@ private struct ArabicPracticeSelectionWash: ViewModifier {
 /// button shrunk to fit a table. It renders nothing when the device has no Arabic voice; the selection
 /// highlight still works, because pointing at a combination is most of what it is for.
 struct PracticeListenButton: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
 
     let text: String
@@ -1885,8 +1899,9 @@ struct PracticeListenButton: View {
 /// The chevron that writes a shaddah out as the two letters it stands for, in the app's expand/collapse
 /// idiom (`SectionPillHeader`'s accent chevron-in-a-circle).
 struct ShaddahExpandButton: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let isExpanded: Bool
     let toggle: () -> Void
 
@@ -2275,7 +2290,11 @@ struct VowelCombinationRow: View {
 /// What a tashkeel mark actually is: its name, the root that name comes from, how long it is held, and what your
 /// mouth has to do to make it. Opened from the info button on the selected mark.
 struct TashkeelDetailSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let tashkeel: Tashkeel
@@ -2630,7 +2649,10 @@ struct HamzaPracticeRow: View {
 }
 
 struct NonArabicVowelPracticeRow: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var selection = ArabicPracticeSelection.shared
 
     let letterData: LetterData
@@ -3532,8 +3554,10 @@ extension View {
 /// used to be two bold lines of body text inside PURPOSE, where the one mark that separates them is
 /// a couple of pixels of system font and the two read as the same word.
 struct LaamAlifHamzaSections: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     var body: some View {
         Group {
             Section {

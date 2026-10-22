@@ -16,6 +16,8 @@ One at a time:
 | `analyze.py <tag>` | error and fault lines per screen from a sweep, known noise filtered |
 | `audits.sh <udid>` | the in-app DEBUG audits (packs, alignment, rollover, verifiers) |
 | `idle.sh <udid>` | 20 s of publish and render counters per screen; the bar is zero publish lines |
+| `settings_actions.sh <udid> <tag>` | one settings flip per screen (`-settingsProbe`): Settings publishes and body evaluations per label it caused |
+| `settings_probeshots.sh <udid> <tag>` | screenshot pairs around one settings flip per screen; an identical pair is a stale view |
 | `launch.sh <udid> [runs]` | `-launchTiming` medians per start screen |
 | `tripwire.sh <udid>` | lldb backtrace of the first appearance-default read |
 | `tsan.sh <udid>` | the Thread Sanitizer flows (needs a TSan build in `$QA_OUT/dd-tsan`) |

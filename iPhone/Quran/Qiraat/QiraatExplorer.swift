@@ -640,7 +640,10 @@ enum QiraatExplorerBench {
 /// published as text ship as printed mushafs, and their selectable text is a beta transcription
 /// that the reader turns on knowingly (the same consent the reader's Page Text menu asks for).
 struct QiraatExplorerUnlockSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

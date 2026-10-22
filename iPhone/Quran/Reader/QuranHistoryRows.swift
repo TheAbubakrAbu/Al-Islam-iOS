@@ -86,7 +86,11 @@ func formatMMSS(_ seconds: Double) -> String {
 
 #if os(iOS)
 struct LastListenedSurahRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     /// Actions only: not observed. Play state and the history lists publish on their own objects
     /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
@@ -439,7 +443,10 @@ struct SummaryTileHeightKey: PreferenceKey {
 /// Compact summary-mode tile that previews a single ayah (Arabic / transliteration / English),
 /// each limited to one line - like a normal AyahRow but trimmed to fit a tile.
 struct SummaryAyahTile: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// An iPad sidebar's half-width tile is about 120 pt: "Last Listened Ayah" needs its third line
     /// there, where two cut it to "Last Listen..." (2026-10-12).
     @Environment(\.isSidebarColumn) private var isSidebarColumn
@@ -603,7 +610,9 @@ struct SummaryAyahTile: View {
 /// Compact summary-mode tile for the last-listened surah. There is no ayah, so it shows the reciter,
 /// duration, a play button, and a tiny progress bar instead - sized to match the ayah tile beside it.
 struct SummarySurahTile: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// A third title line in an iPad sidebar's half-width tile, as `SummaryAyahTile` ("Last Listened
     /// Surah" was "Last Listene..." there, 2026-10-12).
     @Environment(\.isSidebarColumn) private var isSidebarColumn
@@ -817,7 +826,10 @@ struct SummarySurahTile: View {
 #endif
 
 struct LastReadAyahRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Actions only: not observed. Play state and the history lists publish on their own objects
     /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
     private let quranPlayer = QuranPlayer.shared
@@ -1001,7 +1013,11 @@ struct LastReadAyahRow: View {
 #if os(iOS)
 /// The last individual ayah the user listened to (single ayah or custom range). Mirrors LastReadAyahRow.
 struct LastListenedAyahRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Actions only: not observed. Play state and the history lists publish on their own objects
     /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
     private let quranPlayer = QuranPlayer.shared
@@ -1216,7 +1232,10 @@ struct LastListenedAyahRow: View {
 
 /// The deterministic daily "Ayah of the Day" card shown at the top of the Quran tab.
 struct AyahOfTheDayRow: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Actions only: not observed. Play state and the history lists publish on their own objects
     /// (see `NowPlayingState`), so an ayah advance no longer re-evaluates the summary tiles.
     private let quranPlayer = QuranPlayer.shared
@@ -1327,7 +1346,11 @@ struct AyahOfTheDayRow: View {
 /// through `onOpen`, the tab's own `push(surahID:ayahID:)`, so a history row lands in the reader
 /// exactly like a bookmark does.
 struct QuranHistoryView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var playbackHistory = QuranPlayer.shared.history
     @Environment(\.dismiss) private var dismiss

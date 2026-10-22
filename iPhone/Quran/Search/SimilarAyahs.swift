@@ -180,7 +180,10 @@ enum SimilarAyahFilter: String, CaseIterable, Identifiable {
 }
 
 struct SimilarAyahsSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
 
     /// The sheet's two lists: ayahs that say something like this one, and the phrases this one

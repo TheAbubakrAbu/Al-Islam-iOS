@@ -176,7 +176,16 @@ struct HadithBookView: View {
     }
     #endif
 
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    @ObservedObject private var hadithSettings = HadithSettings.shared
+
+    @ObservedObject private var islamSettings = IslamSettings.shared
+
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var store = HadithStore.shared
     /// Chapter favorites render through the store's forwards; the data publishes from HadithUserData,
     /// so this observation is what re-renders the pills/tiles when a favorite toggles.
@@ -1761,8 +1770,8 @@ struct HadithReadingRowHighlight: ViewModifier {
 struct HadithDetailColumn: View {
     @ObservedObject private var selection = HadithColumnSelection.shared
     @ObservedObject private var store = HadithStore.shared
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     var body: some View {
         NavigationStack {
             Group {
@@ -1888,7 +1897,11 @@ struct HadithChapterView: View {
     /// `-launchHadithShare` (with `-launchHadithOpen`): the landed hadith's share sheet, presented headlessly.
     @State private var debugShareHadith: HadithBookData.Hadith? = nil
     #endif
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// NOT `@ObservedObject`: this view's render tree never reads a published store property (the three
     /// `store.` uses are inside onChange/button handlers). Observing it re-ran the whole reading body -
     /// List, sections, every row - on every publish the store made while opening books.
@@ -3018,7 +3031,11 @@ struct HadithChapterView: View {
 /// The title menu's "Choose Chapter": every chapter with its ordinal, names, and count - the current
 /// one highlighted - swapping the chapter IN PLACE on selection, the surah picker's exact behavior.
 struct HadithChapterPickerSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.dismiss) private var dismiss
 
     let book: HadithCatalogBook

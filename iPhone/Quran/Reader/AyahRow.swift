@@ -51,7 +51,11 @@ enum RiwayahTextCacheMark {
 struct AyahRow: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// NOT @ObservedObject (Phase 10.4): the body never reads a published field of it (the diff lane and
     /// the Copy action call its O(1) lookups), so observing it only re-ran every visible row on each
     /// QuranData publish (the load batch, the verse index, the surah search index), past `.equatable()`.
@@ -801,8 +805,8 @@ struct AyahRow: View, Equatable {
     /// signature in `AyahRow.==` already forced correctly) does NOT reset a child's state, so the view
     /// kept the previous orientation's width - 794pt of TextKit layout inside a ~338pt card. Traced:
     /// `updateUIView` was still being handed `width=794` after the interface came back to 402pt. Since
-    /// `WordByWordTextView` sets `clipsToBounds = false` so tashkeel ink is not sheared at the edge,
-    /// that overflow PAINTED outside the row - Arabic and English running off both sides, and a List
+    /// nothing above `WordByWordTextView` clips (and a view's own drawing fills its bounds whatever its
+    /// `clipsToBounds` says), that overflow PAINTED outside the row - Arabic and English running off both sides, and a List
     /// that scrolled sideways. A new identity discards the stale state and the view re-measures.
     private var tajweedAnimationKey: String {
         let categorySignature = settings.tajweedCategoryVisibilitySignature

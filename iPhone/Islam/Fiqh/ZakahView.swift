@@ -7,8 +7,9 @@ import SwiftUI
 /// is worked out from a price per gram the user looks up.
 /// (`ZakahView` is taken - that's the Pillars & Beliefs page ABOUT zakah, in PillarViews.swift.)
 struct ZakahCalculatorView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Which metal sets the threshold. Silver is the default because it is nearly always the lower
     /// of the two, and the lower one takes in more payers: the reading Ibn Baz and the Permanent
     /// Committee gave for banknotes, which have no metal of their own.

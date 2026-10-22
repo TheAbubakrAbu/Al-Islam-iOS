@@ -8,7 +8,11 @@ import SwiftUI
 // search.
 
 struct ThemeHighlightsView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
     @Environment(\.appearance) private var appearance

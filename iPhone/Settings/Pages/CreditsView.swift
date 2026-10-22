@@ -230,7 +230,9 @@ struct CreditItem: Identifiable, Hashable {
 }
 
 struct CreditsView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     /// True as the sheet the Settings tab presents (its own NavigationView + dismiss X); false when
@@ -680,8 +682,9 @@ struct AppItem: Identifiable {
 }
 
 struct AppLinkRow: View {
-    @ObservedObject var settings = Settings.shared
-    
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     var imageName: String
     var title: String
     var url: String

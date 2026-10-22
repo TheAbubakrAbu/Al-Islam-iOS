@@ -182,7 +182,9 @@ struct WelcomePermissionsPage: View {
 /// tour of what only this app does), then the Simple or Full choice (Docs/Product/Simple Mode Guide.md,
 /// Splash). The choice is written by the splash when its page ends, not here.
 struct WelcomeDiscoverPage: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.colorScheme) private var systemColorScheme
 
     @Binding var choosesSimple: Bool

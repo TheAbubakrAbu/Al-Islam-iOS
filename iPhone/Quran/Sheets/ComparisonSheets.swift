@@ -3,7 +3,11 @@ import SwiftUI
 #if os(iOS)
 
 struct AyahQiraahComparisonSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -916,7 +920,11 @@ private final class EnglishComparisonViewModel: ObservableObject {
 }
 
 struct AyahEnglishComparisonSheet: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranContent = QuranContent.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 

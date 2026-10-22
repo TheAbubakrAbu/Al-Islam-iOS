@@ -191,8 +191,11 @@ final class DuaLibrary: ObservableObject {
 }
 
 struct DuaView: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @State private var searchText = ""
     #if os(iOS)
     /// The "About" card's single open door (one @State + one destination on the List:
@@ -798,7 +801,9 @@ struct DuaView: View {
 
 /// Internal, not private: the Today screen (DailyHub.swift) opens the Dua of the Day's category here.
 struct DuaCollectionView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
@@ -1459,7 +1464,9 @@ final class HisnDuaPlayer: ObservableObject {
 
 /// The play control under a Hisn dua: the recitation from hisnmuslim.com, streamed on demand.
 struct HisnDuaAudioButton: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var player = HisnDuaPlayer.shared
     let url: URL
 
@@ -1487,7 +1494,8 @@ struct HisnDuaAudioButton: View {
 
 /// The library's root: the 14 collections of the day, then every situation the book covers.
 struct HisnDuaLibraryView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @State private var searchText = ""
     @State private var library: HisnDuasStore.Library?
     /// The situations and duas matching the settled query: from `.onChange` (150 ms after the last
@@ -1687,7 +1695,11 @@ enum HisnDuaCardDoor {
 }
 
 struct HisnDuaOfTheDayCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let entry: HisnDuasStore.Entry
     let category: HisnDuasStore.Category?
     let library: HisnDuasStore.Library

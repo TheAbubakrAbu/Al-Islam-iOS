@@ -2,8 +2,10 @@
 import SwiftUI
 
 struct CalendarView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     enum DisplayMode: String {
         case events, calendar
     }
@@ -424,8 +426,9 @@ private struct HijriEventRowModel {
 /// thing you actually scan for), the event and its meaning in the middle, and how far away it is on the right.
 /// Past events grey out; the next one coming up is called out, since that's the only row anyone is looking for.
 private struct HijriEventRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let row: HijriEventRowModel
     let isPast: Bool
     /// True for the soonest upcoming event - exactly one row in the list.
@@ -559,7 +562,10 @@ private struct HijriEventRow: View {
 // MARK: - Hijri Month Calendar (grid)
 
 struct HijriMonthCalendarView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.appearance) private var appearance
 
     @State private var displayedYear = 1445
@@ -977,8 +983,10 @@ struct HijriMonthCalendarView: View {
 /// One month of the Hijri year: its number, its name in English and Arabic, whether it is one of the four sacred
 /// months, and what it is known for. The month you are currently in is tinted so the list orients you at a glance.
 struct HijriMonthRow: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
     let month: HijriMonth
     let isCurrent: Bool
     // Appearance snapshotted as stored inputs so `==` compares everything the row draws with; the parent

@@ -98,7 +98,9 @@ private struct SpokenRowWashModifier: ViewModifier {
 
 /// The Listen/Stop control - the other speech-reactive piece, split out for the same reason.
 private struct AdhkarListenButton: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
     let text: String
 
@@ -416,7 +418,11 @@ private struct OptionalRowID: ViewModifier {
 }
 
 struct AdhkarView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @State private var searchText = ""
     #if os(iOS)
     /// The "About" card's single open door (one @State + one destination on the List:

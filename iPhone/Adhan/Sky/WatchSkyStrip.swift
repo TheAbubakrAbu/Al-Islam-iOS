@@ -8,7 +8,9 @@ import SwiftUI
 /// your wrist to find out. This keeps the two facts that survive the shrink - how much daylight is left, and
 /// what the moon is doing - and draws them in a single strip under the countdown.
 struct WatchSkyStrip: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The shared scrub model (also drives the iPhone SkyView). On the watch this is a separate process, so
     /// there is no conflict. Dragging the arc previews a time of day; `previewPrayer` is the prayer then.
     @ObservedObject private var scrubber = DayScrubber.shared

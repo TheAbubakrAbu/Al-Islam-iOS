@@ -127,7 +127,10 @@ struct SettingsSearchEntry: Identifiable {
 #endif
 
 struct SettingsView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #endif
@@ -1405,8 +1408,8 @@ extension Settings {
 /// second copy (where Abu first went looking for it, under a toggle whose name read as if it did
 /// this) until he asked for it to live on Look and Feel alone (2026-09-25).
 struct LaunchTabPicker: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Plain, never animated: an animated selection binding makes the segmented indicator slide,
     /// snap back and slide again.
     private var selection: Binding<LaunchTab> {
@@ -1445,8 +1448,9 @@ struct LaunchTabPicker: View {
 /// One of Appearance's two sub-screens (`SettingsAppearancePage`): the controls that used to run
 /// down the Settings tab under the swatches, unchanged, one push away.
 struct AppearancePageView: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let page: SettingsAppearancePage
 
     var body: some View {
@@ -1557,10 +1561,10 @@ struct AppearancePageView: View {
 
         Section {
             VStack(alignment: .leading) {
-                SettingsToggle("Top Accent Glow", caption: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background.", isOn: $settings.showAccentGlow)
+                SettingsToggle("Top Accent Glow", caption: "A soft wash of your accent color at the top of each screen. Turn it off for a flat background.", isOn: $appearanceSettings.showAccentGlow)
 
                 if settings.showAccentGlow {
-                    SettingsToggle("Al-Islam Glow", caption: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.", isOn: $settings.alIslamGlow)
+                    SettingsToggle("Al-Islam Glow", caption: "Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.", isOn: $appearanceSettings.alIslamGlow)
                     .settingsDependent()
                 }
             }
@@ -1582,14 +1586,14 @@ struct AppearancePageView: View {
         }
 
         Section {
-            SettingsToggle("Default List View", caption: "Apple's standard list look, as in Notes. Screens already open switch the next time they open.", isOn: $settings.defaultView)
+            SettingsToggle("Default List View", caption: "Apple's standard list look, as in Notes. Screens already open switch the next time they open.", isOn: $appearanceSettings.defaultView)
 
             if #available(iOS 26.0, *) {
                 VStack(alignment: .leading) {
-                    SettingsToggle("Show Liquid Glass", caption: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way.", isOn: $settings.showLiquidGlass)
+                    SettingsToggle("Show Liquid Glass", caption: "Off is the Classic Look from before iOS 26: faster and easier on the battery. iOS's own bars, sheets and search field keep Liquid Glass either way.", isOn: $appearanceSettings.showLiquidGlass)
 
                     if settings.showLiquidGlass {
-                        SettingsToggle("Automatically in Low Power Mode", caption: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.", isOn: $settings.classicLookInLowPower)
+                        SettingsToggle("Automatically in Low Power Mode", caption: "Turns Liquid Glass off while Low Power Mode is on and brings it back when Low Power Mode is off.", isOn: $appearanceSettings.classicLookInLowPower)
                         .settingsDependent()
                     }
                 }
@@ -1599,7 +1603,7 @@ struct AppearancePageView: View {
         }
 
         Section {
-            SettingsToggle("Haptic Feedback", isOn: $settings.hapticOn)
+            SettingsToggle("Haptic Feedback", isOn: $systemSettings.hapticOn)
         } header: {
             Text("HOW IT FEELS")
         }
@@ -1650,8 +1654,9 @@ struct AppearancePageView: View {
 /// accent swatches), then a door to each sub-screen. The watch has only the swatches and the haptics
 /// switch, so it keeps both inline.
 struct SettingsAppearanceView: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     #if os(iOS)
     /// Grid mode (`SettingsView.usesGrid`): the two pages as tiles that hand their page to the list's
     /// one push. Nil keeps the rows.
@@ -1708,7 +1713,7 @@ struct SettingsAppearanceView: View {
     var body: some View {
         #if os(iOS)
         VStack(alignment: .leading) {
-            Picker("Color Theme", selection: $settings.colorSchemeString) {
+            Picker("Color Theme", selection: $appearanceSettings.colorSchemeString) {
                 Text(systemThemeLabel).tag("system")
                 Text("Light").tag("light")
                 Text("Dark").tag("dark")
@@ -1778,7 +1783,7 @@ struct SettingsAppearanceView: View {
             }
         }
         #else
-        SettingsToggle("Haptic Feedback", isOn: $settings.hapticOn)
+        SettingsToggle("Haptic Feedback", isOn: $systemSettings.hapticOn)
         #endif
     }
 }
@@ -1927,7 +1932,9 @@ struct SettingsGridTileRow<Content: View>: View {
 /// `rows: true` is the fallback where that push is unavailable (iOS 15) or wrong (the iPad sidebar,
 /// where it would push inside the narrow column): the same three screens as ordinary rows.
 struct ProfileTilesSection: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Observed for the same reason `ProfileSettingsRow` observes them: the deferred last-read load
     /// and a badge unlocked elsewhere must both re-render this row's caption.
     #if HAS_QURAN
@@ -2105,8 +2112,9 @@ struct ProfileTilesSection: View {
 /// lists every trim and where it went (Docs/Product/Simple Mode v2 Design.md, section 4.4). The page
 /// opens with this same section, without the row.
 struct SimpleModeSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// The What Moves Where row under the switch: on the Settings root, off on the page it opens.
     var showsCatalogRow = true
 
@@ -2121,7 +2129,7 @@ struct SimpleModeSection: View {
 
     var body: some View {
         Section(header: SectionIconHeader("SIMPLE MODE", icon: "rectangle.compress.vertical")) {
-            SettingsToggle("Simple Mode", caption: caption, isOn: $settings.simpleMode)
+            SettingsToggle("Simple Mode", caption: caption, isOn: $systemSettings.simpleMode)
 
             // Its own row, one link per row: inside the switch's row, a tap anywhere there would push.
             if showsCatalogRow {
@@ -2207,8 +2215,8 @@ struct SimpleModeSettingsView: View {
 /// why the Settings tab's own hub no longer has one. Compiles for the watch too (its Notifications
 /// and Nagging Mode pages use it).
 struct AdvancedSettingsSection: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Which screen's switch this is.
     let screen: Settings.AdvancedScreen
 
@@ -2277,8 +2285,8 @@ extension View {
 }
 
 struct VersionNumber: View {
-    @ObservedObject var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     var width: CGFloat?
 
     var body: some View {

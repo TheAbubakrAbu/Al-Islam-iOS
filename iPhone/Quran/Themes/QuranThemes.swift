@@ -405,7 +405,9 @@ enum ThemeBrowseFamily: String, CaseIterable, Identifiable {
 }
 
 struct ThemesBrowseView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
 
     let onOpenAyah: (Int, Int) -> Void
@@ -724,7 +726,10 @@ struct ThemesBrowseView: View {
 /// from the topic chips under an ayah in its sheets (no reader to open there: `onOpenAyah` is nil,
 /// and the rows keep their own menus).
 struct ThemeTopicDetailView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var themeHighlights = ThemeHighlights.shared
 

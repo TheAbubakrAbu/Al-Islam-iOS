@@ -7,7 +7,10 @@ import UIKit
 /// Months are built incrementally, one per run-loop pass (see `buildMonthsIfNeeded`). A full year is
 /// ~400 days × 6 prayers, and computing that in one eager pass stalled the push animation.
 struct PrayerCalendarView: View {
-    @ObservedObject var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 

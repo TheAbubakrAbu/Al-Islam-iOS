@@ -5,7 +5,10 @@ import CoreLocation
 import UIKit
 
 struct MapView: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var adhanSettings = AdhanSettings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
     @Environment(\.dismiss) private var dismiss
@@ -439,8 +442,8 @@ private struct AnimatedMarkerBubble: View {
 }
 
 private struct SearchOverlay: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     @Binding var searchText: String
     let cityItems: [MKMapItem]
     let onSelect: (MKMapItem) -> Void
@@ -503,8 +506,9 @@ private struct SearchOverlay: View {
 }
 
 private struct SearchResultRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     let item: MKMapItem
     let primaryTitle: String
     let secondaryTitle: String
@@ -559,7 +563,8 @@ private struct SearchResultRow: View {
 }
 
 private struct HomeLocationSummaryCard: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
 

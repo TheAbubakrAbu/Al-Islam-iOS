@@ -46,7 +46,11 @@ extension View {
 /// include toggles under it, the Image/Text picker, then Copy and Share. The three surfaces are
 /// deliberately identical, so knowing one is knowing all three.
 struct NameShareSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var islamSettings = IslamSettings.shared
+    @ObservedObject private var quranDisplay = QuranDisplay.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     let name: NameOfAllah
