@@ -94,7 +94,7 @@ struct JuzHeader: View {
 
             // The Arabic interface names the juz once, in Arabic.
             Group {
-                if AppLanguage.isArabic {
+                if AppLanguage.isArabicScript {
                     Text(verbatim: "- \(juz.displayName)")
                 } else {
                     Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
@@ -175,13 +175,13 @@ struct JuzHeader: View {
         // Anchored to the info button itself, so the dialog pops from where the tap happened.
         // In Arabic the message's first line already names the juz in Arabic: the title is the number.
         .confirmationDialog(
-            AppLanguage.isArabic ? String(localized: "Juz \(juz.id)") : String(localized: "Juz \(juz.id) - \(juz.nameTransliteration)"),
+            AppLanguage.isArabicScript ? String(localized: "Juz \(juz.id)") : String(localized: "Juz \(juz.id) - \(juz.nameTransliteration)"),
             isPresented: $showInfo,
             titleVisibility: .visible
         ) {
             Button("Copy Info") {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = AppLanguage.isArabic
+                UIPasteboard.general.string = AppLanguage.isArabicScript
                     ? String(localized: "Juz \(juz.id)") + "\n" + infoMessage
                     : String(localized: "Juz \(juz.id) - \(juz.nameTransliteration)\n\(infoMessage)")
             }

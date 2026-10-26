@@ -13,8 +13,8 @@ import SwiftUI
 
 extension ProphetMiraclesView {
     /// The index order: groups in `Entry.Group` order.
-    static let entries: [Entry] = whyEntries + beforeEntries + hisEntries + provisionEntries
-        + creationEntries + prayerEntries + protectionEntries
+    static let entries: [Entry] = whyEntries + beforeEntries + beforeEntries2 + hisEntries + provisionEntries + creationEntries
+        + prayerEntries + protectionEntries + hisEntries2
 
     /// The STRONGEST section, in reading order (Abu, 2026-09-25: "have a strongest tab section").
     ///
@@ -27,7 +27,7 @@ extension ProphetMiraclesView {
     /// Quran's own authority, not on witnesses a reader can weigh.
     static let strongestIDs = [
         "quran", "moon", "water", "trench-feast", "trunk",
-        "hudaybiyah-well", "rain-prayer", "water-skins", "abu-jahl-trench", "isra",
+        "hudaybiyah-well", "rain-prayer", "water-skins", "abu-jahl-trench", "isra", "ghawrath-sword",
     ]
 
     // MARK: Why prophets are given signs
@@ -1235,6 +1235,449 @@ extension ProphetMiraclesView {
                   ]),
                   SignSection("A NOTE", [
                       .text("Both men tell it themselves, and both speak of a lasting cure, not relief for a day: Salamah still had the scar and had never felt pain from it since. At Khaybar he also spat into 'Ali's sore eyes and they were cured at once; that is told in the Prophecies library, with the banner he gave him."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: More: the prophets before him (second pass, 2026-10-26)
+
+    static let beforeEntries2: [Entry] = [
+        .init(id: "ibrahim-guests", title: "The guests of Ibrahim, and a son in old age",
+              summary: "Angels came to Ibrahim's table with news of a son for his barren old wife, and an errand to the people of Lut.",
+              group: .before,
+              aliases: ["abraham", "sarah", "isaac", "ishaq", "jacob", "yaqub", "angels", "roasted calf", "barren", "laugh", "glad tidings", "hospitality"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Messengers came to Ibrahim as travellers and greeted him with peace. He answered the greeting and went straight to bring a roasted calf. When their hands did not reach for it he grew afraid of them, and they told him who they were and where they were going. His wife was standing by, and the news that followed was for her:"),
+                      .quran("11:69-73"),
+                      .text("Surat adh-Dhariyat tells the same scene from where she stood. She came forward with a cry and struck her face, and the answer she was given is the whole of the matter in a line:"),
+                      .quran("51:28-30"),
+                  ]),
+                  SignSection("HIS OWN QUESTION", [
+                      .text("Ibrahim asked the question too. In Surat al-Hijr the tidings come to him first, and his reply is that of a man who knows his own age and still refuses to despair of his Lord:"),
+                      .quran("15:52-56"),
+                      .text("The Quran records the promise kept, in one line: Ishaq was given to him, and Ya'qub in addition (21:72). When the fear had left him and the tidings had come, Ibrahim began to plead with the same guests for the people of Lut (11:74), and was told that the command of his Lord had already gone out (11:76). Lut's city has its own article."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign was a promise about a future no one at that table could bring about: a son to a woman past bearing and a man grown old, and after the son a grandson, named before either was born. The guests' question, whether she wondered at the decree of Allah, is the answer to every such wonder. The same messengers went on from his house to overturn a city, so that one visit carried both of the things a prophet is sent with, a mercy and a warning."),
+                  ]),
+              ]),
+        .init(id: "ibrahim-ram", title: "The sacrifice, and the ransom",
+              summary: "Told in a dream to sacrifice his son, Ibrahim and the boy both submitted, and a great sacrifice was sent as ransom.",
+              group: .before,
+              aliases: ["abraham", "ismail", "ishmael", "isaac", "ishaq", "ram", "dhabih", "udhiyah", "qurbani", "eid al-adha", "dream", "knife"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Ibrahim had asked his Lord for a righteous son, and was given tidings of a forbearing boy. When the boy was old enough to work beside him, Ibrahim told him what he had seen in a dream, and asked what he thought. The scholars say a prophet's dream is revelation, and the son answered as one who knew it:"),
+                      .quran("37:100-105"),
+                      .text("The Quran does not pause on the knife. It names the moment when both of them had submitted and the boy lay face down, and then the call, and the ransom, and the remembrance left among everyone who came after:"),
+                      .quran("37:106-111"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign here is not a wonder done before a crowd. It is a command obeyed to the point of the knife by a father and a son who could both see what it would cost, and a ransom that came from outside the story, a sacrifice neither of them had brought. The Quran calls it the clear trial, and the scholars tie the udhiyah of Eid al-Adha to its memory. On that day the Prophet sacrificed two rams with his own hands:"),
+                      .hadith("bukhari:5565", cite: "Sahih al-Bukhari 5565", arabic: 10...26, english: 0...36),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The Quran does not name the son. Ibn Taymiyyah, Ibn Kathir and Ibn Baz hold that he was Isma'il, the firstborn, because the tidings of Ishaq come only after the story is over (37:112) and Ishaq was promised a son of his own, Ya'qub (11:71), so he could not have been the boy laid down to die; some of the Salaf said Ishaq, and the difference is one of reading, not of faith."),
+                  ]),
+              ]),
+        .init(id: "shuayb-shade", title: "Shu'ayb, and the day of the shade",
+              summary: "Madyan cheated at the scales and dared Shu'ayb to bring down the sky on them; then the day of the shade came.",
+              group: .before,
+              aliases: ["jethro", "shuaib", "madyan", "midian", "aykah", "thicket", "scales", "measure", "cloud", "zullah", "earthquake", "blast"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Shu'ayb was sent to Madyan, the people the Quran also calls the companions of the thicket; the commentators mostly take the two names for one people. His message was the one every messenger brought, worship of Allah alone and obedience to the man He sent, and he asked no payment for it:"),
+                      .quran("26:176-180"),
+                      .text("Then came the charge that belonged to this people in particular. They cheated at the scales, and what he asked of them was honesty in the market and fear of the One who had made them:"),
+                      .quran("26:181-184"),
+                  ]),
+                  SignSection("WHAT THEY DID WITH IT", [
+                      .text("They called him bewitched and a liar, and dared him to make good on his warning by dropping a piece of the sky on them:"),
+                      .quran("26:185-189"),
+                      .text("Surat al-A'raf names the earthquake, and Surat Hud the blast. The commentators reconcile the three as one punishment described three ways, and report that the shade was a cloud they ran to for relief from a burning heat."),
+                      .quran("7:91"),
+                      .text("Surat Hud sets Madyan beside Thamud, and names the ones who were saved:"),
+                      .quran("11:94-95"),
+                      .text("Shu'ayb turned from the dead with a question: he had conveyed his Lord's messages and advised them, so how could he grieve for a people who had disbelieved (7:93)?"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("They asked for a piece of the sky to fall on them, and the punishment came from above them, on the day of the cloud. Shu'ayb performed no wonder; the Quran names no staff or she-camel for him. His sign was the exactness of the answer to a demand they had made in mockery, and the market they had cheated in left as if no one had ever lived there (7:92). The surah says of it what it says of every people in it: in that is a sign, but most of them were not believers (26:190)."),
+                  ]),
+              ]),
+        .init(id: "musa-river-mother", title: "Musa on the river, and the promise to his mother",
+              summary: "His mother was told to cast him into the river and promised his return; Pharaoh's house raised him and she nursed him.",
+              group: .before,
+              aliases: ["moses", "umm musa", "basket", "chest", "tabut", "ark", "nile", "pharaoh", "asiya", "wet nurse", "sister", "miriam"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Pharaoh was killing the sons of the Children of Israel. Musa's mother was told what to do with hers, in words that held a command and a promise together: nurse him, and when you fear for him, put him in the river. She was told not to fear and not to grieve, and given two assurances no mother could check: that he would come back to her, and that he would be a messenger."),
+                      .quran("28:7-9"),
+                      .text("The river carried him to the one household in Egypt that could keep him safe from Pharaoh, Pharaoh's own. The ayahs that follow stay with the mother, whose heart the Quran says was emptied of everything but him:"),
+                      .quran("28:10-13"),
+                  ]),
+                  SignSection("UNDER MY EYE", [
+                      .text("Surat Ta-Ha tells the same favour to Musa himself, years later, at the fire. It adds what no one on the river bank could see: the love placed on him, and whose eye he was raised under:"),
+                      .quran("20:37-39"),
+                      .text("The list goes on (20:40): his sister's errand, his return to his mother, the killing he was saved from, the years in Madyan, every one counted to him as a favour before he was sent."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Nothing in this story is a wonder anyone saw. A chest floated, Pharaoh's wife pleaded, an infant refused every breast, a girl offered a suggestion. The sign is in the fit of the parts: a promise made to a frightened woman at the worst moment of her life and kept in every detail, so that the child Pharaoh's men would have killed came back to his mother's arms, with Pharaoh's household none the wiser. The Quran says why it was done that way: so that she would know the promise of Allah is true."),
+                  ]),
+              ]),
+        .init(id: "musa-tur", title: "The mountain that crumbled",
+              summary: "Musa asked to see his Lord; told to look at the mountain instead, he saw it levelled and fell unconscious.",
+              group: .before,
+              aliases: ["moses", "sinai", "tur", "kalimullah", "kalim allah", "speech", "spoke", "see allah", "ruyah", "tajalli", "forty nights", "tuwa"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Musa was given an appointment of forty nights at the mountain, and left Harun in charge of his people (7:142). When he came to it his Lord spoke to him, and he asked for the one thing beyond that:"),
+                      .quran("7:143"),
+                      .text("He was not rebuked as a man who had asked wrongly. He was shown what a mountain could not bear, and when he came round he turned to his Lord in repentance and called himself the first of the believers. The sign was given to the mountain, and Musa was its witness."),
+                  ]),
+                  SignSection("HOW ALLAH SPOKE TO HIM", [
+                      .text("Musa is the prophet the Quran singles out for having been spoken to. It had begun at the fire on the way back from Madyan, when he went to fetch a brand for his family and was called by name:"),
+                      .quran("20:11-13"),
+                      .text("The Quran states it plainly, with the word for speech doubled so that no one can read it as a figure:"),
+                      .quran("4:164"),
+                      .text("Surat Maryam names the place, the right side of the mount, and says he was brought near:"),
+                      .quran("19:52"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The Quran says that no human being is spoken to by Allah except by revelation, from behind a veil, or through a messenger He sends (42:51). Musa was spoken to from behind the veil, and when he asked for more than that, the answer was a sign no one could stand under: a mountain that could not hold its place before its Lord. The believers are promised the sight he asked for, but not in this world."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Ahl al-Sunnah hold that Allah spoke to Musa with real speech that Musa heard, as the words say, and that no one sees Allah in this world; the believers will see Him in the Hereafter. The Prophet promised it on a full-moon night, with the moon in front of them:"),
+                      .hadith("bukhari:7434", cite: "Sahih al-Bukhari 7434", arabic: 31...56, english: 21...67),
+                  ]),
+              ]),
+        .init(id: "musa-khidr", title: "Musa, and the servant he was sent to learn from",
+              summary: "Told that a servant of Allah knew more than he did, Musa sought him out, with a fish that came to life as the sign.",
+              group: .before,
+              aliases: ["moses", "khidr", "khadir", "kahf", "fish", "two seas", "yusha", "joshua", "ship", "wall", "knowledge", "patience"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("The Prophet told how the journey began. Musa had been asked who was the most knowledgeable of people and answered that he was, and he was corrected for not returning the knowledge to Allah:"),
+                      .hadith("bukhari:4725", cite: "Sahih al-Bukhari 4725", arabic: 51...101, english: 45...147),
+                      .text("The Quran takes it up from the road. The fish was the appointed mark, carried in a basket for food; the commentators report that it had been salted. At the rock it stirred and slipped into the sea, and the two of them walked on past the place:"),
+                      .quran("18:60-65"),
+                  ]),
+                  SignSection("THE THREE DEEDS", [
+                      .text("Musa asked to follow him and learn. The servant warned him that he would not be able to bear it, since he would see things he had not been told the reason for, and made him promise to ask about nothing until he was told. The promise was tested at once, and twice:"),
+                      .quran("18:71-74"),
+                      .text("The third time Musa set his own terms, and the third deed ended the company:"),
+                      .quran("18:75-77"),
+                  ]),
+                  SignSection("THE EXPLANATION", [
+                      .text("At the parting the servant gave the reasons, and ended by disclaiming the deeds as his own:"),
+                      .quran("18:78-82"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Two things in the story are a sign. The first is the fish, carried for food, that slipped into the sea at the one place Musa had been told to look for: the mark that he had reached the man. The second is the man himself, given knowledge from Allah that a prophet with the Torah did not have, and able to say that he had done none of it of his own accord. Musa, spoken to on the mountain, was sent to learn from a servant. The lesson is the one he had missed before his people: knowledge is Allah's to give, and to divide as He wills."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The Quran does not name the servant; the Prophet's narration calls him al-Khidr, and the commentators follow it. The scholars differ on whether he was a prophet or a righteous servant, and the Salafi scholars, following Ibn Taymiyyah, hold that he is dead, as every man of his age is; nothing in the story rests on either question."),
+                  ]),
+              ]),
+        .init(id: "isa-raised", title: "'Isa was not killed: he was raised",
+              summary: "They claimed to have crucified the Messiah; the Quran says they did not kill him, and Allah raised him to Himself.",
+              group: .before,
+              aliases: ["jesus", "messiah", "masih", "crucifixion", "cross", "crucified", "raised", "rafa", "ascension", "alive", "return", "day of judgement"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Those of the Children of Israel who rejected 'Isa went on to boast that they had killed him. The Quran answers the boast in one ayah and gives the truth in the next:"),
+                      .quran("4:157-158"),
+                      .text("The plot is named in Al 'Imran, and so is the plan that overruled it. Allah's words to 'Isa were a promise of what He would do with him, and of what would become of those who followed him:"),
+                      .quran("3:54-55"),
+                  ]),
+                  SignSection("HIS OWN WORDS ON THAT DAY", [
+                      .text("The Quran records a conversation still to come, on the Day of Resurrection, in which 'Isa is asked about those who took him and his mother as gods beside Allah. His answer dates his knowledge of his people to the day he was taken up:"),
+                      .quran("5:116-117"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign was a rescue no one on the ground could see. The people who wanted him dead were left certain they had succeeded, and the Quran says those who differ over it have nothing but conjecture. It does not say how the resemblance was made, and that is left where the Quran leaves it. The one who raised the dead by Allah's permission was himself taken out of the reach of death, and his enemies' plan was overruled by a plan they could not read. Of all the prophets, he is the one whose story is not yet finished."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Ahl al-Sunnah hold that 'Isa was raised alive, body and soul, that he is alive now, and that he will descend before the Hour; the commentators read 43:61 as making his descent a sign of the Hour, and the Prophecies library tells of it. The words 'I will take you' in 3:55 are read as his being taken up whole, not as death, since Surat an-Nisa says plainly that they did not kill him and that Allah raised him to Himself."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: More: his signs, creation, prayers and protection
+
+    static let hisEntries2: [Entry] = [
+        .init(id: "jibril-true-form", title: "Jibril in his true form",
+              summary: "Twice he saw the angel as he was created, filling the horizon; the Quran records the second at the Lote Tree.",
+              group: .his,
+              aliases: ["gabriel", "jibreel", "six hundred wings", "600 wings", "najm", "surah 53", "sidrat al-muntaha", "lote tree", "horizon", "two bow lengths", "ibn masud", "aishah"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Jibril came to him for twenty-three years, usually unseen, sometimes in the shape of a man. Twice he came as he was created. Surah al-Najm, a Makkan surah, describes the first: the angel stood in the highest horizon, then drew near, until he was two bow-lengths away or nearer, and delivered what he delivered."),
+                      .quran("53:5-10"),
+                      .text("The surah then turns to a second sight, at the Lote Tree of the Utmost Boundary, on the night of the ascent:"),
+                      .quran("53:13-18"),
+                  ]),
+                  SignSection("WHAT HE SAID", [
+                      .text("Masruq asked 'A'ishah about these ayahs, and about the ayah of Surah al-Takwir that says he saw him on the clear horizon. She answered that she had been the first of this community to ask the Prophet himself, and she gave his answer:"),
+                      .hadith("muslim:177a", cite: "Sahih Muslim 177a", arabic: 81...123, english: 115...187),
+                      .text("In another sitting she said what the first of the two sights was like:"),
+                      .hadith("muslim:177d", cite: "Sahih Muslim 177d", arabic: 36...62, english: 41...77),
+                      .text("Ibn Mas'ud, asked about the same ayahs, added a detail the Prophet had told him:"),
+                      .hadith("bukhari:3232", cite: "Sahih al-Bukhari 3232", arabic: 29...38, english: 41...58),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The messenger who carried the revelation was seen as he is, twice, by the man who received it; and the Quran put the first sight in a surah recited to the Quraysh, with a challenge in the ayahs that follow: the heart did not lie about what it saw, so will you dispute with him over what he sees? The Companions knew Jibril only in the form of a man. The Prophet knew him in both."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("'A'ishah held that what the Prophet saw in these ayahs was Jibril and not his Lord, whom no eye sees in this life, and most of the Salaf held the same (Sahih al-Bukhari 4855, Sahih Muslim 177); Ibn 'Abbas spoke of a seeing with the heart, and the scholars reconcile the two reports that way."),
+                  ]),
+              ]),
+        .init(id: "cave-protection", title: "Two in the cave, and Allah the third",
+              summary: "The searchers stood at the mouth of the cave; had one looked down at his feet he would have seen them. None did.",
+              group: .protection,
+              aliases: ["thawr", "ghar", "hijrah", "migration", "abu bakr", "siddiq", "quraysh", "sakinah", "tranquillity", "do not grieve", "la tahzan", "tawbah 40"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("When Quraysh resolved to kill him, in 622 CE, he left Makkah by night with Abu Bakr, and the two hid in a cave on Mount Thawr, south of the city and away from the road to Madinah. Quraysh put a price on each of them and sent searchers along every track."),
+                      .text("The searchers reached the cave. Abu Bakr told what happened at its mouth:"),
+                      .hadith("bukhari:3653", cite: "Sahih al-Bukhari 3653", arabic: 18...46, english: 0...42),
+                      .text("The Quran recounts the same moment to the Companions, with what was sent down into the cave:"),
+                      .quran("9:40"),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("Abu Bakr tells it himself, and the ayah was recited in Madinah to men who had heard it from him. The enemy at the mouth of the cave were the other witnesses: they came close enough to be seen from below, and went away without looking down."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Nothing was put between the two men and the searchers. The protection the Quran names is tranquillity sent down on him, and hosts no one saw; the proof is in what did not happen. The words he said in the cave, do not grieve, Allah is with us, are the words he said again on the road when Suraqah caught up with them, told in its own entry."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The spider that spun a web over the entrance and the dove that nested there are in reports the hadith scholars grade weak, and the sahih account has neither. The sign the sources carry is the one Abu Bakr describes: men standing at the mouth who did not look down."),
+                  ]),
+              ]),
+        .init(id: "ghawrath-sword", title: "The sword over him as he slept",
+              summary: "A stranger stood over him with his own sword: who will protect you from me? Allah, he said, and the man sat down.",
+              group: .protection,
+              aliases: ["ghawrath", "ghaurath ibn al-harith", "dhat al-riqa", "najd", "bedouin", "jabir", "acacia", "who will save you", "man yamnauka", "fear prayer", "salat al-khawf"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("On the expedition towards Najd known as Dhat al-Riqa', the army halted at midday in a valley of thorn trees and the men scattered for shade. The Prophet lay down under an acacia and hung his sword on a branch. Jabir says they were asleep when they heard him calling them, and came to find a Bedouin sitting with him. He told them what had happened:"),
+                      .hadith("bukhari:4135", cite: "Sahih al-Bukhari 4135", arabic: 102...142, english: 100...155),
+                      .text("Muslim's narration from Jabir has the exchange in full, and what followed:"),
+                      .hadith("muslim:843a", cite: "Sahih Muslim 843a", arabic: 75...110, english: 60...105),
+                      .text("The call to prayer was then given, and he led the fear prayer, two rak'ahs with each half of the army, in the enemy's own country."),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("Jabir ibn 'Abdullah tells it, and the Companions he called came and found the man sitting beside him, disarmed by nothing but an answer. Al-Bukhari records from Abu Bishr that the man's name was Ghawrath ibn al-Harith (Sahih al-Bukhari 4136)."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("A sleeping man, a drawn sword, and no one within reach: everything a killer needs. He answered the question with one word, and the man who held the blade put it back in its sheath and sat down. The Prophet did not punish him. The Quran had promised the Messenger exactly this:"),
+                      .quran("5:67"),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Some tellings add that the sword fell from the man's hand and the Prophet took it up and asked him the same question; the sahih rows from Jabir say only that he sheathed it, and that is what is quoted here. The year is disputed: Ibn Ishaq put Dhat al-Riqa' in 4 AH, and al-Bukhari placed it after Khaybar."),
+                  ]),
+              ]),
+        .init(id: "sihr-cured", title: "The spell, and the cure",
+              summary: "A spell was worked on him; two came to him in sleep and named the man, the means and the well, and Allah cured him.",
+              group: .protection,
+              aliases: ["sihr", "magic", "sorcery", "labid ibn al-asam", "banu zurayq", "comb", "hair", "well of dharwan", "dhi arwan", "falaq", "nas", "aishah"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("In Madinah a man of Banu Zurayq, Labid ibn al-A'sam, worked a spell on him. 'A'ishah says its effect was that he would imagine he had done a thing he had not done. He prayed, and prayed again, and then told her what he had been shown:"),
+                      .hadith("bukhari:5763", cite: "Sahih al-Bukhari 5763", arabic: 51...119, english: 36...182),
+                      .text("He went to the well with some of his Companions, and came back:"),
+                      .hadith("muslim:2189a", cite: "Sahih Muslim 2189a", arabic: 141...194, english: 227...313),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("'A'ishah tells it, and she was the one who asked him why he did not bring the thing out for people to see. The Companions who went with him to the well saw its water and its palms as he described them. Al-Bukhari and Muslim both have the story through Hisham ibn 'Urwah from his father, and al-Bukhari gives it in several places."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign is not that a spell could touch him; it is how it ended. He was told in his sleep who had done it, with what, and where it was hidden, and the search bore out every detail. He then chose not to expose the man, because Allah had cured him and he would not stir up harm among the people."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The scholars of Ahl al-Sunnah affirm the event as al-Bukhari and Muslim report it, and hold that it touched his body, not his message: Ibn al-Qayyim likened it to an illness he was healed of, and Ibn Hajar explains 'A'ishah's words as concerning his household, since no word of revelation was affected. The commentators say the two who came to him were angels."),
+                  ]),
+              ]),
+        .init(id: "two-lights", title: "Two lamps on a dark night",
+              summary: "Two Companions left his house in the dark and a light went before each; when they parted, each kept his own.",
+              group: .his,
+              aliases: ["usayd ibn hudayr", "abbad ibn bishr", "usaid", "abbad", "light", "nur", "lamp", "misbah", "ansar", "anas", "dark night"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("Anas tells it in a few words. Two of the Companions had been with the Prophet, and set out for home on a night with no moon:"),
+                      .hadith("bukhari:3639", cite: "Sahih al-Bukhari 3639", arabic: 18...54, english: 0...61),
+                      .text("Al-Bukhari gives the same report in the merits of the Ansar, and there Anas names the two: Usayd ibn Hudayr and 'Abbad ibn Bishr (Sahih al-Bukhari 3805)."),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("The two men walked home by it, and Anas, who served in the Prophet's house, is the one who tells it. Usayd ibn Hudayr is the Companion whose recitation of Surah al-Baqarah one night drew what looked like a canopy of lamps down over his yard; that is told in its own entry."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Nothing was asked for and nothing was announced. The light appeared for two men going home from him, and it did not stay with him: it went with them, and when their ways divided it divided. A sign given to the Companions on their own doorsteps is the kind of thing a household remembers, and Anas remembered it."),
+                  ]),
+              ]),
+        .init(id: "daws-guided", title: "O Allah, guide Daws",
+              summary: "Asked to curse a tribe that had refused him, he prayed for its guidance, and the tribe came to him as Muslims.",
+              group: .prayers,
+              aliases: ["daws", "dous", "dawsi", "tufayl ibn amr", "tufail", "abu hurayrah", "curse", "guidance", "hidayah", "khaybar", "ihdi dawsan"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("Al-Tufayl ibn 'Amr was a chief of Daws, a tribe of the south, who had accepted Islam and gone home to call his people. He came to the Prophet with the Muslims of his tribe and reported that Daws had refused. Abu Hurayrah, himself a man of Daws, tells what was asked for and what was given:"),
+                      .hadith("bukhari:2937", cite: "Sahih al-Bukhari 2937", arabic: 19...53, english: 0...62),
+                      .text("Al-Tufayl went back. In the year of Khaybar, 7 AH, the Daws came to Madinah as Muslims, households of them, and Abu Hurayrah arrived with them: al-Bukhari notes that he came to the Prophet in the days of Khaybar (Sahih al-Bukhari 4137)."),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("The narrator is one of the people prayed for. Abu Hurayrah, a man of Daws, is the one who passes the prayer on, and he lived its answer: the rest of his life was spent in Madinah among the Companions, and he became the most prolific narrator of the Prophet's words."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The people around him expected a curse, and said so: Daws is finished. He asked instead for their guidance, and for them to be brought to him, and both halves of the prayer were answered within a few years. Of all the ways a prayer can be answered, this is the easiest to check: a whole tribe changed its mind."),
+                  ]),
+              ]),
+        .init(id: "wind-trench", title: "The wind at the Trench",
+              summary: "A siege of weeks ended in one night of wind and cold; the Quran calls it a wind, and hosts you did not see.",
+              group: .his,
+              aliases: ["khandaq", "ahzab", "confederates", "siege", "saba", "east wind", "dabur", "hudhayfah", "abu sufyan", "5 ah", "627", "nusirtu bil-saba"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("In 5 AH (627 CE) Quraysh, Ghatafan and their allies, some ten thousand men by the sirah's count, camped against Madinah, and the Muslims held them off across a trench for weeks. The Quran recalls how it ended:"),
+                      .quran("33:9"),
+                      .text("Hudhayfah ibn al-Yaman was there on the last night, and remembered it as a night of violent wind and severe cold (Sahih Muslim 1788); the Prophet sent him across the trench to find out what the enemy were doing."),
+                      .text("He found Abu Sufyan warming his back at a fire, and came back with the news. The sirah's record is that the camp could not be held in that wind: the Confederates broke it up that night and went home, and Quraysh never marched on Madinah again."),
+                      .text("The Prophet named the wind afterwards, and set it beside the wind that had ended 'Ad:"),
+                      .hadith("bukhari:1035", cite: "Sahih al-Bukhari 1035", arabic: 18...26, english: 0...21),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("Everyone on both sides of the trench felt the cold; Hudhayfah walked through the enemy's camp in it. Ibn 'Abbas carries the saying about the two winds, and al-Bukhari files it both under the prayer for rain and under the Battle of the Confederates (Sahih al-Bukhari 4105)."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The sign is in the timing and the naming. An east wind came on the one night it was needed, against an army that had everything else in its favour, and the Prophet called it his victory in the same breath as the wind that destroyed 'Ad, a wind the Quran describes as sent. The angels of Badr were seen by some; here the hosts were not seen at all, and the Quran says so."),
+                  ]),
+              ]),
+        .init(id: "left-hand", title: "The hand that would not rise",
+              summary: "He told a man to eat with his right hand; the man said he could not, out of pride, and never could again.",
+              group: .creation,
+              aliases: ["left hand", "right hand", "shimal", "yamin", "pride", "kibr", "la istatata", "salamah ibn al-akwa", "eating", "etiquette"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("Salamah ibn al-Akwa' saw it at a meal. A man ate in front of the Prophet with his left hand, and was told to use his right:"),
+                      .hadith("muslim:2021", cite: "Sahih Muslim 2021", arabic: 34...59, english: 0...46),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The man was not unable; Salamah says it was pride that kept him. The Prophet answered the excuse in its own words, may you not be able, and from then on the hand did not reach his mouth. It is a small scene with a heavy edge: his words were not his own, and a refusal dressed up as an excuse was taken at its word."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The Sunnahs library has the same narration for the ruling it carries, eating and drinking with the right hand, which Ibn Baz and Ibn 'Uthaymin held to be obligatory for anyone able to do it. Here it stands for the sign alone, and for the weight of his word."),
+                  ]),
+              ]),
+        .init(id: "ali-eyes", title: "'Ali's eyes at Khaybar",
+              summary: "'Ali had stayed behind with sore eyes; he spat in them and prayed, and 'Ali was well as if he had never been ill.",
+              group: .protection,
+              aliases: ["ali ibn abi talib", "khaibar", "sore eyes", "ramad", "spat", "saliva", "cured", "healing", "sahl ibn sad", "banner", "7 ah"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("At the siege of Khaybar in 7 AH the Prophet said that in the morning he would give the banner to a man through whom Allah would grant victory. In the morning he asked for 'Ali, who had stayed behind when the army set out because of his eyes. Sahl ibn Sa'd tells what happened when he was brought:"),
+                      .hadith("bukhari:3701", cite: "Sahih al-Bukhari 3701", arabic: 59...95, english: 62...128),
+                      .text("Muslim has it from Sahl too, with the same words for the cure:"),
+                      .hadith("muslim:2406", cite: "Sahih Muslim 2406", arabic: 94...136, english: 66...124),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("The whole camp was gathered when 'Ali was led in, with eyes sore enough to have kept him from the march. Sahl ibn Sa'd tells it, and Salamah ibn al-Akwa' confirms why 'Ali had stayed behind (Sahih al-Bukhari 3702). The man who was cured was sent straight at the fortresses."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The cure was complete and immediate: as if he had never been ill, says the narration, and he was given a banner and a siege the same morning. The banner, and what the Prophet said the night before, are told in the Prophecies library; this entry is the healing, one of several at his hand recorded at Khaybar, with Salamah's wound."),
+                  ]),
+              ]),
+        .init(id: "abu-talhah-night", title: "O Allah, bless them in their night",
+              summary: "Umm Sulaym hid her son's death till morning; the Prophet blessed their night, and from it came nine who read the Quran.",
+              group: .prayers,
+              aliases: ["umm sulaym", "umm sulaim", "abu talhah", "anas", "abdullah ibn abi talhah", "patience", "sabr", "loan", "ariyah", "tahnik", "nine sons", "reciters"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("A son of Abu Talhah fell ill and died while his father was out. Umm Sulaym, his mother and the mother of Anas, laid the boy out, told the family to say nothing, and gave her husband his supper when he came in. Only afterwards did she put a question to him:"),
+                      .hadith("muslim:2144d", cite: "Sahih Muslim 2144d", arabic: 65...88, english: 65...104),
+                      .text("Abu Talhah went out angry, and told the Prophet in the morning. Anas tells the rest:"),
+                      .hadith("bukhari:1301", cite: "Sahih al-Bukhari 1301", arabic: 84...131, english: 102...170),
+                      .text("She conceived that night. The boy was 'Abdullah ibn Abi Talhah; Anas carried him to the Prophet on the morning he was born, and the Prophet softened a date in his mouth, put it on the child's palate, and named him (Sahih Muslim 2144a)."),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("Anas was in the house: Umm Sulaym was his mother and Abu Talhah his stepfather. The nine are counted by a man of the Ansar quoted by Sufyan ibn 'Uyaynah; the commentators explain that they were the sons of 'Abdullah, so the blessing ran into the next generation, and one of them, Ishaq ibn 'Abdullah, is the narrator through whom al-Bukhari has this very hadith."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The prayer was a few words, said for a couple who had lost a child the night before, and its answer was counted for two generations: a son, and that son's nine sons, every one a reader of the Quran. Abu Talhah's loaves and Anas's own wealth and children are told in their own entries; this is the night."),
+                  ]),
+              ]),
+        .init(id: "sad-dua", title: "A prayer that Allah would answer Sa'd",
+              summary: "He prayed that Sa'd's prayers be answered; in Kufah a man who slandered Sa'd lived to be struck by all three of Sa'd's.",
+              group: .prayers,
+              aliases: ["sad ibn abi waqqas", "saad", "mustajab al-dawah", "answered prayer", "kufah", "umar", "usamah ibn qatadah", "abu sadah", "slander", "trials", "fitan"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Sa'd ibn Abi Waqqas was among the first to accept Islam and, as he said himself, the first to shoot an arrow for it. The Prophet once asked something for him that the Companions never forgot:"),
+                      .hadith("tirmidhi:3751", cite: "Sunan al-Tirmidhi 3751; graded sahih by al-Albani", arabic: 32...40, english: 7...16),
+                  ]),
+                  SignSection("WHAT CAME OF IT", [
+                      .text("Years later, under 'Umar, Sa'd governed Kufah, and some of its people complained of him, even saying he did not pray properly. 'Umar sent men to ask about him mosque by mosque, and every gathering praised him until, in the mosque of Banu 'Abs, a man called Usamah ibn Qatadah stood and said that Sa'd did not go out with the troops, did not divide fairly, and did not judge justly. Jabir ibn Samurah tells what Sa'd said, and what became of the man:"),
+                      .hadith("bukhari:755", cite: "Sahih al-Bukhari 755", arabic: 140...171, english: 217...286),
+                      .text("'Abd al-Malik ibn 'Umayr, who passed the story on from Jabir ibn Samurah, said he saw the man himself in old age, his eyebrows fallen over his eyes, poor, and still falling in the streets into the sins Sa'd had prayed he would be exposed to."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Sa'd's prayer was conditional, if this servant of Yours is lying, and all three parts of it landed on one man, in front of a city that had heard the charge and the prayer. The Companions knew Sa'd as a man whose prayers were answered, and this is the row that shows why."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Al-Tirmidhi preferred the chain of this hadith that stops short of Sa'd, while al-Albani graded it sahih, and the Kufah story stands in al-Bukhari on its own. Sa'd's own long life, foretold in the illness of 10 AH, is told in the Prophecies library."),
+                  ]),
+              ]),
+        .init(id: "jabir-camel", title: "Jabir's worn-out camel",
+              summary: "His camel could not keep up; the Prophet struck it and prayed, and he had to hold it back from outrunning him.",
+              group: .creation,
+              aliases: ["jabir ibn abdullah", "camel", "jamal", "exhausted", "stick", "mihjan", "uqiyyah", "bilal", "bought", "price", "sale"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("Jabir was riding back from an expedition with the Prophet, and his camel was done. He tells it:"),
+                      .hadith("bukhari:2097", cite: "Sahih al-Bukhari 2097", arabic: 24...80, english: 0...90),
+                      .text("Muslim's narration says the Prophet prayed for the camel and struck it, and that it then went as it had never gone before (Sahih Muslim 715). On the road the Prophet talked with him about his marriage and his sisters, then asked whether he would sell the camel, and bought it for an uqiyyah."),
+                      .text("The Prophet reached Madinah first. When Jabir arrived in the morning he was told to leave the camel, go into the mosque and pray two rak'ahs, and Bilal weighed out the price, with something over. Then he was called back:"),
+                      .hadith("bukhari:2097", cite: "Sahih al-Bukhari 2097", arabic: 186...209, english: 308...346),
+                  ]),
+                  SignSection("WHO SAW IT", [
+                      .text("The whole column saw a camel that had been left behind come up and have to be held back. Jabir told the story so often, and to so many students, that al-Bukhari and Muslim have it through many chains, and the jurists discuss its sale at length."),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("The animal was finished, and a touch and a prayer made it the fastest in the column. Then the Prophet turned the sign into a kindness: he bought the camel so that he could give it back with its price, to a young man carrying his dead father's debts and his sisters. Those debts, and the dates that paid them, are told in their own entry."),
+                  ]),
+              ]),
+        .init(id: "usayd-cloud", title: "Usayd's recitation, and the canopy of lamps",
+              summary: "He recited al-Baqarah at night and his horse shied; a canopy of lamps hung above him. Those were angels, he was told.",
+              group: .creation,
+              aliases: ["usayd ibn hudayr", "usaid", "baqarah", "recitation", "tilawah", "horse", "canopy", "zullah", "lamps", "angels", "malaikah", "sakinah"],
+              sections: [
+                  SignSection("WHAT HAPPENED", [
+                      .text("Usayd ibn Hudayr, a chief of the Ansar, was reading Surah al-Baqarah one night in his yard, with his horse tethered beside him and his young son Yahya lying near it:"),
+                      .hadith("bukhari:5018", cite: "Sahih al-Bukhari 5018", arabic: 14...32, english: 0...42),
+                      .text("Afraid the horse would trample the boy, he stopped and went to him, and looking up saw something like a canopy with lamps in it, rising into the sky until it was gone. In the morning he told the Prophet, who said, three times, that he should have kept reading. Usayd explained why he had stopped:"),
+                      .hadith("muslim:796", cite: "Sahih Muslim 796", arabic: 157...201, english: 144...231),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("Usayd saw a thing he could not explain; the Prophet named it, and told him it would have stayed until daylight for the whole town to see. The sign was given to a Companion reciting alone, and its reading was given by the Prophet. Al-Bara' tells of another man whose recitation of al-Kahf brought a cloud down over him, and the Prophet called that the tranquillity that descends for the Quran (Sahih al-Bukhari 5011, 3614)."),
+                  ]),
+              ]),
+        .init(id: "jinn-listened", title: "The jinn who heard him at Nakhlah",
+              summary: "A company of jinn heard him recite at Fajr and went back believing; he learned of it only when the Quran told him.",
+              group: .his,
+              aliases: ["jinn", "nakhlah", "ukaz", "surah 72", "al-jinn", "ahqaf", "shooting stars", "shihab", "ibn abbas", "fajr", "listened"],
+              sections: [
+                  SignSection("THE SIGN", [
+                      .text("Ibn 'Abbas tells how the shooting stars that barred the devils from the heavens sent them searching east and west for the cause, and how one party found it:"),
+                      .hadith("bukhari:773", cite: "Sahih al-Bukhari 773", arabic: 85...159, english: 121...249),
+                      .text("The surah that opens with their words:"),
+                      .quran("72:1-2"),
+                      .text("Surah al-Ahqaf tells the same: a company of jinn turned to him, listened, and went back to their people as warners:"),
+                      .quran("46:29-31"),
+                  ]),
+                  SignSection("WHY IT MATTERS", [
+                      .text("He did not see them and did not know they were there; Ibn 'Abbas says plainly that what was revealed to him was their conversation. A book that reports a hearing its own reciter could not have witnessed, and names the response of listeners from another creation, puts the knowledge it claims where no human source could reach."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Ibn Mas'ud tells of a different night, when the Prophet went out to the jinn with an inviter of theirs and recited to them, and the Companions searched for him until dawn (Sahih Muslim 450); the scholars count that as a later occasion, and this entry is the first, when they came to him unseen."),
                   ]),
               ]),
     ]

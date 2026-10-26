@@ -270,10 +270,9 @@ struct PhraseOccurrencesView: View {
 
             Section(footer:
                 Text("Repeated phrases from the Quranic Universal Library's Mutashabihat ul Quran. The accent words are the shared phrase; the orange words are what each occurrence says differently from the ayah you came from.")
-                    .font(.caption2)
             ) { EmptyView() }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         .navigationTitle("Repeated Phrase")
         .navigationBarTitleDisplayMode(.inline)
     }

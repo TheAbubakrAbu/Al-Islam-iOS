@@ -251,6 +251,78 @@ and the spread draws a fold shadow down its gutter. Band after: 160 pt with the 
 
 ---
 
+## 2026-10-26: the stall in a fast run, and the pager replaced
+
+Abu: "Page moving after every x pages I think 3 if I go too fast it piles full on pauses."
+
+**Measured (iPhone 17 Pro simulator, 12 idb swipes 0.45 s apart from page 3, `-windowTrace -pagerMotion`).**
+Pages 3 to 9 turned, then swipes 7 to 12 all bounced at the end of the mounted window (`REVERSAL (no
+finger)` at offset 0, no page change), and the window followed only 0.3 s after the LAST swipe (`apply
+idx=8 centre=2 waited=3.05s`). The mechanism is the one the 2026-09-27 section accepted as a cost: the
+window moves only while the pager rests, each idb swipe lands on the previous one's deceleration (the next
+finger was down 20-26 pt from the boundary every time), so the ring of six is all the reach there is, and
+once it is out every further swipe restarts the bounce before it can settle. The reader sits stuck until
+the thumb pauses: "piles full on pauses".
+
+**Why no window can fix it.** A `TabView` evaluates every child on every publish, so it must be handed a
+ring; the ring must move; and SwiftUI's paging collection view rebuilds its cells on any change to the set,
+which mid-slide blanks the outgoing page (09-20), lays a spread half a cell off or jumps pages (09-27).
+Three rounds of workarounds all ran into the same wall. A deeper ring only moves the stall further out.
+
+**The fix: `MushafPagerView`, a `UIPageViewController` (scroll style) over a pull-based data source.**
+There is no set to change: the page view controller asks `neighbour(index, ±1)` for the next page as a
+gesture begins and holds only the page on screen and its neighbours, so nothing ever reloads under a slide
+and a run goes on as long as the thumb does. Gone with it: `windowCentre`, `windowRadius`, `recentreLead`,
+`windowAnchors`, `pendingTurnTarget`, `pageWindow`, `recentreWindow`, `whenPagerRests`,
+`performPendingTurnIfAny`, and the two-anchor turn rule (`turnPage` now composes the landing page and makes
+the deferred animated write, nothing else). The probe (`MushafPagerProbe`) stays: it finds the page view
+controller's `_UIQueuingScrollView`, dismisses the find bar's keyboard on a drag, and tells a programmatic
+turn whether the pager is moving.
+
+How it is wired (`SurahPageReader.body`, `MushafPagerView` next to the probe in MushafReader.swift):
+
+- `selection` is `pagerSelection(in:)` (the leading index; the spread's binding unchanged). A finished
+  swipe writes it from `didFinishAnimating`; a write from the reader turns the pager, animated when the
+  transaction is (`turnPage`'s `withAnimation`), at once otherwise (seeds). A far jump is ONE slide.
+- A write that lands mid-slide or under a finger waits (`pending`) and is applied at rest, and is DROPPED
+  if the selection has moved on meanwhile (a swipe that landed wrote the binding): applying it anyway slid
+  the pager to a page the reader no longer named (seen in a scripted run with stray swipes).
+- `layoutKey` = pagination key | page count | spread or single: a change drops every host and shows the
+  selection afresh (rotation, riwayah switch).
+- Every live host gets a fresh root view on every publish (`refreshHosts`): three to five
+  `MushafPageContent` bodies per publish against the ring's thirteen. The reader's whole environment goes
+  in with `.environment(\.self, context.environment)`.
+- Hosts ignore EVERY safe-area region (`safeAreaRegions = []` on 16.4+, `.ignoresSafeArea()` on the
+  root): a hosting controller of its own takes the window's insets, and in landscape each spread page came
+  out 124 pt narrower than its half, cold at a width the ring never composed (every page a spinner). The
+  keyboard region too, or the find bar's keyboard refits the page to the half-height box above it.
+- UIKit mirrors a page view controller in a right-to-left interface whatever semantic attribute its view
+  is forced to (measured: Arabic UI, a left-to-right swipe went BACK with "before" mapped to forward). So
+  "before"/"after" map through `forwardIsBefore`, read off the view's effective layout direction.
+- A programmatic animated `setViewControllers` is followed by a non-animated one a tick later (the
+  standard remedy for the page view controller's stale neighbour cache after a jump).
+
+**Verified (same harness, new pager):** 12 swipes at 0.45 s turned 12 pages (3 to 15), 0 blank frames in
+261; backward swipes, the Arabic interface (forward = left-to-right in both), `-pageTurnScript` single
+steps, far jumps (4 to 60, 62 to 5), arrow keys, the facsimile Choose Surah far turn (3 to 537, no
+first-responder loop), the find bar (band 526 to 478 for its room, nothing further while the keyboard is
+up), the iPad 11 beside the floating sidebar (pager at x 330-834, page full width), landscape spread at 0.6 s
+(6 spreads, pages 437 pt wide, 0 blank frames in 205), and a portrait-landscape-portrait-landscape
+round trip (page kept; SwiftUI recreates the pager on each rotation under the `readerLandscapeWidth`
+conditional modifier, exactly as it did the TabView). Still true: the next page's host is created when the
+page view controller asks for it, which is as the previous slide lands (about 100 ms of main thread in a
+Debug simulator build, the same cost the collection view paid per cell); the first open at a stale
+persisted geometry still spins once (see `Docs/Quran/Page Mode Chrome Bands.md`).
+
+**Harness notes.** `run.sh <tag> <gap> <n> [dur] [launch args]` (log stream + recordVideo + staggered idb
+swipes; `SWIPE="340 450 80 450"` for a backward run, `"222 200 222 700"` for a landscape spread, the
+transposed portrait points), `analyze.py <tag>` (timeline: finger down/up, long frames, reversals, page
+changes, hosts, shows, landings) and `scan.py <tag>` (30 fps ink scan). Two zsh traps that each cost a
+run: `seq 1 0` prints "1 0" (two stray swipes), and `${VAR:-default}` is NOT word-split when VAR is set
+(idb got one argument "340 450 80 450" and silently swiped nothing); use `${=VAR:-default}`.
+
+---
+
 ## Related
 
 - `Docs/Quran/Page Mode Sheet Ownership.md`: the same window churn killed any sheet a PAGE presented; fixed the

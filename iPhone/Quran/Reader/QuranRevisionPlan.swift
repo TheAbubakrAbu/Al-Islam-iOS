@@ -366,7 +366,7 @@ struct RevisionSurahPicker: View {
 
                             Spacer()
 
-                            if !AppLanguage.isArabic {
+                            if !AppLanguage.isArabicScript {
                                 Text(surah.nameArabic)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)

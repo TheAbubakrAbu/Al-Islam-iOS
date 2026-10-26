@@ -102,7 +102,6 @@ WITHHELD = {
     'meiosis': ('tafsir-twist', "The 'eight mates' of 39:6 are the four pairs of livestock (6:143-144), a clause separate from 'He creates you in the wombs'; the article fuses them into 'eight phases of meiosis'."),
     'meteorites': ('tafsir-twist', "52:44 describes the disbelievers' denial (they would call a falling fragment of the sky 'clouds heaped up'), not the ash of burning meteors."),
     'microburst': ('tafsir-twist', "22:31 is a parable of the one who commits shirk ('as though he had fallen from the sky... or the wind carried him down into a remote place'), not a downdraft hazard to aviation."),
-    'milk': ('numerology', "Its second half is a letter-count code (88 letters between 'water' and 'milk' in 16:65-66 = cow's milk is 88% water); the first half on 16:66 is sound and could come back if that block is cut."),
     'mistranslations': ('tafsir-twist', "Its grammar is wrong (hatta is used with places, as in 18:90 and 27:18, and many place nouns are feminine), it dismisses the classical explanation that Dhul-Qarnayn saw the sun as if setting in a dark spring, and it says translators 'were translating the Hadeeth, not the original Quran'."),
     'moses': ('tafsir-twist', "Walidan in 26:18 simply means 'as a child' (the app's Saheeh); the Quran does not present it as the Egyptian meaning of Musa's name."),
     'mosquito': ('tafsir-twist', "'A mosquito or what is above it' (2:26) means something larger or smaller (the app's Saheeh: 'or what is smaller than it'), not a parasite riding on it, and the ta' of ba'udah marks a single mosquito, not a female."),
@@ -173,6 +172,15 @@ WITHHELD = {
 # block, replacement for that text, or None to drop the whole block).
 BLOCK_EDITS = [
     ("gender", "The verse number 46 is the same number of total chromosomes humans have; 23 chromosomes from the father and 23 chromosomes from the mother = 46 chromosomes in total.", ""),
+    # 'milk' (2026-10-26, brought back from WITHHELD): its first half on 16:66 is sound; its second half
+    # was a letter-count code (88 letters between 'water' and 'milk' = cow's milk is 88% water), six
+    # blocks from the "88 letters" paragraph to its closer, all dropped.
+    ("milk", "It turned out that the word milk and water are separated by 88 letters.", None),
+    ("milk", "87.7% water", None),
+    ("milk", "From Quran Characters Counter", None),
+    ("milk", "milk.webp", None),
+    ("milk", "separated by 88 letters. Today we know", None),
+    ("milk", "water composition of milk", None),
     ("pharaoh", "In Quran 12:54: 12 + 54 = 66.", None),
     ("expanding_universe", "Einstein gave the Bible the benefit of the doubt", None),
     ("plant_stress", "growweedeasy", None),
@@ -217,8 +225,10 @@ def apply_review(articles):
     edited = 0
     for slug, needle, replacement in BLOCK_EDITS:
         article = next(a for a in kept if a["slug"] == slug)
+        # An image block has no text: its path and caption are searched too (the 'milk' diagram).
         hits = [b for b in article["blocks"]
-                if needle.lower() in (b.get("text", "") + " " + b.get("sourceUrl", "") + " " + b.get("sourceLabel", "")).lower()]
+                if needle.lower() in (b.get("text", "") + " " + b.get("sourceUrl", "") + " " + b.get("sourceLabel", "")
+                                      + " " + b.get("path", "") + " " + b.get("alt", "")).lower()]
         assert len(hits) == 1, f"BLOCK_EDITS {slug!r}: {needle[:40]!r} matches {len(hits)} blocks"
         if replacement is None:
             article["blocks"].remove(hits[0])

@@ -444,11 +444,10 @@ struct RootOccurrencesView: View {
             if searchText.isEmpty {
                 Section(footer:
                     Text("\(locations.count) words across \(ayahCount) ayahs. The tinted word carries the root; roots come from the Quranic Arabic Corpus via the Quranic Universal Library.")
-                        .font(.caption2)
                 ) { EmptyView() }
             }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         .dismissKeyboardOnScroll()
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search these ayahs"))

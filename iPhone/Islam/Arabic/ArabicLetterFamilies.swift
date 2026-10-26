@@ -252,11 +252,7 @@ private struct LettersHeader: View {
     private var names: [String] { letters.compactMap { LetterTraits.letterData(for: $0)?.name } }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Text(title)
-
-            Spacer()
-
+        SectionHeaderLine(title) {
             CountPill(count: letters.count)
 
             if speech.isAvailable, !names.isEmpty {

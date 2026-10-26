@@ -347,8 +347,8 @@ private enum PageFindMemo {
 /// Everything that names where the page reader should land, as ONE `onChange` value (see the handler).
 /// Where the page reader last stood, for page mode to re-open on (`QuranView.openMushafWhereLeftOff`).
 ///
-/// Not the last-read ayah: that one is a DISPLAY preference ("Show Last Read Ayah"), and with it off
-/// (or after the Last Read row's "Delete Forever", which turns it off) nothing was recorded at all, so
+/// Not the last-read ayah: that one was a DISPLAY preference ("Show Last Read Ayah", a switch until
+/// 2026-10-25), and with it off nothing was recorded at all, so
 /// every re-open - leaving the tab, the app, a relaunch - landed back on al-Fatiha (Abu, 2026-10-14:
 /// "I go to Tawbah then leave the app then come back it goes to Fatiha"). Plain defaults, no publish:
 /// nothing on screen shows it, so it is written on every page turn without the debounce last read needs.
@@ -834,13 +834,6 @@ struct SurahPageReader<Controls: View>: View {
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
-    /// The page the mounted window is centred on. NOT `pageIndex`: the window used to follow the
-    /// selection directly, so every swipe changed the pager's page set while the swipe was still
-    /// in flight, and the UIKit pager behind `.page` style landed BETWEEN pages ("when I scroll
-    /// right or left it goes half way", Abu, 2026-09-06). The centre now moves only once the
-    /// selection has rested (`recentreWindow`), or at once when the selection reaches the window's
-    /// inner edge so the next swipe always finds its page mounted. -1 until the first seed.
-    @State private var windowCentre = -1
     /// The reader's own width, for the wide-layout bottom bars (see `bottomBars`).
     @State private var readerWidth: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -854,30 +847,6 @@ struct SurahPageReader<Controls: View>: View {
     /// The pager's band as last measured, for `updatePagerSize` to drop repeats. A reference, so the
     /// per-frame writes during a fold re-render nothing.
     @State private var pagerBand = MushafPagerBandBox()
-    /// Pages mounted to either side of the centre (a computed constant: the reader is generic,
-    /// so a static stored property is not allowed here). A spread mounts two pages per pager child,
-    /// so the same reach in SWIPES needs more pages: 14 is seven spreads to either side, one more than
-    /// the phone's six pages. The window only ever moves while the pager rests (`recentreWindow`),
-    /// so in a run of swipes too quick to ever rest the ring is all the reach there is: measured
-    /// 2026-09-27 at a 0.6 s cadence (each swipe landing on the previous one's deceleration), a ring
-    /// of five spreads ran out on the sixth swipe and the pager bounced at its end until the run
-    /// paused. The pager creates cells lazily, so the extra children cost a diff per publish, not a
-    /// typesetting; the ring was 4 pages until then.
-    private var windowRadius: Int { spreadActive ? 14 : 6 }
-    /// How far the selection may drift from the window's centre before the window follows it at the
-    /// pager's next rest (`recentreWindow`). Smaller = more reloads, each at rest and invisible, and
-    /// more slack kept ahead for a run of swipes; larger = fewer reloads. 2 leaves two pages mounted
-    /// ahead when the follow is requested and four right after it. Every reload rebuilds the pager's
-    /// visible cell (two typeset pages in a spread), so a drift under the lead is left alone: the
-    /// ring still reaches both ways from there.
-    private var recentreLead: Int { spreadActive ? 4 : 2 }
-    /// Extra centres for `pageWindow` while an animated turn is in flight: the page being LEFT and
-    /// the page being turned TO, so the mounted set does not change inside the animated transaction
-    /// (an insertion there renders as a crossfade, not a slide). Cleared once the slide has finished.
-    @State private var windowAnchors: Set<Int> = []
-    /// A programmatic turn whose target's ring has just been mounted (`windowAnchors` written) and
-    /// whose selection write waits for that update to land. See `turnPage`.
-    @State private var pendingTurnTarget: Int?
     /// The page the last turn LEFT, so the ring can be ordered ahead of the direction of travel.
     @State private var previousPageIndex = -1
     /// The surah named by the pinned header at the top of the reader, and the ONLY thing that decides when
@@ -1263,103 +1232,44 @@ struct SurahPageReader<Controls: View>: View {
         )
     }
 
-    /// A programmatic landing (initial seed, in-place surah swap, a picker or search jump): the
-    /// selection and the window centre move together, so the target is mounted in the same pass.
+    /// A programmatic landing (initial seed, in-place surah swap): the pager shows the page at once, no
+    /// slide (`MushafPagerView` slides only inside an animated transaction; see `turnPage`).
     private func seedPageIndex(_ index: Int) {
         pageIndex = index
-        windowCentre = index
     }
 
-    /// Follows the selection with the mounted window - and NEVER while a page turn is in flight
-    /// (`Docs/Quran/Mushaf Page Turn Glitch.md`). The pager writes the selection when the finger lifts, while
-    /// its slide is still running; re-centring right there changed the pager's child set under the live
-    /// transition, and the UIKit pager reloads its children for that: the page being LEFT vanished for a
-    /// few frames mid-slide (the blank panel on the side the swipe heads towards, every third page - the
-    /// re-centre cadence - plus the "resistance" and the halfway stop). Measured on the simulator with
-    /// real swipes (idb) and a frame scan of the recording, 2026-09-20. Every change to the mounted set
-    /// now waits for the pager to rest (`whenPagerRests`).
-    ///
-    /// Since 2026-09-27 that is the ONLY rule: a drift of `recentreLead` pages or more re-centres at the
-    /// pager's next rest, a smaller drift is left alone (the ring reaches both ways from there), and
-    /// nothing re-centres mid-slide any more. Two paths used to: a 0.6 s settle for small drifts (a
-    /// reload after every single swipe, each rebuilding the visible cell for nothing) and a no-slack
-    /// fallback at the ring's edge that ran busy or not. Recorded with the book open at a 0.6 s
-    /// cadence, that fallback reloaded SwiftUI's paging collection view mid-deceleration and the view
-    /// kept its offset over the new cells: the pager came to rest half a cell off (page 19 beside page
-    /// 18, pairing wrong), the next swipe dropped the far cell and blanked half the screen, and once it
-    /// reported the cell under the old offset as the selection - four spreads ahead of the swipe - the
-    /// reader jumped there (Abu, 2026-09-26: "sometimes it jumps back"). In a run of swipes too quick
-    /// to ever rest, the ring simply runs out: the swipe past its last mounted page bounces, the pager
-    /// rests, the window catches up and the next swipe turns. That is the accepted cost, and it is why
-    /// the spread's ring is five spreads deep (`windowRadius`).
-    private func recentreWindow(on index: Int, in pages: [MushafPage]) {
-        if windowCentre < 0 {
-            windowCentre = index
-            return
-        }
-        // Measured between SPREADS when the book is open: the second page of the spread already
-        // centred has not drifted at all.
-        let drift = abs(spreadLeading(index, in: pages) - spreadLeading(windowCentre, in: pages))
-        guard drift >= recentreLead else { return }
-        whenPagerRests {
-            guard windowCentre != pageIndex else { return }
-            windowCentre = pageIndex
-        }
+    /// The leading index one step from `index` in reading order, for the pager's data source
+    /// (`MushafPagerView.neighbour`): the next page, or with the book open the next spread's leading
+    /// page; nil past either cover.
+    private func pagerNeighbour(of index: Int, step: Int, in pages: [MushafPage]) -> Int? {
+        guard pages.indices.contains(index) else { return nil }
+        let target = step > 0 ? (spreadPartner(of: index, in: pages) ?? index) + 1 : index - 1
+        guard pages.indices.contains(target) else { return nil }
+        return spreadLeading(target, in: pages)
     }
 
-    /// Runs `change` the moment the pager is at rest - now, if it already is - and never inside a swipe
-    /// or a slide. Polled at frame rate through `MushafPagerProbe`.
-    ///
-    /// The timeout is a safety net for a probe that misreads the pager as "between pages" (the content
-    /// sitting off a boundary with nothing moving it), never a licence to reload under a finger or a
-    /// running deceleration: those are read straight off the scroll view's own flags
-    /// (`MushafPagerProbe.isMoving`) and hold the change past the timeout, up to a hard cap that only a
-    /// stuck flag could ever reach. A timeout that ran regardless was measured (2026-09-27, 0.5 s at a
-    /// 0.6 s swipe cadence) landing the reload with the finger down: the pager jumped four spreads.
-    private func whenPagerRests(timeout: TimeInterval = 2.0, _ change: @escaping () -> Void) {
-        let deadline = Date().addingTimeInterval(timeout)
-        // Only a stuck flag reaches this; a finger holding a drag for that long is not a real case.
-        let hardCap = Date().addingTimeInterval(max(timeout, 20.0))
-        func attempt() {
-            let probe = MushafPagerProbe.shared
-            let now = Date()
-            if !probe.isTurning || (now >= deadline && !probe.isMoving) || now >= hardCap {
-                #if DEBUG
-                MushafPagerProbe.trace("apply idx=\(pageIndex) centre=\(windowCentre) waited=\(String(format: "%.2f", timeout - deadline.timeIntervalSinceNow))s moving=\(probe.isMoving ? 1 : 0)")
-                #endif
-                change()
-                return
+    /// One child of the pager at a leading index: the page, or with the book open the spread it leads.
+    @ViewBuilder
+    private func pagerChild(_ index: Int, pages: [MushafPage],
+                            liveSearch: (matches: [HighlightedAyahRef], term: String, rule: SearchWordRule)?) -> some View {
+        if spreadActive {
+            // The open book. `index` is the spread's leading (odd) page, which sits on the RIGHT; its
+            // partner faces it on the left. Pinned to a left-to-right stack so "right" means right
+            // whatever the app's direction; each page restores its own direction inside.
+            HStack(spacing: 0) {
+                if let partner = spreadPartner(of: index, in: pages) {
+                    pagerPage(partner, pages: pages, liveSearch: liveSearch)
+                } else {
+                    // A leaf with no facing page (an odd page count's last one).
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                pagerPage(index, pages: pages, liveSearch: liveSearch)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 60.0, execute: attempt)
+            .environment(\.layoutDirection, .leftToRight)
+            .overlay { spreadSpine }
+        } else {
+            pagerPage(index, pages: pages, liveSearch: liveSearch)
         }
-        attempt()
-    }
-
-    /// The page indices the pager mounts (Phase 5 step 4): the page on screen and three to either
-    /// side, plus the same ring around `windowAnchor` during an animated far turn. The `TabView` used
-    /// to be handed all 604 pages: every publish the reader observes (each player tick, each Settings
-    /// write) diffed 604 children and evaluated 604 `MushafPageContent` bodies (measured: 1,200 to
-    /// 2,400 body evaluations per second while the reader sat idle), and realizing the pager the first
-    /// time cost ~900 ms of main thread. Indices are the REAL page indices (`.tag(index)` unchanged),
-    /// so selection, jumps and the prewarm ring keep their contract; a page that leaves the window is
-    /// torn down and rebuilt from the render cache when it returns.
-    ///
-    /// With the book open (`spreadActive`) the pager's children are SPREADS, so the ring is folded
-    /// onto each spread's leading page: that is the tag, and the spread view mounts its partner.
-    private func pageWindow(in pages: [MushafPage]) -> [Int] {
-        let count = pages.count
-        guard count > 0 else { return [] }
-        func ring(_ centre: Int) -> ClosedRange<Int> {
-            let c = spreadLeading(min(max(centre, 0), count - 1), in: pages)
-            return max(0, c - windowRadius)...min(count - 1, c + windowRadius)
-        }
-        var indices = Set(ring(windowCentre >= 0 ? windowCentre : pageIndex))
-        for anchor in windowAnchors { indices.formUnion(ring(anchor)) }
-        if spreadActive { indices = Set(indices.map { spreadLeading($0, in: pages) }) }
-        #if DEBUG
-        MushafPagerProbe.traceWindow(indices.sorted(), pageIndex: pageIndex)
-        #endif
-        return indices.sorted()
     }
 
     /// One page of the pager: the printed facsimile or the composed page. Shared by the single
@@ -1734,52 +1644,23 @@ struct SurahPageReader<Controls: View>: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                // A mushaf is bound on the right: page 1 sits at the far RIGHT, and you turn leftward through it.
-                // This reverses the DATA rather than flipping `layoutDirection` on the TabView. The RTL environment is
-                // not reliably honoured by the UIPageViewController behind `.page` style - on an English (LTR) device
-                // it mirrored each page's CONTENT while still starting index 0 on the LEFT, which is exactly backwards.
-                // Reversing the emission puts index 0 on the right in a plain LTR pager, and every index-based path
-                // (selection, prewarm, jump-to-page) is untouched because `.tag(index)` still carries the real index.
-                TabView(selection: pagerSelection(in: pages)) {
-                    // `MushafPageContent` is a view struct, not an inline builder, so SwiftUI only evaluates
-                    // a page's (expensive) Arabic body when that page is actually on screen - otherwise all
-                    // ~600 pages would render up front.
-                    // Iterating `indices.reversed()` (a lazy range) instead of `Array(enumerated()).reversed()`
-                    // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
-                    // player tick while audio runs) just so the diff can walk it.
-                    //
-                    // In a right-to-left interface (Arabic) UIKit already starts the pager on the right, so the
-                    // data goes in as it is: reversed there too, the next page slid in from the right (seen on
-                    // a recorded turn, 2026-10-24).
-                    let window = pageWindow(in: pages)
-                    ForEach(AppLanguage.isRightToLeft ? window : window.reversed(), id: \.self) { index in
-                        Group {
-                            if spreadActive {
-                                // The open book. `index` is the spread's leading (odd) page, which
-                                // sits on the RIGHT; its partner faces it on the left. Pinned to a
-                                // left-to-right stack so "right" means right whatever the app's
-                                // direction; each page restores its own direction inside.
-                                HStack(spacing: 0) {
-                                    if let partner = spreadPartner(of: index, in: pages) {
-                                        pagerPage(partner, pages: pages, liveSearch: liveSearch)
-                                    } else {
-                                        // A leaf with no facing page (an odd page count's last one).
-                                        Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
-                                    }
-                                    pagerPage(index, pages: pages, liveSearch: liveSearch)
-                                }
-                                .environment(\.layoutDirection, .leftToRight)
-                                .overlay { spreadSpine }
-                            } else {
-                                pagerPage(index, pages: pages, liveSearch: liveSearch)
-                            }
-                        }
-                            .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                // Finds the UIKit pager behind the TabView, so window changes can wait for it to rest
-                // (`whenPagerRests`). Inert: no size of its own, no touches.
+                // A mushaf is bound on the right: page 1 sits at the far RIGHT, and you turn leftward
+                // through it. The pager's geometry is pinned left-to-right (`MushafPagerView`), so forward
+                // is the child on the left in every interface language, and selection, jumps and the
+                // prewarm ring all work in REAL page indices (a spread's child is its leading page).
+                // `MushafPageContent` is a view struct, not an inline builder, so a page's (expensive)
+                // Arabic body is evaluated for the hosts the pager holds and nothing else.
+                MushafPagerView(
+                    count: pages.count,
+                    layoutKey: "\(pages[0].paginationKey)|\(pages.count)|\(spreadActive ? 2 : 1)",
+                    selection: pagerSelection(in: pages),
+                    reach: spreadActive ? 4 : 2,
+                    neighbour: { index, step in pagerNeighbour(of: index, step: step, in: pages) },
+                    content: { index in AnyView(pagerChild(index, pages: pages, liveSearch: liveSearch)) }
+                )
+                // Finds the UIKit scroll view inside the pager, so a programmatic turn can wait for a
+                // slide to end (`MushafPagerView.Coordinator.show`) and the find bar's keyboard goes on a
+                // drag. Inert: no size of its own, no touches.
                 .background(MushafPagerProbeView())
                 // The pager's own band, for `spreadActive`: a paged TabView is laid out INSIDE the
                 // safe area, so its frame is already the region between the bars that a page gets
@@ -2059,11 +1940,6 @@ struct SurahPageReader<Controls: View>: View {
         // with the view value of the pass that installed it, not the pass that fired it: a Choose Surah
         // pick of 2:255 from al-Kahf re-seeded once as (18, ayah 10) and once as (2, no ayah), and
         // landed on al-Baqarah's first page instead of Ayat al-Kursi's (logged).
-        // A programmatic turn's selection write, once the ring it mounted has been applied (see
-        // `turnPage`). The release of the anchors (to `[]`) has nothing pending and does nothing.
-        .onChange(of: windowAnchors) { _ in
-            performPendingTurnIfAny()
-        }
         .onChange(of: ReseedKey(surahID: surah.id, ayahID: initialAyah, token: jumpToken)) { key in
             #if DEBUG
             MushafPagerProbe.trace("reseed key surah=\(key.surahID) ayah=\(key.ayahID ?? 0) token=\(key.token) pages=\(pages.count) idx=\(pageIndex)")
@@ -2083,7 +1959,6 @@ struct SurahPageReader<Controls: View>: View {
             // AHEAD of it warm first. A seed or a far jump (no previous page yet) stays symmetric.
             let direction = previousPageIndex >= 0 ? (index - previousPageIndex).signum() : 0
             previousPageIndex = index
-            recentreWindow(on: index, in: pages)
             // Leaving a page resets its pinch zoom to the fitted view (user rule: same as the PDF) -
             // otherwise the adjacent page stays mounted zoomed-in and greets you magnified on return.
             NotificationCenter.default.post(name: PageZoomScrollView.resetZoomNotification, object: nil)
@@ -2285,43 +2160,14 @@ struct SurahPageReader<Controls: View>: View {
             // exactly as if it had been swiped to. Latched HERE, not before the wait: a turn that the
             // guard above abandons must not leave the latch armed to swallow the next real turn's clear.
             if suppressClear { suppressNextPageTurnClear = true }
-            // Mount the target's ring NOW (this transaction, not animated) and keep the departure page
-            // mounted through the slide: the animated selection change below must find both pages
-            // already there, with the mounted set unchanged, or the pager crossfades instead of sliding
-            // (verified on the simulator: a ring inserted inside the animated transaction faded in).
-            // Released after the turn has settled, again outside any animation.
-            let departure = pageIndex
-            let anchors: Set<Int> = [departure, target]
-            // Released once the slide has settled - and only while the pager rests, so the release
-            // can never land under a swipe that started right after the turn (see `recentreWindow`).
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                whenPagerRests {
-                    if windowAnchors == anchors { windowAnchors = [] }
-                }
+            // A tick later, outside whichever update this callback arrived in (`scheduleTurnWrite`): a
+            // cache hit calls back synchronously, inside the handler's own update. Over the printed
+            // facsimile any PDFKit view still holding first responder is resigned first; a first responder
+            // resigned under the slide used to cycle (see `FitFlooredPDFView.releaseFirstResponder`).
+            if facsimileDocument != nil {
+                DispatchQueue.main.async { MushafFacsimileFocus.release() }
             }
-            // The selection write waits for the ring to be MOUNTED: a SwiftUI update with the new
-            // anchors applied, then a fresh transaction. `whenRendered` calls back synchronously on a
-            // cache hit (inside the handler's own update, so the anchors' update ran before the
-            // deferred write), but from a main-actor task on its timeout - and a `main.async` queued
-            // from there ran BEFORE SwiftUI's next update, so the pager got the new children and the
-            // new selection in ONE update. Over the printed facsimile (which never renders composed
-            // text, so every far turn times out) it wrote its current page straight back and SwiftUI
-            // spun in a layout loop: the title said al-Hadid, the page stayed on al-Mujadilah, 100% of
-            // the main thread for good (Abu, 2026-10-25). The anchors' `onChange` runs after the
-            // update that mounted them, whichever way the callback arrived.
-            // A tick later, outside whichever update this callback arrived in: over the facsimile
-            // any PDFKit view still holding first responder is resigned first, since the mount's
-            // batch update would otherwise resign it mid-update and cycle (see
-            // `FitFlooredPDFView.releaseFirstResponder`).
-            DispatchQueue.main.async {
-                if facsimileDocument != nil { MushafFacsimileFocus.release() }
-                if windowAnchors == anchors {
-                    scheduleTurnWrite(to: target)
-                } else {
-                    pendingTurnTarget = target
-                    windowAnchors = anchors
-                }
-            }
+            scheduleTurnWrite(to: target)
         }
     }
 
@@ -2340,14 +2186,6 @@ struct SurahPageReader<Controls: View>: View {
             MushafPagerProbe.trace("turn wrote to=\(target) idx=\(pageIndex)")
             #endif
         }
-    }
-
-    /// The write a mounted ring was waiting for (see `turnPage`): consumed on the anchors' change,
-    /// so it runs after the update that applied them.
-    private func performPendingTurnIfAny() {
-        guard let target = pendingTurnTarget else { return }
-        pendingTurnTarget = nil
-        scheduleTurnWrite(to: target)
     }
 
     /// Left and right arrow keys turn the page (Abu, 2026-10-02: "allow me to use arrow keys left and
@@ -2466,9 +2304,8 @@ struct SurahPageReader<Controls: View>: View {
         let match = matches[currentMatchIndex]
         highlightedAyah = match.ref
         // A surah-wide find can land its first match on a page other than the one on screen - take the
-        // reader there, the way tapping through the matches does. Through `turnPage`, which mounts the
-        // target's ring before the animated write: a bare write to a page outside the mounted window
-        // selected an unmounted tag while `recentreWindow` moved the window in the same pass (Quality
+        // reader there, the way tapping through the matches does. Through `turnPage`, which composes the
+        // landing page before the animated write and defers the write out of this update (Quality
         // Guide G6).
         if findSurahID != nil, match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
             turnPage(to: match.pageIndex, in: pages, suppressClear: true)
@@ -3390,7 +3227,7 @@ struct SurahPageReader<Controls: View>: View {
     private func percent(_ position: Int, of total: Int) -> String {
         guard total > 0 else { return "" }
         let whole = Int((Double(position) / Double(total) * 100).rounded())
-        if AppLanguage.isArabic, let localized = mushafPercentFormatter.string(from: NSNumber(value: Double(whole) / 100)) {
+        if AppLanguage.isArabicScript, let localized = mushafPercentFormatter.string(from: NSNumber(value: Double(whole) / 100)) {
             return localized
         }
         return "\(whole)%"
@@ -5208,7 +5045,7 @@ struct MushafPageComposer {
                 // The Arabic interface names the continuing surah in Arabic on the Arabic page, cleaned
                 // through the config snapshot like the opening heading (the composer runs off-main).
                 var continuingName = segment.surah.nameTransliteration
-                if !isEnglish && AppLanguage.isArabic {
+                if !isEnglish && AppLanguage.isArabicScript {
                     continuingName = segment.surah.nameArabic
                     if config.cleanArabicText { continuingName = continuingName.removingArabicDiacriticsAndSigns }
                     if config.removeArabicDots { continuingName = continuingName.removingArabicDots }
@@ -7383,18 +7220,297 @@ extension AyahHighlightColor {
     }
 }
 
+// MARK: - Page mode: the pager
+
+/// The pager behind page mode: UIKit's `UIPageViewController` (scroll style) over a PULL-BASED data
+/// source, hosting one SwiftUI page (or one spread) per child.
+///
+/// It replaced a paged `TabView` over a mounted WINDOW of pages (2026-10-26). A `TabView` evaluates every
+/// child it is given on every publish, so the reader could only hand it a ring of pages around the
+/// selection, and that ring had to MOVE; but SwiftUI's pager rebuilds its cells whenever the set changes,
+/// which mid-slide blanked the outgoing page, mispaired a spread or jumped pages, so the ring could only
+/// move while the pager rested (`Docs/Quran/Mushaf Page Turn Glitch.md`). A run of swipes too quick to
+/// ever rest then ran the ring out: past its last page every swipe bounced, the bounce never settled under
+/// the next swipe, and the reader sat stuck until the thumb paused (Abu, 2026-10-26: "every 3 pages if I
+/// go too fast it fully pauses"; measured on the simulator at a 0.45 s cadence: pages 3 to 9 turned,
+/// swipes 7 to 12 all bounced, the window followed 3 s later). A page view controller has no set to
+/// change: it asks `neighbour` for the next page as a gesture begins and keeps only the page on screen
+/// and the ones beside it, so nothing ever reloads under a slide and a run goes on as long as the thumb.
+///
+/// The reader's state still reaches every mounted page: `updateUIViewController` hands each live host a
+/// fresh root view on every publish (a handful of bodies, against the ring's thirteen). The selection is
+/// a plain binding: a finished slide writes it; a write from the reader turns the pager, sliding inside
+/// an animated transaction (`turnPage`) and at once otherwise; and a write that lands mid-slide waits for
+/// the pager to rest rather than cutting into the gesture.
+struct MushafPagerView: UIViewControllerRepresentable {
+    /// Leading indices the book has: `neighbour` and `content` are asked for `0..<count` only.
+    let count: Int
+    /// Everything that changes what an index MEANS: the pagination and whether the book is open (a
+    /// spread's child is a pair of pages). A change drops every host and shows `selection` afresh.
+    let layoutKey: String
+    /// The leading index on screen (the spread's leading page with the book open).
+    @Binding var selection: Int
+    /// Hosts kept to either side of the shown index, in leading indices (which step by two in a spread).
+    let reach: Int
+    /// The leading index one step (+1 forward, -1 back) from `index` in reading order; nil past a cover.
+    let neighbour: (_ index: Int, _ step: Int) -> Int?
+    /// The page (or spread) at a leading index.
+    let content: (_ index: Int) -> AnyView
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    func makeUIViewController(context: Context) -> UIPageViewController {
+        let pager = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal,
+                                         options: [.interPageSpacing: 0])
+        pager.dataSource = context.coordinator
+        pager.delegate = context.coordinator
+        pager.view.backgroundColor = .clear
+        // A mushaf is bound on the right, page 1 at the far right, and forward lies to the LEFT in every
+        // interface language. UIKit mirrors a page view controller in a right-to-left interface (its
+        // "before" page then sits on the right, and it does so whatever semantic attribute its view is
+        // forced to; measured in the Arabic interface, 2026-10-26), so the data source maps "before" and
+        // "after" by the view's effective direction (`Coordinator.forwardIsBefore`).
+        context.coordinator.pager = pager
+        context.coordinator.environment = context.environment
+        context.coordinator.layoutKey = layoutKey
+        #if DEBUG
+        MushafPagerProbe.trace("pager made key=\(layoutKey) idx=\(selection)")
+        #endif
+        context.coordinator.show(selection, animated: false)
+        return pager
+    }
+
+    func updateUIViewController(_ pager: UIPageViewController, context: Context) {
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        coordinator.environment = context.environment
+        if coordinator.layoutKey != layoutKey {
+            coordinator.layoutKey = layoutKey
+            coordinator.rebuild(at: selection)
+            return
+        }
+        coordinator.refreshHosts()
+        if selection != coordinator.current {
+            let animated = context.transaction.animation != nil && !context.transaction.disablesAnimations
+            coordinator.show(selection, animated: animated)
+        }
+    }
+
+    /// One child of the pager: a SwiftUI page (or spread) and the leading index it shows.
+    final class PageHost: UIHostingController<AnyView> {
+        let index: Int
+
+        init(index: Int, rootView: AnyView) {
+            self.index = index
+            super.init(rootView: rootView)
+            view.backgroundColor = .clear
+            // The page takes the whole band it is given. The reader has already laid the pager out clear
+            // of the bars and, in landscape, of the sensor housing (`safeAreaPadding` on its band), so the
+            // window's safe area must not apply AGAIN inside each page: UIKit hands a hosting controller
+            // the window's insets, and every spread page came out 124 pt narrower than its half, cold at a
+            // width the ring had never composed (every page a spinner; 2026-10-26). The keyboard neither:
+            // a hosting controller of its own avoids it by default, and the page would refit to the
+            // half-height box left above the find bar's keyboard (the reader ignores it too). The root
+            // view ignores every region as well (`Coordinator.rootView`), which covers iOS 16.0 to 16.3.
+            if #available(iOS 16.4, *) { safeAreaRegions = [] }
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { nil }
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+        var parent: MushafPagerView
+        weak var pager: UIPageViewController?
+        /// The reader's environment, handed whole to every host (`rootView`).
+        var environment: EnvironmentValues?
+        var layoutKey = ""
+        /// The leading index the pager shows, or is sliding to; -1 before the first `show`.
+        private(set) var current = -1
+        /// Live hosts by leading index: the page on screen and a few to either side, so a swipe back finds
+        /// its page typeset. Pruned after every landing (`parent.reach`).
+        private var hosts: [Int: PageHost] = [:]
+        /// A programmatic slide of this pager's own is running (`setViewControllers(animated: true)`).
+        private var sliding = false
+        /// A selection that arrived while the pager was moving: shown at its next rest.
+        private var pending: Int?
+
+        init(parent: MushafPagerView) { self.parent = parent }
+
+        // MARK: Showing a page
+
+        /// Whether the next page in reading order is the page view controller's "before" child: the one
+        /// on the LEFT in a left-to-right interface, where UIKit lays "before" out; on the right, which is
+        /// "after", once UIKit has mirrored the pager for a right-to-left interface.
+        private var forwardIsBefore: Bool {
+            (pager?.view.effectiveUserInterfaceLayoutDirection ?? .leftToRight) == .leftToRight
+        }
+
+        /// Shows `target`: sliding to it when `animated`, else at once. Never under a finger or a running
+        /// slide (a page view controller cannot stack transitions, and a reload under a gesture is the
+        /// very thing the window pager suffered from): then it waits for the rest (`pending`).
+        func show(_ target: Int, animated: Bool) {
+            guard let pager, parent.count > 0 else { return }
+            let target = min(max(target, 0), parent.count - 1)
+            guard target != current || (pager.viewControllers ?? []).isEmpty else { return }
+            if sliding || MushafPagerProbe.shared.isMoving {
+                pending = target
+                scheduleFlush()
+                return
+            }
+            // Forward in reading order is a slide to the "before" child (UIKit's reverse direction) in a
+            // left-to-right interface, to the "after" child in a right-to-left one (`forwardIsBefore`).
+            let forward = current < 0 || target > current
+            let direction: UIPageViewController.NavigationDirection = forward == forwardIsBefore ? .reverse : .forward
+            let host = host(for: target)
+            let slides = animated && current >= 0
+            current = target
+            sliding = slides
+            pending = nil
+            #if DEBUG
+            MushafPagerProbe.trace("show idx=\(target) animated=\(slides ? 1 : 0) hosts=\(hosts.keys.sorted())")
+            #endif
+            guard slides else {
+                pager.setViewControllers([host], direction: direction, animated: false)
+                prune(around: target)
+                return
+            }
+            pager.setViewControllers([host], direction: direction, animated: true) { [weak self] _ in
+                // The page view controller's own neighbour cache can go stale after an animated jump
+                // (the next swipe shows a page from before the jump); setting the shown page again
+                // without animation, a tick later, is the standard remedy.
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    guard let pager = self.pager, self.current == target else {
+                        self.sliding = false
+                        self.flushPending()
+                        return
+                    }
+                    pager.setViewControllers([host], direction: direction, animated: false) { _ in
+                        self.sliding = false
+                        self.prune(around: target)
+                        self.flushPending()
+                    }
+                }
+            }
+        }
+
+        /// A new pagination, or the book opening or closing: nothing a host shows means the same any more.
+        func rebuild(at index: Int) {
+            #if DEBUG
+            MushafPagerProbe.trace("rebuild key=\(layoutKey) idx=\(index)")
+            #endif
+            hosts.removeAll()
+            current = -1
+            pending = nil
+            show(index, animated: false)
+        }
+
+        /// Every live host re-reads the reader's state (highlights, the find, select mode, the theme...).
+        func refreshHosts() {
+            for (index, host) in hosts { host.rootView = rootView(for: index) }
+        }
+
+        /// The pending selection, shown once the pager rests. Polled rather than left to a delegate
+        /// callback alone: a bounce at a cover, or a drag let go in place, ends with no callback.
+        private func scheduleFlush() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 30.0) { [weak self] in self?.flushPending() }
+        }
+
+        private func flushPending() {
+            guard let target = pending else { return }
+            // Stale once the selection has moved on: a swipe that landed meanwhile wrote the binding
+            // (the reader's state is the truth, and the pager already shows it). Applying it anyway
+            // slid the pager to a page the reader no longer named (seen in a scripted run, 2026-10-26).
+            guard target == parent.selection else {
+                pending = nil
+                return
+            }
+            if sliding || MushafPagerProbe.shared.isMoving {
+                scheduleFlush()
+                return
+            }
+            pending = nil
+            show(target, animated: true)
+        }
+
+        private func host(for index: Int) -> PageHost {
+            if let host = hosts[index] { return host }
+            #if DEBUG
+            MushafPagerProbe.trace("host idx=\(index) hosts=\(hosts.keys.sorted())")
+            #endif
+            let host = PageHost(index: index, rootView: rootView(for: index))
+            hosts[index] = host
+            return host
+        }
+
+        private func rootView(for index: Int) -> AnyView {
+            let page = parent.content(index)
+            // The reader's environment, whole: its objects, direction, color scheme and type size. A
+            // hosting controller of its own would start from UIKit's traits, not from the tree it sits in.
+            // Every safe-area region is ignored here as well as on the host (see `PageHost`).
+            guard let environment else { return AnyView(page.ignoresSafeArea()) }
+            return AnyView(page.environment(\.self, environment).ignoresSafeArea())
+        }
+
+        /// Hosts beyond `reach` of the shown page go; the page view controller keeps the ones it holds.
+        private func prune(around centre: Int) {
+            let reach = parent.reach
+            hosts = hosts.filter { abs($0.key - centre) <= reach }
+        }
+
+        // MARK: Data source
+
+        func pageViewController(_ pageViewController: UIPageViewController,
+                                viewControllerBefore viewController: UIViewController) -> UIViewController? {
+            // The next page of the mushaf in a left-to-right interface (the child on the left), the
+            // previous one in a right-to-left interface (`forwardIsBefore`).
+            neighbourHost(of: viewController, step: forwardIsBefore ? 1 : -1)
+        }
+
+        func pageViewController(_ pageViewController: UIPageViewController,
+                                viewControllerAfter viewController: UIViewController) -> UIViewController? {
+            neighbourHost(of: viewController, step: forwardIsBefore ? -1 : 1)
+        }
+
+        private func neighbourHost(of viewController: UIViewController, step: Int) -> UIViewController? {
+            guard let host = viewController as? PageHost,
+                  let index = parent.neighbour(host.index, step),
+                  (0..<parent.count).contains(index) else { return nil }
+            return self.host(for: index)
+        }
+
+        // MARK: Delegate
+
+        func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool,
+                                previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+            guard completed, let host = pageViewController.viewControllers?.first as? PageHost else {
+                flushPending()
+                return
+            }
+            current = host.index
+            prune(around: current)
+            #if DEBUG
+            MushafPagerProbe.trace("landed idx=\(current) hosts=\(hosts.keys.sorted())")
+            #endif
+            if parent.selection != current { parent.selection = current }
+            flushPending()
+        }
+    }
+}
+
 /// The scroll view hosting a composed mushaf page. UIScrollView never lays out its content on its own, so
 /// this keeps the text view pinned to the box SwiftUI gives the page - and resets the zoom whenever that
 /// box changes size (a rotation, a bars-fold): the page refits to the new box anyway, so a held-over
 /// magnification would be anchored to a layout that no longer exists.
 // MARK: - Page mode: the pager's rest state
 
-/// Whether the UIKit pager behind the reader's paged `TabView` is mid-turn, for the window mutations that
-/// must wait for it (`SurahPageReader.whenPagerRests`; `Docs/Quran/Mushaf Page Turn Glitch.md`). SwiftUI exposes
-/// no "transition ended" hook for a paged TabView, so the pager's own scroll view is found in the view
-/// hierarchy from a probe the reader plants behind the TabView (`MushafPagerProbeView`), and rest is read
-/// off it: no finger down, no deceleration or slide running, and the content sitting exactly on a page
-/// boundary. Main-thread only (UIKit).
+/// Whether the UIKit scroll view inside the reader's pager is mid-turn, for the programmatic turns that
+/// must wait for it (`MushafPagerView.Coordinator.show`; `Docs/Quran/Mushaf Page Turn Glitch.md`). The
+/// pager's scroll view is found in the view hierarchy from a probe the reader plants behind the pager
+/// (`MushafPagerProbeView`), and rest is read off it: no finger down, no deceleration or slide running,
+/// and the content sitting exactly on a page boundary. Main-thread only (UIKit).
 @MainActor
 final class MushafPagerProbe {
     static let shared = MushafPagerProbe()
@@ -7406,7 +7522,7 @@ final class MushafPagerProbe {
     /// controller). Found by walking up from the probe and searching each ancestor's subtree, nearest
     /// first - the probe sits beside the pager, not inside it.
     ///
-    /// Only a scroll view laid over the probe's own frame counts: the probe is the TabView's background,
+    /// Only a scroll view laid over the probe's own frame counts: the probe is the pager's background,
     /// so the pager covers exactly the same rect. Any paging scroll view used to do, and on iPad and Mac
     /// the first one found was the floating tab bar's (`_UIFloatingTabBarCollectionView`, logged
     /// 2026-09-26): the probe can land before the pager's subtree exists, the walk then climbed to the
@@ -7487,7 +7603,7 @@ final class MushafPagerProbe {
     }
 
     /// Whether a finger is on the pager or a deceleration is running, by the scroll view's own flags.
-    /// The one reading a window change may never override (`SurahPageReader.whenPagerRests`).
+    /// The one reading a programmatic turn may never override (`MushafPagerView.Coordinator.show`).
     var isMoving: Bool {
         guard let pager, pager.window != nil else { return false }
         return pager.isTracking || pager.isDragging || pager.isDecelerating
@@ -7503,20 +7619,13 @@ final class MushafPagerProbe {
     }
 
     #if DEBUG
-    /// "-windowTrace": the mounted window on every change, the pager found, and every deferred window
-    /// change with how long it waited (`log show --predicate 'eventMessage CONTAINS "WINDOWTRACE"'`).
+    /// "-windowTrace": the pager found, every host the pager creates, every page shown or landed on, and
+    /// every selection change (`log show --predicate 'eventMessage CONTAINS "WINDOWTRACE"'`).
     static let traceEnabled = ProcessInfo.processInfo.arguments.contains("-windowTrace")
-    private static var lastWindow: [Int] = []
 
     static func trace(_ message: String) {
         guard traceEnabled else { return }
         NSLog("WINDOWTRACE %@", message)
-    }
-
-    static func traceWindow(_ window: [Int], pageIndex: Int) {
-        guard traceEnabled, window != lastWindow else { return }
-        lastWindow = window
-        NSLog("WINDOWTRACE mounted=%@ idx=%d", window.description, pageIndex)
     }
 
     /// "-pagerMotion": one PAGERMOTION line per display frame while the pager moves (its offset in
@@ -7665,7 +7774,7 @@ final class PageZoomScrollView: UIScrollView {
                                                name: Self.resetZoomNotification, object: nil)
     }
 
-    /// The pager destroys page views constantly (`pageWindow`: anything outside the mounted ring
+    /// The pager destroys page views constantly (`MushafPagerView`: any host beyond its reach
     /// goes), and each one registered for `resetZoomNotification` in its init. Without this the
     /// registrations accumulated for every page ever visited: NotificationCenter zeroes its weak
     /// refs so nothing crashed, but the notification is posted on EVERY page turn, so the fan-out

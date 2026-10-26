@@ -323,12 +323,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     }()
 
     private override init() {
-        // Before any screen reads its own key: carries the legacy single Advanced switch over.
+        // Before any screen reads its own key: carries the legacy single Advanced switch over, then
+        // drops the seven per-screen switches retired on 2026-10-25.
         Settings.migrateAdvancedSettings()
+        Settings.migrateRetiredAdvancedSwitches()
         // Likewise for the grid switches: each screen keeps what it shows today.
         Settings.migrateGridModes()
         // And the one Help Shortcuts switch, which became the per-tab `helpDoorsHidden` set.
         Settings.migrateHelpShortcuts()
+        // And the three Show Last ... switches, retired on 2026-10-25: the cards are always on.
+        Settings.migrateHistoryCardSwitches()
 
         let storedAccent = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         self.accentColor = storedAccent
@@ -1248,6 +1252,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "favoriteReciterIDsData", "favoriteQiraahTagsData",
         "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
         "lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
+        // Where the page reader was left (`MushafResumePosition`): a position, like last read.
+        "mushafResumeSurah", "mushafResumeAyah",
         "quranSearchHistoryData",
         // The reading and listening histories under the Quran tab's rows.
         "quranListeningHistoryData", "quranReadingHistoryData", "quranAyahListeningHistoryData",
@@ -1318,7 +1324,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         // retired at launch (`migrateHelpShortcuts`).
         "showHelpShortcuts",
         "didAdoptMinshawiAdhanDefault", "ReciterDownloadManagerDedupeVersion", "hadithLastRead", "groupBySurah",
-        "advancedSettingsPerScreenMigrated", "gridModesPerScreenMigrated",
+        "advancedSettingsPerScreenMigrated", "advancedSwitchesTrimmed", "gridModesPerScreenMigrated", "historyCardSwitchesRemoved",
         // What was last scheduled, played or drawn here.
         "lastCalculationNotificationAt", "lastTravelingNotificationAt", "lastScheduledHijriYear",
         "extraRemindersArmedSignature", "foregroundAdhanLastPlayedMoment", "adhanClipStamps",
@@ -1343,9 +1349,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         "appReviewAskDates", "appReviewSessionCount", "timeSpent",
         // Retired keys an older build left in the domain; nothing reads them now (`arabicGridMode`: the
         // pre-4.6.0 alphabet switch the per-screen `gridModeArabicRaw` replaced; `shouldShowRateAlert`:
-        // the old review latch, migrated once by AppReview and never read again).
+        // the old review latch, migrated once by AppReview and never read again; the seven
+        // `advancedSettings_<screen>` switches of the screens that lost theirs on 2026-10-25).
         "foregroundAdhanLastPlayedID", "gridMode", "islamGridMode", "namesGridMode", "arabicGridMode",
         "shouldShowRateAlert",
+    ] + AdvancedScreen.retiredStorageKeys + [
         // Today's picks: tomorrow they are wrong anyway.
         "hijriDate", "ayahOfTheDayHiddenDate", "ayahOfTheDayOverride", "hadithOfTheDayHiddenDate", "hadithOfTheDayOverride", "hadithOfTheDayResolved",
     ]
@@ -2830,10 +2838,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         if let data = try? Self.encoder.encode(counts) { surahPlayCountsData = data }
     }
 
-    /// When off, the app neither saves nor shows the "Last Read Ayah" / "Last Listened Surah" sections.
+    /// Whether the app saves and shows the Last Read Ayah / Last Listened Surah / Last Listened Ayah
+    /// cards. Always on since 2026-10-25: their switches left Quran Settings and the cards' Delete
+    /// Forever went with them (`migrateHistoryCardSwitches` turned any that were off back on). Kept
+    /// as settings because the player, the tab, the widgets and the watch all read them.
     @Setting("saveLastReadAyah") var saveLastReadAyah: Bool = true
     @Setting("saveLastListenedSurah") var saveLastListenedSurah: Bool = true
-    /// When off, the app neither saves nor shows the "Last Listened Ayah" section.
     @Setting("saveLastListenedAyah") var saveLastListenedAyah: Bool = true
     /// When on, the Quran tab shows the daily "Ayah of the Day" card.
     @Setting("showAyahOfTheDay") var showAyahOfTheDay: Bool = true
@@ -3315,10 +3325,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     }
 
     /// The Islam tab's resources split into subject sections (Learn, Remembrance, Tools, Faith & Proofs,
-    /// Ask AI), or all of them in one ISLAMIC RESOURCES section, the default (Abu,
-    /// 2026-10-18: "add an option to not group for islamic resources ... make that default where it is
-    /// one section"). The ⋯ More menu switches it.
-    @Setting("islamGroupResources") var islamGroupResources: Bool = false
+    /// Ask AI), the default since 2026-10-26 (Abu: "by default for al islam tab group by subject"), or
+    /// all of them in one ISLAMIC RESOURCES section (the default from 2026-10-18 until then: "add an
+    /// option to not group for islamic resources ... make that default where it is one section"). The
+    /// ⋯ More menu switches it.
+    @Setting("islamGroupResources") var islamGroupResources: Bool = true
 
     var settingsGridMode: Bool {
         get { gridModeSettingsRaw != 0 }
@@ -3905,12 +3916,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
 
     /// The switch behind a settings screen's second half (Abu, 2026-09-22: "make nagging mode much
     /// simpler ... only have an option to make it more customizable ... by default should be simple,
-    /// do the same with prayer notifications and all settings in the app"), now ONE PER SCREEN
+    /// do the same with prayer notifications and all settings in the app"), ONE PER SCREEN
     /// (Abu, 2026-09-22: "dont do one general advanced settings there, do that for each one - if it
     /// needs advanced mode then show it there"). Off, that screen keeps to its essentials and ends
     /// with `AdvancedSettingsSection(screen:)`, its own switch; on, that screen shows every option
     /// and no other screen changes. The hidden options keep whatever value they hold: hiding a
     /// control never changes what the app does, only what the screen shows.
+    ///
+    /// Two screens keep one (2026-10-25, Abu: "get rid of it all except for certain places"):
+    /// Prayer Calculation and Nagging Mode, whose second halves are long and niche. The seven other
+    /// screens that had one showed everything from that day; each hid between one and five rows,
+    /// and their pages are sectioned well enough to read without a gate.
     ///
     /// `advancedSettings` is the legacy single key. It is read ONCE, as the starting value every
     /// screen's own key inherits (see `AdvancedScreen.storageKey` / `migrateAdvancedSettings`), so
@@ -3938,7 +3954,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// step (Full preselected); existing installs are never asked.
     ///
     /// The one action the switch takes (rule 9, Docs/Product/Simple Mode v2 Design.md): turning it ON
-    /// folds every settings screen's Advanced switch off (`foldAllAdvancedSettings()`), once, on the
+    /// folds both Advanced switches off (`foldAllAdvancedSettings()`), once, on the
     /// off-to-on edge. Turning it off restores nothing, and a switch turned back on while Simple Mode
     /// is on (by hand, or by search's `revealAllAdvancedSettings()`) stays on. The flip comes from a
     /// Toggle or the splash, never from a view body; a `-seedBool` launch writes the key directly and
@@ -3954,9 +3970,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     /// reciting from memory. The switch lives in both readers' play menus and on its own settings page
     /// (`QuranTestModeSettingsView`); the session state is `QuranTestMode`. These four are its options.
     ///
-    /// What it hides: `QuranTestHiding` raw value. The default hides the recitation (the Arabic and its
-    /// transliteration) and leaves the translations as the cue.
-    @Setting("quranTestModeHides") var quranTestModeHides: String = "arabic"
+    /// What it hides: `QuranTestHiding` raw value. The default hides every line of the ayah (Abu,
+    /// 2026-10-25: "hide everything by default, not just Arabic"); Arabic Only keeps the translations
+    /// as the cue.
+    @Setting("quranTestModeHides") var quranTestModeHides: String = "everything"
     /// What a tap shows: `QuranTestReveal` raw value. By default the tapped ayah and every ayah before
     /// it in its surah (Abu, 2026-10-11: "by default test mode should show that ayah and all ayahs before").
     @Setting("quranTestModeReveals") var quranTestModeReveals: String = "throughSelected"
@@ -3969,31 +3986,27 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     @Setting("quranTestModeOn") var quranTestModeStoredOn: Bool = false
 
     /// A settings screen that keeps a second half behind its own Advanced switch. Every screen that
-    /// hides nothing is simply absent from this list and carries no ADVANCED section.
+    /// hides nothing is simply absent from this list and carries no ADVANCED section. Two since
+    /// 2026-10-25; the seven screens retired that day are `retiredStorageKeys`.
     enum AdvancedScreen: String, CaseIterable, Identifiable {
-        /// Al-Adhan Settings, the prayer-times root (custom prayer names).
-        case prayerSettings
         /// Prayer Calculation (custom angles, the high latitude rule, the notes).
         case prayerCalculation
-        /// Notification Settings, the notifications root (alert tone, silent-mode adhan, date reminder).
-        case notifications
         /// Nagging Mode (repeat interval, last calls, per-prayer starts, its own tone and wording).
         case naggingMode
-        /// Al-Quran → Recitation (what happens after a surah ends).
-        case quranRecitation
-        /// Al-Quran → Reading View (surah details, daily rollover, the last cards, dividers, Keep Sheet Open).
-        case quranReadingView
-        /// Al-Quran → Arabic Text (the mark styles, the script style, Clean Arabic, the qiraah details).
-        case quranArabicText
-        /// Islam → Arabic Alphabet (the two practice switches).
-        case islamAlphabet
-        /// Islam → Libraries (the daily features' Fajr rollover).
-        case islamLibraries
 
         var id: String { rawValue }
 
         /// Its own `UserDefaults` key. Namespaced so nothing collides with the legacy single key.
         var storageKey: String { "advancedSettings_\(rawValue)" }
+
+        /// The keys of the seven switches retired on 2026-10-25 (Prayer Settings, Notifications,
+        /// Quran Recitation, Reading View and Arabic Text, Islam Alphabet and Libraries), removed once
+        /// by `migrateRetiredAdvancedSwitches` and classed device-only so a backup never carries them.
+        static let retiredStorageKeys: [String] = [
+            "advancedSettings_prayerSettings", "advancedSettings_notifications", "advancedSettings_quranRecitation",
+            "advancedSettings_quranReadingView", "advancedSettings_quranArabicText", "advancedSettings_islamAlphabet",
+            "advancedSettings_islamLibraries",
+        ]
     }
 
     /// True while `screen` is showing its second half.
@@ -4041,7 +4054,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
     }
 
     /// One-time carry-over of the legacy single switch: someone who had Advanced Settings on before
-    /// this update keeps seeing every option, on every screen, without hunting for nine switches.
+    /// this update keeps seeing every option, on both screens, without hunting for the switches.
     static func migrateAdvancedSettings() {
         let defaults = UserDefaults.standard
         let doneKey = "advancedSettingsPerScreenMigrated"
@@ -4050,6 +4063,35 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject, Set
         guard defaults.bool(forKey: "advancedSettings") else { return }
         for screen in AdvancedScreen.allCases {
             defaults.set(true, forKey: screen.storageKey)
+        }
+    }
+
+    /// One-time removal of the seven per-screen switches retired on 2026-10-25 (Abu: "get rid of it
+    /// all except for certain places"): nothing reads them, and a key nothing reads is one the backup
+    /// audit would otherwise keep asking about.
+    static func migrateRetiredAdvancedSwitches() {
+        let defaults = UserDefaults.standard
+        let doneKey = "advancedSwitchesTrimmed"
+        guard !defaults.bool(forKey: doneKey) else { return }
+        defaults.set(true, forKey: doneKey)
+        for key in AdvancedScreen.retiredStorageKeys {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    /// One-time retirement of the Show Last Listened Surah / Ayah and Show Last Read Ayah switches
+    /// (Abu, 2026-10-25: "get rid of all of those settings, too many things"). The cards are always on
+    /// now and nothing on screen can turn them off, so a switch somebody had off, or a card they had
+    /// deleted "forever" from its menu, comes back once; left off, it would have stayed off with no
+    /// way back. The keys stay (`saveLastReadAyah` and the two listen keys): the player, the tab and
+    /// the widgets still read them, and the watch still receives them.
+    static func migrateHistoryCardSwitches() {
+        let defaults = UserDefaults.standard
+        let doneKey = "historyCardSwitchesRemoved"
+        guard !defaults.bool(forKey: doneKey) else { return }
+        defaults.set(true, forKey: doneKey)
+        for key in ["saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah"] {
+            defaults.removeObject(forKey: key)
         }
     }
 

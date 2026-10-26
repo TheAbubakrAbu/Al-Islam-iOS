@@ -233,7 +233,6 @@ struct SimilarAyahsSheet: View {
                             } else {
                                 Section(footer:
                                     Text("Phrases this ayah shares word for word with others, longest first, from the Quranic Universal Library's Mutashabihat ul Quran. Open one to read every occurrence side by side.")
-                                        .font(.caption2)
                                 ) {
                                     MutashabihatRows(surahNumber: surahNumber, ayahNumber: ayahNumber, phrases: list)
                                 }
@@ -256,7 +255,7 @@ struct SimilarAyahsSheet: View {
                             }
                         }
                     }
-                    .applyConditionalListStyle(disableNowPlayingInset: true)
+                    .applyConditionalListStyle()
                     // The Similar / Phrases switch is pinned under the bar rather than being the
                     // list's first row: both lists run long, and switching between them should
                     // never mean scrolling back up (the tafsir sheet's rule, Abu 2026-09-28).

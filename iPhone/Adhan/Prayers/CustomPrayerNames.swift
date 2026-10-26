@@ -19,19 +19,15 @@ struct CustomPrayerNamesSection: View {
     }
 
     var body: some View {
-        Section(header: Text("CUSTOM PRAYER NAMES")) {
+        Section(header: Text("CUSTOM PRAYER NAMES"),
+                footer: Text("Renaming a prayer only changes how it is displayed: in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")) {
             ForEach(Settings.renameablePrayerNames, id: \.self) { prayer in
                 row(for: prayer)
             }
-
-            Text("Renaming a prayer only changes how it is displayed: in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
         }
 
         if hasAnyCustomName {
-            Section {
+            Section(header: Text("RESET")) {
                 Button(role: .destructive) {
                     settings.hapticFeedback()
                     focusedPrayer = nil
@@ -39,7 +35,6 @@ struct CustomPrayerNamesSection: View {
                     withAnimation { settings.customPrayerNames = [:] }
                 } label: {
                     Text("Reset to Default Names")
-                        .font(.subheadline)
                         .frame(maxWidth: .infinity)
                 }
             }

@@ -486,7 +486,6 @@ struct PrayerList: View {
     private func optionalPrayerToggle(_ label: String, isOn: Binding<Bool>) -> some View {
         Toggle(isOn: isOn.animation(.easeInOut)) {
             Text(label)
-                .font(.subheadline)
         }
         .tint(settings.accentColor.accent2)
         .padding(.vertical, 4)
@@ -928,7 +927,7 @@ struct PrayerList: View {
             // was squeezed to one letter per line: it gets its own line above the stepper there.
             // In Arabic too: a long date in the picker (a Hijri date) left the label beside it a column one
             // word wide. English keeps the row below, as it always had.
-            if dynamicTypeSize.isAccessibilitySize || AppLanguage.isArabic {
+            if dynamicTypeSize.isAccessibilitySize || AppLanguage.isArabicScript {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Showing prayers for")
                         .fixedSize(horizontal: false, vertical: true)
@@ -1416,7 +1415,7 @@ private struct PrayerDetailBlock: View {
     /// "Dhuhr (الظُهر): ". In an Arabic interface the name already IS the Arabic one ("الظهر (الظُهر)" said it
     /// twice), so it stands alone there; a custom Latin name keeps its Arabic beside it.
     private func componentLabel(_ component: (name: String, arabic: String, time: Date)) -> Text {
-        if AppLanguage.isArabic, component.name.isMostlyArabicScript {
+        if AppLanguage.isArabicScript, component.name.isMostlyArabicScript {
             return Text(verbatim: "\(component.name): ")
         }
         return Text("\(component.name) (\(component.arabic)): ")

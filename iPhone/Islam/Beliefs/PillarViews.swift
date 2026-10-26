@@ -812,10 +812,12 @@ struct SunnahPillarView: View {
                 }
 
                 Section(header: ArticleHeader("RESOURCES")) {
+                    // His daily practice, one sunnah to a page (2026-10-26): the library this
+                    // article's examples come from.
+                    ArticleDoorRow(door: .library(.sunnahsOfProphet))
                     Text(verbatim: "You can view Hadith collections here: https://sunnah.com/")
                         .font(.caption)
                 }
-
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("Preserved through authentic Hadith, the Sunnah shows a Muslim how to live the Quran in daily life, and holding to it is part of obeying Allah.")

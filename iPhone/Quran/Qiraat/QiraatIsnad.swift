@@ -362,7 +362,7 @@ enum QiraatIsnad {
         func path(_ names: [String]) -> String {
             let shown = names.map(\.localizedDisplay)
             // Arabic lists take its own comma ("، "), never the Latin one.
-            let comma = AppLanguage.isArabic ? "\u{060C} " : ", "
+            let comma = AppLanguage.isArabicScript ? "\u{060C} " : ", "
             return shown.count == 1 ? shown[0] : String(localized: "\(shown.dropLast().joined(separator: comma)) and then \(shown.last!)")
         }
         let above = " " + String(localized: "Above \(master.id.localizedDisplay) the chain is one, running through his teachers to the Companions and to the Prophet ﷺ.")
@@ -379,7 +379,7 @@ enum QiraatIsnad {
             names.isEmpty ? String(localized: "\(narrator.name.localizedDisplay) read on \(master.id.localizedDisplay) himself")
                 : String(localized: "\(narrator.name.localizedDisplay) did not meet him, and received it through \(path(names))")
         }
-        let roadList = roads.joined(separator: AppLanguage.isArabic ? "\u{061B} " : "; ")
+        let roadList = roads.joined(separator: AppLanguage.isArabicScript ? "\u{061B} " : "; ")
         return String(localized: "The reading of \(master.id.localizedDisplay) reached its two narrators by two roads: \(roadList).") + above
     }
 

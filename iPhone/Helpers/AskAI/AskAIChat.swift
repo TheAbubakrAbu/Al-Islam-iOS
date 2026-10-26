@@ -766,7 +766,7 @@ private struct AskAISourceCard: View {
     /// `source.title` itself stays as written: the model read it and the transcript stores it.
     private var displayTitle: String {
         #if HAS_QURAN
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             switch source.kind {
             case .ayah(let surahID, let ayahID):
                 if let surah = QuranData.shared.surah(surahID) { return "\(surah.displayName) \(surahID):\(ayahID)".localizedDigits }

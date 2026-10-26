@@ -125,7 +125,7 @@ struct NameShareSheet: View {
         }
         if flag("shareNameOtherNames", default: false), !name.otherNames.isEmpty {
             // The Arabic sentence takes the Arabic comma ("،"), not a Latin ", ".
-            parts.append(String(localized: "Other Names: \(name.otherNames.joined(separator: AppLanguage.isArabic ? "، " : ", "))"))
+            parts.append(String(localized: "Other Names: \(name.otherNames.joined(separator: AppLanguage.isArabicScript ? "، " : ", "))"))
         }
         // The First Found entries are Quran references; apps without the Quran have none.
         #if HAS_QURAN

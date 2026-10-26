@@ -85,7 +85,10 @@ struct DuaItem: Identifiable, Sendable {
             if english.isEmpty { english = text.english }
         case let .shelf(link, arabicRanges, englishRanges):
             guard let parsed = HadithQuoteReference(link), let row = HadithQuoteSource.read(parsed) else { return self }
-            arabic = WordRange.words(row.arabic, arabicRanges)
+            // A dua is recited from the page: a narrator's aside in the middle of it ("or he said ...",
+            // which the shelf sets between dashes) goes in parentheses, so the reader knows those
+            // words are not theirs to say. The words themselves are the shelf's, untouched.
+            arabic = WordRange.parenthesizingAsides(WordRange.words(row.arabic, arabicRanges))
             english = englishRanges.map { WordRange.tidiedSentence(WordRange.words(row.text, $0)) }
                 .filter { !$0.isEmpty }
                 .joined(separator: " \u{2026} ")
@@ -517,23 +520,17 @@ struct DuaView: View {
                 Section(header: Text("HISN AL-MUSLIM"),
                         footer: Text("Many of the duas above also appear here. The collections are a short set for everyday situations; Hisn al-Muslim is the complete book, with its own chapters, references and recitations.")) {
                     NavigationLink(destination: LazyDestination { HisnDuaLibraryView() }) {
-                        HStack(spacing: 12) {
-                            AccentIconChip(systemImage: "shield.lefthalf.filled")
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Fortress of the Muslim")
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(.primary)
-                                Text(String(localized: "268 duas for 132 situations, with references and recitations").localizedDigits)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            Spacer(minLength: 8)
-                            Text("حِصنُ المُسلِمِ")
-                                .font(.custom(settings.nonQuranArabicFontName, size: 16))
-                                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                                .foregroundStyle(settings.accentColor.color)
-                        }
+                        SettingsRowLabel(
+                            title: String(localized: "Fortress of the Muslim"),
+                            systemImage: "shield.lefthalf.filled",
+                            subtitle: String(localized: "268 duas for 132 situations").localizedDigits,
+                            accessory: AnyView(
+                                Text("حِصنُ المُسلِمِ")
+                                    .font(.custom(settings.nonQuranArabicFontName, size: 16))
+                                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                    .foregroundStyle(settings.accentColor.color)
+                            )
+                        )
                     }
                 }
             }
@@ -571,37 +568,18 @@ struct DuaView: View {
                                 DuaCollectionView(collection: collection)
                             }
                         } label: {
-                            // The Islam tab's resource-row grammar: an accent chip for the icon, the
-                            // title and its one-line subtitle, and the collection's size as a count
-                            // pill - so the shelf reads as a set of books rather than a plain menu.
-                            HStack(spacing: 12) {
-                                AccentIconChip(systemImage: collection.systemImage)
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    // Title and subtitle are the collection's English DATA (its id, its
-                                    // search text, the on-device model's source line): translated here only.
-                                    Text(collection.displayTitle)
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(.primary)
-
-                                    Text(collection.subtitle.localizedDisplay)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
-
-                                Spacer(minLength: 8)
-
-                                Text("\(collection.items.count)")
-                                    .font(.caption.weight(.semibold))
-                                    .monospacedDigit()
-                                    .foregroundStyle(settings.accentColor.color)
-                                    .padding(.horizontal, 9)
-                                    .padding(.vertical, 4)
-                                    .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
-                                    .hiddenInSimple(.sectionCounts)
-                            }
-                            .padding(.vertical, 3)
+                            // The app's door row: an accent chip for the icon, the title and its
+                            // subtitle, and the collection's size as the count pill every counted row
+                            // wears - so the shelf reads as a set of books rather than a plain menu.
+                            // Title and subtitle are the collection's English DATA (its id, its search
+                            // text, the on-device model's source line): translated here only.
+                            SettingsRowLabel(
+                                title: collection.displayTitle,
+                                systemImage: collection.systemImage,
+                                subtitle: collection.subtitle.localizedDisplay,
+                                accessory: AnyView(CountPill(count: collection.items.count)),
+                                subtitleLineLimit: 2
+                            )
                         }
                         .id(Self.collectionRowID(collection))
                         #if os(iOS)
@@ -1277,7 +1255,7 @@ final class HisnDuasStore: @unchecked Sendable {
 
         /// The label as the reader sees it: the book's own Arabic chapter title in the Arabic
         /// interface (as the Today screen shows it). `label` stays the English data.
-        var displayLabel: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : label.localizedDisplay }
+        var displayLabel: String { AppLanguage.isArabicScript && !arabic.isEmpty ? arabic : label.localizedDisplay }
     }
 
     struct Collection: Identifiable {
@@ -1290,7 +1268,7 @@ final class HisnDuasStore: @unchecked Sendable {
         let categoryNumbers: [String]
 
         /// The label as the reader sees it (`Category.displayLabel`'s rule).
-        var displayLabel: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : label.localizedDisplay }
+        var displayLabel: String { AppLanguage.isArabicScript && !arabic.isEmpty ? arabic : label.localizedDisplay }
 
         /// The shelf's SF symbol (the pack carries Tilawa's icon keys).
         var systemImage: String {
@@ -1607,27 +1585,13 @@ struct HisnDuaLibraryView: View {
                         Section(header: SectionPillHeader(title: String(localized: "THROUGH THE DAY"), count: library.collections.count)) {
                             ForEach(library.collections) { shelf in
                                 NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: shelf, library: library)) }) {
-                                    HStack(spacing: 12) {
-                                        AccentIconChip(systemImage: shelf.systemImage)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(shelf.displayLabel)
-                                                .font(.body.weight(.medium))
-                                            // The Arabic title once, in the Arabic interface.
-                                            if shelf.displayLabel != shelf.arabic {
-                                                Text(shelf.arabic)
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                            }
-                                        }
-                                        Spacer(minLength: 8)
-                                        Text("\(shelf.entryIDs.count)")
-                                            .font(.caption.weight(.semibold).monospacedDigit())
-                                            .foregroundStyle(accent)
-                                            .padding(.horizontal, 9)
-                                            .padding(.vertical, 4)
-                                            .background(Capsule().fill(accent.opacity(0.12)))
-                                            .hiddenInSimple(.sectionCounts)
-                                    }
+                                    // The Arabic title once: in the Arabic interface it IS the title.
+                                    SettingsRowLabel(
+                                        title: shelf.displayLabel,
+                                        systemImage: shelf.systemImage,
+                                        subtitle: shelf.displayLabel != shelf.arabic ? shelf.arabic : nil,
+                                        accessory: AnyView(CountPill(count: shelf.entryIDs.count))
+                                    )
                                 }
                             }
                         }
@@ -1690,7 +1654,6 @@ struct HisnDuaLibraryView: View {
                     if query.isEmpty {
                         Section(footer:
                             Text("Hisn al-Muslim texts and references from the islamic.app Dhikr API; recitations by hisnmuslim.com. Ported from the Tilawa app by Jamil Hammoudeh, with permission.")
-                                .font(.caption2)
                         ) { EmptyView() }
                     }
                 } else {

@@ -46,7 +46,7 @@ enum CloudManifest {
         "THEfontArabic", "acceptedBetaQiraatNotice", "adhanAutoPlayInApp", "adhanNotificationSound", "adhanOverridesSilentMode",
         "adhanSoundAsr", "adhanSoundDhuhr", "adhanSoundFajr", "adhanSoundIsha", "adhanSoundMaghrib",
         "alIslamGlow", "alertToneSound", "arabicFilterMode", "arabicLetterSizeIndex",
-        "arabicShelfAxisQualities", "arabicShelfAxisRules", "askAIEngine",
+        "arabicShelfAxisPlace", "arabicShelfAxisQualities", "arabicShelfAxisRules", "askAIEngine",
         "automaticKhatmCompletion", "ayahPreviewCardScale", "ayahSheetKeepsScreenOn", "beginnerMode", "betaQiraatEnabled",
         "calculationAutomatic", "classicLook", "classicLookInLowPower", "cleanArabicText",
         "colorSchemeString", "confirmedMinshawiAyahFallbackReciterIDs", "copyAyahArabic",

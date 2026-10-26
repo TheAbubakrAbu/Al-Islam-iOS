@@ -158,7 +158,7 @@ struct QiraatExplorerView: View {
     /// "Hafs an Asim", "Warsh an Nafi": the pickers' names without Hafs's "(default)".
     private func fullName(_ tag: String) -> String {
         // The Arabic interface names it in Arabic (`displayLabel`).
-        if AppLanguage.isArabic { return Settings.Riwayah.option(for: tag).displayLabel(omitsDefaultSuffix: true) }
+        if AppLanguage.isArabicScript { return Settings.Riwayah.option(for: tag).displayLabel(omitsDefaultSuffix: true) }
         return tag.isEmpty ? "Hafs an Asim" : Settings.Riwayah.option(for: tag).label
     }
 
@@ -648,11 +648,10 @@ struct QiraatExplorerView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "text.alignright")
-                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(accent)
                         .frame(width: 24)
+                        .accessibilityHidden(true)
                     Text("Each Riwayah's Whole Ayah")
-                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(.primary)
                     Spacer(minLength: 8)
                     Text("\(place.sides.count)")
@@ -696,7 +695,7 @@ struct QiraatExplorerView: View {
                 Text(option.arabic)
                     .font(.caption)
                     .foregroundColor(accent)
-                betaBadge(option)
+                if option.beta { BetaBadge() }
             }
             if let resolved = side?.resolved, let note = QiraahAyahResolver.numberNote(resolved) {
                 Text(note)
@@ -713,18 +712,6 @@ struct QiraatExplorerView: View {
     }
 
     @ViewBuilder
-    private func betaBadge(_ option: Settings.Riwayah.Option) -> some View {
-        if option.beta {
-            Text("BETA")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.orange.opacity(0.15), in: Capsule())
-        }
-    }
-
-    @ViewBuilder
     private func moreSection(hasReference: Bool) -> some View {
         Section {
             // The reference is keyed by the Hafs number; the page's preview card wants the reader's own
@@ -733,9 +720,8 @@ struct QiraatExplorerView: View {
                 NavigationLink(destination: LazyDestination {
                     AyahQiraatVariantsView(surah: surah, ayah: ayah, hafsAyahs: hafsAyah...hafsAyah)
                 }) {
-                    Label("All Readings and Notes", systemImage: "text.book.closed")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(accent)
+                    SettingsRowLabel(title: String(localized: "All Readings and Notes"), systemImage: "text.book.closed",
+                                     subtitle: String(localized: "Every reading of this ayah with its notes"))
                 }
             }
             if lockedCount > 0 {
@@ -743,22 +729,16 @@ struct QiraatExplorerView: View {
                     Settings.shared.hapticFeedback()
                     showUnlock = true
                 } label: {
-                    HStack(spacing: 10) {
-                        Label("Compare All 20 Riwayat", systemImage: "flask")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(accent)
-                        Spacer(minLength: 8)
-                        Text("\(enabledTags.count + 1) of \(Settings.Riwayah.allOptions.count) now")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
+                    SettingsRowLabel(title: String(localized: "Compare All 20 Riwayat"), systemImage: "flask",
+                                     value: String(localized: "\(enabledTags.count + 1) of \(Settings.Riwayah.allOptions.count) now"))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
+        } header: {
+            Text("MORE")
         } footer: {
             Text("Each riwayah's words come from its printed mushaf, lined up with Hafs word by word. Meanings and transliterations are from the Quran.com qiraat reference.")
-                .font(.caption2)
         }
     }
 
@@ -844,7 +824,7 @@ struct QiraatExplorerView: View {
                 Text(option.arabic)
                     .font(.caption)
                     .foregroundColor(accent)
-                betaBadge(option)
+                if option.beta { BetaBadge() }
             }
             if let resolved = duel.resolved(tag), let note = QiraahAyahResolver.numberNote(resolved) {
                 Text(note)

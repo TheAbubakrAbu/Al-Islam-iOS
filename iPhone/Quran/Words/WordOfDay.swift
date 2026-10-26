@@ -430,10 +430,9 @@ struct WordOfDayDetailView: View {
 
             Section(footer:
                 Text("The count is of this exact written form; other forms of the same root are listed under its root above. Curated with Tilawa; the gloss is Quran.com's word-by-word English.")
-                    .font(.caption2)
             ) { EmptyView() }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         .navigationTitle("Word of the Day")
         .navigationBarTitleDisplayMode(.inline)
         .task { await derive() }

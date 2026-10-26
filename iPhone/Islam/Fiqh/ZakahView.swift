@@ -443,21 +443,12 @@ struct ZakahCalculatorView: View {
     private var fitrDoorSection: some View {
         Section {
             NavigationLink(destination: LazyDestination { ZakatAlFitrView() }) {
-                HStack(spacing: 12) {
-                    AccentIconChip(systemImage: "takeoutbag.and.cup.and.straw", size: 30)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Zakat al-Fitr")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-
-                        Text("The Eid obligation, given as food, worked out per person, not on wealth.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(.vertical, 2)
+                SettingsRowLabel(
+                    title: String(localized: "Zakat al-Fitr"),
+                    systemImage: "takeoutbag.and.cup.and.straw",
+                    subtitle: String(localized: "The Eid obligation, given as food, worked out per person, not on wealth."),
+                    subtitleLineLimit: 2
+                )
             }
         }
     }

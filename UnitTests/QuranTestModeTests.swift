@@ -34,6 +34,16 @@ final class QuranTestModeTests: XCTestCase {
         try await super.tearDown()
     }
 
+    /// The default hides every line (Abu, 2026-10-25: "hide everything by default, not just Arabic"), and an
+    /// unknown stored value falls back to the same.
+    func testDefaultHidesEverything() {
+        UserDefaults.standard.removeObject(forKey: "quranTestModeHides")
+        XCTAssertEqual(settings.quranTestHiding, .everything, "a fresh install hides everything")
+        XCTAssertEqual(QuranTestHiding.allCases.first, .everything, "the picker leads with the default")
+        settings.quranTestModeHides = "something else"
+        XCTAssertEqual(settings.quranTestHiding, .everything, "an unknown value falls back to everything")
+    }
+
     func testOffHidesNothing() {
         XCTAssertFalse(mode.isHidden(surah: 112, ayah: 1))
         XCTAssertNil(mode.veil(surah: 112, ayah: 1))

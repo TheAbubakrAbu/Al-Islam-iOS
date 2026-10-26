@@ -238,7 +238,7 @@ struct RiwayahDifferencesSection: View {
 
                 NavigationLink(destination: LazyDestination { QiraatExplorerView(surahWalk: tag) }) {
                     Label("Step through every place \(name) differs from Hafs", systemImage: "arrow.left.and.right.text.vertical")
-                        .font(.subheadline.weight(.medium))
+                        .font(.body)
                         .foregroundColor(appearance.accent)
                 }
             }

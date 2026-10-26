@@ -146,21 +146,22 @@ struct HijriDate: Identifiable, Codable {
 
 extension HijriDate {
     /// The Hijri date where there is room for ONE line (the watch): the Arabic date in an Arabic
-    /// interface, the English one otherwise.
+    /// interface, the English one otherwise. The Arabic is formatted with Arabic-Indic digits, so it takes
+    /// the locale's here, as every other number on screen does (Western on an `ar_US` or `ur_PK` phone).
     var interfaceLine: String {
-        AppLanguage.isArabic ? arabic : english
+        AppLanguage.isArabicScript ? arabic.localizedDigits : english
     }
 
     /// The line printed beside (or above) the Arabic Hijri date. English: the English Hijri date, as
     /// always. Arabic: the Arabic date already says the Hijri day, and its English twin was a
     /// transliteration ("Jumada I 13, 1448 AH"), so the line carries today's Gregorian date instead.
     var companionLine: String {
-        AppLanguage.isArabic ? Self.gregorianFormatter.string(from: Date()) : english
+        AppLanguage.isArabicScript ? Self.gregorianFormatter.string(from: Date()) : english
     }
 
     /// What "Copy" puts on the pasteboard for `companionLine`'s row.
     var companionCopyTitle: String {
-        AppLanguage.isArabic ? String(localized: "Copy Gregorian Date") : String(localized: "Copy English Date")
+        AppLanguage.isArabicScript ? String(localized: "Copy Gregorian Date") : String(localized: "Copy English Date")
     }
 
     /// Today in the Gregorian calendar, in the interface's language. The calendar is set explicitly: a
@@ -212,7 +213,7 @@ extension Text {
 /// the catalog writes the middle dot as a bullet in Arabic, and a line built outside it should match.
 enum JoinSeparator {
     /// " · ", or " • " in Arabic.
-    static var dot: String { AppLanguage.isArabic ? " • " : " · " }
+    static var dot: String { AppLanguage.isArabicScript ? " • " : " · " }
 }
 
 /// A count and its unit as ONE localized phrase ("**12** days"), for a tile that draws the number large and

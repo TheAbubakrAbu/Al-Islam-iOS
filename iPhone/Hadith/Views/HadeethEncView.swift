@@ -28,7 +28,7 @@ struct HadeethEncCategory: Identifiable, Hashable {
     let total: Int
 
     /// The topic's name as a title: its Arabic name in the Arabic interface, the English one otherwise.
-    var displayName: String { AppLanguage.isArabic && !arabic.isEmpty ? arabic : english }
+    var displayName: String { AppLanguage.isArabicScript && !arabic.isEmpty ? arabic : english }
 }
 
 /// One narration as the lists show it: the header's light row (the English title, intro, grade and
@@ -787,7 +787,7 @@ private struct HadeethEncCategoryRow: View {
                 Text(category.displayName)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(2)
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(category.arabic)
                         .font(appearance.useFontArabic
                               ? Font.arabic(appearance.islamArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)

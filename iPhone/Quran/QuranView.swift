@@ -512,13 +512,7 @@ struct QuranView: View {
     /// "ASK AI" with the sparkles glyph, in the header gray: a search section, not one of yours
     /// (`SectionIconHeader.accentTitle`'s rule).
     private var askAIHeader: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-
-            Text("ASK AI")
-
-            Spacer()
-        }
+        SectionIconHeader(String(localized: "ASK AI"), icon: "sparkles")
     }
 
     /// The Ask AI entry as ONE section pinned ABOVE the surah results - ALWAYS present while searching
@@ -3082,16 +3076,8 @@ struct QuranView: View {
     /// sizes, an iPad sidebar), the pill drops under the title, which beside it had room only for
     /// "YOUR / SUM- / MARY".
     private var summaryHeader: some View {
-        AdaptiveSectionHeader(forceStacked: dynamicTypeSize.isAccessibilitySize) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(settings.accentColor.color)
-                    .accessibilityHidden(true)
-                Text("YOUR SUMMARY")
-                    .foregroundStyle(settings.accentColor.color)
-                    .accessibilityAddTraits(.isHeader)
-            }
-        } controls: {
+        SectionHeaderLine(String(localized: "YOUR SUMMARY"), icon: "sparkles", accentTitle: true,
+                          forceStacked: dynamicTypeSize.isAccessibilitySize) {
             // Everything of the day on one screen (2026-09-16): the door every daily card carries.
             // Simple Mode moves it into the More menu (Today).
             if !settings.hides(.quranTodayPill) {
@@ -3903,15 +3889,9 @@ struct QuranView: View {
                 .padding(.vertical, 2)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle("Automatically Mark Ayahs", isOn: $quranDisplay.automaticKhatmCompletion.animation(.easeInOut))
-                    .font(.subheadline)
-
-                Text("When on, ayahs are marked as completed as soon as they appear while you read. Turn this off to mark ayahs only when you tap them.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
-            }
+            SettingsToggle(String(localized: "Automatically Mark Ayahs"),
+                           caption: String(localized: "When on, ayahs are marked as completed as soon as they appear while you read. Turn this off to mark ayahs only when you tap them."),
+                           isOn: $quranDisplay.automaticKhatmCompletion)
 
             VStack {
                 HStack(alignment: .firstTextBaseline) {
@@ -4326,19 +4306,7 @@ struct QuranView: View {
     @ViewBuilder
     private func surahSectionHeader(context: SearchDisplayContext) -> some View {
         if context.isSearching {
-            HStack {
-                SectionIconHeader(String(localized: "SURAH SEARCH RESULTS"), icon: "magnifyingglass")
-
-                Spacer()
-
-                Text("\(context.filteredSurahs.count)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-                    .padding(.vertical, -16)
-            }
+            SectionPillHeader(title: String(localized: "SURAH SEARCH RESULTS"), count: context.filteredSurahs.count, icon: "magnifyingglass")
         } else {
             SurahsHeader()
         }
@@ -4934,7 +4902,7 @@ struct QuranView: View {
                                         .leftToRightContent(topic.displaysEnglish)
                                     // The category is English pack data: in Arabic the line is the translated
                                     // domain alone, on the English title's edge, not "الموضوعات › Allah".
-                                    Text(AppLanguage.isArabic
+                                    Text(AppLanguage.isArabicScript
                                          ? topic.domain.localizedDisplay
                                          : [topic.domain, topic.category].filter { !$0.isEmpty }.joined(separator: " › "))
                                         .font(.caption)
@@ -5143,27 +5111,17 @@ struct QuranView: View {
     /// better-ranked one stands for both, or the list shows the same name twice. English is untouched.
     #if os(iOS)
     private static func onePerShownName(_ topics: [ThemeTopic]) -> [ThemeTopic] {
-        guard AppLanguage.isArabic else { return topics }
+        guard AppLanguage.isArabicScript else { return topics }
         var seen = Set<String>()
         return topics.filter { seen.insert($0.displayName).inserted }
     }
     #endif
 
+    /// A search result header with its count (or a read-out such as "Page 2 • 7 Ayahs") as the pill:
+    /// the Hadith tab's result headers, to the pixel, since 2026-10-26.
     private func pageSearchHeader(title: String, valueText: String) -> some View {
-        HStack {
-            Text(title)
-
-            Spacer()
-
-            Text(valueText.localizedDigits)
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
-        }
+        SectionPillHeader(title: title, count: Int(valueText) ?? 0, icon: "magnifyingglass",
+                          countText: Int(valueText) == nil ? valueText : nil)
     }
 
     @ViewBuilder
@@ -5444,20 +5402,7 @@ struct QuranView: View {
     #endif
 
     private func bestAyahHeader(count: Int) -> some View {
-        HStack {
-            Text("TOP AYAH RESULTS")
-
-            Spacer()
-
-            Text(String(count).localizedDigits)
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
-        }
+        SectionPillHeader(title: String(localized: "TOP AYAH RESULTS"), count: count, icon: "magnifyingglass")
     }
 
     /// How many ranked ayahs the top section shows.
@@ -5499,20 +5444,8 @@ struct QuranView: View {
     }
 
     private func rankedMainHeader(shown: Int, total: Int) -> some View {
-        HStack {
-            Text("AYAHS BY BEST MATCH")
-
-            Spacer()
-
-            Text(shown < total ? "\(shown) of \(total)" : "\(total)")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
-        }
+        SectionPillHeader(title: String(localized: "AYAHS BY BEST MATCH"), count: total, icon: "magnifyingglass",
+                          countText: shown < total ? String(localized: "\(shown) of \(total)") : nil)
     }
 
     /// The TOP AYAH RESULTS: the ranked lane's best, shown only when it adds something over the
@@ -5549,7 +5482,7 @@ struct QuranView: View {
     @ViewBuilder
     private func surahSearchSectionHeader(surahId: Int, matchCount: Int? = nil) -> some View {
         Group {
-            if let s = quranData.surah(surahId), AppLanguage.isArabic {
+            if let s = quranData.surah(surahId), AppLanguage.isArabicScript {
                 // The Arabic name once: no transliteration and no English meaning beside it.
                 HStack(spacing: 6) {
                     Text("\(s.id). \(s.displayName)")

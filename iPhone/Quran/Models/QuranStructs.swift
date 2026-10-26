@@ -25,7 +25,7 @@ struct Juz: Codable, Identifiable, Equatable {
     /// The name a reader sees: the Arabic name in an Arabic interface (cleaned like the juz headers
     /// draw it), the transliteration otherwise. Display only, like `Surah.displayName`.
     var displayName: String {
-        AppLanguage.isArabic ? Surah.arabicLabel(nameArabic) : nameTransliteration
+        AppLanguage.isArabicScript ? Surah.arabicLabel(nameArabic) : nameTransliteration
     }
 }
 

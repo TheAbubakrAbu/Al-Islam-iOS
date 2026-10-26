@@ -244,6 +244,10 @@ enum TipCatalog {
 
     /// The app's name in a tip: الإسلام on an Arabic screen, Al-Islam to Ask AI.
     private static let app = InterfaceText(display: AppIdentifiers.displayName, english: AppIdentifiers.appName)
+    /// The app's name inside a phrase said to Siri. Siri has no Urdu: an Urdu screen quotes the phrases in
+    /// English, the language Siri runs in there, so the name is the one Siri hears, Al-Islam.
+    private static let siriApp = InterfaceText(display: AppLanguage.isUrdu ? AppIdentifiers.appName : AppIdentifiers.displayName,
+                                               english: AppIdentifiers.appName)
     private static var hasAppleIntelligence: Bool { OnDeviceAsk.isAvailable }
     private static var hasLiquidGlass: Bool {
         if #available(iOS 26.0, *) { return true }
@@ -443,7 +447,7 @@ enum TipCatalog {
         AppTip(id: "adhan.names", area: .adhan, group: InterfaceText("TRAVEL AND CALCULATION"), systemImage: "character.cursor.ibeam",
                title: InterfaceText("Call the prayers what you call them"),
                detail: InterfaceText("Custom Prayer Names renames any prayer everywhere at once: the app, its notifications, the widgets, and the Apple Watch."),
-               place: InterfaceText("Prayer Settings, Custom Prayer Names"), destination: .prayerPage(.customPrayerNames), advanced: true, card: (InterfaceText("Custom Prayer Names"), InterfaceText("Call the prayers what you call them, everywhere at once."))),
+               place: InterfaceText("Prayer Settings, Custom Prayer Names"), destination: .prayerPage(.customPrayerNames), card: (InterfaceText("Custom Prayer Names"), InterfaceText("Call the prayers what you call them, everywhere at once."))),
         AppTip(id: "adhan.offsets", area: .adhan, group: InterfaceText("TRAVEL AND CALCULATION"), systemImage: "slider.horizontal.3",
                title: InterfaceText("Follow your mosque's clock"),
                detail: InterfaceText("Manual Offsets move any prayer by up to 190 minutes either way, and the Hijri date by up to three days."),
@@ -455,7 +459,7 @@ enum TipCatalog {
 
         AppTip(id: "adhan.siri", area: .adhan, group: InterfaceText("BEYOND THE APP"), systemImage: "mic.fill",
                title: InterfaceText("Ask Siri"),
-               detail: InterfaceText { "\u{201C}When is Asr in \(app[$0])\u{201D}, \u{201C}Current prayer in \(app[$0])\u{201D}, and \u{201C}Next prayer in \(app[$0])\u{201D} are answered aloud without opening the app." },
+               detail: InterfaceText { "\u{201C}When is Asr in \(siriApp[$0])\u{201D}, \u{201C}Current prayer in \(siriApp[$0])\u{201D}, and \u{201C}Next prayer in \(siriApp[$0])\u{201D} are answered aloud without opening the app." },
                place: InterfaceText("Siri and Shortcuts"), isAvailable: { hasSiriShortcuts }),
         AppTip(id: "adhan.widgets", area: .adhan, group: InterfaceText("BEYOND THE APP"), systemImage: "rectangle.3.group.fill",
                title: InterfaceText("Widgets with a sky"),
@@ -510,7 +514,7 @@ enum TipCatalog {
         AppTip(id: "notif.alerttone", area: .notifications, group: InterfaceText("THE ADHAN"), systemImage: "waveform",
                title: InterfaceText("A tone for being told, not called"),
                detail: InterfaceText("The Alert Tone plays for everything that is not a call to prayer: prenotifications, Shurooq, the optional times, and prayers whose adhan is off. Echo and Takbir are soft; Chime, Ring, and Alarm are made to carry through noise."),
-               place: InterfaceText("Notifications"), destination: .notifications, advanced: true),
+               place: InterfaceText("Notifications"), destination: .notifications),
 
         AppTip(id: "notif.meanings", area: .notifications, group: InterfaceText("WORDING AND DATES"), systemImage: "textformat",
                title: InterfaceText("Say what the names mean"),
@@ -519,7 +523,7 @@ enum TipCatalog {
         AppTip(id: "notif.daybefore", area: .notifications, group: InterfaceText("WORDING AND DATES"), systemImage: "calendar.badge.exclamationmark",
                title: InterfaceText("Never surprised by Ramadan"),
                detail: InterfaceText("Remind a Day Before sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting do not arrive unannounced."),
-               place: InterfaceText("Notifications"), destination: .notifications, advanced: true),
+               place: InterfaceText("Notifications"), destination: .notifications),
     ] + sunnahReminderTips + [
         AppTip(id: "notif.focus", area: .notifications, group: InterfaceText("WORDING AND DATES"), systemImage: "moon.zzz.fill",
                title: InterfaceText("Through a Focus, if you allow it"),
@@ -610,7 +614,7 @@ enum TipCatalog {
         AppTip(id: "quran.keepopen", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "rectangle.stack",
                title: InterfaceText("Keep the actions open"),
                detail: InterfaceText("With Keep Sheet Open on, tafsir and the other tools open on top of an ayah's actions instead of replacing them, so you come back to where you were. Keep Sheet Open While Playing, in the actions themselves, leaves them up while Play This Ayah, Play From Ayah or Repeat Ayah recites, and Keep Screen On stops the screen from sleeping while they are open."),
-               place: InterfaceText("Quran Settings, Reading View"), destination: .quranPage(.readingView), advanced: true),
+               place: InterfaceText("Quran Settings, Reading View"), destination: .quranPage(.readingView)),
         AppTip(id: "quran.similar", area: .quran, group: InterfaceText("AYAHS AND WORDS"), systemImage: "arrow.triangle.branch",
                title: InterfaceText("Ayahs that resemble each other"),
                detail: InterfaceText("Similar Ayahs and Mutashabihat, in an ayah's actions, list the ayahs that resemble it and the phrases it shares with others: a help in memorizing."),
@@ -635,11 +639,11 @@ enum TipCatalog {
         AppTip(id: "quran.compare", area: .quran, group: InterfaceText("TAJWEED AND QIRAAT"), systemImage: "rectangle.split.2x1",
                title: InterfaceText("Compare the riwayat"),
                detail: InterfaceText("With Comparison mode on, a riwayah picker sits above the reader's search bar, and an ayah's Compare Ayah sets the readings side by side. The Qiraat Explorer steps through every place the riwayat differ."),
-               place: InterfaceText("Quran Settings, Arabic Text"), destination: .quranPage(.arabicText), advanced: true, card: (InterfaceText("Compare Riwayat"), InterfaceText("Read the riwayat side by side and step through where they differ."))),
+               place: InterfaceText("Quran Settings, Arabic Text"), destination: .quranPage(.arabicText), card: (InterfaceText("Compare Riwayat"), InterfaceText("Read the riwayat side by side and step through where they differ."))),
         AppTip(id: "quran.bare", area: .quran, group: InterfaceText("TAJWEED AND QIRAAT"), systemImage: "textformat.abc.dottedunderline",
                title: InterfaceText("The text without its marks"),
                detail: InterfaceText("Hide Arabic Tashkeel and Hide Arabic Dots show the words the way the earliest mushafs were written, across every riwayah."),
-               place: InterfaceText("Quran Settings, Arabic Text"), destination: .quranPage(.arabicText), advanced: true),
+               place: InterfaceText("Quran Settings, Arabic Text"), destination: .quranPage(.arabicText)),
 
         AppTip(id: "quran.refs", area: .quran, group: InterfaceText("SEARCH"), systemImage: "magnifyingglass",
                title: InterfaceText("Search understands references"),
@@ -689,7 +693,7 @@ enum TipCatalog {
         AppTip(id: "quran.afterend", area: .quran, group: InterfaceText("LISTENING"), systemImage: "forward.end.fill",
                title: InterfaceText("When a surah ends"),
                detail: InterfaceText("After Surah Recitation Ends chooses between going on to the next surah, going back to the previous one, and stopping."),
-               place: InterfaceText("Quran Settings, Recitation"), destination: .quranPage(.recitation), advanced: true),
+               place: InterfaceText("Quran Settings, Recitation"), destination: .quranPage(.recitation)),
         AppTip(id: "quran.awake", area: .quran, group: InterfaceText("LISTENING"), systemImage: "light.max",
                title: InterfaceText("The screen stays on while you follow along"),
                detail: InterfaceText("While the recitation is highlighting the ayah being read in either reader, the screen does not go to sleep. Pause, stop, or leave the reader and it sleeps as usual, so listening with the phone put away costs the screen nothing."),
@@ -729,7 +733,7 @@ enum TipCatalog {
                place: InterfaceText("Quran reader, ayah actions")),
         AppTip(id: "quran.siri", area: .quran, group: InterfaceText("THE QURAN TAB"), systemImage: "mic.fill",
                title: InterfaceText("Ask Siri to recite"),
-               detail: InterfaceText { "\u{201C}Play surah Yaseen in \(app[$0])\u{201D}, \u{201C}Play random surah in \(app[$0])\u{201D}, and \u{201C}Play last listened surah in \(app[$0])\u{201D}. Siri understands names, numbers, and common spellings." },
+               detail: InterfaceText { "\u{201C}Play surah Yaseen in \(siriApp[$0])\u{201D}, \u{201C}Play random surah in \(siriApp[$0])\u{201D}, and \u{201C}Play last listened surah in \(siriApp[$0])\u{201D}. Siri understands names, numbers, and common spellings." },
                place: InterfaceText("Siri and Shortcuts"), isAvailable: { hasSiriShortcuts }),
         AppTip(id: "quran.widgets", area: .quran, group: InterfaceText("THE QURAN TAB"), systemImage: "rectangle.3.group.fill",
                title: InterfaceText("The Quran on your Home Screen"),
@@ -964,7 +968,7 @@ enum TipCatalog {
         AppTip(id: "islam.fajr", area: .islam, group: InterfaceText("THE ISLAM TAB"), systemImage: "sunrise.fill",
                title: InterfaceText("Days that begin at Fajr"),
                detail: InterfaceText("Turn Over at Fajr changes every daily feature at Fajr rather than at midnight, so the day begins with the prayer."),
-               place: InterfaceText("Islam Settings, Libraries"), destination: .islamPage(.libraries), advanced: true, card: (InterfaceText("Days Begin at Fajr"), InterfaceText("Every daily feature turns over with the prayer, not at midnight.")), isAvailable: { shipsPrayerTimes }),
+               place: InterfaceText("Islam Settings, Libraries"), destination: .islamPage(.libraries), card: (InterfaceText("Days Begin at Fajr"), InterfaceText("Every daily feature turns over with the prayer, not at midnight.")), isAvailable: { shipsPrayerTimes }),
         AppTip(id: "islam.font", area: .islam, group: InterfaceText("THE ISLAM TAB"), systemImage: "textformat.ar",
                title: InterfaceText("One Arabic font for everything else"),
                detail: islamFontDetail,
@@ -1002,13 +1006,9 @@ enum TipCatalog {
 
     // Tips about the whole app that name a tab: each app names only its own.
 
+    /// Both screens are prayer-times features, so the tip ships only where they do (`shipsPrayerTimes`).
     private static var advancedDetail: InterfaceText {
-        let tail = InterfaceText("A search result or a tip marked Advanced turns them on for you.")
-        #if HAS_ADHAN && HAS_QURAN
-        return InterfaceText { "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so turning Nagging Mode's on leaves Arabic Text simple. \(tail[$0])" }
-        #else
-        return InterfaceText { "Every settings screen keeps to its essentials. Show Advanced Settings, at the foot of a screen that has more to show, reveals the rest of THAT screen: each one has its own switch, so turning one screen's on leaves the others simple. \(tail[$0])" }
-        #endif
+        InterfaceText("Two settings screens keep their fine-tuning behind Show Advanced Settings, at their foot: Prayer Calculation (custom angles, the high latitude rule) and Nagging Mode (how often it repeats, the last calls, its tone). Each has its own switch; every other screen shows everything it has. A search result or a tip marked Advanced turns the switch on for you.")
     }
 
     /// At a Glance is the Adhan tab's.
@@ -1075,7 +1075,7 @@ enum TipCatalog {
         AppTip(id: "app.advanced", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "slider.horizontal.3",
                title: InterfaceText("Simple until you ask for more"),
                detail: advancedDetail,
-               place: InterfaceText("The foot of a settings screen")),
+               place: InterfaceText("Prayer Calculation and Nagging Mode"), isAvailable: { shipsPrayerTimes }),
 
         AppTip(id: "app.simple", area: .app, group: InterfaceText("FINDING THINGS"), systemImage: "rectangle.compress.vertical",
                title: InterfaceText("Too much on screen? Simple Mode"),

@@ -572,6 +572,12 @@ struct ProphetIshaqView: View {
                     ArticleClosing("Ishaq was the promise kept to an old man and a barren woman, and the door through which the prophets of Bani Israil came.")
                 }
 
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`, 2026-10-26). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetIshaqView")
+                #endif
+
                 ArticleSourcesSection(article: "ProphetIshaqView")
             }
             .themedListRowBackground()
@@ -798,6 +804,12 @@ struct ProphetShuaybView: View {
                 Section(header: ArticleHeader("IN SUMMARY")) {
                     ArticleClosing("Shu'ayb told a nation of traders that a crooked scale and a sound faith cannot live in the same man, and they refused to believe him.")
                 }
+
+                // His signs, in Miracles of the Prophets (`ProphetSignsIndex`, 2026-10-26). This file
+                // compiles for the Watch too, where the miracles library does not exist.
+                #if os(iOS)
+                ProphetMiraclesLink(article: "ProphetShuaybView")
+                #endif
 
                 ArticleSourcesSection(article: "ProphetShuaybView")
             }

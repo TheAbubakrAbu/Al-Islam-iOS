@@ -305,7 +305,7 @@ struct MoonViewer: View {
         guard let cycle else { return lit }
         let age = cycle.age(at: shownDate)
         // The locale's digits in Arabic ("١٢٫٣"); English keeps "12.3".
-        let ageText = AppLanguage.isArabic
+        let ageText = AppLanguage.isArabicScript
             ? age.formatted(.number.precision(.fractionLength(1)).grouping(.never))
             : String(format: "%.1f", age)
         return String(localized: "\(lit) · \(ageText) days old")
@@ -399,7 +399,7 @@ struct MoonViewer: View {
         let calendar = settings.hijriCalendar
         guard let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: reference) else { return nil }
         // An Arabic interface gets the header's Arabic date, not its English transliteration.
-        let text = AppLanguage.isArabic ? settings.arabicHijriText(for: adjusted).localizedDigits : Self.hijriFormatter.string(from: adjusted)
+        let text = AppLanguage.isArabicScript ? settings.arabicHijriText(for: adjusted).localizedDigits : Self.hijriFormatter.string(from: adjusted)
         return (text, calendar.component(.day, from: adjusted))
     }
 

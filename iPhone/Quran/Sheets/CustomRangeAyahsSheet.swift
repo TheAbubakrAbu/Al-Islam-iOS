@@ -107,7 +107,7 @@ struct CustomRangeAyahsSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 // The Arabic interface names the surah once, in Arabic.
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(surah.nameTransliteration)
                         .font(.headline)
                         .foregroundColor(.primary)

@@ -517,9 +517,8 @@ struct ShareAyahSheet: View {
                         if noteText != nil {
                             Toggle("Include Note", isOn: $includeNote.animation(.easeInOut))
                                 .tint(settings.accentColor.color)
-                                .scaleEffect(0.8)
-                                .padding(.horizontal, -24)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
                         }
 
                         if shareSettings.arabic {
@@ -566,16 +565,14 @@ struct ShareAyahSheet: View {
                                     set: { shareSettings = updatedShareSettings(showTajweed: $0) }
                                 ).animation(.easeInOut))
                                 .tint(settings.accentColor.color)
-                                .scaleEffect(0.8)
-                                .padding(.horizontal, -24)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
                             }
 
                             Toggle("Hide Tashkeel and Diacretics", isOn: $shareSettings.cleanArabic.animation(.easeInOut))
                                 .tint(settings.accentColor.color)
-                                .scaleEffect(0.8)
-                                .padding(.horizontal, -24)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
 
                             if canShowHideArabicDotsToggle {
                                 Toggle("Hide Arabic Dots", isOn: Binding(
@@ -583,23 +580,20 @@ struct ShareAyahSheet: View {
                                     set: { shareSettings = updatedShareSettings(hideArabicDots: $0) }
                                 ).animation(.easeInOut))
                                 .tint(settings.accentColor.color)
-                                .scaleEffect(0.8)
-                                .padding(.horizontal, -24)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
                             }
                         }
 
                         Toggle("Show Ayah Information", isOn: $quranDisplay.showAyahInformation.animation(.easeInOut))
                             .tint(settings.accentColor.color)
-                            .scaleEffect(0.8)
-                            .padding(.horizontal, -24)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
 
                         Toggle("Show Surah Information", isOn: $quranDisplay.showSurahInformation.animation(.easeInOut))
                             .tint(settings.accentColor.color)
-                            .scaleEffect(0.8)
-                            .padding(.horizontal, -24)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
 
                         if settings.showQiraahDetails {
                             Toggle(isOn: Binding(
@@ -618,9 +612,8 @@ struct ShareAyahSheet: View {
                                 Label("Show Riwayah/Qiraah", systemImage: "character.book.closed.fill.ar")
                             }
                             .tint(settings.accentColor.color)
-                            .scaleEffect(0.8)
-                            .padding(.horizontal, -24)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
 
                             // Last in the list, by request: which riwayah the shared Arabic is taken from.
                             //
@@ -648,9 +641,8 @@ struct ShareAyahSheet: View {
                                     Label("Smart Ayah Matching", systemImage: "wand.and.stars")
                                 }
                                 .tint(settings.accentColor.color)
-                                .scaleEffect(0.8)
-                                .padding(.horizontal, -24)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 4)
 
                                 Text(riwayahFooterText)
                                     .font(.caption)

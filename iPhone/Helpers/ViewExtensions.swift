@@ -1033,6 +1033,16 @@ final class PlaybackVisibility: ObservableObject {
     }
 }
 
+/// True wherever a `ConditionalListStyle` list sits: that list manages the Now Playing bar itself
+/// (shows it, or was told not to), so a sheet host (`SheetPresentationModifier`) adds none of its own.
+/// The bar reaches the sheets built on a `ScrollView` (the ayah actions sheet, the tafsir and word
+/// cards, Share Ayah) through the host instead (Abu, 2026-10-26: "put now playing view in hold down
+/// ayah sheet, put it in every sheet").
+struct NowPlayingBarProvidedKey: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 /// The top-of-screen accent wash: a quiet radial glow bleeding down from the top, gone by mid-screen.
 /// Every list screen gets it through `ConditionalListStyle`'s background; the page-mode readers (the
 /// Quran mushaf and the Hadith pager) apply it directly, since they are not lists.
@@ -1387,6 +1397,8 @@ struct ConditionalListStyle: ViewModifier {
         // presentation contexts and don't inherit the root's preferredColorScheme - also adopt the theme.
         .preferredColorScheme(appearance.colorScheme)
         #if os(iOS)
+        // This list manages the bar (shown, or deliberately not): a sheet around it adds none.
+        .preference(key: NowPlayingBarProvidedKey.self, value: true)
         .safeAreaInset(edge: .bottom) {
             if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
                 VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
@@ -2803,9 +2815,11 @@ struct CountPill: View {
     let count: Int
     /// "5+" style - set when the count is a floor from an early-exited search, not an exact total.
     var overflow: Bool = false
+    /// A read-out in place of the number ("12 of 40", "Page 2 • 7 Ayahs"), in the same pill.
+    var countText: String? = nil
 
     var body: some View {
-        Text("\(count)\(overflow ? "+" : "")")
+        Text(countText?.localizedDigits ?? "\(count)\(overflow ? "+" : "")")
             .font(.caption.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(appearance.accent)
@@ -2974,6 +2988,8 @@ struct SectionPillHeader: View {
     /// folded: the arrow folds it, the trash removes it (Abu, 2026-10-10: "when a tips tab is
     /// collapsed have a button to trash remove it"). The owner confirms before removing anything.
     var onRemove: (() -> Void)? = nil
+    /// A read-out in the count's pill instead of the number (`CountPill.countText`).
+    var countText: String? = nil
 
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
@@ -3008,7 +3024,7 @@ struct SectionPillHeader: View {
         // then the expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its
         // cluster must follow this order too. Simple Mode drops the count, search and shuffle (each
         // hides itself; the trash and the chevron stay).
-        CountPill(count: count, overflow: overflow)
+        CountPill(count: count, overflow: overflow, countText: countText)
 
         if let onSearch {
             Image(systemName: "magnifyingglass")
@@ -3075,6 +3091,142 @@ struct SectionPillHeader: View {
                 .accessibilityRemoveTraits(.isImage)
                 .accessibilityAddTraits(.isButton)
         }
+    }
+}
+
+// MARK: - Section header line, header actions, chips and badges
+
+/// A section header that carries its own controls, in the one grammar every such header follows
+/// (2026-10-26 consistency pass): `SectionIconHeader` for the title (icon optional, accent only for a
+/// section that is yours) and the controls at the trailing edge, the two dropping onto separate
+/// lines where they do not fit (`AdaptiveSectionHeader`). `SectionPillHeader` is this header with
+/// the count pill and its buttons built in; this is the open form for a header with a control of its
+/// own (Clear All, Attach, Listen All, a count as text, a favorite star). It replaced the hand-rolled
+/// `HStack { Text; Spacer; Button }` headers, which each spaced and sized themselves a little
+/// differently.
+struct SectionHeaderLine<Controls: View>: View {
+    let title: String
+    var icon: String? = nil
+    var accentTitle = false
+    /// Stack the controls under the title without measuring (the accessibility text sizes, where a
+    /// Today pill beside "YOUR SUMMARY" had room only for "YOUR / SUM- / MARY").
+    var forceStacked = false
+    @ViewBuilder let controls: () -> Controls
+
+    init(_ title: String, icon: String? = nil, accentTitle: Bool = false, forceStacked: Bool = false,
+         @ViewBuilder controls: @escaping () -> Controls) {
+        self.title = title
+        self.icon = icon
+        self.accentTitle = accentTitle
+        self.forceStacked = forceStacked
+        self.controls = controls
+    }
+
+    var body: some View {
+        #if os(iOS)
+        AdaptiveSectionHeader(forceStacked: forceStacked) {
+            SectionIconHeader(title, icon: icon, accentTitle: accentTitle)
+        } controls: {
+            controls()
+        }
+        #else
+        HStack(spacing: 8) {
+            SectionIconHeader(title, icon: icon, accentTitle: accentTitle)
+
+            Spacer()
+
+            controls()
+        }
+        #endif
+    }
+}
+
+/// A header's trailing text action ("Clear All", "Attach", "Put Out All"): caption-semibold accent
+/// text with an optional symbol, in title case (the Health app's "Edit" beside a header), with the
+/// haptic built in. Three headers each drew this by hand before the 2026-10-26 pass.
+struct SectionHeaderAction: View {
+    @Environment(\.appearance) private var appearance
+
+    let title: String
+    var systemImage: String? = nil
+    let action: () -> Void
+
+    init(_ title: String, systemImage: String? = nil, action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            action()
+        } label: {
+            Group {
+                if let systemImage {
+                    Label(title, systemImage: systemImage)
+                } else {
+                    Text(title)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundColor(appearance.accent)
+            // A List uppercases its header; the action reads as a button, in title case.
+            .textCase(nil)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// The BETA capsule beside a riwayah whose text is still beta, on the comparison surfaces only (user
+/// rule: "say beta for the riwayah in qiraah comparison"). One view, so the comparison sheet and the
+/// Qiraat Explorer draw the identical badge.
+struct BetaBadge: View {
+    var body: some View {
+        Text("BETA")
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.orange.opacity(0.15), in: Capsule())
+            .accessibilityLabel("Beta")
+    }
+}
+
+/// The small tinted-capsule button that sits INSIDE a row or a card (Hear Hafs, a goal preset, Hear
+/// It): caption-semibold accent text on the accent at 12%, or white on the accent when `filled` (an
+/// active state such as "Stop"). Header accessories are glass pills (`CountPill`, the shuffle); this
+/// is the in-row family, with one radius, one padding and one tint strength for all of them. Before
+/// the 2026-10-26 pass these were a mix of `.bordered` buttons and hand-drawn capsules at 0.08,
+/// 0.12, 0.14 and 0.15.
+struct AccentChipButtonStyle: ButtonStyle {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.isEnabled) private var isEnabled
+
+    var filled = false
+    /// The chip's own colour where it is not the accent (a tajweed rule's colour).
+    var tint: Color? = nil
+
+    func makeBody(configuration: Configuration) -> some View {
+        let tint = tint ?? appearance.accent
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundColor(filled ? .white : tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(filled ? tint : tint.opacity(0.12)))
+            .contentShape(Capsule())
+            .opacity(configuration.isPressed ? 0.6 : (isEnabled ? 1 : 0.5))
+    }
+}
+
+extension ButtonStyle where Self == AccentChipButtonStyle {
+    /// `.buttonStyle(.accentChip)`: the in-row chip.
+    static var accentChip: AccentChipButtonStyle { AccentChipButtonStyle() }
+
+    /// The chip in its filled (active) form, or in a colour of its own.
+    static func accentChip(filled: Bool = false, tint: Color? = nil) -> AccentChipButtonStyle {
+        AccentChipButtonStyle(filled: filled, tint: tint)
     }
 }
 

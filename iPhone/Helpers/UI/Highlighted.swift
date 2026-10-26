@@ -53,6 +53,11 @@ struct HighlightedSnippet: View {
     var trailingSuffix: String = ""
     var trailingSuffixFont: Font? = nil
     var trailingSuffixColor: Color? = nil
+    /// Text set BEFORE the source in the same run ("14: " before a book's title), so a title that wraps
+    /// carries its number along the first line instead of parking it beside a centred block.
+    var leadingPrefix: String = ""
+    var leadingPrefixFont: Font? = nil
+    var leadingPrefixColor: Color? = nil
     var lineLimit: Int? = nil
     /// With `lineLimit`, also RESERVE the clamped height (iOS 16+/watchOS 9+; plain clamp below): a
     /// one-line snippet occupies the same box as a full one, so preview cards line up. NOTE: an outer
@@ -83,14 +88,17 @@ struct HighlightedSnippet: View {
         let suffixText = Text(trailingSuffix)
             .font(trailingSuffixFont ?? font)
             .foregroundColor(trailingSuffixColor ?? fg)
+        let prefixText = Text(leadingPrefix)
+            .font(leadingPrefixFont ?? font)
+            .foregroundColor(leadingPrefixColor ?? fg)
 
         if needsAttributedWork {
             let highlightedText = memoizedHighlightedText(term: resolvedSearchTerm,
                                                           needsSearchHighlight: needsSearchHighlight)
 
-            limited(Text("\(Text(highlightedText))\(suffixText)"))
+            limited(Text("\(prefixText)\(Text(highlightedText))\(suffixText)"))
         } else {
-            limited(Text("\(Text(source).foregroundColor(fg))\(suffixText)"))
+            limited(Text("\(prefixText)\(Text(source).foregroundColor(fg))\(suffixText)"))
         }
     }
 

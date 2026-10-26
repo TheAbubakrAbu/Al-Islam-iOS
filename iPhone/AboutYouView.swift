@@ -477,19 +477,7 @@ struct AboutYouView: View {
     }
 
     private func suggestionToggle(_ title: String, _ detail: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn.animation(.easeInOut)) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-
-                Text(detail)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .tint(accent)
-        .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
+        SettingsToggle(title, caption: detail, isOn: isOn)
     }
 
     // MARK: Actions
@@ -659,37 +647,28 @@ struct AboutYouSettingsView: View {
                 }
 
                 if settings.userBackground?.wantsStartHere == true {
-                    Section {
-                        VStack(alignment: .leading) {
-                            // Was "Start Here on the Islam Tab", which reads as "start the app on
-                            // the Islam tab" (Abu read it that way himself, 2026-09-21). It shows a
-                            // guide; the opening tab is Appearance > Look and Feel's picker, which
-                            // is its only home now (Abu, 2026-09-25: "remove open the app on in
-                            // about you, only keep that for the looks one").
-                            Toggle("Show the Start Here Guide", isOn: Binding(
-                                get: { !settings.startHereHidden },
-                                set: { newValue in withAnimation(.easeInOut) { settings.startHereHidden = !newValue } }
-                            ))
-                            .font(.subheadline)
-                            .tint(settings.accentColor.color)
-                            .onChange(of: settings.startHereHidden) { _ in settings.hapticFeedback() }
-
-                            Text("A short guided path shown at the top of the Islam tab. It ticks off each step as you open it. This does not change which tab the app opens on.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
-                        }
+                    Section(header: Text("START HERE")) {
+                        // Was "Start Here on the Islam Tab", which reads as "start the app on
+                        // the Islam tab" (Abu read it that way himself, 2026-09-21). It shows a
+                        // guide; the opening tab is Appearance > Look and Feel's picker, which
+                        // is its only home now (Abu, 2026-09-25: "remove open the app on in
+                        // about you, only keep that for the looks one"). The settings switch
+                        // (haptic, flagged page animation) like every other switch in Settings.
+                        SettingsToggle(String(localized: "Show the Start Here Guide"),
+                                       caption: String(localized: "A short guided path shown at the top of the Islam tab. It ticks off each step as you open it. This does not change which tab the app opens on."),
+                                       isOn: Binding(
+                                           get: { !settings.startHereHidden },
+                                           set: { settings.startHereHidden = !$0 }
+                                       ))
                     }
                 }
 
-                Section {
+                Section(header: Text("WELCOME")) {
                     Button {
                         settings.hapticFeedback()
                         showWelcome = true
                     } label: {
                         Label("Replay the Welcome Tutorial", systemImage: "arrow.counterclockwise")
-                            .font(.subheadline)
                     }
                     .tint(settings.accentColor.color)
                 }

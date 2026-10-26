@@ -103,8 +103,8 @@ struct HelpDoor: Identifiable {
         case page(SettingsSearchEntry.Destination)
         /// The one control that answers the question, first, and the pages that hold the rest one row
         /// below it. For a setting that sits deep in a long page (Beginner Mode, on Arabic Text), that
-        /// is split across two (one language: Arabic Text and English Text), or that its page shows
-        /// only with Advanced Settings on (the Fajr turnover).
+        /// is split across two (one language: Arabic Text and English Text), or that is one switch on
+        /// a page about something else (the Fajr turnover, on Libraries).
         case answer(() -> AnyView, pages: [SettingsSearchEntry.Destination])
     }
 
@@ -828,8 +828,8 @@ private struct HadithLanguageAnswer: View {
 #endif
 
 #if HAS_ADHAN
-/// "When Does Your Day Begin?": the daily cards' turnover, which Libraries shows only with Advanced
-/// Settings on. Answered here, so opening the question does not have to turn that switch on.
+/// "When Does Your Day Begin?": the daily cards' turnover, one switch on the Libraries page.
+/// Answered here, so the question opens on its own answer rather than on that page.
 private struct DayBeginsAnswer: View {
     private let settings = Settings.shared
     @ObservedObject private var systemSettings = SystemSettings.shared

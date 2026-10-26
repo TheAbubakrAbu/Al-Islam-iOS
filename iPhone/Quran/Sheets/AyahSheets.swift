@@ -496,6 +496,12 @@ struct AyahPreviewCard: View {
         return ayahSheetTitle(surahNumber: surah.id, ayahNumber: first.id, endAyah: last.id > first.id ? last.id : nil)
     }
 
+    /// The reference in the other language, at the far end of the same line (`ayahSheetCounterpartTitle`).
+    private var counterpartTitle: String? {
+        guard let first = ayahs.first, let last = ayahs.last else { return nil }
+        return ayahSheetCounterpartTitle(surahNumber: surah.id, ayahNumber: first.id, endAyah: last.id > first.id ? last.id : nil)
+    }
+
     private struct TranslationBlock: Identifiable {
         let name: String
         let text: String
@@ -650,10 +656,19 @@ struct AyahPreviewCard: View {
             // numbered inline when the group spans several.
             if let title {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // The reference both ways (Abu, 2026-10-26): the interface's name leading, the
+                    // other language's trailing, a spacer between them, as the reader's title pill
+                    // names the surah in both scripts.
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(title)
+                        Spacer(minLength: 8)
+                        if let counterpartTitle {
+                            Text(counterpartTitle)
+                        }
+                    }
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
 
                     ForEach(translationBlocks) { block in
                         VStack(alignment: .leading, spacing: 1) {

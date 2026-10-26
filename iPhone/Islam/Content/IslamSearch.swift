@@ -305,8 +305,9 @@ enum IslamArticleCatalog {
             ("DuhaView", "How to Pray Duha", "duha", ["forenoon", "ishraq", "morning prayer", "chasht"]),
             ("TaraweehView", "How to Pray Taraweeh", "taraweeh", ["tarawih", "ramadan night", "qiyam"]),
             ("JanazahView", "How to Pray the Funeral Prayer", "janazah", ["janaza", "funeral", "death", "burial", "shroud", "kafan", "deceased"]),
-            ("IstikharahView", "How to Pray Istikharah", "istikharah", ["istikhara", "salat al-istikhara", "decision", "guidance prayer", "choice"]),
-            ("IstikharahDuaView", "The Dua of Istikharah", "istikharah-dua", ["dua istikhara", "istikhara dua", "dua al-istikhara", "istikhara", "supplication", "decision", "allahumma inni astakhiruka"]),
+            // The prayer and its dua are ONE guide (Abu, 2026-10-25: "merge them into one"); the dua page's
+            // aliases live here so "dua istikhara" still lands on it.
+            ("IstikharahView", "How to Pray Istikharah", "istikharah", ["istikhara", "salat al-istikhara", "dua istikhara", "istikhara dua", "dua al-istikhara", "allahumma inni astakhiruka", "supplication", "decision", "guidance prayer", "choice"]),
         ]),
         group("PRAYER IN SPECIAL CASES", .guides, [
             ("TravelPrayerView", "How to Pray While Traveling", "travel", ["traveler", "qasr", "shorten", "combine", "jam", "journey", "plane"]),
@@ -742,9 +743,10 @@ enum ArticleDoor {
     case link(String, title: String, subtitle: String)
 }
 
-/// The signs libraries a door can open whole.
+/// The data-backed libraries a door can open whole: the three signs libraries, and the Sunnahs of
+/// the Prophet (2026-10-26).
 enum ArticleLibrary {
-    case miraclesOfQuran, propheciesOfProphet, miraclesOfProphets
+    case miraclesOfQuran, propheciesOfProphet, miraclesOfProphets, sunnahsOfProphet
 }
 
 struct ArticleSection {
@@ -927,6 +929,14 @@ struct ArticleDoorRow: View {
                     label(title: AppLanguage.article("Miracles of the Prophets"),
                           subtitle: AppLanguage.article("The signs given to the prophets, and to him"),
                           systemImage: "staroflife")
+                }
+            case .sunnahsOfProphet:
+                OpenScreenLink(screen: .sunnahLibrary) {
+                    SunnahView().openScreen(.sunnahLibrary)
+                } label: {
+                    label(title: AppLanguage.article("Sunnahs of the Prophet"),
+                          subtitle: AppLanguage.article("What he did each day, from waking to sleeping"),
+                          systemImage: "sun.horizon")
                 }
             }
             #else
@@ -1520,11 +1530,7 @@ struct AskAISearchSection: View {
         if OnDeviceAsk.isAvailable {
             let asked = query.trimmingCharacters(in: .whitespacesAndNewlines)
             // Header gray: a search section (`SectionIconHeader.accentTitle`'s rule).
-            Section(header: HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                Text(verbatim: translated ? String(localized: "ASK AI") : AppLanguage.article("ASK AI"))
-                Spacer()
-            }) {
+            Section(header: SectionIconHeader(translated ? String(localized: "ASK AI") : AppLanguage.article("ASK AI"), icon: "sparkles")) {
                 Button {
                     Settings.shared.hapticFeedback()
                     showAskAI = true
@@ -2799,15 +2805,9 @@ enum ArticleSources {
         ],
         "IstikharahView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-‘Asqalani, commentary on Sahih al-Bukhari, on the Istikharah hadith"),
             ArticleSource(title: "Al-Wabil as-Sayyib", subtitle: "Ibn al-Qayyim, on dhikr and dua"),
             ArticleSource(title: "Ad-Da' wad-Dawa'", subtitle: "Ibn al-Qayyim"),
-            ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
-            ArticleSource(title: "How to Pray Istikharah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
-            ArticleSource(title: "Istikharah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),
-        ],
-        "IstikharahDuaView": [
-            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
-            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-‘Asqalani, commentary on Sahih al-Bukhari, on the Istikharah hadith"),
             ArticleSource(title: "Hisn al-Muslim", subtitle: "Sa'id ibn Ali al-Qahtani, the authentic adhkar and duas"),
             ArticleSource(title: "How to Pray Istikharah", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/2217"),
             ArticleSource(title: "Istikharah prayer", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/11981"),

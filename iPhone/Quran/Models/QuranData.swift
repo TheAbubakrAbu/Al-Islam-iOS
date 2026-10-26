@@ -141,7 +141,7 @@ struct Surah: Codable, Identifiable, Equatable {
     /// and the reader's title pill draw it), the transliteration otherwise. Display only: search,
     /// sorting, aliases, stored records and the on-device model keep `nameTransliteration`.
     var displayName: String {
-        AppLanguage.isArabic ? Self.arabicLabel(nameArabic) : nameTransliteration
+        AppLanguage.isArabicScript ? Self.arabicLabel(nameArabic) : nameTransliteration
     }
 
     /// An Arabic NAME used as a label: vowel marks follow the clean-Arabic setting, but the letters keep
@@ -153,13 +153,13 @@ struct Surah: Codable, Identifiable, Equatable {
     /// The English meaning drawn under or beside the name ("The Cow"), or nil in an Arabic interface,
     /// where the Arabic name already says it.
     var displayMeaning: String? {
-        AppLanguage.isArabic ? nil : nameEnglish
+        AppLanguage.isArabicScript ? nil : nameEnglish
     }
 
     /// `displayName` for a surah known only by its number (a stored record), falling back to the
     /// stored name when the number is out of range.
     static func displayName(id: Int, stored: String) -> String {
-        guard AppLanguage.isArabic, let surah = QuranData.shared.surah(id) else { return stored }
+        guard AppLanguage.isArabicScript, let surah = QuranData.shared.surah(id) else { return stored }
         return surah.displayName
     }
 
@@ -224,7 +224,7 @@ enum SurahPageLength {
 
     /// "¾ Page", "1 Page", "2⅓ Pages" ("¾ Pg", "2⅓ Pgs" short, for the watch).
     static func label(twelfths: Int, short: Bool = false) -> String {
-        if AppLanguage.isArabic { return arabicLabel(twelfths: twelfths) }
+        if AppLanguage.isArabicScript { return arabicLabel(twelfths: twelfths) }
         let whole = twelfths / 12
         let part: String
         switch twelfths % 12 {

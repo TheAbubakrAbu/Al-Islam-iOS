@@ -17,13 +17,14 @@ import SwiftUI
 // ornament still showing, so the page never re-flows and there is always something to tap. The printed
 // (PDF) mushaf is a picture of the page and cannot hide one ayah, so Test Mode is offered on text pages.
 
-/// What Test Mode hides. Stored as `Settings.quranTestModeHides`.
+/// What Test Mode hides. Stored as `Settings.quranTestModeHides`. Everything is the default (Abu,
+/// 2026-10-25: "hide everything by default, not just Arabic"), so it leads the picker.
 enum QuranTestHiding: String, CaseIterable, Identifiable {
+    /// Every line of the ayah.
+    case everything
     /// The recitation: the Arabic, and its transliteration (the same words in Latin letters). The
     /// translations stay on screen, as the cue to recite from.
     case recitation = "arabic"
-    /// Every line of the ayah.
-    case everything
 
     var id: String { rawValue }
 
@@ -70,7 +71,7 @@ enum QuranTestVeil: Equatable {
 }
 
 extension Settings {
-    var quranTestHiding: QuranTestHiding { QuranTestHiding(rawValue: quranTestModeHides) ?? .recitation }
+    var quranTestHiding: QuranTestHiding { QuranTestHiding(rawValue: quranTestModeHides) ?? .everything }
     var quranTestReveal: QuranTestReveal { QuranTestReveal(rawValue: quranTestModeReveals) ?? .throughSelected }
 }
 
@@ -377,13 +378,13 @@ struct QuranTestModeSettingsView: View {
     var body: some View {
         List {
             Group {
-                Section {
+                Section(header: Text("TEST MODE")) {
                     SettingsToggle(String(localized: "Test Mode"),
                                    caption: String(localized: "Hides the Quran's text in the list and page readers until you tap an ayah, so you can recite from memory and check yourself. In the reader, the play button's menu turns it on and off, and the button wears a small eye while it is on. While a recitation plays, hold the playing bar for the same switch. The printed mushaf (PDF) can't hide single ayahs, so it works on text pages."),
                                    isOn: Binding(get: { testMode.isOn }, set: { testMode.setOn($0) }))
                 }
 
-                Section(header: Text("WHAT IT HIDES")) {
+                Section(header: Text("WHAT IT HIDES"), footer: Text(settings.quranTestHiding.caption)) {
                     Picker("What It Hides", selection: $quranDisplay.quranTestModeHides) {
                         ForEach(QuranTestHiding.allCases) { hiding in
                             Text(hiding.title).tag(hiding.rawValue)
@@ -392,14 +393,10 @@ struct QuranTestModeSettingsView: View {
                     .pickerStyle(.inline)
                     .labelsHidden()
                     .onChange(of: settings.quranTestModeHides) { _ in settings.hapticFeedback() }
-
-                    Text(settings.quranTestHiding.caption)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Section(header: Text("WHAT A TAP SHOWS")) {
+                Section(header: Text("WHAT A TAP SHOWS"),
+                        footer: Text("Tap the ayah that is showing to hide it again. \"Hide All Again\" in the play menu starts over.")) {
                     Picker("What a Tap Shows", selection: $quranDisplay.quranTestModeReveals) {
                         ForEach(QuranTestReveal.allCases) { reveal in
                             Text(reveal.title).tag(reveal.rawValue)
@@ -412,14 +409,9 @@ struct QuranTestModeSettingsView: View {
                         // The two remember different things, so a switch starts the test over.
                         testMode.hideAll()
                     }
-
-                    Text("Tap the ayah that is showing to hide it again. \"Hide All Again\" in the play menu starts over.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Section {
+                Section(header: Text("MORE")) {
                     SettingsToggle(String(localized: "Reveal as It's Recited"), caption: String(localized: "While an ayah plays, it shows the way a tap would show it. Off, the highlight moves across the hidden text so you can follow the reciter without seeing the words."), isOn: $quranDisplay.quranTestModeRevealsRecited)
 
                     SettingsToggle(String(localized: "Turn Off When Leaving the Reader"), caption: String(localized: "On, closing the surah you are reading turns Test Mode off, so the Quran never opens with its text hidden. Off, it stays on, across launches too, until you turn it off."), isOn: $quranDisplay.quranTestModeEndsOnLeave)

@@ -192,6 +192,10 @@ struct FontSizeSlider: View {
     var label: (Double) -> String = { String(localized: "\(Int($0.rounded())) pt") }
     /// Every size the thumb passes, for a page that previews the size outside this control.
     var onLiveChange: ((Double) -> Void)? = nil
+    /// For a control whose value is a Dynamic Type STEP rather than a point size (the Islam tab's
+    /// two sliders): the type size the sample reads at for a value. The sample is then the body
+    /// style at that size, in `fontName` when one is given, instead of `value` points.
+    var sampleTypeSize: ((Double) -> DynamicTypeSize)? = nil
 
     @Environment(\.appearance) private var appearance
     /// The size while the thumb is down; nil otherwise.
@@ -200,7 +204,8 @@ struct FontSizeSlider: View {
     init(_ title: String, value: Binding<Double>, in range: ClosedRange<Double>, sample: String?,
          fontName: String? = nil, glyph: String = "A",
          label: @escaping (Double) -> String = { String(localized: "\(Int($0.rounded())) pt") },
-         onLiveChange: ((Double) -> Void)? = nil) {
+         onLiveChange: ((Double) -> Void)? = nil,
+         sampleTypeSize: ((Double) -> DynamicTypeSize)? = nil) {
         self.title = title
         self._value = value
         self.range = range
@@ -209,12 +214,35 @@ struct FontSizeSlider: View {
         self.glyph = glyph
         self.label = label
         self.onLiveChange = onLiveChange
+        self.sampleTypeSize = sampleTypeSize
     }
 
     private var shown: Double { dragging ?? value }
 
     private func font(size: Double) -> Font {
         fontName.map { Font.arabic($0, size: CGFloat(size)) } ?? .system(size: CGFloat(size))
+    }
+
+    /// The sample at the live size: `shown` points, or the body style at the Dynamic Type step
+    /// `sampleTypeSize` names for it.
+    @ViewBuilder
+    private func sampleText(_ sample: String) -> some View {
+        if let sampleTypeSize {
+            Text(sample)
+                .font(scaledSampleFont)
+                .dynamicTypeSize(sampleTypeSize(shown))
+        } else {
+            Text(sample)
+                .font(font(size: shown))
+        }
+    }
+
+    /// The body style in `fontName`, scaling with Dynamic Type. The Basic sentinel is the rounded
+    /// system face (`Font.arabic`'s fixed-size branch would not scale).
+    private var scaledSampleFont: Font {
+        guard let fontName else { return .body }
+        if fontName == Settings.systemArabicFontName { return .system(.body, design: .rounded) }
+        return .custom(fontName, size: 17, relativeTo: .body)
     }
 
     var body: some View {
@@ -228,8 +256,7 @@ struct FontSizeSlider: View {
             }
 
             if let sample {
-                Text(sample)
-                    .font(font(size: shown))
+                sampleText(sample)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 4)

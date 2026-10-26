@@ -762,7 +762,6 @@ struct QuranPlannerView: View {
                 Stepper(value: $ayahsPerDay, in: 5...600, step: 5) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(ayahsPerDay) ayahs a day")
-                            .font(.subheadline.weight(.semibold))
                             .monospacedDigit()
 
                         Text("about \(pagesEquivalent(ayahsPerDay)) pages")
@@ -841,11 +840,9 @@ struct QuranPlannerView: View {
             targetDate = Calendar.current.date(byAdding: .day, value: days - 1, to: Date()) ?? Date()
         } label: {
             Text(label.localizedDigits)
-                .font(.caption.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .tint(accent)
+        .buttonStyle(.accentChip)
     }
 
     private func startPlan() {
@@ -987,10 +984,8 @@ struct QuranPlannerView: View {
                 NavigationLink(destination: RevisionSurahPicker(selection: $revisionSurahs)) {
                     HStack {
                         Label("Choose Surahs", systemImage: "list.bullet")
-                            .font(.subheadline)
                         Spacer()
                         Text(revisionSurahs.isEmpty ? "None" : (revisionSurahs.count == 1 ? "1 surah" : "\(revisionSurahs.count) surahs"))
-                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -1002,7 +997,6 @@ struct QuranPlannerView: View {
                         revisionSurahs = Set(settings.favoriteSurahs)
                     } label: {
                         Label("Use Favorite Surahs", systemImage: "star.fill")
-                            .font(.subheadline)
                             .foregroundColor(accent)
                     }
                     .listRowSeparator(.hidden)
@@ -1020,7 +1014,6 @@ struct QuranPlannerView: View {
             Text("REVISE")
         } footer: {
             Text("Ayahs are counted as revised when you read them in the app, in any mode, or when you mark them here.")
-                .font(.caption)
         }
         .themedListRowBackground()
 
@@ -1036,7 +1029,6 @@ struct QuranPlannerView: View {
             Stepper(value: $revisionCycleDays, in: 1...90) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(revisionCycleDays == 1 ? "Every day" : "Every \(revisionCycleDays) days")
-                        .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
 
                     Text("one full pass through the set")
@@ -1096,13 +1088,11 @@ struct QuranPlannerView: View {
             revisionJuzTo = 30
         } label: {
             Text(label.localizedDigits)
-                .font(.caption.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .tint(accent)
+        .buttonStyle(.accentChip)
     }
 
     private func cyclePresetButton(_ label: String, days: Int) -> some View {
@@ -1111,11 +1101,9 @@ struct QuranPlannerView: View {
             revisionCycleDays = days
         } label: {
             Text(label)
-                .font(.caption.weight(.semibold))
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.bordered)
-        .tint(accent)
+        .buttonStyle(.accentChip)
     }
 
     private func startRevision() {
@@ -1361,7 +1349,6 @@ struct QuranPlannerView: View {
                 withAnimation { editingRevision = true }
             } label: {
                 Label("Adjust Revision", systemImage: "slider.horizontal.3")
-                    .font(.subheadline)
                     .foregroundColor(accent)
             }
 
@@ -1370,7 +1357,6 @@ struct QuranPlannerView: View {
                 showingEndRevisionConfirmation = true
             } label: {
                 Label("End Revision", systemImage: "xmark.circle")
-                    .font(.subheadline)
             }
             .confirmationDialog(
                 "End this revision plan?",
@@ -1387,7 +1373,6 @@ struct QuranPlannerView: View {
             }
         } footer: {
             Text("An ayah of the set counts as revised when you read it in the app, in any mode, or when you mark it here. Once the whole set is done, the next cycle starts from the top.")
-                .font(.caption)
         }
         .themedListRowBackground()
     }
@@ -1541,8 +1526,7 @@ struct QuranPlannerView: View {
     /// (this lives in `dashboardSections`), so there is never a reminder without a plan behind it.
     private var reminderSection: some View {
         Section {
-            Toggle("Daily Reminder", isOn: reminderToggleBinding.animation(.easeInOut))
-                .font(.subheadline)
+            SettingsToggle(String(localized: "Daily Reminder"), isOn: reminderToggleBinding)
                 .listRowSeparator(.hidden)
                 // On the toggle, not the Section: a modifier on a Section inside a List is applied to
                 // each of its rows, so one `.alert` became two presentation bridges bound to one Bool,
@@ -1577,7 +1561,6 @@ struct QuranPlannerView: View {
             Text("REMINDER")
         } footer: {
             Text("A daily notification at the chosen time with your reading amount. It re-schedules whenever the goal or time changes, and stops when the plan ends.")
-                .font(.caption)
         }
         .themedListRowBackground()
     }
@@ -1588,7 +1571,6 @@ struct QuranPlannerView: View {
         Binding(
             get: { reminderEnabled },
             set: { enabled in
-                settings.hapticFeedback()
                 guard enabled else {
                     reminderEnabled = false
                     QuranPlannerReminder.cancel()
@@ -1798,7 +1780,6 @@ struct QuranPlannerView: View {
                 withAnimation { editingGoal = true }
             } label: {
                 Label("Adjust Goal", systemImage: "slider.horizontal.3")
-                    .font(.subheadline)
                     .foregroundColor(accent)
             }
 
@@ -1807,7 +1788,6 @@ struct QuranPlannerView: View {
                 showingEndPlanConfirmation = true
             } label: {
                 Label("End Plan", systemImage: "xmark.circle")
-                    .font(.subheadline)
             }
             .confirmationDialog(
                 "End this plan?",
@@ -1823,7 +1803,6 @@ struct QuranPlannerView: View {
             }
         } footer: {
             Text("Progress comes from khatm marking: ayahs are marked as you read in the app, and you can review or reset them in Khatm mode on the Quran tab.")
-                .font(.caption)
         }
         .themedListRowBackground()
     }
@@ -1892,11 +1871,9 @@ struct QuranPlannerView: View {
                 reminderAfterPlanChange()
             } label: {
                 Label("End Plan", systemImage: "xmark.circle")
-                    .font(.subheadline)
             }
         } footer: {
             Text("Ending the plan keeps your completed khatm progress.")
-                .font(.caption)
         }
         .themedListRowBackground()
     }

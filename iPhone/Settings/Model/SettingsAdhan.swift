@@ -422,7 +422,7 @@ extension Settings {
     /// The region half of a "City, Region" label. An Arabic label with a Latin state code ("إيرفين، CA") reads
     /// broken, so Arabic takes the country's name when the geocoder answers with a code.
     private static func labelRegion(_ placemark: CLPlacemark) -> String? {
-        if let area = placemark.administrativeArea, !(AppLanguage.isArabic && area.allSatisfy(\.isASCII)) { return area }
+        if let area = placemark.administrativeArea, !(AppLanguage.isArabicScript && area.allSatisfy(\.isASCII)) { return area }
         return placemark.country
     }
 

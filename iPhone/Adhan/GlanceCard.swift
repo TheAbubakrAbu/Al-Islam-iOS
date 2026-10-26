@@ -406,7 +406,7 @@ struct GlanceCard: View {
         // The locale's digits in Arabic, like the whole-number branch below; English keeps "2.4 mi (3.9 km)".
         guard miles >= 10 else {
             return String(format: NSLocalizedString("%.1f mi (%.1f km)", comment: ""),
-                          locale: AppLanguage.isArabic ? Locale.current : nil, miles, kilometers)
+                          locale: AppLanguage.isArabicScript ? Locale.current : nil, miles, kilometers)
         }
         let mi = distanceFormatter.string(from: NSNumber(value: miles)) ?? "\(Int(miles))"
         let km = distanceFormatter.string(from: NSNumber(value: kilometers)) ?? "\(Int(kilometers))"

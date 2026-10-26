@@ -107,7 +107,7 @@ enum ChosenAyahText {
               let text = pack.text(row: meta.firstRow + ayah - 1) else { return nil }
         return QuranWidgetSnapshot.AyahCard(
             arabic: text.arabic,
-            reference: String(localized: "Surah \(surah):\(ayah) • \(AppLanguage.isArabic ? meta.nameArabic : meta.nameTransliteration)"),
+            reference: String(localized: "Surah \(surah):\(ayah) • \(AppLanguage.isArabicScript ? meta.nameArabic : meta.nameTransliteration)"),
             english: text.englishSaheeh,
             // The reader's face when the app has written one; the Uthmani face (bundled with the
             // widget) until then. A face the widget does not bundle falls back to the system font.

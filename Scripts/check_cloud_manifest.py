@@ -13,8 +13,8 @@ by "Reset All Settings". This script is what makes that loud.
                                                print the unclassified keys as Swift string
                                                literals, ready to paste into a list
 
-It reads key names out of the sources four ways: @AppStorage("key"), forKey: "key", `let
-somethingKey = "key"` / `let someFlag = "key"` constants, and `someKey: "key"` arguments. A key
+It reads key names out of the sources four ways: @AppStorage("key") or @Setting("key"), forKey: "key",
+`let somethingKey = "key"` / `let someFlag = "key"` constants, and `someKey: "key"` arguments. A key
 declared any other way, or built from an interpolated string, is invisible here; the app's DEBUG
 launch argument -cloudKeyAudit checks the LIVE defaults domain for those (it found fourteen the
 first time it ran).
@@ -38,7 +38,7 @@ SETTINGS = os.path.join(ROOT, "iPhone", "Settings", "Model", "Settings.swift")
 WATCH = os.path.join(ROOT, "iPhone", "Settings", "System", "WatchConnectivity.swift")
 CATEGORIES = os.path.join(ROOT, "iPhone", "Settings", "Model", "ContentCategories.swift")
 
-APPSTORAGE = re.compile(r'@AppStorage\(\s*"([^"\\]+)"')
+APPSTORAGE = re.compile(r'@(?:AppStorage|Setting)\(\s*"([^"\\]+)"')
 FORKEY = re.compile(r'forKey:\s*"([^"\\]+)"')
 CONSTANT = re.compile(r'\blet\s+\w*(?:[Kk]ey|[Ff]lag)\w*\s*(?::\s*String\s*)?=\s*"([^"\\]+)"')
 # A key handed over as an argument: `homeCacheKey: "masjidLocatorHomeCacheData"`.
@@ -63,6 +63,8 @@ def source_keys():
                 if os.path.abspath(path) == os.path.abspath(MANIFEST):
                     continue
                 text = open(path, encoding="utf-8", errors="replace").read()
+                # Comment lines carry examples (`@Setting("key") var x`), not keys.
+                text = re.sub(r"^\s*//[^\n]*", "", text, flags=re.M)
                 for pattern in (APPSTORAGE, FORKEY, CONSTANT, ARGUMENT):
                     for match in pattern.finditer(text):
                         key = match.group(1)
@@ -74,37 +76,54 @@ def source_keys():
 
 
 def swift_string_array(text, declaration):
-    """The string literals of `static let <declaration> ... = [ ... ]` (comments skipped)."""
+    """The string literals of `static let <declaration> ... = [ ... ]` (comments skipped).
+
+    A list written as `[ ... ] + SomeType.otherKeys + [ ... ]` is read literal by literal: every
+    bracketed list joined with `+` on the same declaration counts, the named lists in between do not.
+    """
     start = text.find(declaration)
     if start < 0:
         sys.exit(f"cannot find `{declaration}`")
     open_bracket = text.index("= ", start)
     open_bracket = text.index("[", open_bracket)
-    depth, index = 0, open_bracket
+    found = []
     while True:
-        char = text[index]
-        if char == "[":
-            depth += 1
-        elif char == "]":
-            depth -= 1
-            if depth == 0:
-                break
-        index += 1
-    body = text[open_bracket:index]
-    body = re.sub(r"//[^\n]*", "", body)
-    return re.findall(r'"([^"\\]+)"', body)
+        depth, index = 0, open_bracket
+        while True:
+            char = text[index]
+            if char == "[":
+                depth += 1
+            elif char == "]":
+                depth -= 1
+                if depth == 0:
+                    break
+            index += 1
+        body = text[open_bracket:index]
+        body = re.sub(r"//[^\n]*", "", body)
+        found += re.findall(r'"([^"\\]+)"', body)
+        # `] + Name.keys + [` continues the same list; anything else ends it.
+        tail = re.match(r"\s*\+\s*(?:[\w.]+\s*\+\s*)*\[", text[index + 1:])
+        if not tail:
+            return found
+        open_bracket = index + 1 + tail.end() - 1
 
 
 PRAYER_OFFSET_KEYS = ["offsetFajr", "offsetSunrise", "offsetDhuhr", "offsetAsr", "offsetMaghrib", "offsetIsha"]
 
 
 def app_group_preferences(settings):
-    """The rows of `Settings.appGroupPreferences`: key -> backed up (True/False)."""
-    start = settings.find("static let appGroupPreferences: [AppGroupPreference] = [")
-    if start < 0:
+    """The rows of `Settings.appGroupPreferences`: key -> backed up (True/False).
+
+    The table is the sum of its literal lists (`sharedAppGroupPreferences + prayerAppGroupPreferences`
+    since the slices refactor), so every `[AppGroupPreference] = [` literal in the file is read; the
+    watch's empty `#else` list contributes nothing.
+    """
+    if "static let appGroupPreferences: [AppGroupPreference]" not in settings:
         sys.exit("cannot find `static let appGroupPreferences`")
-    end = settings.index("\n    ]", start)
-    rows = re.findall(r'key:\s*"([^"]+)",\s*backedUp:\s*(true|false)', settings[start:end])
+    rows = []
+    for match in re.finditer(r"static let \w*[aA]ppGroupPreferences: \[AppGroupPreference\] = \[", settings):
+        end = settings.index("\n    ]", match.end() - 1) if settings[match.end():match.end() + 1] != "]" else match.end()
+        rows += re.findall(r'key:\s*"([^"]+)",\s*backedUp:\s*(true|false)', settings[match.end():end])
     if not rows:
         sys.exit("no rows found in `appGroupPreferences`")
     return {key: backed == "true" for key, backed in rows}

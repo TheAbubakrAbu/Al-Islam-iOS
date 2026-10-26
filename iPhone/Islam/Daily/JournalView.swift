@@ -626,7 +626,6 @@ struct JournalView: View {
                 if query.isEmpty, !store.entries.isEmpty {
                     Section(footer:
                         Text(journalKeepingLine)
-                            .font(.caption2)
                     ) { EmptyView() }
                 }
             }
@@ -1225,7 +1224,7 @@ struct JournalEditorSheet: View {
                         }
                     }
 
-                    Section(header: Text("WRITING"), footer: Text("Start a line with ## for a heading and - for a bullet.").font(.caption2)) {
+                    Section(header: Text("WRITING"), footer: Text("Start a line with ## for a heading and - for a bullet.")) {
                         ZStack(alignment: .topLeading) {
                             if entry.text.isEmpty {
                                 Text(entry.kind.placeholder)
@@ -1266,17 +1265,10 @@ struct JournalEditorSheet: View {
                         }
                     }
 
-                    Section(header: HStack {
-                        Text("ATTACHED")
-                        Spacer()
-                        Button {
-                            Settings.shared.hapticFeedback()
+                    Section(header: SectionHeaderLine(String(localized: "ATTACHED")) {
+                        SectionHeaderAction(String(localized: "Attach"), systemImage: "paperclip") {
                             showAttach = true
-                        } label: {
-                            Label("Attach", systemImage: "paperclip")
-                                .font(.caption.weight(.semibold))
                         }
-                        .foregroundColor(accent)
                     }) {
                         if entry.attachments.isEmpty {
                             Text("An ayah, a bookmarked hadith or a dua, kept with the entry.")
@@ -1373,7 +1365,7 @@ struct JournalAttachSheet: View {
         SheetNavigationContainer {
             List {
                 Group {
-                    Section(header: Text("AN AYAH"), footer: Text("Type the reference, surah:ayah.").font(.caption2)) {
+                    Section(header: Text("AN AYAH"), footer: Text("Type the reference, surah:ayah.")) {
                         TextField("2:255", text: $reference)
                             .keyboardType(.numbersAndPunctuation)
                         if let resolved = resolvedAyah {
@@ -1441,7 +1433,7 @@ struct JournalAttachSheet: View {
                         }
                     }
 
-                    Section(header: Text("A DUA"), footer: Text("Search the app's dua collections.").font(.caption2)) {
+                    Section(header: Text("A DUA"), footer: Text("Search the app's dua collections.")) {
                         TextField("Search duas", text: $duaQuery)
                         ForEach(duaMatches) { dua in
                             Button {

@@ -17,9 +17,11 @@ struct AyahQiraahComparisonSheet: View {
     /// rather than presented as a sheet of its own: no container of its own, no X.
     var embedded: Bool = false
     @State private var searchText = ""
-    // Comparing scripts is exactly when you want the text bigger; the slider only affects this sheet.
-    @State private var arabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .title3).pointSize)
+    /// The Arabic size, shared with the Qiraat Explorer (the same four steps in the same options
+    /// menu), so the two comparison screens read at one size.
+    @AppStorage("qiraatExplorerFontSize") private var fontSize: Double = 24
     @State private var showSummarize = false
+    @State private var showUnlock = false
     /// Smart comparison (default ON): rows are aligned through Hafs to the SAME WORDS even where a
     /// riwayah numbers this ayah differently or joins it with a neighbor. Off = each row shows that
     /// riwayah's ayah under this exact NUMBER, unaligned - useful for seeing the numbering itself.
@@ -58,8 +60,8 @@ struct AyahQiraahComparisonSheet: View {
 
         /// The row's name as shown. The Arabic interface names the riwayah once, in Arabic (the
         /// caption beside it would repeat it); `label` stays English for search and the model's prompt.
-        var shownLabel: String { AppLanguage.isArabic ? arabicCaption : label }
-        var showsCaption: Bool { !AppLanguage.isArabic }
+        var shownLabel: String { AppLanguage.isArabicScript ? arabicCaption : label }
+        var showsCaption: Bool { !AppLanguage.isArabicScript }
     }
 
     /// Comparison columns are pure TEXT - there is no facsimile fallback here - so
@@ -128,264 +130,198 @@ struct AyahQiraahComparisonSheet: View {
         }
     }
 
-    /// The sheet's content below its container (indented as the container's closure it was).
+    /// The sheet's content below its container. The layout is the Qiraat Explorer's, the screen this
+    /// one opens (2026-10-26, Abu: "compare qiraat looks so messy"): the options live in the toolbar
+    /// menu, the mode is the Explorer's All Riwayat | Compare Two control in the pinned band, the
+    /// riwayah rows come first, and the door to the explorer sits under them. Before, four
+    /// single-switch sections with long footers and a font slider stood between the title and the
+    /// first riwayah.
     private var comparisonContent: some View {
-            // The pinned "current riwayah" strip rides as a safe-area inset on the List
-            // rather than a VStack above it: with a VStack, the half-height (.medium)
-            // sheet detent laid the header out as a blank gap until the sheet was
-            // dragged to full height.
-            List {
-                    Group {
-                        // The door to the whole-Quran view: this sheet compares one ayah, the
-                        // explorer finds the next one worth comparing.
-                        Section {
-                            NavigationLink(destination: LazyDestination {
-                                QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
-                            }) {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "arrow.left.and.right.text.vertical")
-                                        .font(.title3)
-                                        .foregroundColor(settings.accentColor.color)
-                                        .frame(width: 30)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("Qiraat Explorer")
-                                            .font(.subheadline.weight(.semibold))
-                                        Text("Step through every place the riwayat differ: what changes, what it means, and every reading side by side")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                }
-                                .padding(.vertical, 2)
-                            }
-                        }
-
-                        Section {
-                            Toggle(isOn: $smartComparison.animation(.easeInOut)) {
-                                Text("Smart Comparison")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .tint(settings.accentColor.color)
-                            .onChange(of: smartComparison) { _ in settings.hapticFeedback() }
-                        } footer: {
-                            Text(smartComparison
-                                 ? "Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading."
-                                 : "Smart Comparison is off: each row shows that riwayah's ayah under this exact NUMBER, with no word alignment. Where numbering differs, rows may show different words. Turn it on to align every row to the same words.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Section {
-                            Toggle(isOn: $compareShowTajweed.animation(.easeInOut)) {
-                                Text("Show Tajweed")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .tint(settings.accentColor.color)
-                            .onChange(of: compareShowTajweed) { _ in settings.hapticFeedback() }
-                        } footer: {
-                            Text("Each riwayah's print-derived tajweed coloring (the khilaf wash marking what differs from Hafs) paints on every row, and stays on even with tashkeel or dots hidden below.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Section {
-                            Toggle(isOn: $compareHideTashkeel.animation(.easeInOut)) {
-                                Text("Hide Tashkeel and Signs")
-                                    .font(.subheadline.weight(.semibold))
-                            }
-                            .tint(settings.accentColor.color)
-                            .onChange(of: compareHideTashkeel) { newValue in
-                                settings.hapticFeedback()
-                                // Dots without the tashkeel stripped is not a state the reading
-                                // view offers either; keep the pair coupled the same way.
-                                if !newValue { compareHideDots = false }
-                            }
-
-                            if compareHideTashkeel {
-                                Toggle(isOn: $compareHideDots.animation(.easeInOut)) {
-                                    Text("Hide Dots")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .tint(settings.accentColor.color)
-                                .onChange(of: compareHideDots) { _ in settings.hapticFeedback() }
-                            }
-                        } footer: {
-                            Text(rasmFooterText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Section {
-                            Toggle(isOn: $duelMode.animation(.easeInOut)) {
-                                Label {
-                                    Text("Head-to-Head")
-                                        .font(.subheadline.weight(.semibold))
-                                } icon: {
-                                    Image(systemName: "arrow.left.arrow.right.circle.fill")
-                                        .foregroundStyle(settings.accentColor.color)
-                                }
-                            }
-                            .tint(settings.accentColor.color)
-                            .onChange(of: duelMode) { _ in settings.hapticFeedback() }
-
-                            if duelMode {
-                                duelPickerRow
-
-                                if let a = duelOptionA {
-                                    duelCard(a, against: duelOptionB)
-                                }
-                                if let b = duelOptionB {
-                                    duelCard(b, against: duelOptionA)
-                                }
-                            }
-                        } footer: {
-                            if duelMode {
-                                Text(duelFooterText)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        if !duelMode {
-                            // Derived ONCE per pass (Phase 10.8): `filteredOptions` resolves every riwayah's
-                            // text while a query is typed, and the three lists below read it ~13 times.
-                            let filtered = filteredOptions
-                            let favorites = favoriteOptions(from: filtered)
-                            let grouped = groupedOptions(from: filtered)
-                            if !favorites.isEmpty {
-                                Section(header: Text("FAVORITES")) {
-                                    ForEach(favorites) { option in
-                                        qiraahRow(option)
-                                    }
-                                }
-                            }
-
-                            ForEach(grouped, id: \.teacher) { group in
-                                Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
-                                    ForEach(group.options) { option in
-                                        qiraahRow(option)
-                                    }
-                                }
-                            }
-
-                            if filtered.isEmpty {
-                                Section {
-                                    Text("No riwayat found.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    .themedListRowBackground()
+        List {
+            Group {
+                if duelMode {
+                    duelSections
+                } else {
+                    allSections
                 }
-            .applyConditionalListStyle()
-            .compactListSectionSpacing()
-            #if DEBUG
-            .debugPushDestination(isPresented: $debugOpenExplorer) {
-                QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
-            }
-            .onAppear {
-                guard ProcessInfo.processInfo.arguments.contains("-openQiraatExplorer") else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenExplorer = true }
-            }
-            #endif
-            // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
-            // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app uses.
-            // The filtering itself is untouched: `filteredOptions` still reads `searchText`.
-            .adaptiveSafeArea(edge: .bottom) {
-                // In Head-to-Head the list is hidden, so the search bar steps aside with it.
-                if !duelMode {
-                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, BottomBarCushion.standard)
-                        .background(Color.white.opacity(0.00001))
-                }
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if let currentOption {
-                    VStack(spacing: 0) {
-                        currentQiraahHeader(currentOption)
 
-                        Divider()
-                    }
-                    .background(.ultraThinMaterial)
-                }
+                moreSection
             }
-            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbarIf(!embedded)
-            // The list below washes itself; this covers the header strip above it, so the whole
-            // sheet sits on the same light.
-            .accentWashedBackground()
-            // On-device AI: summarize how the riwayat of this ayah compare - the current riwayah's
-            // text plus every compared row's text and numbering/difference notes, as rendered.
-            // Hidden when Apple Intelligence is unavailable (the Ask pattern).
-            #if canImport(FoundationModels)
-            .toolbar {
-                // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
-                // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
-                ToolbarItem(placement: .primaryAction) {
-                    if OnDeviceAsk.isAvailable, AyahAISources.qiraahComparisonHasText(surahNumber: surahNumber, ayahNumber: ayahNumber) {
-                        SummarizeToolbarButton { showSummarize = true }
-                    }
-                }
-            }
-            .sheet(isPresented: $showSummarize) {
-                SummarizeSheet(
-                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, english: true))",
-                    displayTitle: AyahAISources.combinedDisplayTitle(of: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)),
-                    sourceText: "",
-                    multiSource: true,
-                    gatherSource: {
-                        // Every ayah ask reads all three families - riwayat first here, since that is
-                        // what this sheet is about. The online translations are fetched best-effort.
-                        let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
-                        let online = await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: anchor)
-                        return OnDeviceAsk.combinedSource(
-                            AyahAISources.combinedSections(
-                                surahNumber: surahNumber,
-                                ayahNumber: ayahNumber,
-                                emphasis: .qiraah,
-                                onlineTranslations: online
-                            )
-                        )
-                    },
-                    excludedNote: AyahAISources.arabicExcludedNote
-                )
-            }
-            #endif
-    }
-
-    #if canImport(FoundationModels)
-    /// The riwayat block of the summarize source (also the toolbar button's non-empty gate). The full
-    /// gathering - tafsirs + riwayat + translations - lives in `AyahAISources`, shared by every ayah
-    /// AI entry point.
-    private var qiraahSummarizeSource: String {
-        AyahAISources.qiraahComparisonText(surahNumber: surahNumber, ayahNumber: ayahNumber)
-    }
-    #endif
-
-    /// The beta-text marker, comparison surfaces only (user rule: "say beta for the riwayah in qiraah
-    /// comparison"). The riwayah pickers elsewhere stay unmarked - the riwayah itself is never beta,
-    /// and outside comparison mode its text never renders.
-    @ViewBuilder
-    private func betaBadge(_ option: QiraahDisplay) -> some View {
-        if option.beta {
-            Text("BETA")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.orange)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.orange.opacity(0.15), in: Capsule())
+            .themedListRowBackground()
         }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        #if DEBUG
+        .debugPushDestination(isPresented: $debugOpenExplorer) {
+            QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
+        }
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-openQiraatExplorer") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenExplorer = true }
+        }
+        #endif
+        // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
+        // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app uses.
+        .adaptiveSafeArea(edge: .bottom) {
+            // In Compare Two the list is the two cards, so the search bar steps aside with the rows.
+            if !duelMode {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: String(localized: "Search riwayat"))
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, BottomBarCushion.standard)
+                    .background(Color.white.opacity(0.00001))
+            }
+        }
+        // A safe-area inset rather than a VStack above the List: with a VStack, the half-height
+        // (.medium) sheet detent laid the band out as a blank gap until the sheet was dragged up.
+        .safeAreaInset(edge: .top, spacing: 0) { band }
+        .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
+        .navigationBarTitleDisplayMode(.inline)
+        .sheetDismissToolbarIf(!embedded)
+        // The list below washes itself; this covers the band above it, so the whole sheet sits on
+        // the same light.
+        .accentWashedBackground()
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                optionsMenu
+
+                // On-device AI: summarize how the riwayat of this ayah compare. Hidden when Apple
+                // Intelligence is unavailable (the Ask pattern); at the far end, where every ayah
+                // sheet keeps it.
+                #if canImport(FoundationModels)
+                if OnDeviceAsk.isAvailable, AyahAISources.qiraahComparisonHasText(surahNumber: surahNumber, ayahNumber: ayahNumber) {
+                    SummarizeToolbarButton { showSummarize = true }
+                }
+                #endif
+            }
+        }
+        .sheet(isPresented: $showUnlock) { QiraatExplorerUnlockSheet() }
+        .onChange(of: duelMode) { _ in settings.hapticFeedback() }
+        .onChange(of: smartComparison) { _ in settings.hapticFeedback() }
+        .onChange(of: compareShowTajweed) { _ in settings.hapticFeedback() }
+        .onChange(of: compareHideTashkeel) { newValue in
+            settings.hapticFeedback()
+            // Dots without the tashkeel stripped is not a state the reading view offers either.
+            if !newValue { compareHideDots = false }
+        }
+        .onChange(of: compareHideDots) { _ in settings.hapticFeedback() }
+        #if canImport(FoundationModels)
+        .sheet(isPresented: $showSummarize) {
+            SummarizeSheet(
+                title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, english: true))",
+                displayTitle: AyahAISources.combinedDisplayTitle(of: ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber)),
+                sourceText: "",
+                multiSource: true,
+                gatherSource: {
+                    // Every ayah ask reads all three families - riwayat first here, since that is
+                    // what this sheet is about. The online translations are fetched best-effort.
+                    let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+                    let online = await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: anchor)
+                    return OnDeviceAsk.combinedSource(
+                        AyahAISources.combinedSections(
+                            surahNumber: surahNumber,
+                            ayahNumber: ayahNumber,
+                            emphasis: .qiraah,
+                            onlineTranslations: online
+                        )
+                    )
+                },
+                excludedNote: AyahAISources.arabicExcludedNote
+            )
+        }
+        #endif
     }
 
-    private func currentQiraahHeader(_ option: QiraahDisplay) -> some View {
+    // MARK: Toolbar
+
+    /// The riwayat still locked behind the beta text notice, if any.
+    private var lockedCount: Int {
+        max(0, Settings.Riwayah.allOptions.count - options.count)
+    }
+
+    /// The Explorer's options menu with this sheet's own switches: what used to be four
+    /// single-switch sections above the rows, and the text size that used to be a slider in the band.
+    private var optionsMenu: some View {
+        Menu {
+            Picker("Text Size", selection: $fontSize) {
+                Text("Small").tag(20.0)
+                Text("Medium").tag(24.0)
+                Text("Large").tag(28.0)
+                Text("Extra Large").tag(34.0)
+            }
+            Divider()
+            // `.automatic`, not the app's padded switch: inside a menu that style draws double-height
+            // rows with stray checkmarks (see the memory note on menu toggles).
+            Toggle(isOn: $smartComparison) {
+                Label("Smart Comparison", systemImage: "wand.and.stars")
+                Text("Line every row up to the same words")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: $compareShowTajweed) {
+                Label("Show Tajweed", systemImage: "paintpalette")
+                Text("Each print's khilaf coloring")
+            }
+            .toggleStyle(.automatic)
+            Divider()
+            Toggle(isOn: $compareHideTashkeel) {
+                Label("Hide Tashkeel and Signs", systemImage: "textformat")
+                Text("Compare the bare lettering")
+            }
+            .toggleStyle(.automatic)
+            Toggle(isOn: $compareHideDots) {
+                Label("Hide Dots", systemImage: "circle.dotted")
+                Text("Down to the Uthmani rasm")
+            }
+            .toggleStyle(.automatic)
+            .disabled(!compareHideTashkeel)
+            if lockedCount > 0 {
+                Divider()
+                Button {
+                    showUnlock = true
+                } label: {
+                    Label("Compare All 20 Riwayat", systemImage: "flask")
+                }
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+        }
+        .fixedMenuOrder()
+        .tint(settings.accentColor.color)
+        .accessibilityLabel("Comparison options")
+    }
+
+    // MARK: The band
+
+    /// The pinned band: the mode (the Explorer's All Riwayat | Compare Two), then the current
+    /// riwayah's own text, the reference every row is read against, or Compare Two's two sides.
+    private var band: some View {
+        VStack(spacing: 10) {
+            Picker("Mode", selection: $duelMode) {
+                Text("All Riwayat").tag(false)
+                Text("Compare Two").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityLabel("Comparison mode")
+
+            if duelMode {
+                sidesRow
+            } else if let currentOption {
+                currentRiwayah(currentOption)
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
+        .background(.ultraThinMaterial)
+        .overlay(Divider(), alignment: .bottom)
+    }
+
+    /// The riwayah the reader is displaying, pinned so every row can be compared against it without
+    /// scrolling back up.
+    private func currentRiwayah(_ option: QiraahDisplay) -> some View {
         let text = qiraahText(for: option)
 
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(option.shownLabel)
                     .font(.subheadline.weight(.semibold))
 
@@ -395,7 +331,7 @@ struct AyahQiraahComparisonSheet: View {
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                betaBadge(option)
+                if option.beta { BetaBadge() }
 
                 Spacer()
 
@@ -413,7 +349,7 @@ struct AyahQiraahComparisonSheet: View {
                     Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
+                .font(.custom(comparisonArabicFontName(for: option), size: fontSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
@@ -422,22 +358,134 @@ struct AyahQiraahComparisonSheet: View {
                 // Arabic keeps the right edge: in the Arabic interface `.trailing` is the left.
                 .environment(\.layoutDirection, .leftToRight)
                 .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
-            HStack(spacing: 12) {
-                Image(systemName: "textformat.size.smaller")
-                    .foregroundStyle(.secondary)
+    /// Compare Two's sides: the Explorer's band row, so the two screens pick their pair the same
+    /// way (the app's one riwayah picker in its compact capsule, a swap between).
+    private var sidesRow: some View {
+        let accent = settings.accentColor.color
+        return HStack(spacing: 8) {
+            ArabicTextRiwayahPicker(
+                selection: Binding(get: { duelOptionA?.tag ?? Settings.Riwayah.hafsTag }, set: { duelATagRaw = $0 }),
+                sideLabel: "A", compactLabel: true)
 
-                Slider(value: $arabicFontSize, in: 15...45, step: 1)
-                    .accessibilityLabel("Arabic font size")
+            Button {
+                settings.hapticFeedback()
+                let a = duelOptionA?.tag ?? "__unset__"
+                let b = duelOptionB?.tag ?? "__unset__"
+                duelATagRaw = b
+                duelBTagRaw = a
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(accent)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(accent.opacity(0.14)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Swap the two riwayat")
 
-                Image(systemName: "textformat.size.larger")
+            ArabicTextRiwayahPicker(
+                selection: Binding(get: { duelOptionB?.tag ?? Settings.Riwayah.hafsTag }, set: { duelBTagRaw = $0 }),
+                sideLabel: "B", compactLabel: true)
+        }
+    }
+
+    // MARK: The sections
+
+    /// Every riwayah against the current one: the favorites first, then one section per qiraah.
+    @ViewBuilder
+    private var allSections: some View {
+        // Derived ONCE per pass (Phase 10.8): `filteredOptions` resolves every riwayah's text while
+        // a query is typed, and the lists below read it several times.
+        let filtered = filteredOptions
+        let favorites = favoriteOptions(from: filtered)
+        let grouped = groupedOptions(from: filtered)
+
+        if !favorites.isEmpty {
+            Section(header: Text("FAVORITES")) {
+                ForEach(favorites) { option in
+                    qiraahRow(option)
+                }
+            }
+        }
+
+        ForEach(grouped, id: \.teacher) { group in
+            Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
+                ForEach(group.options) { option in
+                    qiraahRow(option)
+                }
+            }
+        }
+
+        if filtered.isEmpty {
+            Section {
+                Text("No riwayat found.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .font(.caption)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 10)
     }
+
+    /// Compare Two: the pair read against each other.
+    @ViewBuilder
+    private var duelSections: some View {
+        Section {
+            if let a = duelOptionA {
+                duelCard(a, against: duelOptionB)
+            }
+            if let b = duelOptionB {
+                duelCard(b, against: duelOptionA)
+            }
+        } footer: {
+            Text(duelFooterText)
+        }
+    }
+
+    /// The door to the whole-Quran view, under the rows as the Explorer keeps its own doors: this
+    /// sheet compares one ayah, the explorer finds the next one worth comparing. Its footer is the
+    /// one note about what the rows show.
+    private var moreSection: some View {
+        Section {
+            NavigationLink(destination: LazyDestination {
+                QiraatExplorerView(surah: surahNumber, ayah: ayahNumber, originTag: originTag)
+            }) {
+                SettingsRowLabel(title: String(localized: "Qiraat Explorer"), systemImage: "arrow.left.and.right.text.vertical",
+                                 subtitle: String(localized: "Every place the riwayat differ, side by side"))
+            }
+        } header: {
+            Text("MORE")
+        } footer: {
+            if !comparisonNote.isEmpty {
+                Text(comparisonNote)
+            }
+        }
+    }
+
+    /// What the rows show, said once under them: how they are aligned, what the accent tint means
+    /// and, with marks hidden, how many riwayat now read alike (the receipt that makes hiding them
+    /// worth it). Compare Two carries its own note under the pair.
+    private var comparisonNote: String {
+        guard !duelMode else { return "" }
+        var parts = [smartComparison
+            ? String(localized: "Rows are aligned to the same words through Hafs; a note marks a riwayah that numbers this ayah differently or joins it with a neighbor. Words in the accent color differ from the current riwayah.")
+            : String(localized: "Smart Comparison is off: each row shows that riwayah's ayah under this exact number, so rows may show different words where the numbering differs.")]
+        if compareHideTashkeel || compareHideDots {
+            parts.append(rasmFooterText)
+        }
+        return parts.joined(separator: " ")
+    }
+
+    #if canImport(FoundationModels)
+    /// The riwayat block of the summarize source (also the toolbar button's non-empty gate). The full
+    /// gathering - tafsirs + riwayat + translations - lives in `AyahAISources`, shared by every ayah
+    /// AI entry point.
+    private var qiraahSummarizeSource: String {
+        AyahAISources.qiraahComparisonText(surahNumber: surahNumber, ayahNumber: ayahNumber)
+    }
+    #endif
 
     /// The riwayah the sheet was OPENED from: the tapped ayah number is in THAT riwayah's own
     /// numbering, so every row is anchored through its Hafs equivalent.
@@ -457,9 +505,9 @@ struct AyahQiraahComparisonSheet: View {
             : QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: option.tag, quranData: quranData)
     }
 
-    /// The caption under the Hide Tashkeel / Hide Dots toggles. With either on it also REPORTS the
-    /// result - how many riwayat now read identically to the current one - because seeing the
-    /// shared Uthmani rasm emerge is the whole point of the toggles.
+    /// The receipt for Hide Tashkeel / Hide Dots: how many riwayat now read identically to the
+    /// current one, because seeing the shared Uthmani rasm emerge is the whole point of the two.
+    /// Part of `comparisonNote` while either is on.
     private var rasmFooterText: String {
         guard compareHideTashkeel || compareHideDots else {
             return String(localized: "Strip the vowel marks (and then the dots) to compare the bare letter skeletons. All qiraat descend from the dotless Uthmani rasm of the copies Uthman ibn Affan sent out, so most differences vanish at the skeleton level.")
@@ -637,45 +685,6 @@ struct AyahQiraahComparisonSheet: View {
             : String(localized: "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two.")
     }
 
-    private var duelPickerRow: some View {
-        HStack(spacing: 10) {
-            duelPicker(side: "A", selected: duelOptionA) { duelATagRaw = $0 }
-
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    let a = duelOptionA?.tag ?? "__unset__"
-                    let b = duelOptionB?.tag ?? "__unset__"
-                    duelATagRaw = b
-                    duelBTagRaw = a
-                }
-            } label: {
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(6)
-                    .background(Circle().fill(settings.accentColor.color.opacity(0.12)))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Swap the two riwayat")
-
-            duelPicker(side: "B", selected: duelOptionB) { duelBTagRaw = $0 }
-        }
-        .padding(.vertical, 2)
-    }
-
-    /// One side's picker: the app's one riwayah picker (the nested qiraah menu), in its side-card
-    /// form (user rule: every riwayah picker is the comparison bar's).
-    private func duelPicker(side: String, selected: QiraahDisplay?, choose: @escaping (String) -> Void) -> some View {
-        ArabicTextRiwayahPicker(
-            selection: Binding(
-                get: { selected?.tag ?? Settings.Riwayah.hafsTag },
-                set: { tag in withAnimation(.easeInOut) { choose(tag) } }
-            ),
-            sideLabel: side
-        )
-    }
-
     /// One side of the duel: the riwayah's aligned text, diffed against the OTHER side (not against
     /// the current riwayah), with its khilaf wash layered on top - the same styling stack as the rows.
     private func duelCard(_ option: QiraahDisplay, against other: QiraahDisplay?) -> some View {
@@ -693,7 +702,7 @@ struct AyahQiraahComparisonSheet: View {
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                betaBadge(option)
+                if option.beta { BetaBadge() }
 
                 Spacer()
 
@@ -707,7 +716,7 @@ struct AyahQiraahComparisonSheet: View {
             if let resolved, let note = numberNote(resolved) {
                 Text(note)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(.secondary)
             }
 
             Group {
@@ -717,7 +726,7 @@ struct AyahQiraahComparisonSheet: View {
                     Text(text ?? String(localized: "This ayah is not separate in this riwayah."))
                 }
             }
-                .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
+                .font(.custom(comparisonArabicFontName(for: option), size: fontSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
@@ -774,7 +783,7 @@ struct AyahQiraahComparisonSheet: View {
                         )
                     }
 
-                    betaBadge(option)
+                    if option.beta { BetaBadge() }
                 }
 
                 Spacer()
@@ -803,7 +812,7 @@ struct AyahQiraahComparisonSheet: View {
             if let resolved, let note = numberNote(resolved) {
                 Text(note)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(.secondary)
             }
 
             // Scanning the rows, one of them matches the current riwayah word for word in every
@@ -811,7 +820,7 @@ struct AyahQiraahComparisonSheet: View {
             if QiraatProfiles.shareOneText(option.tag, originTag) {
                 Text("Same transmitted text as \(QiraatProfiles.shortName(of: originTag).localizedDisplay): al-Durrah reports no difference between the two narrators.")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(.secondary)
             }
 
             HighlightedSnippet(
@@ -819,7 +828,7 @@ struct AyahQiraahComparisonSheet: View {
                 term: searchText,
                 font: .custom(
                     comparisonArabicFontName(for: option),
-                    size: arabicFontSize
+                    size: fontSize
                 ),
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary,

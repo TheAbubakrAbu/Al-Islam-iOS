@@ -138,7 +138,8 @@ struct AskAISource: Identifiable, Equatable, Codable {
         case .hadith: return String(localized: "Hadith")
         case .tafsir: return String(localized: "Tafsir")
         case .surah: return String(localized: "Surah")
-        case .article: return String(localized: "Article")
+        // Its own key: "Article" is also the definite article in the tajweed course (لام التعريف).
+        case .article: return String(localized: "askai.article", defaultValue: "Article")
         case .prayer: return String(localized: "Prayer times")
         case .name: return String(localized: "Name of Allah")
         case .dua, .hisnDua: return String(localized: "Dua")

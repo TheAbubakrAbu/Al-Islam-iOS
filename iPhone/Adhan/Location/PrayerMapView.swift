@@ -158,7 +158,7 @@ struct PrayerTimesMapView: View {
                 optionalTimeToggle(String(localized: "Islamic Midnight"), icon: "moon.fill", isOn: optionalBinding($mapShowIslamicMidnight, fallback: settings.showIslamicMidnight))
                 optionalTimeToggle(String(localized: "Last Third of the Night"), icon: "moon.stars.fill", isOn: optionalBinding($mapShowLastThird, fallback: settings.showLastThird))
             } header: {
-                Text("Optional Times")
+                Text("OPTIONAL TIMES")
             } footer: {
                 Text(isComparing
                      ? "Computed for both cities from their own sunrise, Maghrib and next Fajr. These switches only affect this screen."
@@ -176,18 +176,7 @@ struct PrayerTimesMapView: View {
     }
 
     private func optionalTimeToggle(_ title: String, icon: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn.animation(.easeInOut)) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(width: 22, alignment: .center)
-                Text(title)
-                    .foregroundColor(.primary)
-            }
-            .font(.subheadline)
-        }
-        .tint(settings.accentColor.color)
-        .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
+        SettingsToggle(title, systemImage: icon, isOn: isOn)
     }
 
     // MARK: - Hero
@@ -215,7 +204,7 @@ struct PrayerTimesMapView: View {
                             Text(selectedLocation == nil
                                  ? String(localized: "Your current location")
                                  // Signed pair, kept one left-to-right run in Arabic (`SymbolNumber`).
-                                 : SymbolNumber.isolated(String(format: "%.3f°, %.3f°", locale: AppLanguage.isArabic ? Locale.current : nil,
+                                 : SymbolNumber.isolated(String(format: "%.3f°, %.3f°", locale: AppLanguage.isArabicScript ? Locale.current : nil,
                                                                 location.latitude, location.longitude)))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -300,7 +289,7 @@ struct PrayerTimesMapView: View {
                 .foregroundStyle(.secondary)
                 .padding(.vertical, 2)
         } header: {
-            Text("Favorites")
+            Text("FAVORITES")
         }
     }
 
@@ -353,13 +342,8 @@ struct PrayerTimesMapView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Toggle(isOn: $compareAutomaticLocation.animation(.easeInOut)) {
-                    Label("Compare With My Location", systemImage: "arrow.left.arrow.right")
-                        .font(.subheadline)
-                }
-                .tint(settings.accentColor.color)
-                .disabled(!canCompareAutomaticLocation)
-                .onChange(of: compareAutomaticLocation) { _ in settings.hapticFeedback() }
+                SettingsToggle(String(localized: "Compare With My Location"), systemImage: "arrow.left.arrow.right", isOn: $compareAutomaticLocation)
+                    .disabled(!canCompareAutomaticLocation)
 
                 Text(methodCaption)
                     .font(.caption)
@@ -367,7 +351,7 @@ struct PrayerTimesMapView: View {
                     .padding(.vertical, 2)
             }
         } header: {
-            Text("Options")
+            Text("OPTIONS")
         }
     }
 
@@ -399,7 +383,6 @@ struct PrayerTimesMapView: View {
 
                 DatePicker(selection: $selectedDate.animation(.easeInOut), displayedComponents: .date) {
                     Label("Date", systemImage: "calendar")
-                        .font(.subheadline)
                 }
                 .tint(settings.accentColor.color)
 
@@ -414,12 +397,11 @@ struct PrayerTimesMapView: View {
                     }
                 }
             } header: {
-                HStack {
-                    Text("Prayer Times")
-                    Spacer()
+                SectionHeaderLine(String(localized: "PRAYER TIMES")) {
                     Text(isComparing ? String(localized: "Comparison") : shortCity(location))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
+                        .textCase(nil)
                 }
             }
         } else {
@@ -428,7 +410,7 @@ struct PrayerTimesMapView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } header: {
-                Text("Prayer Times")
+                Text("PRAYER TIMES")
             }
         }
     }

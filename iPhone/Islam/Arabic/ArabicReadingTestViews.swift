@@ -413,9 +413,7 @@ struct ReadingTierView: View {
             }
 
             if tier.hint != .none, tier.display != .spaced {
-                Toggle("Letter by Letter", isOn: $examplesSpaced.animation(.easeInOut))
-                    .font(.subheadline)
-                    .tint(accent)
+                SettingsToggle(String(localized: "Letter by Letter"), isOn: $examplesSpaced)
             }
         } header: {
             StudySectionHeader(String(localized: "EXAMPLES"), systemImage: "text.quote")

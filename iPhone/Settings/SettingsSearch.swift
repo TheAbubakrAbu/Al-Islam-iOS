@@ -292,6 +292,19 @@ struct SettingsRowLabel: View {
     var secondaryTint: Color? = nil
     /// A short state read-out ("On", "3 passages") at the trailing edge.
     var value: String? = nil
+    /// A chip of the row's own in place of the accent symbol chip (the theme legend's rainbow).
+    var chip: AnyView? = nil
+    /// A trailing accessory after the value: a count pill, a title in Arabic. Every door row in the
+    /// app draws through this view (2026-10-26), so a row that carries one more thing passes it
+    /// here rather than drawing its own chip, title and caption.
+    var accessory: AnyView? = nil
+    /// Lines the caption may take: one on a settings row (the row stays one height), two on a
+    /// content row whose caption is a sentence (a dua collection's).
+    var subtitleLineLimit: Int = 1
+    /// The List's own disclosure chevron, for a door drawn as a `Button` (a row that pushes through
+    /// one piece of state rather than a `NavigationLink`, see `one-link-per-list-row`): without it
+    /// the row read as an action, not a door.
+    var showsChevron: Bool = false
 
     #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -314,7 +327,11 @@ struct SettingsRowLabel: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint)
+            if let chip {
+                chip
+            } else {
+                AccentIconChip(systemImage: systemImage, tint: tint, secondaryTint: secondaryTint)
+            }
 
             // The title never wraps: a long value ("All passages · 2 themes") shrinks and then
             // truncates before the title gives up a line. Accessibility sizes aside (`stacks`).
@@ -329,7 +346,7 @@ struct SettingsRowLabel: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(stacks ? nil : 1)
+                        .lineLimit(stacks ? nil : subtitleLineLimit)
                         .minimumScaleFactor(stacks ? 1 : 0.8)
                 }
                 #endif
@@ -350,6 +367,26 @@ struct SettingsRowLabel: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+            }
+
+            if let accessory {
+                if value == nil || stacks || isSidebarColumn {
+                    Spacer(minLength: 8)
+                }
+
+                accessory
+            }
+
+            if showsChevron {
+                if value == nil && accessory == nil {
+                    Spacer(minLength: 8)
+                }
+
+                // UIKit's disclosure indicator: a 13 pt semibold chevron in the tertiary label colour.
+                Image(systemName: "chevron.forward")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 3)
@@ -693,7 +730,7 @@ struct SettingsSearchResultRow: View {
     /// One segment of the trail. The page roots are filed under the apps' names ("Al-Quran"), which
     /// stay Latin in Arabic; there the trail names the section as the Settings root shows it instead.
     private static func localizedSegment(_ segment: String) -> String {
-        guard AppLanguage.isArabic else { return segment.localizedDisplay }
+        guard AppLanguage.isArabicScript else { return segment.localizedDisplay }
         switch segment {
         case "Al-Islam": return String(localized: "Islam Settings")
         case "Al-Adhan": return String(localized: "Prayer Settings")

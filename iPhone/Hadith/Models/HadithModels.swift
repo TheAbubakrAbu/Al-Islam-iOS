@@ -474,18 +474,18 @@ struct HadithCatalogBook: Identifiable, Hashable {
 extension HadithCatalogBook {
     /// The book's title: `arabicTitle` in the Arabic interface, `englishTitle` otherwise.
     var displayTitle: String {
-        AppLanguage.isArabic && !arabicTitle.isEmpty ? arabicTitle : englishTitle
+        AppLanguage.isArabicScript && !arabicTitle.isEmpty ? arabicTitle : englishTitle
     }
 
     /// The compiler's name: `authorArabic` in the Arabic interface, `authorEnglish` otherwise.
     var displayAuthor: String {
-        AppLanguage.isArabic && !authorArabic.isEmpty ? authorArabic : authorEnglish
+        AppLanguage.isArabicScript && !authorArabic.isEmpty ? authorArabic : authorEnglish
     }
 
     /// "Sahih al-Bukhari 1" as the reader sees it. English is the saved form exactly, "\(englishTitle)
     /// \(number)"; Arabic reads "صَحِيح البُخارِي ١", the number in the interface's digits.
     func displayReference(_ number: String) -> String {
-        guard AppLanguage.isArabic else { return "\(englishTitle) \(number)" }
+        guard AppLanguage.isArabicScript else { return "\(englishTitle) \(number)" }
         return "\(displayTitle) \(Self.displayNumber(number))"
     }
 
@@ -493,7 +493,7 @@ extension HadithCatalogBook {
     /// (`HadithDigits`), and in the Arabic interface its words too ("المقدمة ٩").
     static func displayNumber(_ number: String) -> String {
         let introduction = "Introduction "
-        if AppLanguage.isArabic, number.hasPrefix(introduction) {
+        if AppLanguage.isArabicScript, number.hasPrefix(introduction) {
             return String(localized: "Introduction") + " " + HadithDigits.display(String(number.dropFirst(introduction.count)))
         }
         return HadithDigits.display(number)
@@ -504,7 +504,7 @@ extension HadithCatalogBook {
     /// in the interface's digits. English, an unknown book, or a reference that does not open with
     /// the book's title comes back exactly as stored.
     static func displayReference(stored reference: String, slug: String) -> String {
-        guard AppLanguage.isArabic, let book = bySlug[slug] else { return reference }
+        guard AppLanguage.isArabicScript, let book = bySlug[slug] else { return reference }
         let prefix = book.englishTitle + " "
         guard reference.hasPrefix(prefix) else { return reference }
         return book.displayReference(String(reference.dropFirst(prefix.count)))
@@ -560,7 +560,7 @@ struct HadithBookData: @unchecked Sendable {
         /// The chapter's name as the reader sees it: `arabic` in the Arabic interface (when the data
         /// has one), `english` otherwise. DISPLAY only; matching keeps the folds above.
         var displayTitle: String {
-            AppLanguage.isArabic && !arabic.isEmpty ? arabic : english
+            AppLanguage.isArabicScript && !arabic.isEmpty ? arabic : english
         }
 
         /// `displayTitle`, or the book's own title for a chapter that has no name: the fallback every

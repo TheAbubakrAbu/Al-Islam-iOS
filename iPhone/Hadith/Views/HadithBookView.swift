@@ -38,7 +38,7 @@ private struct HadithBookHero: View {
         ResourceHero(eyebrow: book.group.rawValue.localizedDisplay,
                      systemImage: "books.vertical.fill",
                      headline: book.displayTitle,
-                     arabic: AppLanguage.isArabic ? nil : book.arabicTitle,
+                     arabic: AppLanguage.isArabicScript ? nil : book.arabicTitle,
                      message: "") {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center, spacing: 10) {
@@ -51,7 +51,7 @@ private struct HadithBookHero: View {
                             .foregroundColor(.primary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        if !AppLanguage.isArabic {
+                        if !AppLanguage.isArabicScript {
                             Text(book.authorArabic)
                                 .font(appearance.islamArabicFont(base: 17, relativeTo: .subheadline))
                                 .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
@@ -129,7 +129,7 @@ private struct HadithBookNameBlock: View {
         // The Arabic interface keeps only the full title in Arabic: the meaning, the transliteration
         // and the translation are English, written for a reader who cannot read the Arabic.
         VStack(alignment: .leading, spacing: 10) {
-            if !AppLanguage.isArabic {
+            if !AppLanguage.isArabicScript {
                 VStack(alignment: .leading, spacing: 3) {
                     label(String(localized: "THE NAME MEANS"))
                     Text("“\(name.meaning)”")
@@ -154,7 +154,7 @@ private struct HadithBookNameBlock: View {
                     .fixedSize(horizontal: false, vertical: true)
                     // The right edge in the Arabic interface too (`.trailing` is right only left to right).
                     .environment(\.layoutDirection, .leftToRight)
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(name.fullTransliteration)
                         .font(.subheadline.italic())
                         .foregroundColor(.primary)
@@ -1064,12 +1064,8 @@ struct HadithBookView: View {
     /// edge, in the same pill language the other section headers use. No size pill: the book is part of
     /// the app, so how many megabytes it weighs is not something the reader has to think about.
     private func chaptersSectionHeader(_ data: HadithBookData) -> some View {
-        HStack(spacing: 5) {
-            Text("CHAPTERS")
-
-            Spacer()
-
-            // Chapters, then hadiths - the SAME order as the catalog rows' chips, abbreviated in the
+        SectionHeaderLine(String(localized: "CHAPTERS")) {
+            // Chapters, then hadiths - the SAME order as the catalog rows' counts, abbreviated in the
             // split view's narrow content column so neither ellipsizes. Simple Mode drops them.
             if settings.hides(.chapterStats) {
                 EmptyView()
@@ -1463,15 +1459,17 @@ struct HadithBookView: View {
                 // the range under the count pill. In the Arabic interface the title above IS the
                 // Arabic name, so the row keeps only the range.
                 HStack(alignment: .firstTextBaseline) {
-                    if !AppLanguage.isArabic, !chapter.arabic.isEmpty {
+                    if !AppLanguage.isArabicScript, !chapter.arabic.isEmpty {
                         // The chapter number in Arabic-Indic digits beside the Arabic name, matching
                         // the grid tile - both scripts carry the number.
+                        // The surah row's colours: the number carries the accent, the Arabic name
+                        // is content in the primary colour (2026-10-26).
                         Text(arabicNumberString(from: chapterOrdinal(chapter, data: data)))
                             .font(settings.useFontArabic
                                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
                                 : .caption.weight(.semibold))
                             .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(settings.accentColor.color)
                             .layoutPriority(1)
 
                         HighlightedSnippet(
@@ -1481,7 +1479,7 @@ struct HadithBookView: View {
                                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
                                 : .caption,
                             accent: settings.accentColor.color,
-                            fg: .secondary,
+                            fg: .primary,
                             lineLimit: 1
                         )
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -1493,7 +1491,7 @@ struct HadithBookView: View {
                     if !settings.hides(.chapterStats), let rangeText = chapterRangeText(chapter, data: data) {
                         Text(rangeText)
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                             .monospacedDigit()
                             .layoutPriority(1)
                     }
@@ -1546,7 +1544,7 @@ struct HadithBookView: View {
                                 ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
                                 : .subheadline,
                             accent: settings.accentColor.color,
-                            fg: settings.accentColor.color,
+                            fg: .primary,
                             lineLimit: 1
                         )
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -1562,7 +1560,7 @@ struct HadithBookView: View {
 
                 // The Arabic interface leaves out the English line when the Arabic one above names
                 // the chapter (and its number) already.
-                if !AppLanguage.isArabic || chapter.arabic.isEmpty {
+                if !AppLanguage.isArabicScript || chapter.arabic.isEmpty {
                     HStack(spacing: 4) {
                         Text("\(chapterOrdinal(chapter, data: data)):")
                             .font(.subheadline.monospacedDigit().weight(.bold))
@@ -1590,14 +1588,14 @@ struct HadithBookView: View {
                         if let rangeText = chapterRangeText(chapter, data: data) {
                             Text(rangeText)
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.secondaryOnGlass)
                                 .monospacedDigit()
                         }
 
                         if let count = chapterStats(data).counts[chapter.id] {
                             Text("• \(count)")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(.secondaryOnGlass)
                                 .monospacedDigit()
                         }
                     }
@@ -2592,7 +2590,7 @@ struct HadithChapterView: View {
                 // The Latin side never shrinks (a scaled-down title next to full-size Arabic reads
                 // as a mistake); it truncates instead. The Arabic interface names the book once, by
                 // the Arabic title beside it.
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(book.englishTitle)
                         .font(.subheadline.bold())
                         .lineLimit(1)
@@ -2959,7 +2957,7 @@ struct HadithChapterView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                if !AppLanguage.isArabic, !chapter.arabic.isEmpty {
+                if !AppLanguage.isArabicScript, !chapter.arabic.isEmpty {
                     // Comma-safe via the snippet renderer, like every other Arabic label in this tab.
                     HighlightedSnippet(
                         source: chapter.arabic,
@@ -3024,7 +3022,7 @@ struct HadithChapterView: View {
         let subtitle = target.map { chapter -> String in
             let ordinal = bookData.position(of: chapter)
             // The Arabic interface names the chapter by its Arabic title, in its own digits.
-            if AppLanguage.isArabic {
+            if AppLanguage.isArabicScript {
                 return "\(ordinal.formatted(.number.grouping(.never))). \(chapter.displayTitle(in: book))"
             }
             return "\(ordinal). \(chapter.english.isEmpty ? book.englishTitle : chapter.english)"
@@ -3163,7 +3161,7 @@ struct HadithChapterPickerSheet: View {
                                     .lineLimit(2)
                                     .minimumScaleFactor(0.7)
 
-                                if !AppLanguage.isArabic, !chapter.arabic.isEmpty {
+                                if !AppLanguage.isArabicScript, !chapter.arabic.isEmpty {
                                     HighlightedSnippet(
                                         source: chapter.arabic,
                                         term: "",

@@ -46,6 +46,7 @@ ALLOWED_SNIPPETS = [
 ALLOWED_FILES = {
     "iPhone/Settings/Model/Settings.swift",
     "iPhone/Settings/Model/SettingsQuran.swift",
+    "iPhone/Settings/Model/SettingsSlices.swift",
     "iPhone/Settings/Model/SimpleTrims.swift",
     "iPhone/SplashScreen.swift",
     "iPhone/WelcomePages.swift",

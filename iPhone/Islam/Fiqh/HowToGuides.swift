@@ -873,6 +873,11 @@ struct JanazahView: View {
     }
 }
 
+/// Istikharah: the prayer and its dua on ONE page (Abu, 2026-10-25: "there's dua and prayer of
+/// istikhara in how to guides, merge them into one"; the dua had been its own row, IstikharahDuaView,
+/// since 2026-10-21). The dua is drawn as the Dua screen draws its rows (`GuideDuaRow`), the
+/// narrator's "or he said" set in parentheses so the page reads as a script
+/// (`WordRange.parenthesizingAsides`), and each of its phrases is explained under it.
 struct IstikharahView: View {
     var body: some View {
         List {
@@ -887,62 +892,10 @@ struct IstikharahView: View {
                 }
 
                 Section(header: ArticleHeader("THE DUA OF ISTIKHARAH")) {
-                    ArticleParagraph(verbatim: "Said after the taslim of the two rak‘ah. Where it says هَذَا الأَمْرَ, “this matter”, name what you are deciding. The narrator's “or he said” gives the Prophet's other wording of one phrase; say either.")
+                    ArticleParagraph(verbatim: "Said after the taslim of the two rak‘ah, in Arabic if you can. Where it says هَذَا الأَمْرَ, “this matter”, name what you are deciding. The words in parentheses are the narrator's, not yours to say: “or he said” introduces the Prophet's other wording of one phrase. Say either wording in its place, or both one after the other.")
                     // The dua as the Dua screen would carry it: the narration's own words from "Allahumma"
-                    // to "ardini bih", the narrator's variants set off by dashes as the shelf prints them.
-                    GuideDuaRow(DuaItem(
-                        hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 54...135, english: 154...299,
-                        transliteration: "Allahumma inni astakhiruka bi-‘ilmika, wa astaqdiruka bi-qudratika, wa as'aluka min fadlika al-‘adhim, fa-innaka taqdiru wa la aqdiru, wa ta‘lamu wa la a‘lamu, wa anta ‘allamu al-ghuyub. Allahumma in kunta ta‘lamu anna hadha al-amra khayrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: ‘ajili amri wa ajilihi), faqdurhu li wa yassirhu li thumma barik li fih. Wa in kunta ta‘lamu anna hadha al-amra sharrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: fi ‘ajili amri wa ajilihi), fasrifhu ‘anni wasrifni ‘anhu, waqdur li al-khayra haythu kana thumma ardini bih.",
-                        note: "After the two rak‘ah, naming the matter at hand"
-                    ))
-                    ArticleDoorRow(door: .article("IstikharahDuaView"))
-                }
-
-                Section(header: ArticleHeader("WHEN TO PRAY IT")) {
-                    ArticleParagraph(verbatim: "For any permissible matter whose outcome you cannot see: a marriage, a job, a journey, a purchase, a move. It is not prayed over obligations or prohibitions, for those are already decided, nor over trivial daily choices.")
-                    ArticleParagraph(articleMarkdown: "Consult trustworthy people first or alongside it: the Companions took counsel (**istisharah**) and sought Allah's choice (**istikharah**) together.")
-                }
-
-                Section(header: ArticleHeader("STEP BY STEP")) {
-                    ArticleStep("1. **Make wudhu** and pray two rak'ah of voluntary prayer with the intention of Istikharah, at any time prayer is permitted. Recite what you wish after al-Fatihah.")
-                    ArticleStep("2. **After the taslim**, raise your hands and say the supplication above, in Arabic if you can, otherwise in your own language. Praise Allah and send prayers upon the Prophet before it.")
-                    ArticleStep("3. **Name the matter** where the hadith says “this matter”: “if You know that marrying so-and-so...” or “this position at...”")
-                    ArticleStep("4. **Then act.** Pursue the matter. If Allah eases it, that is His choice; if He turns it away, that is His choice too. Do not sit waiting for a sign.")
-                }
-
-                Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    ArticleParagraph(articleMarkdown: "**Must I see a dream?** No. Nothing in the hadith mentions a dream or a feeling. The answer is in how the matter unfolds after you set out on it.")
-                    ArticleParagraph(articleMarkdown: "**Can I repeat it?** Yes, if the matter is still unclear, the scholars allow repeating it (the report that names seven times is weak). But do not make repetition a way of avoiding a decision.")
-                    ArticleParagraph(articleMarkdown: "**Can I pray it after a sunnah prayer instead of separate rak'ah?** The hadith says two rak'ah other than the obligatory ones; the scholars allow making the intention of Istikharah in a rawatib or Duha prayer. Two rak'ah prayed for it is the clearest way.")
-                    ArticleParagraph(articleMarkdown: "**Can someone pray it on my behalf?** The hadith addresses the one concerned with the matter. Ask others for their counsel and their dua, and pray Istikharah yourself.")
-                }
-
-                Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Two rak'ah, the Prophet's supplication with your matter named, then action. Whatever Allah then opens or closes is the answer, and He decrees the good wherever it is.")
-                }
-
-                ArticleSourcesSection(article: "IstikharahView")
-            }
-            .themedListRowBackground()
-        }
-        .englishArticle().selectableArticleList(article: "IstikharahView")
-        .navigationTitle("How to Pray Istikharah")
-    }
-}
-
-/// The Dua of Istikharah on its own page (Abu, 2026-10-21: "make it its own link"): the words as a
-/// Dua-screen row, what each phrase asks, how it is said, and the questions the words raise. The
-/// prayer that frames it is IstikharahView's; the two pages open each other through a door row.
-struct IstikharahDuaView: View {
-    var body: some View {
-        List {
-            Group {
-                Section(header: ArticleHeader("SUMMARY")) {
-                    ArticleLead(articleMarkdown: "In short: the **Dua of Istikharah (دُعَاءُ الاِستِخَارَة)** is the supplication the Prophet (peace and blessings be upon him) taught for every matter a Muslim is unsure about. Said after two voluntary rak'ah, it asks Allah, by His knowledge and His power, to bring the matter about if it is good for you and to turn it away if it is not, and to make you content with whatever He chooses.")
-                }
-
-                Section(header: ArticleHeader("THE DUA")) {
-                    ArticleParagraph(verbatim: "Jabir ibn Abdullah (may Allah be pleased with him) said the Prophet taught it to them as he taught them a surah of the Quran. Where it says هَذَا الأَمْرَ, “this matter”, name what you are deciding. The narrator's “or he said” gives the Prophet's other wording of one phrase; say either.")
+                    // to "ardini bih"; the narrator's asides, which the shelf sets between dashes, are
+                    // drawn in parentheses (`WordRange.parenthesizingAsides`).
                     GuideDuaRow(DuaItem(
                         hadith: "bukhari:1166", cite: "Sahih al-Bukhari 1166", arabic: 54...135, english: 154...299,
                         transliteration: "Allahumma inni astakhiruka bi-‘ilmika, wa astaqdiruka bi-qudratika, wa as'aluka min fadlika al-‘adhim, fa-innaka taqdiru wa la aqdiru, wa ta‘lamu wa la a‘lamu, wa anta ‘allamu al-ghuyub. Allahumma in kunta ta‘lamu anna hadha al-amra khayrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: ‘ajili amri wa ajilihi), faqdurhu li wa yassirhu li thumma barik li fih. Wa in kunta ta‘lamu anna hadha al-amra sharrun li fi dini wa ma‘ashi wa ‘aqibati amri (aw qala: fi ‘ajili amri wa ajilihi), fasrifhu ‘anni wasrifni ‘anhu, waqdur li al-khayra haythu kana thumma ardini bih.",
@@ -956,36 +909,45 @@ struct IstikharahDuaView: View {
                     ArticleTermCard("I ask You of Your great bounty", arabic: "وَأَسْأَلُكَ مِنْ فَضْلِكَ الْعَظِيمِ", meaning: "Whatever He then gives is a gift from His favour, not something you earned or were owed.")
                     ArticleTermCard("You are able and I am not, You know and I do not", arabic: "فَإِنَّكَ تَقْدِرُ وَلاَ أَقْدِرُ وَتَعْلَمُ وَلاَ أَعْلَمُ", meaning: "The reason for the asking, said plainly: all ability and all knowledge are His, and He is the Knower of the unseen (**‘allam al-ghuyub**).")
                     ArticleTermCard("If You know this matter is good for me", arabic: "إِنْ كُنْتَ تَعْلَمُ أَنَّ هَذَا الأَمْرَ خَيْرٌ لِي", meaning: "Here you name the matter. Good is measured in three things, in this order: **my religion**, **my livelihood** (ma‘ashi) and **the end of my affair** (‘aqibati amri), the outcome in this world and the next.")
+                    ArticleTermCard("Or he said: the near and the far of my affair", arabic: "(أَوْ قَالَ: عَاجِلِ أَمْرِي وَآجِلِهِ)", meaning: "The narrator's note, in parentheses on the page: the Prophet's other wording for the third thing, **‘ajili amri wa ajilihi**, this life and the next. Say either wording where it falls, or both one after the other. The words “or he said” are the narrator's and are not recited.")
                     ArticleTermCard("Decree it for me, ease it for me, then bless me in it", arabic: "فَاقْدُرْهُ لِي وَيَسِّرْهُ لِي ثُمَّ بَارِكْ لِي فِيهِ", meaning: "Three requests in order: that it comes to be, that it comes easily, and that once it has come it carries blessing. A thing can be given and still be without barakah, so the third is asked for on its own.")
                     ArticleTermCard("Turn it away from me and turn me away from it", arabic: "فَاصْرِفْهُ عَنِّي وَاصْرِفْنِي عَنْهُ", meaning: "If the matter is bad for you, both directions are asked for: that it leaves you, and that your heart leaves it, so you are not left longing for what was kept away.")
                     ArticleTermCard("Decree the good for me wherever it is, then make me content with it", arabic: "وَاقْدُرْ لِي الْخَيْرَ حَيْثُ كَانَ ثُمَّ أَرْضِنِي بِهِ", meaning: "The closing: good from whatever direction Allah knows it to be, and a heart at peace with His choice. Contentment (**rida**) is the fruit of Istikharah.")
                 }
 
-                Section(header: ArticleHeader("HOW TO SAY IT")) {
-                    ArticleStep("1. **Pray two rak'ah** other than the obligatory prayer, at any time prayer is permitted, with the intention of Istikharah.")
-                    ArticleStep("2. **After the taslim**, praise Allah and send prayers upon the Prophet (peace and blessings be upon him), then say the dua: in Arabic if you can, otherwise with its meaning in your own words.")
-                    ArticleStep("3. **Name the matter** where the dua says “this matter”, in whatever words describe it: the person, the position, the journey, the purchase.")
-                    ArticleStep("4. **Then go ahead.** Pursue the matter and take what Allah opens or closes as the answer; the dua asks for His decree, not for a dream or a feeling.")
-                    ArticleDoorRow(door: .article("IstikharahView"))
+                Section(header: ArticleHeader("WHEN TO PRAY IT")) {
+                    ArticleParagraph(verbatim: "For any permissible matter whose outcome you cannot see: a marriage, a job, a journey, a purchase, a move. It is not prayed over obligations or prohibitions, for those are already decided, nor over trivial daily choices.")
+                    ArticleParagraph(articleMarkdown: "Consult trustworthy people first or alongside it: the Companions took counsel (**istisharah**) and sought Allah's choice (**istikharah**) together.")
+                }
+
+                Section(header: ArticleHeader("STEP BY STEP")) {
+                    ArticleStep("1. **Make wudhu** and pray two rak'ah of voluntary prayer with the intention of Istikharah, at any time prayer is permitted. Recite what you wish after al-Fatihah.")
+                    ArticleStep("2. **After the taslim**, praise Allah and send prayers upon the Prophet (peace and blessings be upon him), then raise your hands and say the dua above: in Arabic if you can, otherwise with its meaning in your own language.")
+                    ArticleStep("3. **Name the matter** where the dua says “this matter”, in whatever words describe it: “if You know that marrying so-and-so...”, “this position at...”, the journey, the purchase.")
+                    ArticleStep("4. **Then act.** Pursue the matter. If Allah eases it, that is His choice; if He turns it away, that is His choice too. Do not sit waiting for a sign.")
                 }
 
                 Section(header: ArticleHeader("COMMON QUESTIONS")) {
-                    ArticleParagraph(articleMarkdown: "**Must I say it in Arabic?** Say the Prophet's words if you can; they are the Sunnah. Someone who cannot may say their meaning in their own language, and Allah hears every tongue.")
+                    ArticleParagraph(articleMarkdown: "**Must I see a dream?** No. Nothing in the hadith mentions a dream or a feeling. The answer is in how the matter unfolds after you set out on it.")
+                    ArticleParagraph(articleMarkdown: "**Can I repeat it?** Yes, if the matter is still unclear, the scholars allow repeating it (the report that names seven times is weak). But do not make repetition a way of avoiding a decision.")
+                    ArticleParagraph(articleMarkdown: "**Can I pray it after a sunnah prayer instead of separate rak'ah?** The hadith says two rak'ah other than the obligatory ones; the scholars allow making the intention of Istikharah in a rawatib or Duha prayer. Two rak'ah prayed for it is the clearest way.")
                     ArticleParagraph(articleMarkdown: "**Inside the prayer or after it?** The hadith says to pray two rak'ah and then say it, so after the taslim is its apparent meaning and the clearest way. The scholars also allowed saying it before the taslim, after the final tashahhud.")
+                    ArticleParagraph(articleMarkdown: "**Must I say it in Arabic?** Say the Prophet's words if you can; they are the Sunnah. Someone who cannot may say their meaning in their own language, and Allah hears every tongue.")
                     ArticleParagraph(articleMarkdown: "**Can I say the dua without the two rak'ah?** The Sunnah ties the dua to the prayer. Someone who cannot pray at the time, such as a woman during her period, may say the dua on its own in the view of some scholars.")
-                    ArticleParagraph(articleMarkdown: "**Should I memorise it?** It helps, and the Companions learned it as they learned the Quran. Until then read it from the page: the row above can be heard aloud and copied.")
+                    ArticleParagraph(articleMarkdown: "**Can someone pray it on my behalf?** The hadith addresses the one concerned with the matter. Ask others for their counsel and their dua, and pray Istikharah yourself.")
+                    ArticleParagraph(articleMarkdown: "**Should I memorise the dua?** It helps, and the Companions learned it as they learned the Quran. Until then read it from the page: the row above can be heard aloud and copied.")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
-                    ArticleClosing("Ask by His knowledge, ask by His power, name your matter, and ask for the good wherever it is and a heart content with it. Then act, and let what Allah opens or closes be the answer.")
+                    ArticleClosing("Two rak'ah, the Prophet's supplication with your matter named, then action. Ask by His knowledge, ask by His power, and ask for the good wherever it is and a heart content with it. Whatever Allah then opens or closes is the answer.")
                 }
 
-                ArticleSourcesSection(article: "IstikharahDuaView")
+                ArticleSourcesSection(article: "IstikharahView")
             }
             .themedListRowBackground()
         }
-        .englishArticle().selectableArticleList(article: "IstikharahDuaView")
-        .navigationTitle("The Dua of Istikharah")
+        .englishArticle().selectableArticleList(article: "IstikharahView")
+        .navigationTitle("How to Pray Istikharah")
     }
 }
 

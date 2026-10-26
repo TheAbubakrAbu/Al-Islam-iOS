@@ -211,6 +211,12 @@ struct SheetPresentationModifier: ViewModifier {
     @State private var settling = true
     private static let settleDuration: TimeInterval = 0.6
 
+    /// Whether the Now Playing bar is up (the narrow slice, not the player: see `PlaybackVisibility`).
+    @ObservedObject private var playback = PlaybackVisibility.shared
+    /// True while a List inside this sheet draws the bar itself (`ConditionalListStyle` sets the
+    /// preference), so the sheet never stacks a second one under it.
+    @State private var listDrawsNowPlaying = false
+
     init(startLarge: Bool = false, dismissDisabled: Bool = false) {
         _isLarge = State(initialValue: startLarge)
         self.dismissDisabled = dismissDisabled
@@ -219,9 +225,28 @@ struct SheetPresentationModifier: ViewModifier {
     func body(content: Content) -> some View {
         detents(content)
             .interactiveDismissDisabled(settling || dismissDisabled)
+            .onPreferenceChange(NowPlayingBarProvidedKey.self) { listDrawsNowPlaying = $0 }
+            .safeAreaInset(edge: .bottom) { nowPlayingInset }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDuration) { settling = false }
             }
+    }
+
+    /// The Now Playing bar at the foot of the sheet while a recitation plays (Abu, 2026-10-26: "put
+    /// now playing view in hold down ayah sheet, put it in every sheet"), the inset every list draws
+    /// (`ConditionalListStyle`), for a sheet built on a `ScrollView`: the ayah actions sheet, the
+    /// tafsir and word cards, Share Ayah. A sheet whose List already draws the bar gets nothing here.
+    @ViewBuilder
+    private var nowPlayingInset: some View {
+        if !listDrawsNowPlaying, playback.showsNowPlaying, let bar = playback.barContent {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                bar()
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, BottomBarCushion.standard)
+            .background(Color.white.opacity(0.00001))
+            .animation(.easeInOut, value: playback.showsNowPlaying)
+        }
     }
 
     /// The keyboard came up for a field in THIS sheet while it stood at the medium detent: commit the

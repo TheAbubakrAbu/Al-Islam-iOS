@@ -192,7 +192,6 @@ struct HadithTopicsView: View {
 
                 Section(footer:
                     Text("Curated by Jamil Hammoudeh for Tilawa and used with permission. The narrations themselves are this app's own, from the same open dataset every collection here comes from.")
-                        .font(.caption2)
                 ) { EmptyView() }
             }
             .themedListRowBackground()
@@ -216,11 +215,9 @@ struct HadithTopicsView: View {
 
     private func laneHeader(_ lane: HadithLane) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(lane.label.localizedDisplay.uppercased())
-                Spacer()
-                Text("\(store.count(inLane: lane.id))")
-                    .hiddenInSimple(.sectionCounts)
+            // The count as the pill every counted header wears (a bare number until 2026-10-26).
+            SectionHeaderLine(lane.label.localizedDisplay.uppercased()) {
+                CountPill(count: store.count(inLane: lane.id))
             }
             Text(lane.subtitle.localizedDisplay)
                 .font(.caption2)

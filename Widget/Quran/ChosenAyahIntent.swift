@@ -159,7 +159,7 @@ enum ChosenAyahCatalog {
     /// The reference every surface of the widget shows: `reference`, with the Arabic name in an
     /// Arabic interface ("البقرة 2:255").
     static func displayReference(surah: Int, ayah: Int) -> String {
-        guard AppLanguage.isArabic, let entry = Self.surah(surah) else { return reference(surah: surah, ayah: ayah) }
+        guard AppLanguage.isArabicScript, let entry = Self.surah(surah) else { return reference(surah: surah, ayah: ayah) }
         return "\(entry.arabicName) \(surah):\(ayah)"
     }
 

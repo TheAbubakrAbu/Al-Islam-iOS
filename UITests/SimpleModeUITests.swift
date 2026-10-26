@@ -233,12 +233,12 @@ final class SimpleModeUITests: XCTestCase {
     /// the control launch (the seed, no tap) still shows the switch on; after one tap on Simple Mode a
     /// fresh launch shows it off, with the caption naming Simple Mode as the reason.
     func testSimpleModeSwitchFoldsAdvanced() {
-        let seed = "advancedSettings_prayerCalculation=1,advancedSettings_islamLibraries=1,simpleMode=0,gridModeSettingsRaw=1"
+        let seed = "advancedSettings_prayerCalculation=1,advancedSettings_naggingMode=1,simpleMode=0,gridModeSettingsRaw=1"
         let advancedSwitch: (XCUIApplication) -> XCUIElement = { $0.switches["Show Advanced Settings"].firstMatch }
 
-        // The control: seeded on, nothing tapped, the Libraries page's switch reads on.
-        var app = launch(["-launchTabSettings", "-settingsOpen", "islamLibraries", "-seedBool", seed])
-        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Libraries page has no ADVANCED switch (control)")
+        // The control: seeded on, nothing tapped, the Prayer Calculation page's switch reads on.
+        var app = launch(["-launchTabSettings", "-settingsOpen", "prayerCalculation", "-seedBool", seed])
+        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Prayer Calculation page has no ADVANCED switch (control)")
         XCTAssertEqual(advancedSwitch(app).value as? String, "1", "the seed alone did not leave Show Advanced Settings on")
         attachScreenshot("advanced-fold-control")
         app.terminate()
@@ -273,8 +273,8 @@ final class SimpleModeUITests: XCTestCase {
         app.terminate()
 
         // No seed this time: whatever the tap wrote is what the page reads.
-        app = launch(["-launchTabSettings", "-settingsOpen", "islamLibraries"])
-        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Libraries page has no ADVANCED switch (after the tap)")
+        app = launch(["-launchTabSettings", "-settingsOpen", "prayerCalculation"])
+        XCTAssertTrue(advancedSwitch(app).waitForExistence(timeout: 15), "the Prayer Calculation page has no ADVANCED switch (after the tap)")
         XCTAssertEqual(advancedSwitch(app).value as? String, "0",
                        "turning Simple Mode on with its switch did not fold Show Advanced Settings (rule 9)")
         let caption = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Also here, with this on:' AND label ENDSWITH 'Simple Mode turned this off; turn it on to see every option here.'")).firstMatch

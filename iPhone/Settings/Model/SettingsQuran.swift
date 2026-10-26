@@ -105,7 +105,7 @@ extension Settings {
             /// matched value either way. `omitsDefaultSuffix` drops the "(default)" in both languages.
             func displayLabel(omitsDefaultSuffix: Bool = false) -> String {
                 let isDefault = tag == Riwayah.hafsTag
-                if AppLanguage.isArabic {
+                if AppLanguage.isArabicScript {
                     guard isDefault, !omitsDefaultSuffix else { return arabic }
                     return "\(arabic) \(String(localized: "(default)"))"
                 }

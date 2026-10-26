@@ -183,7 +183,7 @@ struct DailyHubView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(word.meaning)
                                 .font(.subheadline.weight(.semibold))
-                            if !AppLanguage.isArabic { wordCaption(word, surah: surah) }
+                            if !AppLanguage.isArabicScript { wordCaption(word, surah: surah) }
                         }
                         Spacer(minLength: 12)
                         Text(settings.cleanedQuranArabic(word.arabic))
@@ -195,7 +195,7 @@ struct DailyHubView: View {
 
                     // In Arabic the caption is an Arabic sentence: its own row, on the interface's edge,
                     // not inside the left-to-right pair above.
-                    if AppLanguage.isArabic {
+                    if AppLanguage.isArabicScript {
                         wordCaption(word, surah: surah)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -265,7 +265,7 @@ struct DailyHubView: View {
                     cardHeader(String(localized: "DUA OF THE DAY"), symbol: "hands.sparkles.fill") {
                         if let category {
                             // The category's Arabic name in an Arabic interface.
-                            Text(AppLanguage.isArabic && !category.arabic.isEmpty ? category.arabic : category.label)
+                            Text(AppLanguage.isArabicScript && !category.arabic.isEmpty ? category.arabic : category.label)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)

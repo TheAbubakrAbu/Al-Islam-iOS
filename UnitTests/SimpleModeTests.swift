@@ -131,16 +131,16 @@ final class SimpleModeTests: XCTestCase {
 
         settings.simpleMode = false
         settings.setAdvanced(.prayerCalculation, true)
-        settings.setAdvanced(.quranReadingView, true)
+        settings.setAdvanced(.naggingMode, true)
 
         settings.simpleMode = true
         for screen in Settings.AdvancedScreen.allCases {
             XCTAssertFalse(settings.advanced(screen), "turning Simple Mode on left \(screen.rawValue)'s Advanced switch on")
         }
 
-        settings.setAdvanced(.quranReadingView, true)
+        settings.setAdvanced(.naggingMode, true)
         settings.simpleMode = false
-        XCTAssertTrue(settings.advanced(.quranReadingView), "a switch turned on while Simple Mode was on did not stay on")
+        XCTAssertTrue(settings.advanced(.naggingMode), "a switch turned on while Simple Mode was on did not stay on")
         XCTAssertFalse(settings.advanced(.prayerCalculation), "turning Simple Mode off restored a folded switch")
     }
 
@@ -225,7 +225,7 @@ final class SimpleModeTests: XCTestCase {
 
         settings.simpleMode = false
         settings.setAdvanced(.prayerCalculation, true)
-        settings.setAdvanced(.islamLibraries, true)
+        settings.setAdvanced(.naggingMode, true)
         bindings.simpleMode.animation(.easeInOut).wrappedValue = true
         XCTAssertTrue(settings.simpleMode)
         for screen in Settings.AdvancedScreen.allCases {

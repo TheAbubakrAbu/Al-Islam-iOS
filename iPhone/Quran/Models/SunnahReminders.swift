@@ -460,7 +460,7 @@ final class SunnahReminderStore: ObservableObject {
         let content = UNMutableNotificationContent()
         // In Arabic the localized title already IS the Arabic name ("سورة الملك"): no second Arabic
         // title beside it, and no Latin transliteration under the body.
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             content.title = preset.title
             content.body = preset.body
         } else {
@@ -556,7 +556,6 @@ struct SunnahRemindersView: View {
 
             Section(footer:
                 Text("Reminders repeat on their own, even when the app has not been opened for a while. The Quran Planner on the Quran tab has its own daily reminder for a paced reading plan.")
-                    .font(.caption2)
             ) { EmptyView() }
         }
         .applyConditionalListStyle()

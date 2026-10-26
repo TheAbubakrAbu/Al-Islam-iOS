@@ -1,17 +1,17 @@
 # Localization Guide
 
-The app speaks English and Arabic (since 2026-10-24). Everything is translated, the Islam tab included, except
-the Islam tab's ARTICLES: Faith & Proofs (the pillars, beliefs, How-To Guides, miracles, prophecies, the
-prophets' miracles, Proving Islam), Hadith & Its Sciences and the riwayat differences page. Those stay English
-and read left to right inside the Arabic interface.
+The app speaks English, Arabic (since 2026-10-24) and Urdu (since 2026-10-26). Everything is translated, the
+Islam tab included, except the Islam tab's ARTICLES: Faith & Proofs (the pillars, beliefs, How-To Guides,
+miracles, prophecies, the prophets' miracles, the Sunnahs of the Prophet, Proving Islam), Hadith & Its Sciences
+and the riwayat differences page. Those stay English and read left to right inside the Arabic and Urdu interfaces.
 
 ## Where things live
 
 | What | Where |
 | --- | --- |
-| Interface strings and their Arabic | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication) |
+| Interface strings, their Arabic and Urdu | `Resources/Localizable.xcstrings` (iPhone, Widget, Watch, Complication) |
 | Permission prompts, the home-screen name | `Resources/InfoPlist.xcstrings` (iPhone, Watch) |
-| Siri and Shortcuts phrases | `Resources/ar.lproj/AppShortcuts.strings` (iPhone), `Resources/Watch/ar.lproj/AppShortcuts.strings` (Watch) |
+| Siri and Shortcuts phrases | `Resources/ar.lproj/AppShortcuts.strings` (iPhone), `Resources/Watch/ar.lproj/AppShortcuts.strings` (Watch); none for Urdu (Siri has no Urdu) |
 | Helpers | `iPhone/Helpers/System/Localization.swift` (every target) |
 | Catalog tool | `Scripts/localize_catalog.py` |
 
@@ -31,7 +31,8 @@ notifications and widgets would not follow one.
    manual catalog key (see below).
 3. **Whole sentences, not pieces.** `"\(n) ayahs"` and `"Surah \(name)"` become one key each. Never glue
    translated fragments together, and never put an English word in a key's argument.
-4. **Plurals:** keep the English branches as they are; Arabic gets its six plural forms in the catalog.
+4. **Plurals:** keep the English branches as they are; Arabic gets its six plural forms in the catalog, Urdu its
+   two (one, other).
 5. **Two meanings, two keys.** One English word with two senses needs a key of its own:
    `String(localized: "weather.clear", defaultValue: "Clear")`. Met so far: "Voice" (the grammar card's
    البناء; the letters course uses `sifah.voice`) and the ayah-counting traditions (`count.makki` and the
@@ -66,8 +67,15 @@ Western digits (0-9); Saudi Arabia (`ar_SA`) and Egypt write Arabic-Indic (٠-٩
 digits in iOS. Numbers Foundation and SwiftUI format follow it on their own. Two kinds do not:
 - digits the app builds into a string itself (`"\(surah):\(ayah)"`, `String(n)`, `Text(verbatim:)`), and
 - digits a translation writes out ("٥ دقائق").
-Both go through `.localizedDigits` at the display site. It maps every digit, Western or Arabic-Indic, to the
-locale's, and is a no-op in English. Never on data. Test both: `-AppleLocale ar_US` and `-AppleLocale ar_SA`.
+Both go through `.localizedDigits` at the display site. It maps every digit, Western, Arabic-Indic or Extended
+Arabic-Indic, to the locale's, and is a no-op in English. Never on data. Test both: `-AppleLocale ar_US` and
+`-AppleLocale ar_SA`.
+
+Urdu: Apple's Urdu locales, `ur_PK` and `ur_IN` alike, write Western digits; a reader who picks Urdu digits
+in iOS (Settings > General > Language & Region > Numbers) gets Extended Arabic-Indic (۰-۹), and every number
+the app formats or passes through `localizedDigits` follows (measured 2026-10-26). Urdu translations write
+Western digits (the validator rejects the others), so a catalog value shown straight by SwiftUI keeps them.
+Test `-AppleLocale ur_PK` and `-AppleLocale "ur_PK@numbers=arabext"`.
 
 ## Names
 
@@ -75,12 +83,17 @@ locale's, and is a no-op in English. Never on data. Test both: `-AppleLocale ar_
   `AppIdentifiers.appName` stays the identifier, asset name and file-name prefix. In an Arabic sentence the
   app is "تطبيق %@" (a bare الإسلام in a sentence reads as the religion). The home-screen name is
   `CFBundleDisplayName` in InfoPlist.xcstrings.
-- Surahs, juz, hadith books, chapters, authors and Quran topics show their Arabic names in Arabic
-  (`Surah.displayName`, `Juz.displayName`, `HadithCatalogBook.displayTitle` and `displayReference`).
+- Surahs, juz, hadith books, chapters, authors and Quran topics show their Arabic names in Arabic and in Urdu
+  (`Surah.displayName`, `Juz.displayName`, `HadithCatalogBook.displayTitle` and `displayReference`). The switch
+  is `AppLanguage.isArabicScript` (Arabic or Urdu): wherever a comment says "the Arabic interface", Urdu does
+  the same, because the Latin transliteration and the English meaning would be untranslated English in either.
+  `AppLanguage.isArabic` alone is kept for what only Arabic does: the surah name Siri says back.
+- In Urdu the app is الاسلام (الاذان، القرآن، الحدیث), and in a sentence "%@ ایپ", the name first, with
+  feminine verbs (ایپ ... استعمال کرتی ہے).
 
 ## Right to left
 
-SwiftUI mirrors every layout in Arabic. What must not mirror:
+SwiftUI mirrors every layout in Arabic and Urdu. What must not mirror:
 - **English content** (a translation, a transliteration, a hadith's English, an English tafsir):
   `.leftToRightContent()` on the text, never on the row around it.
 - **Clocks and numeric runs** (`2:49:59`): pin the stack `.leftToRight`.
@@ -107,6 +120,10 @@ intents are iPhone only); a build warning "This phrase is not used in any App Sh
 drifted apart. Never write a non-English phrase into the code: to Siri it would be one more English phrase.
 The surah a phrase names is matched against Arabic names too (`Surah.spokenName`, `normalizedSearchNames`).
 
+Urdu has no AppShortcuts.strings: Siri cannot be set to Urdu (iOS 26 brought Urdu to the interface, not to
+Siri or dictation), so an Urdu phrase could never be heard. On an Urdu phone Siri runs in English or Arabic and
+matches those phrases; the shortcut titles in the Shortcuts app and Spotlight are catalog keys and show Urdu.
+
 ## Updating the catalog
 
 `xcodebuild` does not write new keys into the catalog (only a build inside Xcode does). After a command-line
@@ -115,20 +132,31 @@ build:
 ```sh
 DD=<the build's -derivedDataPath>
 ./Scripts/localize_catalog.py sync $DD                 # add new keys, mark vanished ones stale
-./Scripts/localize_catalog.py todo $DD /tmp/todo       # batches of keys still missing Arabic
+./Scripts/localize_catalog.py todo $DD /tmp/todo       # batches of keys still missing Arabic (--lang ur: Urdu)
 ./Scripts/localize_catalog.py validate ar.json         # check a translation file, write nothing
 ./Scripts/localize_catalog.py merge ar.json            # write it in
 ./Scripts/localize_catalog.py manual keys.json         # data strings shown through .localizedDisplay
-./Scripts/localize_catalog.py check                    # every Arabic value against its key
+./Scripts/localize_catalog.py check                    # every translated value against its key
 ./Scripts/localize_catalog.py sibling SIBLING_DD [--add]  # keys only Al-Adhan's or Al-Quran's code has
 ```
 
-A translation file is `{english key: arabic}`; a key with exactly one integer argument may map to an object of
-plural forms (`one`, `two`, `few`, `many`, `other`, optional `zero`). The validator rejects mismatched
-placeholders, leftover English words, em dashes and changed `${parameter}` tokens. A Latin word may stay only
-when the key has it too and it is a letter or two or quoted (the alphabet lessons compare letters with English
+`todo`, `validate`, `merge`, `check` and `sibling` take `--lang ur` for Urdu (Arabic is the default). An Urdu
+batch carries each key's Arabic as `arabic`, the reference for its sense and for the Islamic term chosen.
+
+A translation file is `{english key: translation}`; a key with exactly one integer argument may map to an object
+of plural forms (Arabic `one`, `two`, `few`, `many`, `other`; Urdu `one`, `other`; optional `zero` in both).
+The validator rejects mismatched placeholders, leftover English words, em dashes and changed `${parameter}`
+tokens, and in Urdu Arabic letter forms, Eastern digits and a Latin full stop. A Latin word may stay only when
+the key has it too and it is a letter or two or quoted (the alphabet lessons compare letters with English
 words: «مثل حرف b في “book”»). Keys whose every source is an article file (`ARTICLE_SOURCES`) are never offered
-for translation.
+for translation, nor a key marked `shouldTranslate: false` (an email address).
+
+A key the code shows AND the tajweed pack shows as data can mean two things: "Light" is the Color Theme
+choice and a light letter (مرقّقة), "Merge" a backup choice and idgham, "Article" an Ask AI source and the
+definite article. The code side then takes a dotted key of its own (`appearance.light`, `backup.merge`,
+`askai.article`, `dhikr.count.one`) and the plain key stays the pack's, marked `manual`. Short keys that
+both show are worth checking after every pack harvest: the Tilawa harvest of 2026-10-25 had overwritten the
+Arabic of "Surah" (الموضع), "Note" (تنبيه), "Noun" and "Verb" with their senses in one lesson table.
 
 Data shown through `.localizedDisplay` needs its English registered as a manual key. The tajweed course is the
 big one: its 58 lessons live in `Resources/Data/Quran/TajweedLessons.json.xz`, and every field the course shows
@@ -146,9 +174,9 @@ rest is `../sync_localization.py`'s, a pass of the sync that can also run alone:
 | Sibling file | Where it comes from |
 | --- | --- |
 | `Resources/Localizable.xcstrings` | Al-Islam's, copied whole on every sync (`L10N_MIRROR`): all translation happens here |
-| `Resources/InfoPlist.xcstrings` | written per app (`L10N_DERIVED`): the keys its Info.plist declares, its own English, this catalog's Arabic with the app's name swapped (الأذان، القرآن; "تطبيق %@" in a sentence) |
+| `Resources/InfoPlist.xcstrings` | written per app (`L10N_DERIVED`): the keys its Info.plist declares, its own English, this catalog's Arabic and Urdu with the app's name swapped (الأذان، القرآن, "تطبيق %@" in an Arabic sentence; الاذان، القرآن, "%@ ایپ" in Urdu) |
 | `Resources/ar.lproj/AppShortcuts.strings`, `Resources/Watch/ar.lproj/AppShortcuts.strings` | written per app and target: only the phrases its `AppShortcutsRoot` compiles under its flags (Al-Adhan the prayer phrases, Al-Quran the surah ones), since an unused phrase is a build warning |
-| the project | `ar` in knownRegions, `STRING_CATALOG_GENERATE_SYMBOLS = NO` (Al-Quran's Widget overrides it too), and the files above registered in the targets Al-Islam's are in |
+| the project | `ar` and `ur` in knownRegions, `STRING_CATALOG_GENERATE_SYMBOLS = NO` (Al-Quran's Widget overrides it too), and the files above registered in the targets Al-Islam's are in |
 
 Never translate inside a sibling: its catalog is replaced on the next sync. A key only a sibling's code has
 (its root, a string it renamed) is found from one of its builds and added here:
@@ -172,61 +200,65 @@ exact text between ﴿ ﴾, checked against the Quran's text, or its meaning wit
 accept Arabic-Indic digits (٢:٢٥٥): the Quran search, the mushaf find bar, the Go To fields and the hadith
 reference parser fold them to Western digits.
 
-## Urdu (planned, not started)
+## Urdu style
 
-Written down 2026-10-25 so the next language starts from decisions already made. Nothing below is in the
-catalog or the code yet.
+Since 2026-10-26, made the way the Arabic was: the same catalog, the same tool (`--lang ur`), and the
+Arabic beside every key as the reference for its sense and its Islamic term.
 
 **Names.** The same names as Arabic, in Urdu spelling (no hamza on the alif, Urdu ی):
 
 | English | Urdu | Used as |
 | --- | --- | --- |
-| Al-Islam | الاسلام | home-screen name and tab |
-| Al-Adhan | الاذان | home-screen name and tab |
-| Al-Quran | القرآن | home-screen name and tab |
-| Al-Hadith | الحدیث | tab |
+| Al-Islam | الاسلام | home-screen name, the Adhan screen's title, sentences |
+| Al-Adhan | الاذان | the same, in Al-Adhan |
+| Al-Quran | القرآن | the same, in Al-Quran |
+| Al-Hadith | الحدیث | the Hadith screen's title |
 | Settings | ترتیبات | tab (Tilawa's word; سیٹنگز is the spoken one) |
 | "the app" in a sentence | `%@ ایپ` | the name comes FIRST: «الاسلام ایپ آپ کا مقام … استعمال کرتی ہے۔» |
 
 - ایپ is feminine, so a sentence whose subject is "%@ ایپ" ends in کرتی ہے، دکھاتی ہے, not the masculine forms.
 - A bare اسلام in a sentence is the religion; the app is always الاسلام or «الاسلام ایپ».
-
-**App Store names** (drafts, 30 characters max; App Store Connect has taken Urdu listings since 2026-03-31):
-
-| App | Name | Count |
-| --- | --- | --- |
-| Al-Islam | الاسلام \| قرآن، اذان، حدیث | 26 |
-| Al-Adhan | الاذان \| نماز کے اوقات، قبلہ | 28 |
-| Al-Quran | القرآن \| تلاوت، تفسیر، تجوید | 28 |
+- The tabs ("Islam", "Quran", "Hadith", "Adhan") are the plain words, as Urdu says them: اسلام، قرآن، حدیث،
+  اذان. Arabic's tabs carry ال because that is how Arabic says those words, not because they are the brand.
 
 **Writing Urdu**
 - Urdu letters, never their Arabic look-alikes: ی (U+06CC) not ي, ک (U+06A9) not ك, ہ (U+06C1) and ھ
-  (U+06BE) not ه. The full stop is ۔ (U+06D4). A validator rule should reject the Arabic forms in `ur`
-  values (quoted Arabic, an ayah or a dua, keeps its own spelling).
-- Prayer and Quran terms the way Urdu speakers say them: نماز (not صلاة) for the prayer, فجر، ظہر، عصر، مغرب،
-  عشاء، سورت or سورہ، آیت، پارہ (the common word for a juz), تجوید، قبلہ.
-- Digits: `ur_PK` writes Western digits and `ur_IN` Extended Arabic-Indic (۰-۹); `localizedDigits` already
-  maps both ways.
-- Plurals: Urdu has only `one` and `other`. `localize_catalog.py` requires Arabic's five forms today, so the
-  required forms become per language first.
+  (U+06BE) not ه, ۃ not ة. The full stop is ۔ (U+06D4). The validator rejects a word that mixes the two, and
+  an Arabic-form word unless it is vowelled, inside ﴿ ﴾, or spelled the same in the key or its Arabic (an
+  Arabic term quoted as Arabic: «الحروف الهجائية»).
+- Prayer and Quran terms the way Urdu speakers say them: نماز (not صلاة), فجر، ظہر، عصر، مغرب، عشاء، سورت
+  (سورۃ before a name), آیت، پارہ (a juz), قاری، تجوید، قبلہ. Fatha, kasra and damma are زبر، زیر، پیش, as
+  in the Noorani Qaida.
+- Western digits in every value (the validator rejects ٠-٩ and ۰-۹ unless the key has them); Hijri years
+  take ھ ("1448ھ"). A literal percent stays % (Arabic's ٪ is Arabic only).
+- Plurals: `one` and `other` (and the optional `zero`).
 
-**What the tooling needs when it starts**
-- `ur` in knownRegions, catalog values for `ur`, and `InfoPlist.xcstrings` entries in the same name pattern.
-- `../sync_localization.py` swaps the app's name into the siblings' prompts through `APP_WORD`, which only
-  knows a word placed BEFORE the name (Arabic تطبيق). Urdu puts ایپ AFTER it, so the swap needs a suffix form.
-- Nastaliq: iOS draws Urdu in Noto Nastaliq Urdu, which is much taller than Arabic Naskh. Fixed-height rows,
-  chips and widget lines need checking for clipped text.
-- Siri: check Apple's list of Siri languages before writing `ur.lproj/AppShortcuts.strings` (unverified
-  when this was written whether Siri speaks Urdu; the phrases would still show in Spotlight and Shortcuts).
-- Tilawa ships Urdu (`src/i18n/strings.ur.ts`, about 4,100 keys, plus the whole tajweed course under
-  `src/data/tajweed-course/ur/`): align by identical English first, as was done for Arabic.
+**Where it came from.** 3,963 strings are Tilawa's own Urdu (`src/data/tajweed-course/ur/`, the tajweed
+article overlay): the whole 58-lesson course, aligned by lesson and field as the Arabic was, plus Tilawa's
+lesson `title` and rule-card `countLabel`, which only its Urdu copy has (Arabic reads the lesson's
+`titleAr`). Tilawa's UI dictionary (`strings.ur.ts`) was NOT used: its short labels are machine-quality
+(Juz as جوز, Ayah as آیہ, full stops on buttons). The other 8,300 keys were translated against the
+glossary above with the Arabic as the reference.
+
+**Siri.** None (see Siri and Shortcuts): the two tips that quote Siri phrases quote them in English on an
+Urdu screen, with the name Siri hears (`TipsAndTricks.siriApp`).
+
+**Nastaliq.** iOS draws Urdu in Noto Nastaliq Urdu, much taller than Arabic Naskh. Text that can wrap
+grows on its own; check fixed-height rows, chips and widget lines in `-AppleLanguages "(ur)"` for clipping.
+
+**The Hijri date** reads in Arabic in Urdu, as it does in Arabic (`HijriDate.interfaceLine`, the widgets'
+`Language.interface`): the month names are the same words, and the line beside it is the Gregorian date in
+Urdu.
 
 ## Still open
 
 - The Islam tab's articles (about 220,000 words) are English.
 - Quran, hadith, dua and 99 Names English meanings stay English (they are translations of the Arabic).
-- The siblings are staged, not applied (2026-10-25): their next sync carries Arabic (section above). Their
-  Arabic store listings wait in `~/Downloads/Islam/sibling-staging/<App>-iOS/Docs/Arabic Listing.md`.
+- The siblings are staged, not applied (2026-10-25): their next sync carries Arabic and Urdu (section above).
+  Their Arabic store listings wait in `~/Downloads/Islam/sibling-staging/<App>-iOS/Docs/Arabic Listing.md`.
 - The App Store listing in Arabic is drafted in `Docs/App Store/Arabic Listing.md`; screenshots are English
   (App Store Connect shows the English ones for a language that has none of its own).
-- Every Arabic string is machine-translated and needs a fluent reviewer before release.
+- Every Arabic and Urdu string is machine-translated (Urdu's tajweed course is Tilawa's) and needs a fluent
+  reviewer before release.
+- The App Store listing in Urdu is drafted in `Docs/App Store/Urdu Listing.md`; the siblings' Urdu listings
+  wait in `~/Downloads/Islam/sibling-staging/<App>-iOS/Docs/Urdu Listing.md`.

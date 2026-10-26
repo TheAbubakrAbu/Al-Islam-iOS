@@ -333,9 +333,7 @@ struct SettingsAdhanView: View {
             adhanPageLink(.travelingMode) { travelingModeDestination }
             adhanPageLink(.optionalPrayers) { optionalTimesDestination }
             adhanPageLink(.manualOffsets) { prayerOffsetsDestination }
-            if settings.advanced(.prayerSettings) {
-                adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
-            }
+            adhanPageLink(.customPrayerNames) { customPrayerNamesDestination }
         }
 
         #if os(iOS)
@@ -350,16 +348,15 @@ struct SettingsAdhanView: View {
         // 2026-10-19 (see `Settings.canMarkPrayer`); the tracker explains itself on its history page.
         #endif
 
-        // Last on every settings page, above its ADVANCED switch (Abu, 2026-10-10): a page opens on its
-        // own settings, and the tips and the Need a Hand? switch wait at the foot. They led every page
-        // from 2026-09-20 until then, which put the first real setting most of a screen down.
+        // Last on every settings page (Abu, 2026-10-10): a page opens on its own settings, and the
+        // tips and the Need a Hand? switch wait at the foot. They led every page from 2026-09-20
+        // until then, which put the first real setting most of a screen down. No ADVANCED switch
+        // since 2026-10-25: it hid one row, the Custom Prayer Names link.
         #if os(iOS)
         TipsSection(area: .adhan, resolve: resolveSearchDestination)
         // The Adhan tab's Need a Hand? questions, named here with their switch (HelpDoors.swift).
         HelpDoorsSettingsSection(area: .adhan)
         #endif
-
-        AdvancedSettingsSection(screen: .prayerSettings, hides: String(localized: "custom prayer names"))
     }
 
     /// The Skyline row's one value: "off" while the skyline is hidden, else the style's raw value.
@@ -424,28 +421,21 @@ struct SettingsAdhanView: View {
                         }
                     }
                     #endif
-                    Section(header: Text("HORIZON")) {
-                        VStack(alignment: .leading) {
-                            // One row for off / which structures: "off" is the old Skyline switch,
-                            // the three styles set it on and pick the shapes (Abu, 2026-09-21).
-                            // Plain binding, never animated: see the picker rule.
-                            Picker("Skyline", selection: skylineChoice) {
-                                Text("Off").tag("off")
-                                ForEach(SkySceneStyle.allCases) { style in
-                                    Text(style.title).tag(style.rawValue)
-                                }
+                    Section(header: Text("HORIZON"),
+                            footer: Text("Pyramids to the west, a mosque to the east, the sun by day and the moon by night. Choose the pair, only pyramids, or only mosques. Also on the sky widgets.")) {
+                        // One row for off / which structures: "off" is the old Skyline switch,
+                        // the three styles set it on and pick the shapes (Abu, 2026-09-21).
+                        // Plain binding, never animated: see the picker rule.
+                        Picker("Skyline", selection: skylineChoice) {
+                            Text("Off").tag("off")
+                            ForEach(SkySceneStyle.allCases) { style in
+                                Text(style.title).tag(style.rawValue)
                             }
-                            .pickerStyle(.menu)
-                            .tint(settings.accentColor.color)
-                            .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
-                            .onChange(of: settings.skySceneStyle) { _ in settings.hapticFeedback() }
-
-                            Text("Pyramids to the west, a mosque to the east, the sun by day and the moon by night. Choose the pair, only pyramids, or only mosques. Also on the sky widgets.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.vertical, 2)
                         }
+                        .pickerStyle(.menu)
+                        .tint(settings.accentColor.color)
+                        .onChange(of: settings.showSkyScene) { _ in settings.hapticFeedback() }
+                        .onChange(of: settings.skySceneStyle) { _ in settings.hapticFeedback() }
                     }
 
                     Section(header: Text("COLORS")) {
@@ -520,7 +510,7 @@ struct SettingsAdhanView: View {
     @ViewBuilder
     private var notificationsSection: some View {
         #if os(iOS)
-        Section {
+        Section(header: Text("NOTIFICATIONS")) {
             NavigationLink(destination: LazyDestination { NotificationView() }) {
                 SettingsRowLabel(title: String(localized: "Notification Settings"), systemImage: "bell.badge.fill",
                                  subtitle: String(localized: "Prayer alerts, adhan sounds, reminders"), tint: SettingsTint.notifications)
@@ -799,37 +789,26 @@ struct PrayerOffsetsView: View {
     }
 
     var body: some View {
-        Section(header: Text("HIJRI DATE")) {
-            VStack(alignment: .leading, spacing: 6) {
-                SettingsToggle(String(localized: "Switch Hijri Date at Maghrib"), caption: String(localized: "When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default."), isOn: $adhanSettings.switchHijriDateAtMaghrib)
-
-                Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
-            }
+        Section(header: Text("HIJRI DATE"),
+                footer: Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")) {
+            SettingsToggle(String(localized: "Switch Hijri Date at Maghrib"), caption: String(localized: "When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default."), isOn: $adhanSettings.switchHijriDateAtMaghrib)
         }
 
-        Section(header: Text("PRAYER OFFSETS")) {
+        Section(header: Text("PRAYER OFFSETS"), footer: offsetsFooter) {
             offsetStepper(title: String(localized: "Fajr"), icon: "sunrise", value: $adhanSettings.offsetFajr)
             offsetStepper(title: String(localized: "Sunrise"), icon: "sunrise.fill", value: $adhanSettings.offsetSunrise)
             offsetStepper(title: String(localized: "Dhuhr"), icon: "sun.max", value: $adhanSettings.offsetDhuhr)
             offsetStepper(title: String(localized: "Asr"), icon: "sun.min", value: $adhanSettings.offsetAsr)
             offsetStepper(title: String(localized: "Maghrib"), icon: "sunset", value: $adhanSettings.offsetMaghrib)
             offsetStepper(title: String(localized: "Isha"), icon: "moon", value: $adhanSettings.offsetIsha)
+        }
+    }
 
-            Text("In traveling mode, Dhuhr offset also affects the combined Dhuhr/Asr prayer, and Maghrib offset also affects the combined Maghrib/Isha prayer.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
-
+    /// The two notes under the steppers, as the section's footer (one grammar, 2026-10-25).
+    private var offsetsFooter: some View {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Use these offsets to shift the calculated prayer times earlier or later. Negative values move the time earlier, positive values move it later.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 2)
+            Text("In traveling mode, Dhuhr offset also affects the combined Dhuhr/Asr prayer, and Maghrib offset also affects the combined Maghrib/Isha prayer.")
         }
     }
 }
@@ -940,7 +919,7 @@ struct NotificationView: View {
     @ViewBuilder
     private var notificationSections: some View {
                 #if os(iOS)
-                Section {
+                Section(header: Text("PERMISSION")) {
                     permissionCard
                 }
                 #else
@@ -979,7 +958,8 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
-                Section(header: Text("ADHAN")) {
+                Section(header: Text("ADHAN"),
+                        footer: Text("A notification can play 30 seconds of the adhan; the app plays it in full.")) {
                     Picker("Adhan Sound", selection: $adhanSettings.adhanNotificationSound) {
                         // Two groups, not one run of nineteen names: the tones (with Default, the same
                         // six the ALERT TONE picker offers) and then the calls to prayer.
@@ -1006,11 +986,14 @@ struct NotificationView: View {
                     }
 
                     if notificationSoundsDisabled {
-                        Label("Notification sounds are off in iPhone Settings, so the adhan will be silent.", systemImage: "speaker.slash.fill")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.vertical, 2)
+                        Label {
+                            SettingsCaption(String(localized: "Notification sounds are off in iPhone Settings, so the adhan will be silent."))
+                        } icon: {
+                            Image(systemName: "speaker.slash.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
                     }
 
                     if settings.adhanNotificationSound != "default" {
@@ -1037,12 +1020,10 @@ struct NotificationView: View {
                             .settingsDependent()
                         }
                     }
-
-                    settingsCaption(String(localized: "A notification can play 30 seconds of the adhan; the app plays it in full."))
                 }
 
-                if settings.advanced(.notifications) {
-                Section(header: Text("ALERT TONE")) {
+                Section(header: Text("ALERT TONE"),
+                        footer: Text("For prenotifications, the optional times and any prayer with the adhan off. Chime, Ring and Alarm carry through noise.")) {
                     Picker("Alert Tone", selection: $adhanSettings.alertToneSound) {
                         Section {
                             // Tones only, no adhans: this sound plays exactly where the adhan was
@@ -1074,16 +1055,13 @@ struct NotificationView: View {
                                 }
                             }
                     }
-
-                    settingsCaption(String(localized: "For prenotifications, the optional times and any prayer with the adhan off. Chime, Ring and Alarm carry through noise."))
-                }
                 }
                 #endif
 
                 Section(header: Text("MORE REMINDERS")) {
                     SettingsToggle(String(localized: "Islamic Calendar Notifications"), isOn: $adhanSettings.dateNotifications)
 
-                    if settings.dateNotifications, settings.advanced(.notifications) {
+                    if settings.dateNotifications {
                         SettingsToggle(String(localized: "Remind a Day Before"), caption: String(localized: "A heads-up the evening before each Islamic date."), isOn: $adhanSettings.dateNotificationsDayBefore)
                         .settingsDependent()
                     }
@@ -1099,25 +1077,10 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
-                // Last on the page, above its ADVANCED switch (Abu, 2026-10-10): see Prayer Settings.
+                // Last on the page (Abu, 2026-10-10): see Prayer Settings. No ADVANCED switch since
+                // 2026-10-25: it hid the alert tone and the day-before reminder, three rows.
                 TipsSection(area: .notifications, resolve: resolveSearchDestination)
-
-                AdvancedSettingsSection(screen: .notifications, hides: String(localized: "the alert tone and the day-before reminder for Islamic dates"))
-                #else
-                // The watch's only advanced control here is Remind a Day Before, itself shown only
-                // while Islamic Calendar Notifications is on - so with that off, nothing is hidden.
-                AdvancedSettingsSection(screen: .notifications, hides: String(localized: "the day-before reminder for Islamic dates"),
-                                        applies: settings.dateNotifications)
                 #endif
-    }
-
-    /// One line under a control, the only kind of caption this page carries (Abu, 2026-10-19).
-    private func settingsCaption(_ text: String) -> some View {
-        Text(text.localizedDigits)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.vertical, 2)
     }
 
     /// What the Prayer Notifications door leads to, at a glance: "All 5 prayers \u{00B7} 10 min before",
@@ -1604,6 +1567,23 @@ struct MoreNotificationView: View {
         minutes == 0 ? String(localized: "At the time") : String(localized: "\(minutes) min before")
     }
 
+    /// The symbol each prayer's row wears: the Manual Offsets steppers' for the daily prayers, the
+    /// Optional Prayers switches' for the optional times.
+    private static func symbol(for prayer: String) -> String {
+        switch prayer {
+        case "Fajr": return "sunrise"
+        case "Shurooq": return "sunrise.fill"
+        case "Duhaa": return "sun.haze.fill"
+        case "Dhuhr": return "sun.max"
+        case "Asr": return "sun.min"
+        case "Maghrib": return "sunset"
+        case "Isha": return "moon"
+        case "Islamic Midnight": return "moon.fill"
+        case "Last Third": return "moon.stars.fill"
+        default: return "bell.fill"
+        }
+    }
+
     /// The row's trailing read-out: "10 min before \u{00B7} Adhan", "At the time \u{00B7} Tone", "Off".
     private func summary(for row: PrayerRow) -> String {
         guard settings[keyPath: row.notification] else { return String(localized: "Off") }
@@ -1645,7 +1625,7 @@ struct MoreNotificationView: View {
     private var notificationBody: some View {
         List {
             Group {
-            Section {
+            Section(header: Text("ALL PRAYERS"), footer: Text("Sets the five prayers at once. Each one can differ below.")) {
                 SettingsToggle(String(localized: "All Prayers"), isOn: allPrayersBinding)
 
                 Stepper(value: allLeadsBinding, in: 0...120, step: 1) {
@@ -1657,12 +1637,6 @@ struct MoreNotificationView: View {
                             .monospacedDigit()
                     }
                 }
-
-                Text("Sets the five prayers at once. Each one can differ below.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
             }
 
             Section(header: Text("EACH PRAYER")) {
@@ -1672,16 +1646,10 @@ struct MoreNotificationView: View {
                                                      preNotificationTime: binding(row.lead),
                                                      isNotificationOn: binding(row.notification))
                     }) {
-                        HStack {
-                            Text(row.name.localizedDisplay)
-                                .foregroundColor(.primary)
-                            Spacer(minLength: 8)
-                            Text(summary(for: row))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
+                        // The row grammar every settings link uses (chip, title, value), with the
+                        // Manual Offsets page's symbol for each prayer.
+                        SettingsRowLabel(title: row.name.localizedDisplay, systemImage: Self.symbol(for: row.name),
+                                         tint: SettingsTint.notifications, value: summary(for: row))
                     }
                     .tint(settings.accentColor.color)
                 }
@@ -1801,14 +1769,6 @@ struct PrayerNotificationDetailView: View {
         Binding(get: { settings[keyPath: keyPath] }, set: { settings[keyPath: keyPath] = $0 })
     }
 
-    private func caption(_ text: String) -> some View {
-        Text(text)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.vertical, 2)
-    }
-
     var body: some View {
         List {
             Group {
@@ -1826,9 +1786,11 @@ struct PrayerNotificationDetailView: View {
                             }
                         }
                     }
-
+                } header: {
+                    Text("NOTIFICATION")
+                } footer: {
                     if let travelNotificationCaption {
-                        caption(travelNotificationCaption)
+                        Text(travelNotificationCaption)
                     }
                 }
 
@@ -1866,9 +1828,9 @@ extension SettingsSearchEntry {
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah preview", destination: .notifications),
         .init(title: "Play Adhan Automatically", path: "Notifications", keywords: "automatic auto play in-app adhan full recording open app five minutes play button offer", destination: .notifications),
         .init(title: "Play in Silent Mode", path: "Notifications", keywords: "silent mode ringer switch mute action button in-app adhan sound", destination: .notifications),
-        .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications, advanced: true),
+        .init(title: "Alert Tone", path: "Notifications", keywords: "tone chime ding sound reminder alert", destination: .notifications),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
-        .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications, advanced: true),
+        .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
         .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Notifications", keywords: "before minutes early alert all prayers prenotification remind", destination: .notificationsPage(.prayerReminders)),
         .init(title: "Per-Prayer Notifications & Adhan", path: "Notifications → Prayer Notifications", keywords: "per prayer each fajr dhuhr asr maghrib isha own sound short adhan play adhan prenotification duhaa midnight last third", destination: .notificationsPage(.prayerReminders)),
         .init(title: "Nagging Mode", path: "Notifications → Nagging Mode", keywords: "nag repeat reminders pray on time cascade did you pray tracker deadline window closes midnight isha fajr shurooq struggle lazy miss prayers accountability", destination: .notificationsPage(.naggingMode)),
@@ -1909,7 +1871,7 @@ extension SettingsSearchEntry {
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings → Manual Offsets", keywords: "adjust minutes plus minus tune offset", destination: .prayerPage(.manualOffsets)),
         .init(title: "Hijri Date Offset", path: "Prayer Settings → Manual Offsets", keywords: "hijri adjust day moon date calendar", destination: .prayerPage(.manualOffsets)),
         .init(title: "Switch Hijri Date at Maghrib", path: "Prayer Settings → Manual Offsets", keywords: "hijri date sunset maghrib midnight islamic day", destination: .prayerPage(.manualOffsets)),
-        .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames), advanced: true),
+        .init(title: "Custom Prayer Names", path: "Prayer Settings → Custom Prayer Names", keywords: "rename spelling fadjr salah names", destination: .prayerPage(.customPrayerNames)),
         .init(title: "Show Sky (Sun Arc, Moon, Stars)", path: "Prayer Settings → Sky", keywords: "sky card sun arc moon phase stars countdown adhan tab", destination: .prayerPage(.sky)),
         .init(title: "Sky Fills the Screen", path: "Prayer Settings → Sky", keywords: "sky whole tab background full screen fill page gradient behind everything glass rows adhan tab color", destination: .prayerPage(.sky)),
         .init(title: "Skyline (Mosque, Pyramids, Palms)", path: "Prayer Settings → Sky", keywords: "skyline scene silhouette mosque pyramids palm trees sun moon horizon widgets", destination: .prayerPage(.sky)),
@@ -2088,10 +2050,7 @@ struct PrayerCalculationListView: View {
             }
 
             if let region = method.region {
-                Text(region)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                SettingsCaption(region)
                     .padding(.vertical, 2)
             }
         }
@@ -2107,7 +2066,7 @@ struct PrayerCalculationListView: View {
 
     @ViewBuilder
     private var customSection: some View {
-        Section(header: Text("CUSTOM")) {
+        Section {
             methodRow(customMethod)
 
             // Only editable while the custom method is the one in use - otherwise these steppers would be
@@ -2122,7 +2081,6 @@ struct PrayerCalculationListView: View {
                             .foregroundColor(settings.accentColor.color)
                     }
                 }
-                .font(.subheadline)
 
                 Stepper(value: $adhanSettings.customIshaAngle, in: 8...25, step: 0.5) {
                     HStack {
@@ -2133,13 +2091,12 @@ struct PrayerCalculationListView: View {
                             .foregroundColor(settings.accentColor.color)
                     }
                 }
-                .font(.subheadline)
-
+            }
+        } header: {
+            Text("CUSTOM")
+        } footer: {
+            if selectedID == PrayerCalculationCatalog.customID {
                 Text("Only set your own angles if you know the values your local mosque uses. A wrong angle means praying at the wrong time.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
             }
         }
     }
@@ -2148,31 +2105,27 @@ struct PrayerCalculationListView: View {
     /// orphaned in refactors); they belong here with the rest of the calculation choices - and the
     /// settings-search index deep-links "hanafi"/"high latitude" to this screen.
     private var madhabAndHighLatitudeSection: some View {
-        Section(header: Text(settings.advanced(.prayerCalculation) ? String(localized: "MADHAB & HIGH LATITUDE") : String(localized: "MADHAB"))) {
+        Section {
             SettingsToggle(String(localized: "Hanafi Calculation for Asr"), caption: String(localized: "The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method."), isOn: $adhanSettings.hanafiMadhab)
 
             if settings.advanced(.prayerCalculation) {
-            VStack(alignment: .leading) {
                 Picker("High Latitude Rule", selection: $adhanSettings.highLatitudeRule) {
                     Section {
                         ForEach(Settings.highLatitudeRuleOptions, id: \.self) { option in
                             Text(option.localizedDisplay).tag(option)
-                                .font(.subheadline)
                         }
                     } header: {
                         Text("High Latitude Rule")
                             .foregroundStyle(.secondary)
                     }
                 }
-                .font(.subheadline)
                 .onChange(of: settings.highLatitudeRule) { _ in settings.hapticFeedback() }
-
-                Text(highLatitudeRuleCaption)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.vertical, 2)
             }
+        } header: {
+            Text(settings.advanced(.prayerCalculation) ? String(localized: "MADHAB & HIGH LATITUDE") : String(localized: "MADHAB"))
+        } footer: {
+            if settings.advanced(.prayerCalculation) {
+                Text(highLatitudeRuleCaption)
             }
         }
     }
@@ -2189,22 +2142,13 @@ struct PrayerCalculationListView: View {
 
     private var explanationSection: some View {
         Section(header: Text("ABOUT THESE ANGLES")) {
-            Text("Fajr begins at true dawn and Isha at nightfall. Neither is a clock time: both are defined by how far the sun has sunk below the horizon, and the bodies below differ on where exactly to draw that line. A larger angle means an earlier Fajr and a later Isha.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            SettingsCaption(String(localized: "Fajr begins at true dawn and Isha at nightfall. Neither is a clock time: both are defined by how far the sun has sunk below the horizon, and the bodies below differ on where exactly to draw that line. A larger angle means an earlier Fajr and a later Isha."))
                 .padding(.vertical, 2)
 
-            Text("Umm Al-Qura and Qatar use a fixed interval after Maghrib for Isha instead of an angle, because at their latitude the twilight is consistent enough for a clock to be reliable.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            SettingsCaption(String(localized: "Umm Al-Qura and Qatar use a fixed interval after Maghrib for Isha instead of an angle, because at their latitude the twilight is consistent enough for a clock to be reliable."))
                 .padding(.vertical, 2)
 
-            Text("Use the method your local mosque uses. If you do not know it, leave this on automatic.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            SettingsCaption(String(localized: "Use the method your local mosque uses. If you do not know it, leave this on automatic."))
                 .padding(.vertical, 2)
         }
     }

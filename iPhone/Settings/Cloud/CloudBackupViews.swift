@@ -518,7 +518,7 @@ struct CloudRestoreSheet: View {
 
                 Section(header: Text("HOW"), footer: Text(footer)) {
                     choice(.replace, title: String(localized: "Replace"), subtitle: String(localized: "This \(CloudDevice.kind) becomes the backup: its content and its settings. What is here now is replaced."), systemImage: "arrow.triangle.2.circlepath")
-                    choice(.merge, title: String(localized: "Merge"), subtitle: String(localized: "The backup's bookmarks, marks and counts are added to what is here. Your settings on this \(CloudDevice.kind) stay as they are."), systemImage: "arrow.triangle.merge")
+                    choice(.merge, title: String(localized: "backup.merge", defaultValue: "Merge"), subtitle: String(localized: "The backup's bookmarks, marks and counts are added to what is here. Your settings on this \(CloudDevice.kind) stay as they are."), systemImage: "arrow.triangle.merge")
                 }
 
                 if let errorMessage {

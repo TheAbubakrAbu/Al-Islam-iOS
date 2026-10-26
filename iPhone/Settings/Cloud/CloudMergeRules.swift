@@ -63,6 +63,8 @@ enum CloudMergeRules {
         "savedBrokenLetterAyahIDsData": .unionScalars(cap: nil),
         "lastListenedAyahData": .newerObject(stamp: "savedAt"),
         "lastListenedSurahData": .newerObject(stamp: "savedAt"),
+        // The page reader's resume position carries no stamp: it fills an empty device and stays put.
+        "mushafResumeSurah": .fillIfMissing, "mushafResumeAyah": .fillIfMissing,
         "quranSearchHistoryData": .unionScalars(cap: 10),
         "quranListeningHistoryData": .unionObjects(identity: ["surahNumber", "reciter.name"], stamp: "timestamp", newestFirst: true, cap: 10),
         "quranReadingHistoryData": .unionObjects(identity: ["surahNumber", "ayahNumber"], stamp: "timestamp", newestFirst: true, cap: 10),

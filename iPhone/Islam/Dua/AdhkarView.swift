@@ -747,11 +747,7 @@ struct AdhkarView: View {
     }
 
     private var introductionSection: some View {
-        Section(header: HStack(spacing: 8) {
-            Text("REMEMBRANCES OF ALLAH")
-
-            Spacer()
-
+        Section(header: SectionHeaderLine(String(localized: "REMEMBRANCES OF ALLAH")) {
             // Count pill first (the SectionPillHeader rule); the pill plays every dhikr below, in order.
             CountPill(count: commonDhikrItems.count)
 

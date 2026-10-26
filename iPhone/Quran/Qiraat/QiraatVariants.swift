@@ -315,7 +315,7 @@ struct AyahQiraatVariantsSection: View {
     /// The riwayah's name without the picker's "(default)" suffix: a pill, not a menu row.
     private var currentLabel: String {
         // The Arabic interface names it in Arabic (`displayLabel`).
-        if AppLanguage.isArabic { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
+        if AppLanguage.isArabicScript { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
         return Settings.Riwayah.option(for: currentTag).label
             .replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
     }
@@ -460,7 +460,7 @@ struct AyahQiraatVariantsView: View {
 
     /// The riwayah's name without the picker's "(default)" suffix, in the reader's language (`displayLabel`).
     private var currentLabel: String {
-        if AppLanguage.isArabic { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
+        if AppLanguage.isArabicScript { return Settings.Riwayah.option(for: currentTag).displayLabel(omitsDefaultSuffix: true) }
         return Settings.Riwayah.option(for: currentTag).label
             .replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
     }
@@ -509,10 +509,9 @@ struct AyahQiraatVariantsView: View {
 
             Section(footer:
                 Text("Readings of the Ten and their meanings from the Quran.com qiraat reference (Quran Foundation). The app's Qiraah Comparison shows the full text of every riwayah from its printed mushaf.")
-                    .font(.caption2)
             ) { EmptyView() }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         .navigationTitle("Readings of \(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))")
         .navigationBarTitleDisplayMode(.inline)
     }

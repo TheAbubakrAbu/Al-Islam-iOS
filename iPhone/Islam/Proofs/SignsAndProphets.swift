@@ -269,7 +269,9 @@ struct SignArticleSections: View {
 
         init(heading: String) {
             switch heading {
-            case "WHAT HAPPENED", "WHAT CAME OF IT", "WHAT IS SEEN NOW", "WHAT THEY DID WITH IT":
+            // "HOW TO KEEP IT" is the Sunnahs library's steps section (2026-10-26): a sequence of
+            // things to do reads on the same rail as a sequence of things that happened.
+            case "WHAT HAPPENED", "WHAT CAME OF IT", "WHAT IS SEEN NOW", "WHAT THEY DID WITH IT", "HOW TO KEEP IT":
                 self = .timeline
             case "A NOTE":
                 self = .note(systemImage: "text.bubble.fill")
@@ -408,10 +410,13 @@ private struct SignNoteCard: View {
 
 /// The STRONGEST section each signs library leads with: the first three, then a "Show more" row for
 /// the rest (Abu, 2026-09-25: "show like 3 and have a show more button to see all"). The pick is the
-/// app's own in all three libraries, which the footer says.
+/// app's own in all three libraries, which the footer says. The Sunnahs library leads with the same
+/// section under its own heading ("MOST EMPHASISED", 2026-10-26): `title` and `icon`.
 struct StrongestSection<Item: Identifiable, Row: View>: View {
     @Environment(\.appearance) private var appearance
 
+    var title: String = "STRONGEST"
+    var icon: String = "star.fill"
     let items: [Item]
     let footer: String
     @ViewBuilder let row: (Item) -> Row
@@ -424,7 +429,7 @@ struct StrongestSection<Item: Identifiable, Row: View>: View {
     var body: some View {
         if !items.isEmpty {
             Section(
-                header: SectionPillHeader(title: "STRONGEST", count: items.count, icon: "star.fill"),
+                header: SectionPillHeader(title: title, count: items.count, icon: icon),
                 footer: Text(footer)
             ) {
                 ForEach(showAll ? items : Array(items.prefix(Self.collapsedCount))) { item in
@@ -507,20 +512,26 @@ enum ProphetSignsIndex {
         .init(id: "ProphetSalihView", name: "Salih", arabic: "\u{0635}\u{064E}\u{0627}\u{0644}\u{0650}\u{062D}",
               miracleEntries: ["salih-camel"], signs: "The she-camel, and the water shared with her"),
         .init(id: "ProphetIbrahimView", name: "Ibrahim", arabic: "\u{0625}\u{0650}\u{0628}\u{0631}\u{064E}\u{0627}\u{0647}\u{0650}\u{064A}\u{0645}",
-              miracleEntries: ["ibrahim-fire", "ibrahim-birds"], signs: "The fire made cool, and the four birds"),
+              miracleEntries: ["ibrahim-fire", "ibrahim-birds", "ibrahim-guests", "ibrahim-ram"],
+              signs: "The fire made cool, the four birds, the guests, and the ransom"),
         .init(id: "ProphetLutView", name: "Lut", arabic: "\u{0644}\u{064F}\u{0648}\u{0637}",
               miracleEntries: ["lut-city"], signs: "The angels at his door, and the city overturned"),
         .init(id: "ProphetIsmailView", name: "Isma'il", arabic: "\u{0625}\u{0650}\u{0633}\u{0645}\u{064E}\u{0627}\u{0639}\u{0650}\u{064A}\u{0644}",
-              miracleEntries: ["zamzam"], signs: "The spring of Zamzam, opened for him and his mother"),
+              miracleEntries: ["zamzam", "ibrahim-ram"], signs: "The spring of Zamzam, and the ransom at the sacrifice"),
+        .init(id: "ProphetIshaqView", name: "Ishaq", arabic: "\u{0625}\u{0650}\u{0633}\u{062D}\u{064E}\u{0627}\u{0642}",
+              miracleEntries: ["ibrahim-guests"], signs: "Announced by angels to a barren mother and an old father"),
         .init(id: "ProphetYaqubView", name: "Ya'qub", arabic: "\u{064A}\u{064E}\u{0639}\u{0642}\u{064F}\u{0648}\u{0628}",
               miracleEntries: ["yusuf-dream-shirt"], signs: "His sight returned by his son's shirt"),
         .init(id: "ProphetYusufView", name: "Yusuf", arabic: "\u{064A}\u{064F}\u{0648}\u{0633}\u{064F}\u{0641}",
               miracleEntries: ["yusuf-dream-shirt"], signs: "The dream fulfilled, and the shirt that healed"),
         .init(id: "ProphetAyyubView", name: "Ayyub", arabic: "\u{0623}\u{064E}\u{064A}\u{064F}\u{0651}\u{0648}\u{0628}",
               miracleEntries: ["ayyub-spring"], signs: "The spring that healed him, and his family restored"),
+        .init(id: "ProphetShuaybView", name: "Shu'ayb", arabic: "\u{0634}\u{064F}\u{0639}\u{064E}\u{064A}\u{0628}",
+              miracleEntries: ["shuayb-shade"], signs: "The day of the shade, the answer to a mocking demand"),
         .init(id: "ProphetMusaView", name: "Musa", arabic: "\u{0645}\u{064F}\u{0648}\u{0633}\u{064E}\u{0649}",
-              miracleEntries: ["musa-staff-hand", "musa-nine-signs", "musa-sea", "musa-desert", "musa-cow"],
-              signs: "The staff and the hand, the nine signs, the sea, the springs"),
+              miracleEntries: ["musa-river-mother", "musa-staff-hand", "musa-nine-signs", "musa-sea", "musa-desert",
+                               "musa-cow", "musa-tur", "musa-khidr"],
+              signs: "The river, the staff and the hand, the nine signs, the sea, the springs, the mountain"),
         .init(id: "ProphetHarunView", name: "Harun", arabic: "\u{0647}\u{064E}\u{0627}\u{0631}\u{064F}\u{0648}\u{0646}",
               miracleEntries: ["musa-staff-hand", "musa-sea"], signs: "Beside his brother before Pharaoh and at the sea"),
         .init(id: "ProphetDawudView", name: "Dawud", arabic: "\u{062F}\u{064E}\u{0627}\u{0648}\u{064F}\u{0648}\u{062F}",
@@ -535,8 +546,8 @@ enum ProphetSignsIndex {
         .init(id: "ProphetYahyaView", name: "Yahya", arabic: "\u{064A}\u{064E}\u{062D}\u{064A}\u{064E}\u{0649}",
               miracleEntries: ["zakariya-yahya"], signs: "Born to a barren mother and an old father"),
         .init(id: "ProphetIsaView", name: "'Isa", arabic: "\u{0639}\u{0650}\u{064A}\u{0633}\u{064E}\u{0649}",
-              miracleEntries: ["isa-birth-cradle", "isa-signs", "table-spread"],
-              signs: "Speech in the cradle, healing, the dead raised, the table"),
+              miracleEntries: ["isa-birth-cradle", "isa-signs", "table-spread", "isa-raised"],
+              signs: "Speech in the cradle, healing, the dead raised, the table, and his raising"),
         .init(id: "ProphetMuhammadView", name: "Muhammad", arabic: "\u{0645}\u{064F}\u{062D}\u{064E}\u{0645}\u{064E}\u{0651}\u{062F}",
               miracleEntries: ["quran", "moon", "isra"], signs: "The Quran, the splitting of the moon, and more"),
     ]

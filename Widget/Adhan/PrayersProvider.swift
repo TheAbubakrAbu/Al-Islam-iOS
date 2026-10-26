@@ -59,7 +59,9 @@ enum AdhanWidgetDateFormatting {
     static func hijriDate(for entry: PrayersEntry, style: DateFormatter.Style) -> String {
         if Language.interface == .arabic {
             let parts = hijriParts(for: entry, language: .arabic)
-            return style == .full ? "\(parts.weekday)، \(parts.dayMonthYear)" : parts.dayMonthYear
+            // The interface's digits (Western on an `ar_US` or `ur_PK` phone), as the prayer times beside it
+            // have; the explicit Arabic Hijri tiles keep Arabic-Indic.
+            return (style == .full ? "\(parts.weekday)، \(parts.dayMonthYear)" : parts.dayMonthYear).localizedDigits
         }
         let date = hijriReferenceDate(for: entry)
         guard style == .full else { return mediumHijriFormatter.string(from: date) }
@@ -79,7 +81,7 @@ enum AdhanWidgetDateFormatting {
         /// The language the interface is showing (`AppLanguage`, which reads the widget extension's own
         /// bundle, so it follows the app's language choice): for everything but the Hijri-alone tiles,
         /// whose English and Arabic kinds are explicit.
-        static var interface: Language { AppLanguage.isArabic ? .arabic : .english }
+        static var interface: Language { AppLanguage.isArabicScript ? .arabic : .english }
     }
 
     /// One Hijri date broken into the pieces the lock-screen date widgets set separately: a circular

@@ -106,7 +106,7 @@ struct QuranWidgetProvider: TimelineProvider {
                 kind: kind,
                 title: kind.title,
                 icon: kind.icon,
-                primaryText: AppLanguage.isArabic ? "الفاتحة" : "Al-Fatihah",
+                primaryText: AppLanguage.isArabicScript ? "الفاتحة" : "Al-Fatihah",
                 secondaryText: "Mishary Alafasy",
                 tertiaryText: "00:42 / 01:30".localizedDigits,
                 accentColor: accent,

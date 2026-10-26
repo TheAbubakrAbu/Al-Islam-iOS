@@ -307,7 +307,7 @@ struct SurahRow: View, Equatable {
                 // The English name on the left and the Arabic on the right in both interfaces (in
                 // Arabic, `.leading` / `.trailing` would swap them).
                 // The Arabic interface names the surah once, in Arabic.
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(verbatim: "\(surah.id) - \(surah.nameTransliteration)")
                         .font(.subheadline)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -322,7 +322,7 @@ struct SurahRow: View, Equatable {
                     .minimumScaleFactor(0.9)
             } else {
                 HStack {
-                    if !AppLanguage.isArabic {
+                    if !AppLanguage.isArabicScript {
                         Text(verbatim: "\(surah.id) - \(surah.nameTransliteration)")
                             .font(.subheadline)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -368,7 +368,7 @@ struct SurahRow: View, Equatable {
                         .lineLimit(1)
                 }
 
-                if AppLanguage.isArabic {
+                if AppLanguage.isArabicScript {
                     // The Arabic interface names the surah once: the Arabic name leads the column
                     // (carrying the revelation emoji the English meaning line carries), and neither
                     // the transliteration, the meaning nor the trailing name and number are drawn.
@@ -434,7 +434,7 @@ struct SurahRow: View, Equatable {
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !AppLanguage.isArabic {
+            if !AppLanguage.isArabicScript {
                 HStack {
                     HighlightedSnippet(
                         source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
@@ -498,7 +498,7 @@ struct SurahRow: View, Equatable {
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
                 // The Arabic interface has no meaning line below to carry the revelation emoji.
-                if AppLanguage.isArabic && !showInfo {
+                if AppLanguage.isArabicScript && !showInfo {
                     Text(revelationEmoji)
                         .font(.caption)
                 }
@@ -520,7 +520,7 @@ struct SurahRow: View, Equatable {
             // "107: Al-Ma'un" is one piece of English content: its own digits and its own direction, or
             // the Arabic interface turned it into ":١٠٧ Al-Ma'un". The Arabic interface draws neither it
             // nor the English meaning: the top line already names the surah in Arabic.
-            if !AppLanguage.isArabic {
+            if !AppLanguage.isArabicScript {
                 HStack(spacing: 4) {
                     Text(verbatim: "\(surah.id):")
                         .font(.subheadline.monospacedDigit().weight(.bold))

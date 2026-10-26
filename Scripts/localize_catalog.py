@@ -4,29 +4,33 @@
 The compiler writes one `.stringsdata` file per Swift source (SWIFT_EMIT_LOC_STRINGS) listing every
 localizable literal it found. Xcode's IDE folds those into the catalog on each build; `xcodebuild` from
 the command line does not, so this script does the same fold, then adds what only a person can supply:
-the Arabic. Arabic is written into the catalog, which stays the one source of truth for translations
-(Xcode's catalog editor reads and writes the same file).
+the translations, Arabic (`ar`, 2026-10-24) and Urdu (`ur`, 2026-10-26). They are written into the catalog,
+which stays the one source of truth for translations (Xcode's catalog editor reads and writes the same file).
 
 The Islam tab's articles are not translated yet (2026-10-25): a key whose every source is an article file
 (ARTICLE_SOURCES) is listed in the catalog but never offered for translation, and reads English.
 
     # after a build with -derivedDataPath DD:
     ./Scripts/localize_catalog.py sync DD                  # add new keys, mark vanished ones stale
-    ./Scripts/localize_catalog.py todo DD OUTDIR [--chunk 300]   # batches of keys still missing Arabic
+    ./Scripts/localize_catalog.py todo DD OUTDIR [--chunk 300]   # batches of keys still missing a translation
     ./Scripts/localize_catalog.py merge FILE.json [...]    # write translations in (validated)
     ./Scripts/localize_catalog.py validate FILE.json [...] # the same checks, writing nothing
-    ./Scripts/localize_catalog.py check                    # every Arabic value against its key
+    ./Scripts/localize_catalog.py check                    # every translated value against its key
     ./Scripts/localize_catalog.py manual KEYS.json         # data strings shown through .localizedDisplay
     ./Scripts/localize_catalog.py sibling DD [--add]       # Al-Adhan's or Al-Quran's build: keys only it has
 
-Al-Adhan and Al-Quran carry a copy of this catalog (../sync_localization.py replaces theirs whole on every
-sync), so their Arabic is made here too. `sibling` reads one of their builds and lists the keys their code has
-that this catalog cannot translate; --add writes them in as manual keys (this app's own `sync` never marks
-those stale), and `todo` then offers them with the rest.
+`todo`, `merge`, `validate`, `check` and `sibling` take `--lang ar|ur` (default ar). An Urdu `todo` batch
+carries each key's Arabic beside it (`arabic`), the reference for its sense and its Islamic terms.
 
-A translation file is a JSON object {english key: arabic}. A key holding exactly one integer argument
-(%lld, %d, %ld, %u, %lu) may map to an object of CLDR plural forms instead:
-{"one": ..., "two": ..., "few": ..., "many": ..., "other": ..., "zero": ...} ("zero" optional).
+Al-Adhan and Al-Quran carry a copy of this catalog (../sync_localization.py replaces theirs whole on every
+sync), so their translations are made here too. `sibling` reads one of their builds and lists the keys their
+code has that this catalog cannot translate; --add writes them in as manual keys (this app's own `sync` never
+marks those stale), and `todo` then offers them with the rest.
+
+A translation file is a JSON object {english key: translation}. A key holding exactly one integer argument
+(%lld, %d, %ld, %u, %lu) may map to an object of CLDR plural forms instead: Arabic
+{"one": ..., "two": ..., "few": ..., "many": ..., "other": ..., "zero": ...}, Urdu {"one": ..., "other": ...}
+("zero" optional in both).
 """
 import glob
 import json
@@ -36,13 +40,15 @@ import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CATALOG = os.path.join(REPO, "Resources", "Localizable.xcstrings")
-LANG = "ar"
+LANG = "ar"  # --lang (main)
+LANGUAGES = ("ar", "ur")
 TARGET_BUILDS = ("iPhone.build", "Widget.build", "Watch.build", "Complication.build")
 # The Islam tab's articles (Faith & Proofs, the How-To Guides, Hadith & Its Sciences, the riwayat
 # differences) stay English for now; the rest of that tab is translated. The article kit (ArticleDesign.swift)
 # is shared with translated pages, so its few literals are translated; its String defaults stay English and
 # translated pages pass their own.
 ARTICLE_SOURCES = ("iPhone/Islam/Beliefs/", "iPhone/Islam/Proofs/", "iPhone/Islam/Fiqh/HowToGuides.swift",
+                   "iPhone/Islam/Fiqh/SunnahView.swift", "iPhone/Islam/Fiqh/SunnahContent.swift",
                    "iPhone/Islam/Content/HadithSciencesViews.swift", "iPhone/Islam/Content/IslamArticles.swift",
                    "iPhone/Islam/Qiraat/RiwayatDifferencesView.swift")
 
@@ -53,15 +59,18 @@ SPEC = re.compile(r"%(?:(\d+)\$)?[-+#0]*\d*(?:\.\d+)?(ll|l|h|hh|q|z|t|j)?([@dDiu
 PARAM_TOKEN = re.compile(r"\$\{[A-Za-z_]+\}")
 INT_CONV = set("dDiuUxXoO")
 EM_DASH = chr(0x2014)
-PLURAL_FORMS = ("zero", "one", "two", "few", "many", "other")
-REQUIRED_PLURALS = ("one", "two", "few", "many", "other")
-# Latin words allowed to stay in an Arabic value.
+# CLDR's plural categories per language (Urdu has only one and other), and "zero", which is optional.
+PLURAL_FORMS = {"ar": ("zero", "one", "two", "few", "many", "other"), "ur": ("zero", "one", "other")}
+REQUIRED_PLURALS = {"ar": ("one", "two", "few", "many", "other"), "ur": ("one", "other")}
+# The forms that may say the number as a word (one ayah, two ayahs) instead of printing it.
+WORD_FORMS = {"ar": ("zero", "one", "two"), "ur": ("zero", "one")}
+# Latin words allowed to stay in a translated value.
 LATIN_OK = {"al-islam", "al-adhan", "al-quran", "apple", "icloud", "carplay", "siri", "watch", "ios",
             "ipados", "macos", "watchos", "intelligence", "id", "gps", "pdf", "ai", "faceid", "touch",
             "airplay", "wi-fi", "wifi", "bluetooth", "imessage", "facetime", "safari", "url", "qr",
             "utc", "gmt", "am", "pm", "hafs", "warsh", "qalun", "app", "store", "tilawa", "quran.com",
             "github", "dynamic", "island", "pro", "max", "ipad", "iphone", "mac", "kfgqpc", "uthmani",
-            "indopak", "sf", "rounded", "mp3", "ok"}
+            "indopak", "sf", "rounded", "mp3", "ok", "csv"}
 
 
 def load_catalog():
@@ -130,8 +139,19 @@ def translatable(sources):
     return any(not s.startswith(ARTICLE_SOURCES) for s in sources)
 
 
-def has_arabic(entry):
-    return LANG in entry.get("localizations", {})
+def has_translation(entry, lang=None):
+    return (lang or LANG) in entry.get("localizations", {})
+
+
+def value_of(entry, lang):
+    """One language's value as a string, a plural as "form: value" lines; None when it has none."""
+    loc = entry.get("localizations", {}).get(lang)
+    if not loc:
+        return None
+    if "stringUnit" in loc:
+        return loc["stringUnit"]["value"]
+    forms = loc.get("variations", {}).get("plural", {})
+    return "\n".join(f"{form}: {v['stringUnit']['value']}" for form, v in forms.items())
 
 
 def cmd_sync(dd):
@@ -178,7 +198,9 @@ def cmd_todo(dd, outdir, chunk):
     keys = extracted(dd)
     todo = []
     for key, entry in cat["strings"].items():
-        if has_arabic(entry) or entry.get("extractionState") == "stale" or not key.strip():
+        if has_translation(entry) or entry.get("extractionState") == "stale" or not key.strip():
+            continue
+        if entry.get("shouldTranslate") is False:  # an address, a name: marked in Xcode's catalog editor
             continue
         sources = keys.get(key)
         if sources is not None and not translatable(sources):
@@ -186,8 +208,13 @@ def cmd_todo(dd, outdir, chunk):
         # Nothing to translate in a bare argument ("%lld") or a symbol.
         if not re.search(r"[A-Za-z]", SPEC.sub("", key)):
             continue
-        todo.append({"key": key, "files": sorted(sources or ["(data shown via .localizedDisplay)"]),
-                     "plural": plural_eligible(key)})
+        item = {"key": key, "files": sorted(sources or ["(data shown via .localizedDisplay)"]),
+                "plural": plural_eligible(key)}
+        if english_of(entry) is not None:
+            item["english"] = english_of(entry)
+        if LANG != "ar" and has_translation(entry, "ar"):
+            item["arabic"] = value_of(entry, "ar")
+        todo.append(item)
     # Grouped by first source file so a batch reads as whole screens.
     todo.sort(key=lambda t: (t["files"][0], t["key"]))
     os.makedirs(outdir, exist_ok=True)
@@ -196,7 +223,7 @@ def cmd_todo(dd, outdir, chunk):
         n += 1
         with open(os.path.join(outdir, f"todo_{n:03d}.json"), "w", encoding="utf-8") as f:
             json.dump(todo[i:i + chunk], f, ensure_ascii=False, indent=1)
-    print(f"todo: {len(todo)} keys in {n} files under {outdir}")
+    print(f"todo [{LANG}]: {len(todo)} keys in {n} files under {outdir}")
 
 
 def cmd_sibling(dd, add):
@@ -216,14 +243,15 @@ def cmd_sibling(dd, add):
         entry = strings.get(key)
         if entry is None:
             missing.append((key, sorted(sources)[0]))
-        elif has_arabic(entry):
+        elif has_translation(entry):
             have += 1
         else:
             untranslated += 1
             if entry.get("extractionState") == "stale":
                 revive.append(key)  # gone from this app's code: `todo` skips it unless it turns manual
-    print(f"sibling: {len(keys)} keys in that build; {have} have Arabic here, {untranslated} are here without "
-          f"Arabic yet ({len(revive)} of them stale), {len(missing)} are missing; {articles} article-only skipped")
+    print(f"sibling [{LANG}]: {len(keys)} keys in that build; {have} are translated here, {untranslated} are "
+          f"here without a translation yet ({len(revive)} of them stale), {len(missing)} are missing; "
+          f"{articles} article-only skipped")
     for key, src in missing[:40]:
         print(f"  missing  {key!r}  ({src})")
     if len(missing) > 40:
@@ -237,22 +265,32 @@ def cmd_sibling(dd, add):
         print(f"sibling: {len(missing)} added and {len(revive)} kept as manual keys; `todo` offers them now")
 
 
-def problems(key, value, may_drop_count=False):
-    """What is wrong with one Arabic value (a string), as a list of messages. `may_drop_count`: a plural's
-    zero/one/two form, which can say the number as a word (one ayah, two ayahs) instead of printing it."""
-    out = []
+def english_of(entry):
+    """A dotted key's English (`weather.clear`, `about.app`: `String(localized: "about.app", defaultValue:
+    "About \\(name)")`), kept as the catalog's `en` unit; None for an ordinary key, which IS its English."""
+    return entry.get("localizations", {}).get("en", {}).get("stringUnit", {}).get("value")
+
+
+def problems(key, value, may_drop_count=False, english=None, arabic=None):
+    """What is wrong with one translated value (a string), as a list of messages. `may_drop_count`: a
+    plural form that can say the number as a word (one ayah, two ayahs) instead of printing it (WORD_FORMS).
+    `english`: the English a dotted key stands for (see `english_of`); the placeholders, `${...}` tokens
+    and Latin words are checked against it, since the key itself ("about.app") carries none of them.
+    `arabic`: the key's Arabic, for an Urdu value (`urdu_problems`)."""
+    out = urdu_problems(key, value, english, arabic) if LANG == "ur" else []
+    reference = english if english is not None else key
     if not value.strip():
         out.append("empty")
     if EM_DASH in value or "&mdash;" in value:
         out.append("em dash")
-    if specs(value) != specs(key) and not (may_drop_count and not specs(value)):
-        out.append(f"placeholders {specs(value)} != key {specs(key)}")
-    if key.count("%%") > value.count("%%") + value.count("\u066A"):
+    if specs(value) != specs(reference) and not (may_drop_count and not specs(value)):
+        out.append(f"placeholders {specs(value)} != key {specs(reference)}")
+    if reference.count("%%") > value.count("%%") + value.count("\u066A"):
         out.append("a literal %% is missing")
-    if sorted(PARAM_TOKEN.findall(value)) != sorted(PARAM_TOKEN.findall(key)):
+    if sorted(PARAM_TOKEN.findall(value)) != sorted(PARAM_TOKEN.findall(reference)):
         out.append("${...} parameter tokens differ from the key")
     quoted = set(quoted_latin(value))
-    key_words = {w.lower() for w in re.findall(r"[A-Za-z]+", key)}
+    key_words = {w.lower() for w in re.findall(r"[A-Za-z]+", reference)}
     for word in re.findall(r"[A-Za-z][A-Za-z.\-]*", PARAM_TOKEN.sub(" ", SPEC.sub(" ", value))):
         w = word.lower().strip(".-")
         if not w or w in LATIN_OK:
@@ -263,6 +301,45 @@ def problems(key, value, may_drop_count=False):
             continue
         out.append(f"Latin word {word!r}")
         break
+    return out
+
+
+# Urdu writes its own forms of three letters: ی (U+06CC) for ي, ک (U+06A9) for ك, ہ (U+06C1) or ھ (U+06BE)
+# for ه, and ۃ (U+06C3) or ہ for ة, ی for ى. An Arabic form is right only in quoted Arabic: an ayah between
+# ﴿ ﴾, a vocalised word, or a term the key or its Arabic spells the same way («الحروف الهجائية»).
+ARABIC_FORMS = re.compile("[\u064A\u0643\u0647\u0629\u0649]")
+URDU_ONLY = re.compile("[\u06CC\u06A9\u06C1\u06BE\u06C3\u06D2\u0679\u0688\u0691\u06BA]")
+HARAKAT = re.compile("[\u064B-\u0652\u0670\u06E1]")
+ARABIC_WORD = re.compile("[\u0621-\u064A\u0660-\u0669\u066E-\u06D3\u06D5-\u06FF\u064B-\u0652\u0670\u0640]+")
+AYAH = re.compile("\uFD3F[^\uFD3E]*\uFD3E")
+EASTERN_DIGIT = re.compile("[\u0660-\u0669\u06F0-\u06F9]")
+
+
+def bare(word):
+    return re.sub("[\u064B-\u0652\u0670\u06E1\u0640]", "", word)
+
+
+def urdu_problems(key, value, english, arabic):
+    """Urdu's own checks: its letter forms, Western digits (Urdu in Pakistan writes 0-9; `localizedDigits`
+    turns them into ۰-۹ for Urdu in India), and ۔ to end a sentence."""
+    out = []
+    reference = english if english is not None else key
+    text = AYAH.sub(" ", value)
+    allowed = {bare(w) for w in ARABIC_WORD.findall(reference + " " + (arabic or ""))}
+    for word in ARABIC_WORD.findall(text):
+        if not ARABIC_FORMS.search(word):
+            continue
+        if URDU_ONLY.search(word):
+            out.append(f"Arabic letter form in the Urdu word {word!r}")
+            break
+        if HARAKAT.search(word) or len(bare(word)) <= 1 or bare(word) in allowed:
+            continue
+        out.append(f"Arabic letter form in {word!r} (Urdu writes \u06CC \u06A9 \u06C1)")
+        break
+    if EASTERN_DIGIT.search(SPEC.sub("", text)) and not EASTERN_DIGIT.search(reference):
+        out.append("Eastern digits: write 0-9 in Urdu")
+    if re.search("[\u0621-\u06FF]\\.(\\s|$)", text):
+        out.append("a Latin full stop after Urdu: write \u06D4")
     return out
 
 
@@ -281,14 +358,15 @@ ARABIC_LETTER = re.compile(r"[\u0600-\u06FF]")
 
 
 def directional(value):
-    """An Arabic value whose only Arabic sits inside its arguments starts with a right-to-left mark:
+    """A value whose only Arabic-script letters sit inside its arguments starts with a right-to-left mark:
     `String(localized:)` isolates every argument, so with nothing strong outside them the line fell back to
     left to right and its parts swapped ("%1$@/%2$lld  %3$@" put the percent first). A middle dot beside
-    Arabic-Indic digits reads as a zero, so the separator becomes a bullet, and a literal percent becomes
-    the Arabic percent sign."""
+    Arabic-Indic digits (or Urdu's ۰) reads as a zero, so the separator becomes a bullet, and in Arabic a
+    literal percent becomes the Arabic percent sign (Urdu keeps %)."""
     value = value.replace(" \u00B7 ", " \u2022 ")
     # Arabic writes its own percent sign beside its digits (a literal percent is "%%" in a format string).
-    value = value.replace("%%", "\u066A")
+    if LANG == "ar":
+        value = value.replace("%%", "\u066A")
     if specs(value) and not value.startswith(RLM) and not ARABIC_LETTER.search(SPEC.sub("", value)):
         value = RLM + value
     return value
@@ -312,16 +390,17 @@ def cmd_merge(paths, dry_run=False):
                 if not plural_eligible(key):
                     bad.append((path, key, "plural forms on a key without exactly one integer"))
                     continue
-                missing = [f for f in REQUIRED_PLURALS if not value.get(f)]
-                errs = [f"{f}: {p}" for f, v in value.items() if f in PLURAL_FORMS
-                        for p in problems(key, v, may_drop_count=f in ("zero", "one", "two"))]
-                extra = [f for f in value if f not in PLURAL_FORMS]
+                missing = [f for f in REQUIRED_PLURALS[LANG] if not value.get(f)]
+                errs = [f"{f}: {p}" for f, v in value.items() if f in PLURAL_FORMS[LANG]
+                        for p in problems(key, v, may_drop_count=f in WORD_FORMS[LANG],
+                                          english=english_of(strings[key]), arabic=value_of(strings[key], "ar"))]
+                extra = [f for f in value if f not in PLURAL_FORMS[LANG]]
                 if missing or errs or extra:
                     bad.append((path, key, f"missing {missing} extra {extra} {errs}"))
                     continue
-                loc = {"variations": {"plural": {f: unit(value[f]) for f in PLURAL_FORMS if value.get(f)}}}
+                loc = {"variations": {"plural": {f: unit(value[f]) for f in PLURAL_FORMS[LANG] if value.get(f)}}}
             else:
-                errs = problems(key, value)
+                errs = problems(key, value, english=english_of(strings[key]), arabic=value_of(strings[key], "ar"))
                 if errs:
                     bad.append((path, key, "; ".join(errs)))
                     continue
@@ -346,15 +425,24 @@ def cmd_check():
         values = [("", loc["stringUnit"]["value"])] if "stringUnit" in loc else \
             [(f, v["stringUnit"]["value"]) for f, v in loc.get("variations", {}).get("plural", {}).items()]
         for form, v in values:
-            for p in problems(key, v, may_drop_count=form in ("zero", "one", "two")):
+            for p in problems(key, v, may_drop_count=form in WORD_FORMS[LANG], english=english_of(entry),
+                              arabic=value_of(entry, "ar")):
                 print(f"{key!r}: {p}")
                 bad += 1
-    total = sum(1 for e in cat["strings"].values() if has_arabic(e))
-    print(f"check: {total} Arabic entries, {bad} problems")
+    total = sum(1 for e in cat["strings"].values() if has_translation(e))
+    print(f"check [{LANG}]: {total} entries, {bad} problems")
     return 1 if bad else 0
 
 
 def main(argv):
+    global LANG
+    argv = list(argv)
+    if "--lang" in argv:
+        i = argv.index("--lang")
+        LANG = argv[i + 1] if i + 1 < len(argv) else ""
+        del argv[i:i + 2]
+        if LANG not in LANGUAGES:
+            sys.exit(f"--lang takes one of {', '.join(LANGUAGES)}")
     if len(argv) < 2:
         sys.exit(__doc__)
     cmd, args = argv[1], argv[2:]

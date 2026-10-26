@@ -489,7 +489,7 @@ final class ExtraRemindersStore: ObservableObject {
             let name = surah.display
             // In Arabic the name already IS the Arabic one: the title names it once.
             content.title = label.isEmpty
-                ? (AppLanguage.isArabic ? String(localized: "Surat \(name)") : String(localized: "Surat \(name) · \(surah.arabic)"))
+                ? (AppLanguage.isArabicScript ? String(localized: "Surat \(name)") : String(localized: "Surat \(name) · \(surah.arabic)"))
                 : label
             if let ayah = reminder.ayah {
                 content.body = label.isEmpty ? String(localized: "Time to recite \(name) \(id):\(ayah).") : "\(name) \(id):\(ayah)".localizedDigits
@@ -586,7 +586,6 @@ struct ExtraReminderSections: View {
     var body: some View {
         Section(header: Text("YOUR OWN REMINDERS"), footer:
             Text("Any surah or ayah, every day or on one weekday. Tapping the reminder opens it in the Quran.")
-                .font(.caption2)
         ) {
             ForEach(store.custom) { reminder in
                 CustomReminderRow(reminder: reminder) { editing = reminder }
@@ -617,7 +616,6 @@ struct ExtraReminderSections: View {
 
         Section(header: Text("DUAS THROUGH THE DAY"), footer:
             Text(String(localized: "Authentic duas and adhkar from the Sunnah, with transliteration, meaning and source, at random times between 9 AM and 9 PM.").localizedDigits)
-                .font(.caption2)
         ) {
             Toggle(isOn: Binding(
                 get: { store.config.duaEnabled },
@@ -651,7 +649,6 @@ struct ExtraReminderSections: View {
 
         Section(header: Text("NUDGES"), footer:
             Text("Pick Up Where You Left Off stays quiet on a day you have already read. Keep Your Streak only speaks while there is a streak to keep.")
-                .font(.caption2)
         ) {
             nudgeRow(title: String(localized: "Pick up where you left off"), symbol: "bookmark.fill",
                      enabled: store.config.lastReadEnabled, minutes: store.config.lastReadMinutes,
@@ -829,7 +826,7 @@ private struct CustomReminderEditor: View {
     var body: some View {
         SheetNavigationContainer {
             List {
-                Section(header: Text("NAME"), footer: Text("Optional. Without one the reminder is named after its surah.").font(.caption2)) {
+                Section(header: Text("NAME"), footer: Text("Optional. Without one the reminder is named after its surah.")) {
                     TextField("What to call it", text: $draft.label)
                 }
 

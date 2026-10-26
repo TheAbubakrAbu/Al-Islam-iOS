@@ -295,8 +295,8 @@ enum QuranPlaybackRouter {
 
 extension Surah {
     /// The surah's name as Siri says it back: Arabic, without vowel marks, in an Arabic interface (the
-    /// name an Arabic speaker says), the transliteration otherwise. Display only; playback and stored
-    /// records keep `nameTransliteration`.
+    /// name an Arabic speaker says), the transliteration otherwise, Urdu included: Siri has no Urdu, so it
+    /// speaks English or Arabic there. Display only; playback and stored records keep `nameTransliteration`.
     var spokenName: String {
         AppLanguage.isArabic ? nameArabic.removingArabicMarks() : nameTransliteration
     }

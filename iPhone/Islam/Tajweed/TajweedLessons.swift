@@ -635,20 +635,14 @@ struct TajweedLessonDetailView: View {
                 // lesson of the chapter, this one among them.
                 if let chapterTest {
                     NavigationLink(destination: LazyDestination { TajweedTestTierView(tier: chapterTest.tier, tiers: chapterTest.tiers) }) {
-                        HStack(spacing: 12) {
-                            AccentIconChip(systemImage: "checkmark.seal.fill", tint: accent, size: 30)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Test This Chapter")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.primary)
-                                Text(chapterTest.tier.lessons.count == 1 ? String(localized: "A scored test on \(chapterTest.tier.title)")
-                                     : String(localized: "A scored test on \(chapterTest.tier.title): \(chapterTest.tier.lessons.count) lessons"))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .padding(.vertical, 2)
+                        SettingsRowLabel(
+                            title: String(localized: "Test This Chapter"),
+                            systemImage: "checkmark.seal.fill",
+                            subtitle: chapterTest.tier.lessons.count == 1 ? String(localized: "A scored test on \(chapterTest.tier.title)")
+                                : String(localized: "A scored test on \(chapterTest.tier.title): \(chapterTest.tier.lessons.count) lessons"),
+                            tint: accent,
+                            subtitleLineLimit: 2
+                        )
                     }
                 }
             }
@@ -793,6 +787,9 @@ struct TajweedLessonDetailView: View {
 // MARK: - Pieces
 
 /// A section's heading in the lesson: an icon in the lesson's colour, the title, and a line under it.
+/// A lesson's stage header: the study kit's `StudyStageHeader` (the Reading Test and the Tajweed
+/// Test draw theirs with it) in the lesson's own colour. One header for every learning page, so a
+/// lesson and the test that follows it read as one course (2026-10-26).
 struct TajweedLessonHeader: View {
     let systemImage: String
     let title: String
@@ -800,25 +797,7 @@ struct TajweedLessonHeader: View {
     let accent: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(accent)
-                Text(title)
-                    .font(.headline.weight(.heavy))
-                    .foregroundColor(.primary)
-            }
-            if let subtitle, !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundColor(Color(.secondaryLabel))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .textCase(nil)
-        .padding(.top, 8)
-        .padding(.bottom, 2)
+        StudyStageHeader(systemImage: systemImage, title: title, blurb: subtitle, tint: accent)
     }
 }
 

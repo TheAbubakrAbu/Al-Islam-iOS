@@ -3,8 +3,9 @@ import SwiftUI
 import ImageIO
 import UIKit
 
-// Miracles of the Quran: the miracles-of-quran.com library (72 of its 202 articles; the 2026-10-18 review
-// withheld the rest at build time, see WITHHELD in Scripts/build_miracles_pack.py),
+// Miracles of the Quran: the miracles-of-quran.com library (73 of its 202 articles; the 2026-10-18 review
+// withheld the rest at build time, see WITHHELD in Scripts/build_miracles_pack.py; Milk came back on
+// 2026-10-26 with its letter-count half cut),
 // ported from the Tilawa app by Jamil Hammoudeh, with permission. The data is
 // `Resources/Data/Islam/Miracles.json.xz` (Scripts/build_miracles_pack.py): the site's own prose, which
 // it waives copyright on; third-party excerpts trimmed at import to a short attributed quote that links

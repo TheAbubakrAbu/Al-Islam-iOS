@@ -427,21 +427,7 @@ struct CreditsView: View {
 
     private var headerSection: some View {
         VStack(alignment: .center, spacing: 10) {
-            // The app icon as the hero, in the splash screen's card language.
-            Image(AppIdentifiers.appName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 76, height: 76)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(settings.accentColor.color.opacity(0.35), lineWidth: 1)
-                )
-                .shadow(color: settings.accentColor.color.opacity(0.35), radius: 14, x: 0, y: 6)
-                .padding(.top, 6)
-
-            Text(AppIdentifiers.displayName)
-                .font(.title2.bold())
+            AppIconHero()
 
             Text(String(localized: "Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023.").localizedDigits)
                 .font(.subheadline)
@@ -658,6 +644,160 @@ private struct CreditRowActions: ViewModifier {
 private extension View {
     func creditRowActions(label: String, copyURL: String? = nil, onScrollTo: @escaping () -> Void) -> some View {
         modifier(CreditRowActions(label: label, copyURL: copyURL, onScrollTo: onScrollTo))
+    }
+}
+
+/// The app icon as the hero, in the splash screen's card language, with the app's name under it.
+/// The Credits page's header and the About sheet's.
+struct AppIconHero: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 10) {
+            Image(AppIdentifiers.appName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 76, height: 76)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(settings.accentColor.color.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: settings.accentColor.color.opacity(0.35), radius: 14, x: 0, y: 6)
+                .padding(.top, 6)
+
+            Text(AppIdentifiers.displayName)
+                .font(.title2.bold())
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// About Al-Islam: the sheet behind the ⓘ in the Settings toolbar (Abu, 2026-10-25: "top right of
+/// settings add an info button that shows something about Al-Islam"). The app on one screen: its icon,
+/// name and version, what it is and who made it, and the doors on from there (the Credits page pushed
+/// inside the sheet, the store, the website, the inbox). The Credits page keeps the long story and
+/// every source.
+struct AboutAppView: View {
+    private let settings = Settings.shared
+    @ObservedObject private var appearanceSettings = AppearanceSettings.shared
+    @ObservedObject private var systemSettings = SystemSettings.shared
+
+    private static let website = "https://abubakrelmallah.com/"
+    private static let email = "ammelmallah@icloud.com"
+    private static var version: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section {
+                    VStack(alignment: .center, spacing: 10) {
+                        AppIconHero()
+
+                        Text(String(localized: "Version \(Self.version)").localizedDigits)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+
+                        Text(String(localized: "Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023.").localizedDigits)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.bottom, 4)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .listRowSeparator(.hidden)
+                }
+
+                Section {
+                    ProseText(text: String(localized: "This app brings together the Quran with its recitations, translations and tafsir, prayer times and the adhan, the books of hadith, and a library on Islam: its pillars and beliefs, the proofs of Islam, duas, the 99 Names, Arabic and tajweed. Its texts live on the device and read offline. It is free, with no ads, no accounts and nothing collected about you."))
+                }
+
+                Section(header: Text("MORE")) {
+                    NavigationLink(destination: CreditsView(presentedAsSheet: false)) {
+                        aboutRow(String(localized: "View Credits"), systemImage: "scroll.fill")
+                    }
+                    Button {
+                        settings.hapticFeedback()
+                        if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(AppIdentifiers.appStoreID)?action=write-review") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        aboutRow(String(localized: "Leave a Review"), systemImage: "star.bubble.fill")
+                    }
+                    if #available(iOS 16.0, *) {
+                        ShareLink(item: AppIdentifiers.appStoreURL) {
+                            aboutRow(String(localized: "Share \(AppIdentifiers.displayName)"), systemImage: "square.and.arrow.up")
+                        }
+                    }
+                    if let url = URL(string: Self.website) {
+                        Link(destination: url) {
+                            aboutRow(String(localized: "Website"), systemImage: "globe", detail: "abubakrelmallah.com")
+                        }
+                        .contextMenu {
+                            Text("Website")
+                                .foregroundStyle(.secondary)
+
+                            Button {
+                                settings.hapticFeedback()
+                                UIPasteboard.general.string = Self.website
+                            } label: {
+                                Label("Copy Website", systemImage: "doc.on.doc")
+                            }
+                        }
+                    }
+                    if let url = URL(string: "mailto:\(Self.email)") {
+                        Link(destination: url) {
+                            aboutRow(String(localized: "Contact"), systemImage: "envelope.fill", detail: Self.email)
+                        }
+                        .contextMenu {
+                            Text("Email")
+                                .foregroundStyle(.secondary)
+
+                            Button {
+                                settings.hapticFeedback()
+                                UIPasteboard.general.string = Self.email
+                            } label: {
+                                Label("Copy Email", systemImage: "doc.on.doc")
+                            }
+                        }
+                    }
+                }
+            }
+            .applyConditionalListStyle()
+            // `about.app`, not the catalog's "About %@" (the letter families' حول %@): in Arabic the app
+            // is "تطبيق %@", a bare الإسلام being the religion (the Localization Guide's rule).
+            .navigationTitle(String(localized: "about.app", defaultValue: "About \(AppIdentifiers.displayName)"))
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+    }
+
+    /// One door: the symbol in the accent, the title, and an optional second line (the address a
+    /// Website or Contact row opens), left to right so the address reads as written in Arabic too.
+    private func aboutRow(_ title: String, systemImage: String, detail: String? = nil) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body)
+                .foregroundColor(settings.accentColor.color)
+                .frame(width: 26)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .foregroundColor(.primary)
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .leftToRightContent()
+                }
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 

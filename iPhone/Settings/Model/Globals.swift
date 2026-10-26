@@ -192,7 +192,7 @@ extension Array where Element == String {
     /// Latin ", ". The formatter isolates only a phrase in another script ("Apple Watch"), so a list of
     /// Arabic phrases comes back as plain Arabic text.
     func sentenceList(_ type: SentenceListType = .and, english: ([String]) -> String) -> String {
-        guard AppLanguage.isArabic else { return english(self) }
+        guard AppLanguage.isArabicScript else { return english(self) }
         let locale = Locale(identifier: AppLanguage.code)
         switch type {
         case .and: return formatted(.list(type: .and).locale(locale))
@@ -1816,7 +1816,7 @@ enum MushafPDFAppearance: String, CaseIterable, Identifiable {
     var displayName: String {
         switch self {
         case .auto:  return String(localized: "Automatic")
-        case .light: return String(localized: "Light")
+        case .light: return String(localized: "appearance.light", defaultValue: "Light")
         case .night: return String(localized: "Dark")
         }
     }

@@ -273,7 +273,7 @@ struct QuranSearchFilterBar: View {
         case 0: return isJuz ? String(localized: "Juz") : String(localized: "Surah")
         case 1...3:
             // The locale's digits and list comma ("الجزء ١، ٢"), as the sentence around them has.
-            let list = ids.sorted().map { $0.formatted() }.joined(separator: AppLanguage.isArabic ? "، " : ", ")
+            let list = ids.sorted().map { $0.formatted() }.joined(separator: AppLanguage.isArabicScript ? "، " : ", ")
             return isJuz ? String(localized: "Juz \(list)") : String(localized: "Surah \(list)")
         default: return isJuz ? String(localized: "\(ids.count) Juz") : String(localized: "\(ids.count) Surahs")
         }

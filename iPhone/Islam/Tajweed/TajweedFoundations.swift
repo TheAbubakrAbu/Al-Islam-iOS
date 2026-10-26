@@ -249,7 +249,6 @@ struct TajweedFoundationsView: View {
 
                     Section(footer:
                         Text("Every page is for Hafs an Asim, the riwayah of most printed mushafs. Other riwayat apply some of these rules differently.")
-                            .font(.caption2)
                     ) { EmptyView() }
                 } else {
                     // The pages only: the links beside them (the legend, the course, the articles)

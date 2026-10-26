@@ -1082,7 +1082,7 @@ private struct HijriDateRow: View {
                     UIPasteboard.general.string = hijriDate.arabic
                 } label: {
                     // In Arabic every date on the row is Arabic: this one is named for its calendar.
-                    Label(AppLanguage.isArabic ? String(localized: "Copy Hijri Date") : String(localized: "Copy Arabic Date"),
+                    Label(AppLanguage.isArabicScript ? String(localized: "Copy Hijri Date") : String(localized: "Copy Arabic Date"),
                           systemImage: "doc.on.doc")
                 }
             }
@@ -1255,7 +1255,7 @@ private struct CurrentLocationRow: View {
                                     settings.hapticFeedback()
                                     // In Arabic the formatted line carries direction marks and Arabic
                                     // digits no other app can read: copy the plain pair there.
-                                    UIPasteboard.general.string = AppLanguage.isArabic
+                                    UIPasteboard.general.string = AppLanguage.isArabicScript
                                         ? "\(location.latitude), \(location.longitude)"
                                         : formatCoordinates(latitude: location.latitude, longitude: location.longitude)
                                 } label: {

@@ -267,7 +267,7 @@ private struct WeekBars: View, Equatable {
             return "\(name): " + (parts.isEmpty ? String(localized: "nothing") : parts.sentenceList { $0.joined(separator: ", ") })
         }
         // Arabic's own semicolon between the days.
-        .joined(separator: AppLanguage.isArabic ? "\u{061B} " : "; ")
+        .joined(separator: AppLanguage.isArabicScript ? "\u{061B} " : "; ")
     }
 }
 
@@ -363,7 +363,7 @@ private struct MilestoneLadder: View, Equatable {
         let done = reached.isEmpty ? String(localized: "None reached yet")
             : String(localized: "Reached \(reached.map { $0.formatted() }.sentenceList { $0.joined(separator: ", ") }) days")
         // Arabic's own semicolon between the two halves, as in the week's spoken value.
-        let separator = AppLanguage.isArabic ? "\u{061B} " : "; "
+        let separator = AppLanguage.isArabicScript ? "\u{061B} " : "; "
         guard let next else { return done + separator + String(localized: "every milestone reached") }
         let left = next - current
         return done + separator + (left == 1 ? String(localized: "next \(next) days, 1 day to go") : String(localized: "next \(next) days, \(left) days to go"))
@@ -496,7 +496,6 @@ struct ActivityAnalyticsView: View {
 
                 Section(footer:
                     Text(analyticsActionFootnote)
-                        .font(.caption2)
                 ) { EmptyView() }
             }
             .themedListRowBackground()

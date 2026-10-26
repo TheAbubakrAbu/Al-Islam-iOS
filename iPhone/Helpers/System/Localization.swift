@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-// Arabic interface (2026-10-24). Interface text written in the code goes through `String(localized:)` or a
+// Arabic interface (2026-10-24), Urdu (2026-10-26). Interface text written in the code goes through `String(localized:)` or a
 // SwiftUI literal, which the compiler extracts into Resources/Localizable.xcstrings. What this file covers is
 // the other kind: the app's English DATA shown to the reader (an enum's raw value, a reciter's name). That
 // stays English wherever it is stored, compared, searched or sent to the model, and is translated only at the
@@ -19,13 +19,22 @@ extension String {
 
     /// This display string with its digits written the way the interface writes numbers, so a number the app
     /// builds or a translation spells out matches every number Foundation and SwiftUI format: Arabic-Indic
-    /// (٢:٢٥٥) where the locale writes them (Saudi Arabia, Egypt), Western where it does not (an Arabic
-    /// interface on a US-region phone is `ar_US`, Western digits), untouched in English. For text the app
+    /// (٢:٢٥٥) where the locale writes them (Saudi Arabia, Egypt), Extended Arabic-Indic (۲:۲۵۵) where the
+    /// reader picked Urdu digits in iOS, Western where it does not (an Arabic interface on a US-region phone
+    /// is `ar_US`; Apple's Urdu locales write Western digits by default), untouched in English. For text the app
     /// builds itself ("\(surah):\(ayah)", `String(year)`, a count drawn verbatim) and for a translation that
     /// writes a number out ("٥ دقائق"). DISPLAY only: never store, compare or search the result.
     var localizedDigits: String {
         if let zero = AppLanguage.localeZero {
-            return mappingDigits { (0x30...0x39).contains($0) ? zero + $0 - 0x30 : nil }
+            // Western, Arabic-Indic and Extended Arabic-Indic (Urdu, Persian) alike become the locale's.
+            return mappingDigits { value in
+                switch value {
+                case 0x30...0x39: return zero + value - 0x30
+                case 0x660...0x669: return zero + value - 0x660
+                case 0x6F0...0x6F9: return zero + value - 0x6F0
+                default: return nil
+                }
+            }
         }
         // Western digits in an Arabic interface: the translations' Arabic-Indic and Persian digits, and
         // their decimal, thousands and percent signs, come back to the Western ones.
@@ -80,6 +89,15 @@ enum AppLanguage {
     static var code: String { Bundle.main.preferredLocalizations.first ?? "en" }
 
     static var isArabic: Bool { code.hasPrefix("ar") }
+
+    static var isUrdu: Bool { code.hasPrefix("ur") }
+
+    /// The interface is written in the Arabic script: Arabic, or Urdu (since 2026-10-26). Where a comment says
+    /// "the Arabic interface" it means this: a surah, juz, riwayah, hadith book or letter is named once, by its
+    /// Arabic name, with no Latin transliteration or English meaning beside it (those would be untranslated
+    /// English in either language), and lists take the Arabic comma and semicolon (، ؛), which Urdu writes
+    /// too. `isArabic` alone is for what only Arabic does: the name Siri says back.
+    static var isArabicScript: Bool { isArabic || isUrdu }
 
     /// The interface reads right to left. UIKit then lays out paging scroll views from the right on its own.
     /// A list, not `Locale.characterDirection(forLanguage:)`: that is deprecated on the iOS 16 floor, and its

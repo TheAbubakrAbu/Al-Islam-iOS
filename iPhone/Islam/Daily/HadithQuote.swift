@@ -134,6 +134,48 @@ enum WordRange {
     static func words(_ text: String, _ ranges: [ClosedRange<Int>]) -> String {
         ranges.map { words(text, $0) }.filter { !$0.isEmpty }.joined(separator: " \u{2026} ")
     }
+
+    /// A narrator's aside inside a dua, set in parentheses. The shelf's Arabic marks the aside a
+    /// narrator puts in the middle of a dua ("or he said: in the near and the far of my affair") with
+    /// a standalone tatweel on each side, the way an English printer uses dashes:
+    /// `أَمْرِي ـ أَوْ قَالَ عَاجِلِ أَمْرِي وَآجِلِهِ ـ فَاقْدُرْهُ`. On a dua row the reader recites from the page,
+    /// and a dash does not tell them the aside is not theirs to say; parentheses do, and they are how
+    /// Hisn al-Muslim prints the same aside (Abu, 2026-10-25: "put it in parentheses so they know not
+    /// to say that"). A leading "or he said" / "he said" gets the colon that book gives it. Not a word
+    /// is changed or dropped; a dash without a partner (an aside the range cut in half) is left alone.
+    static func parenthesizingAsides(_ text: String) -> String {
+        let tokens = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        var dashes = tokens.indices.filter { tokens[$0] == "\u{0640}" }
+        guard dashes.count >= 2 else { return text }
+        var out: [String] = []
+        var index = 0
+        while index < tokens.count {
+            guard dashes.count >= 2, index == dashes[0] else {
+                out.append(tokens[index])
+                index += 1
+                continue
+            }
+            let close = dashes[1]
+            dashes.removeFirst(2)
+            var inner = Array(tokens[(index + 1)..<close])
+            index = close + 1
+            guard !inner.isEmpty else { continue }
+            if inner.count > 2, bare(inner[0]) == "أو", bare(inner[1]) == "قال" {
+                inner[1] += ":"
+            } else if inner.count > 1, bare(inner[0]) == "قال" {
+                inner[0] += ":"
+            }
+            out.append("(" + inner.joined(separator: " ") + ")")
+        }
+        return out.joined(separator: " ")
+    }
+
+    /// The token without its vowel marks, for matching a word of the narration.
+    private static func bare(_ token: String) -> String {
+        String(String.UnicodeScalarView(token.unicodeScalars.filter {
+            !(0x064B...0x065F).contains($0.value) && $0.value != 0x0670
+        }))
+    }
 }
 
 #if os(watchOS) || !HAS_HADITH

@@ -642,7 +642,7 @@ struct TashkeelLettersView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle(AppLanguage.isArabic ? letter.name : letter.transliteration.capitalized)
+        .navigationTitle(AppLanguage.isArabicScript ? letter.name : letter.transliteration.capitalized)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -696,18 +696,16 @@ struct LetterSectionHeader: View {
     let letterData: LetterData
 
     var body: some View {
-        HStack {
-            Text("LETTER")
-                .font(.subheadline)
-
-            Spacer()
-
+        SectionHeaderLine(String(localized: "LETTER")) {
             Image(systemName: settings.isLetterFavorite(letterData: letterData) ? "star.fill" : "star")
                 .foregroundColor(settings.accentColor.color)
                 .onTapGesture {
                     settings.hapticFeedback()
                     settings.toggleLetterFavoriteOrConfirm(letterData: letterData)
                 }
+                .accessibilityLabel(settings.isLetterFavorite(letterData: letterData) ? String(localized: "Unfavorite Letter") : String(localized: "Favorite Letter"))
+                .accessibilityRemoveTraits(.isImage)
+                .accessibilityAddTraits(.isButton)
         }
     }
 }
@@ -2464,10 +2462,8 @@ struct TashkeelDetailSheet: View {
                                 ArabicSpeech.shared.speak(spokenText)
                             } label: {
                                 Label("Hear It", systemImage: "speaker.wave.2.fill")
-                                    .font(.subheadline.weight(.semibold))
                             }
-                            .buttonStyle(.bordered)
-                            .tint(settings.accentColor.color)
+                            .buttonStyle(.accentChip)
                         }
                     }
                     .padding(.vertical, 8)

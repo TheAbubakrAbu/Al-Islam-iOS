@@ -130,7 +130,8 @@ nested types and argument labels (the old `.sheet(` false positive was WidgetGal
    phrase to Siri. Once the sibling builds (step 9), `Al-Islam-iOS/Scripts/localize_catalog.py sibling
    <its -derivedDataPath>` lists keys only its code has; `--add`, translate and merge them in Al-Islam, then
    run `sync_localization.py` again. Check it in Arabic: launch with `-AppleLanguages "(ar)" -AppleLocale ar_SA`
-   and look at the home-screen name (الأذان / القرآن).
+   and look at the home-screen name (الأذان / القرآن); then in Urdu, `-AppleLanguages "(ur)" -AppleLocale ur_PK`
+   (الاذان / القرآن).
 7. **Roots by hand.** The per-app roots are never merged, so anything Al-Islam wired into ITS roots since
    BASE has to be ported: `git -C Al-Islam-iOS diff <base> HEAD -- iPhone/Al-IslamApp.swift "Apple Watch/Al-IslamApp.swift"`.
    On 2026-10-13 that was the About You root stage, the warm walk, the deep-link receivers, the post-reveal
@@ -215,6 +216,14 @@ warnings are its old `lock()`/`unlock()` calls, Al-Quran had none, and no "phras
 bundles carry الأذان / القرآن and their phrase files on the iPhone and the Watch; Al-Adhan launched right to
 left in Arabic. On the clones the siblings' old `AppIntents.swift` still had their 20 Arabic-in-code phrases:
 the pass names them as a LOC-ERROR until the merge (or a hand edit) removes them.
+
+**Urdu (2026-10-26), staged the same way.** The pass needed one change: `APP_WORD` became a pattern per
+language (`"تطبيق %s"`, `"%s ایپ"`), since Urdu names the app before its word. Dry runs: both siblings get
+`ar, ur` in knownRegions and 0 LOC-ERRORs. On fresh APFS clones (`sibtest3` in that session's scratchpad)
+`--apply` wrote Al-Adhan's Urdu prompts as «الاذان ایپ … استعمال کرتی ہے» and its home-screen name الاذان,
+Al-Quran's القرآن and photo prompt; a second run changed nothing. Its only errors were the 10 Arabic-in-code
+phrases above, which the real merge removes. No Urdu AppShortcuts.strings: Siri has no Urdu. Urdu store
+listings are staged beside the Arabic ones (`Urdu Listing.md`).
 
 The whole sync's dry run that day: Al-Adhan 131 LEAKs and 107 conflicts, Al-Quran 87 and 130. Every LEAK
 sits on a line changed since HEAD; most are Arabic rewrites (`return "Khatm"` became `String(localized:)`) of

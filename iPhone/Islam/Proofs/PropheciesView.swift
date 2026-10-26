@@ -57,6 +57,9 @@ struct PropheciesView: View {
             case companions = "The Companions and his household"
             case ummah = "The ummah after him"
             case endTimes = "Signs before the Hour"
+            /// The major signs he foretold that have not yet come (2026-10-26): believed as part of faith
+            /// in the Last Day, kept out of the strongest list because they are not yet fulfilled.
+            case toCome = "Still to come"
 
             var id: String { rawValue }
             var systemImage: String {
@@ -66,6 +69,7 @@ struct PropheciesView: View {
                 case .companions: return "person.2"
                 case .ummah:      return "building.columns"
                 case .endTimes:   return "hourglass"
+                case .toCome:     return "hourglass.bottomhalf.filled"
                 }
             }
         }
@@ -123,7 +127,7 @@ struct PropheciesView: View {
                         systemImage: "checkmark.seal.fill",
                         headline: "Nor does he speak from [his own] inclination. It is not but a revelation revealed.",
                         source: "Quran 53:3\u{2013}4",
-                        message: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it. Every hadith is quoted from this app's own collections and is sahih or hasan; where the graders differ, the citation names the grader followed.",
+                        message: "He foretold things no one could have known, and he said them in front of people who wrote them down and lived to see them happen. This library gathers \(Self.entries.count) of them, each with what the Quran or the narration says and what history did with it, and closes with the signs he said are still to come. Every hadith is quoted from this app's own collections and is sahih or hasan; where the graders differ, the citation names the grader followed.",
                         stats: [
                             ResourceHeroStat("\(Self.entries.count)", "prophecies"),
                             ResourceHeroStat("\(grouped.count)", "groups"),

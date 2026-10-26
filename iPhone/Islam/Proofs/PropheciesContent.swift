@@ -14,7 +14,8 @@ import SwiftUI
 extension PropheciesView {
     /// The index order: groups in `Entry.Group` order, and within a group roughly the order in which
     /// the prophecies were fulfilled, so each section reads as history.
-    static let entries: [Entry] = quranEntries + empireEntries + companionEntries + ummahEntries + endTimesEntries
+    static let entries: [Entry] = quranEntries + empireEntries + companionEntries + moreEntriesA + ummahEntries + moreEntriesB
+        + endTimesEntries + toComeEntries
 
     /// The STRONGEST section, in reading order (Abu, 2026-09-25: "have a strongest tab section").
     ///
@@ -26,6 +27,7 @@ extension PropheciesView {
     static let strongestIDs = [
         "byzantines", "abu-lahab", "fatimah-first", "badr-places", "security-hira", "six-signs",
         "mutah-martyrs", "nahrawan", "thaqif-liar", "hasan-reconciles", "caliphate-thirty", "uwais",
+        "two-bracelets",
     ]
 
     // MARK: Foretold in the Quran
@@ -1300,6 +1302,784 @@ extension PropheciesView {
                   ]),
                   SignSection("WHAT IS SEEN NOW", [
                       .text("This is a sign of a state of mind rather than an event, so it has no date. It is recognisable all the same: people who lived through the sieges, famines and wars of recent history have described this, envying the dead. He gave it as a sign of the Hour, and left the Hour's time with Allah."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: Still to come
+
+    /// The greater signs of the Hour that have not yet come, believed as part of faith in the Last
+    /// Day (Ibn Kathir's al-Nihayah, Ibn Hajar, Ibn Baz, Ibn 'Uthaymin on al-Wasitiyyah) and kept out
+    /// of `strongestIDs` on purpose: a sign still to come proves nothing yet.
+    static let toComeEntries: [Entry] = [
+        .init(id: "ten-signs", title: "Ten signs before the Hour",
+              summary: "Ten great signs before the Hour, named in one sitting: none has yet come, and all are believed as part of faith.",
+              group: .toCome,
+              aliases: ["major signs", "greater signs", "ashrat", "ashrat al-saah", "hudhayfah ibn usayd", "smoke", "dukhan", "landslides", "khasf", "fire from yemen", "gathering", "mahshar"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Hudhayfah ibn Usayd was sitting with a group of Companions when the Prophet came out to them and asked what they were discussing. They were talking about the Hour. He did not give them a time; he told them what they would see before it, and counted ten signs."),
+                      .hadith("muslim:2901a", cite: "Sahih Muslim 2901a", arabic: 59...105, english: 38...124),
+                      .text("Ten things in one sentence: a smoke; Dajjal; a beast out of the earth; the sun rising in the west; the descent of 'Isa son of Maryam; Gog and Magog; three sinkings of the earth, one in the east, one in the west and one in Arabia; and, last of them, a fire out of Yemen that drives people toward the place of their gathering. Each has its own article in this group where the shelf carries more on it."),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ahl al-Sunnah hold these as the greater signs, the ones that change the world rather than its habits. All are believed because he said them, and belief in them is part of belief in the Last Day, as Ibn 'Uthaymin sets out in his commentary on al-'Aqidah al-Wasitiyyah. Ibn Kathir gathers the narrations in al-Nihayah and Ibn Hajar discusses their order in Fath al-Bari: the hadith does not rank them, and the order the scholars draw from other texts is Dajjal, then 'Isa, then Gog and Magog, then the sun from the west and the beast close together, with the fire the last of all."),
+                      .text("On the smoke, the scholars record a disagreement among the Companions themselves. Ibn Mas'ud read the smoke of Surah al-Dukhan (44:10) as the famine that struck Quraysh in the Prophet's lifetime, when a hungry man looked at the sky and saw it as smoke; Hudhayfah's narration counts a smoke still to come. Ibn Kathir takes both to be true: one smoke seen, and one awaited."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("This group gathers the signs the Prophet said would come before the Hour that have not yet come: they are believed as part of faith in the Last Day, and they are kept out of this library's strongest list because a sign still to come proves nothing yet. What is known of the ten is what the narrations say; what is not known is when any of them begins. He said more than once that the Hour's time is with Allah alone."),
+                  ]),
+              ]),
+        .init(id: "dajjal", title: "Dajjal, the one-eyed liar",
+              summary: "A man, one-eyed, with kafir written between his eyes: every prophet warned of him, and he has not come.",
+              group: .toCome,
+              aliases: ["dajjal", "antichrist", "masih ad-dajjal", "one eyed", "kafir", "kahf", "surah al-kahf", "ludd", "trial", "fitnah", "madinah", "refuge"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("He spoke of Dajjal more than of any other sign, and he made sure his Companions could recognise him. Anas heard him describe the mark by which every believer will know him:"),
+                      .hadith("muslim:2933a", cite: "Sahih Muslim 2933a", arabic: 31...52, english: 0...34),
+                      .text("Hudhayfah heard which eye, and what he brings with him:"),
+                      .hadith("muslim:2934a", cite: "Sahih Muslim 2934a", arabic: 37...49, english: 0...31),
+                      .text("Hisham ibn 'Amir heard him say there is no trial like him between the creation of Adam and the Hour:"),
+                      .hadith("muslim:2946a", cite: "Sahih Muslim 2946a", arabic: 72...82, english: 61...81),
+                      .text("Two cities are closed to him:"),
+                      .hadith("bukhari:1881", cite: "Sahih al-Bukhari 1881", arabic: 29...58, english: 4...68),
+                      .text("And he taught the ummah to ask for protection from him in every prayer, in the tashahhud before the salam:"),
+                      .hadith("muslim:588a", cite: "Sahih Muslim 588a", arabic: 57...83, english: 10...68),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ahl al-Sunnah hold that Dajjal is a real man of the children of Adam, not a symbol of an age or a system. Ibn 'Uthaymin explains the name as the one who deceives most. The narrations describe him: one-eyed, with a mark every believer reads whether or not he can read; a garden that is a fire and a fire that is a garden; rain and crops for those who follow him and drought for those who refuse; forty days on the earth, the first of them like a year; and death at the hand of 'Isa at the gate of Ludd."),
+                      .text("The defence he gave is small and specific: seek refuge from Dajjal's trial in prayer, and, as the long narration of al-Nawwas ibn Sam'an quoted under the descent of 'Isa says, recite the opening verses of Surah al-Kahf over him and hold firm. Ibn Baz counted the hadiths about him as mutawatir, Ibn Kathir devotes the longest section of al-Nihayah to them, and Ibn Hajar gathers them in the book of tribulations in Fath al-Bari."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is what the narrations give: who he is, what he looks like, what he will do, how long he stays and how he dies. What is not known is when he comes, or where he is now; the narration of Tamim al-Dari in Sahih Muslim describes a chained man on an island, and the scholars leave it there. Guesses that name him in a living person, a nation or a machine are not the reading of Ahl al-Sunnah. He is believed as part of faith in the Last Day, not offered as a sign already fulfilled."),
+                  ]),
+              ]),
+        .init(id: "isa-descends", title: "The descent of 'Isa son of Maryam",
+              summary: "'Isa will descend as a just ruler, break the cross, end the jizyah and kill Dajjal; held by consensus of Ahl al-Sunnah.",
+              group: .toCome,
+              aliases: ["isa", "jesus", "son of mary", "ibn maryam", "descent", "nuzul", "cross", "swine", "jizyah", "damascus", "white minaret", "ludd"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("The Quran says that 'Isa was neither killed nor crucified but raised to Allah (4:157–158). The Prophet told his Companions what comes after that, and swore to it:"),
+                      .hadith("bukhari:3448", cite: "Sahih al-Bukhari 3448", arabic: 34...65, english: 4...83),
+                      .text("Abu Hurayrah, who narrated it, would then recite the verse he read as speaking of that day; and in Surah al-Zukhruf 'Isa is called a sign of the Hour:"),
+                      .quran("4:159"),
+                      .quran("43:61"),
+                      .text("The long narration of al-Nawwas ibn Sam'an gives the moment itself: the place he comes down, what he wears, and what he does with Dajjal:"),
+                      .hadith("muslim:2937a", cite: "Sahih Muslim 2937a", arabic: 297...364, english: 440...621),
+                      .text("Abu Hurayrah also recorded how he is to be recognised, what he does, and how his stay ends:"),
+                      .hadith("abudawud:4324", cite: "Sunan Abi Dawud 4324; graded sahih by al-Albani", arabic: 27...84, english: 4...107),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ibn Kathir writes that the hadiths of his descent are mutawatir, and Ibn Baz and Ibn 'Uthaymin say the same: it is established by the Quran, the Sunnah and the agreement of Ahl al-Sunnah. He descends as a man of this ummah, not with a new law: he rules by the Shari'ah of Muhammad, and when he comes down the Muslims' commander invites him to lead the prayer and he declines (Sahih Muslim 156, under the Mahdi). Breaking the cross and killing the swine end the claims made in his name; ending the jizyah means that in his time no religion but Islam is accepted."),
+                      .text("He kills Dajjal, lives among the Muslims, and Gog and Magog are released in his time; after they perish the earth is restored, as the same narration of al-Nawwas describes. The narration of Abu Dawud gives forty years for his stay, then his death and the Muslims' prayer over him. Ibn Kathir reads the verse of Surah al-Nisa' as every one of the People of the Book believing in him before his death, that is, at his descent."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is what the texts give: that he will come, where, in what state, and what he will do. What is not known is when. Ibn Kathir, who lived in Damascus, noted a white minaret standing in his day on the eastern side of the Umayyad Mosque and read the hadith of it; the hadith does not depend on which building it is. This sign is believed as part of faith in the Last Day and in the Prophet's truthfulness, not offered as a proof already fulfilled."),
+                  ]),
+              ]),
+        .init(id: "gog-magog", title: "Gog and Magog, behind the barrier",
+              summary: "Two peoples walled in by Dhul-Qarnayn will break out near the end; he saw the first opening in the wall.",
+              group: .toCome,
+              aliases: ["gog", "magog", "yajuj", "majuj", "dhul qarnayn", "dhu al-qarnayn", "barrier", "wall", "radm", "zaynab bint jahsh", "tiberias", "tur"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Surah al-Kahf tells of Dhul-Qarnayn, who reached a people between two mountains and built an iron barrier between them and Gog and Magog, and said that it would stand until his Lord's promise came:"),
+                      .quran("18:93-99"),
+                      .text("Surah al-Anbiya' places their release among the last things:"),
+                      .quran("21:96-97"),
+                      .text("Zaynab bint Jahsh, his wife, saw him come in frightened one day:"),
+                      .hadith("bukhari:3346", cite: "Sahih al-Bukhari 3346", arabic: 46...86, english: 15...86),
+                      .text("The narration of al-Nawwas ibn Sam'an, quoted under the descent of 'Isa, gives their release after Dajjal is killed, and their end:"),
+                      .hadith("muslim:2937a", cite: "Sahih Muslim 2937a", arabic: 404...461, english: 691...803),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ahl al-Sunnah hold that Gog and Magog are real peoples of the children of Adam, shut behind a real barrier, and that their breaking out is one of the ten great signs. Ibn Kathir in al-Nihayah and Ibn Hajar in Fath al-Bari gather the texts: they come out after 'Isa has killed Dajjal, in such numbers that the first of them drink Lake Tiberias dry; 'Isa and the believers take refuge on al-Tur, and Allah ends them with a worm in their necks in a single night. The Hajj continues after them, as Abu Sa'id's narration quoted under the Ka'bah says."),
+                      .text("Ibn Hajar reads the hole the Prophet showed with his fingers as the beginning of a breach that widens until the appointed time, and his answer to Zaynab as a rule that holds in every age: ruin comes when wickedness abounds, even with the righteous present. The commentators report sayings of the Salaf on whom they descend from; Ibn Kathir gives them as reports, not as hadith."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is what the Quran and the narrations give: that they exist, that they are held back, and what their release will look like. What is not known is where the barrier stands; the early geographers' guesses and the modern ones are not part of the creed, and no sound text names the place. Believed as part of faith in the Last Day; not a sign already fulfilled."),
+                  ]),
+              ]),
+        .init(id: "mahdi", title: "The Mahdi",
+              summary: "A man of his household, bearing his name, will fill the earth with justice before the descent of 'Isa; he has not come.",
+              group: .toCome,
+              aliases: ["mahdi", "al-mahdi", "ahl al-bayt", "household", "fatimah", "justice", "caliph", "handfuls", "ibn masud", "umm salamah", "hidden imam", "twelfth imam"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Ibn Mas'ud heard him make a promise about the last day of this world. Abu Dawud's text keeps each narrator's wording and says where they agree:"),
+                      .hadith("abudawud:4282", cite: "Sunan Abi Dawud 4282; graded hasan sahih by al-Albani", arabic: 70...126, english: 4...71),
+                      .text("Umm Salamah heard which line of his family he comes from:"),
+                      .hadith("abudawud:4284", cite: "Sunan Abi Dawud 4284; graded sahih by al-Albani", arabic: 42...47, english: 4...15),
+                      .text("Abu Sa'id heard of a caliph whose giving will not be counted. The hadith does not name him; Ibn Kathir reads it of the Mahdi, and it is given here as his reading:"),
+                      .hadith("muslim:2914", cite: "Sahih Muslim 2914", arabic: 43...51, english: 0...21),
+                      .text("Jabir heard what happens when 'Isa comes down and finds the Muslims under a commander. Again the hadith gives no name; Ibn Kathir is among the scholars who read the commander as the Mahdi:"),
+                      .hadith("muslim:156", cite: "Sahih Muslim 156", arabic: 42...83, english: 8...73),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("The Mahdi of Ahl al-Sunnah is a righteous ruler, not a prophet and not a hidden man: a descendant of the Prophet through Fatimah, bearing his name and his father's name, who appears at the end of time, rules the Muslims with justice, and is alive when Dajjal comes out and 'Isa descends. Ibn Baz said the hadiths about him are sound and mutawatir in meaning, and the Permanent Committee and Ibn 'Uthaymin affirm the same; Ibn Kathir lists the narrations in al-Nihayah and Ibn Hajar accepts them in Fath al-Bari."),
+                      .text("That is also what he is not. He is not the twelfth imam of the Shi'ah, said to have gone into hiding as a child in the third century and to be alive still; the Sunni texts describe a man born and raised among his people. And he is not any of the men who have claimed the title since, whose claims ended with them; the narrations make his sign his justice and his time, not his announcement."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is his name, his line, his justice and his place in the order of the signs. What is not known is when he comes or how he is recognised, and the scholars warn that much of what circulates about him beyond this rests on weak or invented reports. Believed as part of faith in what the Prophet foretold; not a sign already fulfilled, and not a man to be sought out."),
+                  ]),
+              ]),
+        .init(id: "sun-from-west", title: "The sun rising from the west",
+              summary: "The sun will rise where it sets, everyone will believe, and belief will no longer count; the door of repentance closes.",
+              group: .toCome,
+              aliases: ["sun", "west", "sunrise", "maghrib", "repentance", "tawbah", "door of repentance", "6:158", "al-anam", "signs of your lord", "abu hurayrah", "faith no longer avails"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Surah al-An'am warns of a day when some of the signs of the Lord come and faith is accepted no longer. Abu Hurayrah heard the Prophet say which sign that is, and then recite the verse:"),
+                      .hadith("bukhari:4636", cite: "Sahih al-Bukhari 4636", arabic: 27...46, english: 4...49),
+                      .quran("6:158"),
+                      .text("Muslim's wording spells out whose faith will not avail:"),
+                      .hadith("muslim:157a", cite: "Sahih Muslim 157a", arabic: 41...71, english: 0...59),
+                      .text("And he tied the door of repentance to it:"),
+                      .hadith("muslim:2703", cite: "Sahih Muslim 2703", arabic: 71...81, english: 0...26),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ahl al-Sunnah take this as it reads: the sun will rise one morning from the place of its setting, by Allah's command over His creation, and everyone alive will believe at the sight of it. Ibn Kathir in his tafsir of the verse gathers the narrations and the words of the Companions that this is the sign the verse means, and al-Nawawi, Ibn Hajar and Ibn 'Uthaymin follow them. From that day a person who had not believed before gains nothing by believing, and a sinner gains nothing by repenting; faith and repentance are accepted until then and sealed with it."),
+                      .text("The narration of 'Abdullah ibn 'Amr, quoted under the beast in this group, makes it the first of the signs in the heavens, with the beast coming out close behind it. Ibn Hajar reads the two sets of signs together: Dajjal, 'Isa and Gog and Magog change the earth first; the sun and the beast then close the door."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is that it will happen, what it means, and what follows it. What is not known is when, nor how it will look beyond the words of the hadith, and the scholars do not describe it in terms of the motions of the heavens. It is believed as part of faith in the Last Day; a sign not yet seen is not offered here as proof."),
+                  ]),
+              ]),
+        .init(id: "the-beast", title: "The beast that speaks to people",
+              summary: "A creature from the earth will speak to people; the Quran names it, the hadith sets it beside the sun from the west.",
+              group: .toCome,
+              aliases: ["beast", "dabbah", "dabbat al-ard", "creature", "earth", "27:82", "an-naml", "speak", "abdullah ibn amr", "forenoon", "staff of musa", "ring of sulayman"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Surah al-Naml says what comes out of the earth when people have stopped being certain of the signs:"),
+                      .quran("27:82"),
+                      .text("'Abdullah ibn 'Amr memorised one hadith from the Prophet that he never forgot, and it places the beast beside the sun that rises from the west. It is also the third of the ten signs Hudhayfah ibn Usayd counted, quoted at the head of this group."),
+                      .hadith("muslim:2941a", cite: "Sahih Muslim 2941a", arabic: 44...65, english: 25...73),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ahl al-Sunnah hold that the beast is a real animal that Allah brings out of the earth near the end, and that it speaks to people. Ibn Kathir in his tafsir of the verse and in al-Nihayah, Ibn Hajar in Fath al-Bari, and Ibn 'Uthaymin in his commentary on al-Wasitiyyah count it among the great signs, from the Quran and from the hadith of the ten."),
+                      .text("The commentators report sayings of the Salaf about what it says and that it marks believer and disbeliever apart; Ibn Kathir gives these as reports. The narration that gives it the staff of Musa and the ring of Sulayman is graded weak by al-Albani and by every grader the shelf lists, so it is not quoted here."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is the verse and the two sound hadiths: a creature, from the earth, speaking, near the sun's rising from the west. What is not known is its form, where it comes out, or what exactly it says; readings that make it a machine or a disease are guesses the scholars do not make. Believed as part of faith in the Last Day; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "jews-and-stones", title: "The stone and the tree",
+              summary: "The stone and the tree will give the Jews away, in a battle the scholars place in the age of Dajjal and 'Isa.",
+              group: .toCome,
+              aliases: ["jews", "yahud", "stone", "tree", "gharqad", "boxthorn", "fight", "dajjal", "isa", "isfahan", "abu hurayrah", "battle"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah heard him describe a battle at the end of time in which even the ground takes the Muslims' side:"),
+                      .hadith("bukhari:2926", cite: "Sahih al-Bukhari 2926", arabic: 31...47, english: 4...39),
+                      .text("Muslim's wording adds the tree, and the one tree that stays silent:"),
+                      .hadith("muslim:2922", cite: "Sahih Muslim 2922", arabic: 29...65, english: 0...70),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("The scholars place this in the age of Dajjal and 'Isa, not before it. Sahih Muslim records that seventy thousand Jews of Isfahan follow Dajjal when he comes out, and the long narration of al-Nawwas has 'Isa kill him and then pursue those who stood with him; Ibn Kathir and al-Nawawi read the stone and the tree as the end of that battle, when the earth itself is made to speak for the believers. It is a thing Allah will bring about on that day, in that war, under that prophet. It is not a programme, and it was never given as one."),
+                      .text("Al-Nawawi notes that the gharqad is a kind of thorn tree known in the land of Bayt al-Maqdis; the hadith says only that it stays silent, and the scholars draw from it nothing more than the measure of that day's help."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is that it will happen and roughly when: at the end, around Dajjal and 'Isa. What is not known is anything beyond that; the hadith names no nation, no century and no battlefield. It describes what Allah will do, not what anyone is told to do, and the scholars have never read it as a licence against a people. Believed as part of faith in the Last Day; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "kaaba-demolished", title: "The Ka'bah demolished",
+              summary: "A thin-legged man from Abyssinia will pull the Ka'bah down stone by stone, after Gog and Magog, when no one says Allah.",
+              group: .toCome,
+              aliases: ["kaaba", "ka'bah", "house", "demolish", "dhul suwayqatayn", "dhu al-suwayqatayn", "abyssinia", "ethiopia", "habashah", "hajj", "qarmatians", "black stone"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah heard it in a single sentence, which al-Bukhari records twice and Muslim three times:"),
+                      .hadith("bukhari:1591", cite: "Sahih al-Bukhari 1591", arabic: 34...39, english: 3...15),
+                      .text("Ibn 'Abbas heard him say he could almost see the man at it:"),
+                      .hadith("bukhari:1595", cite: "Sahih al-Bukhari 1595", arabic: 34...40, english: 4...25),
+                      .text("But the House is visited until then, through the greatest of the signs:"),
+                      .hadith("bukhari:1593", cite: "Sahih al-Bukhari 1593", arabic: 35...41, english: 4...23),
+                      .text("And the Hour itself comes only on people who have forgotten Allah:"),
+                      .hadith("muslim:148a", cite: "Sahih Muslim 148a", arabic: 22...31, english: 0...13),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ibn Hajar and Ibn Kathir place this near the very end: after 'Isa, after Gog and Magog, after the good wind that takes every believer's soul, in the time when, as Anas heard, no one on earth says Allah. Until then the Hajj goes on; Abu Sa'id's narration says it continues even after Gog and Magog, and Ibn Hajar reconciles the two texts by their order. Dhul-Suwayqatayn is a description, the man with two thin shanks; the hadith names him by it and by his land, and by nothing else."),
+                      .text("History has seen the House attacked without this coming true. In 317 AH (930 CE) the Qarmatians sacked Makkah during the Hajj and carried the Black Stone away for about twenty years, and the building has been damaged and rebuilt more than once; each time it was restored and the Hajj resumed. The sign the hadith describes, a demolition stone by stone in an age when the House is no longer visited, has not happened."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is the man's description, his land, and his place at the end of the order. What is not known is when, or who; no one in history has been him, and the scholars do not name a people or a state as his. Believed as part of faith in the Last Day; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "euphrates-gold", title: "The Euphrates and the mountain of gold",
+              summary: "The river will uncover a mountain of gold and people will die fighting over it; whoever is there must take nothing.",
+              group: .toCome,
+              aliases: ["euphrates", "furat", "al-furat", "gold", "treasure", "mountain", "river", "iraq", "syria", "ninety-nine", "abu hurayrah", "dam"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah heard it with a command attached:"),
+                      .hadith("bukhari:7119", cite: "Sahih al-Bukhari 7119", arabic: 35...48, english: 4...29),
+                      .text("Muslim's wording tells what the gold does to people:"),
+                      .hadith("muslim:2894a", cite: "Sahih Muslim 2894a", arabic: 30...57, english: 0...49),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ibn Hajar and al-Nawawi take the words as they stand: the river's water draws back from a real mass of gold, people hear of it and fight, and nearly all who fight die. The command is the point of the hadith for a believer: whoever is present should not take any of it, and a narrator of Muslim's text adds that his father told him not even to go near it. Ibn Kathir lists it among the signs in al-Nihayah without a date; the scholars do not say whether it comes before or after the greater signs."),
+                      .text("The Euphrates has been dammed and has run low in living memory, and people have pointed at each drought. The scholars do not: the hadith's sign is the gold and the killing, and until both are seen nothing has been fulfilled."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is the river, the gold, the fighting and the command. What is not known is when, or what the gold is beyond gold. Reading it into any present event, a dam, a drought or an oilfield, is a guess the scholars do not make. Believed as part of faith in the Last Day; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "qahtan", title: "A man from Qahtan",
+              summary: "A man of Qahtan will drive the people with his staff before the Hour: a ruler near the end, and nothing more is known.",
+              group: .toCome,
+              aliases: ["qahtan", "qahtani", "al-qahtani", "yemen", "yemeni", "staff", "stick", "asa", "ruler", "abu hurayrah", "mahdi", "end times"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Qahtan is the ancestor of the Arabs of the south, the tribes of Yemen. Abu Hurayrah heard this in one line, which al-Bukhari records twice:"),
+                      .hadith("bukhari:7117", cite: "Sahih al-Bukhari 7117", arabic: 26...36, english: 4...21),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ibn Hajar reads the staff as an image: driving the people with it is a way of saying they obey him and gather to him, and the hadith does not say whether his rule is just. He places the man near the end, and records reports from the early generations that he comes after the Mahdi and walks in the Mahdi's way; he gives them as reports, not as hadith. Ibn Kathir lists him among the signs in al-Nihayah with the same caution."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is his tribe and that he will rule. What is not known is his name, his time beyond the words before the Hour, or his character; the texts give nothing more, and the scholars add nothing more. Believed as part of faith in what the Prophet foretold; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "jahjah", title: "Al-Jahjah",
+              summary: "Night and day will not end until a man of the freed slaves called al-Jahjah rules; nothing else is said of him.",
+              group: .toCome,
+              aliases: ["jahjah", "al-jahjah", "jahjaah", "mawali", "freed slaves", "ruler", "king", "throne", "abu hurayrah", "end times", "tirmidhi"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah heard a name and a promise:"),
+                      .hadith("muslim:2911", cite: "Sahih Muslim 2911", arabic: 37...46, english: 0...19),
+                      .text("Al-Tirmidhi's wording keeps one more detail: he is of the mawali, the freed slaves and their descendants, not of the Arab tribes:"),
+                      .hadith("tirmidhi:2228", cite: "Sunan al-Tirmidhi 2228; graded sahih by al-Albani", arabic: 32...43, english: 0...17),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("The scholars pass this on as it stands. Al-Nawawi explains the name and the word mawali and goes no further; Ibn Kathir lists the hadith among the signs; Ibn Hajar notes it beside the man from Qahtan without joining the two. No one in the record has borne the name and ruled, and the texts give neither a time nor a place."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is the name, his origin among the mawali, and that he will rule. Nothing else is known, and nothing else is claimed here. Believed because the Prophet said it, as part of faith in what he foretold; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "constantinople-takbir", title: "The city on land and sea, taken with takbir",
+              summary: "Seventy thousand of the sons of Ishaq take the city by takbir alone, and Dajjal appears while they divide the spoils.",
+              group: .toCome,
+              aliases: ["constantinople", "istanbul", "qustantiniyyah", "bani ishaq", "banu ishaq", "isaac", "takbir", "seventy thousand", "spoils", "dajjal", "1453", "muhammad al-fatih"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("He asked his Companions whether they had heard of a city with one side on land and one on the sea; they had. Then he told them how it would be taken:"),
+                      .hadith("muslim:2920a", cite: "Sahih Muslim 2920a", arabic: 34...139, english: 0...188),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("The commentators take the city to be Constantinople, which sits on the sea on one side and on land on the other. Al-Nawawi records that the text in every copy reads the sons of Ishaq, and that al-Qadi 'Iyad thought the sense wanted the sons of Isma'il, the Arabs; Ibn Kathir in al-Nihayah keeps Ishaq and reads them as Romans who have entered Islam by then. The details are what mark the event: no weapon, no arrow, the walls falling at the takbir, and the cry that Dajjal has come out while the spoils are being shared."),
+                      .text("The scholars differ on whether the conquest of 857 AH (1453 CE) by Muhammad al-Fatih, with cannon and after a siege, was the conquest of this hadith. Some count it a first conquest and expect a second; most of the Salafi scholars, reading the details, hold the hadith's conquest to be still to come, since none of its marks was present in 1453. Ibn Kathir, who died before it, expected the city's conquest to come shortly before Dajjal, as the narrations order it."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What is known is the manner of the taking and what follows it. What is not known is when, and whether the city is the one taken in 1453 or that city in a later age; the scholars say both, and this entry says both and stops. Believed as part of faith in what the Prophet foretold; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "beasts-speak", title: "When the beasts of prey speak",
+              summary: "Wild beasts will speak to people, and a man's whip, sandal strap and thigh will tell him what his family did.",
+              group: .toCome,
+              aliases: ["beasts", "predators", "animals speak", "wolf", "whip", "sandal", "strap", "thigh", "family", "abu said", "wild beasts", "signs of the hour"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Sa'id al-Khudri heard him swear to it:"),
+                      .hadith("tirmidhi:2181", cite: "Sunan al-Tirmidhi 2181; graded sahih by al-Albani", arabic: 28...51, english: 0...49),
+                      .text("It was not the first time his Companions heard of an animal speaking. One morning after Fajr he told them of a cow and a wolf, and when they were astonished he said he believed it, and so did Abu Bakr and 'Umar:"),
+                      .hadith("bukhari:3471", cite: "Sahih al-Bukhari 3471", arabic: 75...120, english: 81...180),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("The scholars read the hadith as it stands: a sign in which Allah makes animals and lifeless things speak, as He made the wolf speak to the shepherd and as the stone and the tree will speak on the day of 'Isa. Ibn Kathir lists it in al-Nihayah among the signs still to come, and the commentators on al-Tirmidhi explain the whip, the strap and the thigh as things of a man's own that will tell him, by Allah's power, what was done in his absence. None of them reads it as a figure of speech."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Modern readers have made the whip a telephone, the strap a camera, the thigh a message on a screen. The scholars do not; the hadith says the things themselves speak, and the Prophet swore to it in those words. What is known is what it says. What is not known is when, and the scholars leave the how to Allah. Believed as part of faith in what he foretold; not offered as a sign fulfilled."),
+                  ]),
+              ]),
+        .init(id: "how-sudden", title: "How suddenly the Hour comes",
+              summary: "It comes between a hand and a mouth, a bargain and its close; the right answer is the question he asked the Bedouin.",
+              group: .toCome,
+              aliases: ["sudden", "baghtatan", "hour", "qiyamah", "milk", "garment", "trough", "prepared", "love", "bedouin", "anas", "7:187"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("The Quran says the Hour comes without warning, and in less than the blink of an eye:"),
+                      .quran("7:187"),
+                      .quran("16:77"),
+                      .text("Abu Hurayrah heard it in three pictures from ordinary life:"),
+                      .hadith("muslim:2954", cite: "Sahih Muslim 2954", arabic: 26...52, english: 0...82),
+                      .text("Anas was there when a man of the desert asked the only question people ever ask about it, and got a different question back:"),
+                      .hadith("bukhari:6167", cite: "Sahih al-Bukhari 6167", arabic: 10...49, english: 0...63),
+                  ]),
+                  SignSection("WHAT THE SCHOLARS SAY", [
+                      .text("Ibn Hajar and al-Nawawi read the three pictures literally: the Hour will open on people in the middle of what they are doing, with no time to finish it. Ibn Kathir in al-Nihayah closes the signs with this, as the texts do: once the last of them has come, the end comes in an instant. The scholars take the reply to the Bedouin as the rule for every question about timing: he was not told when, he was asked what he had prepared, and what he had prepared was love of Allah and His Messenger, which was enough."),
+                      .text("This is why the group is here. Ahl al-Sunnah believe the signs because the Prophet gave them, and do not spend them on calculation: Ibn Baz and Ibn 'Uthaymin both warned against fixing dates and against naming the people of the signs among the living. What the signs ask for is what the Bedouin had: faith, repentance before the door closes, and deeds that are ready to be interrupted."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("No one knows when the Hour comes, and the Prophet said he did not either. The signs still to come are believed as part of faith in the Last Day; none of them is offered here as fulfilled, and none is offered as a clock. What is known is that it comes, and suddenly; what is not known is the day, and that is by design."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: More: the ummah after him (B)
+
+    static let moreEntriesB: [Entry] = [
+        .init(id: "best-generations", title: "The best generations, then the eager swearers",
+              summary: "His generation was the best, then the next two; then people whose testimony runs ahead of their oath.",
+              group: .ummah,
+              aliases: ["qarn", "khayr al-qurun", "sahabah", "companions", "tabiin", "successors", "atba al-tabiin", "salaf", "oath", "testimony", "ibn masud", "mihnah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Ibn Mas'ud heard him rank the generations of his ummah, and then describe the people who would come after them:"),
+                      .hadith("bukhari:2652", cite: "Sahih al-Bukhari 2652", arabic: 29...46, english: 4...47),
+                      .text("Muslim's wording makes the first of them the generation nearest to him:"),
+                      .hadith("muslim:2533a", cite: "Sahih Muslim 2533a", arabic: 32...51, english: 0...40),
+                      .text("The Quran had already set the first two side by side, the Companions and those who followed them in good:"),
+                      .quran("9:100"),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("Qarn, the word translated as generation, means the people of one age. Ibn Hajar, commenting on this hadith, takes the three as the Companions, the Successors who learned from them, and the Successors' students, and that is how the scholars of hadith have ranked the first three generations ever since. By his reckoning the age of the Companions closed around 110 AH, when the last of them died, and the third generation was ending by about 220 AH."),
+                      .text("Ibn Hajar then describes what followed the third generation: innovations appeared and spread openly, the Mu'tazilah loosened their tongues, the philosophers raised their heads, and the people of knowledge were put on trial to make them say the Quran is created. That trial, the mihnah, began under the caliph al-Ma'mun in 218 AH, and Ahmad ibn Hanbal was imprisoned and flogged for refusing it."),
+                      .text("The second half of the saying was the part the narrators themselves took hardest. Ibrahim al-Nakha'i, a scholar of Kufa in the second generation, adds in al-Bukhari's text that as boys they were beaten for taking oaths and giving testimony lightly. A witness who swears before he is asked, and takes an oath as readily as he gives evidence, is a man who has stopped weighing his words, and that habit has been common in every age since."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("He ranked three generations while only the first was alive, and the ranking held: the ummah's own scholars, counting back centuries later, drew the line where he had drawn it. Then he described what the fourth would bring, and the historians of his community wrote it down as it happened."),
+                  ]),
+              ]),
+        .init(id: "seventy-three-sects", title: "Seventy-three sects, and one of them saved",
+              summary: "His ummah would split into seventy-three sects, as the nations before it had, and one of them would be saved.",
+              group: .ummah,
+              aliases: ["firqah", "firaq", "sects", "iftiraq", "division", "jamaah", "ahl al-sunnah", "saved sect", "firqah najiyah", "khawarij", "qadariyyah", "mutazilah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah reports it in the form the Sunan carry most often:"),
+                      .hadith("abudawud:4596", cite: "Sunan Abi Dawud 4596; graded hasan sahih by al-Albani", arabic: 26...47, english: 4...35),
+                      .text("'Awf ibn Malik heard it with its end: the fate of the sects, and the name of the one that is safe."),
+                      .hadith("ibnmajah:3992", cite: "Sunan Ibn Majah 3992; graded sahih by al-Albani", arabic: 38...90, english: 0...78),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The sects came, and they came early. The Khawarij broke away in 37 AH and have two articles of their own in this library. Before the first century was out, Ma'bad al-Juhani was denying the divine decree in Basra, the dispute that opens the hadith of Jibril in Sahih Muslim, and the Murji'ah, who set deeds apart from faith, had appeared in Kufa."),
+                      .text("The second century added the Rafidah, who took their name in Kufa in 122 AH when they deserted Zayd ibn 'Ali for refusing to curse Abu Bakr and 'Umar; the Jahmiyyah of Jahm ibn Safwan, who denied the attributes of Allah; and the Mu'tazilah of Wasil ibn 'Ata', who set reason over the texts and said the Quran was created. Each is a matter of record, with a named founder and a date, and each has its chapter in the books the ummah's scholars wrote to catalogue them."),
+                      .text("The one he called the Jama'ah is, as the scholars of the Sunnah have always explained it, the body that holds to what he and his Companions were upon: Ahl al-Sunnah wal-Jama'ah. It is a description, not the name of a party, and whoever matches it belongs to it."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("He said it when his followers were one body, praying behind one man in one mosque, and he gave the splitting a shape: many groups, one of them right, the rest in danger. The groups that appeared did so with the mark he had given them, each taking a part of the religion and leaving the rest."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The number is not a tally to be ticked off. Scholars from Ibn Taymiyyah onward have warned against naming sects to make the count come out, and they read 'in the Fire' as a threat these groups have earned, not a ruling that they are outside Islam: the ones that remain within the ummah are Muslims who have gone astray."),
+                  ]),
+              ]),
+        .init(id: "strangers", title: "Islam began as a stranger",
+              summary: "Islam began as something strange and would return to being strange as it began; blessed are the strangers.",
+              group: .ummah,
+              aliases: ["ghurabaa", "ghuraba", "gharib", "tuba", "strange", "strangeness", "abu hurayrah", "ibn masud", "nuzza", "tribes", "sunnah", "ibn rajab"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah reports a saying with the shape of a prophecy: Islam had begun one way, and it would end the same way."),
+                      .hadith("muslim:145", cite: "Sahih Muslim 145", arabic: 39...47, english: 0...21),
+                      .text("Ibn Mas'ud's narration adds a question and its answer:"),
+                      .hadith("ibnmajah:3988", cite: "Sunan Ibn Majah 3988; graded sahih by al-Albani", arabic: 31...48, english: 0...34),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The beginning is a matter of record. In Makkah the believers were a handful, hiding their prayer, tortured for it, driven out to Abyssinia and then to Madinah. The Arabic word gharib means a foreigner, someone with no people around him, and that is what a Muslim was in his own city. Within the Prophet's lifetime all of Arabia had entered Islam, and the strangeness seemed to have ended for good."),
+                      .text("The return is the part the scholars read with care. Al-Nawawi read it as a dwindling: Islam would be held by few again, as at the start. Ibn Rajab, writing in the eighth century AH, gave the strangers a treatise of their own and described them as the people who hold to the Sunnah as the Companions knew it when their own people have left it: strangers not among unbelievers, but among Muslims."),
+                      .text("The word in Ibn Mas'ud's narration, nuzza', is those who pull away from their tribes. The commentators took it in two ways that do not conflict: the first Muslims, who left their tribes for the religion, and anyone since who leaves what his people are on in order to hold to it."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It was said when Islam was winning. Its shape is a circle, and history has drawn one: a Muslim can live today in a city of Muslims and still be a stranger for keeping to what the first Muslims kept to. The saying does not complain about that; it congratulates the strangers."),
+                  ]),
+              ]),
+        .init(id: "victorious-group", title: "A group that never stops",
+              summary: "A group of his ummah would stay on the truth, unharmed by those who forsake them, until the command of Allah comes.",
+              group: .ummah,
+              aliases: ["taifah mansurah", "al-taifah al-mansurah", "victorious group", "ahl al-hadith", "people of knowledge", "muawiyah", "thawban", "mughirah", "sham", "ibn baz", "ahmad ibn hanbal", "nawawi"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Mu'awiyah heard it from him. In al-Bukhari's text he repeats it, and Malik ibn Yukhamir, who was there, adds what he had heard from Mu'adh ibn Jabal: that they would be in Sham."),
+                      .hadith("bukhari:3641", cite: "Sahih al-Bukhari 3641", arabic: 26...47, english: 6...53),
+                      .text("Thawban's narration says what they stand on:"),
+                      .hadith("muslim:1920", cite: "Sahih Muslim 1920", arabic: 37...54, english: 0...50),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The saying is a guarantee with one end date, the command of Allah. Fourteen centuries have passed since, with civil wars, the Mongol sack of Baghdad in 656 AH, the loss of al-Andalus, the colonial age and the abolition of the caliphate in 1924, and at no point has the religion been without people who held to it, taught it and defended it. Communities that seemed finished produced scholars again within a generation."),
+                      .text("The scholars identified the group by what it does, not where it sits. Ahmad ibn Hanbal said that if they were not the people of hadith he did not know who they were. Al-Bukhari himself said they are the people of knowledge. Al-Nawawi allowed that they might be scattered: some fighters, some jurists, some hadith scholars, some callers to good. Ibn Baz, in our time, described them as the people of knowledge and faith who hold to the truth and act on it, wherever they are found."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("Religions and empires have gone out, and the one that said of itself that it would never go out was, when he said it, a few thousand people in one town. He added that abandonment would not harm them, which rules out the easy reading that the group is whoever happens to be strong."),
+                  ]),
+              ]),
+        .init(id: "mujaddid", title: "A renewer at the head of every century",
+              summary: "Allah would send this ummah, at the head of every hundred years, one who renews its religion for it.",
+              group: .ummah,
+              aliases: ["mujaddid", "tajdid", "renewal", "reviver", "century", "hundred years", "umar ibn abd al-aziz", "al-shafii", "abu hurayrah", "revive", "sunan abi dawud"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah reports it, and Abu Dawud opened his chapters on the battles and trials of the last days with it:"),
+                      .hadith("abudawud:4291", cite: "Sunan Abi Dawud 4291; graded sahih by al-Albani", arabic: 36...49, english: 4...25),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The scholars took the saying as a promise and looked for its people. From early on they named 'Umar ibn 'Abd al-'Aziz, the caliph who died in 101 AH after restoring justice and the Sunnah in a reign of under three years, as the renewer of the first century, and al-Shafi'i, who died in 204 AH after setting out the principles of the law, as the renewer of the second. Later centuries have their own candidates, and the lists disagree."),
+                      .text("That is where the record stops. The hadith promises a renewer; it does not name one, and no narration says who any of them was. The identifications are the scholars' reading of their own history, offered with respect and sometimes with disagreement, and they are given here as that and nothing more."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("The religion was new and its people few; nothing suggested it would need reviving, let alone a hundred years at a time. The saying assumes a long future in which the religion wears down and is restored again and again, and that is the shape its history has taken."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The scholars differ on whether the head of the century is its beginning or its end, and on whether the renewer must be one person; Ibn Hajar and others allowed that it may be several people in different fields and lands. None of this is settled by the text."),
+                  ]),
+              ]),
+        .init(id: "twelve-caliphs", title: "Twelve rulers, all of Quraysh",
+              summary: "Islam would stand strong under twelve rulers, all from Quraysh; the Sunni scholars count them among the early caliphs.",
+              group: .ummah,
+              aliases: ["twelve caliphs", "ithna ashar", "khalifah", "quraysh", "jabir ibn samurah", "umayyads", "abd al-malik", "ibn kathir", "ibn hajar", "qadi iyad", "imams", "rulers"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Jabir ibn Samurah heard it as a boy, with his father beside him to catch the words he missed:"),
+                      .hadith("muslim:1821a", cite: "Sahih Muslim 1821a", arabic: 58...88, english: 16...65),
+                      .text("Another of his narrations gives the condition the twelve are tied to:"),
+                      .hadith("muslim:1821b", cite: "Sahih Muslim 1821b", arabic: 24...33, english: 8...27),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The one detail no reading disputes is the tribe. Every caliph from Abu Bakr to the fall of Baghdad in 656 AH, Rightly Guided, Umayyad and Abbasid, was a man of Quraysh, across six centuries and three dynasties that had little else in common."),
+                      .text("The Sunni reading starts from the wording: the people's affairs would run well, and the religion stand strong, so long as these twelve ruled. Ibn Hajar, following al-Qadi 'Iyad, counted the rulers under whom the ummah was one body and Islam held its strength: the four Rightly Guided caliphs, then Mu'awiyah and the Umayyads after him, up to the civil war that broke the dynasty in 126 AH, after which that unity never returned. He leaned toward this reading over the others."),
+                      .text("Ibn Kathir agrees that the twelve are not a list of appointed imams and need not rule in succession. He counts the four Rightly Guided and 'Umar ibn 'Abd al-'Aziz among them, allows for some of the Abbasids, and holds that the number is not yet complete, with the Mahdi among those to come. The scholars differ on the count; what they share is the kind of ruler meant, one under whom the religion stands strong and the community is one."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Ahl al-Sunnah do not read this hadith as naming twelve infallible imams: its subject is rule, its condition is that the people's affairs run well under them, and Jabir heard it with no names attached. Where the count falls is a matter on which the scholars differ, and this article leaves it there."),
+                  ]),
+              ]),
+        .init(id: "slave-girl-mistress", title: "When the slave-girl gives birth to her mistress",
+              summary: "The first sign Jibril was given: a slave woman bearing her own master or mistress, read two ways by the scholars.",
+              group: .ummah,
+              aliases: ["amah", "rabbatuha", "rabbaha", "hadith of jibril", "gabriel", "signs of the hour", "disobedience", "uquq", "parents", "mothers", "slave woman", "concubine"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("In al-Bukhari's text Jibril asks about the Hour, and the Prophet answers that the one asked knows no more than the asker, but that he will tell him its portents, the first of which is:"),
+                      .hadith("bukhari:50", cite: "Sahih al-Bukhari 50", arabic: 95...98, english: 154...162),
+                      .text("In Muslim's text, which 'Umar reports, the word is rabbatahā, her mistress, and the second sign follows at once:"),
+                      .hadith("muslim:8a", cite: "Sahih Muslim 8a", arabic: 325...345, english: 527...565),
+                      .text("The second sign has an article of its own in this library, among the signs before the Hour. This one is about the first."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The classical commentators read it in two main ways, and allow both. Ibn Hajar leaned toward the reading that it foretells the spread of disobedience to parents: a son or daughter ordering a mother about as an owner orders a servant, until the child is in effect her master. The hadith is giving signs of a world turned upside down, and nothing turns it over more plainly than that."),
+                      .text("The other reading goes back to al-Khattabi: with the conquests, captive women bore children to their Muslim masters, and a child born free of a bondwoman stood to her as her master. That was already true within a generation of the saying, in the households of the Companions, and al-Nawawi gave it as the first explanation. On this reading the sign came quickly; on Ibn Hajar's it is the long decline of respect for parents, which no one now needs to be shown."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("The scholars allow both readings and do not force a choice, and this article does not either. What is not in doubt is the setting: he was asked for the Hour's time, said he did not know it, and gave signs instead. Everything in the hadith turns on that honesty."),
+                  ]),
+              ]),
+        .init(id: "rulers-after-me", title: "Rulers after me, and what to do with them",
+              summary: "He warned Ka'b of rulers who would lie and oppress, and told Hudhayfah to hear and obey even when his back was beaten.",
+              group: .ummah,
+              aliases: ["umara", "rulers", "kings", "tyranny", "oppression", "kab ibn ujrah", "hudhayfah", "hawd", "obedience", "rebellion", "khuruj", "patience"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Ka'b ibn 'Ujrah heard a warning addressed to him by name, and a line drawn through it:"),
+                      .hadith("tirmidhi:614", cite: "Sunan al-Tirmidhi 614; graded sahih by al-Albani", arabic: 45...93, english: 7...107),
+                      .text("Hudhayfah, who made a habit of asking about the evil to come, was told what the rulers of that time would be like:"),
+                      .hadith("muslim:1847b", cite: "Sahih Muslim 1847b", arabic: 92...109, english: 86...123),
+                      .text("He asked what to do if he lived to see it:"),
+                      .hadith("muslim:1847b", cite: "Sahih Muslim 1847b", arabic: 124...133, english: 143...169),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The caliphate of the four lasted thirty years, as he had said it would, and kingship followed; that story is told in the article on the thirty years of caliphate. What this saying foretells is the character of much of the rule that came after: rulers who lied, who oppressed, and who gathered men to their doors to approve of both. The histories of the Umayyads, the Abbasids and the dynasties after them are full of such courts, and of scholars asked to lend them their standing."),
+                      .text("The line he drew held too. The scholars who refused those doors, or entered them and spoke the truth there, are the ones the ummah remembers, Sa'id ibn al-Musayyib and Ahmad ibn Hanbal among many. The hadith made the test one of lies and oppression, not of attendance: a man could enter and keep his place with the Prophet, or stay away and still lose it."),
+                      .text("The duty it carries is the part Ahl al-Sunnah have held to. Hudhayfah was told to hear and obey even when his back was beaten and his wealth taken, and in the other narration to cling to the body of the Muslims and their leader. From this and its like the scholars drew the rule that a Muslim does not rebel against a ruler who still prays and shows no open disbelief, however much he wrongs, because the blood that rebellion spills is the greater harm. Ibn Baz and Ibn 'Uthaymin stated it in those terms in our time."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("He ruled a state whose governors he appointed himself, and he described the rulers of his people as liars and oppressors in the same breath as he gave the rule for living under them. A founder who expects his successors to be good does not leave instructions for when they are not."),
+                  ]),
+              ]),
+        .init(id: "fitan-dark-night", title: "Trials like pieces of a dark night",
+              summary: "Trials like the dark of night: a believer at dawn, a disbeliever by dusk, his religion sold for a scrap of the world.",
+              group: .ummah,
+              aliases: ["fitan", "fitnah", "tribulations", "dark night", "badiru", "hasten", "good deeds", "apostasy", "riddah", "abu hurayrah", "civil war", "nawawi"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah reports a command with its reason attached:"),
+                      .hadith("muslim:118", cite: "Sahih Muslim 118", arabic: 37...57, english: 0...63),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The first of those nights fell within a generation. 'Uthman was killed in his own house in 35 AH, and the battles of the Camel and Siffin followed, then the Khawarij, who declared Muslims disbelievers and killed them, then Karbala in 61 AH and the sack of Madinah at al-Harrah in 63 AH. Men who had sat with the Prophet found themselves on opposite sides of a battlefield, and many could not tell which side was right."),
+                      .text("Al-Nawawi explains the image: trials so dark that a man cannot see his way in them, and so fast that his state changes between morning and evening. The selling is the point. A religion given up not for an argument but for a price: a post, a payment, safety. The scholars read the hadith as a description of every age of trial since, not of one, and as the reason for the command that opens it."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It was said to people who had paid for their faith with their homes and were not about to sell it. He told them a time would come when faith changed hands in a day, and the first such time came while some of them were still alive to see it."),
+                  ]),
+              ]),
+        .init(id: "horn-of-the-east", title: "The horn of Shaytan rises in the east",
+              summary: "He blessed Sham and Yemen and left out Najd: there were the earthquakes, the trials, and the horn of Shaytan.",
+              group: .ummah,
+              aliases: ["najd", "qarn al-shaytan", "horn of satan", "east", "iraq", "kufa", "basra", "sham", "yemen", "ibn umar", "salim", "khawarij"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Ibn 'Umar remembered a prayer he made more than once, and what he said when the people asked him to add a third land to it:"),
+                      .hadith("bukhari:7094", cite: "Sahih al-Bukhari 7094", arabic: 25...69, english: 4...88),
+                      .text("Ibn 'Umar's son Salim quoted his father's narration of it to the people of Iraq in his own day, and added what he saw them doing:"),
+                      .hadith("muslim:2905f", cite: "Sahih Muslim 2905f", arabic: 35...84, english: 0...66),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("Najd is high land, and whose Najd is meant depends on where the speaker stands. Ibn Hajar, following al-Khattabi, explains that Madinah's Najd, the high country to its east, is the land of Iraq and what lies beyond it, and in Muslim's narrations the Prophet points east as he speaks. Ibn Baz and Ibn 'Uthaymin read it the same way. The hadith marks a direction, not a people."),
+                      .text("What rose in that direction is a matter of record. The Khawarij gathered at Harura' near Kufa in 37 AH and were fought at al-Nahrawan the next year; 'Ali was killed in Kufa in 40 AH; al-Husayn was killed at Karbala in 61 AH. The first man to deny the divine decree did so in Basra, as the hadith of Jibril in Sahih Muslim records, and the Jahmiyyah and the Mu'tazilah took shape in the same lands. Salim's words to the people of Iraq, quoted above, were spoken into the middle of it."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("Iraq was under Persian rule when he said it. He blessed two lands that became the first homes of Islam outside Arabia, set a third apart as the source of trials, and the first great trials of the ummah rose where he had pointed."),
+                  ]),
+              ]),
+        .init(id: "wealth-trial", title: "The trial of this ummah is wealth",
+              summary: "Every ummah has its trial, and the trial of his would be wealth; he feared it for them more than poverty.",
+              group: .ummah,
+              aliases: ["mal", "money", "fitnah", "riches", "dunya", "bahrain", "jizyah", "abu ubaydah", "khabbab", "kab ibn iyad", "competition", "conquests"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Ka'b ibn 'Iyad heard it in a single sentence:"),
+                      .hadith("tirmidhi:2336", cite: "Sunan al-Tirmidhi 2336; graded sahih by al-Albani", arabic: 40...46, english: 0...15),
+                      .text("When Abu 'Ubaydah brought the tribute of Bahrain, the Ansar gathered after Fajr in the hope of a share. He smiled at them and said why the money worried him:"),
+                      .hadith("bukhari:6425", cite: "Sahih al-Bukhari 6425", arabic: 129...152, english: 148...209),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The Bahrain money was the first of it. Within twenty years of his death the treasuries of Persia and the revenues of Syria and Egypt were flowing into Madinah, and ordinary soldiers came home with sums their fathers had never seen. The Companions felt the change in themselves and said so. Qays ibn Abi Hazim found Khabbab ibn al-Aratt, one of the first Muslims, tortured for his faith in Makkah, building a wall:"),
+                      .hadith("bukhari:6431", cite: "Sahih al-Bukhari 6431", arabic: 11...37, english: 0...46),
+                      .text("Khabbab died in 37 AH, in the years when the ummah's first war with itself was being fought, and the grievances that led to it included who held the wealth the conquests had brought. The scholars read the two sayings together: wealth was the trial because it was the one thing the ummah was certain to be given, and it has gone on being given. The history of the Muslims since is in large part a history of what wealth did to rulers, to scholars and to ordinary believers, and the complaint is made in every century."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("He said it to people who were poor, and he said poverty was not what he feared for them. The threat he named was the one thing they wanted, and it arrived in the lifetime of the people he said it to."),
+                  ]),
+              ]),
+    ]
+
+    // MARK: More: foretold in the Quran, the empires, and the Companions
+
+    static let moreEntriesA: [Entry] = [
+        .init(id: "kawthar-abtar", title: "Cut off: the taunt the Quran turned back",
+              summary: "Quraysh called him abtar, cut off with no sons to carry his name; the surah said his hater was the one cut off.",
+              group: .quran,
+              aliases: ["kawthar", "al-kawthar", "surah 108", "abtar", "cut off", "al-as ibn wail", "as ibn wail", "qasim", "sons", "adhan", "renown", "shani"],
+              sections: [
+                  SignSection("WHAT THE QURAN SAID", [
+                      .text("His sons died in childhood: al-Qasim and 'Abdullah in Makkah, and Ibrahim later in Madinah. In Makkah, Quraysh made that a taunt. A man whose sons had died was abtar, cut off: a line that ended with him and a name no one would carry. The commentators report that it was al-'As ibn Wa'il who said it of him. The answer came in the shortest surah of the Quran:"),
+                      .quran("108:1-3"),
+                      .text("The word is shani', the one who hates. The surah did not name him, and it did not answer the taunt by promising sons. It promised him al-Kawthar, abundance, and turned the word back on the man who had used it: whoever hates you, he is the one cut off."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The men who said it are remembered today, where they are remembered at all, because of him. Al-'As ibn Wa'il's name survives in the books largely as the father of 'Amr ibn al-'As, who became a Muslim, commanded the Prophet's armies and conquered Egypt: the taunter's line continued inside the religion of the man he had taunted."),
+                      .text("The Prophet left no son who lived to manhood, and no man's name is spoken more often. It is called from every minaret in every adhan, five times a day; it is said in every prayer at the tashahhud; and it is answered with blessings wherever it is heard. Another Makkan surah had promised exactly that:"),
+                      .quran("94:4"),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It was said to a man with no living son, in a city that measured a man by his sons, and it staked the opposite claim: that his mention would last and his enemy's would not. Nothing in his situation in Makkah pointed that way. Fourteen centuries later the claim can be checked against any adhan."),
+                  ]),
+              ]),
+        .init(id: "one-of-two-groups", title: "One of the two groups",
+              summary: "Promised the caravan or the army, they hoped for the caravan; the promise was kept with the army, at Badr.",
+              group: .quran,
+              aliases: ["badr", "caravan", "abu sufyan", "al-anfal", "surah 8", "two parties", "taifatayn", "sad ibn ubadah", "consultation", "2 ah", "abu jahl", "water carriers"],
+              sections: [
+                  SignSection("WHAT THE QURAN SAID", [
+                      .text("In Ramadan of 2 AH the Prophet went out from Madinah with about three hundred men, lightly armed, to meet a Qurayshi caravan coming home from Syria under Abu Sufyan. Quraysh marched out of Makkah with about a thousand men to protect it. Abu Sufyan turned the caravan down to the coast and slipped past. The Muslims, who had come for a caravan, found an army. Surah al-Anfal came down after the battle, and it records a promise made before it:"),
+                      .quran("8:5-8"),
+                      .text("Anas describes the march, and the moment the Muslims learned which of the two they had been given:"),
+                      .hadith("muslim:1779", cite: "Sahih Muslim 1779", arabic: 79...121, english: 111...173),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The caravan was gone and the army was there, camped across the wells of Badr. On the morning of 17 Ramadan the two sides met. Quraysh broke; seventy of them were killed, Abu Jahl among them, and seventy were taken captive. What the ayahs say Allah intended by the choice, that the truth be established and the root of the disbelievers cut off, was done by nightfall."),
+                      .text("The men who set out had hoped for the group that carried goods and no weapons; the ayah says so plainly. Of the two outcomes the promise allowed, Allah chose the one they feared, and it was the one that mattered. The caravan would have fed Madinah for a season. Badr changed what the Muslims were."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("The promise was one of two, and it would have been kept by either. It was kept by the harder one, and the surah says why. Quraysh, who lost that day, could not say afterwards that the Muslims had gone out looking for a battle: all of Arabia knew they had gone out for a caravan."),
+                  ]),
+              ]),
+        .init(id: "promised-spoils", title: "Many spoils, and this one hastened",
+              summary: "Many spoils were promised to the men who pledged under the tree: one hastened, Khaybar, and others not yet within reach.",
+              group: .quran,
+              aliases: ["hudaybiyah", "bayat al-ridwan", "pledge of the tree", "al-fath", "surah 48", "khaybar", "booty", "ghanaim", "maghanim", "persia", "byzantium", "7 ah"],
+              sections: [
+                  SignSection("WHAT THE QURAN SAID", [
+                      .text("At al-Hudaybiyah in 6 AH, when word came that 'Uthman had been killed in Makkah, about fourteen hundred Muslims pledged to the Prophet under a tree that they would fight to the death. The report proved false and the truce was signed instead. On the road home Surah al-Fath spoke of that pledge, and of what it would be paid with:"),
+                      .quran("48:18-21"),
+                      .text("Three things are promised in order: many spoils, one of them hastened, and others the Muslims could not yet reach but which Allah had already encompassed. The men who heard it had just agreed to go home with nothing, under a truce that denied them even the pilgrimage that year."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("Khaybar, the richest Jewish settlement in the Hijaz, fell early in 7 AH, within months of the surah. Its lands and date groves were the first great wealth of the Muslim state. The hands held back from them were those of Khaybar's allies in Ghatafan, who never came to its aid, and of Quraysh, bound by the truce they had just signed."),
+                      .text("The others came within fifteen years. Damascus fell in 14 AH; Ctesiphon, with the treasury of Persia, and Jerusalem in 16; Egypt by 21 AH. By the end of 'Umar's caliphate the Muslims held land and revenue that no one at al-Hudaybiyah could have reached or imagined."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("Ibn Kathir reads 'this one He has hastened for you' as Khaybar, and reports the commentators divided over the 'others': Persia and Byzantium according to al-Hasan and al-Dahhak, Makkah according to Qatadah, and every conquest until the Day of Judgement according to Mujahid. The general reading takes the words at their widest, and the record does not make it choose: all three came."),
+                  ]),
+              ]),
+        .init(id: "nasr-crowds", title: "In crowds, and then his death",
+              summary: "People would enter the religion in crowds, and, as Ibn 'Abbas read it, the Prophet would die: both within two years.",
+              group: .quran,
+              aliases: ["an-nasr", "surah 110", "nasr", "conquest", "afwaj", "delegations", "wufud", "year of delegations", "ibn abbas", "umar", "death of the prophet", "11 ah"],
+              sections: [
+                  SignSection("WHAT THE QURAN SAID", [
+                      .quran("110:1-3"),
+                      .text("Ibn 'Abbas said that it was the last surah to come down whole:"),
+                      .hadith("muslim:3024a", cite: "Sahih Muslim 3024a", arabic: 39...66, english: 0...50),
+                      .text("Years later 'Umar, by then caliph, put the surah to the veterans of Badr with the young Ibn 'Abbas sitting among them, and asked what it meant:"),
+                      .hadith("bukhari:4294", cite: "Sahih al-Bukhari 4294", arabic: 57...140, english: 83...269),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The crowds came first. Before the conquest, the tribes of Arabia had held back; 'Amr ibn Salimah, a boy at the time, remembered why:"),
+                      .hadith("bukhari:4302", cite: "Sahih al-Bukhari 4302", arabic: 64...91, english: 87...150),
+                      .text("Makkah was taken in Ramadan of 8 AH, and 9 AH is remembered as the Year of Delegations: tribe after tribe sent its envoys to Madinah to accept Islam, from Najd, from Yemen, from Bahrain and from Oman. People who had come one at a time for twenty years now came as whole peoples."),
+                      .text("Then the second thing. The surah told him, on the day of that help and that conquest, to glorify his Lord and ask His forgiveness: the words of a man whose work is done. The commentators report that it came down in the last months of his life. He died in Rabi' al-Awwal of 11 AH, less than three years after the conquest it names. The old men of Badr had read the surah as a thanksgiving; the boy had read it as a farewell, and 'Umar said he knew nothing in it but what the boy had said."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("A surah of three verses carried two forecasts: a change in the whole of Arabia, and the end of the life of the man reciting it. Ibn 'Abbas took the second from the words themselves, and 'Umar, who knew the Prophet as well as any man alive, agreed with him."),
+                  ]),
+              ]),
+        .init(id: "iraq-withholds", title: "Iraq, Syria and Egypt, and what they would withhold",
+              summary: "Iraq, Syria and Egypt named by their coins and measures before the Muslims held any; the withholding is a reading.",
+              group: .empires,
+              aliases: ["iraq", "sham", "egypt", "misr", "dirham", "dinar", "qafiz", "mudd", "irdabb", "kharaj", "land tax", "nawawi"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah accepted Islam in 7 AH, so this was said in the Prophet's last four years, when Iraq belonged to Persia and Syria and Egypt to the Byzantines, and the Muslim state did not hold one village of any of them."),
+                      .hadith("muslim:2896", cite: "Sahih Muslim 2896", arabic: 44...76, english: 0...66),
+                      .text("The qafiz, the mudd and the irdabb were the dry measures of those three countries, and the dirham and the dinar their coins: the units in which, under 'Umar, their land tax would come to be assessed. To speak of what the three lands would withhold is to assume that they would first be paying."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The first part came within a decade of his death. Iraq was taken between 14 and 16 AH, Syria between 13 and 16, Egypt by 21 AH, and their revenue, assessed in exactly those coins and measures, became the income of the state in Madinah."),
+                  ]),
+                  SignSection("A NOTE", [
+                      .text("What the withholding means is not a matter of record. Al-Nawawi gives the readings: that the peoples of those lands would stop paying what they owed, whether by accepting Islam, so that the tax lapsed, or by refusing it; or that the Muslims would lose those lands near the end of time and be driven back to where they began. The hadith is given here for what it assumed and for what the scholars say of it, not as a fulfilment claimed."),
+                  ]),
+              ]),
+        .init(id: "land-of-palms", title: "A land of palms, and a notched sword",
+              summary: "One dream, two fulfilments: the city of the Hijrah he had guessed wrongly, and the losses of Uhud he had been shown.",
+              group: .companions,
+              aliases: ["dream", "palm trees", "nakhl", "yamamah", "hajar", "yathrib", "hijrah", "uhud", "sword", "cows", "abu musa", "3 ah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Before the Hijrah, in Makkah, he was shown in a dream the land he would migrate to. He did not know its name; he knew only that it had palms, and he guessed at two famous date countries. Abu Musa al-Ash'ari transmits the dream, together with the Prophet's own account of how each part of it was answered:"),
+                      .hadith("bukhari:3622", cite: "Sahih al-Bukhari 3622", arabic: 35...115, english: 4...142),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The guess was wrong and the dream was right. Al-Yamamah lies east in Najd and Hajar on the Gulf coast; both were known for their dates. The land that opened to him was neither: the men of Yathrib, a palm oasis to the north, met him at al-'Aqabah, and in 622 CE he migrated there, and it became Madinah."),
+                      .text("The sword and the cows were answered at Uhud, in Shawwal of 3 AH. Ibn Hajar notes that before the battle, while the Companions were deciding whether to go out to meet Quraysh, he told them he had seen cows being slaughtered and a notch in his sword. At Uhud the Muslims were struck hard: seventy were killed, Hamzah among them, and the Prophet himself was wounded. Muslim's wording of the cows is the plainer:"),
+                      .hadith("muslim:2272", cite: "Sahih Muslim 2272", arabic: 96...125, english: 110...161),
+                      .text("The blade restored was the recovery that followed: the Muslims regathered, and the victories came. The commentators read the victory it names as the conquest of Makkah or the openings before it, and the gathering of the believers as the unity that returned after the division of Uhud."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("A dream he reported without understanding it is the hardest kind to fake. He guessed al-Yamamah or Hajar and was wrong, and said so; history answered with a city he had not thought of. And he spoke of a notched sword and slaughtered cows before a battle, to the men about to fight it, at a council where any commander would have promised a win."),
+                  ]),
+              ]),
+        .init(id: "two-bracelets", title: "Two bracelets, two liars",
+              summary: "Two gold bracelets blown away in a dream: the liars of San'a and al-Yamamah, both alive and in power when he said it.",
+              group: .companions,
+              aliases: ["bracelets", "bangles", "siwaran", "dream", "al-aswad al-ansi", "musaylimah", "musailima", "sanaa", "yamamah", "fayruz", "liar", "abu hurayrah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("In the last months of his life two men in Arabia claimed to be prophets beside him, each with a following and an army. Al-Aswad al-'Ansi had seized San'a and most of Yemen to the south; Musaylimah of Banu Hanifah held al-Yamamah to the east. Madinah lay between them. Abu Hurayrah heard him tell a dream about the two:"),
+                      .hadith("bukhari:4375", cite: "Sahih al-Bukhari 4375", arabic: 30...58, english: 4...73),
+                      .text("Muslim has the same dream from Abu Hurayrah, with one more word about how the bracelets weighed on him:"),
+                      .hadith("muslim:2274b", cite: "Sahih Muslim 2274b", arabic: 39...68, english: 0...82),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("He blew on the bracelets and they were gone: no campaign, no army, no hand of his. That is how both men ended. Al-Aswad was killed inside his own palace in San'a by Fayruz al-Daylami and other men of the city who had kept their Islam, at the very end of the Prophet's life; the historians say the news reached Madinah in the days around his death."),
+                      .text("Musaylimah lived about a year longer. In 12 AH, in the caliphate of Abu Bakr, the army of Khalid ibn al-Walid met the forces of Banu Hanifah at al-Yamamah, in the fiercest battle of the wars of apostasy, and Musaylimah was killed there. The Prophet had been dead a year, and had led no campaign against either man."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("The dream fixed a number, two, and a place for each, and it was told while both men ruled, in the last months of the Prophet's life. Either could have outlived the Muslim state, which many in Arabia expected to break up at his death. Neither outlived the year, and he had not lifted a hand against them."),
+                  ]),
+              ]),
+        .init(id: "ibn-salam-handhold", title: "The handhold he would not let go",
+              summary: "To 'Abdullah ibn Salam: you will hold to Islam until you die. He lived thirty more years, through every trial, and did.",
+              group: .companions,
+              aliases: ["abdullah ibn salam", "ibn salam", "dream", "meadow", "rawdah", "pillar", "handhold", "urwah al-wuthqa", "firmest handhold", "qays ibn ubad", "people of paradise", "43 ah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("'Abdullah ibn Salam had been the leading scholar of the Jews of Madinah before he accepted Islam. Long after the Prophet's death, Qays ibn 'Ubad watched him walk into the Prophet's mosque, heard the people say of him that he was a man of Paradise, and followed him out to ask why:"),
+                      .hadith("bukhari:3813", cite: "Sahih al-Bukhari 3813", arabic: 53...158, english: 66...254),
+                      .text("The handhold is the one the Quran names, al-'urwah al-wuthqa, the firmest handhold that never breaks:"),
+                      .quran("2:256"),
+                      .text("Muslim's wording of the Prophet's answer:"),
+                      .hadith("muslim:2484a", cite: "Sahih Muslim 2484a", arabic: 186...209, english: 317...359),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("He was told one thing about his future: that he would die on Islam. He did not take it as a licence to be called a man of Paradise, and he corrected the people who said so. No one should say what he does not know, he told Qays; he knew the dream, and he knew what he had been told."),
+                      .text("He lived on in Madinah through the apostasy wars, the siege of 'Uthman and the wars that followed, and died there in 43 AH, in the caliphate of Mu'awiyah, a Muslim as he had been since the days of the Hijrah. The promise had been kept across three decades of trial."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("A promise about a man's last state is the kind a prophet alone can make, because no one else knows it. Hearts turn, and Islam does not call a man saved on the strength of his present state. It was made to a convert whose own people had called him the worst of them on the day he believed, and his end came as it was promised."),
+                  ]),
+              ]),
+        .init(id: "ansar-after-me", title: "After me, others will be preferred over you",
+              summary: "The Ansar would be passed over after his death and should be patient till the Pool; under the Umayyads they were.",
+              group: .companions,
+              aliases: ["ansar", "helpers", "atharah", "preference", "favouritism", "bahrain", "hawd", "pool", "kawthar", "harrah", "anas", "al-walid"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("The Ansar of Madinah had taken him in, fought his battles and asked for nothing. When he offered to grant them the land of Bahrain, they refused it unless the Muhajirun were given the same. Anas heard what he told them then:"),
+                      .hadith("bukhari:3793", cite: "Sahih al-Bukhari 3793", arabic: 21...38, english: 0...37),
+                      .text("Once a man of the Ansar took him aside and asked for a post:"),
+                      .hadith("muslim:1845a", cite: "Sahih Muslim 1845a", arabic: 37...54, english: 0...40),
+                      .text("Atharah is others being preferred over you: in office, in wealth, in the share of what you helped to win. He did not tell them it would be put right. He told them to bear it and to look for him at the Pool."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The caliphate went to Quraysh from the first day, and no Ansari ever held it. Under the Rightly Guided caliphs the Ansar were honoured and consulted. From 41 AH the Umayyads ruled from Damascus, and the governorships, the army commands and the treasury went to their own kin and clients. Ibn Hajar notes that what the Prophet had foretold came to pass in their time."),
+                      .text("In 63 AH the army of Yazid sacked Madinah itself after the battle of al-Harrah, and many of the Ansar were killed in the city they had given him. Anas ibn Malik, one of the last of them, was still repeating the words decades later. Yahya ibn Sa'id heard him on the road to the caliph al-Walid ibn 'Abd al-Malik:"),
+                      .hadith("bukhari:3794", cite: "Sahih al-Bukhari 3794", arabic: 25...58, english: 14...70),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It is a prophecy against the interest of the people it was told to, delivered to their faces, and it asked them to accept it in advance. A man seeking a following flatters his supporters; he told his that they would be set aside, and they stayed loyal. And they kept the words: the narrators who carry them, Anas and Usayd ibn Hudayr, were Ansar themselves."),
+                  ]),
+              ]),
+        .init(id: "prayer-delayed", title: "Rulers who would delay the prayer",
+              summary: "Abu Dharr was told of rulers who would delay the prayer past its time, and what to do then; al-Hajjaj was one of them.",
+              group: .companions,
+              aliases: ["abu dharr", "prayer times", "salah", "rulers", "umara", "hajjaj", "al-hajjaj", "jabir", "anas", "damascus", "nafilah", "voluntary"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Dharr al-Ghifari was one of the earliest Muslims and died in 32 AH, before any ruler had done what this describes. The Prophet put the case to him as a question:"),
+                      .hadith("muslim:648a", cite: "Sahih Muslim 648a", arabic: 38...70, english: 8...80),
+                      .text("The instruction is as exact as the forecast: pray at the time, then pray with them, and count the second as voluntary. It assumes that the prayer would be delayed by the men leading it, not by the people, and that the people would still be praying behind them."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("Al-Hajjaj ibn Yusuf governed the Hijaz for the Umayyads from 73 AH and then Iraq for twenty years, and he delayed the prayers. Sahih Muslim records it in the words of the man who went to ask Jabir ibn 'Abdullah, the Companion, about the Prophet's own times:"),
+                      .hadith("muslim:646b", cite: "Sahih Muslim 646b", arabic: 20...31, english: 0...21),
+                      .text("Al-Zuhri found Anas ibn Malik, the Prophet's servant, in tears in Damascus. The historians place the visit in the caliphate of al-Walid ibn 'Abd al-Malik, when Anas had gone to the capital to complain of al-Hajjaj:"),
+                      .hadith("bukhari:530", cite: "Sahih al-Bukhari 530", arabic: 25...48, english: 0...51),
+                      .text("Abu Dharr passed the instruction on, and the scholars take the ruling from his hadith to this day: the prayer at its time, and then the congregation behind such a ruler, counted as voluntary, so that neither the time nor the community is abandoned."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It foretold a corruption from the top, in the one duty every Muslim performs five times a day, within a community that then prayed exactly as he prayed; and it gave the remedy before the disease. No preacher inventing prophecies for his movement would have told it that its own rulers would neglect the prayer."),
+                  ]),
+              ]),
+        .init(id: "young-quraysh", title: "Young men of Quraysh",
+              summary: "The ruin of my ummah at the hands of young men of Quraysh: Abu Hurayrah repeated it to Marwan, and could name them.",
+              group: .companions,
+              aliases: ["ghilmah", "boys", "youths", "marwan", "umayyads", "banu umayyah", "yazid", "karbala", "husayn", "harrah", "abu hurayrah", "destruction"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("Abu Hurayrah said it in the hearing of Marwan ibn al-Hakam, the Umayyad who governed Madinah for Mu'awiyah and later took the caliphate for his house. Sa'id ibn 'Amr, himself an Umayyad, was there:"),
+                      .hadith("bukhari:3605", cite: "Sahih al-Bukhari 3605", arabic: 15...51, english: 0...64),
+                      .text("Al-Bukhari gives it again in the Book of Trials (7058). There the grandson who carried it from Sa'id adds that Marwan cursed the boys, and that he himself used to go with Sa'id to the court of Banu Marwan when they ruled in Syria; when Sa'id saw them as young boys he would say, perhaps these are among them."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("Abu Hurayrah died in 57 or 59 AH, and the reign of Yazid ibn Mu'awiyah began in 60. Ibn Hajar reads the hadith on those years: the killing of al-Husayn and his family at Karbala in 61 AH, the sack of Madinah after al-Harrah in 63, and the siege of Makkah in 64, in which the Kaaba itself was damaged by fire, all in the reign of a caliph who came to power at about thirty-four."),
+                      .text("Sa'id ibn 'Amr, who had heard Abu Hurayrah, watched the boys of Banu Marwan grow up in Syria and pointed at them. Abu Hurayrah had said he could name the clans and did not, which is how the Companions spoke of what they knew: enough to be understood, not enough to be a weapon."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("It was said when Quraysh was the Prophet's own tribe and his enemies were mostly its old men. It named the young as the danger and a tribe as the source, and an Umayyad narrator carried it to an Umayyad prince and was not contradicted. Marwan's response was a curse, not a denial."),
+                  ]),
+              ]),
+        .init(id: "fitan-like-rain", title: "Trials falling like rain",
+              summary: "From a rooftop he saw trials falling among their houses like rain; the first fell on 'Uthman's house in Madinah, 35 AH.",
+              group: .companions,
+              aliases: ["fitan", "fitnah", "afflictions", "raindrops", "qatr", "rooftop", "utum", "usamah ibn zayd", "madinah", "uthman", "civil war", "35 ah"],
+              sections: [
+                  SignSection("WHAT HE SAID", [
+                      .text("The utum were the fortified houses of Madinah, the tallest buildings in the town. Usamah ibn Zayd, whom the Prophet had raised almost as a son, was with him on top of one of them:"),
+                      .hadith("bukhari:7060", cite: "Sahih al-Bukhari 7060", arabic: 30...59, english: 0...40),
+                      .text("Al-Bukhari records it also in the Book of the Virtues of Madinah (1878), with the wording that he saw the places where the trials would fall, among their houses, like the places where drops of rain fall. He was looking down at the Companions' own homes."),
+                  ]),
+                  SignSection("WHAT HAPPENED", [
+                      .text("The first drop fell on a house he could have pointed to. In Dhu al-Hijjah of 35 AH, rebels from Egypt, Kufa and Basra besieged 'Uthman in his home in Madinah and killed him there. Ibn Hajar counts his killing as the first of the trials the hadith foresaw, and the one from which the rest flowed."),
+                      .text("The rest followed as rain follows the first drop: the battle of the Camel in 36 AH, Siffin in 37, al-Nahrawan in 38, the killing of 'Ali in 40, and in 63 the sack of Madinah itself after al-Harrah, when the trials came into those very houses."),
+                  ]),
+                  SignSection("WHY IT IS STRIKING", [
+                      .text("He said it in Madinah at the height of its unity, about Madinah, to men who could not see what he saw and said so. He did not name a culprit or take a side; he described the pattern, many trials, close together, falling among the houses of his own Companions, and that is the pattern the next thirty years took."),
                   ]),
               ]),
     ]

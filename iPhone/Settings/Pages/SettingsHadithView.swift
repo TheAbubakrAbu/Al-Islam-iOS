@@ -64,7 +64,7 @@ struct SettingsHadithView: View {
         }
     }
 
-    /// "Use System Font Size" for the hadith Arabic - pins it to the device's Dynamic Type body size
+    /// "Use Device Text Size" for the hadith Arabic - pins it to the device's Dynamic Type body size
     /// (+4, the hadith default), the Quran settings' exact pattern.
     private var useSystemArabicFontSize: Binding<Bool> {
         Binding(
@@ -79,7 +79,7 @@ struct SettingsHadithView: View {
         )
     }
 
-    /// "Use System Font Size" for the hadith English - pins it to the device's Dynamic Type body size.
+    /// "Use Device Text Size" for the hadith English - pins it to the device's Dynamic Type body size.
     private var useSystemEnglishFontSize: Binding<Bool> {
         Binding(
             get: {
@@ -148,7 +148,7 @@ struct SettingsHadithView: View {
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
-                Section {
+                Section(header: Text("READING")) {
                     SettingsToggle(String(localized: "Highlight Allah"), caption: String(localized: "Colors the majestic and glorious name اللَّه (Allah) in red throughout the hadith texts, in both Arabic and English."), isOn: $hadithSettings.highlightAllahNamesHadith)
                 }
             }
@@ -161,7 +161,7 @@ struct SettingsHadithView: View {
     private var arabicTextDestination: some View {
         List {
             Group {
-                Section {
+                Section(header: Text("ARABIC TEXT")) {
                     SettingsToggle(String(localized: "Show Arabic"), isOn: Binding(
                         get: { settings.showHadithArabic },
                         set: { newValue in
@@ -176,18 +176,20 @@ struct SettingsHadithView: View {
 
                 if settings.showHadithArabic {
                     // The footer is the chosen face's own story (same captions as the Quran font picker).
-                    Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption.localizedDigits)) {
+                    Section(header: Text("FONT"), footer: Text(settings.islamArabicFace.historyCaption.localizedDigits)) {
                         IslamArabicFontPicker()
+                    }
 
-                        // The Quran settings' font controls, one for one: the size slider with its
-                        // sample, then the system-size switch.
+                    // The Quran settings' size controls, one for one: the slider with its sample, then
+                    // the device-size switch, in a section of their own as on Arabic Text there.
+                    Section(header: Text("SIZE")) {
                         VStack(alignment: .leading, spacing: 12) {
                             FontSizeSlider(String(localized: "Arabic Font Size"), value: $hadithSettings.hadithArabicFontSize, in: 15...40,
                                            sample: Settings.hadithArabicSizeSample,
                                            fontName: settings.hadithArabicWantsCustomFace ? settings.nonQuranArabicFontName : nil,
                                            glyph: "ب")
 
-                            SettingsToggle(String(localized: "Use System Font Size"), isOn: useSystemArabicFontSize)
+                            SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemArabicFontSize)
                         }
                     }
                 }
@@ -203,7 +205,7 @@ struct SettingsHadithView: View {
             Group {
                 // No separate narrator toggle: the narrator is part of the English text and
                 // simply shows whenever English does - one less switch to reason about.
-                Section {
+                Section(header: Text("ENGLISH TEXT")) {
                     SettingsToggle(String(localized: "Show English"), isOn: Binding(
                         get: { settings.showHadithEnglish },
                         set: { newValue in
@@ -216,12 +218,12 @@ struct SettingsHadithView: View {
                 }
 
                 if settings.showHadithEnglish {
-                    Section(header: Text("ENGLISH FONT")) {
+                    Section(header: Text("SIZE")) {
                         VStack(alignment: .leading, spacing: 12) {
                             FontSizeSlider(String(localized: "English Font Size"), value: $hadithSettings.hadithEnglishFontSize, in: 10...32,
                                            sample: Settings.hadithEnglishSizeSample)
 
-                            SettingsToggle(String(localized: "Use System Font Size"), isOn: useSystemEnglishFontSize)
+                            SettingsToggle(String(localized: "Use Device Text Size"), isOn: useSystemEnglishFontSize)
                         }
                     }
                 }
@@ -244,9 +246,9 @@ extension SettingsSearchEntry {
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
         .init(title: "Need a Hand? on the Hadith Tab", path: "Hadith Settings", keywords: "need a hand help shortcuts questions show hide hadith tab one language arabic english allah red", destination: .hadithSettings, isAvailable: { !Settings.shared.hides(.pageHelpDoors) }),
         .init(title: "Show Hadith Arabic", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic text toggle display", destination: .hadithPage(.arabicText)),
-        .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system", destination: .hadithPage(.arabicText)),
+        .init(title: "Hadith Arabic Font & Size", path: "Hadith Settings → Arabic Text", keywords: "hadith arabic font face size slider system device", destination: .hadithPage(.arabicText)),
         .init(title: "Show Hadith English", path: "Hadith Settings → English Text", keywords: "hadith english translation narrator toggle display", destination: .hadithPage(.englishText)),
-        .init(title: "Hadith English Font Size", path: "Hadith Settings → English Text", keywords: "hadith english font size slider system", destination: .hadithPage(.englishText)),
+        .init(title: "Hadith English Font Size", path: "Hadith Settings → English Text", keywords: "hadith english font size slider system device", destination: .hadithPage(.englishText)),
         .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithPage(.readingView)),
         .init(title: "Show Hadith of the Day", path: "Hadith Settings → Reading View", keywords: "hadith of the day daily tile summary show hide", destination: .hadithPage(.readingView)),
     ]

@@ -20,6 +20,29 @@ func ayahSheetTitle(surahNumber: Int, ayahNumber: Int, endAyah: Int? = nil, engl
     return "\(name) \(english ? reference : reference.localizedDigits)"
 }
 
+/// The other language's form of `ayahSheetTitle`, for a reference line that names the ayah both ways
+/// (Abu, 2026-10-26, the ayah actions sheet: the English on one side, "do the same thing in Arabic" on
+/// the other, a spacer between them, as the reader's title pill names a surah): the Arabic name with
+/// Arabic-Indic digits under an English interface, the transliteration with Western digits under an
+/// Arabic one.
+func ayahSheetCounterpartTitle(surahNumber: Int, ayahNumber: Int, endAyah: Int? = nil) -> String? {
+    if AppLanguage.isArabicScript {
+        return ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber, endAyah: endAyah, english: true)
+    }
+    guard let surah = QuranData.shared.surah(surahNumber) else { return nil }
+    let reference: String
+    if let endAyah, endAyah > ayahNumber {
+        reference = "\(surahNumber):\(ayahNumber)-\(endAyah)"
+    } else {
+        reference = "\(surahNumber):\(ayahNumber)"
+    }
+    let arabicIndic = String(reference.map { ch -> Character in
+        guard let digit = ch.wholeNumberValue, let scalar = UnicodeScalar(0x0660 + digit) else { return ch }
+        return Character(scalar)
+    })
+    return "\(surah.nameArabic) \(arabicIndic)"
+}
+
 /// The English translation currently being shown, by name - so ayah sheets can mention it consistently.
 /// Mirrors the reader's own precedence (Saheeh unless only Mustafa is enabled).
 func currentTranslationDisplayName() -> String {
@@ -781,6 +804,8 @@ struct AyahContextMenuModifier: ViewModifier {
 
             Divider()
         } else if lastRead {
+            // Remove only. Delete Forever used to turn the Show Last Read Ayah switch off, and that
+            // switch left Quran Settings on 2026-10-25: a hide with no way back is no option at all.
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation {
@@ -788,11 +813,6 @@ struct AyahContextMenuModifier: ViewModifier {
                     settings.lastReadAyah = 0
                 }
             } label: { Label("Remove", systemImage: "minus.circle") }
-
-            Button(role: .destructive) {
-                settings.hapticFeedback()
-                confirmDeleteForever = true
-            } label: { Label("Delete Forever", systemImage: "trash") }
 
             Divider()
         }
@@ -1078,20 +1098,12 @@ struct AyahContextMenuModifier: ViewModifier {
                 Button("Remove Permanently", role: .destructive) {
                     settings.hapticFeedback()
                     withAnimation {
-                        if ayahOfTheDay {
-                            settings.showAyahOfTheDay = false
-                        } else {
-                            settings.lastReadSurah = 0
-                            settings.lastReadAyah = 0
-                            settings.saveLastReadAyah = false
-                        }
+                        settings.showAyahOfTheDay = false
                     }
                 }
                 Button("Cancel") {}
             } message: {
-                Text(ayahOfTheDay
-                     ? "You can re-enable Ayah of the Day later in Quran Settings."
-                     : "You can re-enable Last Read Ayah later in Quran Settings.")
+                Text("You can re-enable Ayah of the Day later in Quran Settings.")
             }
         #else
         content
@@ -1472,7 +1484,7 @@ extension FocusItem {
         let footnote = String(localized: "\(surah.type.capitalized.localizedDisplay) · \(surah.numberOfAyahs) ayahs")
         // In Arabic the hero already IS the name and there is no English meaning: the caption carries
         // the type and length alone, and the share text names the surah once.
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             return FocusItem(
                 id: "surah-\(surah.id)",
                 arabic: displayName,
@@ -1640,17 +1652,11 @@ struct SelectAyahTextSheet: View {
                             // picker has moved off the riwayah the ayah was tapped under - on the same
                             // riwayah the resolution is the identity (same rule as the share sheet).
                             if selectedQiraahDiffersFromOrigin {
-                                Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
-                                    Label("Smart Ayah Matching", systemImage: "wand.and.stars")
-                                }
-                                .font(.subheadline)
-                                .onChange(of: smartAyahMatching) { _ in settings.hapticFeedback() }
+                                SettingsToggle(String(localized: "Smart Ayah Matching"), systemImage: "wand.and.stars", isOn: $smartAyahMatching)
                             }
                         } footer: {
                             if selectedQiraahDiffersFromOrigin {
                                 Text(riwayahFooterText)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
                             }
                         }
                     }
@@ -1672,19 +1678,13 @@ struct SelectAyahTextSheet: View {
                         .pickerStyle(.menu)
                         .onChange(of: selectedFontName) { _ in settings.hapticFeedback() }
 
-                        Toggle("Hide Tashkeel (Vowel Diacritics) and Signs", isOn: $hideTashkeel.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: hideTashkeel) { _ in settings.hapticFeedback() }
+                        SettingsToggle(String(localized: "Hide Tashkeel (Vowel Diacritics) and Signs"), isOn: $hideTashkeel)
 
                         // Independent, like the settings page it is seeded from: gating this row
                         // on the one above made "dots hidden, tashkeel shown" unreachable here too.
-                        Toggle("Hide Arabic Dots", isOn: $hideDots.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: hideDots) { _ in settings.hapticFeedback() }
+                        SettingsToggle(String(localized: "Hide Arabic Dots"), isOn: $hideDots)
                     } footer: {
                         Text("Shapes only the Arabic text below; the reading view keeps its own settings.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
 
                     if ayahExistsInSelectedQiraah {

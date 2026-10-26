@@ -1645,7 +1645,6 @@ struct PrayerTrackerView: View {
         Section(
             header: Text("MENSTRUATION & POSTPARTUM"),
             footer: Text("During menstruation or postpartum bleeding, the five daily prayers are not obligatory and are not made up afterward; this is Allah's mercy, not a shortfall. While paused, days are marked exempt: they never break a streak or count in any statistic, and \"Did you pray?\" reminders stay silent. Prayer time notifications continue as usual. Past days can be corrected with the exempt toggle in the Day view.")
-                .font(.caption2)
         ) {
             Toggle(isOn: Binding(
                 get: { settings.mensesPauseActive },

@@ -406,7 +406,7 @@ final class CloudBackupManager: ObservableObject {
     func restore(_ snapshot: CloudSnapshot, from profile: ProfileSummary, mode: CloudSnapshot.RestoreMode, claim: Bool) async throws {
         if claim { try await ensureZone() }
         snapshot.apply(mode)
-        let how = mode == .replace ? String(localized: "Replace") : String(localized: "Merge")
+        let how = mode == .replace ? String(localized: "Replace") : String(localized: "backup.merge", defaultValue: "Merge")
         guard claim else {
             record(.restored, String(localized: "Restored \u{201C}\(profile.nickname)\u{201D} with \(how)"))
             return
@@ -426,7 +426,7 @@ final class CloudBackupManager: ObservableObject {
     /// profile behind it.
     func restore(file snapshot: CloudSnapshot, named name: String, mode: CloudSnapshot.RestoreMode) {
         snapshot.apply(mode)
-        record(.restored, String(localized: "Restored the file \u{201C}\(name)\u{201D} with \(mode == .replace ? String(localized: "Replace") : String(localized: "Merge"))"))
+        record(.restored, String(localized: "Restored the file \u{201C}\(name)\u{201D} with \(mode == .replace ? String(localized: "Replace") : String(localized: "backup.merge", defaultValue: "Merge"))"))
     }
 
     /// Stops backing up from this device. The profile stays in iCloud for a restore later.

@@ -219,7 +219,7 @@ enum HadithDigits {
 
     static func display(_ ascii: String) -> String {
         let digits = ascii.localizedDigits
-        guard AppLanguage.isArabic, let last = digits.last, let letter = variantLetters[last],
+        guard AppLanguage.isArabicScript, let last = digits.last, let letter = variantLetters[last],
               digits.dropLast().last?.isNumber == true else { return digits }
         return String(digits.dropLast()) + String(letter)
     }
@@ -920,7 +920,7 @@ extension Array where Element == HadithRankedSearch.Correction {
     /// "Showing results for ... instead of ..." line: curly quotes and commas in English, guillemets
     /// in the Arabic list format in Arabic.
     func quotedWords(_ side: KeyPath<HadithRankedSearch.Correction, String>) -> String {
-        let quoted = map { AppLanguage.isArabic ? "\u{00AB}\($0[keyPath: side])\u{00BB}" : "\u{201C}\($0[keyPath: side])\u{201D}" }
+        let quoted = map { AppLanguage.isArabicScript ? "\u{00AB}\($0[keyPath: side])\u{00BB}" : "\u{201C}\($0[keyPath: side])\u{201D}" }
         return quoted.sentenceList { $0.joined(separator: ", ") }
     }
 }
@@ -1784,7 +1784,7 @@ extension FocusItem {
     static func hadithBook(_ book: HadithCatalogBook) -> FocusItem {
         // The Arabic interface: the Arabic title is the hero, so the caption under it names the
         // compiler and the date instead of repeating the title in English.
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             return FocusItem(
                 id: "hadith-book-\(book.slug)",
                 arabic: book.arabicTitle,
@@ -1810,7 +1810,7 @@ extension FocusItem {
     static func hadithChapter(book: HadithCatalogBook, chapter: HadithBookData.Chapter, ordinal: Int, rangeText: String?) -> FocusItem {
         // The Arabic interface: the Arabic name is the hero, so the caption under it gives the
         // chapter's number and the book's Arabic title instead of the English names.
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             let number = ordinal == 0 ? String(localized: "Introduction") : String(localized: "Chapter \(ordinal)")
             let name = chapter.displayTitle(in: book)
             return FocusItem(
@@ -1967,7 +1967,7 @@ struct HadithShareSheet: View {
         } else if includeReference, !includeArabic {
             // The reference alone (every text part off): the bare English citation, as before; the
             // Arabic one in the Arabic interface.
-            parts.append(AppLanguage.isArabic
+            parts.append(AppLanguage.isArabicScript
                 ? arabicReference(book: book, hadith: hadith, hideTashkeel: hideTashkeel)
                 : englishReference(book: book, hadith: hadith))
         }
@@ -2206,15 +2206,14 @@ struct HadithShareSheet: View {
         .padding(.vertical, 4)
     }
 
-    /// The ayah sheet's secondary-option row: the same 0.8 scale and negative inset, so an option that
-    /// modifies a part reads quieter than the part's own switch.
+    /// A secondary option (one that modifies a part) at the same size as the part's own switch: until
+    /// 2026-10-26 it was scaled to 0.8, the one shrunken switch left in the app.
     @ViewBuilder
     private func compactToggle(_ title: LocalizedStringKey, _ binding: Binding<Bool>) -> some View {
         Toggle(title, isOn: binding.animation(.easeInOut))
             .tint(settings.accentColor.color)
-            .scaleEffect(0.8)
-            .padding(.horizontal, -24)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
     }
 
     private func actionButton(_ title: String, isAnimating: Bool = false, action: @escaping () -> Void) -> some View {

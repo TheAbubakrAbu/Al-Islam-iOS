@@ -33,22 +33,23 @@ struct WelcomeActionBar: View {
 
     var body: some View {
         VStack(spacing: 6) {
+            // The system's prominent button on the accent, the call to action every notice in the app
+            // ends with (`BetaTextConsentCard`); it was a tinted glass slab of its own until 2026-10-26.
             Button {
                 Settings.shared.hapticFeedback()
                 primaryAction()
             } label: {
                 HStack(spacing: 8) {
-                    if primaryBusy { ProgressView().tint(.primary) }
+                    if primaryBusy { ProgressView().tint(.white) }
                     Text(primaryTitle)
                         .font(.headline)
-                        .foregroundColor(.primary)
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, 8)
             }
-            .conditionalGlassEffect(rectangle: true, useColor: 0.38, customTint: AppIdentifiers.mainColor.color)
+            .buttonStyle(.borderedProminent)
+            .tint(Settings.shared.accentColor.color)
             .disabled(!primaryEnabled || primaryBusy)
-            .opacity(primaryEnabled ? 1 : 0.5)
             .modifier(OptionalIdentifier(identifier: primaryIdentifier))
 
             if secondaryTitle != nil || backAction != nil {
@@ -78,7 +79,9 @@ struct WelcomeActionBar: View {
                 Text(title)
             }
             .font(.subheadline.weight(.medium))
-            .foregroundColor(.secondary)
+            // The accent, as a text link under a prominent button reads on the system's own sheets
+            // ("Not Now" under "Continue").
+            .foregroundColor(Settings.shared.accentColor.color)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())

@@ -27,7 +27,7 @@ struct ThemeTopic: Identifiable {
 
     /// The name a reader sees: the Arabic one in an Arabic interface when there is one. DISPLAY only:
     /// search, ranking and ids keep `name`.
-    var displayName: String { AppLanguage.isArabic && !arabicName.isEmpty ? arabicName : name }
+    var displayName: String { AppLanguage.isArabicScript && !arabicName.isEmpty ? arabicName : name }
 
     /// True when `displayName` is English (the line reads left to right inside the Arabic interface).
     var displaysEnglish: Bool { displayName == name }
@@ -493,30 +493,27 @@ struct ThemesBrowseView: View {
 
         List {
             // What this screen is, said here rather than as a caption on the door that opens it
-            // (Abu, 2026-09-07). Hidden while searching - the results are the answer then.
+            // (Abu, 2026-09-07), as the hero card the Hadith tab's Browse by Topic and every Islam
+            // resource open with (2026-10-26; a plain paragraph before). Hidden while searching - the
+            // results are the answer then.
             if !isSearching {
-                Section {
-                    Text(verbatim: String(localized: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                ResourceHeroSection(ResourceHero(
+                    eyebrow: String(localized: "BROWSE BY THEME"),
+                    systemImage: "highlighter",
+                    headline: String(localized: "What the ayahs speak about"),
+                    message: String(localized: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read.")
+                ))
 
+                Section {
                     // The passages and the legend: every theme here is lit in its meaning's colour, and
                     // that screen says what the colours mean and washes whole surahs by passage.
                     NavigationLink(destination: LazyDestination { ThemeHighlightsView(onOpenAyah: onOpenAyah) }) {
-                        HStack(spacing: 12) {
-                            ThemeLegendChip(size: 30)
-
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Highlight Themes")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.primary)
-                                Text(themeHighlights.isEmpty ? String(localized: "Color-coded passages and what each color means") : themeHighlights.summary)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(.vertical, 3)
+                        SettingsRowLabel(
+                            title: String(localized: "Highlight Themes"),
+                            systemImage: "paintpalette.fill",
+                            subtitle: themeHighlights.isEmpty ? String(localized: "Color-coded passages and what each color means") : themeHighlights.summary,
+                            chip: AnyView(ThemeLegendChip(size: 29))
+                        )
                     }
                     .tint(settings.accentColor.color)
                 }
@@ -524,15 +521,10 @@ struct ThemesBrowseView: View {
 
             // What is lit in the reader right now, with a way to put each one (or all) out.
             if !isSearching, !themeHighlights.lit.isEmpty {
-                Section(header: HStack {
-                    Text("LIT IN THE READER")
-                    Spacer()
-                    Button("Clear All") {
-                        settings.hapticFeedback()
+                Section(header: SectionHeaderLine(String(localized: "LIT IN THE READER")) {
+                    SectionHeaderAction(String(localized: "Clear All")) {
                         withAnimation(.easeInOut) { themeHighlights.clear() }
                     }
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
                 }) {
                     ForEach(themeHighlights.lit) { theme in
                         HStack(spacing: 10) {
@@ -576,11 +568,10 @@ struct ThemesBrowseView: View {
             if !isSearching {
                 Section(footer:
                     Text(family.footnote.localizedDigits)
-                        .font(.caption2)
                 ) { EmptyView() }
             }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         #if DEBUG
         // "-openThemeTopic" pushes the first topic on launch, so the ayah rows (which are the reader's
         // own AyahRow) can be verified headlessly. Through the List's own destination (see
@@ -848,7 +839,6 @@ struct ThemeTopicDetailView: View {
                     .tint(settings.accentColor.color)
                 } footer: {
                     Text("Up to \(ThemeHighlights.limit) themes can be lit at once, each in the color of what it speaks about, in the list and page readers. Put them out here, at the top of Browse by Theme, or under Highlight Themes, which also says what every color means.")
-                        .font(.caption)
                 }
             }
 
@@ -889,7 +879,7 @@ struct ThemeTopicDetailView: View {
                 }
             }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .applyConditionalListStyle()
         .navigationTitle(topic.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $rowSheet) { request in

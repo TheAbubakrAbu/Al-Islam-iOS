@@ -505,7 +505,11 @@
 		7ADD180E00000000AA0018 /* QuranHistoryRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD180D00000000AA0018 /* QuranHistoryRows.swift */; };
 		7ADD180F00000000AA0018 /* QuranHistoryRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD180D00000000AA0018 /* QuranHistoryRows.swift */; };
 		7ADD181100000000AA0018 /* HowToGuides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181000000000AA0018 /* HowToGuides.swift */; };
+		4F50A4D3C7BC4D29BA3858CF /* SunnahContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E9CB3C0F9C14DC0A39E84CE /* SunnahContent.swift */; };
+		D57C7FA12AF64555B8EB3B62 /* SunnahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB871D8FD9E84CE690592DF8 /* SunnahView.swift */; };
 		7ADD181200000000AA0018 /* HowToGuides.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181000000000AA0018 /* HowToGuides.swift */; };
+		1A5C7E953B4347198883E090 /* SunnahContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E9CB3C0F9C14DC0A39E84CE /* SunnahContent.swift */; };
+		15962CB0BB324E17B6B4DECE /* SunnahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB871D8FD9E84CE690592DF8 /* SunnahView.swift */; };
 		7ADD181400000000AA0018 /* PillarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181300000000AA0018 /* PillarViews.swift */; };
 		7ADD181500000000AA0018 /* PillarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181300000000AA0018 /* PillarViews.swift */; };
 		7ADD181700000000AA0018 /* BeliefsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181600000000AA0018 /* BeliefsViews.swift */; };
@@ -1132,6 +1136,8 @@
 		7ADD180A00000000AA0018 /* ComparisonSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonSheets.swift; sourceTree = "<group>"; };
 		7ADD180D00000000AA0018 /* QuranHistoryRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranHistoryRows.swift; sourceTree = "<group>"; };
 		7ADD181000000000AA0018 /* HowToGuides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToGuides.swift; sourceTree = "<group>"; };
+		5E9CB3C0F9C14DC0A39E84CE /* SunnahContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunnahContent.swift; sourceTree = "<group>"; };
+		EB871D8FD9E84CE690592DF8 /* SunnahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SunnahView.swift; sourceTree = "<group>"; };
 		7ADD181300000000AA0018 /* PillarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillarViews.swift; sourceTree = "<group>"; };
 		7ADD181600000000AA0018 /* BeliefsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeliefsViews.swift; sourceTree = "<group>"; };
 		7ADD181900000000AA0018 /* TajweedCourse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedCourse.swift; sourceTree = "<group>"; };
@@ -1505,6 +1511,8 @@
 				72FA0001AB5F4C7D00000001 /* ZakahView.swift */,
 				A7C5ABEFBEFA4ABEB70FA559 /* ZakatAlFitrView.swift */,
 				7ADD181000000000AA0018 /* HowToGuides.swift */,
+				5E9CB3C0F9C14DC0A39E84CE /* SunnahContent.swift */,
+				EB871D8FD9E84CE690592DF8 /* SunnahView.swift */,
 			);
 			path = Fiqh;
 			sourceTree = "<group>";
@@ -2529,6 +2537,7 @@
 				en,
 				Base,
 				ar,
+				ur,
 			);
 			mainGroup = 725E6F442A1C687500AF8854;
 			packageReferences = (
@@ -2992,6 +3001,8 @@
 				873E10AA0AD141518B45472B /* HadithSciencesViews.swift in Sources */,
 				7ADD9A1100000000AA0018 /* ProphetViews.swift in Sources */,
 				7ADD181100000000AA0018 /* HowToGuides.swift in Sources */,
+				4F50A4D3C7BC4D29BA3858CF /* SunnahContent.swift in Sources */,
+				D57C7FA12AF64555B8EB3B62 /* SunnahView.swift in Sources */,
 				7260F9412A8715D600E8FF87 /* PrayerCountdown.swift in Sources */,
 				3FBAC7BCA3B34D59B84EEAB5 /* ClockChangeNotice.swift in Sources */,
 				720DEC5B2D244EEF006EA342 /* CreditsView.swift in Sources */,
@@ -3241,6 +3252,8 @@
 				6CA9CC7DAEAF4F04B496099F /* HadithSciencesViews.swift in Sources */,
 				7ADD9A1200000000AA0018 /* ProphetViews.swift in Sources */,
 				7ADD181200000000AA0018 /* HowToGuides.swift in Sources */,
+				1A5C7E953B4347198883E090 /* SunnahContent.swift in Sources */,
+				15962CB0BB324E17B6B4DECE /* SunnahView.swift in Sources */,
 				720CCE1B2E394375002DD82E /* QuranPlayer.swift in Sources */,
 				72D47B0000000000000000D4 /* ScreenWakeLock.swift in Sources */,
 				72827EA62E3C425300EBA534 /* SettingsAdhanView.swift in Sources */,

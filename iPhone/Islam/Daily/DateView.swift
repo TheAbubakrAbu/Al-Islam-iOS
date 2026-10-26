@@ -194,7 +194,7 @@ struct DateView: View {
                 // transliteration of it. Dates always render in the basic system face - the classical
                 // Quranic faces are for scripture, and their ornamental digits make dates hard to read.
                 // An Arabic interface already writes the line above this way, so it is not said twice.
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Text(hijriArabicText)
                         .font(.body)
                         .arabicFontDesign(custom: false)
@@ -213,7 +213,7 @@ struct DateView: View {
                     Label("Copy Hijri Date", systemImage: "doc.on.doc")
                 }
 
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
                     Button {
                         settings.hapticFeedback()
                         UIPasteboard.general.string = hijriArabicText

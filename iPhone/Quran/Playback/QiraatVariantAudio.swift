@@ -283,14 +283,9 @@ struct QiraatVariantAudioButtons: View {
                         .font(.caption2)
                 }
                 Text(playing ? "Stop" : "Hear \(label)")
-                    .font(.caption.weight(.semibold))
             }
-            .foregroundColor(playing ? .white : appearance.accent)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(playing ? appearance.accent : appearance.accent.opacity(0.12)))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.accentChip(filled: playing))
         .accessibilityLabel(playing ? "Stop" : "Hear the verse as \(label) reads it")
     }
 }

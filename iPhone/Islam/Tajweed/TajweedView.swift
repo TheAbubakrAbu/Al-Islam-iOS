@@ -131,7 +131,6 @@ struct TajweedCourseView: View {
 
                     Section(footer:
                         Text("Curriculum by Jamil Hammoudeh for Tilawa, used with permission, merged lesson by lesson with Al-Islam's Tajweed Foundations. Hafs an Asim, by the way of ash-Shatibiyyah. Example ayahs play in your chosen reciter.")
-                            .font(.caption2)
                     ) { EmptyView() }
                 } else if course == nil, TajweedLessonsStore.isBundled {
                     // Typed before the pack landed: the spinner, not "no lessons match".
@@ -235,21 +234,17 @@ struct TajweedCourseView: View {
         })
 
         if let next {
-            Section {
+            // Where to pick up, as a door row under its own header (it was an eyebrow and a title
+            // beside a play glyph until 2026-10-26, the one row of the course in its own grammar).
+            let position = (lessons.firstIndex(where: { $0.id == next.id }) ?? 0) + 1
+            Section(header: Text("CONTINUE")) {
                 NavigationLink(destination: LazyDestination { TajweedLessonDetailView(lesson: next) }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "play.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("CONTINUE")
-                                .font(.caption2.weight(.heavy))
-                                .tracking(0.7)
-                                .foregroundStyle(.secondary)
-                            Text(next.titleEn.localizedDisplay)
-                                .font(.subheadline.weight(.semibold))
-                        }
-                    }
+                    SettingsRowLabel(
+                        title: next.titleEn.localizedDisplay,
+                        systemImage: "play.fill",
+                        subtitle: String(localized: "Lesson \(position) of \(lessons.count)"),
+                        tint: accent
+                    )
                     .padding(.vertical, 2)
                 }
             }
@@ -272,25 +267,13 @@ struct TajweedCourseView: View {
         let passed = testProgress.passedCount(in: tiers)
         Section(header: Text("TEST YOURSELF")) {
             NavigationLink(destination: LazyDestination { TajweedTestView() }) {
-                HStack(spacing: 12) {
-                    AccentIconChip(systemImage: "checkmark.seal.fill", size: 30)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Tajweed Test")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                        Text(passed > 0 ? String(localized: "\(passed) of \(tiers.count) chapters passed")
-                             : String(localized: "A scored test for every chapter, built from its lessons"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    if passed > 0 {
-                        Text("\(passed)/\(tiers.count)")
-                            .font(.caption.weight(.bold))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                SettingsRowLabel(
+                    title: String(localized: "Tajweed Test"),
+                    systemImage: "checkmark.seal.fill",
+                    subtitle: passed > 0 ? String(localized: "\(passed) of \(tiers.count) chapters passed")
+                        : String(localized: "A scored test for every chapter, built from its lessons"),
+                    value: passed > 0 ? "\(passed)/\(tiers.count)" : nil
+                )
                 .padding(.vertical, 2)
             }
         }

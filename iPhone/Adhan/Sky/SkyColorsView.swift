@@ -14,32 +14,27 @@ struct SkyColorsView: View {
 
     var body: some View {
         List {
-            Section {
+            Section(header: Text("PREVIEW")) {
                 preview
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
             }
 
-            Section(header: Text("SKY COLORS")) {
+            Section(header: Text("SKY COLORS"),
+                    footer: Text("These color the sky at the top of the Adhan tab. Friday's Jumuah, the combined traveling prayers and the optional night times follow the prayer they belong to.")) {
                 ForEach(SkyPalette.editablePrayers, id: \.self) { prayer in
                     row(for: prayer)
                 }
-
-                Text("These color the sky at the top of the Adhan tab. Friday's Jumuah, the combined traveling prayers and the optional night times follow the prayer they belong to.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
             }
             .themedListRowBackground()
 
             if settings.hasCustomSkyGradients {
-                Section {
+                Section(header: Text("RESET")) {
                     Button(role: .destructive) {
                         settings.hapticFeedback()
                         withAnimation { settings.resetSkyGradients() }
                     } label: {
                         Text("Restore Default Colors")
-                            .font(.subheadline)
                             .frame(maxWidth: .infinity)
                     }
                 }

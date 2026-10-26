@@ -356,7 +356,7 @@ struct TajweedLegendView: View {
             }
         } label: {
             Label(
-                AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
+                AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
                 systemImage: group.options.contains(where: { option in
                     previewTag.map { tag in
                         Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.canonicalTag(option.tag)
@@ -422,7 +422,7 @@ struct TajweedLegendView: View {
         LazyVStack(alignment: .leading, spacing: 14) {
             ForEach(Self.compareQiraahGroups) { group in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher.uppercased()) - \(group.teacherArabic)")
+                    Text(AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher.uppercased()) - \(group.teacherArabic)")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
 
@@ -431,7 +431,7 @@ struct TajweedLegendView: View {
                         // caption (the same name again) stays empty there.
                         compareCardShell(
                             title: Settings.Riwayah.option(for: Settings.Riwayah.hafsTag).displayLabel(),
-                            arabic: AppLanguage.isArabic ? "" : Settings.Riwayah.hafsArabic
+                            arabic: AppLanguage.isArabicScript ? "" : Settings.Riwayah.hafsArabic
                         ) {
                             ForEach(TajweedLegendCategory.allCases.sorted { $0.sortRank < $1.sortRank }) { item in
                                 compareRuleRow(color: item.color, english: item.transliteration)
@@ -442,7 +442,7 @@ struct TajweedLegendView: View {
                     }
 
                     ForEach(group.options, id: \.tag) { option in
-                        compareCardShell(title: option.displayLabel(), arabic: AppLanguage.isArabic ? "" : option.arabic) {
+                        compareCardShell(title: option.displayLabel(), arabic: AppLanguage.isArabicScript ? "" : option.arabic) {
                             ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
                                 compareRuleRow(color: entry.color, english: entry.english.localizedDisplay)
                             }
@@ -636,7 +636,7 @@ struct TajweedLegendView: View {
                     CompareRuleRowItem(
                         id: "\(key)-hafs-\(category.rawValue)",
                         color: category.color,
-                        title: AppLanguage.isArabic
+                        title: AppLanguage.isArabicScript
                             ? "\(Settings.Riwayah.option(for: Settings.Riwayah.hafsTag).displayLabel(omitsDefaultSuffix: true)) - \(category.transliteration)"
                             : "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)",
                         tag: Settings.Riwayah.hafsTag
@@ -687,7 +687,7 @@ struct TajweedLegendView: View {
             .map { String(localized: "“\($0.english.localizedDisplay)” in \(ListFormatter.localizedString(byJoining: $0.labels))") }
         guard !others.isEmpty else { return "" }
         // Arabic separates the clauses with its own semicolon ("؛").
-        let separator = AppLanguage.isArabic ? "؛ " : "; "
+        let separator = AppLanguage.isArabicScript ? "؛ " : "; "
         return String(localized: "The prints caption it differently: \(others.joined(separator: separator)); “\(majority.english.localizedDisplay)” in the rest.")
     }
 

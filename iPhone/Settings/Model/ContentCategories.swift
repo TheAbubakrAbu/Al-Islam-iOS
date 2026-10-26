@@ -68,6 +68,7 @@ struct ContentCategory: Identifiable {
         ContentCategory(
             id: "positions", title: String(localized: "Reading and Listening"), systemImage: "book.fill",
             keys: ["lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
+                   "mushafResumeSurah", "mushafResumeAyah",
                    "quranReadingHistoryData", "quranListeningHistoryData", "quranAyahListeningHistoryData",
                    "customRangeHistoryData", "quranSearchHistoryData", "surahOpenCountsData", "surahPlayCountsData",
                    "hadithLastReadByBook", "hadithViewedLog", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts"],

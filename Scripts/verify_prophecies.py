@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Gate the Prophecies of the Prophet and Miracles of the Prophets libraries against THIS APP'S OWN
-hadith shelf and Quran. Non-zero exit means do not ship.
+"""Gate the Prophecies of the Prophet, Miracles of the Prophets and Sunnahs of the Prophet libraries
+against THIS APP'S OWN hadith shelf and Quran. Non-zero exit means do not ship.
 
     python3 Scripts/verify_prophecies.py              # check every article in both libraries
     python3 Scripts/verify_prophecies.py --show       # also print each quote as the screen shows it
@@ -37,7 +37,9 @@ from hadith_spans import row as shelf_row, words as shelf_words  # noqa: E402
 LIBRARIES = [ROOT / "iPhone/Islam/Proofs" / name for name in (
     "PropheciesView.swift", "PropheciesContent.swift",
     "ProphetMiraclesView.swift", "ProphetMiraclesContent.swift",
-    "SignsAndProphets.swift", "MiraclesView.swift")]
+    "SignsAndProphets.swift", "MiraclesView.swift")] + [
+    # The Sunnahs of the Prophet (2026-10-26) are the same data shape under the same rule.
+    ROOT / "iPhone/Islam/Fiqh/SunnahView.swift", ROOT / "iPhone/Islam/Fiqh/SunnahContent.swift"]
 
 SOUND = re.compile(r"sahih|hasan|صحيح|حسن", re.I)
 HADITH_RE = re.compile(
@@ -119,7 +121,8 @@ def check(paths, show):
             where = f"{path.name}:{line_of(m.start())}"
             if "\u2014" in text or "\\u{2014}" in text:
                 failures.append(f"{where}: em dash in {text[:60]!r}")
-            if " - " in text:
+            # A `\(a - b)` interpolation is Swift arithmetic, not a dash in prose ("Show \(n - 3) more").
+            if " - " in re.sub(r"\\\((?:[^()]|\([^()]*\))*\)", "", text):
                 failures.append(f"{where}: spaced hyphen standing in for a dash in {text[:60]!r}")
 
     print(f"{hadith_count} hadith references, {quran_count} Quran references checked in {len(paths)} files")

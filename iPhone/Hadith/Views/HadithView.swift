@@ -319,8 +319,25 @@ struct HadithView: View {
     }
     /// "Delete Forever" on the Hadith of the Day asks first, like the ayah card's.
     @State private var confirmDeleteDailyForever = false
-    /// Whether the daily section's history (last 5 days) is unfolded - the shuffle only shows here.
-    @State private var showDailyHistory = false
+    /// Which tile's recents are unfolded under the grid, the Quran tab's one expansion slot: the
+    /// Hadith of the Day's earlier days, or where each book was left. Until 2026-10-26 the daily
+    /// history alone unfolded, from a +/- in the header; the + sits in the tile's corner now, where
+    /// the Quran tab's tiles carry theirs.
+    @State private var summaryHistoryExpansion: SummaryHistoryKind?
+
+    enum SummaryHistoryKind { case daily, leftOff }
+
+    /// Toggle a tile's recents: the same tile collapses, a different tile takes over the one slot.
+    private func toggleSummaryExpansion(_ kind: SummaryHistoryKind) {
+        withAnimation(.easeInOut) {
+            summaryHistoryExpansion = summaryHistoryExpansion == kind ? nil : kind
+        }
+    }
+
+    /// Where each book was left, newest first (the History screen's WHERE YOU LEFT OFF).
+    private var leftOffEntries: [HadithLastRead] {
+        store.lastReadByBook.values.sorted { $0.timestamp > $1.timestamp }
+    }
     /// A hidden push target (shuffled bookmark, summary tiles) - HadithReferenceView by slug+number.
     @State private var pushedReference: HadithBookmark? = nil
 
@@ -993,21 +1010,21 @@ struct HadithView: View {
     private var dailyHistory: [HadithStore.DailyHadithEntry] { HadithStore.loadDailyHistory() }
 
 
-    private func dailyHistoryRow(_ entry: HadithStore.DailyHadithEntry, isToday: Bool) -> some View {
+    /// One unfolded row under the summary grid: an earlier Hadith of the Day, or where a book was
+    /// left. `isToday` adds the shuffle and today's menu (the Ayah of the Day history row's).
+    private func summaryHistoryRow(slug: String, idInBook: Int, reference: String, arabic: String, english: String,
+                                   date: Date, dimmed: Bool, isToday: Bool = false) -> some View {
         HStack(spacing: 8) {
             Button {
                 settings.hapticFeedback()
-                pushedReference = HadithBookmark(
-                    slug: entry.slug, idInBook: entry.idInBook,
-                    reference: entry.reference, preview: entry.englishPreview
-                )
+                pushedReference = HadithBookmark(slug: slug, idInBook: idInBook, reference: "", preview: english)
             } label: {
                 VStack(alignment: .leading, spacing: 3) {
                     // The timestamp lives ONLY here, in the expanded (+) rows - top-left, above the
                     // reference pill. The compact tiles stay clean.
-                    historyTimestampLabel(entry.date)
+                    historyTimestampLabel(date)
 
-                    Text(HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug))
+                    Text(reference)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
 
@@ -1020,11 +1037,11 @@ struct HadithView: View {
                     // The toggles gate the slots, not the content, because a toggle applies to every
                     // row at once and so cannot make the list ragged.
                     if settings.showHadithArabic {
-                        HadithArabicPreview(text: entry.arabicPreview, lineLimit: 2)
+                        HadithArabicPreview(text: arabic, lineLimit: 2)
                     }
 
                     if settings.showHadithEnglish {
-                        Text(entry.englishPreview)
+                        Text(english)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .reservedLineLimit(2)
@@ -1051,6 +1068,8 @@ struct HadithView: View {
             }
         }
         .padding(.vertical, 2)
+        // Same dimming the Quran tab gives its unfolded history, so "current" reads brighter.
+        .opacity(dimmed ? 0.75 : 1)
         // Today's row carries the tile's menu (the Ayah of the Day history row does the same).
         .contextMenu {
             if isToday, let pick = store.daily {
@@ -1065,39 +1084,23 @@ struct HadithView: View {
     /// tiles in one section. On by default; the full rows return when it's off (Hadith settings).
     @ViewBuilder
     private var summaryTilesSection: some View {
-        // The pill and the history button drop under the title where the three do not fit on one line
-        // (an iPad sidebar broke it into "YOUR / SUM- / MARY" beside "To- / da / y").
+        // The Quran tab's header, to the letter: the accent icon header, the Today pill at the
+        // trailing edge, the two dropping onto separate lines where they do not fit (an iPad sidebar
+        // broke it into "YOUR / SUM- / MARY" beside "To- / da / y"). Simple Mode keeps the tiles alone:
+        // Today moves into the More menu, and the history expanders step aside
+        // (Docs/Product/Simple Mode Guide.md).
+        let expandersHidden = settings.hides(.historyExpanders)
         Section(header:
-            AdaptiveSectionHeader(forceStacked: dynamicTypeSize.isAccessibilitySize) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .accessibilityHidden(true)
-
-                    Text("YOUR SUMMARY")
-                        .accessibilityAddTraits(.isHeader)
-                }
-            } controls: {
+            SectionHeaderLine(String(localized: "YOUR SUMMARY"), icon: "sparkles", accentTitle: true,
+                              forceStacked: dynamicTypeSize.isAccessibilitySize) {
                 // Everything of the day on one screen (2026-09-16): the door every daily card carries.
-                // Simple Mode keeps the tiles alone: Today moves into the More menu, and the history
-                // expander steps aside (Docs/Product/Simple Mode Guide.md).
                 if !settings.hides(.hadithTodayPill) {
                     NavigationLink(destination: LazyDestination { DailyHubView() }) {
                         DailyHubDoorLabel()
                     }
                     .buttonStyle(.plain)
                 }
-
-                if !dailyHistory.isEmpty, !settings.hides(.historyExpanders) {
-                    Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
-                        .padding(4)
-                        .conditionalGlassEffect()
-                        .onTapGesture {
-                            settings.hapticFeedback()
-                            withAnimation { showDailyHistory.toggle() }
-                        }
-                }
             }
-            .foregroundColor(settings.accentColor.color)
         ) {
             // The grid only when there is something in it: an empty grid would still draw its own
             // padded row.
@@ -1123,7 +1126,9 @@ struct HadithView: View {
                                 reference: dailyHadith.book.displayReference(dailyHadith.hadith.displayNumber),
                                 // The previews were captured when the pick was made - the tile never touches a pack.
                                 arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
-                                english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
+                                english: settings.showHadithEnglish ? dailyHadith.englishPreview : "",
+                                isExpanded: summaryHistoryExpansion == .daily,
+                                onExpand: expandersHidden || dailyHistory.isEmpty ? nil : { toggleSummaryExpansion(.daily) }
                             )
                         }
                         .confirmationDialog("Are you sure?", isPresented: $confirmDeleteDailyForever, titleVisibility: .visible) {
@@ -1143,7 +1148,10 @@ struct HadithView: View {
                             icon: "book",
                             reference: lastRead.displayReference,
                             arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
-                            english: settings.showHadithEnglish ? lastRead.englishPreview : ""
+                            english: settings.showHadithEnglish ? lastRead.englishPreview : "",
+                            isExpanded: summaryHistoryExpansion == .leftOff,
+                            // Where every other book was left: only once a second book has a position.
+                            onExpand: expandersHidden || leftOffEntries.count < 2 ? nil : { toggleSummaryExpansion(.leftOff) }
                         ) {
                             pushedReference = HadithBookmark(
                                 slug: lastRead.slug, idInBook: lastRead.idInBook,
@@ -1155,13 +1163,32 @@ struct HadithView: View {
                 .padding(.vertical, 4)
             }
 
-            if showDailyHistory, !settings.hides(.historyExpanders) {
-                ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
-                    dailyHistoryRow(entry, isToday: index == 0)
-                        .opacity(index == 0 ? 1 : 0.75)
+            // The one open expansion, unfolded as plain rows right under the tiles (the Quran tab's
+            // `summaryHistoryRows`). "Today" and the current book keep full brightness: they ARE the
+            // tile's own hadith, not history.
+            if !expandersHidden, let kind = summaryHistoryExpansion {
+                switch kind {
+                case .daily:
+                    ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
+                        summaryHistoryRow(
+                            slug: entry.slug, idInBook: entry.idInBook,
+                            reference: HadithCatalogBook.displayReference(stored: entry.reference, slug: entry.slug),
+                            arabic: entry.arabicPreview, english: entry.englishPreview, date: entry.date,
+                            dimmed: index != 0, isToday: index == 0
+                        )
+                        .transition(.opacity)
+                    }
+                case .leftOff:
+                    ForEach(leftOffEntries, id: \.slug) { entry in
+                        summaryHistoryRow(
+                            slug: entry.slug, idInBook: entry.idInBook, reference: entry.displayReference,
+                            arabic: entry.arabicPreview, english: entry.englishPreview, date: entry.timestamp,
+                            dimmed: entry.slug != store.lastRead?.slug
+                        )
+                        .transition(.opacity)
+                    }
                 }
             }
-
         }
     }
 
@@ -1170,12 +1197,14 @@ struct HadithView: View {
         dailyHadith != nil || store.lastRead != nil
     }
 
-    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, onTap: @escaping () -> Void) -> some View {
+    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String,
+                             isExpanded: Bool = false, onExpand: (() -> Void)? = nil, onTap: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             onTap()
         } label: {
-            summaryTileLabel(title: title, icon: icon, reference: reference, arabic: arabic, english: english)
+            summaryTileLabel(title: title, icon: icon, reference: reference, arabic: arabic, english: english,
+                             isExpanded: isExpanded, onExpand: onExpand)
         }
         .buttonStyle(.plain)
     }
@@ -1215,7 +1244,10 @@ struct HadithView: View {
         } label: { Label("Pick a Random Hadith", systemImage: "shuffle") }
     }
 
-    private func summaryTileLabel(title: String, icon: String, reference: String, arabic: String, english: String) -> some View {
+    /// `onExpand` grows the Quran tile's small +/- in the corner, which unfolds this tile's recents
+    /// under the grid (`summaryHistoryExpansion`).
+    private func summaryTileLabel(title: String, icon: String, reference: String, arabic: String, english: String,
+                                  isExpanded: Bool = false, onExpand: (() -> Void)? = nil) -> some View {
             // Tight on purpose (Abu, 2026-09-16), the Quran tab's tiles' exact grammar: 4 pt between
             // lines, 10 pt of padding, one line of each script, a small chip for the icon.
             // LEADING, unlike the short-label tiles elsewhere in the app, which centre (Abu,
@@ -1234,6 +1266,20 @@ struct HadithView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .layoutPriority(1)
+
+                    if let onExpand {
+                        Spacer(minLength: 0)
+
+                        Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
+                            .font(.caption)
+                            .foregroundColor(settings.accentColor.color)
+                            .contentShape(Rectangle().inset(by: -8))
+                            .onTapGesture {
+                                settings.hapticFeedback()
+                                onExpand()
+                            }
+                            .accessibilityLabel("Show recent \(title)")
+                    }
                 }
 
                 Text(reference)
@@ -1300,24 +1346,14 @@ struct HadithView: View {
 
     /// One "About Hadith" card: a Button through the summary's one door, not a NavigationLink (see
     /// `SummaryDoor`).
-    private func aboutDoorButton(_ title: String, door: SummaryDoor) -> some View {
+    private func aboutDoorRow(_ title: String, systemImage: String, door: SummaryDoor) -> some View {
         Button {
             guard !bookPushInFlight else { return }
             settings.hapticFeedback()
             openDoor = door
         } label: {
-            HStack {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .conditionalGlassEffect(clear: true, rectangle: true)
-            .contentShape(Rectangle())
-            .padding(.horizontal, -2)
+            SettingsRowLabel(title: title, systemImage: systemImage, showsChevron: true)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -1377,37 +1413,20 @@ struct HadithView: View {
 
     /// One polished orientation card: the two pillar screens as proper links on a glass card, with the
     /// pointer to where the full teachings live.
+    /// The Islam tab's five pages about the Sunnah, as a section of the tab root (an icon header,
+    /// a door row each, the pointer as the footer). Until 2026-10-26 it was one List row holding
+    /// five glass cards under a hand-drawn accent title, the only section of the root in its own
+    /// grammar. BUTTONS, not links: each pushes through `openDoor` and the List's one destination,
+    /// since a NavigationLink activates with every other link in its row (2026-09-19 audit), and a
+    /// row of its own per door keeps the rows pressable.
     private var aboutHadithSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "text.book.closed.fill")
-                        .font(.subheadline)
-                        .foregroundColor(settings.accentColor.color)
-
-                    Text("About Hadith & the Sunnah")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
-                }
-
-                // BUTTONS: both cards are in ONE List row (this VStack is the whole section's row),
-                // and two NavigationLinks in a row activate together - tapping either pushed both
-                // pillar screens (2026-09-19 audit).
-                aboutDoorButton(String(localized: "What is the Sunnah?"), door: .sunnah)
-
-                aboutDoorButton(String(localized: "What are Hadiths?"), door: .hadithPillar)
-
-                aboutDoorButton(String(localized: "The Sciences of Hadith"), door: .hadithSciences)
-
-                aboutDoorButton(String(localized: "How the Hadith Were Preserved"), door: .hadithPreservation)
-
-                aboutDoorButton(String(localized: "Answering the Hadith Rejectors"), door: .hadithRejectors)
-
-                Text("Learn more under Al-Islam → Pillars and Beliefs.")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 6)
+        Section(header: SectionIconHeader(String(localized: "ABOUT HADITH & THE SUNNAH"), icon: "text.book.closed.fill"),
+                footer: Text("Learn more under Al-Islam → Pillars and Beliefs.")) {
+            aboutDoorRow(String(localized: "What is the Sunnah?"), systemImage: "sun.max.fill", door: .sunnah)
+            aboutDoorRow(String(localized: "What are Hadiths?"), systemImage: "text.quote", door: .hadithPillar)
+            aboutDoorRow(String(localized: "The Sciences of Hadith"), systemImage: "graduationcap.fill", door: .hadithSciences)
+            aboutDoorRow(String(localized: "How the Hadith Were Preserved"), systemImage: "archivebox.fill", door: .hadithPreservation)
+            aboutDoorRow(String(localized: "Answering the Hadith Rejectors"), systemImage: "checkmark.shield.fill", door: .hadithRejectors)
         }
     }
 
@@ -1472,7 +1491,7 @@ struct HadithView: View {
                                 .font(.subheadline.weight(.semibold))
 
                             // The Arabic interface names the book once, in the line above.
-                            if !AppLanguage.isArabic {
+                            if !AppLanguage.isArabicScript {
                                 Text(reference.book.arabicTitle)
                                     .font(.caption)
                                     .foregroundColor(settings.accentColor.color)
@@ -1762,12 +1781,7 @@ struct HadithView: View {
 
     /// "ASK AI" with the sparkles glyph - the Quran search's `askAIHeader`, verbatim.
     private var hadithAskAIHeader: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "sparkles")
-            Text("ASK AI")
-
-            Spacer()
-        }
+        SectionIconHeader(String(localized: "ASK AI"), icon: "sparkles")
     }
 
     /// The one-tap Ask entry: press to open the Ask AI chat with exactly what's typed as its first
@@ -1859,7 +1873,7 @@ struct HadithView: View {
     private func bookSearchSectionHeader(book: HadithCatalogBook, matchCount: Int) -> some View {
         HStack(spacing: 6) {
             // The Arabic interface names the book once, by its Arabic title (Arabic has no case).
-            if AppLanguage.isArabic {
+            if AppLanguage.isArabicScript {
                 Text(book.displayTitle)
             } else {
                 Text(book.englishTitle.uppercased())
@@ -1899,7 +1913,7 @@ struct HadithView: View {
 
                 Spacer(minLength: 8)
 
-                if !AppLanguage.isArabic, !hit.chapter.arabic.isEmpty {
+                if !AppLanguage.isArabicScript, !hit.chapter.arabic.isEmpty {
                     HighlightedSnippet(
                         source: hit.chapter.arabic,
                         term: searchText,
@@ -2517,7 +2531,7 @@ struct HadithView: View {
         let name = book.name
         // The Arabic interface shares the book in Arabic: its title, compiler and full title once,
         // without the English meaning and transliteration lines.
-        if AppLanguage.isArabic {
+        if AppLanguage.isArabicScript {
             return "\(book.displayTitle)\n\n\(book.displayAuthor)\n\(book.eraDisplay)\n\n"
                 + String(localized: "Full title: \(name.fullArabic)") + "\n\n\(book.longDescription)"
         }
@@ -2527,11 +2541,6 @@ struct HadithView: View {
 
     /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths). The surah rows lead with ayah
     /// counts; books do the same. Chapters, then hadiths - the one order every hadith surface uses.
-    private func bookShapeText(_ book: HadithCatalogBook) -> String {
-        guard let counts = store.counts(for: book) else { return "" }
-        return String(localized: "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha")
-    }
-
     /// When the book was compiled, dated the classical way by its compiler's death ("d. 256 AH /
     /// 870 CE"), under the counts on a list row and a grid tile alike, so the shelf reads in time.
     private func bookEraLabel(_ book: HadithCatalogBook) -> some View {
@@ -2542,24 +2551,11 @@ struct HadithView: View {
                 .monospacedDigit()
         }
         .font(.caption2)
-        .foregroundColor(.secondary)
+        .foregroundColor(.secondaryOnGlass)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(book.eraAccessibilityLabel)
-    }
-
-    /// One small glass chip in the shared stat-pill language.
-    /// Deliberately tight: three of these share one row with the title and the Arabic name, and the pill
-    /// padding was what pushed the counts into ellipses ("7,27...") the moment the row got narrow.
-    private func statChip(_ text: String) -> some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(settings.accentColor.color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .conditionalGlassEffect()
     }
 
     private func arabicTitleFont(_ style: UIFont.TextStyle, bump: CGFloat) -> Font {
@@ -2616,12 +2612,17 @@ struct HadithView: View {
         }())
     }
 
+    /// The SurahRow, for a book (2026-10-26, the Quran/Hadith consistency pass): the number pill,
+    /// the title over its caption lines (the counts, then the era, in the surah row's glass
+    /// secondary), and at the trailing edge the Arabic name in the primary colour with its number
+    /// beside it in the accent. Until then the counts were two glass chips and the Arabic name was
+    /// painted in the accent, so the two catalogs read as two apps.
     private func bookRow(_ book: HadithCatalogBook) -> some View {
         HStack(alignment: .center) {
             bookNumberPill(book)
                 .padding(.trailing, 2)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 // Two lines reserved for the title, so "Forty Hadith Qudsi" never stacks a word per line.
                 // The Arabic interface titles the row by its Arabic name and drops the trailing Arabic
                 // column below (the same name twice).
@@ -2635,19 +2636,16 @@ struct HadithView: View {
                 )
                 .minimumScaleFactor(0.7)
 
-                // Separate chips - chapters, then hadiths - one stat per pill. There is no third
-                // (size) chip any more: every book ships in the app, so its download weight is not a
-                // fact the reader has to decide anything with.
                 // Simple Mode leaves the counts and the era to the book's own screen.
                 if !settings.hides(.bookStats) {
-                    HStack(spacing: 4) {
-                        if let counts = store.counts(for: book) {
-                            statChip(String(localized: "\(counts.chapters) Ch"))
-                            statChip(String(localized: "\(counts.hadiths) Ha"))
-                        }
+                    if let counts = store.counts(for: book) {
+                        Text(bookCountsLine(counts))
+                            .font(.caption2)
+                            .foregroundColor(.secondaryOnGlass)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
                     bookEraLabel(book)
                 }
@@ -2655,24 +2653,44 @@ struct HadithView: View {
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !AppLanguage.isArabic {
+            if !AppLanguage.isArabicScript {
                 HStack(spacing: 6) {
                     HighlightedSnippet(
                         source: book.arabicTitle,
                         term: searchText,
-                        font: arabicTitleFont(.subheadline, bump: 2),
+                        font: arabicTitleFont(.title3, bump: 0),
                         accent: settings.accentColor.color,
-                        fg: settings.accentColor.color,
+                        fg: .primary,
                         lineLimit: 2
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                     .multilineTextAlignment(.trailing)
+
+                    bookArabicNumber(book, style: .title3)
                 }
                 .minimumScaleFactor(0.5)
                 .padding(.leading, 8)
             }
         }
         .contentShape(Rectangle())
+    }
+
+    /// The book's number in Arabic-Indic digits beside its Arabic name, the surah row's ornament
+    /// (the Arabic face draws the digits in the end-of-ayah ring, as the chapter tiles have it).
+    private func bookArabicNumber(_ book: HadithCatalogBook, style: UIFont.TextStyle) -> some View {
+        Text(arabicNumberString(from: book.number))
+            .font(settings.useFontArabic
+                ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: style).pointSize + 2)
+                : Font(UIFont.preferredFont(forTextStyle: style)).weight(.semibold))
+            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+            .foregroundColor(settings.accentColor.color)
+            .layoutPriority(1)
+    }
+
+    /// "97 Chapters • 7,277 Hadiths": the surah row's "286 Ayahs" line, for a book.
+    private func bookCountsLine(_ counts: (chapters: Int, hadiths: Int)) -> String {
+        let chapters = counts.chapters == 1 ? String(localized: "1 Chapter") : String(localized: "\(counts.chapters) Chapters")
+        return String(localized: "\(chapters) • \(counts.hadiths.formatted()) Hadiths")
     }
 
     /// A compact tile in the 99-Names style: Arabic, English, and the number stacked centered - a
@@ -2684,56 +2702,71 @@ struct HadithView: View {
         } menu: {
             bookContextMenu(book)
         } label: {
-            VStack(spacing: 3) {
-                HighlightedSnippet(
-                    source: book.arabicTitle,
-                    term: searchText,
-                    font: arabicTitleFont(.body, bump: 3),
-                    accent: settings.accentColor.color,
-                    fg: settings.accentColor.color
-                )
-                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+            // The surah grid tile's lines (2026-10-26): the Arabic name in the primary colour with
+            // its number beside it, "1: Sahih al-Bukhari" with the number in the accent, then the
+            // counts and the era in the glass secondary. CENTERED, every line, like every short-label
+            // tile (Abu, 2026-10-05).
+            VStack(alignment: .center, spacing: 2) {
+                HStack(spacing: 4) {
+                    bookArabicNumber(book, style: .subheadline)
+
+                    HighlightedSnippet(
+                        source: book.arabicTitle,
+                        term: searchText,
+                        font: arabicTitleFont(.title3, bump: 0),
+                        accent: settings.accentColor.color,
+                        fg: .primary,
+                        lineLimit: 1
+                    )
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                }
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
+                // The star overlay sits in the trailing corner, so this line alone needs room for it,
+                // taken from both edges to keep it on the tile's true centre.
+                .padding(.horizontal, 20)
 
-                if !AppLanguage.isArabic {
+                if !AppLanguage.isArabicScript {
+                    // One run, number and title: a two-line title ("The Forty Hadith of Imam Nawawi")
+                    // keeps its number on the first line instead of beside a centred block.
                     HighlightedSnippet(
                         source: book.englishTitle,
                         term: searchText,
-                        font: .caption.weight(.semibold),
+                        font: .subheadline.weight(.semibold),
                         accent: settings.accentColor.color,
-                        fg: .primary
+                        fg: .primary,
+                        leadingPrefix: "\(book.number): ",
+                        leadingPrefixFont: .subheadline.monospacedDigit().weight(.bold),
+                        leadingPrefixColor: settings.accentColor.color,
+                        lineLimit: 2
                     )
-                    .lineLimit(2)
                     .multilineTextAlignment(.center)
+                    .leftToRightContent()
                     .minimumScaleFactor(0.55)
                 }
 
-                // Simple Mode leaves the number, the counts and the era to the book's own screen, and
-                // the tile shrinks to what it still holds.
+                // Simple Mode leaves the counts and the era to the book's own screen, and the tile
+                // shrinks to what it still holds.
                 if !settings.hides(.bookStats) {
-                    HStack(spacing: 4) {
-                        Text("\(book.number)")
-                            .font(.caption2.monospacedDigit().weight(.bold))
-                            .foregroundColor(settings.accentColor.color)
-
-                        Text("• \(bookShapeText(book))")
+                    if let counts = store.counts(for: book) {
+                        Text(bookCountsLine(counts))
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.secondaryOnGlass)
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
 
                     bookEraLabel(book)
                 }
+
+                Spacer(minLength: 0)
             }
             .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            // A fixed height so every tile in the grid lines up regardless of how its titles wrap.
-            .frame(height: settings.hides(.bookStats) ? 72 : 100)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 6)
+            // Every tile in a row takes the row's height (`SummaryTileGrid`), as the surah tiles do.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
             .contentShape(Rectangle())
             // iPad/Mac: the book the detail column is reading wears the sidebar's ring.
             .overlay {

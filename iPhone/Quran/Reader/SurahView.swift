@@ -3304,7 +3304,7 @@ struct SurahView: View {
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
 
-                                if !AppLanguage.isArabic {
+                                if !AppLanguage.isArabicScript {
                                     Text(option.arabic)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -3922,7 +3922,7 @@ struct SurahView: View {
                 // Legend, the full label left "Global" no room for its word.
                 if comparisonVisible {
                     ArabicTextRiwayahPicker(selection: $quranDisplay.displayQiraah,
-                                            omitsDefaultSuffix: AppLanguage.isArabic)
+                                            omitsDefaultSuffix: AppLanguage.isArabicScript)
                         .layoutPriority(1)
                 }
             }
@@ -4409,7 +4409,7 @@ struct SurahView: View {
                 // and an expanding Spacer collapses to zero there - which is what shrank the title to a pill.
                 HStack(spacing: 10) {
                     // The Arabic interface names the surah once: the Arabic name and number beside it.
-                    if !AppLanguage.isArabic {
+                    if !AppLanguage.isArabicScript {
                         HStack {
                             // The Latin side never shrinks - a scaled-down transliteration next to full-size
                             // Arabic reads as a mistake. It truncates instead.
@@ -4446,7 +4446,7 @@ struct SurahView: View {
                 // there, and the two-line pill held it some 20 pt taller than the one-line one does.
                 // Not in the Arabic interface either: the English meaning under an Arabic title read
                 // as untranslated, and the Arabic name already sits in the pill.
-                if verticalSizeClass != .compact, !AppLanguage.isArabic {
+                if verticalSizeClass != .compact, !AppLanguage.isArabicScript {
                     Text(surah.nameEnglish)
                         .font(.caption2)
                         .lineLimit(1)
@@ -5106,7 +5106,7 @@ struct ArabicTextRiwayahPicker: View {
                         Text(option.beta ? String(localized: "\(option.displayLabel()) (Beta)") : option.displayLabel()).tag(option.tag)
                     }
                 } header: {
-                    Text(AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)")
+                    Text(AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -5161,7 +5161,7 @@ struct ArabicTextRiwayahPicker: View {
         } label: {
             // The Arabic interface names the imam once, in Arabic; English keeps both names.
             Label(
-                AppLanguage.isArabic ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
+                AppLanguage.isArabicScript ? group.teacherArabic : "\(group.teacher) - \(group.teacherArabic)",
                 systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
             )
 
@@ -5193,7 +5193,7 @@ struct ArabicTextRiwayahPicker: View {
             // (the standalone Hafs entry omits it). The Arabic interface already titles the row
             // with the Arabic name, so its subtitle is the year alone.
             if !hideDetail, let detail = option.narratorDetail {
-                Text(AppLanguage.isArabic ? detail : "\(option.arabic) · \(detail)")
+                Text(AppLanguage.isArabicScript ? detail : "\(option.arabic) · \(detail)")
             }
         }
     }

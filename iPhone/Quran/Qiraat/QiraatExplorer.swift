@@ -778,9 +778,7 @@ struct QiraatPlacePickerSheet: View {
 
     private var thisSurahSection: some View {
         let name = quranData.surah(surahID)?.displayName ?? String(localized: "Surah \(surahID)")
-        return Section(header: HStack {
-            Text(name.uppercased())
-            Spacer()
+        return Section(header: SectionHeaderLine(name.uppercased()) {
             Text(places.count == 1 ? "1 place" : "\(places.count) places")
         }) {
             if places.isEmpty {
@@ -863,7 +861,7 @@ struct QiraatPlacePickerSheet: View {
                         VStack(alignment: .leading, spacing: 2) {
                             // The Arabic interface names the surah once, in Arabic, where the
                             // transliteration sits (no meaning line, no trailing Arabic name).
-                            if AppLanguage.isArabic {
+                            if AppLanguage.isArabicScript {
                                 Text(surah.nameArabic)
                                     .font(.custom(appearance.quranDisplayFace, size: 18))
                                     .arabicFontDesign(custom: true)
@@ -884,7 +882,7 @@ struct QiraatPlacePickerSheet: View {
                                 .font(.caption2.weight(.semibold))
                                 .foregroundColor(count == 0 ? .secondary : accent)
                         }
-                        if !AppLanguage.isArabic {
+                        if !AppLanguage.isArabicScript {
                             Text(surah.nameArabic)
                                 .font(.custom(appearance.quranDisplayFace, size: 18))
                                 .arabicFontDesign(custom: true)

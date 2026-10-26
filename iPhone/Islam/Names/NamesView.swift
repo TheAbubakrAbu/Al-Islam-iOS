@@ -860,10 +860,7 @@ struct NamesView: View {
 
             // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
             if !settings.namesGridMode {
-                Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
-                    .font(.caption)
-                    .tint(settings.accentColor.color)
-                    .onChange(of: settings.showDescription) { _ in settings.hapticFeedback() }
+                SettingsToggle(String(localized: "Show All Descriptions"), isOn: showAllDescriptionsBinding)
             }
         }
     }

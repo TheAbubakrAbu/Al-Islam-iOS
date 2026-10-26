@@ -107,7 +107,6 @@ struct LastListenedSurahRow: View {
     @Binding var showListeningHistory: Bool
     var onSelectSurah: ((Int) -> Void)? = nil
 
-    @State private var confirmDeleteForever = false
 
     var body: some View {
         guard let surah = quranData.surah(lastListenedSurah.surahNumber)
@@ -190,26 +189,6 @@ struct LastListenedSurahRow: View {
                 }
                 .padding(.vertical, 8)
                 .contentShape(Rectangle())
-                // On this ONE row, not on the Section: a modifier on a Section inside a List is applied
-                // to each of its rows (this one and every history row), so one dialog became several
-                // presentation bridges bound to one Bool, UIKit refused every presentation after the
-                // first, and SwiftUI answered by resetting the Bool, which closed the dialog the first
-                // time it opened (2026-09-22; see `AskAISearchSection`). The context menu that raises
-                // it stays on the Section, so any row's "Delete Forever" still lands here.
-                #if os(iOS)
-                .confirmationDialog("Are you sure?", isPresented: $confirmDeleteForever, titleVisibility: .visible) {
-                    Button("Remove Permanently", role: .destructive) {
-                        settings.hapticFeedback()
-                        withAnimation {
-                            settings.lastListenedSurah = nil
-                            settings.saveLastListenedSurah = false
-                        }
-                    }
-                    Button("Cancel") {}
-                } message: {
-                    Text("You can re-enable Last Listened Surah later in Quran Settings.")
-                }
-                #endif
 
                 if showListeningHistory && !playbackHistory.listeningHistory.isEmpty {
                     ForEach(playbackHistory.listeningHistory) { item in
@@ -257,13 +236,6 @@ struct LastListenedSurahRow: View {
                     }
                 } label: {
                     Label("Remove", systemImage: "minus.circle")
-                }
-
-                Button(role: .destructive) {
-                    settings.hapticFeedback()
-                    confirmDeleteForever = true
-                } label: {
-                    Label("Delete Forever", systemImage: "trash")
                 }
 
                 Divider()
@@ -1040,7 +1012,6 @@ struct LastListenedAyahRow: View {
     @Binding var showAyahListeningHistory: Bool
     var onSelectAyah: ((Int, Int) -> Void)? = nil
 
-    @State private var confirmDeleteForever = false
 
     private var rowContent: some View {
         HStack(spacing: 8) {
@@ -1190,13 +1161,6 @@ struct LastListenedAyahRow: View {
                     Label("Remove", systemImage: "minus.circle")
                 }
 
-                Button(role: .destructive) {
-                    settings.hapticFeedback()
-                    confirmDeleteForever = true
-                } label: {
-                    Label("Delete Forever", systemImage: "trash")
-                }
-
                 Divider()
 
                 Button {
@@ -1212,18 +1176,6 @@ struct LastListenedAyahRow: View {
                 } label: {
                     Label("Play From Ayah", systemImage: "play.circle.fill")
                 }
-            }
-            .confirmationDialog("Are you sure?", isPresented: $confirmDeleteForever, titleVisibility: .visible) {
-                Button("Remove Permanently", role: .destructive) {
-                    settings.hapticFeedback()
-                    withAnimation {
-                        settings.lastListenedAyah = nil
-                        settings.saveLastListenedAyah = false
-                    }
-                }
-                Button("Cancel") {}
-            } message: {
-                Text("You can re-enable Last Listened Ayah later in Quran Settings.")
             }
 
             if showAyahListeningHistory && !playbackHistory.ayahListeningHistory.isEmpty {
@@ -1396,11 +1348,11 @@ struct QuranHistoryView: View {
         List {
             Group {
                 // What the screen is, said once at the top rather than as a caption on the door that
-                // opens it (Abu, 2026-09-07).
+                // opens it (Abu, 2026-09-07). The article kit's lead card, as the Hadith tab's History
+                // opens (2026-10-26); it was a plain paragraph here.
                 Section {
-                    Text(String(localized: "Everything this tab remembers: the ayahs you read, what you listened to, the Ayah of the Day on earlier days, and your recent searches. Tap any of them to open it in the reader. It never leaves this device."))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    ArticleLead(String(localized: "Everything this tab remembers: the ayahs you read, what you listened to, the Ayah of the Day on earlier days, and your recent searches. Tap any of them to open it in the reader. It never leaves this device."),
+                                eyebrow: String(localized: "IN SHORT"))
                 }
 
                 if reading.isEmpty, listenedAyahs.isEmpty, listenedSurahs.isEmpty, daily.isEmpty, searches.isEmpty {

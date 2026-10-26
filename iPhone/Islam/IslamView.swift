@@ -34,6 +34,8 @@ struct IslamView: View {
     @State private var reminderDoor: ReminderOfTheDayCard.HeaderDoor?
     /// The resource row a result asked to scroll to ("Scroll To ..."), consumed once the search clears.
     @State private var scrollTarget: String?
+    /// Where `scrollTarget` lands on screen: the top, unless a DEBUG scroll asked for the bottom.
+    @State private var scrollAnchor: UnitPoint = .top
     @StateObject private var articleSearch = IslamArticleSearchModel()
 
     #if DEBUG
@@ -112,15 +114,18 @@ struct IslamView: View {
         case halalFoodLocator
         case islamicWallpapers
         // FAITH & PROOFS, one section since 2026-10-24 (Abu: pillars, beliefs and how-to "should be
-        // with" the miracles, the prophecies and Proving Islam). Proving Islam is a TILE again so the
-        // section is two clean rows: the faith itself and the case for it, then the three miracle /
-        // prophecy screens, which are one subject and so one row.
+        // with" the miracles, the prophecies and Proving Islam). Two rows of tiles in the order Abu
+        // gave on 2026-10-26 ("after how to guides put miracles of Quran then miracles of prophet then
+        // prophecies of prophet then sunnah of the prophet then do a full row of proving Islam"): the
+        // faith itself, then the signs and his daily practice, with Proving Islam the section's BANNER
+        // (`bannerResources`), the whole case under the pieces of it.
         case pillarsAndBasics
         case howToGuides
-        case provingIslam
         case miraclesOfQuran
-        case propheciesOfProphet
         case miraclesOfProphets
+        case propheciesOfProphet
+        case sunnahsOfProphet
+        case provingIslam
         case askAI
         /// Simple Mode's one row standing in for the sections it folds (TOOLS, ASK AI;
         /// Docs/Product/Simple Mode Guide.md). A destination like any resource, so a tile opened from its
@@ -162,6 +167,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "Miracles of the Quran"
             case .propheciesOfProphet: return "Prophecies of the Prophet"
             case .miraclesOfProphets: return "Miracles of the Prophets"
+            case .sunnahsOfProphet: return "Sunnahs of the Prophet"
             case .provingIslam: return "Proving Islam"
             case .journal: return "Islamic Journal"
             }
@@ -190,6 +196,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return String(localized: "Miracles of the Quran")
             case .propheciesOfProphet: return String(localized: "Prophecies of the Prophet")
             case .miraclesOfProphets: return String(localized: "Miracles of the Prophets")
+            case .sunnahsOfProphet: return String(localized: "Sunnahs of the Prophet")
             case .provingIslam: return String(localized: "Proving Islam")
             case .journal: return String(localized: "Islamic Journal")
             }
@@ -217,6 +224,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "sparkle.magnifyingglass"
             case .propheciesOfProphet: return "checkmark.seal"
             case .miraclesOfProphets: return "staroflife"
+            case .sunnahsOfProphet: return "sun.horizon"
             case .provingIslam: return "checkmark.shield"
             case .journal: return "square.and.pencil"
             }
@@ -246,6 +254,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return "Signs in creation, science, and history"
             case .propheciesOfProphet: return "What he foretold, and what history did"
             case .miraclesOfProphets: return "The signs given to the prophets, and to him"
+            case .sunnahsOfProphet: return "What he did each day, from waking to sleeping"
             case .provingIslam: return "The complete case that Islam is true, one line of evidence at a time"
             case .journal: return "Notes from khutbahs, classes, and your reading"
             }
@@ -275,6 +284,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return String(localized: "Signs in creation, science, and history")
             case .propheciesOfProphet: return String(localized: "What he foretold, and what history did")
             case .miraclesOfProphets: return String(localized: "The signs given to the prophets, and to him")
+            case .sunnahsOfProphet: return String(localized: "What he did each day, from waking to sleeping")
             case .provingIslam: return String(localized: "The complete case that Islam is true, one line of evidence at a time")
             case .journal: return String(localized: "Notes from khutbahs, classes, and your reading")
             }
@@ -311,6 +321,7 @@ struct IslamView: View {
             case .miraclesOfQuran: return String(localized: "Miracles of\nthe Quran")
             case .propheciesOfProphet: return String(localized: "Prophecies of\nthe Prophet")
             case .miraclesOfProphets: return String(localized: "Miracles of\nthe Prophets")
+            case .sunnahsOfProphet: return String(localized: "Sunnahs of\nthe Prophet")
             case .provingIslam: return String(localized: "Proving\nIslam")
             case .journal: return String(localized: "Islamic\nJournal")
             }
@@ -350,6 +361,9 @@ struct IslamView: View {
             case .miraclesOfProphets: return ["miracles", "prophets", "moses", "musa", "jesus", "isa", "abraham", "ibrahim", "salih", "moon", "splitting", "staff", "sea", "proof", "prophethood",
                                               "david", "dawud", "solomon", "sulayman", "jonah", "yunus", "whale", "iron", "jinn", "ants", "birds",
                                               "night journey", "isra", "miraj", "ascension", "aqsa", "cradle", "she-camel", "fire"]
+            case .sunnahsOfProphet: return ["sunnah", "sunnahs", "sunan", "common sunnahs", "daily sunnahs", "habits", "practices",
+                                            "siwak", "miswak", "rawatib", "witr", "duha", "right hand", "bismillah", "waking", "sleep",
+                                            "eating", "drinking", "fasting", "monday", "thursday", "friday", "salam", "wudu", "adhkar"]
             case .journal: return ["journal", "notes", "note", "diary", "khutbah", "lecture", "class", "study", "reflection", "write"]
             }
         }
@@ -371,8 +385,8 @@ struct IslamView: View {
             // and tajweed course"). Writing down what you studied belongs with the studying.
             case .arabicAlphabet, .tajweedFoundations, .tajweedCourse, .journal: return .learn
             case .commonAdhkar, .commonDuas, .tasbihCounter, .namesOfAllah: return .remembrance
-            case .pillarsAndBasics, .howToGuides, .provingIslam,
-                 .miraclesOfQuran, .propheciesOfProphet, .miraclesOfProphets: return .faith
+            case .pillarsAndBasics, .howToGuides, .miraclesOfQuran, .miraclesOfProphets,
+                 .propheciesOfProphet, .sunnahsOfProphet, .provingIslam: return .faith
             case .zakahCalculator, .inheritanceCalculator, .hijriCalendarConverter, .islamicWallpapers: return .tools
             // The two location tools come with the prayer times' location (not in Al-Quran).
             #if HAS_ADHAN
@@ -391,13 +405,20 @@ struct IslamView: View {
         /// LEARN's banner is the JOURNAL, not the course (Abu, 2026-10-04): that leaves the three
         /// study resources as a full row of tiles above it, and the journal - the one you WRITE in
         /// rather than read - reads as the thing you do with what they taught you. REMEMBRANCE's is the
-        /// 99 Names (2026-10-24), under its row of dhikr, dua and tasbih. Trading Proving Islam's banner
-        /// for this one keeps the one-section grid at eighteen tiles, six clean rows.
-        static let bannerResources: [IslamDestination] = [.journal, .namesOfAllah, .askAI]
+        /// 99 Names (2026-10-24), under its row of dhikr, dua and tasbih. FAITH & PROOFS' is Proving
+        /// Islam again (2026-10-26, Abu: "then do a full row of proving Islam"): the Sunnahs tile took
+        /// its place in the rows, and the one case built from every piece above it reads best as the
+        /// row under them. Ask AI closes the whole list.
+        static let bannerResources: [IslamDestination] = [.journal, .namesOfAllah, .provingIslam, .askAI]
 
-        /// Every tile's title (the banners are not tiles), so the iPad sidebar's grid can fit them all
-        /// to one size (`SidebarResourceGrid`).
-        static let tileTitles: [String] = allCases.filter { !bannerResources.contains($0) }.map(\.gridTitle)
+        /// The banners the one ISLAMIC RESOURCES section folds into its closing row of TILES: every
+        /// banner but Ask AI, which stays a full row there too (Abu, 2026-10-26: "have ask ai be full
+        /// row"). Three, so with the eighteen tiles of the groups the grid is seven clean rows.
+        static let closingRowResources: [IslamDestination] = [.journal, .namesOfAllah, .provingIslam]
+
+        /// Every title, so the iPad sidebar's grid can fit them all to one size (`SidebarResourceGrid`).
+        /// The banners' too: in the one-section view they are tiles (`bannerResources(in:)`).
+        static let tileTitles: [String] = allCases.map(\.gridTitle)
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row), and minus the
@@ -414,8 +435,8 @@ struct IslamView: View {
 
     /// The subjects the resources are listed under, one section each, in this order (Abu, 2026-10-02:
     /// "divide islamic resources into section that it relates to"). Each holds three or six tiles, so
-    /// no grid row is left half empty; the banners (the Journal, the 99 Names, Ask AI) close their
-    /// sections. A resource's order inside its section is still the enum's case order.
+    /// no grid row is left half empty; the banners (the Journal, the 99 Names, Proving Islam, Ask AI)
+    /// close their sections. A resource's order inside its section is still the enum's case order.
     ///
     /// The ORDER here is the section order on screen, and it is the one Abu gave on 2026-10-05:
     /// Learn, Remembrance, Tools, then the reading library you sit down with (Faith & Practice and
@@ -477,10 +498,12 @@ struct IslamView: View {
         let items: [IslamDestination]
     }
 
-    /// The resource sections, in order. One section by default, every resource in the groups' order
-    /// (so switching the grouping never reshuffles them), with the three banners closing it; one per
-    /// subject while `islamGroupResources` is on. `foldsSimple`: Simple Mode leaves the folded groups
-    /// to More Resources (the iPad sidebar lists every group regardless).
+    /// The resource sections, in order. One per subject by default (`islamGroupResources`, on since
+    /// 2026-10-26, Abu: "by default for al islam tab group by subject"); off, one ISLAMIC RESOURCES section
+    /// with every resource in the groups' order (so switching the grouping never reshuffles them) and the
+    /// banner resources LAST, where `bannerResources(in:)` draws three of them as the grid's closing row of
+    /// tiles and Ask AI as the full row under it. `foldsSimple`: Simple Mode leaves the folded groups to
+    /// More Resources (the iPad sidebar lists every group regardless).
     private func resourceSections(foldsSimple: Bool) -> [ResourceSection] {
         let groups = ResourceGroup.allCases.filter { !(foldsSimple && settings.hides(.foldedGroups) && $0.foldsInSimpleMode) }
         guard !settings.islamGroupResources else {
@@ -488,8 +511,26 @@ struct IslamView: View {
                 .filter { !$0.items.isEmpty }
         }
         let all = groups.flatMap(\.resources)
-        return all.isEmpty ? [] : [ResourceSection(id: "ISLAMIC RESOURCES", title: String(localized: "ISLAMIC RESOURCES"),
-                                                   systemImage: "square.grid.2x2.fill", items: all)]
+        let ordered = all.filter { !IslamDestination.bannerResources.contains($0) }
+            + IslamDestination.bannerResources.filter { all.contains($0) }
+        return ordered.isEmpty ? [] : [ResourceSection(id: "ISLAMIC RESOURCES", title: String(localized: "ISLAMIC RESOURCES"),
+                                                       systemImage: "square.grid.2x2.fill", items: ordered)]
+    }
+
+    /// The resources `items` draws as full-width banners. Grouped by subject, the four of
+    /// `bannerResources` each close their own section. In the one ISLAMIC RESOURCES section the banners
+    /// used to close the grid as three full rows, which read as waste (Abu, 2026-10-26: "all 3 of them get
+    /// full rows and it's like bro 3 fit perfectly"): there, the Journal, the 99 Names and Proving Islam
+    /// (`closingRowResources`) are the grid's last row of tiles whenever all three are present, and Ask AI
+    /// is the one banner under it ("have ask ai be full row"). Without Apple Intelligence the grid is the
+    /// same seven clean rows with no banner at all. Should one of the three ever be missing (a Favorites
+    /// section with only two of them), two tiles would leave the row ragged, so they stay banners.
+    private func bannerResources(in items: [IslamDestination]) -> [IslamDestination] {
+        let present = IslamDestination.bannerResources.filter { items.contains($0) }
+        guard !settings.islamGroupResources else { return present }
+        let closing = IslamDestination.closingRowResources
+        if closing.allSatisfy(items.contains) { return present.filter { !closing.contains($0) } }
+        return present
     }
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
@@ -742,7 +783,7 @@ struct IslamView: View {
                 guard let target else { return }
                 // The search rows are still animating out; scroll once the resource rows are back.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    withAnimation { proxy.scrollTo(target, anchor: .top) }
+                    withAnimation { proxy.scrollTo(target, anchor: scrollAnchor) }
                 }
             }
         }
@@ -759,6 +800,18 @@ struct IslamView: View {
             // into a screenshot (there is no scroll tooling for the simulator).
             if ProcessInfo.processInfo.arguments.contains("-islamScrollToReminder") {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = "reminder" }
+            }
+            // `-islamScrollToSection <section id>` (the English header, "FAITH & PROOFS" or "ISLAMIC
+            // RESOURCES"): bring that section's grid row into a screenshot, its BOTTOM at the screen's
+            // bottom with `-islamScrollAnchorBottom` (2026-10-26, for the last section and the
+            // one-section grid's closing rows; a tile's own id is not scrollable until its row exists).
+            if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-islamScrollToSection"),
+               ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+                let section = ProcessInfo.processInfo.arguments[idx + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    scrollAnchor = ProcessInfo.processInfo.arguments.contains("-islamScrollAnchorBottom") ? .bottom : .top
+                    scrollTarget = Self.sectionRowID(section)
+                }
             }
             if let seeded = IslamSearchDebug.launchQuery("-islamSearch"), searchText.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
@@ -854,6 +907,7 @@ struct IslamView: View {
     }
 
     private static func rowID(_ item: IslamDestination) -> String { "resource_\(item.rawValue)" }
+    private static func sectionRowID(_ section: String) -> String { "section_\(section)" }
 
     /// A resource as a search result: the list row with the match coloured, whatever the grid toggle
     /// says (a grid tile cannot carry a context menu). Its menu and trailing swipe scroll the list back
@@ -940,6 +994,9 @@ struct IslamView: View {
         ForEach(resourceSections(foldsSimple: true)) { section in
             Section(header: SectionPillHeader(title: section.title, count: section.items.count, icon: section.systemImage)) {
                 resourceItems(section.items)
+                    // The section's one grid row, so a scroll can land on a section that the lazy
+                    // List has not built yet (a tile's own id is unknown until its row exists).
+                    .id(Self.sectionRowID(section.id))
             }
         }
 
@@ -1017,10 +1074,12 @@ struct IslamView: View {
             // you reach for when they have not answered you). As of 2026-10-04 it has a section of
             // its own at the foot of the resources, so here it is the only thing in `items` and the
             // `tiles.isEmpty` guard below draws the banner with no grid above it. Pulled OUT of
-            // `items` so it never draws twice. The Journal and the 99 Names are banners too
-            // (`bannerResources`): each closes its own section, under the tiles' rows.
-            let banners = IslamDestination.bannerResources.filter { items.contains($0) }
-            let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
+            // `items` so it never draws twice. The Journal, the 99 Names and Proving Islam are banners
+            // too (`bannerResources`): each closes its own section, under the tiles' rows. In the
+            // one-section view those three are the grid's last row of tiles and Ask AI alone stays a
+            // banner (`bannerResources(in:)`).
+            let banners = bannerResources(in: items)
+            let tiles = items.filter { !banners.contains($0) }
 
             // Press-and-hold offers the row's menu through `GridTileMenu` - a plain `contextMenu`
             // here would lift the WHOLE row (every tile at once) as its preview, since the grid is
@@ -1429,6 +1488,8 @@ struct IslamView: View {
             PropheciesView()
         case .miraclesOfProphets:
             ProphetMiraclesView()
+        case .sunnahsOfProphet:
+            SunnahView()
         case .provingIslam:
             ProvingIslamView().openScreen(.provingIslamLibrary)
         case .journal:
@@ -1552,9 +1613,11 @@ struct IslamView: View {
             // Ask AI spans the full width BELOW the tiles, exactly as in the iPhone grid
             // (`resourceItems`): as half a sidebar row it was one tile among the references, with
             // no room for the caption that says what it does (Abu, 2026-09-23: "it should be the full
-            // row similar to how it is on iphone"). Pulled out of `items` so it never draws twice.
-            let banners = IslamDestination.bannerResources.filter { items.contains($0) }
-            let tiles = items.filter { !IslamDestination.bannerResources.contains($0) }
+            // row similar to how it is on iphone"). Pulled out of `items` so it never draws twice; in the
+            // one-section view the other three banners are the grid's last row of tiles and Ask AI alone
+            // stays one (`bannerResources(in:)`).
+            let banners = bannerResources(in: items)
+            let tiles = items.filter { !banners.contains($0) }
 
             // One row for the grid and the banners, 8 pt apart like the tiles, for the iPhone grid's
             // reasons: no gap between two rows' insets, and no empty grid above a banner when it is a

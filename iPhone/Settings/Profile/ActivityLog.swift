@@ -19,7 +19,7 @@ enum ActivityKind: String, CaseIterable, Codable {
         case .read: return String(localized: "Read")
         // Arabic names the activities as nouns (القراءة, الذكر), so it takes the noun key; the shared
         // "Listen" key is the verb on the play buttons. English keeps "Listen" beside "Read".
-        case .listen: return AppLanguage.isArabic ? String(localized: "Listening") : String(localized: "Listen")
+        case .listen: return AppLanguage.isArabicScript ? String(localized: "Listening") : String(localized: "Listen")
         case .dhikr: return String(localized: "Dhikr")
         case .hadith: return String(localized: "Hadith")
         }
@@ -39,7 +39,8 @@ enum ActivityKind: String, CaseIterable, Codable {
         switch self {
         case .read: return n == 1 ? String(localized: "1 ayah") : String(localized: "\(n) ayahs")
         case .listen: return n == 1 ? String(localized: "1 surah") : String(localized: "\(n) surahs")
-        case .dhikr: return n == 1 ? String(localized: "1 count") : String(localized: "\(n) counts")
+        // Its own key: "1 count" is also one harakah of a madd in the letters course (حركة واحدة).
+        case .dhikr: return n == 1 ? String(localized: "dhikr.count.one", defaultValue: "1 count") : String(localized: "\(n) counts")
         case .hadith: return n == 1 ? String(localized: "1 hadith") : String(localized: "\(n) hadiths")
         }
     }

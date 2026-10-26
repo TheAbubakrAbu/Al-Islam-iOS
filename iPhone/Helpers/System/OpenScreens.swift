@@ -71,6 +71,8 @@ enum OpenScreen: String, Hashable, CaseIterable {
     case miraclesLibrary
     case propheciesLibrary
     case prophetMiraclesLibrary
+    /// The Sunnahs of the Prophet index (2026-10-26): the Sunnah pillar article doors into it.
+    case sunnahLibrary
     /// Proving Islam's index: its chapters door into the pillar articles, and those articles door
     /// back into the index.
     case provingIslamLibrary
@@ -101,6 +103,7 @@ enum OpenScreen: String, Hashable, CaseIterable {
         case .miraclesLibrary:        return String(localized: "You came here from Miracles of the Quran")
         case .propheciesLibrary:      return String(localized: "You came here from Prophecies of the Prophet")
         case .prophetMiraclesLibrary: return String(localized: "You came here from Miracles of the Prophets")
+        case .sunnahLibrary:          return String(localized: "You came here from Sunnahs of the Prophet")
         case .provingIslamLibrary:    return String(localized: "You came here from Proving Islam")
         }
     }

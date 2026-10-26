@@ -65,7 +65,6 @@ struct ZakatAlFitrView: View {
                     Stepper(value: $fitrPeople, in: 1...30) {
                         HStack {
                             Text("People you are responsible for")
-                                .font(.subheadline)
                                 .lineLimit(2)
                                 .minimumScaleFactor(0.7)
                             Spacer(minLength: 8)

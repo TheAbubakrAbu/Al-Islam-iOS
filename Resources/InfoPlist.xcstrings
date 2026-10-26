@@ -16,6 +16,12 @@
             "state" : "new",
             "value" : "Al-Islam"
           }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاسلام"
+          }
         }
       }
     },
@@ -33,6 +39,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
           }
         }
       }
@@ -52,6 +64,12 @@
             "state" : "new",
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
           }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
+          }
         }
       }
     },
@@ -70,6 +88,12 @@
             "state" : "new",
             "value" : "Al-Islam uses your location to calculate your prayer times and Qibla direction. Only Al-Islam and Apple ever see it, and it is never shared with anyone else."
           }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الاسلام ایپ نماز کے اوقات اور قبلہ کی سمت معلوم کرنے کے لیے آپ کا مقام استعمال کرتی ہے۔ اسے صرف الاسلام ایپ اور Apple دیکھتے ہیں، اور یہ کبھی کسی اور کے ساتھ شیئر نہیں کیا جاتا۔"
+          }
         }
       }
     },
@@ -87,6 +111,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "Used to save wallpapers you choose to your Photo Library."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آپ کے منتخب کردہ وال پیپرز فوٹو لائبریری میں محفوظ کرنے کے لیے۔"
           }
         }
       }

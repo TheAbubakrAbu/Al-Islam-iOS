@@ -416,7 +416,7 @@ struct SplashScreen: View {
                 .foregroundColor(accent)
 
             // The Arabic greeting above already says it in Arabic.
-            if !AppLanguage.isArabic {
+            if !AppLanguage.isArabicScript {
                 Text("Assalamu Alaikum")
                     .font(.title.bold())
                     .foregroundColor(.primary)

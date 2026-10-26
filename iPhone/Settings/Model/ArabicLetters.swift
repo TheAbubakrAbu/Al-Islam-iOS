@@ -53,7 +53,7 @@ extension LetterData {
     /// transliteration ("baa") otherwise. The transliteration itself stays the pronunciation guide drawn
     /// under the letter, the search key and the AI corpus text.
     var displayName: String {
-        AppLanguage.isArabic ? name : transliteration
+        AppLanguage.isArabicScript ? name : transliteration
     }
 }
 

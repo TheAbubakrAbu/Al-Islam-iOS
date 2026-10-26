@@ -598,13 +598,16 @@ struct StudyStageHeader: View {
     let title: String
     var arabic: String? = nil
     var blurb: String? = nil
+    /// The symbol's colour where the stage wears one of its own (a tajweed lesson's rule colour);
+    /// nil is the accent. `TajweedLessonHeader` is this header with its colour set.
+    var tint: Color? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: systemImage)
                     .font(.subheadline.weight(.bold))
-                    .foregroundColor(appearance.accent)
+                    .foregroundColor(tint ?? appearance.accent)
                     .accessibilityHidden(true)
 
                 Text(title)
